@@ -22,6 +22,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -57,6 +58,26 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        chart: {
+          1: "hsl(var(--chart-color-1))",
+          2: "hsl(var(--chart-color-2))",
+          3: "hsl(var(--chart-color-3))",
+          4: "hsl(var(--chart-color-4))",
+        },
+      },
+      backgroundImage: {
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-stage": "var(--gradient-stage)",
+        "gradient-spotlight": "var(--gradient-spotlight)",
+      },
+      boxShadow: {
+        electric: "var(--shadow-electric)",
+        stage: "var(--shadow-stage)",
+      },
+      transitionTimingFunction: {
+        rock: "var(--transition-rock)",
       },
       borderRadius: {
         lg: "var(--radius)",
