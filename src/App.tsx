@@ -7,6 +7,10 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
 import GigBooking from "./pages/GigBooking";
+import Profile from "./pages/Profile";
+import MusicStudio from "./pages/MusicStudio";
+import WorldPulse from "./pages/WorldPulse";
+import Schedule from "./pages/Schedule";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +29,10 @@ const App = () => (
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="band" element={<BandManager />} />
             <Route path="gigs" element={<GigBooking />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="music" element={<MusicStudio />} />
+            <Route path="charts" element={<WorldPulse />} />
+            <Route path="schedule" element={<Schedule />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
