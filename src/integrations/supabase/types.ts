@@ -422,6 +422,45 @@ export type Database = {
         }
         Relationships: []
       }
+      genre_statistics: {
+        Row: {
+          avg_popularity: number
+          chart_date: string
+          chart_type: string
+          created_at: string
+          genre: string
+          growth: number
+          id: string
+          top_song: string | null
+          total_plays: number
+          total_songs: number
+        }
+        Insert: {
+          avg_popularity?: number
+          chart_date: string
+          chart_type?: string
+          created_at?: string
+          genre: string
+          growth?: number
+          id?: string
+          top_song?: string | null
+          total_plays?: number
+          total_songs?: number
+        }
+        Update: {
+          avg_popularity?: number
+          chart_date?: string
+          chart_type?: string
+          created_at?: string
+          genre?: string
+          growth?: number
+          id?: string
+          top_song?: string | null
+          total_plays?: number
+          total_songs?: number
+        }
+        Relationships: []
+      }
       gig_performances: {
         Row: {
           earnings: number | null
@@ -540,6 +579,68 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      global_charts: {
+        Row: {
+          artist_name: string | null
+          band_name: string | null
+          chart_date: string
+          chart_type: string
+          created_at: string
+          genre: string
+          id: string
+          plays: number
+          popularity: number
+          rank: number
+          song_id: string | null
+          song_title: string
+          trend: string
+          trend_change: number
+          weeks_on_chart: number
+        }
+        Insert: {
+          artist_name?: string | null
+          band_name?: string | null
+          chart_date: string
+          chart_type: string
+          created_at?: string
+          genre: string
+          id?: string
+          plays?: number
+          popularity?: number
+          rank: number
+          song_id?: string | null
+          song_title: string
+          trend?: string
+          trend_change?: number
+          weeks_on_chart?: number
+        }
+        Update: {
+          artist_name?: string | null
+          band_name?: string | null
+          chart_date?: string
+          chart_type?: string
+          created_at?: string
+          genre?: string
+          id?: string
+          plays?: number
+          popularity?: number
+          rank?: number
+          song_id?: string | null
+          song_title?: string
+          trend?: string
+          trend_change?: number
+          weeks_on_chart?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_charts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       player_achievements: {
         Row: {
