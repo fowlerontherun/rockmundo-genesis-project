@@ -34,21 +34,27 @@ interface Tour {
   description: string;
   start_date: string;
   end_date: string;
-  status: 'planned' | 'active' | 'completed' | 'cancelled';
+  status: string;
   total_revenue: number;
   band_id?: string;
   venues: TourVenue[];
+  tour_venues?: TourVenue[];
 }
 
 interface TourVenue {
   id: string;
   venue_id: string;
   date: string;
-  ticket_price: number;
-  tickets_sold: number;
-  revenue: number;
-  status: 'scheduled' | 'completed' | 'cancelled';
-  venue: {
+  ticket_price: number | null;
+  tickets_sold: number | null;
+  revenue: number | null;
+  status: string | null;
+  venues?: {
+    name: string;
+    location: string;
+    capacity: number;
+  };
+  venue?: {
     name: string;
     location: string;
     capacity: number;
@@ -85,16 +91,22 @@ const TourManager = () => {
         .from('tours')
         .select(`
           *,
-          tour_venues (
+          tour_venues!tour_venues_tour_id_fkey (
             *,
-            venues (name, location, capacity)
+            venues!tour_venues_venue_id_fkey (name, location, capacity)
           )
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTours(data || []);
+      setTours((data || []).map(tour => ({
+        ...tour,
+        venues: (tour.tour_venues || []).map(tv => ({
+          ...tv,
+          venue: tv.venues
+        }))
+      })));
     } catch (error: any) {
       console.error('Error loading tours:', error);
       toast({

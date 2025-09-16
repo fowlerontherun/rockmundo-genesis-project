@@ -76,7 +76,7 @@ const StreamingPlatforms = () => {
         .from('player_streaming_accounts')
         .select(`
           *,
-          platform:streaming_platforms(*)
+          streaming_platforms!player_streaming_accounts_platform_id_fkey(*)
         `)
         .eq('user_id', user!.id);
 

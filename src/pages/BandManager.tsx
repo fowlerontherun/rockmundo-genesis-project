@@ -69,7 +69,7 @@ const BandManager = () => {
         .from('band_members')
         .select(`
           *,
-          band:bands(*)
+          bands!band_members_band_id_fkey(*)
         `)
         .eq('user_id', user!.id)
         .single();
@@ -78,9 +78,9 @@ const BandManager = () => {
         throw memberError;
       }
 
-      if (memberData?.band) {
-        setBand(memberData.band);
-        await loadBandMembers(memberData.band.id);
+      if (memberData?.bands) {
+        setBand(memberData.bands);
+        await loadBandMembers(memberData.bands.id);
       }
     } catch (error: any) {
       console.error('Error loading band data:', error);

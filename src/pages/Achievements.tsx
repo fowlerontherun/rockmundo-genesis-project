@@ -75,7 +75,7 @@ const Achievements = () => {
         .from('player_achievements')
         .select(`
           *,
-          achievement:achievements(*)
+          achievements!player_achievements_achievement_id_fkey(*)
         `)
         .eq('user_id', user.id);
 
@@ -84,9 +84,9 @@ const Achievements = () => {
         ...item,
         progress: item.progress as Record<string, any>,
         achievement: {
-          ...item.achievement,
-          requirements: item.achievement?.requirements as Record<string, any>,
-          rewards: item.achievement?.rewards as Record<string, any>
+          ...item.achievements,
+          requirements: item.achievements?.requirements as Record<string, any>,
+          rewards: item.achievements?.rewards as Record<string, any>
         }
       })));
     } catch (error: any) {

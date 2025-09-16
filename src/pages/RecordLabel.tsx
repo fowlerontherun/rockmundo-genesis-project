@@ -454,7 +454,7 @@ const RecordLabel = () => {
                     <p className="text-muted-foreground mb-4">
                       Sign with a record label to boost your career and get financial support
                     </p>
-                    <Button onClick={() => document.querySelector('[value="available"]')?.click()}>
+                    <Button onClick={() => (document.querySelector('[value="available"]') as HTMLElement)?.click()}>
                       Browse Labels
                     </Button>
                   </CardContent>

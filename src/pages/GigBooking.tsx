@@ -82,7 +82,7 @@ const GigBooking = () => {
         .from('gigs')
         .select(`
           *,
-          venue:venues(*)
+          venues!gigs_venue_id_fkey(*)
         `)
         .eq('band_id', user.id) // For solo artists, band_id can be user_id
         .order('scheduled_date', { ascending: true });
@@ -91,8 +91,8 @@ const GigBooking = () => {
       setPlayerGigs((data || []).map(gig => ({
         ...gig,
         venue: {
-          ...gig.venue,
-          requirements: gig.venue?.requirements as Record<string, any>
+          ...gig.venues,
+          requirements: gig.venues?.requirements as Record<string, any>
         }
       })));
     } catch (error: any) {
@@ -158,7 +158,7 @@ const GigBooking = () => {
         })
         .select(`
           *,
-          venue:venues(*)
+          venues!gigs_venue_id_fkey(*)
         `)
         .single();
 
@@ -167,8 +167,8 @@ const GigBooking = () => {
       const newGig = {
         ...data,
         venue: {
-          ...data.venue,
-          requirements: data.venue?.requirements as Record<string, any>
+          ...data.venues,
+          requirements: data.venues?.requirements as Record<string, any>
         }
       };
 
