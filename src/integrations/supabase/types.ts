@@ -1330,6 +1330,9 @@ export type Database = {
           ticket_price: number | null
           tickets_sold: number | null
           tour_id: string
+          travel_cost: number | null
+          lodging_cost: number | null
+          misc_cost: number | null
           venue_id: string
         }
         Insert: {
@@ -1340,6 +1343,9 @@ export type Database = {
           ticket_price?: number | null
           tickets_sold?: number | null
           tour_id: string
+          travel_cost?: number | null
+          lodging_cost?: number | null
+          misc_cost?: number | null
           venue_id: string
         }
         Update: {
@@ -1350,6 +1356,9 @@ export type Database = {
           ticket_price?: number | null
           tickets_sold?: number | null
           tour_id?: string
+          travel_cost?: number | null
+          lodging_cost?: number | null
+          misc_cost?: number | null
           venue_id?: string
         }
         Relationships: [
