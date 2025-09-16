@@ -1262,6 +1262,7 @@ export type Database = {
       }
       songs: {
         Row: {
+          audio_layers: Json | null
           chart_position: number | null
           created_at: string
           genre: string
@@ -1280,6 +1281,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_layers?: Json | null
           chart_position?: number | null
           created_at?: string
           genre: string
@@ -1298,6 +1300,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_layers?: Json | null
           chart_position?: number | null
           created_at?: string
           genre?: string
