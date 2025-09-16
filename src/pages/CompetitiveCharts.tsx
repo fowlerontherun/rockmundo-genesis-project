@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
 import { toast } from 'sonner';
-import { Trophy, TrendingUp, Users, Crown, Star, Music, Target, Award, Zap, Calendar } from 'lucide-react';
+import { Trophy, TrendingUp, Crown, Award, Music, Zap } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
 
 interface PlayerRanking {
   id: string;
@@ -51,6 +51,13 @@ interface Achievement {
   unlocked?: boolean;
 }
 
+type ProfileSummary = Pick<
+  Database['public']['Tables']['profiles']['Row'],
+  'id' | 'user_id' | 'username' | 'display_name' | 'level' | 'fame' | 'avatar_url'
+>;
+type SongSummary = Pick<Database['public']['Tables']['songs']['Row'], 'artist_id' | 'plays' | 'popularity'>;
+type EventParticipantSummary = Pick<Database['public']['Tables']['event_participants']['Row'], 'event_id' | 'user_id'>;
+
 const CompetitiveCharts: React.FC = () => {
   const { user } = useAuth();
   const { profile, skills } = useGameData();
@@ -59,162 +66,362 @@ const CompetitiveCharts: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [userRank, setUserRank] = useState<PlayerRanking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [registeredCompetitions, setRegisteredCompetitions] = useState<Set<string>>(new Set());
+  const [registeredCompetitions, setRegisteredCompetitions] = useState<Set<string>>(() => new Set());
 
-  useEffect(() => {
-    if (user) {
-      loadCompetitiveData();
+  const previousRankingsRef = useRef<Map<string, number>>(new Map());
+
+  const fetchAchievements = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('achievements')
+      .select('*')
+      .order('rarity', { ascending: false });
+
+    if (error) throw error;
+    setAchievements(data ?? []);
+  }, []);
+
+  const fetchRankings = useCallback(async () => {
+    if (!user) {
+      setPlayerRankings([]);
+      setUserRank(null);
+      previousRankingsRef.current = new Map();
+      return;
     }
+
+    const previousRanks = previousRankingsRef.current;
+
+    const { data: topProfiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, user_id, username, display_name, level, fame, avatar_url')
+      .order('fame', { ascending: false })
+      .limit(50);
+
+    if (profilesError) throw profilesError;
+
+    let profilesList: ProfileSummary[] = (topProfiles ?? []) as ProfileSummary[];
+    let userProfileRecord = profilesList.find((item) => item.user_id === user.id);
+
+    if (!userProfileRecord) {
+      const { data: currentUserProfile, error: userProfileError } = await supabase
+        .from('profiles')
+        .select('id, user_id, username, display_name, level, fame, avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (userProfileError) throw userProfileError;
+
+      if (currentUserProfile) {
+        profilesList = [...profilesList, currentUserProfile as ProfileSummary];
+        userProfileRecord = currentUserProfile as ProfileSummary;
+      } else if (profile) {
+        const fallbackProfile: ProfileSummary = {
+          id: profile.id,
+          user_id: user.id,
+          username: profile.username,
+          display_name: profile.display_name,
+          level: profile.level,
+          fame: profile.fame,
+          avatar_url: profile.avatar_url ?? null,
+        };
+        profilesList = [...profilesList, fallbackProfile];
+        userProfileRecord = fallbackProfile;
+      }
+    }
+
+    if (profilesList.length === 0) {
+      setPlayerRankings([]);
+      setUserRank(null);
+      previousRankingsRef.current = new Map();
+      return;
+    }
+
+    const artistIds = Array.from(
+      new Set(profilesList.map((item) => item.user_id).filter((id): id is string => Boolean(id)))
+    );
+
+    let songsData: SongSummary[] = [];
+    if (artistIds.length > 0) {
+      const { data: songs, error: songsError } = await supabase
+        .from('songs')
+        .select('artist_id, plays, popularity')
+        .in('artist_id', artistIds);
+
+      if (songsError) throw songsError;
+      songsData = (songs ?? []) as SongSummary[];
+    }
+
+    const statsByArtist = new Map<string, { totalPlays: number; hitSongs: number }>();
+
+    songsData.forEach((song) => {
+      if (!song.artist_id) return;
+      const stats = statsByArtist.get(song.artist_id) ?? { totalPlays: 0, hitSongs: 0 };
+      const plays = typeof song.plays === 'number' ? song.plays : 0;
+      const popularity = typeof song.popularity === 'number' ? song.popularity : 0;
+      stats.totalPlays += plays;
+      if (popularity >= 80 || plays >= 100000) {
+        stats.hitSongs += 1;
+      }
+      statsByArtist.set(song.artist_id, stats);
+    });
+
+    let higherRankCount: number | null = null;
+    if (userProfileRecord) {
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .gt('fame', userProfileRecord.fame ?? 0);
+
+      if (countError) {
+        console.error('Error calculating user rank position:', countError);
+      } else if (typeof count === 'number') {
+        higherRankCount = count;
+      }
+    }
+
+    const ranked = profilesList
+      .map((profileRow) => {
+        const stats = statsByArtist.get(profileRow.user_id) ?? { totalPlays: 0, hitSongs: 0 };
+        const playerId = profileRow.user_id ?? profileRow.id;
+        return {
+          id: playerId,
+          username: profileRow.username || 'player',
+          display_name: profileRow.display_name || profileRow.username || 'Unknown Artist',
+          level: profileRow.level ?? 1,
+          fame: profileRow.fame ?? 0,
+          total_plays: stats.totalPlays,
+          hit_songs: stats.hitSongs,
+          rank: 0,
+          trend: 'same' as PlayerRanking['trend'],
+          avatar_url: profileRow.avatar_url ?? undefined,
+        };
+      })
+      .sort((a, b) => b.fame - a.fame);
+
+    const updatedRankings: PlayerRanking[] = [];
+    const nextPreviousRanks = new Map<string, number>();
+    let computedUserRank: PlayerRanking | null = null;
+
+    ranked.forEach((player, index) => {
+      let rank = index + 1;
+      if (player.id === user.id && higherRankCount != null) {
+        rank = higherRankCount + 1;
+      }
+      const previousRank = previousRanks.get(player.id);
+      let trend: PlayerRanking['trend'] = 'same';
+      if (previousRank && previousRank !== rank) {
+        trend = previousRank > rank ? 'up' : 'down';
+      }
+      const playerWithRank: PlayerRanking = { ...player, rank, trend };
+      updatedRankings.push(playerWithRank);
+      nextPreviousRanks.set(player.id, rank);
+      if (player.id === user.id) {
+        computedUserRank = playerWithRank;
+      }
+    });
+
+    previousRankingsRef.current = nextPreviousRanks;
+    setPlayerRankings(updatedRankings);
+    setUserRank(computedUserRank);
+  }, [user, profile]);
+
+  const fetchCompetitions = useCallback(async () => {
+    if (!user) {
+      setCompetitions([]);
+      setRegisteredCompetitions(new Set());
+      return;
+    }
+
+    const { data: eventsData, error: eventsError } = await supabase
+      .from('game_events')
+      .select(
+        'id, title, description, start_date, end_date, rewards, requirements, max_participants, current_participants, event_type, is_active'
+      )
+      .order('start_date', { ascending: true });
+
+    if (eventsError) throw eventsError;
+
+    const eventIds = (eventsData ?? []).map((event) => event.id).filter((id): id is string => Boolean(id));
+
+    let participants: EventParticipantSummary[] = [];
+    if (eventIds.length > 0) {
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('event_participants')
+        .select('event_id, user_id')
+        .in('event_id', eventIds);
+
+      if (participantsError) throw participantsError;
+      participants = (participantsData ?? []) as EventParticipantSummary[];
+    }
+
+    const participantCounts = new Map<string, number>();
+    const registeredSet = new Set<string>();
+
+    participants.forEach((entry) => {
+      participantCounts.set(entry.event_id, (participantCounts.get(entry.event_id) ?? 0) + 1);
+      if (entry.user_id === user.id) {
+        registeredSet.add(entry.event_id);
+      }
+    });
+
+    const now = new Date();
+    const competitionsData: Competition[] = (eventsData ?? []).map((event) => {
+      const requirementEntries = Object.entries((event.requirements ?? {}) as Record<string, unknown>);
+      const rewardEntries = Object.entries((event.rewards ?? {}) as Record<string, unknown>);
+
+      const normalizedRequirements: Record<string, number> = {};
+      let entryFee = 0;
+
+      requirementEntries.forEach(([key, value]) => {
+        if (key === 'entry_fee' || key === 'entryFee') {
+          if (typeof value === 'number') {
+            entryFee = value;
+          } else if (typeof value === 'string') {
+            const parsed = Number(value);
+            if (!Number.isNaN(parsed)) {
+              entryFee = parsed;
+            }
+          }
+        } else if (typeof value === 'number') {
+          normalizedRequirements[key] = value;
+        } else if (typeof value === 'string') {
+          const parsed = Number(value);
+          if (!Number.isNaN(parsed)) {
+            normalizedRequirements[key] = parsed;
+          }
+        }
+      });
+
+      let prizePool = 0;
+      rewardEntries.forEach(([key, value]) => {
+        if (key === 'prize_pool' || key === 'prizePool' || key === 'cash') {
+          if (typeof value === 'number') {
+            prizePool = value;
+          } else if (typeof value === 'string') {
+            const parsed = Number(value);
+            if (!Number.isNaN(parsed)) {
+              prizePool = parsed;
+            }
+          }
+        }
+      });
+
+      const participantsCount = participantCounts.get(event.id) ?? event.current_participants ?? 0;
+      const maxParticipants =
+        event.max_participants && event.max_participants > 0 ? event.max_participants : Math.max(participantsCount, 1);
+      const startDate = new Date(event.start_date);
+      const endDate = new Date(event.end_date);
+      const isActive =
+        typeof event.is_active === 'boolean' ? event.is_active : startDate <= now && endDate >= now;
+
+      return {
+        id: event.id,
+        name: event.title,
+        description: event.description ?? '',
+        start_date: event.start_date,
+        end_date: event.end_date,
+        prize_pool: prizePool,
+        entry_fee: entryFee,
+        participants: participantsCount,
+        max_participants: maxParticipants,
+        category: event.event_type,
+        requirements: normalizedRequirements,
+        is_active: isActive,
+        user_registered: registeredSet.has(event.id),
+      };
+    });
+
+    setCompetitions(competitionsData);
+    setRegisteredCompetitions(registeredSet);
   }, [user]);
 
-  const loadCompetitiveData = async () => {
-    if (!user) return;
+  const loadCompetitiveData = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      setPlayerRankings([]);
+      setCompetitions([]);
+      setUserRank(null);
+      setRegisteredCompetitions(new Set());
+      return;
+    }
 
     try {
       setLoading(true);
-      
-      // Load global rankings (simulated)
-      const rankings = generateGlobalRankings();
-      setPlayerRankings(rankings);
-      
-      // Find user's rank
-      const userRanking = rankings.find(r => r.id === user.id);
-      setUserRank(userRanking || null);
-
-      // Load competitions (simulated)
-      const competitionsData = generateCompetitions();
-      setCompetitions(competitionsData);
-
-      // Load achievements
-      const { data: achievementsData, error: achievementsError } = await supabase
-        .from('achievements')
-        .select('*')
-        .order('rarity', { ascending: false });
-
-      if (achievementsError) throw achievementsError;
-      setAchievements(achievementsData || []);
-
-    } catch (error: any) {
+      await Promise.all([fetchRankings(), fetchCompetitions(), fetchAchievements()]);
+    } catch (error) {
       console.error('Error loading competitive data:', error);
       toast.error('Failed to load competitive data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, fetchRankings, fetchCompetitions, fetchAchievements]);
 
-  const generateGlobalRankings = (): PlayerRanking[] => {
-    const baseRankings = [
-      { username: 'RockLegend', display_name: 'The Rock Legend', level: 25, fame: 15000, total_plays: 500000, hit_songs: 8 },
-      { username: 'MelodyMaster', display_name: 'Melody Master', level: 23, fame: 12000, total_plays: 400000, hit_songs: 6 },
-      { username: 'BassDropper', display_name: 'Bass Dropper', level: 22, fame: 11000, total_plays: 350000, hit_songs: 5 },
-      { username: 'DrumSolo99', display_name: 'Drum Solo', level: 21, fame: 10000, total_plays: 300000, hit_songs: 4 },
-      { username: 'VocalVirtuoso', display_name: 'Vocal Virtuoso', level: 20, fame: 9500, total_plays: 280000, hit_songs: 5 },
-    ];
+  useEffect(() => {
+    loadCompetitiveData();
+  }, [loadCompetitiveData]);
 
-    // Add user if they exist
-    if (profile) {
-      baseRankings.push({
-        username: profile.username,
-        display_name: profile.display_name || profile.username,
-        level: profile.level,
-        fame: profile.fame,
-        total_plays: Math.floor(Math.random() * 100000),
-        hit_songs: Math.floor(Math.random() * 3)
-      });
-    }
+  useEffect(() => {
+    previousRankingsRef.current = new Map();
+  }, [user?.id]);
 
-    // Add more random players
-    for (let i = 0; i < 15; i++) {
-      baseRankings.push({
-        username: `Player${i + 6}`,
-        display_name: `Player ${i + 6}`,
-        level: Math.floor(Math.random() * 15) + 5,
-        fame: Math.floor(Math.random() * 5000) + 1000,
-        total_plays: Math.floor(Math.random() * 200000) + 10000,
-        hit_songs: Math.floor(Math.random() * 3)
-      });
-    }
+  const handleRankingRealtime = useCallback(() => {
+    fetchRankings().catch((error) => console.error('Error refreshing rankings:', error));
+  }, [fetchRankings]);
 
-    // Sort by fame and assign ranks
-    return baseRankings
-      .sort((a, b) => b.fame - a.fame)
-      .map((player, index) => ({
-        ...player,
-        id: user?.id && player.username === profile?.username ? user.id : `player-${index}`,
-        rank: index + 1,
-        trend: Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'same'
-      }));
-  };
+  const handleCompetitionRealtime = useCallback(() => {
+    fetchCompetitions().catch((error) => console.error('Error refreshing competitions:', error));
+  }, [fetchCompetitions]);
 
-  const generateCompetitions = (): Competition[] => {
-    const now = new Date();
-    const oneWeek = 7 * 24 * 60 * 60 * 1000;
-    
-    return [
-      {
-        id: 'battle-of-bands',
-        name: 'Battle of the Bands',
-        description: 'Compete against other bands in weekly performances',
-        start_date: new Date(now.getTime() - oneWeek).toISOString(),
-        end_date: new Date(now.getTime() + oneWeek).toISOString(),
-        prize_pool: 50000,
-        entry_fee: 1000,
-        participants: 87,
-        max_participants: 100,
-        category: 'performance',
-        requirements: { performance: 50, fame: 1000 },
-        is_active: true,
-        user_registered: false
-      },
-      {
-        id: 'songwriting-contest',
-        name: 'Songwriting Contest',
-        description: 'Create the most popular song of the month',
-        start_date: new Date(now.getTime() - oneWeek * 2).toISOString(),
-        end_date: new Date(now.getTime() + oneWeek * 2).toISOString(),
-        prize_pool: 30000,
-        entry_fee: 500,
-        participants: 156,
-        max_participants: 200,
-        category: 'songwriting',
-        requirements: { songwriting: 40, level: 10 },
-        is_active: true,
-        user_registered: false
-      },
-      {
-        id: 'viral-challenge',
-        name: 'Viral Challenge',
-        description: 'Get the most streams in 48 hours',
-        start_date: new Date(now.getTime() + oneWeek).toISOString(),
-        end_date: new Date(now.getTime() + oneWeek + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        prize_pool: 75000,
-        entry_fee: 2000,
-        participants: 23,
-        max_participants: 50,
-        category: 'streaming',
-        requirements: { fame: 5000, level: 15 },
-        is_active: false,
-        user_registered: false
-      }
-    ];
-  };
+  useEffect(() => {
+    if (!user) return;
+
+    const rankingChannel = supabase
+      .channel('global-rankings-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handleRankingRealtime)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'songs' }, handleRankingRealtime);
+
+    const competitionsChannel = supabase
+      .channel('competition-events-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_events' }, handleCompetitionRealtime)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_participants' }, handleCompetitionRealtime);
+
+    rankingChannel.subscribe();
+    competitionsChannel.subscribe();
+
+    return () => {
+      supabase.removeChannel(rankingChannel);
+      supabase.removeChannel(competitionsChannel);
+    };
+  }, [user?.id, handleRankingRealtime, handleCompetitionRealtime]);
 
   const registerForCompetition = async (competitionId: string) => {
     if (!profile || !user) return;
 
-    const competition = competitions.find(c => c.id === competitionId);
+    const competition = competitions.find((c) => c.id === competitionId);
     if (!competition) return;
 
-    // Check requirements
+    if (competition.user_registered || registeredCompetitions.has(competitionId)) {
+      toast.info('You are already registered for this competition');
+      return;
+    }
+
+    if (competition.participants >= competition.max_participants) {
+      toast.error('This competition is already full');
+      return;
+    }
+
     const meetsRequirements = Object.entries(competition.requirements).every(([key, value]) => {
-      if (key === 'level') return profile.level >= value;
-      if (key === 'fame') return profile.fame >= value;
-      if (skills && key in skills) return (skills as any)[key] >= value;
+      const requiredValue = Number(value);
+      if (Number.isNaN(requiredValue)) return true;
+      if (key === 'level') return profile.level >= requiredValue;
+      if (key === 'fame') return profile.fame >= requiredValue;
+      if (skills && key in skills) {
+        return (skills as Record<string, number>)[key] >= requiredValue;
+      }
       return true;
     });
 
     if (!meetsRequirements) {
-      toast.error('You don\'t meet the requirements for this competition');
+      toast.error("You don't meet the requirements for this competition");
       return;
     }
 
@@ -224,14 +431,37 @@ const CompetitiveCharts: React.FC = () => {
     }
 
     try {
-      // In a real implementation, this would be stored in the database
-      setRegisteredCompetitions(prev => new Set([...prev, competitionId]));
-      setCompetitions(prev => prev.map(c => 
-        c.id === competitionId 
-          ? { ...c, participants: c.participants + 1, user_registered: true }
-          : c
-      ));
-      
+      const { error } = await supabase.from('event_participants').insert({
+        event_id: competitionId,
+        user_id: user.id,
+      });
+
+      if (error) {
+        if ((error as { code?: string }).code === '23505') {
+          toast.info('You are already registered for this competition');
+          return;
+        }
+        throw error;
+      }
+
+      setRegisteredCompetitions((prev) => {
+        const updated = new Set(prev);
+        updated.add(competitionId);
+        return updated;
+      });
+
+      setCompetitions((prev) =>
+        prev.map((c) =>
+          c.id === competitionId
+            ? {
+                ...c,
+                participants: Math.min(c.participants + 1, c.max_participants),
+                user_registered: true,
+              }
+            : c
+        )
+      );
+
       toast.success(`Registered for ${competition.name}!`);
     } catch (error: any) {
       console.error('Error registering for competition:', error);
@@ -418,8 +648,11 @@ const CompetitiveCharts: React.FC = () => {
                     </div>
                   </div>
 
-                  <Progress 
-                    value={(competition.participants / competition.max_participants) * 100} 
+                  <Progress
+                    value={Math.min(
+                      100,
+                      (competition.participants / Math.max(competition.max_participants, 1)) * 100
+                    )}
                     className="h-2"
                   />
 
