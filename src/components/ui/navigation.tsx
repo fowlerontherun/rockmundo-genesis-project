@@ -31,25 +31,65 @@ const Navigation = () => {
   const { signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  const navItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: Users, label: "Band", path: "/band" },
-    { icon: Heart, label: "Chemistry", path: "/chemistry" },
-    { icon: Calendar, label: "Gigs", path: "/gigs" },
-    { icon: MapPin, label: "Venues", path: "/venues" },
-    { icon: Music, label: "Studio", path: "/music" },
-    { icon: Play, label: "Create", path: "/create" },
-    { icon: TrendingUp, label: "Training", path: "/training" },
-    { icon: Play, label: "Streaming", path: "/streaming" },
-    { icon: TrendingUp, label: "Charts", path: "/charts" },
-    { icon: Building2, label: "Labels", path: "/labels" },
-    { icon: Share2, label: "Social", path: "/social" },
-    { icon: Calendar, label: "Schedule", path: "/schedule" },
-    { icon: ShoppingCart, label: "Equipment", path: "/equipment" },
-    { icon: Users, label: "Fans", path: "/fans" },
-    { icon: Trophy, label: "Achievements", path: "/achievements" },
-    { icon: MapPin, label: "Tours", path: "/tours" },
-    { icon: User, label: "Profile", path: "/profile" },
+  const navSections = [
+    {
+      title: "Core",
+      items: [
+        { icon: Home, label: "Dashboard", path: "/dashboard" },
+        { icon: User, label: "Profile", path: "/profile" },
+        { icon: Calendar, label: "Schedule", path: "/schedule" },
+        { icon: Trophy, label: "Achievements", path: "/achievements" },
+      ]
+    },
+    {
+      title: "Music & Creation",
+      items: [
+        { icon: Music, label: "Music Studio", path: "/music" },
+        { icon: Play, label: "Music Creation", path: "/create" },
+        { icon: TrendingUp, label: "Skill Training", path: "/training" },
+      ]
+    },
+    {
+      title: "Performance & Touring",
+      items: [
+        { icon: Calendar, label: "Gig Booking", path: "/gigs" },
+        { icon: MapPin, label: "Tour Manager", path: "/tours" },
+        { icon: MapPin, label: "Venue Management", path: "/venues" },
+      ]
+    },
+    {
+      title: "Band & Social",
+      items: [
+        { icon: Users, label: "Band Manager", path: "/band" },
+        { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
+        { icon: Share2, label: "Social Media", path: "/social" },
+        { icon: Users, label: "Fan Management", path: "/fans" },
+      ]
+    },
+    {
+      title: "Business & Economy",
+      items: [
+        { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
+        { icon: Building2, label: "Record Label", path: "/labels" },
+        { icon: Play, label: "Streaming", path: "/streaming" },
+      ]
+    },
+    {
+      title: "Competition & Charts",
+      items: [
+        { icon: TrendingUp, label: "World Pulse", path: "/charts" },
+        { icon: Trophy, label: "Competitive Charts", path: "/charts-competitive" },
+      ]
+    },
+    {
+      title: "Enhanced Features",
+      items: [
+        { icon: Users, label: "Enhanced Band", path: "/band-enhanced" },
+        { icon: ShoppingCart, label: "Enhanced Store", path: "/equipment-enhanced" },
+        { icon: Users, label: "Enhanced Fans", path: "/fans-enhanced" },
+        { icon: MapPin, label: "Tour System", path: "/tours-system" },
+      ]
+    }
   ];
 
   const handleLogout = async () => {
@@ -79,25 +119,34 @@ const Navigation = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Button
-              key={item.path}
-              variant={isActive(item.path) ? "secondary" : "ghost"}
-              className={`w-full justify-start gap-3 ${
-                isActive(item.path) 
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-              onClick={() => handleNavigation(item.path)}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Button>
-          );
-        })}
+      <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+        {navSections.map((section) => (
+          <div key={section.title} className="space-y-2">
+            <h3 className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              {section.title}
+            </h3>
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.path}
+                    variant={isActive(item.path) ? "secondary" : "ghost"}
+                    className={`w-full justify-start gap-3 ${
+                      isActive(item.path) 
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" 
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    }`}
+                    onClick={() => handleNavigation(item.path)}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Logout */}
@@ -148,7 +197,7 @@ const Navigation = () => {
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border">
         <div className="flex justify-around items-center py-2">
-          {navItems.slice(0, 5).map((item) => {
+          {navSections[0].items.slice(0, 4).map((item) => {
             const Icon = item.icon;
             return (
               <Button
@@ -163,10 +212,19 @@ const Navigation = () => {
                 onClick={() => handleNavigation(item.path)}
               >
                 <Icon className="h-4 w-4" />
-                <span className="text-xs font-oswald">{item.label}</span>
+                <span className="text-xs font-oswald">{item.label.split(' ')[0]}</span>
               </Button>
             );
           })}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex flex-col gap-1 h-12 px-2 text-muted-foreground"
+            onClick={() => setIsOpen(true)}
+          >
+            <Menu className="h-4 w-4" />
+            <span className="text-xs font-oswald">More</span>
+          </Button>
         </div>
       </div>
     </>
