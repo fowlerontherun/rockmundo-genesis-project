@@ -17,6 +17,7 @@ interface EquipmentItem {
   subcategory: string;
   price: number;
   rarity: string;
+  stock: number;
   stat_boosts: {
     guitar?: number;
     vocals?: number;
@@ -43,7 +44,7 @@ const EquipmentStore = () => {
   const [playerEquipment, setPlayerEquipment] = useState<PlayerEquipment[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [purchasing, setPurchasing] = useState(false);
+  const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
 
   const categories = ["all", "instruments", "accessories", "studio", "stage"];
@@ -74,7 +75,8 @@ const EquipmentStore = () => {
         // Transform the data to ensure stat_boosts is properly typed
         const transformedEquipment = equipmentResponse.data.map(item => ({
           ...item,
-          stat_boosts: (item.stat_boosts as any) || {}
+          stat_boosts: (item.stat_boosts as any) || {},
+          stock: typeof item.stock === "number" ? item.stock : 0
         }));
         setEquipment(transformedEquipment);
       }
@@ -111,6 +113,26 @@ const EquipmentStore = () => {
   };
 
   const purchaseEquipment = async (item: EquipmentItem) => {
+    if (purchasingItemId) return;
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please sign in to purchase equipment."
+      });
+      return;
+    }
+
+    if (item.stock <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Out of Stock",
+        description: `${item.name} is currently unavailable.`
+      });
+      return;
+    }
+
     if ((profile?.cash || 0) < item.price) {
       toast({
         variant: "destructive",
@@ -120,48 +142,60 @@ const EquipmentStore = () => {
       return;
     }
 
-    setPurchasing(true);
+    setPurchasingItemId(item.id);
 
     try {
-      // Add equipment to player inventory
-      const { error: equipmentError } = await supabase
-        .from("player_equipment")
-        .insert({
-          user_id: user?.id,
-          equipment_id: item.id,
-          is_equipped: false
-        });
+      const { data, error } = await supabase
+        .rpc("purchase_equipment_item", { p_equipment_id: item.id })
+        .single();
 
-      if (equipmentError) throw equipmentError;
+      if (error) {
+        const message = error.message?.toLowerCase() ?? "";
 
-      // Update player cash
-      const newCash = (profile?.cash || 0) - item.price;
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ cash: newCash })
-        .eq("user_id", user?.id);
+        if (message.includes("out of stock")) {
+          toast({
+            variant: "destructive",
+            title: "Out of Stock",
+            description: `${item.name} is currently unavailable.`
+          });
+        } else if (message.includes("insufficient")) {
+          toast({
+            variant: "destructive",
+            title: "Insufficient Funds",
+            description: `You need $${item.price} to purchase this equipment.`
+          });
+        } else if (message.includes("already owned")) {
+          toast({
+            variant: "destructive",
+            title: "Already Owned",
+            description: `You already own ${item.name}.`
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Purchase Failed",
+            description: "Failed to purchase equipment. Please try again."
+          });
+        }
 
-      if (profileError) throw profileError;
+        return;
+      }
 
-      // Add activity
-      await supabase
-        .from("activity_feed")
-        .insert({
-          user_id: user?.id,
-          activity_type: "purchase",
-          message: `Purchased ${item.name}`,
-          earnings: -item.price
-        });
+      if (data) {
+        setProfile(prev => prev ? { ...prev, cash: data.new_cash } : prev);
+        setEquipment(prev => prev.map(eq =>
+          eq.id === item.id
+            ? { ...eq, stock: data.remaining_stock }
+            : eq
+        ));
+      }
 
-      setProfile(prev => prev ? { ...prev, cash: newCash } : null);
-      
       toast({
         title: "Purchase Successful!",
         description: `You've acquired the ${item.name}. Check your inventory to equip it.`
       });
 
-      fetchData(); // Refresh data
-
+      await fetchData();
     } catch (error) {
       console.error("Error purchasing equipment:", error);
       toast({
@@ -170,7 +204,7 @@ const EquipmentStore = () => {
         description: "Failed to purchase equipment. Please try again."
       });
     } finally {
-      setPurchasing(false);
+      setPurchasingItemId(null);
     }
   };
 
@@ -337,6 +371,12 @@ const EquipmentStore = () => {
                         <Badge variant="outline" className="capitalize text-xs">
                           {item.rarity}
                         </Badge>
+                        {item.stock <= 0 && (
+                          <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            Out of Stock
+                          </Badge>
+                        )}
                         {owned && (
                           <Badge variant="secondary" className="text-xs">
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -371,11 +411,26 @@ const EquipmentStore = () => {
                     )}
 
                     <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-2">
-                        <Coins className="h-4 w-4 text-yellow-400" />
-                        <span className="font-mono text-lg">${item.price.toLocaleString()}</span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <Coins className="h-4 w-4 text-yellow-400" />
+                          <span className="font-mono text-lg">${item.price.toLocaleString()}</span>
+                        </div>
+                        <Badge
+                          variant={item.stock > 0 ? "outline" : "destructive"}
+                          className="w-fit text-xs flex items-center gap-1"
+                        >
+                          {item.stock > 0 ? (
+                            `${item.stock} in stock`
+                          ) : (
+                            <>
+                              <Lock className="h-3 w-3" />
+                              Out of Stock
+                            </>
+                          )}
+                        </Badge>
                       </div>
-                      
+
                       {owned ? (
                         <Badge variant="secondary">
                           <CheckCircle className="h-3 w-3 mr-1" />
@@ -384,10 +439,16 @@ const EquipmentStore = () => {
                       ) : (
                         <Button
                           onClick={() => purchaseEquipment(item)}
-                          disabled={purchasing || (profile?.cash || 0) < item.price}
+                          disabled={!!purchasingItemId || (profile?.cash || 0) < item.price || item.stock <= 0}
                           size="sm"
                         >
-                          {purchasing ? "Buying..." : (profile?.cash || 0) < item.price ? "Can't Afford" : "Buy"}
+                          {purchasingItemId === item.id
+                            ? "Buying..."
+                            : item.stock <= 0
+                              ? "Out of Stock"
+                              : (profile?.cash || 0) < item.price
+                                ? "Can't Afford"
+                                : "Buy"}
                         </Button>
                       )}
                     </div>

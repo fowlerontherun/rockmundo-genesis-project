@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
+import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 
 interface Venue {
   id: string;
@@ -33,6 +34,7 @@ interface Gig {
   attendance: number;
   fan_gain: number;
   venue: Venue;
+  environment_modifiers?: EnvironmentModifierSummary | null;
 }
 
 const GigBooking = () => {
@@ -94,7 +96,8 @@ const GigBooking = () => {
         venue: {
           ...gig.venues,
           requirements: gig.venues?.requirements as Record<string, any>
-        }
+        },
+        environment_modifiers: (gig as { environment_modifiers?: EnvironmentModifierSummary | null }).environment_modifiers ?? null
       })));
     } catch (error: any) {
       console.error('Error loading player gigs:', error);
@@ -148,15 +151,38 @@ const GigBooking = () => {
       
       const payment = calculateGigPayment(venue);
 
+      let environmentSummary: EnvironmentModifierSummary | null = null;
+      try {
+        environmentSummary = await fetchEnvironmentModifiers(venue.location, futureDate.toISOString());
+      } catch (envError) {
+        console.error('Error fetching environment modifiers for gig:', envError);
+      }
+
+      const baseAttendance = Math.max(1, Math.round(venue.capacity * 0.6));
+      const attendanceMultiplier = environmentSummary?.attendanceMultiplier ?? 1;
+      const projectedAttendance = Math.max(1, Math.round(baseAttendance * attendanceMultiplier));
+
+      const gigInsertPayload: Record<string, unknown> = {
+        venue_id: venue.id,
+        band_id: user.id, // For solo artists
+        scheduled_date: futureDate.toISOString(),
+        payment: payment,
+        status: 'scheduled',
+        attendance: projectedAttendance,
+      };
+
+      if (environmentSummary) {
+        gigInsertPayload.environment_modifiers = {
+          ...environmentSummary,
+          projections: {
+            attendance: projectedAttendance,
+          },
+        } as EnvironmentModifierSummary;
+      }
+
       const { data, error } = await supabase
         .from('gigs')
-        .insert({
-          venue_id: venue.id,
-          band_id: user.id, // For solo artists
-          scheduled_date: futureDate.toISOString(),
-          payment: payment,
-          status: 'scheduled'
-        })
+        .insert(gigInsertPayload as any)
         .select(`
           *,
           venues!gigs_venue_id_fkey(*)
@@ -165,16 +191,62 @@ const GigBooking = () => {
 
       if (error) throw error;
 
+      const environmentFromDb = (data as { environment_modifiers?: EnvironmentModifierSummary | null }).environment_modifiers ?? null;
+      const mergedEnvironment = environmentFromDb ?? (environmentSummary
+        ? {
+            ...environmentSummary,
+            projections: {
+              attendance: projectedAttendance,
+            },
+          }
+        : null);
+
       const newGig = {
         ...data,
         venue: {
           ...data.venues,
           requirements: data.venues?.requirements as Record<string, any>
-        }
+        },
+        environment_modifiers: mergedEnvironment,
       };
 
       const eventEndTime = new Date(futureDate);
       eventEndTime.setHours(eventEndTime.getHours() + 2);
+
+      const environmentNotes = mergedEnvironment?.applied?.length
+        ? mergedEnvironment.applied
+            .map((effect) => {
+              const parts: string[] = [];
+              if (effect.source === 'weather') {
+                parts.push(effect.name);
+              } else {
+                parts.push(effect.name);
+              }
+
+              const modifiers: string[] = [];
+              if (effect.attendanceMultiplier && effect.attendanceMultiplier !== 1) {
+                modifiers.push(`attendance ${Math.round((effect.attendanceMultiplier - 1) * 100)}%`);
+              }
+              if (effect.costMultiplier && effect.costMultiplier !== 1) {
+                modifiers.push(`cost ${Math.round((effect.costMultiplier - 1) * 100)}%`);
+              }
+              if (effect.moraleModifier && effect.moraleModifier !== 1) {
+                modifiers.push(`morale ${Math.round((effect.moraleModifier - 1) * 100)}%`);
+              }
+
+              if (modifiers.length) {
+                parts.push(`(${modifiers.join(', ')})`);
+              }
+
+              return parts.join(' ');
+            })
+            .join(' | ')
+        : null;
+
+      const scheduleDescriptionBase = `Live performance at ${venue.name}`;
+      const scheduleDescription = environmentNotes
+        ? `${scheduleDescriptionBase} • Env: ${environmentNotes}`
+        : scheduleDescriptionBase;
 
       const { error: scheduleError } = await supabase
         .from('schedule_events')
@@ -182,7 +254,7 @@ const GigBooking = () => {
           user_id: user.id,
           event_type: 'gig',
           title: `Gig at ${venue.name}`,
-          description: `Live performance at ${venue.name}`,
+          description: scheduleDescription,
           start_time: futureDate.toISOString(),
           end_time: eventEndTime.toISOString(),
           location: venue.location,
@@ -203,9 +275,18 @@ const GigBooking = () => {
       
       await addActivity('gig', `Booked gig at ${venue.name}`, 0);
 
+      const toastParts = [
+        `You're performing at ${venue.name} on ${futureDate.toLocaleDateString()}.`,
+        `Projected attendance: ${projectedAttendance.toLocaleString()}.`,
+      ];
+
+      if (environmentNotes) {
+        toastParts.push(`Environment: ${environmentNotes}.`);
+      }
+
       toast({
         title: "Gig booked!",
-        description: `You're performing at ${venue.name} on ${futureDate.toLocaleDateString()}`,
+        description: toastParts.join(' '),
       });
     } catch (error: any) {
       console.error('Error booking gig:', error);
@@ -225,9 +306,13 @@ const GigBooking = () => {
     try {
       const successChance = calculateSuccessChance(gig.venue);
       const isSuccess = Math.random() * 100 < successChance;
-      
+
+      const environmentModifiers = gig.environment_modifiers;
+      const attendanceMultiplier = environmentModifiers?.attendanceMultiplier ?? 1;
+      const moraleMultiplier = environmentModifiers?.moraleModifier ?? 1;
+
       let attendance, fanGain, actualPayment;
-      
+
       if (isSuccess) {
         attendance = Math.round(gig.venue.capacity * (0.6 + Math.random() * 0.4)); // 60-100% capacity
         fanGain = Math.round(attendance * 0.1 * (gig.venue.prestige_level / 5));
@@ -238,15 +323,34 @@ const GigBooking = () => {
         actualPayment = Math.round(gig.payment * 0.5); // Half payment for poor performance
       }
 
+      attendance = Math.max(1, Math.round(attendance * attendanceMultiplier));
+      fanGain = Math.max(0, Math.round(fanGain * moraleMultiplier));
+
       // Update gig status
+      const updatedEnvironment = environmentModifiers
+        ? {
+            ...environmentModifiers,
+            projections: {
+              ...environmentModifiers.projections,
+              attendance,
+            },
+          }
+        : null;
+
+      const gigUpdatePayload: Record<string, unknown> = {
+        status: 'completed',
+        attendance: attendance,
+        fan_gain: fanGain,
+        payment: actualPayment,
+      };
+
+      if (updatedEnvironment) {
+        gigUpdatePayload.environment_modifiers = updatedEnvironment;
+      }
+
       const { error } = await supabase
         .from('gigs')
-        .update({
-          status: 'completed',
-          attendance: attendance,
-          fan_gain: fanGain,
-          payment: actualPayment
-        })
+        .update(gigUpdatePayload as any)
         .eq('id', gig.id);
 
       if (error) throw error;
@@ -263,9 +367,16 @@ const GigBooking = () => {
       });
 
       // Update local state
-      setPlayerGigs(prev => prev.map(g => 
-        g.id === gig.id 
-          ? { ...g, status: 'completed', attendance, fan_gain: fanGain, payment: actualPayment }
+      setPlayerGigs(prev => prev.map(g =>
+        g.id === gig.id
+          ? {
+              ...g,
+              status: 'completed',
+              attendance,
+              fan_gain: fanGain,
+              payment: actualPayment,
+              environment_modifiers: updatedEnvironment ?? g.environment_modifiers,
+            }
           : g
       ));
 
@@ -314,6 +425,30 @@ const GigBooking = () => {
       case 'cancelled': return 'bg-destructive text-destructive-foreground';
       default: return 'bg-secondary text-secondary-foreground';
     }
+  };
+
+  const formatEnvironmentDelta = (value?: number, label?: string) => {
+    if (!value || value === 1 || !label) {
+      return null;
+    }
+
+    const percent = Math.round((value - 1) * 100);
+    if (percent === 0) {
+      return null;
+    }
+
+    const sign = percent > 0 ? '+' : '';
+    return `${label} ${sign}${percent}%`;
+  };
+
+  const summarizeEnvironmentEffect = (effect: AppliedEnvironmentEffect) => {
+    const changes = [
+      formatEnvironmentDelta(effect.attendanceMultiplier, 'Attendance'),
+      formatEnvironmentDelta(effect.costMultiplier, 'Costs'),
+      formatEnvironmentDelta(effect.moraleModifier, 'Morale'),
+    ].filter(Boolean);
+
+    return changes.join(' • ');
   };
 
   if (loading) {
@@ -477,6 +612,37 @@ const GigBooking = () => {
                           </div>
                           <Progress value={calculateSuccessChance(gig.venue)} className="h-2" />
                         </div>
+
+                        {gig.environment_modifiers?.projections?.attendance && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">Projected Attendance</span>
+                            <span className="font-semibold">
+                              {gig.environment_modifiers.projections.attendance.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+
+                        {gig.environment_modifiers?.applied?.length ? (
+                          <div className="space-y-1 border-t border-border/40 pt-3 text-xs">
+                            <div className="text-sm font-semibold text-foreground">Environment Effects</div>
+                            <div className="space-y-1">
+                              {gig.environment_modifiers.applied.map((effect) => {
+                                const summary = summarizeEnvironmentEffect(effect);
+                                const detail = summary || effect.description;
+                                return (
+                                  <div key={`${gig.id}-${effect.id}`} className="flex items-start justify-between gap-2">
+                                    <span className="font-medium text-foreground">{effect.name}</span>
+                                    {detail && (
+                                      <span className="text-muted-foreground text-right">
+                                        {detail}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : null}
 
                         <Button
                           onClick={() => performGig(gig)}

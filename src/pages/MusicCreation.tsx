@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,79 @@ interface Song {
   plays: number;
   duration: number;
   created_at: string;
+  audio_layers?: SongLayer[];
 }
+
+interface SongLayer {
+  name: string;
+  url: string;
+  duration?: number;
+  storagePath?: string;
+  created_at?: string;
+}
+
+interface LocalRecording {
+  name: string;
+  url: string;
+  blob: Blob;
+  duration: number;
+}
+
+type SupabaseSongRow = {
+  id: string;
+  title?: string | null;
+  genre?: string | null;
+  lyrics?: string | null;
+  status?: string | null;
+  quality_score?: number | null;
+  recording_cost?: number | null;
+  production_cost?: number | null;
+  popularity?: number | null;
+  plays?: number | null;
+  streams?: number | null;
+  duration?: number | null;
+  created_at?: string | null;
+  audio_layers?: unknown;
+};
+
+type ProfileInfo = { cash?: number | null } & Record<string, unknown>;
+
+interface ToneRecorder {
+  start?: () => Promise<void>;
+  stop: () => Promise<Blob>;
+}
+
+interface ToneUserMedia {
+  open: () => Promise<void>;
+  close?: () => Promise<void>;
+  connect: (destination: unknown) => void;
+  disconnect?: () => void;
+}
+
+interface TonePlayer {
+  start?: () => void;
+  stop?: () => void;
+  dispose?: () => void;
+  loaded?: () => Promise<void>;
+  load?: (url: string) => Promise<void>;
+  toDestination?: () => TonePlayer;
+}
+
+interface ToneModule {
+  start?: () => Promise<void>;
+  context?: {
+    state?: string;
+    resume?: () => Promise<void>;
+  };
+  UserMedia: new () => ToneUserMedia;
+  Recorder: new () => ToneRecorder;
+  Player: new (options: { url: string; autostart?: boolean } | string) => TonePlayer;
+}
+
+type RecorderInstance = {
+  recorder: ToneRecorder;
+  mic: ToneUserMedia;
+};
 
 interface PlayerSkills {
   guitar: number;
@@ -36,12 +108,85 @@ interface PlayerSkills {
   songwriting: number;
 }
 
+const toNumber = (value: unknown, fallback = 0): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const parseAudioLayers = (layers: SupabaseSongRow["audio_layers"]): SongLayer[] => {
+  if (!Array.isArray(layers)) {
+    return [];
+  }
+
+  return (layers as unknown[])
+    .map((layer, index: number) => {
+      if (typeof layer !== "object" || layer === null) return null;
+
+      const layerRecord = layer as Record<string, unknown>;
+      const url = typeof layerRecord.url === "string" ? layerRecord.url : "";
+      if (!url) return null;
+
+      return {
+        name:
+          typeof layerRecord.name === "string" && layerRecord.name.trim().length > 0
+            ? layerRecord.name
+            : `Layer ${index + 1}`,
+        url,
+        duration:
+          typeof layerRecord.duration === "number" && Number.isFinite(layerRecord.duration)
+            ? layerRecord.duration
+            : undefined,
+        storagePath:
+          typeof layerRecord.storagePath === "string" && layerRecord.storagePath.length > 0
+            ? layerRecord.storagePath
+            : undefined,
+        created_at:
+          typeof layerRecord.created_at === "string" && layerRecord.created_at.length > 0
+            ? layerRecord.created_at
+            : undefined,
+      } satisfies SongLayer;
+    })
+    .filter((layer): layer is SongLayer => Boolean(layer));
+};
+
+const normalizeSong = (song: SupabaseSongRow): Song => ({
+  id: song.id,
+  title: song.title ?? "Untitled Song",
+  genre: song.genre ?? "Unknown",
+  lyrics: song.lyrics ?? "",
+  status: song.status ?? "draft",
+  quality_score: toNumber(song.quality_score, 0),
+  recording_cost: toNumber(song.recording_cost ?? song.production_cost, 0),
+  popularity: toNumber(song.popularity, 0),
+  plays: toNumber(song.plays ?? song.streams, 0),
+  duration: toNumber(song.duration, 0),
+  created_at: song.created_at ?? new Date().toISOString(),
+  audio_layers: parseAudioLayers(song.audio_layers),
+});
+
+const formatDuration = (seconds: number | undefined): string => {
+  if (!seconds || !Number.isFinite(seconds)) {
+    return "0:00";
+  }
+
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
+
+const slugifyName = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
 const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [songs, setSongs] = useState<Song[]>([]);
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -68,13 +213,7 @@ const MusicCreation = () => {
     "Metal", "Punk", "Alternative", "Indie", "Classical", "Folk", "R&B"
   ];
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [songsResponse, skillsResponse, profileResponse] = await Promise.all([
         supabase.from("songs").select("*").eq("artist_id", user?.id).order("created_at", { ascending: false }),
@@ -82,15 +221,24 @@ const MusicCreation = () => {
         supabase.from("profiles").select("*").eq("user_id", user?.id).single()
       ]);
 
-      if (songsResponse.data) setSongs(songsResponse.data);
-      if (skillsResponse.data) setSkills(skillsResponse.data);
-      if (profileResponse.data) setProfile(profileResponse.data);
+      if (songsResponse.data) {
+        const rawSongs = songsResponse.data as SupabaseSongRow[];
+        setSongs(rawSongs.map(normalizeSong));
+      }
+      if (skillsResponse.data) setSkills(skillsResponse.data as PlayerSkills);
+      if (profileResponse.data) setProfile(profileResponse.data as ProfileInfo);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [fetchData, user]);
 
   const openEditDialog = (song: Song) => {
     setEditingSong(song);
@@ -146,7 +294,8 @@ const MusicCreation = () => {
           artist_id: user?.id,
           quality_score: quality,
           recording_cost: recordingCost,
-          status: "draft"
+          status: "draft",
+          audio_layers: []
         })
         .select()
         .single();
@@ -172,7 +321,10 @@ const MusicCreation = () => {
           earnings: 0
         });
 
-      setSongs(prev => [data, ...prev]);
+      if (data) {
+        const normalized = normalizeSong(data as SupabaseSongRow);
+        setSongs(prev => [normalized, ...prev]);
+      }
       setNewSong({ title: "", genre: "", lyrics: "", duration: 180 });
 
       await fetchData();
@@ -204,14 +356,14 @@ const MusicCreation = () => {
       return;
     }
 
-    setRecording(true);
+    setRecordingSession(true);
 
     try {
       // Update song status and profile cash
       const [songUpdate, profileUpdate] = await Promise.all([
         supabase
           .from("songs")
-          .update({ status: "recorded", release_date: new Date().toISOString() })
+          .update({ status: "recorded" })
           .eq("id", song.id),
         supabase
           .from("profiles")
@@ -263,7 +415,7 @@ const MusicCreation = () => {
         description: "Failed to record song. Please try again."
       });
     } finally {
-      setRecording(false);
+      setRecordingSession(false);
     }
   };
 
@@ -325,6 +477,45 @@ const MusicCreation = () => {
         .eq("id", songId);
 
       if (error) throw error;
+
+      if (previewSongId === songId) {
+        stopPreview();
+      }
+
+      if (audioRecordingSongId === songId) {
+        setAudioRecordingSongId(null);
+        const activeRecorder = recorderRef.current;
+        if (activeRecorder) {
+          try {
+            await activeRecorder.recorder.stop();
+          } catch (error) {
+            console.error("Error stopping recorder during deletion:", error);
+          }
+          try {
+            activeRecorder.mic.disconnect?.();
+          } catch (error) {
+            console.error("Error disconnecting mic during deletion:", error);
+          }
+          if (activeRecorder.mic?.close) {
+            try {
+              await activeRecorder.mic.close();
+            } catch (error) {
+              console.error("Error closing mic during deletion:", error);
+            }
+          }
+        }
+        recorderRef.current = null;
+      }
+
+      setLocalRecordings((prev) => {
+        const next = { ...prev };
+        const layers = next[songId];
+        if (layers && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
+          layers.forEach((layer) => URL.revokeObjectURL(layer.url));
+        }
+        delete next[songId];
+        return next;
+      });
 
       setSongs(prev => prev.filter(s => s.id !== songId));
 
@@ -491,13 +682,20 @@ const MusicCreation = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {songs.map((song) => (
-                <Card key={song.id} className="relative">
+              {songs.map((song) => {
+                const pendingLayers = localRecordings[song.id] ?? [];
+                const storedLayers = song.audio_layers ?? [];
+                const totalLayerCount = storedLayers.length + pendingLayers.length;
+
+                return (
+                  <Card key={song.id} className="relative">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="font-oswald text-lg">{song.title}</CardTitle>
-                        <CardDescription>{song.genre} • {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, '0')}</CardDescription>
+                        <CardDescription>
+                          {song.genre} • {formatDuration(song.duration)}
+                        </CardDescription>
                       </div>
                       <Badge className={`${getStatusColor(song.status)} text-white capitalize`}>
                         {song.status}
@@ -536,7 +734,7 @@ const MusicCreation = () => {
                       {song.status === "draft" && (
                         <Button
                           onClick={() => recordSong(song)}
-                          disabled={recording || (profile?.cash || 0) < song.recording_cost}
+                          disabled={recordingSession || (profile?.cash || 0) < song.recording_cost}
                           className="flex-1"
                           variant="default"
                         >
@@ -565,8 +763,9 @@ const MusicCreation = () => {
                       </Button>
                     </div>
                   </CardContent>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>

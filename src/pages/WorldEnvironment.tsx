@@ -8,6 +8,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  fetchWorldEnvironmentSnapshot,
+  type WeatherCondition,
+  type City,
+  type WorldEvent,
+  type RandomEvent,
+} from '@/utils/worldEnvironment';
 import { 
   Cloud, 
   Sun, 
@@ -30,94 +37,6 @@ import {
 } from 'lucide-react';
 
 const REFRESH_INTERVAL = 60_000;
-
-const WEATHER_CONDITIONS: WeatherCondition['condition'][] = ['sunny', 'cloudy', 'rainy', 'stormy', 'snowy'];
-const WORLD_EVENT_TYPES: WorldEvent['type'][] = ['festival', 'competition', 'disaster', 'celebration', 'economic'];
-const RANDOM_EVENT_RARITIES: RandomEvent['rarity'][] = ['common', 'rare', 'epic', 'legendary'];
-
-const parseNumericRecord = (record: Record<string, unknown> | null | undefined) => {
-  if (!record || typeof record !== 'object') {
-    return {} as Record<string, number>;
-  }
-
-  return Object.entries(record).reduce<Record<string, number>>((acc, [key, value]) => {
-    if (typeof value === 'number') {
-      acc[key] = value;
-      return acc;
-    }
-
-    const numericValue = Number(value);
-    if (!Number.isNaN(numericValue)) {
-      acc[key] = numericValue;
-    }
-    return acc;
-  }, {});
-};
-
-const toNumber = (value: unknown, defaultValue = 0) => {
-  if (typeof value === 'number') {
-    return value;
-  }
-
-  const numericValue = Number(value);
-  return Number.isNaN(numericValue) ? defaultValue : numericValue;
-};
-
-interface WeatherCondition {
-  id: string;
-  city: string;
-  country: string;
-  temperature: number;
-  condition: 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy';
-  humidity: number;
-  wind_speed: number;
-  effects: {
-    gig_attendance: number;
-    travel_cost: number;
-    mood_modifier: number;
-    equipment_risk: number;
-  };
-}
-
-interface City {
-  id: string;
-  name: string;
-  country: string;
-  population: number;
-  music_scene: number;
-  cost_of_living: number;
-  dominant_genre: string;
-  venues: number;
-  local_bonus: number;
-  cultural_events: string[];
-}
-
-interface WorldEvent {
-  id: string;
-  title: string;
-  description: string;
-  type: 'festival' | 'competition' | 'disaster' | 'celebration' | 'economic';
-  start_date: string;
-  end_date: string;
-  affected_cities: string[];
-  global_effects: Record<string, number>;
-  participation_reward: number;
-  is_active: boolean;
-}
-
-interface RandomEvent {
-  id: string;
-  title: string;
-  description: string;
-  choices: {
-    id: string;
-    text: string;
-    effects: Record<string, number>;
-    requirements?: Record<string, number>;
-  }[];
-  expiry: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-}
 
 const WorldEnvironment: React.FC = () => {
   const { user } = useAuth();
@@ -147,184 +66,28 @@ const WorldEnvironment: React.FC = () => {
         setLoading(true);
       }
 
-      const [
-        weatherResponse,
-        citiesResponse,
-        worldEventsResponse,
-        randomEventsResponse
-      ] = await Promise.all([
-        supabase.from('weather').select('*').order('city', { ascending: true }),
-        supabase.from('cities').select('*').order('name', { ascending: true }),
-        supabase.from('world_events').select('*').order('start_date', { ascending: true }),
-        supabase.from('random_events').select('*').order('expiry', { ascending: true })
-      ]);
-
-      if (weatherResponse.error) throw weatherResponse.error;
-      if (citiesResponse.error) throw citiesResponse.error;
-      if (worldEventsResponse.error) throw worldEventsResponse.error;
-      if (randomEventsResponse.error) throw randomEventsResponse.error;
+      const { weather: weatherSnapshot, cities: citySnapshot, worldEvents: worldEventSnapshot, randomEvents: randomEventSnapshot } =
+        await fetchWorldEnvironmentSnapshot();
 
       if (!isMountedRef.current) {
         return;
       }
 
-      const normalizedWeather: WeatherCondition[] = (weatherResponse.data || []).map((item: Record<string, unknown>) => {
-        const conditionValue = typeof item.condition === 'string' && WEATHER_CONDITIONS.includes(item.condition as WeatherCondition['condition'])
-          ? (item.condition as WeatherCondition['condition'])
-          : 'sunny';
-
-        const effectsData = parseNumericRecord(item.effects as Record<string, unknown> | null | undefined);
-        const temperatureValue = toNumber(item.temperature);
-        const humidityValue = toNumber(item.humidity);
-        const windSpeedValue = toNumber(item.wind_speed);
-
-        return {
-          id: String(item.id),
-          city: typeof item.city === 'string' ? item.city : 'Unknown',
-          country: typeof item.country === 'string' ? item.country : '',
-          temperature: Number.isNaN(temperatureValue) ? 0 : temperatureValue,
-          condition: conditionValue,
-          humidity: Number.isNaN(humidityValue) ? 0 : humidityValue,
-          wind_speed: Number.isNaN(windSpeedValue) ? 0 : windSpeedValue,
-          effects: {
-            gig_attendance: effectsData.gig_attendance ?? 1,
-            travel_cost: effectsData.travel_cost ?? 1,
-            mood_modifier: effectsData.mood_modifier ?? 1,
-            equipment_risk: effectsData.equipment_risk ?? 1,
-          },
-        };
-      });
-
-      const normalizedCities: City[] = (citiesResponse.data || []).map((item: Record<string, unknown>) => ({
-        id: String(item.id),
-        name: typeof item.name === 'string' ? item.name : 'Unknown',
-        country: typeof item.country === 'string' ? item.country : '',
-        population: toNumber(item.population),
-        music_scene: toNumber(item.music_scene),
-        cost_of_living: toNumber(item.cost_of_living),
-        dominant_genre: typeof item.dominant_genre === 'string' ? item.dominant_genre : '',
-        venues: toNumber(item.venues),
-        local_bonus: toNumber(item.local_bonus, 1),
-        cultural_events: Array.isArray(item.cultural_events)
-          ? item.cultural_events.filter((event: unknown): event is string => typeof event === 'string')
-          : [],
-      }));
-
-      const normalizedWorldEvents: WorldEvent[] = (worldEventsResponse.data || []).map((item: Record<string, unknown>) => {
-        const typeValue = typeof item.type === 'string' && WORLD_EVENT_TYPES.includes(item.type as WorldEvent['type'])
-          ? (item.type as WorldEvent['type'])
-          : 'festival';
-
-        const globalEffects = parseNumericRecord(item.global_effects as Record<string, unknown> | null | undefined);
-        const affectedCities = Array.isArray(item.affected_cities)
-          ? item.affected_cities.filter((city: unknown): city is string => typeof city === 'string')
-          : [];
-
-        const startDate = typeof item.start_date === 'string' ? item.start_date : new Date().toISOString();
-        const endDate = typeof item.end_date === 'string' ? item.end_date : startDate;
-
-        const title = typeof item.title === 'string' ? item.title : 'Global Event';
-        const description = typeof item.description === 'string' ? item.description : '';
-        const participationRewardValue = toNumber(item.participation_reward);
-
-        return {
-          id: String(item.id),
-          title,
-          description,
-          type: typeValue,
-          start_date: startDate,
-          end_date: endDate,
-          affected_cities: affectedCities,
-          global_effects: globalEffects,
-          participation_reward: participationRewardValue,
-          is_active: Boolean(item.is_active),
-        };
-      }).sort((a, b) => {
-        const startA = Date.parse(a.start_date);
-        const startB = Date.parse(b.start_date);
-        if (Number.isNaN(startA) || Number.isNaN(startB)) {
-          return 0;
-        }
-        return startA - startB;
-      });
-
-      const now = Date.now();
-      const normalizedRandomEvents: RandomEvent[] = (randomEventsResponse.data || [])
-        .map((item: Record<string, unknown>) => {
-          const rarityValue = typeof item.rarity === 'string' && RANDOM_EVENT_RARITIES.includes(item.rarity as RandomEvent['rarity'])
-            ? (item.rarity as RandomEvent['rarity'])
-            : 'common';
-
-          const expiry = typeof item.expiry === 'string'
-            ? item.expiry
-            : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-          const choicesRaw = Array.isArray(item.choices) ? item.choices : [];
-          const choices = choicesRaw
-            .map((choice: Record<string, unknown>, index: number) => {
-              const choiceRecord = choice as Record<string, unknown>;
-              const effects = parseNumericRecord(choiceRecord.effects as Record<string, unknown> | null | undefined);
-              const requirements = parseNumericRecord(choiceRecord.requirements as Record<string, unknown> | null | undefined);
-
-              const choiceText = choiceRecord.text;
-              if (typeof choiceText !== 'string' || !choiceText.trim()) {
-                return null;
-              }
-
-              const choiceIdValue = choiceRecord.id;
-
-              return {
-                id: String(choiceIdValue ?? `${item.id}-choice-${index}`),
-                text: choiceText,
-                effects,
-                requirements: Object.keys(requirements).length > 0 ? requirements : undefined,
-              };
-            })
-            .filter((choice): choice is RandomEvent['choices'][number] => Boolean(choice));
-
-          const title = typeof item.title === 'string' ? item.title : 'Random Event';
-          const description = typeof item.description === 'string' ? item.description : '';
-
-          return {
-            id: String(item.id),
-            title,
-            description,
-            choices,
-            expiry,
-            rarity: rarityValue,
-          };
-        })
-        .filter((event) => {
-          const expiryTime = Date.parse(event.expiry);
-          if (Number.isNaN(expiryTime)) {
-            return true;
-          }
-          return expiryTime > now;
-        })
-        .sort((a, b) => {
-          const expiryA = Date.parse(a.expiry);
-          const expiryB = Date.parse(b.expiry);
-          if (Number.isNaN(expiryA) || Number.isNaN(expiryB)) {
-            return 0;
-          }
-          return expiryA - expiryB;
-        });
-
-      setWeather(normalizedWeather);
-      setCities(normalizedCities);
-      setWorldEvents(normalizedWorldEvents);
-      setRandomEvents(normalizedRandomEvents);
+      setWeather(weatherSnapshot);
+      setCities(citySnapshot);
+      setWorldEvents(worldEventSnapshot);
+      setRandomEvents(randomEventSnapshot);
       setSelectedCity((current) => {
-        if (!normalizedCities.length) {
+        if (!citySnapshot.length) {
           return null;
         }
 
         if (current) {
-          const existing = normalizedCities.find((city) => city.id === current.id);
-          return existing ?? normalizedCities[0];
+          const existing = citySnapshot.find((city) => city.id === current.id);
+          return existing ?? citySnapshot[0];
         }
 
-        return normalizedCities[0];
+        return citySnapshot[0];
       });
     } catch (error: unknown) {
       console.error('Error loading world data:', error);
