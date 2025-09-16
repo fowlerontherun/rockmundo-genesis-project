@@ -46,6 +46,7 @@ interface TourVenue {
   venue_id: string;
   date: string;
   ticket_price: number | null;
+  marketing_spend: number | null;
   tickets_sold: number | null;
   revenue: number | null;
   status: string | null;
@@ -69,6 +70,10 @@ const TourManager = () => {
   const [venues, setVenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingTour, setCreatingTour] = useState(false);
+  const [ticketPriceUpdates, setTicketPriceUpdates] = useState<Record<string, string>>({});
+  const [marketingSpendUpdates, setMarketingSpendUpdates] = useState<Record<string, string>>({});
+  const [updatingVenue, setUpdatingVenue] = useState<string | null>(null);
+  const [performingVenue, setPerformingVenue] = useState<string | null>(null);
   const [newTour, setNewTour] = useState({
     name: "",
     description: "",
@@ -107,6 +112,8 @@ const TourManager = () => {
           venue: tv.venues
         }))
       })));
+      setTicketPriceUpdates({});
+      setMarketingSpendUpdates({});
     } catch (error: any) {
       console.error('Error loading tours:', error);
       toast({
@@ -189,7 +196,7 @@ const TourManager = () => {
     }
   };
 
-  const addVenueToTour = async (tourId: string, venueId: string, date: string, ticketPrice: number) => {
+  const addVenueToTour = async (tourId: string, venueId: string, date: string, ticketPrice: number, marketingSpend: number) => {
     if (!user) return;
 
     try {
@@ -200,6 +207,7 @@ const TourManager = () => {
           venue_id: venueId,
           date,
           ticket_price: ticketPrice,
+          marketing_spend: marketingSpend,
           tickets_sold: 0,
           revenue: 0,
           status: 'scheduled'
@@ -223,39 +231,107 @@ const TourManager = () => {
     }
   };
 
-  const simulateTourShow = async (tourVenueId: string, venue: any) => {
-    if (!user || !profile || !skills) return;
+  const updateTourVenueSettings = async (
+    tourVenueId: string,
+    ticketPrice: number | null,
+    marketingSpend: number | null
+  ) => {
+    if (!user) return;
+
+    const updates: Record<string, number> = {};
+
+    if (typeof ticketPrice === "number" && !Number.isNaN(ticketPrice)) {
+      updates.ticket_price = Math.max(0, Math.round(ticketPrice * 100) / 100);
+    }
+
+    if (typeof marketingSpend === "number" && !Number.isNaN(marketingSpend)) {
+      updates.marketing_spend = Math.max(0, Math.round(marketingSpend * 100) / 100);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid values",
+        description: "Please provide a valid ticket price or marketing spend."
+      });
+      return;
+    }
 
     try {
-      // Calculate show success based on skills and venue prestige
-      const successRate = Math.min(0.9, skills.performance / 100);
-      const attendance = Math.floor(venue.capacity * (0.4 + successRate * 0.5));
-      const revenue = attendance * 25; // Assume $25 ticket price
-
+      setUpdatingVenue(tourVenueId);
       const { error } = await supabase
         .from('tour_venues')
-        .update({
-          tickets_sold: attendance,
-          revenue: revenue,
-          status: 'completed'
-        })
+        .update(updates)
         .eq('id', tourVenueId);
 
       if (error) throw error;
 
+      toast({
+        title: "Show settings updated",
+        description: "Ticket price and marketing spend have been saved."
+      });
+
+      loadTours();
+    } catch (error: any) {
+      console.error('Error updating tour venue:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update show settings"
+      });
+    } finally {
+      setUpdatingVenue(null);
+    }
+  };
+
+  const simulateTourShow = async (tourVenue: TourVenue) => {
+    if (!user || !profile || !skills) return;
+
+    try {
+      setPerformingVenue(tourVenue.id);
+
+      const venueInfo = tourVenue.venue || tourVenue.venues;
+      const capacity = venueInfo?.capacity || 0;
+      const marketingSpend = typeof tourVenue.marketing_spend === "number" ? Math.max(0, tourVenue.marketing_spend) : 0;
+      const ticketPrice = typeof tourVenue.ticket_price === "number" ? Math.max(0, tourVenue.ticket_price) : 25;
+
+      const fameInfluence = Math.min(0.5, (profile.fame || 0) / 10000);
+      const marketingInfluence = Math.min(0.3, marketingSpend / 10000);
+      const baseAttendanceRate = 0.25;
+      const attendanceRate = Math.min(0.95, baseAttendanceRate + fameInfluence + marketingInfluence);
+      const ticketsSold = Math.min(
+        capacity,
+        Math.max(0, Math.floor(capacity * attendanceRate))
+      );
+      const revenue = ticketPrice * ticketsSold;
+      const profit = revenue - marketingSpend;
+
+      const { error } = await supabase
+        .from('tour_venues')
+        .update({
+          tickets_sold: ticketsSold,
+          revenue: revenue,
+          ticket_price: ticketPrice,
+          marketing_spend: marketingSpend,
+          status: 'completed'
+        })
+        .eq('id', tourVenue.id);
+
+      if (error) throw error;
+
       // Update player cash and fame
-      const fameGain = Math.floor(attendance / 10);
+      const fameGain = Math.floor(ticketsSold / 10);
       await supabase
         .from('profiles')
         .update({
-          cash: profile.cash + revenue,
+          cash: profile.cash + profit,
           fame: profile.fame + fameGain
         })
         .eq('user_id', user.id);
 
       toast({
         title: "Show Complete!",
-        description: `Great performance! Earned $${revenue} and ${fameGain} fame`
+        description: `Show results: $${revenue.toLocaleString()} revenue, ${ticketsSold} tickets sold, ${profit >= 0 ? 'profit' : 'loss'} of $${Math.abs(profit).toLocaleString()}`
       });
 
       loadTours();
@@ -266,6 +342,8 @@ const TourManager = () => {
         title: "Error",
         description: "Failed to complete show"
       });
+    } finally {
+      setPerformingVenue(null);
     }
   };
 
@@ -281,10 +359,12 @@ const TourManager = () => {
   const calculateTourStats = (tour: Tour) => {
     const totalRevenue = tour.venues?.reduce((sum, v) => sum + (v.revenue || 0), 0) || 0;
     const totalTickets = tour.venues?.reduce((sum, v) => sum + (v.tickets_sold || 0), 0) || 0;
+    const totalMarketing = tour.venues?.reduce((sum, v) => sum + (v.marketing_spend || 0), 0) || 0;
+    const netProfit = totalRevenue - totalMarketing;
     const completedShows = tour.venues?.filter(v => v.status === 'completed').length || 0;
     const totalShows = tour.venues?.length || 0;
 
-    return { totalRevenue, totalTickets, completedShows, totalShows };
+    return { totalRevenue, totalTickets, totalMarketing, netProfit, completedShows, totalShows };
   };
 
   if (loading) {
@@ -395,6 +475,10 @@ const TourManager = () => {
         <div className="space-y-4">
           {tours.length > 0 ? tours.map((tour) => {
             const stats = calculateTourStats(tour);
+            const netProfitPositive = stats.netProfit >= 0;
+            const netProfitDisplay = stats.netProfit === 0
+              ? '$0'
+              : `${netProfitPositive ? '+' : '-'}$${Math.abs(stats.netProfit).toLocaleString()}`;
             return (
               <Card key={tour.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardHeader>
@@ -413,22 +497,28 @@ const TourManager = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Tour Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-success">${stats.totalRevenue.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">Total Revenue</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-warning">${stats.totalMarketing.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Marketing Spend</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-2xl font-bold ${netProfitPositive ? 'text-success' : 'text-destructive'}`}>
+                        {netProfitDisplay}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{netProfitPositive ? 'Net Profit' : 'Net Loss'}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-primary">{stats.totalTickets.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">Tickets Sold</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-warning">{stats.completedShows}</p>
-                      <p className="text-xs text-muted-foreground">Shows Done</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-accent">{stats.totalShows}</p>
-                      <p className="text-xs text-muted-foreground">Total Shows</p>
+                      <p className="text-2xl font-bold text-accent">{stats.completedShows}/{stats.totalShows}</p>
+                      <p className="text-xs text-muted-foreground">Shows Completed</p>
                     </div>
                   </div>
 
@@ -438,34 +528,132 @@ const TourManager = () => {
                       <Calendar className="h-4 w-4" />
                       Tour Dates ({tour.venues?.length || 0})
                     </h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {tour.venues?.map((venue) => (
-                        <div key={venue.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                          <div className="flex-1">
-                            <p className="font-medium">{venue.venue.name}</p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {venue.venue.location} • {new Date(venue.date).toLocaleDateString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {venue.tickets_sold}/{venue.venue.capacity} tickets • ${venue.ticket_price} each
-                            </p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {tour.venues?.map((venue) => {
+                        const venueInfo = venue.venue || venue.venues;
+                        const ticketsSold = venue.tickets_sold || 0;
+                        const capacity = venueInfo?.capacity || 0;
+                        const marketingSpend = venue.marketing_spend || 0;
+                        const revenue = venue.revenue || 0;
+                        const netProfit = revenue - marketingSpend;
+                        const ticketPriceValue = ticketPriceUpdates[venue.id] ?? (venue.ticket_price !== null ? venue.ticket_price.toString() : "");
+                        const marketingValue = marketingSpendUpdates[venue.id] ?? (venue.marketing_spend !== null ? venue.marketing_spend.toString() : "");
+                        const ticketPriceDisplay = typeof venue.ticket_price === 'number'
+                          ? `$${venue.ticket_price.toLocaleString()}`
+                          : 'N/A';
+                        const marketingDisplay = `$${marketingSpend.toLocaleString()}`;
+
+                        return (
+                          <div key={venue.id} className="flex flex-col gap-3 p-3 rounded-lg bg-secondary/30">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="flex-1">
+                                <p className="font-medium">{venueInfo?.name || 'Unknown Venue'}</p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {venueInfo?.location || 'Unknown Location'} • {new Date(venue.date).toLocaleDateString()}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Tickets: {ticketsSold}/{capacity} • Ticket Price: {ticketPriceDisplay}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Marketing Spend: {marketingDisplay} {venue.status === 'completed' && (
+                                    <>
+                                      {' • '}Revenue: ${revenue.toLocaleString()} {' • '}
+                                      {netProfit >= 0 ? 'Profit' : 'Loss'}: ${Math.abs(netProfit).toLocaleString()}
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex flex-col items-end gap-2 min-w-[220px]">
+                                <Badge variant="outline" className={getStatusColor(venue.status)}>
+                                  {venue.status}
+                                </Badge>
+                                {venue.status === 'scheduled' && (
+                                  <div className="w-full space-y-2">
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                      <div className="space-y-1">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Ticket Price</Label>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          value={ticketPriceValue}
+                                          onChange={(event) =>
+                                            setTicketPriceUpdates((prev) => ({
+                                              ...prev,
+                                              [venue.id]: event.target.value
+                                            }))
+                                          }
+                                          className="h-9 text-sm"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Marketing Spend</Label>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="50"
+                                          value={marketingValue}
+                                          onChange={(event) =>
+                                            setMarketingSpendUpdates((prev) => ({
+                                              ...prev,
+                                              [venue.id]: event.target.value
+                                            }))
+                                          }
+                                          className="h-9 text-sm"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2 justify-end">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={updatingVenue === venue.id || performingVenue === venue.id}
+                                        onClick={() => {
+                                          const parsedTicketPrice = ticketPriceValue ? parseFloat(ticketPriceValue) : null;
+                                          const sanitizedTicketPrice = parsedTicketPrice !== null && !Number.isNaN(parsedTicketPrice)
+                                            ? parsedTicketPrice
+                                            : null;
+                                          const parsedMarketing = marketingValue ? parseFloat(marketingValue) : null;
+                                          const sanitizedMarketing = parsedMarketing !== null && !Number.isNaN(parsedMarketing)
+                                            ? parsedMarketing
+                                            : null;
+                                          updateTourVenueSettings(venue.id, sanitizedTicketPrice, sanitizedMarketing);
+                                        }}
+                                      >
+                                        Save Settings
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        disabled={performingVenue === venue.id || updatingVenue === venue.id}
+                                        onClick={() => {
+                                          const parsedTicketPrice = ticketPriceValue ? parseFloat(ticketPriceValue) : undefined;
+                                          const parsedMarketing = marketingValue ? parseFloat(marketingValue) : undefined;
+                                          const ticketPriceOverride = parsedTicketPrice !== undefined && !Number.isNaN(parsedTicketPrice)
+                                            ? parsedTicketPrice
+                                            : (typeof venue.ticket_price === 'number' ? venue.ticket_price : 25);
+                                          const marketingOverride = parsedMarketing !== undefined && !Number.isNaN(parsedMarketing)
+                                            ? parsedMarketing
+                                            : marketingSpend;
+
+                                          simulateTourShow({
+                                            ...venue,
+                                            venue: venueInfo,
+                                            ticket_price: ticketPriceOverride,
+                                            marketing_spend: marketingOverride
+                                          });
+                                        }}
+                                      >
+                                        {performingVenue === venue.id ? 'Performing...' : 'Perform'}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={getStatusColor(venue.status)}>
-                              {venue.status}
-                            </Badge>
-                            {venue.status === 'scheduled' && (
-                              <Button 
-                                size="sm"
-                                onClick={() => simulateTourShow(venue.id, venue.venue)}
-                              >
-                                Perform
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      )) || (
+                        );
+                      }) || (
                         <p className="text-center text-muted-foreground py-4">
                           No venues added to this tour yet
                         </p>
