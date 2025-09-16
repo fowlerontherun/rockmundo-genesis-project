@@ -113,6 +113,13 @@ export type Database = {
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_band_members_band"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
         ]
       }
       bands: {
@@ -199,6 +206,13 @@ export type Database = {
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_chart_entries_song"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       equipment_items: {
@@ -268,6 +282,13 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "game_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_event_participants_event"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "game_events"
@@ -410,6 +431,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_gigs_band"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_gigs_venue"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gigs_band_id_fkey"
             columns: ["band_id"]
             isOneToOne: false
@@ -473,6 +508,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_player_achievements_achievement"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "player_achievements_achievement_id_fkey"
             columns: ["achievement_id"]
             isOneToOne: false
@@ -504,6 +546,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_player_equipment_item"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_equipment_equipment_id_fkey"
             columns: ["equipment_id"]
@@ -587,6 +636,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_player_streaming_platform"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_streaming_accounts_platform_id_fkey"
             columns: ["platform_id"]
@@ -801,6 +857,20 @@ export type Database = {
           venue_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_tour_venues_tour"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_tour_venues_venue"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tour_venues_tour_id_fkey"
             columns: ["tour_id"]

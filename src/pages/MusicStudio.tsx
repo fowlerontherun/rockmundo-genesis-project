@@ -29,6 +29,13 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
+import { 
+  calculateTrainingCost, 
+  getSkillCap, 
+  isOnCooldown, 
+  getRemainingCooldown,
+  COOLDOWNS 
+} from "@/utils/gameBalance";
 
 interface Song {
   id: string;
