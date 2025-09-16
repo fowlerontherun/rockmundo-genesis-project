@@ -110,7 +110,7 @@ const Auth = () => {
     try {
       // First, sign up the admin user
       const { data, error } = await supabase.auth.signUp({
-        email: 'admin@rockmundo.com',
+        email: 'j.fowler1986@gmail.com',
         password: 'admin123',
         options: {
           data: {
@@ -165,7 +165,7 @@ const Auth = () => {
 
         toast({
           title: "Admin User Created!",
-          description: "Admin user has been created successfully. You can now login with admin@rockmundo.com / admin123"
+          description: "Admin user has been created successfully. You can now login with j.fowler1986@gmail.com / admin123"
         });
       }
     } catch (error: any) {
@@ -359,7 +359,7 @@ const Auth = () => {
             <AlertDescription className="text-left space-y-2">
               <div>
                 <strong>Admin Access:</strong> For testing admin features, use:<br/>
-                Email: <code>admin@rockmundo.com</code><br/>
+                Email: <code>j.fowler1986@gmail.com</code><br/>
                 Password: <code>admin123</code>
               </div>
               <Button 
