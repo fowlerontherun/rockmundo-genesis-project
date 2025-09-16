@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import Index from "./pages/Index";
+import PerformGig from "./pages/PerformGig";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
@@ -42,6 +43,7 @@ function App() {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="band" element={<BandManager />} />
                 <Route path="gigs" element={<GigBooking />} />
+                <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="music" element={<MusicStudio />} />
                 <Route path="charts" element={<WorldPulse />} />
