@@ -630,26 +630,41 @@ export type Database = {
       gig_performances: {
         Row: {
           earnings: number | null
+          failure_reason: string | null
+          fame_change: number | null
           gig_id: string | null
           id: string
+          penalty_amount: number | null
+          penalty_applied: boolean | null
           performance_score: number | null
           performed_at: string
+          status: string | null
           user_id: string
         }
         Insert: {
           earnings?: number | null
+          failure_reason?: string | null
+          fame_change?: number | null
           gig_id?: string | null
           id?: string
+          penalty_amount?: number | null
+          penalty_applied?: boolean | null
           performance_score?: number | null
           performed_at?: string
+          status?: string | null
           user_id: string
         }
         Update: {
           earnings?: number | null
+          failure_reason?: string | null
+          fame_change?: number | null
           gig_id?: string | null
           id?: string
+          penalty_amount?: number | null
+          penalty_applied?: boolean | null
           performance_score?: number | null
           performed_at?: string
+          status?: string | null
           user_id?: string
         }
         Relationships: []
