@@ -14,6 +14,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Song {
   id: string;
@@ -30,6 +31,94 @@ interface Song {
   user_id: string;
   updated_at?: string;
 }
+
+interface StreamingAccountRecord {
+  id: string;
+  followers: number | null;
+  platform?: {
+    id?: string;
+    name?: string;
+    revenue_per_play?: number | null;
+  } | null;
+}
+
+interface BreakdownSource {
+  key: string;
+  name: string;
+  weight: number;
+  revenuePerPlay: number;
+  platformId?: string;
+}
+
+interface StreamingStatsBreakdownEntry {
+  key: string;
+  platformId?: string;
+  name: string;
+  streams: number;
+  revenue: number;
+  revenuePerPlay: number;
+}
+
+const DEFAULT_REVENUE_PER_PLAY = 0.003;
+
+const DEFAULT_STREAMING_PLATFORM_DISTRIBUTION: BreakdownSource[] = [
+  { key: "spotify", name: "Spotify", weight: 45, revenuePerPlay: 0.003 },
+  { key: "apple_music", name: "Apple Music", weight: 25, revenuePerPlay: 0.007 },
+  { key: "youtube_music", name: "YouTube Music", weight: 20, revenuePerPlay: 0.002 },
+  { key: "tidal", name: "Tidal", weight: 10, revenuePerPlay: 0.01 }
+];
+
+const slugifyPlatformKey = (value: string, fallback: string) => {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+  return slug || fallback;
+};
+
+const buildInitialStreamingBreakdown = (
+  initialStreams: number,
+  accounts: StreamingAccountRecord[] | null | undefined
+): StreamingStatsBreakdownEntry[] => {
+  const sources: BreakdownSource[] = (accounts && accounts.length > 0)
+    ? accounts.map((account) => {
+        const platformName = account.platform?.name?.trim() || "Streaming Platform";
+        return {
+          key: account.platform?.id || slugifyPlatformKey(platformName, account.id),
+          name: platformName,
+          weight: Math.max(account.followers ?? 0, 1),
+          revenuePerPlay: account.platform?.revenue_per_play ?? DEFAULT_REVENUE_PER_PLAY,
+          platformId: account.platform?.id ?? undefined
+        };
+      })
+    : DEFAULT_STREAMING_PLATFORM_DISTRIBUTION.map((entry) => ({ ...entry }));
+
+  if (sources.length === 0) {
+    return [];
+  }
+
+  const totalWeight = sources.reduce((sum, entry) => sum + (entry.weight || 0), 0) || sources.length;
+  let allocatedStreams = 0;
+
+  return sources.map((entry, index) => {
+    const ratio = totalWeight > 0 ? entry.weight / totalWeight : 1 / sources.length;
+    const isLast = index === sources.length - 1;
+    const streams = isLast
+      ? Math.max(initialStreams - allocatedStreams, 0)
+      : Math.max(Math.floor(initialStreams * ratio), 0);
+    allocatedStreams += streams;
+    const revenue = streams * entry.revenuePerPlay;
+
+    return {
+      key: entry.key || `platform_${index}`,
+      platformId: entry.platformId,
+      name: entry.name,
+      streams,
+      revenue,
+      revenuePerPlay: entry.revenuePerPlay
+    };
+  });
+};
 
 const SongManager = () => {
   const { user } = useAuth();
@@ -55,6 +144,99 @@ const SongManager = () => {
       fetchSongs();
     }
   }, [user]);
+
+  const createStreamingStatsRecord = async (
+    songId: string,
+    totalStreams: number
+  ): Promise<StreamingStatsBreakdownEntry[]> => {
+    if (!user) {
+      return [];
+    }
+
+    try {
+      const { data: accountData, error: accountsError } = await supabase
+        .from('player_streaming_accounts')
+        .select(`
+          id,
+          followers,
+          platform:streaming_platforms!player_streaming_accounts_platform_id_fkey (
+            id,
+            name,
+            revenue_per_play
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('is_connected', true);
+
+      if (accountsError) {
+        throw accountsError;
+      }
+
+      const breakdown = buildInitialStreamingBreakdown(
+        totalStreams,
+        (accountData as StreamingAccountRecord[] | null | undefined)
+      );
+
+      const totalRevenue = breakdown.reduce((sum, entry) => sum + entry.revenue, 0);
+      const breakdownPayload = breakdown.map((entry) => ({
+        platform_id: entry.platformId ?? null,
+        key: entry.key,
+        name: entry.name,
+        streams: entry.streams,
+        revenue: Number(entry.revenue.toFixed(2)),
+        revenue_per_play: entry.revenuePerPlay
+      }));
+
+      const { error: statsError } = await supabase
+        .from('streaming_stats')
+        .upsert({
+          song_id: songId,
+          user_id: user.id,
+          total_streams: totalStreams,
+          total_revenue: Number(totalRevenue.toFixed(2)),
+          platform_breakdown: breakdownPayload as Json
+        }, {
+          onConflict: 'song_id'
+        });
+
+      if (statsError) {
+        throw statsError;
+      }
+
+      return breakdown;
+    } catch (statsError) {
+      console.error('Error creating streaming stats:', statsError);
+      return [];
+    }
+  };
+
+  const enqueueStreamingSimulation = async (
+    songId: string,
+    totalStreams: number,
+    breakdown: StreamingStatsBreakdownEntry[]
+  ) => {
+    if (breakdown.length === 0 || totalStreams <= 0) {
+      return;
+    }
+
+    try {
+      await supabase.functions.invoke('queue-streaming-simulation', {
+        body: {
+          songId,
+          totalStreams,
+          breakdown: breakdown.map((entry) => ({
+            key: entry.key,
+            name: entry.name,
+            streams: entry.streams,
+            revenue: Number(entry.revenue.toFixed(2))
+          }))
+        }
+      });
+    } catch (jobError) {
+      // The edge function may not be configured in all environments.
+      console.info('Streaming simulation job not queued:', jobError);
+    }
+  };
 
   const fetchSongs = async () => {
     try {
@@ -187,6 +369,15 @@ const SongManager = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "You must be logged in to release a song."
+      });
+      return;
+    }
+
     try {
       const initialStreams = Math.floor(song.quality_score * (profile?.fans || 0) / 100);
       const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8));
@@ -204,8 +395,9 @@ const SongManager = () => {
 
       if (error) throw error;
 
+      const breakdown = await createStreamingStatsRecord(song.id, initialStreams);
       const fameGain = Math.floor(song.quality_score / 2);
-      await updateProfile({ 
+      await updateProfile({
         fame: (profile?.fame || 0) + fameGain,
         cash: (profile?.cash || 0) + (initialStreams * 0.01)
       });
@@ -222,7 +414,20 @@ const SongManager = () => {
             }
           : s
       ));
-      
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('streaming:refresh', {
+          detail: {
+            songId: song.id,
+            streams: initialStreams
+          }
+        }));
+      }
+
+      if (breakdown.length > 0) {
+        void enqueueStreamingSimulation(song.id, initialStreams, breakdown);
+      }
+
       toast({
         title: "Song Released",
         description: `"${song.title}" is now available to fans! +${fameGain} fame!`

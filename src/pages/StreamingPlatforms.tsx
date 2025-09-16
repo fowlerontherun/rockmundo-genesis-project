@@ -79,6 +79,17 @@ interface PlatformBreakdown {
   revenue: number;
 }
 
+interface StreamingStatsRecord {
+  id: string;
+  song_id: string;
+  user_id: string;
+  total_streams: number | null;
+  total_revenue: number | null;
+  platform_breakdown: unknown;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 interface SongWithPlatformData {
   id: string;
   title: string;
@@ -238,6 +249,45 @@ const buildPlatformBreakdown = (
   return breakdown;
 };
 
+const buildPlatformBreakdownFromStats = (
+  stats: StreamingStatsRecord | undefined
+): PlatformBreakdown[] | null => {
+  if (!stats || !Array.isArray(stats.platform_breakdown)) {
+    return null;
+  }
+
+  const entries = (stats.platform_breakdown as Array<Record<string, unknown>>)
+    .map((entry, index) => {
+      const entryRecord = entry as Record<string, unknown>;
+      const rawKey = entryRecord.key;
+      const rawName = entryRecord.name ?? entryRecord.label ?? rawKey;
+      const label = typeof rawName === "string"
+        ? rawName
+        : typeof rawKey === "string"
+          ? formatPlatformLabel(rawKey)
+          : `Platform ${index + 1}`;
+
+      const key = typeof rawKey === "string"
+        ? rawKey
+        : label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+      const streams = safeNumber(entryRecord.streams);
+      const revenue = entryRecord.revenue !== undefined && entryRecord.revenue !== null
+        ? safeNumber(entryRecord.revenue)
+        : streams * safeNumber(entryRecord["revenue_per_play"]);
+
+      return {
+        key,
+        label,
+        streams,
+        revenue,
+      };
+    })
+    .filter((entry) => entry.streams > 0 || entry.revenue > 0);
+
+  return entries.length > 0 ? entries : null;
+};
+
 const formatLargeNumber = (value: number): string => {
   if (!Number.isFinite(value)) return "0";
   if (Math.abs(value) >= 1_000_000) {
@@ -269,6 +319,8 @@ const StreamingPlatforms = () => {
 
   const loadData = useCallback(async () => {
     if (!user) return;
+
+    setLoading(true);
 
     try {
       // Load streaming platforms
@@ -320,9 +372,34 @@ const StreamingPlatforms = () => {
         songsData = (songsResponse.data as SongRecord[]) || [];
       }
 
+      let streamingStatsData: StreamingStatsRecord[] = [];
+      if (songsData.length > 0) {
+        const songIds = songsData.map((song) => song.id);
+        const { data: statsData, error: statsError } = await supabase
+          .from('streaming_stats')
+          .select('*')
+          .eq('user_id', user.id)
+          .in('song_id', songIds);
+
+        if (statsError) throw statsError;
+        streamingStatsData = (statsData as StreamingStatsRecord[]) || [];
+      }
+
+      const statsMap = new Map<string, StreamingStatsRecord>();
+      streamingStatsData.forEach((stat) => {
+        if (stat?.song_id) {
+          statsMap.set(stat.song_id, stat);
+        }
+      });
+
       const streamingPlatforms = platformsData || [];
       const formattedSongs: SongWithPlatformData[] = songsData.map((song) => {
-        const platformBreakdown = buildPlatformBreakdown(song, streamingPlatforms);
+        const stats = statsMap.get(song.id);
+        const statsBreakdown = buildPlatformBreakdownFromStats(stats);
+        const platformBreakdown = (statsBreakdown && statsBreakdown.length > 0)
+          ? statsBreakdown
+          : buildPlatformBreakdown(song, streamingPlatforms);
+
         const breakdownStreams = platformBreakdown.reduce(
           (total, entry) => total + entry.streams,
           0
@@ -332,7 +409,12 @@ const StreamingPlatforms = () => {
           0
         );
 
-        if (
+        if (stats) {
+          const statsRevenue = safeNumber(stats.total_revenue);
+          if (statsRevenue > 0) {
+            breakdownRevenue = statsRevenue;
+          }
+        } else if (
           breakdownRevenue === 0 &&
           song.revenue !== undefined &&
           song.revenue !== null
@@ -340,8 +422,15 @@ const StreamingPlatforms = () => {
           breakdownRevenue = safeNumber(song.revenue);
         }
 
-        const totalStreamsValue =
+        let totalStreamsValue =
           breakdownStreams > 0 ? breakdownStreams : safeNumber(song.streams);
+
+        if (stats) {
+          const statsStreams = safeNumber(stats.total_streams);
+          if (statsStreams > 0) {
+            totalStreamsValue = statsStreams;
+          }
+        }
 
         return {
           id: song.id,
@@ -374,6 +463,15 @@ const StreamingPlatforms = () => {
       loadData();
     }
   }, [user, loadData]);
+
+  useEffect(() => {
+    const handleStreamingRefresh = () => {
+      loadData();
+    };
+
+    window.addEventListener('streaming:refresh', handleStreamingRefresh);
+    return () => window.removeEventListener('streaming:refresh', handleStreamingRefresh);
+  }, [loadData]);
 
   const connectPlatform = async (platformId: string) => {
     if (!user || !profile) return;
