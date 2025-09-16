@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, FormEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Users, 
   Heart, 
@@ -50,21 +53,68 @@ interface FanDemographics {
   updated_at: string;
 }
 
+interface FanMessage {
+  id: string;
+  user_id: string;
+  fan_name: string | null;
+  fan_email: string | null;
+  platform: string | null;
+  sentiment: string | null;
+  message: string;
+  created_at: string;
+}
+
+type MessageFormState = {
+  name: string;
+  email: string;
+  platform: string;
+  sentiment: string;
+  message: string;
+};
+
+const PLATFORM_OPTIONS = [
+  { value: "instagram", label: "Instagram" },
+  { value: "twitter", label: "Twitter / X" },
+  { value: "youtube", label: "YouTube" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "email", label: "Email" },
+  { value: "other", label: "Other" }
+];
+
+const SENTIMENT_OPTIONS = [
+  { value: "positive", label: "Positive" },
+  { value: "request", label: "Request" },
+  { value: "question", label: "Question" }
+];
+
 const FanManagement = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile, updateProfile, addActivity } = useGameData();
-  
+
   const [postContent, setPostContent] = useState("");
   const [fanStats, setFanStats] = useState<FanDemographics | null>(null);
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
+  const [fanMessages, setFanMessages] = useState<FanMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
+  const [messageSubmitting, setMessageSubmitting] = useState(false);
+  const [messageForm, setMessageForm] = useState<MessageFormState>({
+    name: "",
+    email: "",
+    platform: "instagram",
+    sentiment: "positive",
+    message: ""
+  });
+  const [sentimentFilter, setSentimentFilter] = useState("all");
+  const [platformFilter, setPlatformFilter] = useState("all");
 
   useEffect(() => {
     if (user) {
       loadFanData();
       loadSocialPosts();
+      loadFanMessages();
     }
   }, [user]);
 
@@ -78,7 +128,7 @@ const FanManagement = () => {
 
       if (error) throw error;
       setFanStats(data);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading fan data:', error);
     } finally {
       setLoading(false);
@@ -96,8 +146,29 @@ const FanManagement = () => {
 
       if (error) throw error;
       setSocialPosts(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading social posts:', error);
+    }
+  };
+
+  const loadFanMessages = async () => {
+    if (!user) return;
+
+    setMessagesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('fan_messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setFanMessages(data || []);
+    } catch (error) {
+      console.error('Error loading fan messages:', error);
+    } finally {
+      setMessagesLoading(false);
     }
   };
 
@@ -116,6 +187,70 @@ const FanManagement = () => {
       case "request": return "border-l-warning";
       case "question": return "border-l-primary";
       default: return "border-l-muted";
+    }
+  };
+
+  const filteredMessages = useMemo(() => {
+    return fanMessages.filter((message) => {
+      const sentimentMatch = sentimentFilter === "all" || message.sentiment === sentimentFilter;
+      const platformMatch = platformFilter === "all" || message.platform === platformFilter;
+      return sentimentMatch && platformMatch;
+    });
+  }, [fanMessages, sentimentFilter, platformFilter]);
+
+  const updateMessageForm = (field: keyof MessageFormState, value: string) => {
+    setMessageForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleFanMessageSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user || !messageForm.message.trim()) return;
+
+    const trimmedName = messageForm.name.trim();
+    const trimmedEmail = messageForm.email.trim();
+    const trimmedMessage = messageForm.message.trim();
+
+    setMessageSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('fan_messages')
+        .insert({
+          user_id: user.id,
+          fan_name: trimmedName || null,
+          fan_email: trimmedEmail || null,
+          platform: messageForm.platform || null,
+          sentiment: messageForm.sentiment || null,
+          message: trimmedMessage,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Message saved",
+        description: "Your fan message has been recorded.",
+      });
+
+      setMessageForm((prev) => ({
+        name: "",
+        email: "",
+        platform: prev.platform,
+        sentiment: prev.sentiment,
+        message: "",
+      }));
+
+      await loadFanMessages();
+    } catch (error) {
+      console.error('Error saving fan message:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save fan message.",
+      });
+    } finally {
+      setMessageSubmitting(false);
     }
   };
 
@@ -175,7 +310,7 @@ const FanManagement = () => {
         description: `Your message gained ${fanGrowth * platforms.length} new fans across all platforms!`,
       });
       setPostContent("");
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error posting:', error);
       toast({
         variant: "destructive",
@@ -186,6 +321,41 @@ const FanManagement = () => {
       setPosting(false);
     }
   };
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`fan_messages_user_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'fan_messages', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const newMessage = payload.new as FanMessage;
+          setFanMessages((prev) => {
+            if (prev.some((message) => message.id === newMessage.id)) {
+              return prev;
+            }
+
+            const updated = [newMessage, ...prev];
+            return updated.slice(0, 50);
+          });
+
+          toast({
+            title: "New fan message",
+            description: newMessage.fan_name
+              ? `${newMessage.fan_name} just reached out${newMessage.platform ? ` via ${newMessage.platform}` : ""}.`
+              : "A new fan just reached out.",
+          });
+        }
+      );
+
+    channel.subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user, toast]);
 
   if (loading) {
     return (
@@ -353,10 +523,186 @@ const FanManagement = () => {
               </CardTitle>
               <CardDescription>Connect with your most dedicated fans</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-center py-8">
-                <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Fan messages will appear here as you grow your audience!</p>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+                <div className="p-4 rounded-lg bg-secondary/30 space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold">Log fan outreach</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Record new fan connections to keep track of every shoutout and opportunity.
+                    </p>
+                  </div>
+                  <form className="space-y-4" onSubmit={handleFanMessageSubmit}>
+                    <div className="grid gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="fan-name">Fan name</Label>
+                        <Input
+                          id="fan-name"
+                          value={messageForm.name}
+                          onChange={(event) => updateMessageForm("name", event.target.value)}
+                          placeholder="Jamie from L.A."
+                          className="bg-secondary/50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fan-email">Fan contact</Label>
+                        <Input
+                          id="fan-email"
+                          type="email"
+                          value={messageForm.email}
+                          onChange={(event) => updateMessageForm("email", event.target.value)}
+                          placeholder="jamie@email.com"
+                          className="bg-secondary/50"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="fan-platform">Platform</Label>
+                        <Select
+                          value={messageForm.platform}
+                          onValueChange={(value) => updateMessageForm("platform", value)}
+                        >
+                          <SelectTrigger id="fan-platform" className="bg-secondary/50 border-primary/20">
+                            <SelectValue placeholder="Select platform" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PLATFORM_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fan-sentiment">Sentiment</Label>
+                        <Select
+                          value={messageForm.sentiment}
+                          onValueChange={(value) => updateMessageForm("sentiment", value)}
+                        >
+                          <SelectTrigger id="fan-sentiment" className="bg-secondary/50 border-primary/20">
+                            <SelectValue placeholder="Sentiment" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SENTIMENT_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fan-message">Message</Label>
+                      <Textarea
+                        id="fan-message"
+                        value={messageForm.message}
+                        onChange={(event) => updateMessageForm("message", event.target.value)}
+                        placeholder="Share the fan's note or request..."
+                        className="min-h-[120px] bg-secondary/50"
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={messageSubmitting || !messageForm.message.trim()}
+                      className="w-full bg-gradient-primary hover:shadow-electric"
+                    >
+                      {messageSubmitting ? "Saving..." : "Save Message"}
+                    </Button>
+                  </form>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Fan inbox</h3>
+                      <p className="text-sm text-muted-foreground">Review feedback coming in from your community.</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                      <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                        <SelectTrigger className="bg-secondary/50 border-primary/20 sm:w-[160px]">
+                          <SelectValue placeholder="Sentiment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All sentiments</SelectItem>
+                          {SENTIMENT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                        <SelectTrigger className="bg-secondary/50 border-primary/20 sm:w-[160px]">
+                          <SelectValue placeholder="Platform" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All platforms</SelectItem>
+                          {PLATFORM_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {messagesLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                    </div>
+                  ) : filteredMessages.length === 0 ? (
+                    <div className="text-center py-10">
+                      <Heart className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground">
+                        {fanMessages.length === 0
+                          ? "Fan messages will appear here as you grow your audience!"
+                          : "No messages match your current filters."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredMessages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`p-4 rounded-lg bg-secondary/40 border-l-4 ${getSentimentColor(message.sentiment || "")}`}
+                        >
+                          <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="font-semibold">
+                              {message.fan_name || "Anonymous Fan"}
+                            </span>
+                            {message.fan_email && (
+                              <span className="text-muted-foreground">• {message.fan_email}</span>
+                            )}
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {new Date(message.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {message.platform && (
+                              <div className="flex items-center gap-1">
+                                {getPlatformIcon(message.platform)}
+                                <span className="uppercase tracking-wide text-[11px]">
+                                  {message.platform}
+                                </span>
+                              </div>
+                            )}
+                            {message.sentiment && (
+                              <Badge variant="outline" className="capitalize">
+                                {message.sentiment}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-3 text-sm leading-relaxed whitespace-pre-line">
+                            {message.message}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
