@@ -1,9 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Users, 
   Music, 
@@ -19,16 +31,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
+import type { Database } from "@/integrations/supabase/types";
 
 interface BandMember {
   id: string;
   user_id: string;
   band_id: string;
   role: string;
-  salary: number;
-  joined_at: string;
+  salary: number | null;
+  joined_at: string | null;
   name?: string;
-  skills?: any;
+  skills?: PlayerSkillsRow | null;
   avatar_url?: string;
   is_player?: boolean;
 }
@@ -46,32 +59,74 @@ interface Band {
   updated_at: string;
 }
 
+const BAND_ROLES = [
+  "Lead Vocals",
+  "Lead Guitar",
+  "Rhythm Guitar",
+  "Bassist",
+  "Drummer",
+  "Keyboardist",
+  "Producer",
+  "Manager"
+];
+
+type PlayerSkillsRow = Database['public']['Tables']['player_skills']['Row'];
+
+type BandMemberRow = Database['public']['Tables']['band_members']['Row'] & {
+  profile?: { display_name?: string | null; avatar_url?: string | null };
+  skills?: PlayerSkillsRow | null;
+};
+
+type BandInvitation = Database['public']['Tables']['band_invitations']['Row'] & {
+  band?: Band;
+};
+
 const BandManager = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { profile, skills } = useGameData();
   
   const [band, setBand] = useState<Band | null>(null);
   const [members, setMembers] = useState<BandMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [isRecruitDialogOpen, setIsRecruitDialogOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState<string>(BAND_ROLES[0]);
+  const [inviteSalary, setInviteSalary] = useState<number>(0);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<BandInvitation[]>([]);
+  const [acceptingInviteId, setAcceptingInviteId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (user) {
       loadBandData();
+    } else {
+      setBand(null);
+      setMembers([]);
+      setPendingInvites([]);
+      setLoading(false);
     }
-  }, [user]);
+  }, [authLoading, user, loadBandData]);
 
-  const loadBandData = async () => {
+  const loadBandData = useCallback(async () => {
+    if (!user?.id) {
+      setBand(null);
+      setMembers([]);
+      setPendingInvites([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Check if user has a band (as leader or member)
       const { data: memberData, error: memberError } = await supabase
         .from('band_members')
         .select(`
           *,
           bands!band_members_band_id_fkey(*)
         `)
-        .eq('user_id', user!.id)
+        .eq('user_id', user.id)
         .single();
 
       if (memberError && memberError.code !== 'PGRST116') {
@@ -79,17 +134,24 @@ const BandManager = () => {
       }
 
       if (memberData?.bands) {
-        setBand(memberData.bands);
+        setBand(memberData.bands as Band);
+        setPendingInvites([]);
         await loadBandMembers(memberData.bands.id);
+      } else {
+        setBand(null);
+        setMembers([]);
+        await loadPendingInvitations();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading band data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadBandMembers, loadPendingInvitations, user?.id]);
 
-  const loadBandMembers = async (bandId: string) => {
+  const loadBandMembers = useCallback(async (bandId: string) => {
+    if (!user?.id) return;
+
     try {
       const { data, error } = await supabase
         .from('band_members')
@@ -102,19 +164,71 @@ const BandManager = () => {
 
       if (error) throw error;
 
-      const membersWithData = data.map((member: any) => ({
-        ...member,
-        name: member.user_id === user!.id ? 'You' : (member.profile?.display_name || 'Unknown'),
-        avatar_url: member.profile?.avatar_url || '',
-        is_player: member.user_id === user!.id,
-        skills: member.skills || {}
+      const memberRows = (data ?? []) as BandMemberRow[];
+      const currentUserId = user.id;
+
+      const membersWithData: BandMember[] = memberRows.map((member) => ({
+        id: member.id,
+        band_id: member.band_id,
+        user_id: member.user_id,
+        role: member.role,
+        salary: member.salary ?? null,
+        joined_at: member.joined_at ?? null,
+        name: member.user_id === currentUserId ? 'You' : member.profile?.display_name ?? 'Unknown',
+        avatar_url: member.profile?.avatar_url ?? '',
+        is_player: member.user_id === currentUserId,
+        skills: member.skills ?? null,
       }));
 
       setMembers(membersWithData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading band members:', error);
     }
-  };
+  }, [user?.id]);
+
+  const loadPendingInvitations = useCallback(async () => {
+    if (!user?.id) {
+      setPendingInvites([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('band_invitations')
+        .select(`
+          id,
+          band_id,
+          inviter_id,
+          invitee_id,
+          role,
+          salary,
+          status,
+          created_at,
+          responded_at,
+          band:bands (
+            id,
+            name,
+            genre,
+            description,
+            leader_id,
+            popularity,
+            weekly_fans,
+            max_members,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('invitee_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setPendingInvites((data as BandInvitation[]) || []);
+    } catch (error: unknown) {
+      console.error('Error loading band invitations:', error);
+    }
+  }, [user?.id]);
 
   const createBand = async () => {
     if (!user || !profile) return;
@@ -153,7 +267,7 @@ const BandManager = () => {
         title: "Band Created!",
         description: "Your musical journey as a band begins now!",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating band:', error);
       toast({
         variant: "destructive",
@@ -162,6 +276,142 @@ const BandManager = () => {
       });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const sendInvite = async () => {
+    if (!user || !band) {
+      toast({
+        variant: "destructive",
+        title: "No Band Available",
+        description: "You need to have an active band before recruiting members.",
+      });
+      return;
+    }
+
+    if (!inviteRole) {
+      toast({
+        variant: "destructive",
+        title: "Role Required",
+        description: "Please select a role for the invitation.",
+      });
+      return;
+    }
+
+    if (band.max_members && members.length >= band.max_members) {
+      toast({
+        variant: "destructive",
+        title: "Band Full",
+        description: "Your band has reached its maximum number of members.",
+      });
+      return;
+    }
+
+    const salaryValue = Number.isFinite(inviteSalary)
+      ? Math.max(0, Math.round(inviteSalary))
+      : 0;
+
+    setSendingInvite(true);
+
+    try {
+      const { error } = await supabase
+        .from('band_invitations')
+        .insert({
+          band_id: band.id,
+          inviter_id: user.id,
+          role: inviteRole,
+          salary: salaryValue,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invitation Sent",
+        description: "Your recruitment invitation is now live.",
+      });
+
+      setIsRecruitDialogOpen(false);
+      setInviteRole(BAND_ROLES[0]);
+      setInviteSalary(0);
+    } catch (error: unknown) {
+      console.error('Error sending band invitation:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to send invitation. Please try again.",
+      });
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  const acceptInvite = async (invitation: BandInvitation) => {
+    if (!user) return;
+
+    setAcceptingInviteId(invitation.id);
+
+    try {
+      const { data: updatedInvitation, error } = await supabase
+        .from('band_invitations')
+        .update({
+          status: 'accepted',
+          invitee_id: user.id,
+          responded_at: new Date().toISOString(),
+        })
+        .eq('id', invitation.id)
+        .eq('status', 'pending')
+        .select(`
+          id,
+          band_id,
+          role,
+          salary
+        `)
+        .single();
+
+      if (error) throw error;
+      if (!updatedInvitation) throw new Error('Invitation not found');
+
+      const { error: memberError } = await supabase
+        .from('band_members')
+        .insert({
+          band_id: updatedInvitation.band_id,
+          user_id: user.id,
+          role: updatedInvitation.role,
+          salary: updatedInvitation.salary ?? 0,
+        });
+
+      if (memberError && memberError.code !== '23505') {
+        throw memberError;
+      }
+
+      setPendingInvites(prev => prev.filter(invite => invite.id !== invitation.id));
+
+      const { data: bandData, error: bandError } = await supabase
+        .from('bands')
+        .select('*')
+        .eq('id', updatedInvitation.band_id)
+        .single();
+
+      if (bandError) throw bandError;
+
+      if (bandData) {
+        setBand(bandData as Band);
+        await loadBandMembers(bandData.id);
+      }
+
+      toast({
+        title: "Invitation Accepted",
+        description: "Welcome to your new band!",
+      });
+    } catch (error: unknown) {
+      console.error('Error accepting band invitation:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to accept invitation.',
+      });
+    } finally {
+      setAcceptingInviteId(null);
     }
   };
 
@@ -189,8 +439,63 @@ const BandManager = () => {
     );
   }
 
-  // If no band, show creation interface
+  // If no band, show pending invitations or creation interface
   if (!band) {
+    if (pendingInvites.length > 0) {
+      return (
+        <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20 w-full max-w-3xl">
+            <CardHeader className="text-center space-y-2">
+              <CardTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                Band Invitations
+              </CardTitle>
+              <CardDescription>
+                {pendingInvites.length > 1
+                  ? "You've received new invitations to join a band. Review and accept the role that fits you best."
+                  : "You've been invited to join a band. Review the offer and accept to begin performing together."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pendingInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="p-4 rounded-lg bg-secondary/30 border border-primary/10 space-y-3"
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {invite.band?.name || "New Band Opportunity"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {invite.band?.genre ? `${invite.band.genre} • ` : ""}Role: {invite.role}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-sm border-primary/40 text-primary">
+                      ${invite.salary ?? 0}/week
+                    </Badge>
+                  </div>
+                  {invite.band?.description && (
+                    <p className="text-sm text-muted-foreground">
+                      {invite.band.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-end">
+                    <Button
+                      className="bg-gradient-primary"
+                      onClick={() => acceptInvite(invite)}
+                      disabled={acceptingInviteId === invite.id}
+                    >
+                      {acceptingInviteId === invite.id ? "Accepting..." : "Accept Invitation"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
         <Card className="bg-card/80 backdrop-blur-sm border-primary/20 max-w-md">
@@ -222,6 +527,9 @@ const BandManager = () => {
     );
   }
 
+  const isBandAtCapacity = band.max_members ? members.length >= band.max_members : false;
+  const memberCapacityLabel = band.max_members ? `${members.length}/${band.max_members}` : `${members.length}`;
+
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -231,13 +539,80 @@ const BandManager = () => {
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               {band.name}
             </h1>
-            <p className="text-muted-foreground">{band.genre} • {members.length}/{band.max_members} members</p>
+            <p className="text-muted-foreground">{band.genre} • {memberCapacityLabel} members</p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-gradient-primary hover:shadow-electric">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Recruit Member
-            </Button>
+            <Dialog open={isRecruitDialogOpen} onOpenChange={setIsRecruitDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary hover:shadow-electric">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Recruit Member
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Recruit a New Member</DialogTitle>
+                  <DialogDescription>
+                    Customize the role and salary offer for your next band mate.
+                  </DialogDescription>
+                </DialogHeader>
+                {isBandAtCapacity && (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    Your band has reached its member limit. Remove a member before sending new invitations.
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-role">Role</Label>
+                    <Select value={inviteRole} onValueChange={(value) => setInviteRole(value)}>
+                      <SelectTrigger id="invite-role">
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BAND_ROLES.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-salary">Weekly Salary Offer</Label>
+                    <Input
+                      id="invite-salary"
+                      type="number"
+                      min={0}
+                      step={50}
+                      value={inviteSalary}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        setInviteSalary(Number.isNaN(nextValue) ? 0 : nextValue);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Offer a weekly stipend to attract skilled musicians.
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsRecruitDialogOpen(false)}
+                    disabled={sendingInvite}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="bg-gradient-primary"
+                    onClick={sendInvite}
+                    disabled={sendingInvite || !inviteRole || isBandAtCapacity}
+                  >
+                    {sendingInvite ? "Sending..." : "Send Invitation"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" className="border-primary/20 hover:bg-primary/10">
               <Settings className="h-4 w-4 mr-2" />
               Band Settings
