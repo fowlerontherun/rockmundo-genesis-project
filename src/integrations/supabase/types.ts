@@ -1170,43 +1170,46 @@ export type Database = {
         }
         Relationships: []
       }
-      schedule_events: {
+      social_campaigns: {
         Row: {
+          budget: number
           created_at: string | null
-          date: string
-          description: string | null
+          engagement: number
+          end_date: string | null
           id: string
-          location: string
-          status: string
-          time: string
-          title: string
-          type: string
+          name: string
+          platform: string
+          reach: number
+          start_date: string | null
+          status: "active" | "completed"
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          budget?: number
           created_at?: string | null
-          date: string
-          description?: string | null
+          engagement?: number
+          end_date?: string | null
           id?: string
-          location: string
-          status?: string
-          time: string
-          title: string
-          type: string
+          name: string
+          platform: string
+          reach?: number
+          start_date?: string | null
+          status?: "active" | "completed"
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          budget?: number
           created_at?: string | null
-          date?: string
-          description?: string | null
+          engagement?: number
+          end_date?: string | null
           id?: string
-          location?: string
-          status?: string
-          time?: string
-          title?: string
-          type?: string
+          name?: string
+          platform?: string
+          reach?: number
+          start_date?: string | null
+          status?: "active" | "completed"
           updated_at?: string | null
           user_id?: string
         }

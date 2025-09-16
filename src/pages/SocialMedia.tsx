@@ -1,17 +1,36 @@
 
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDistanceToNow } from "date-fns";
-import { Heart, MessageCircle, Repeat2, Share, TrendingUp, Users, Eye } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Share, TrendingUp, Users, Eye, Loader2, Pencil, Plus } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
 
 type SocialPostRow = Database["public"]["Tables"]["social_posts"]["Row"];
+
+type SocialCampaignRow = Database["public"]["Tables"]["social_campaigns"]["Row"];
 
 interface SocialPost {
   id: string;
@@ -24,41 +43,97 @@ interface SocialPost {
   engagement: number;
 }
 
-const calculateEngagement = (likes: number, comments: number, reposts: number, views: number) => {
-  if (!views) return 0;
-  const engagementRate = ((likes + comments + reposts) / views) * 100;
-  return Number(engagementRate.toFixed(1));
-};
+interface Campaign {
+  id: string;
+  name: string;
+  platform: string;
+  budget: number;
+  reach: number;
+  engagement: number;
+  status: CampaignStatus;
+  startDate: string | null;
+  endDate: string | null;
+}
 
-const formatPostTimestamp = (timestamp: string) => {
-  if (!timestamp) return "Just now";
-  try {
-    return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-  } catch (error) {
-    console.error("Error formatting timestamp:", error);
-    return "Just now";
+interface CampaignFormState {
+  name: string;
+  platform: string;
+  budget: string;
+  reach: string;
+  engagement: string;
+  status: CampaignStatus;
+  startDate: string;
+  endDate: string;
+}
+
+const campaignStatusOptions: CampaignStatus[] = ["Active", "Completed"];
+
+const mapStatusFromDb = (status: SocialCampaignRow["status"]): CampaignStatus => {
+  switch (status) {
+    case "completed":
+      return "Completed";
+    case "active":
+    default:
+      return "Active";
   }
 };
 
-const mapPost = (post: SocialPostRow): SocialPost => {
-  const likes = post.likes ?? 0;
-  const comments = post.comments ?? 0;
-  const reposts = post.reposts ?? post.shares ?? 0;
-  const views = post.views ?? 0;
-  const timestamp = post.timestamp ?? post.created_at ?? new Date().toISOString();
-
-  return {
-    id: post.id,
-    content: post.content,
-    likes,
-    comments,
-    reposts,
-    views,
-    timestamp,
-    engagement: calculateEngagement(likes, comments, reposts, views),
-  };
+const mapStatusToDb = (status: CampaignStatus): SocialCampaignRow["status"] => {
+  switch (status) {
+    case "Completed":
+      return "completed";
+    case "Active":
+    default:
+      return "active";
+  }
 };
 
+const mapRowToCampaign = (row: SocialCampaignRow): Campaign => ({
+  id: row.id,
+  name: row.name,
+  platform: row.platform,
+  budget: Number(row.budget ?? 0),
+  reach: Number(row.reach ?? 0),
+  engagement: Number(row.engagement ?? 0),
+  status: mapStatusFromDb(row.status),
+  startDate: row.start_date,
+  endDate: row.end_date
+});
+
+const formatCampaignDate = (date: string | null) => {
+  if (!date) return "--";
+
+  const safeDateString = `${date}T00:00:00`;
+  const formattedDate = new Date(safeDateString).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+
+  return formattedDate;
+};
+
+const createEmptyCampaignForm = (): CampaignFormState => ({
+  name: "",
+  platform: "",
+  budget: "",
+  reach: "",
+  engagement: "",
+  status: "Active",
+  startDate: "",
+  endDate: ""
+});
+
+const mapCampaignToForm = (campaign: Campaign): CampaignFormState => ({
+  name: campaign.name,
+  platform: campaign.platform,
+  budget: Number.isFinite(campaign.budget) ? campaign.budget.toString() : "",
+  reach: Number.isFinite(campaign.reach) ? campaign.reach.toString() : "",
+  engagement: Number.isFinite(campaign.engagement) ? campaign.engagement.toString() : "",
+  status: campaign.status,
+  startDate: campaign.startDate ?? "",
+  endDate: campaign.endDate ?? ""
+});
 
 const SocialMedia = () => {
   const { user } = useAuth();
@@ -74,65 +149,145 @@ const SocialMedia = () => {
     if (authLoading) {
       return;
     }
+  ]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
+  const [campaignDialogOpen, setCampaignDialogOpen] = useState(false);
+  const [campaignSaving, setCampaignSaving] = useState(false);
+  const [campaignForm, setCampaignForm] = useState<CampaignFormState>(() => createEmptyCampaignForm());
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
 
+  const loadCampaigns = useCallback(async () => {
     if (!user) {
-      setPosts([]);
-      setLoadingPosts(false);
+      setCampaigns([]);
+      setCampaignsLoading(false);
       return;
     }
 
-    setLoadingPosts(true);
+    setCampaignsLoading(true);
 
     try {
       const { data, error } = await supabase
-        .from("social_posts")
+        .from("social_campaigns")
         .select("*")
         .eq("user_id", user.id)
-        .order("timestamp", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      setPosts((data ?? []).map(mapPost));
+      const mappedCampaigns = (data ?? []).map(mapRowToCampaign);
+      setCampaigns(mappedCampaigns);
     } catch (error) {
-      console.error("Error loading social posts:", error);
+      console.error("Error loading social campaigns:", error);
       toast({
         variant: "destructive",
-        title: "Error loading posts",
-        description: "We couldn't load your recent social updates.",
+        title: "Unable to load campaigns",
+        description: "Please try again in a moment."
       });
     } finally {
-      setLoadingPosts(false);
+      setCampaignsLoading(false);
     }
-  }, [authLoading, toast, user]);
+  }, [toast, user]);
 
-  useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+  const createCampaign = useCallback(
+    async (formState: CampaignFormState) => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Sign in to create campaigns",
+          description: "You need to be logged in to manage marketing campaigns."
+        });
+        throw new Error("User not authenticated");
+      }
 
-  const campaigns = [
-    {
-      id: 1,
-      name: "New Single Launch",
-      platform: "All Platforms",
-      budget: 5000,
-      reach: 150000,
-      engagement: 8.5,
-      status: "Active",
-      startDate: "Nov 1, 2024",
-      endDate: "Nov 15, 2024"
+      try {
+        const { data, error } = await supabase
+          .from("social_campaigns")
+          .insert({
+            user_id: user.id,
+            name: formState.name.trim(),
+            platform: formState.platform.trim(),
+            budget: Number(formState.budget || 0),
+            reach: Number(formState.reach || 0),
+            engagement: Number(formState.engagement || 0),
+            status: mapStatusToDb(formState.status),
+            start_date: formState.startDate || null,
+            end_date: formState.endDate || null
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const newCampaign = mapRowToCampaign(data);
+        setCampaigns((previous) => [newCampaign, ...previous]);
+        return newCampaign;
+      } catch (error) {
+        console.error("Error creating campaign:", error);
+        toast({
+          variant: "destructive",
+          title: "Campaign not saved",
+          description: "We couldn't create the campaign. Please try again."
+        });
+        throw error;
+      }
     },
-    {
-      id: 2,
-      name: "Tour Announcement",
-      platform: "Instagram + TikTok",
-      budget: 3000,
-      reach: 89000,
-      engagement: 12.2,
-      status: "Completed",
-      startDate: "Oct 15, 2024",
-      endDate: "Oct 30, 2024"
-    }
-  ]);
+    [toast, user]
+  );
+
+  const updateCampaign = useCallback(
+    async (campaignId: string, updates: Partial<Campaign>) => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Sign in to update campaigns",
+          description: "You need to be logged in to update marketing campaigns."
+        });
+        throw new Error("User not authenticated");
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (updates.name !== undefined) updatePayload.name = updates.name.trim();
+      if (updates.platform !== undefined) updatePayload.platform = updates.platform.trim();
+      if (updates.budget !== undefined) updatePayload.budget = updates.budget;
+      if (updates.reach !== undefined) updatePayload.reach = updates.reach;
+      if (updates.engagement !== undefined) updatePayload.engagement = updates.engagement;
+      if (updates.status !== undefined) updatePayload.status = mapStatusToDb(updates.status);
+      if (updates.startDate !== undefined) updatePayload.start_date = updates.startDate;
+      if (updates.endDate !== undefined) updatePayload.end_date = updates.endDate;
+
+      try {
+        const { data, error } = await supabase
+          .from("social_campaigns")
+          .update(updatePayload)
+          .eq("id", campaignId)
+          .eq("user_id", user.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const updatedCampaign = mapRowToCampaign(data);
+        setCampaigns((previous) =>
+          previous.map((campaign) => (campaign.id === campaignId ? updatedCampaign : campaign))
+        );
+
+        return updatedCampaign;
+      } catch (error) {
+        console.error("Error updating campaign:", error);
+        toast({
+          variant: "destructive",
+          title: "Campaign update failed",
+          description: "We couldn't update the campaign. Please try again."
+        });
+        throw error;
+      }
+    },
+    [toast, user]
+  );
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -160,6 +315,108 @@ const SocialMedia = () => {
 
     fetchStats();
   }, [user]);
+
+  useEffect(() => {
+    void loadCampaigns();
+  }, [loadCampaigns]);
+
+  const handleCampaignDialogChange = (open: boolean) => {
+    setCampaignDialogOpen(open);
+    if (!open) {
+      setEditingCampaign(null);
+      setCampaignForm(createEmptyCampaignForm());
+    }
+  };
+
+  const handleOpenCreateCampaign = () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Sign in to manage campaigns",
+        description: "Log in to create new marketing campaigns."
+      });
+      return;
+    }
+
+    setEditingCampaign(null);
+    setCampaignForm(createEmptyCampaignForm());
+    setCampaignDialogOpen(true);
+  };
+
+  const handleEditCampaign = (campaign: Campaign) => {
+    setEditingCampaign(campaign);
+    setCampaignForm(mapCampaignToForm(campaign));
+    setCampaignDialogOpen(true);
+  };
+
+  const handleCampaignFieldChange = (field: keyof CampaignFormState, value: string | CampaignStatus) => {
+    setCampaignForm((previous) => ({
+      ...previous,
+      [field]: value
+    }));
+  };
+
+  const handleCampaignSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedName = campaignForm.name.trim();
+    const trimmedPlatform = campaignForm.platform.trim();
+
+    if (!trimmedName || !trimmedPlatform) {
+      toast({
+        variant: "destructive",
+        title: "Add campaign details",
+        description: "Campaign name and platform are required."
+      });
+      return;
+    }
+
+    const numericBudget = Number(campaignForm.budget || 0);
+    const numericReach = Number(campaignForm.reach || 0);
+    const numericEngagement = Number(campaignForm.engagement || 0);
+
+    setCampaignSaving(true);
+
+    try {
+      if (editingCampaign) {
+        await updateCampaign(editingCampaign.id, {
+          name: trimmedName,
+          platform: trimmedPlatform,
+          budget: numericBudget,
+          reach: numericReach,
+          engagement: numericEngagement,
+          status: campaignForm.status,
+          startDate: campaignForm.startDate || null,
+          endDate: campaignForm.endDate || null
+        });
+
+        toast({
+          title: "Campaign updated",
+          description: "Your campaign changes have been saved."
+        });
+      } else {
+        await createCampaign({
+          ...campaignForm,
+          name: trimmedName,
+          platform: trimmedPlatform,
+          budget: campaignForm.budget || numericBudget.toString(),
+          reach: campaignForm.reach || numericReach.toString(),
+          engagement: campaignForm.engagement || numericEngagement.toString()
+        });
+
+        toast({
+          title: "Campaign created",
+          description: "Your new marketing campaign is ready to launch."
+        });
+      }
+
+      handleCampaignDialogChange(false);
+    } catch (error) {
+      console.error("Error saving campaign:", error);
+    } finally {
+      setCampaignSaving(false);
+    }
+  };
 
   const applySocialGrowth = async (followerGain: number, engagementBoost: number, message: string) => {
     if (followerGain <= 0 && engagementBoost <= 0) return;
@@ -264,8 +521,11 @@ const SocialMedia = () => {
     }
   };
 
-  const handleLike = async (postId: string) => {
-    if (!user) {
+  const handleRunCampaign = async (campaignId: string) => {
+    const campaign = campaigns.find((item) => item.id === campaignId);
+    if (!campaign) return;
+
+    if (campaign.status === "Completed") {
       toast({
         variant: "destructive",
         title: "Sign in required",
@@ -284,28 +544,10 @@ const SocialMedia = () => {
       engagement: calculateEngagement(updatedLikes, existingPost.comments, existingPost.reposts, existingPost.views),
     };
 
-    setPosts((prev) =>
-      prev.map((post) => (post.id === postId ? optimisticPost : post))
-    );
-
-    const { error } = await supabase
-      .from("social_posts")
-      .update({ likes: updatedLikes })
-      .eq("id", postId)
-      .eq("user_id", user.id);
-
-    if (error) {
-      console.error("Error updating likes:", error);
-      setPosts((prev) =>
-        prev.map((post) =>
-          post.id === postId ? { ...existingPost } : post
-        )
-      );
-      toast({
-        variant: "destructive",
-        title: "Unable to like post",
-        description: "Please try again later.",
-      });
+    try {
+      await updateCampaign(campaignId, { status: "Completed" });
+    } catch (error) {
+      console.error("Error completing campaign:", error);
     }
   };
 
@@ -483,48 +725,79 @@ const SocialMedia = () => {
                 <CardDescription>Manage your promotional campaigns</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {campaigns.map((campaign) => (
-                  <div key={campaign.id} className="space-y-3 p-4 border border-accent/20 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-semibold text-cream">{campaign.name}</h4>
-                      <Badge
-                        variant={campaign.status === "Active" ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {campaign.status}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between text-cream/80">
-                        <span>Platform:</span>
-                        <span>{campaign.platform}</span>
-                      </div>
-                      <div className="flex justify-between text-cream/80">
-                        <span>Budget:</span>
-                        <span>${campaign.budget.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-cream/80">
-                        <span>Reach:</span>
-                        <span>{campaign.reach.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-cream/80">
-                        <span>Engagement:</span>
-                        <span className="text-accent font-semibold">{campaign.engagement}%</span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-cream/60">
-                      {campaign.startDate} - {campaign.endDate}
-                    </div>
-                    <Button
-                      onClick={() => handleRunCampaign(campaign.id)}
-                      className="w-full bg-accent hover:bg-accent/80 text-background"
-                      disabled={campaign.status === "Completed"}
-                    >
-                      {campaign.status === "Completed" ? "Campaign Completed" : "Run Campaign"}
-                    </Button>
+                {campaignsLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-6 text-sm text-cream/70">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading campaigns...
                   </div>
-                ))}
-                <Button className="w-full bg-accent hover:bg-accent/80 text-background">
+                ) : campaigns.length > 0 ? (
+                  campaigns.map((campaign) => (
+                    <div
+                      key={campaign.id}
+                      className="space-y-4 rounded-lg border border-accent/20 bg-background/5 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <h4 className="font-semibold text-cream">{campaign.name}</h4>
+                          <div className="text-xs text-cream/60">
+                            {formatCampaignDate(campaign.startDate)} - {formatCampaignDate(campaign.endDate)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={campaign.status === "Active" ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {campaign.status}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-accent/40 text-cream/80 hover:text-cream"
+                            onClick={() => handleEditCampaign(campaign)}
+                          >
+                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between text-cream/80">
+                          <span>Platform:</span>
+                          <span>{campaign.platform}</span>
+                        </div>
+                        <div className="flex justify-between text-cream/80">
+                          <span>Budget:</span>
+                          <span>${campaign.budget.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-cream/80">
+                          <span>Reach:</span>
+                          <span>{campaign.reach.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-cream/80">
+                          <span>Engagement:</span>
+                          <span className="text-accent font-semibold">{campaign.engagement.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => void handleRunCampaign(campaign.id)}
+                        className="w-full bg-accent hover:bg-accent/80 text-background"
+                        disabled={campaign.status === "Completed"}
+                      >
+                        {campaign.status === "Completed" ? "Campaign Completed" : "Run Campaign"}
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed border-accent/40 py-8 text-center text-sm text-cream/60">
+                    No campaigns yet. Start one to grow your reach.
+                  </div>
+                )}
+                <Button
+                  onClick={handleOpenCreateCampaign}
+                  className="w-full bg-accent hover:bg-accent/80 text-background"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
                   Create Campaign
                 </Button>
               </CardContent>
@@ -557,6 +830,150 @@ const SocialMedia = () => {
           </div>
         </div>
       </div>
+      <Dialog open={campaignDialogOpen} onOpenChange={handleCampaignDialogChange}>
+        <DialogContent className="bg-card border border-accent/40 sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-cream">
+              {editingCampaign ? "Edit Campaign" : "Create Campaign"}
+            </DialogTitle>
+            <DialogDescription>
+              Define your campaign goals, budget, and timeframe to keep your promotions on track.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCampaignSubmit} className="space-y-4">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="campaign-name" className="text-cream/80">
+                  Campaign Name
+                </Label>
+                <Input
+                  id="campaign-name"
+                  value={campaignForm.name}
+                  onChange={(event) => handleCampaignFieldChange("name", event.target.value)}
+                  placeholder="Album Launch Promo"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="campaign-platform" className="text-cream/80">
+                  Platform
+                </Label>
+                <Input
+                  id="campaign-platform"
+                  value={campaignForm.platform}
+                  onChange={(event) => handleCampaignFieldChange("platform", event.target.value)}
+                  placeholder="Instagram, TikTok, YouTube"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="campaign-budget" className="text-cream/80">
+                    Budget ($)
+                  </Label>
+                  <Input
+                    id="campaign-budget"
+                    type="number"
+                    min={0}
+                    step="100"
+                    value={campaignForm.budget}
+                    onChange={(event) => handleCampaignFieldChange("budget", event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="campaign-reach" className="text-cream/80">
+                    Reach
+                  </Label>
+                  <Input
+                    id="campaign-reach"
+                    type="number"
+                    min={0}
+                    step="1000"
+                    value={campaignForm.reach}
+                    onChange={(event) => handleCampaignFieldChange("reach", event.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="campaign-engagement" className="text-cream/80">
+                    Engagement (%)
+                  </Label>
+                  <Input
+                    id="campaign-engagement"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.1"
+                    value={campaignForm.engagement}
+                    onChange={(event) => handleCampaignFieldChange("engagement", event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="campaign-status" className="text-cream/80">
+                    Status
+                  </Label>
+                  <Select
+                    value={campaignForm.status}
+                    onValueChange={(value) => handleCampaignFieldChange("status", value as CampaignStatus)}
+                  >
+                    <SelectTrigger id="campaign-status" className="text-left">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {campaignStatusOptions.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="campaign-start-date" className="text-cream/80">
+                    Start Date
+                  </Label>
+                  <Input
+                    id="campaign-start-date"
+                    type="date"
+                    value={campaignForm.startDate}
+                    onChange={(event) => handleCampaignFieldChange("startDate", event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="campaign-end-date" className="text-cream/80">
+                    End Date
+                  </Label>
+                  <Input
+                    id="campaign-end-date"
+                    type="date"
+                    value={campaignForm.endDate}
+                    onChange={(event) => handleCampaignFieldChange("endDate", event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-accent/40"
+                onClick={() => handleCampaignDialogChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-accent hover:bg-accent/80 text-background"
+                disabled={campaignSaving}
+              >
+                {campaignSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingCampaign ? "Save Changes" : "Create Campaign"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
