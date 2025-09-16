@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,10 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
+import type { Tables, Database } from '@/integrations/supabase/types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
 import {
   MessageSquare,
   Users,
@@ -43,6 +42,41 @@ interface ChatMessage {
   channel: string;
   user_level?: number;
   user_badge?: string;
+}
+
+type NotificationType =
+  | 'gig_invite'
+  | 'band_request'
+  | 'fan_milestone'
+  | 'achievement'
+  | 'system';
+
+interface NotificationRow {
+  id: string;
+  user_id: string;
+  type: NotificationType | null;
+  message: string;
+  timestamp: string;
+  read: boolean;
+}
+
+interface ChatProfileSummary {
+  username: string | null;
+  display_name: string | null;
+  level: number | null;
+}
+
+interface ChatMessageRow {
+  id: string;
+  user_id: string;
+  message: string;
+  channel: string | null;
+  created_at: string | null;
+  username?: string | null;
+  user_level?: number | null;
+  user_badge?: string | null;
+  profiles?: ChatProfileSummary | null;
+  profile?: ChatProfileSummary | null;
 }
 
 type JamSessionRow = Tables<'jam_sessions'>;
@@ -156,6 +190,34 @@ const mapNotificationRow = (notification: NotificationRow): Notification => {
   };
 };
 
+const mapChatMessageRow = (row: ChatMessageRow): ChatMessage => {
+  const relatedProfile = row.profiles ?? row.profile ?? null;
+
+  const resolvedUsername =
+    row.username ??
+    relatedProfile?.display_name ??
+    relatedProfile?.username ??
+    'Unknown Player';
+
+  const potentialLevel = row.user_level ?? relatedProfile?.level ?? undefined;
+  const resolvedLevel = typeof potentialLevel === 'number' ? potentialLevel : undefined;
+
+  const resolvedBadge =
+    row.user_badge ??
+    (typeof resolvedLevel === 'number' && resolvedLevel > 20 ? 'Pro' : undefined);
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    username: resolvedUsername || 'Unknown Player',
+    message: row.message,
+    timestamp: row.created_at ?? new Date().toISOString(),
+    channel: row.channel ?? 'general',
+    user_level: resolvedLevel ?? 1,
+    user_badge: resolvedBadge ?? undefined,
+  };
+};
+
 const RealtimeCommunication: React.FC = () => {
   const { user } = useAuth();
   const { profile } = useGameData();
@@ -165,7 +227,8 @@ const RealtimeCommunication: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [selectedChannel, setSelectedChannel] = useState('general');
-  const selectedChannelRef = useRef(selectedChannel);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const hasConnectedRef = useRef(false);
   const [isConnected, setIsConnected] = useState(false);
   const [activeJam, setActiveJam] = useState<JamSession | null>(null);
   const [jamTempo, setJamTempo] = useState(120);
@@ -187,28 +250,188 @@ const RealtimeCommunication: React.FC = () => {
   const unreadCount = notifications.filter(notification => !notification.read).length;
 
   useEffect(() => {
-    selectedChannelRef.current = selectedChannel;
-  }, [selectedChannel]);
-
-  useEffect(() => {
-    if (user) {
-      initializeRealtime();
-      loadChatHistory();
-      void loadJamSessions();
-      loadNotifications();
+    if (!user) {
+      return;
     }
 
-    const cleanupRealtime = initializeRealtime();
-    loadChatHistory();
-    loadJamSessions();
-
-    return () => {
-      cleanupRealtime();
-      setIsConnected(false);
-    };
+    void loadJamSessions();
   }, [user, loadJamSessions]);
 
-        const mapped = (data ?? []).map(mapNotificationRow);
+  useEffect(() => {
+    if (!userId) {
+      setMessages([]);
+      setIsConnected(false);
+      hasConnectedRef.current = false;
+
+      if (channelRef.current) {
+        void supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+
+      return;
+    }
+
+    let isActive = true;
+
+    const fetchMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from<ChatMessageRow>('chat_messages' as unknown as keyof Database['public']['Tables'])
+          .select(`
+            id,
+            user_id,
+            message,
+            channel,
+            created_at
+          `)
+          .eq('channel', selectedChannel)
+          .order('created_at', { ascending: true })
+          .limit(100);
+
+        if (error) {
+          throw error;
+        }
+
+        const rows = (data ?? []) as ChatMessageRow[];
+        const userIds = Array.from(new Set(rows.map(row => row.user_id).filter(Boolean)));
+
+        let profileMap: Record<string, ChatProfileSummary> = {};
+
+        if (userIds.length > 0) {
+          const { data: profileRows, error: profileError } = await supabase
+            .from('profiles')
+            .select('user_id, username, display_name, level')
+            .in('user_id', userIds);
+
+          if (!profileError && profileRows) {
+            profileMap = Object.fromEntries(
+              profileRows.map(profile => [
+                profile.user_id,
+                {
+                  username: profile.username,
+                  display_name: profile.display_name,
+                  level: profile.level,
+                } satisfies ChatProfileSummary,
+              ])
+            );
+          }
+        }
+
+        if (!isActive) {
+          return;
+        }
+
+        const mapped = rows.map(row =>
+          mapChatMessageRow({
+            ...row,
+            channel: row.channel ?? selectedChannel,
+            created_at: row.created_at ?? new Date().toISOString(),
+            profiles: profileMap[row.user_id] ?? null,
+          })
+        );
+        setMessages(mapped);
+      } catch (err) {
+        console.error('Error loading chat messages:', err);
+        if (isActive) {
+          toast.error('Failed to load chat messages.');
+        }
+      }
+    };
+
+    void fetchMessages();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedChannel, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    if (channelRef.current) {
+      void supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    const channel = supabase.channel(`chat-room:${selectedChannel}`, {
+      config: {
+        broadcast: {
+          self: true,
+        },
+      },
+    });
+
+    setIsConnected(false);
+
+    channel
+      .on('broadcast', { event: 'new-message' }, payload => {
+        const incoming = payload.payload as ChatMessage | undefined;
+
+        if (!incoming || incoming.channel !== selectedChannel) {
+          return;
+        }
+
+        setMessages(prev => {
+          if (prev.some(message => message.id === incoming.id)) {
+            return prev;
+          }
+          return [...prev, incoming];
+        });
+      });
+
+    channel.subscribe(status => {
+      if (status === 'SUBSCRIBED') {
+        setIsConnected(true);
+
+        if (!hasConnectedRef.current) {
+          toast.success('Connected to RockMundo Live!');
+          hasConnectedRef.current = true;
+        }
+      }
+
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        setIsConnected(false);
+      }
+    });
+
+    channelRef.current = channel;
+
+    return () => {
+      setIsConnected(false);
+      if (channelRef.current) {
+        void supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [selectedChannel, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setNotifications([]);
+      return;
+    }
+
+    let isActive = true;
+
+    const fetchNotifications = async () => {
+        try {
+          const { data, error } = await supabase
+            .from<NotificationRow>('notifications' as unknown as keyof Database['public']['Tables'])
+            .select('*')
+            .eq('user_id', userId)
+            .order('timestamp', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!isActive) {
+          return;
+        }
+
+        const mapped = (data ?? []).map(item => mapNotificationRow(item as NotificationRow));
         setNotifications(sortNotificationsByTimestamp(mapped));
       } catch (err) {
         console.error('Error loading notifications:', err);
@@ -218,7 +441,7 @@ const RealtimeCommunication: React.FC = () => {
       }
     };
 
-    fetchNotifications();
+    void fetchNotifications();
 
     return () => {
       isActive = false;
@@ -271,79 +494,6 @@ const RealtimeCommunication: React.FC = () => {
     };
   }, [userId]);
 
-  const initializeRealtime = useCallback(() => {
-    const connectionTimeout = setTimeout(() => {
-      setIsConnected(true);
-      toast.success('Connected to RockMundo Live!');
-    }, 1000);
-
-    const messageInterval = setInterval(() => {
-      if (Math.random() > 0.7) {
-        const randomMessages = [
-          'Anyone up for a jam session?',
-          'Just finished recording a new track!',
-          'Looking for a bassist for our upcoming tour',
-          'Check out my new song on the charts!',
-          'Equipment trade: Gibson Les Paul for Fender Strat',
-        ];
-
-        const newMessage: ChatMessage = {
-          id: Date.now().toString(),
-          user_id: 'random',
-          username: `Player${Math.floor(Math.random() * 1000)}`,
-          message: randomMessages[Math.floor(Math.random() * randomMessages.length)],
-          timestamp: new Date().toISOString(),
-          channel: selectedChannelRef.current,
-          user_level: Math.floor(Math.random() * 50) + 1,
-          user_badge: Math.random() > 0.7 ? 'Premium' : undefined
-        };
-
-        setMessages(prev => [...prev.slice(-49), newMessage]);
-      }
-    }, 5000);
-
-    return () => {
-      clearTimeout(connectionTimeout);
-      clearInterval(messageInterval);
-    };
-  }, []);
-
-  const loadChatHistory = () => {
-    // Simulate loading chat history
-    const historyMessages: ChatMessage[] = [
-      {
-        id: '1',
-        user_id: 'user1',
-        username: 'RockStar99',
-        message: 'Welcome to RockMundo! Anyone want to start a band?',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        channel: 'general',
-        user_level: 25,
-        user_badge: 'Premium'
-      },
-      {
-        id: '2',
-        user_id: 'user2',
-        username: 'MelodyMaker',
-        message: 'Just hit level 15! Time to book bigger venues 🎸',
-        timestamp: new Date(Date.now() - 1800000).toISOString(),
-        channel: 'general',
-        user_level: 15
-      },
-      {
-        id: '3',
-        user_id: 'user3',
-        username: 'DrumMaster',
-        message: 'Looking for band members for the upcoming tournament!',
-        timestamp: new Date(Date.now() - 900000).toISOString(),
-        channel: 'general',
-        user_level: 22,
-        user_badge: 'Pro'
-      }
-    ];
-    setMessages(historyMessages);
-  };
-
   const loadJamSessions = useCallback(async (): Promise<JamSession[]> => {
     setIsLoadingSessions(true);
 
@@ -384,23 +534,69 @@ const RealtimeCommunication: React.FC = () => {
     }
   }, [activeJamId]);
 
-  const sendMessage = () => {
-    if (!currentMessage.trim() || !user) return;
+  const sendMessage = async () => {
+    if (!currentMessage.trim() || !user) {
+      return;
+    }
 
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      user_id: user.id,
-      username: profile?.username || 'You',
-      message: currentMessage,
-      timestamp: new Date().toISOString(),
-      channel: selectedChannel,
-      user_level: profile?.level || 1,
-      user_badge: profile?.level && profile.level > 20 ? 'Pro' : undefined
-    };
+    const trimmedMessage = currentMessage.trim();
 
-    setMessages(prev => [...prev, newMessage]);
-    setCurrentMessage('');
-    toast.success('Message sent!');
+    try {
+      const { data, error } = await supabase
+        .from<ChatMessageRow>('chat_messages' as unknown as keyof Database['public']['Tables'])
+        .insert({
+          user_id: user.id,
+          channel: selectedChannel,
+          message: trimmedMessage,
+        })
+        .select(`
+          id,
+          user_id,
+          message,
+          channel,
+          created_at
+        `)
+        .single();
+
+      if (error || !data) {
+        throw error ?? new Error('Failed to send message');
+      }
+
+      const insertedRow = data as ChatMessageRow;
+      const messagePayload = mapChatMessageRow({
+        ...insertedRow,
+        channel: insertedRow.channel ?? selectedChannel,
+        created_at: insertedRow.created_at ?? new Date().toISOString(),
+        username: profile?.username ?? 'You',
+        user_level: profile?.level ?? 1,
+        user_badge: profile?.level && profile.level > 20 ? 'Pro' : undefined,
+      });
+
+      setMessages(prev => {
+        if (prev.some(existing => existing.id === messagePayload.id)) {
+          return prev;
+        }
+        return [...prev, messagePayload];
+      });
+
+      if (channelRef.current) {
+        const status = await channelRef.current.send({
+          type: 'broadcast',
+          event: 'new-message',
+          payload: messagePayload,
+        });
+
+        if (status !== 'ok') {
+          console.warn('Broadcast failed with status:', status);
+        }
+      }
+
+      setCurrentMessage('');
+      toast.success('Message sent!');
+    } catch (err) {
+      console.error('Error sending chat message:', err);
+      toast.error('Failed to send message.');
+    }
   };
 
   const createSession = async () => {
@@ -687,10 +883,19 @@ const RealtimeCommunication: React.FC = () => {
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
                   placeholder="Type your message..."
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      void sendMessage();
+                    }
+                  }}
                   disabled={!isConnected}
                 />
-                <Button onClick={sendMessage} disabled={!isConnected || !currentMessage.trim()}>
+                <Button
+                  onClick={() => {
+                    void sendMessage();
+                  }}
+                  disabled={!isConnected || !currentMessage.trim()}
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
