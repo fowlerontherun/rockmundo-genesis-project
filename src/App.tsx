@@ -25,6 +25,8 @@ import BandChemistry from "./pages/BandChemistry";
 import StreamingPlatforms from "./pages/StreamingPlatforms";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
+import SkillTraining from "./pages/SkillTraining";
+import MusicCreation from "./pages/MusicCreation";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +59,8 @@ function App() {
                 <Route path="venues" element={<VenueManagement />} />
                 <Route path="chemistry" element={<BandChemistry />} />
                 <Route path="streaming" element={<StreamingPlatforms />} />
+                <Route path="training" element={<SkillTraining />} />
+                <Route path="create" element={<MusicCreation />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

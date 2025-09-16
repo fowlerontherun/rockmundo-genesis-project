@@ -38,6 +38,8 @@ const Navigation = () => {
     { icon: Calendar, label: "Gigs", path: "/gigs" },
     { icon: MapPin, label: "Venues", path: "/venues" },
     { icon: Music, label: "Studio", path: "/music" },
+    { icon: Play, label: "Create", path: "/create" },
+    { icon: TrendingUp, label: "Training", path: "/training" },
     { icon: Play, label: "Streaming", path: "/streaming" },
     { icon: TrendingUp, label: "Charts", path: "/charts" },
     { icon: Building2, label: "Labels", path: "/labels" },
