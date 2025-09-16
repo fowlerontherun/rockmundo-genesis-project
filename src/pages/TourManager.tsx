@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
+import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 
 interface Tour {
   id: string;
@@ -54,6 +55,8 @@ interface TourVenue {
   travel_cost: number | null;
   lodging_cost: number | null;
   misc_cost: number | null;
+  travel_time: number | null;
+  rest_days: number | null;
   status: string | null;
   venues?: {
     name: string;
@@ -65,6 +68,7 @@ interface TourVenue {
     location: string;
     capacity: number;
   };
+  environment_modifiers?: EnvironmentModifierSummary | null;
 }
 
 interface VenueScheduleForm {
@@ -85,6 +89,127 @@ interface NewTourVenueDetails {
   miscCost: number;
 }
 
+interface RouteSuggestion {
+  order: TourVenue[];
+  totalDistance: number;
+}
+
+type VenueRow = Database['public']['Tables']['venues']['Row'];
+type TourRow = Database['public']['Tables']['tours']['Row'];
+type TourVenueRow = Database['public']['Tables']['tour_venues']['Row'];
+
+type SupabaseTour = TourRow & {
+  tour_venues?: Array<
+    TourVenueRow & {
+      venues?: Pick<VenueRow, 'name' | 'location' | 'capacity'> | null;
+    }
+  >;
+};
+
+const LOCATION_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "downtown": { lat: 40.7128, lng: -74.006 },
+  "downtown district": { lat: 40.7138, lng: -74.001 },
+  "arts district": { lat: 34.043, lng: -118.235 },
+  "arts quarter": { lat: 34.05, lng: -118.247 },
+  "stadium district": { lat: 39.760, lng: -104.987 },
+  "cultural center": { lat: 41.881, lng: -87.623 },
+  "city park": { lat: 39.756, lng: -104.966 },
+  "suburbs": { lat: 41.0, lng: -87.9 },
+  "uptown": { lat: 41.894, lng: -87.634 },
+  "sports district": { lat: 34.043, lng: -118.267 },
+  "outskirts": { lat: 36.1699, lng: -115.1398 },
+  "central": { lat: 39.0997, lng: -94.5786 },
+};
+
+const DEFAULT_COORDINATE = { lat: 39.5, lng: -98.35 };
+const AVERAGE_TRAVEL_SPEED_KMH = 80;
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
+const EARTH_RADIUS_KM = 6371;
+
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+const getCoordinateForLocation = (location?: string | null) => {
+  if (!location) return DEFAULT_COORDINATE;
+  const normalized = location.trim().toLowerCase();
+  if (LOCATION_COORDINATES[normalized]) {
+    return LOCATION_COORDINATES[normalized];
+  }
+
+  let hash = 0;
+  for (const char of normalized) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+
+  const lat = ((hash % 180000) / 1000) - 90;
+  const lng = (((Math.floor(hash / 180000)) % 360000) / 1000) - 180;
+  return { lat, lng };
+};
+
+const calculateDistanceKm = (fromLocation?: string | null, toLocation?: string | null) => {
+  const from = getCoordinateForLocation(fromLocation);
+  const to = getCoordinateForLocation(toLocation);
+
+  const dLat = toRadians(to.lat - from.lat);
+  const dLng = toRadians(to.lng - from.lng);
+  const lat1 = toRadians(from.lat);
+  const lat2 = toRadians(to.lat);
+
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+
+  return Math.round(EARTH_RADIUS_KM * c * 100) / 100;
+};
+
+const estimateTravelTimeHours = (distanceKm: number) => Number(((distanceKm || 0) / AVERAGE_TRAVEL_SPEED_KMH).toFixed(2));
+
+const calculateRestDaysFromDistance = (distanceKm: number) => Math.max(1, Math.ceil((distanceKm || 0) / 600));
+
+const calculateTravelCostFromDistance = (distanceKm: number) => Math.max(0, Math.round(distanceKm * 0.75 + 150));
+
+const calculateLodgingCostFromRestDays = (restDays: number) => Math.max(0, restDays * 120);
+
+const calculateOptimalRoute = (tourVenues: TourVenue[]): RouteSuggestion => {
+  const stops = (tourVenues || []).filter(Boolean);
+  if (stops.length <= 1) {
+    return { order: stops, totalDistance: 0 };
+  }
+
+  const remaining = [...stops].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const start = remaining.shift();
+  if (!start) {
+    return { order: [], totalDistance: 0 };
+  }
+
+  const optimalOrder: TourVenue[] = [start];
+  let totalDistance = 0;
+
+  while (remaining.length > 0) {
+    const lastStop = optimalOrder[optimalOrder.length - 1];
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    remaining.forEach((candidate, index) => {
+      const distance = calculateDistanceKm(lastStop.venue?.location, candidate.venue?.location);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    });
+
+    const nextStop = remaining.splice(bestIndex, 1)[0];
+    if (!nextStop) {
+      break;
+    }
+
+    if (Number.isFinite(bestDistance)) {
+      totalDistance += bestDistance;
+    }
+    optimalOrder.push(nextStop);
+  }
+
+  return { order: optimalOrder, totalDistance };
+};
+
 const createEmptySchedule = (): VenueScheduleForm => ({
   venueId: "",
   date: "",
@@ -98,7 +223,7 @@ const TourManager = () => {
   const { profile, skills } = useGameData();
   const { toast } = useToast();
   const [tours, setTours] = useState<Tour[]>([]);
-  const [venues, setVenues] = useState<any[]>([]);
+  const [venues, setVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingTour, setCreatingTour] = useState(false);
   const [ticketPriceUpdates, setTicketPriceUpdates] = useState<Record<string, string>>({});
@@ -161,15 +286,18 @@ const TourManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      const mappedTours = (data || []).map(tour => ({
+      const mappedTours = (data || []).map((tour) => ({
         ...tour,
-        venues: (tour.tour_venues || []).map(tv => ({
+        venues: (tour.tour_venues || []).map((tv) => ({
           ...tv,
-          venue: tv.venues
-        }))
-      })));
+          venue: tv.venues,
+          environment_modifiers: (tv as { environment_modifiers?: EnvironmentModifierSummary | null }).environment_modifiers ?? null,
+        })),
+      }));
+      setTours(mappedTours);
       setTicketPriceUpdates({});
       setMarketingSpendUpdates({});
+      return mappedTours;
     } catch (error: any) {
       console.error('Error loading tours:', error);
       toast({
@@ -190,12 +318,23 @@ const TourManager = () => {
 
       if (error) throw error;
       setVenues(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading venues:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const optimalRoutes = useMemo(() => {
+    const routes: Record<string, RouteSuggestion> = {};
+    (tours || []).forEach((tour) => {
+      const route = calculateOptimalRoute(tour.venues || []);
+      if (route.order.length > 0) {
+        routes[tour.id] = route;
+      }
+    });
+    return routes;
+  }, [tours]);
 
   const createTour = async () => {
     if (!user || !profile || !skills) return;
@@ -241,7 +380,7 @@ const TourManager = () => {
 
       setNewTour({ name: "", description: "", start_date: "", end_date: "" });
       await loadTours();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating tour:', error);
       toast({
         variant: "destructive",
@@ -256,43 +395,99 @@ const TourManager = () => {
     if (!user) return false;
 
     try {
-      const { error } = await supabase
+      const selectedVenue = venues.find(venue => venue.id === details.venueId);
+      const locationLabel = selectedVenue?.location ?? '';
+
+      let environmentSummary: EnvironmentModifierSummary | null = null;
+      try {
+        environmentSummary = await fetchEnvironmentModifiers(locationLabel, details.date);
+      } catch (envError) {
+        console.error('Error fetching environment modifiers for tour stop:', envError);
+      }
+
+      const costMultiplier = environmentSummary?.costMultiplier ?? 1;
+      const adjustedTravelCost = Math.max(0, Math.round(details.travelCost * costMultiplier));
+      const adjustedLodgingCost = Math.max(0, Math.round(details.lodgingCost * costMultiplier));
+      const adjustedMiscCost = Math.max(0, Math.round(details.miscCost * costMultiplier));
+
+      const baseCapacity = selectedVenue?.capacity ?? 0;
+      const baseProjectedAttendance = baseCapacity ? Math.max(1, Math.round(baseCapacity * 0.6)) : null;
+      const projectedAttendance = baseProjectedAttendance
+        ? Math.max(1, Math.round(baseProjectedAttendance * (environmentSummary?.attendanceMultiplier ?? 1)))
+        : null;
+
+      const insertPayload: Record<string, unknown> = {
+        tour_id: tourId,
+        venue_id: details.venueId,
+        date: details.date,
+        ticket_price: details.ticketPrice,
+        travel_cost: adjustedTravelCost,
+        lodging_cost: adjustedLodgingCost,
+        misc_cost: adjustedMiscCost,
+        tickets_sold: 0,
+        revenue: 0,
+        status: 'scheduled',
+      };
+
+      let environmentForInsert: EnvironmentModifierSummary | null = null;
+      if (environmentSummary) {
+        environmentForInsert = {
+          ...environmentSummary,
+          projections: {
+            attendance: projectedAttendance ?? undefined,
+            travelCost: adjustedTravelCost,
+            lodgingCost: adjustedLodgingCost,
+            miscCost: adjustedMiscCost,
+          },
+        };
+        insertPayload.environment_modifiers = environmentForInsert;
+      }
+
+      const { data: createdVenue, error } = await supabase
         .from('tour_venues')
-        .insert({
-          tour_id: tourId,
-          venue_id: details.venueId,
-          date: details.date,
-          ticket_price: details.ticketPrice,
-          travel_cost: details.travelCost,
-          lodging_cost: details.lodgingCost,
-          misc_cost: details.miscCost,
-          tickets_sold: 0,
-          revenue: 0,
-          status: 'scheduled'
-        })
-        .select()
+        .insert(insertPayload as any)
+        .select(`
+          *,
+          venues!tour_venues_venue_id_fkey (name, location, capacity)
+        `)
         .single();
 
       if (error) throw error;
 
-      if (newTourVenue) {
+      const environmentFromDb = (createdVenue as { environment_modifiers?: EnvironmentModifierSummary | null }).environment_modifiers ?? environmentForInsert;
+
+      if (createdVenue) {
         const selectedTour = tours.find(tour => tour.id === tourId);
-        const selectedVenue = venues.find(venue => venue.id === venueId);
-        const eventEnd = new Date(newTourVenue.date);
+        const venueDetails = createdVenue.venues || selectedVenue;
+        const eventEnd = new Date(createdVenue.date);
         eventEnd.setHours(eventEnd.getHours() + 3);
+
+        const environmentNotes = environmentFromDb?.applied?.length
+          ? environmentFromDb.applied
+              .map((effect) => {
+                const summary = summarizeEnvironmentEffect(effect);
+                return summary ? `${effect.name} (${summary})` : effect.name;
+              })
+              .join(' | ')
+          : null;
+
+        const scheduleDescriptionBase = selectedTour?.description ?? (venueDetails ? `Tour stop at ${venueDetails.name}` : 'Tour performance');
+        const scheduleDescription = environmentNotes
+          ? `${scheduleDescriptionBase} • Env: ${environmentNotes}`
+          : scheduleDescriptionBase;
 
         const { error: scheduleError } = await supabase
           .from('schedule_events')
           .insert({
             user_id: user.id,
             event_type: 'tour',
-            title: `${selectedTour?.name ?? 'Tour Show'}${selectedVenue ? ` - ${selectedVenue.name}` : ''}`,
-            description: selectedTour?.description ?? (selectedVenue ? `Tour stop at ${selectedVenue.name}` : 'Tour performance'),
-            start_time: newTourVenue.date,
+            title: `${selectedTour?.name ?? 'Tour Show'}${venueDetails ? ` - ${venueDetails.name}` : ''}`,
+            description: scheduleDescription,
+            start_time: createdVenue.date,
             end_time: eventEnd.toISOString(),
-            location: selectedVenue?.location ?? 'TBA',
+            location: venueDetails?.location ?? 'TBA',
             status: 'scheduled',
-            tour_venue_id: newTourVenue.id
+            tour_venue_id: createdVenue.id
           });
 
         if (scheduleError) {
@@ -305,14 +500,30 @@ const TourManager = () => {
         }
       }
 
+      const toastMessages = [
+        selectedVenue ? `Added ${selectedVenue.name} to the tour.` : 'Tour venue scheduled.',
+        projectedAttendance ? `Projected attendance ${projectedAttendance.toLocaleString()}.` : null,
+      ];
+
+      if (environmentFromDb?.applied?.length) {
+        const summary = environmentFromDb.applied
+          .map((effect) => summarizeEnvironmentEffect(effect))
+          .filter(Boolean)
+          .join(' | ');
+        if (summary) {
+          toastMessages.push(`Environment: ${summary}.`);
+        }
+      }
+
       toast({
         title: "Venue Added",
-        description: "Venue has been added to your tour"
+
+        description: toastMessages.filter(Boolean).join(' ')
       });
 
-      loadTours();
+      await loadTours();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding venue to tour:', error);
       toast({
         variant: "destructive",
@@ -401,24 +612,41 @@ const TourManager = () => {
       // Calculate show success based on skills and venue prestige
       const successRate = Math.min(0.9, skills.performance / 100);
       const capacity = venueInfo.capacity || 500;
-      const attendance = Math.floor(capacity * (0.4 + successRate * 0.5));
+      const environmentModifiers = tourVenue.environment_modifiers;
+      const attendanceMultiplier = environmentModifiers?.attendanceMultiplier ?? 1;
+      const moraleMultiplier = environmentModifiers?.moraleModifier ?? 1;
+
+      const attendanceBase = Math.floor(capacity * (0.4 + successRate * 0.5));
+      const attendance = Math.max(1, Math.round(attendanceBase * attendanceMultiplier));
       const ticketPrice = tourVenue.ticket_price ?? 25;
       const revenue = attendance * ticketPrice;
       const totalCosts = (tourVenue.travel_cost || 0) + (tourVenue.lodging_cost || 0) + (tourVenue.misc_cost || 0);
       const profit = revenue - totalCosts;
+
+      const updatedEnvironment = environmentModifiers
+        ? {
+            ...environmentModifiers,
+            projections: {
+              ...environmentModifiers.projections,
+              attendance,
+            },
+          }
+        : null;
+
       const { error } = await supabase
         .from('tour_venues')
         .update({
           tickets_sold: attendance,
           revenue,
-          status: 'completed'
-        })
+          status: 'completed',
+          environment_modifiers: updatedEnvironment ?? tourVenue.environment_modifiers,
+        } as any)
         .eq('id', tourVenue.id);
 
       if (error) throw error;
 
       // Update player cash and fame
-      const fameGain = Math.floor(attendance / 10);
+      const fameGain = Math.max(0, Math.round((attendance / 10) * moraleMultiplier));
       const currentCash = profile.cash ?? 0;
       const currentFame = profile.fame ?? 0;
 
@@ -444,7 +672,7 @@ const TourManager = () => {
       });
 
       await loadTours();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error simulating tour show:', error);
       toast({
         variant: "destructive",
@@ -465,16 +693,40 @@ const TourManager = () => {
     }
   };
 
+  function formatEnvironmentDelta(value?: number, label?: string) {
+    if (!value || value === 1 || !label) {
+      return null;
+    }
+
+    const percent = Math.round((value - 1) * 100);
+    if (percent === 0) {
+      return null;
+    }
+
+    const sign = percent > 0 ? '+' : '';
+    return `${label} ${sign}${percent}%`;
+  }
+
+  function summarizeEnvironmentEffect(effect: AppliedEnvironmentEffect) {
+    const changes = [
+      formatEnvironmentDelta(effect.attendanceMultiplier, 'Attendance'),
+      formatEnvironmentDelta(effect.costMultiplier, 'Costs'),
+      formatEnvironmentDelta(effect.moraleModifier, 'Morale'),
+    ].filter(Boolean);
+
+    return changes.join(' • ');
+  }
+
   const calculateTourStats = (tour: Tour) => {
     const totalRevenue = tour.venues?.reduce((sum, v) => sum + (v.revenue || 0), 0) || 0;
     const totalCosts = tour.venues?.reduce((sum, v) => sum + (v.travel_cost || 0) + (v.lodging_cost || 0) + (v.misc_cost || 0), 0) || 0;
     const totalProfit = totalRevenue - totalCosts;
     const totalTickets = tour.venues?.reduce((sum, v) => sum + (v.tickets_sold || 0), 0) || 0;
-    const totalMarketing = tour.venues?.reduce((sum, v) => sum + (v.marketing_spend || 0), 0) || 0;
-    const netProfit = totalRevenue - totalMarketing;
     const completedShows = tour.venues?.filter(v => v.status === 'completed').length || 0;
     const totalShows = tour.venues?.length || 0;
-    return { totalRevenue, totalCosts, totalProfit, totalTickets, completedShows, totalShows };
+    const totalTravelHours = tour.venues?.reduce((sum, v) => sum + (typeof v.travel_time === 'number' ? v.travel_time : Number(v.travel_time || 0)), 0) || 0;
+    const totalRestDays = tour.venues?.reduce((sum, v) => sum + (typeof v.rest_days === 'number' ? v.rest_days : Number(v.rest_days || 0)), 0) || 0;
+    return { totalRevenue, totalCosts, totalProfit, totalTickets, completedShows, totalShows, totalTravelHours, totalRestDays };
   };
 
   if (loading) {
@@ -590,6 +842,7 @@ const TourManager = () => {
             const formattedNetProfit = stats.totalProfit >= 0
               ? `+$${stats.totalProfit.toLocaleString()}`
               : `-$${Math.abs(stats.totalProfit).toLocaleString()}`;
+            const routeSuggestion = optimalRoutes[tour.id];
             return (
               <Card key={tour.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardHeader>
@@ -608,7 +861,7 @@ const TourManager = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Tour Stats */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-success">${stats.totalRevenue.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">Total Revenue</p>
@@ -628,6 +881,11 @@ const TourManager = () => {
                     <div className="text-center">
                       <p className="text-2xl font-bold text-warning">{stats.completedShows}/{stats.totalShows}</p>
                       <p className="text-xs text-muted-foreground">Shows Completed</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-primary">{stats.totalTravelHours.toFixed(1)}h</p>
+                      <p className="text-xs text-muted-foreground">Travel Time</p>
+                      <p className="text-xs text-muted-foreground">{stats.totalRestDays} rest day{stats.totalRestDays === 1 ? '' : 's'}</p>
                     </div>
                   </div>
 
@@ -729,6 +987,23 @@ const TourManager = () => {
                       </Button>
                     </div>
                   </div>
+
+                  {routeSuggestion && routeSuggestion.order.length > 1 && (
+                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-1">
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        Optimal Route Suggestion
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {routeSuggestion.order
+                          .map((stop, index) => `${index + 1}. ${stop.venue?.name ?? 'Unknown Venue'} (${stop.venue?.location ?? 'TBD'})`)
+                          .join(' → ')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Estimated travel: {Math.round(routeSuggestion.totalDistance)} km total
+                      </p>
+                    </div>
+                  )}
 
                   {editingTourId === tour.id && editForm && (
                     <div className="rounded-lg border border-border/40 bg-secondary/20 p-4 space-y-4">
@@ -893,6 +1168,9 @@ const TourManager = () => {
                           const showCosts = travelCost + lodgingCost + miscCost;
                           const showProfit = showRevenue - showCosts;
                           const showProfitColor = showProfit >= 0 ? "text-success" : "text-destructive";
+                          const travelTimeValue = typeof venue.travel_time === 'number' ? venue.travel_time : Number(venue.travel_time || 0);
+                          const restDaysValue = typeof venue.rest_days === 'number' ? venue.rest_days : Number(venue.rest_days || 0);
+                          const formattedTravelTime = Math.round(travelTimeValue * 10) / 10;
 
                           return (
                             <div key={venue.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
@@ -908,6 +1186,23 @@ const TourManager = () => {
                                 <p className="text-xs text-muted-foreground">
                                   Costs: ${showCosts.toLocaleString()} (Travel ${travelCost.toLocaleString()} • Lodging ${lodgingCost.toLocaleString()} • Misc ${miscCost.toLocaleString()})
                                 </p>
+                                {venue.environment_modifiers?.projections?.attendance && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Projected attendance: {venue.environment_modifiers.projections.attendance.toLocaleString()}
+                                  </p>
+                                )}
+                                {venue.environment_modifiers?.applied?.length ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    Environment: {
+                                      venue.environment_modifiers.applied
+                                        .map((effect) => {
+                                          const summary = summarizeEnvironmentEffect(effect);
+                                          return summary ? `${effect.name} (${summary})` : effect.name;
+                                        })
+                                        .join(' | ')
+                                    }
+                                  </p>
+                                ) : null}
                                 <p className={`text-xs font-semibold ${showProfitColor}`}>
                                   Profit: ${showProfit.toLocaleString()}
                                 </p>

@@ -104,7 +104,6 @@ const EnhancedFanManagement = () => {
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [replyLoadingId, setReplyLoadingId] = useState<string | null>(null);
   const [markingReadId, setMarkingReadId] = useState<string | null>(null);
-
   const [newPost, setNewPost] = useState({
     platform: "",
     content: ""
@@ -278,6 +277,8 @@ const EnhancedFanManagement = () => {
   };
 
   const launchCampaign = async (campaign: EngagementCampaign) => {
+    if (!user) return;
+
     if ((profile?.cash || 0) < campaign.cost) {
       toast({
         variant: "destructive",
@@ -290,29 +291,39 @@ const EnhancedFanManagement = () => {
     setCampaigning(true);
 
     try {
-      // Update profile cash
       const newCash = (profile?.cash || 0) - campaign.cost;
+      const performanceMultiplier = 0.75 + Math.random() * 0.5;
+      const actualGrowth = Math.max(0, Math.round(campaign.expectedGrowth * performanceMultiplier));
+      const estimatedRevenue = actualGrowth * FAN_VALUE_PER_FAN;
+      const roiValue = campaign.cost > 0
+        ? Number((((estimatedRevenue - campaign.cost) / campaign.cost) * 100).toFixed(1))
+        : 0;
+      const performanceSummary =
+        actualGrowth > campaign.expectedGrowth
+          ? "Exceeded expectations"
+          : actualGrowth === campaign.expectedGrowth
+            ? "Met expectations"
+            : "Underperformed expectations";
+
       await supabase
         .from("profiles")
         .update({ cash: newCash })
         .eq("user_id", user?.id);
 
-      // Update fan demographics based on campaign
       if (fanData) {
         let updates: Partial<FanDemographics> = {
-          total_fans: fanData.total_fans + campaign.expectedGrowth,
-          weekly_growth: fanData.weekly_growth + campaign.expectedGrowth
+          total_fans: fanData.total_fans + actualGrowth,
+          weekly_growth: fanData.weekly_growth + actualGrowth
         };
 
-        // Apply specific demographic targeting
         if (campaign.targetDemographic === "age_18_25") {
-          updates.age_18_25 = fanData.age_18_25 + Math.round(campaign.expectedGrowth * 0.8);
+          updates.age_18_25 = fanData.age_18_25 + Math.round(actualGrowth * 0.8);
         } else if (campaign.targetDemographic === "age_36_45") {
-          updates.age_36_45 = fanData.age_36_45 + Math.round(campaign.expectedGrowth * 0.8);
+          updates.age_36_45 = fanData.age_36_45 + Math.round(actualGrowth * 0.8);
         } else if (campaign.targetDemographic === "platform_tiktok") {
-          updates.platform_tiktok = fanData.platform_tiktok + Math.round(campaign.expectedGrowth * 0.9);
+          updates.platform_tiktok = fanData.platform_tiktok + Math.round(actualGrowth * 0.9);
         } else if (campaign.targetDemographic === "all_platforms") {
-          const growthPerPlatform = Math.round(campaign.expectedGrowth / 4);
+          const growthPerPlatform = Math.round(actualGrowth / 4);
           updates.platform_instagram = fanData.platform_instagram + growthPerPlatform;
           updates.platform_twitter = fanData.platform_twitter + growthPerPlatform;
           updates.platform_youtube = fanData.platform_youtube + growthPerPlatform;
@@ -324,24 +335,65 @@ const EnhancedFanManagement = () => {
           .update(updates)
           .eq("user_id", user?.id);
 
-        setFanData(prev => prev ? { ...prev, ...updates } : null);
+        setFanData(prev => (prev ? { ...prev, ...updates } : prev));
       }
 
-      // Add activity
+      const formattedTarget = formatTargetDemo(campaign.targetDemographic);
+
+      const { data: insertedCampaign, error: campaignError } = await supabase
+        .from("fan_campaigns")
+        .insert({
+          user_id: user?.id,
+          title: campaign.title,
+          cost: campaign.cost,
+          duration: campaign.duration,
+          expected_growth: campaign.expectedGrowth,
+          target_demo: campaign.targetDemographic,
+          actual_growth: actualGrowth,
+          roi: roiValue,
+          results: {
+            summary: performanceSummary,
+            actual_growth: actualGrowth,
+            expected_growth: campaign.expectedGrowth,
+            estimated_revenue: estimatedRevenue,
+            roi: roiValue,
+            notes: `Targeted ${formattedTarget} audience.`
+          }
+        })
+        .select()
+        .single();
+
+      if (campaignError) throw campaignError;
+
       await supabase
         .from("activity_feed")
         .insert({
           user_id: user?.id,
           activity_type: "campaign",
-          message: `Launched "${campaign.title}" campaign (+${campaign.expectedGrowth} fans)`,
-          earnings: -campaign.cost
+          message: `"${campaign.title}" campaign gained ${actualGrowth} fans (${roiValue.toFixed(1)}% ROI)`,
+          earnings: estimatedRevenue - campaign.cost
         });
 
-      setProfile(prev => prev ? { ...prev, cash: newCash } : null);
+      setProfile(prev => (prev ? { ...prev, cash: newCash } : prev));
+
+      if (insertedCampaign) {
+        const normalizedCampaign: FanCampaignRecord = {
+          ...insertedCampaign,
+          cost: typeof insertedCampaign.cost === "string" ? parseFloat(insertedCampaign.cost) : insertedCampaign.cost,
+          roi:
+            insertedCampaign.roi !== null
+              ? typeof insertedCampaign.roi === "string"
+                ? parseFloat(insertedCampaign.roi)
+                : insertedCampaign.roi
+              : null,
+          results: insertedCampaign.results as CampaignResults | null
+        };
+        setCampaignHistory(prev => [normalizedCampaign, ...prev]);
+      }
 
       toast({
-        title: "Campaign Launched!",
-        description: `"${campaign.title}" is now running and will gain you ${campaign.expectedGrowth} fans over ${campaign.duration} days!`
+        title: "Campaign Completed!",
+        description: `"${campaign.title}" brought in ${actualGrowth} new fans with a ${roiValue.toFixed(1)}% ROI.`
       });
 
     } catch (error) {
@@ -493,7 +545,6 @@ const EnhancedFanManagement = () => {
   };
 
   const unreadMessagesCount = fanMessages.filter(message => !message.is_read).length;
-
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -913,6 +964,123 @@ const EnhancedFanManagement = () => {
               </Card>
             ))}
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-bebas">CAMPAIGN ANALYTICS</CardTitle>
+              <CardDescription>Track performance, ROI, and audience impact from your launches</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {campaignHistory.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Campaigns Run</p>
+                      <p className="text-2xl font-bold">{campaignHistory.length}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Fans Gained</p>
+                      <p className="text-2xl font-bold text-green-500">+{totalCampaignGrowth.toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Spend</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalCampaignSpend)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Average ROI</p>
+                      <p
+                        className={`text-2xl font-bold ${averageCampaignRoi >= 0 ? "text-green-500" : "text-red-500"}`}
+                      >
+                        {formatPercentage(averageCampaignRoi)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {bestCampaign && (
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Top Performing Campaign
+                          </p>
+                          <p className="font-medium">{bestCampaign.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            +{bestCampaignGrowth.toLocaleString()} fans • {formatCurrency(bestCampaignSpend)} spend • Target: {formatTargetDemo(bestCampaign.target_demo)}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={bestCampaignRoi >= 0 ? "secondary" : "destructive"}
+                          className="w-fit"
+                        >
+                          ROI {formatPercentage(bestCampaignRoi)}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {campaignHistory.map(campaign => {
+                      const actualGrowth = getActualGrowth(campaign);
+                      const roiValue = getCampaignRoi(campaign);
+                      const roiPositive = roiValue >= 0;
+
+                      return (
+                        <div key={campaign.id} className="space-y-3 rounded-lg border p-4">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <p className="font-semibold">{campaign.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(campaign.completed_at ?? campaign.launched_at).toLocaleDateString()} • Target: {formatTargetDemo(campaign.target_demo)}
+                              </p>
+                            </div>
+                            <Badge variant={roiPositive ? "secondary" : "destructive"} className="w-fit">
+                              ROI {formatPercentage(roiValue)}
+                            </Badge>
+                          </div>
+
+                          {campaign.results?.summary && (
+                            <p className="text-sm text-muted-foreground">{campaign.results.summary}</p>
+                          )}
+
+                          <div className="grid grid-cols-1 gap-3 text-sm text-muted-foreground md:grid-cols-4">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-green-500" />
+                              <span>
+                                +{actualGrowth.toLocaleString()} fans
+                                <span className="ml-1 text-xs text-muted-foreground">
+                                  ({campaign.expected_growth.toLocaleString()} expected)
+                                </span>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <TrendingDown className="h-4 w-4 text-red-500" />
+                              <span>{formatCurrency(typeof campaign.cost === "number" ? campaign.cost : 0)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-blue-500" />
+                              <span>{campaign.duration} days</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Target className="h-4 w-4 text-purple-500" />
+                              <span>{formatTargetDemo(campaign.target_demo)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3 py-8 text-center text-muted-foreground">
+                  <TrendingUp className="mx-auto h-10 w-10" />
+                  <p className="font-medium text-foreground">No campaigns launched yet</p>
+                  <p className="text-sm">
+                    Launch a campaign to see detailed performance analytics and ROI insights.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

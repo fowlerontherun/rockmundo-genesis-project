@@ -236,7 +236,13 @@ const AdvancedGigSystem: React.FC = () => {
       bonuses
     };
 
-    setStageResults(prev => [...prev, result]);
+    let updatedResults: StageResult[] = [];
+
+    setStageResults(prev => {
+      const nextResults = [...prev, result];
+      updatedResults = nextResults;
+      return nextResults;
+    });
 
     // Move to next stage or finish performance
     if (stageIndex < PERFORMANCE_STAGES.length - 1) {
@@ -246,14 +252,21 @@ const AdvancedGigSystem: React.FC = () => {
         performStage(stageIndex + 1);
       }, 1500);
     } else {
-      finishPerformance();
+      finishPerformance(updatedResults);
     }
   };
 
-  const finishPerformance = async () => {
+  const finishPerformance = async (finalStageResults: StageResult[]) => {
     if (!gig || !profile || !user) return;
 
-    const averageScore = stageResults.reduce((sum, result) => sum + result.score, 0) / stageResults.length;
+    const stageResultsData = finalStageResults.length ? finalStageResults : stageResults;
+
+    if (!stageResultsData.length) {
+      console.warn('No stage results available to finalize performance');
+      return;
+    }
+
+    const averageScore = stageResultsData.reduce((sum, result) => sum + result.score, 0) / stageResultsData.length;
     const baseEarnings = gig.payment || 1000;
     const scoreMultiplier = averageScore / 100;
     const totalEarnings = Math.floor(baseEarnings * scoreMultiplier);
@@ -264,6 +277,8 @@ const AdvancedGigSystem: React.FC = () => {
     setTotalEarnings(totalEarnings);
 
     try {
+      const finalAudienceReaction = stageResultsData[stageResultsData.length - 1]?.audienceReaction || audienceReaction;
+
       // Update gig status
       await supabase
         .from('gigs')
@@ -273,6 +288,18 @@ const AdvancedGigSystem: React.FC = () => {
           fan_gain: fanGain
         })
         .eq('id', gig.id);
+
+      // Store performance history with detailed results
+      await supabase
+        .from('gig_performances')
+        .insert({
+          user_id: user.id,
+          gig_id: gig.id,
+          performance_score: Math.round(averageScore),
+          earnings: totalEarnings,
+          stage_results: stageResultsData,
+          audience_reaction: finalAudienceReaction
+        });
 
       // Update player profile
       await updateProfile({
