@@ -1,19 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Users, 
-  Music, 
-  Guitar, 
-  Mic, 
+import {
+  Users,
+  Music,
+  Guitar,
+  Mic,
   Drum,
   TrendingUp,
   UserPlus,
   Settings,
-  Star
+  Star,
+  MapPin
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,50 +47,268 @@ interface Band {
   updated_at: string;
 }
 
+interface BandScheduleEvent {
+  id: string;
+  title: string;
+  description?: string | null;
+  eventType?: string | null;
+  scheduledAt: string | null;
+  timestamp: number | null;
+  location?: string | null;
+  status?: string | null;
+}
+
+interface RawScheduleEvent {
+  id: string;
+  title?: string | null;
+  description?: string | null;
+  details?: string | null;
+  notes?: string | null;
+  event_type?: string | null;
+  type?: string | null;
+  status?: string | null;
+  state?: string | null;
+  event_status?: string | null;
+  location?: string | null;
+  venue?: string | null;
+  place?: string | null;
+  address?: string | null;
+  scheduled_at?: string | Date | number | null;
+  scheduledAt?: string | Date | number | null;
+  event_at?: string | Date | number | null;
+  eventAt?: string | Date | number | null;
+  event_date?: string | Date | number | null;
+  eventDate?: string | Date | number | null;
+  scheduled_date?: string | Date | number | null;
+  scheduledDate?: string | Date | number | null;
+  start_time?: string | Date | number | null;
+  startTime?: string | Date | number | null;
+  start_at?: string | Date | number | null;
+  startAt?: string | Date | number | null;
+  datetime?: string | Date | number | null;
+  dateTime?: string | Date | number | null;
+  date_time?: string | Date | number | null;
+  date?: string | null;
+  time?: string | null;
+  [key: string]: unknown;
+}
+
 const BandManager = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile, skills } = useGameData();
-  
+
   const [band, setBand] = useState<Band | null>(null);
   const [members, setMembers] = useState<BandMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [songCount, setSongCount] = useState(0);
+  const [albumCount, setAlbumCount] = useState(0);
+  const [upcomingEvents, setUpcomingEvents] = useState<BandScheduleEvent[]>([]);
+
+  const loadBandStats = useCallback(async (bandId: string) => {
+    try {
+      const [songsResponse, albumsResponse] = await Promise.all([
+        supabase
+          .from('songs')
+          .select('id', { count: 'exact', head: true })
+          .eq('band_id', bandId),
+        supabase
+          .from('albums')
+          .select('id', { count: 'exact', head: true })
+          .eq('band_id', bandId)
+      ]);
+
+      if (songsResponse.error) {
+        console.error('Error loading band songs:', songsResponse.error);
+        setSongCount(0);
+      } else {
+        setSongCount(songsResponse.count ?? 0);
+      }
+
+      if (albumsResponse.error) {
+        console.error('Error loading band albums:', albumsResponse.error);
+        setAlbumCount(0);
+      } else {
+        setAlbumCount(albumsResponse.count ?? 0);
+      }
+    } catch (error) {
+      console.error('Error loading band stats:', error);
+    }
+  }, []);
+
+  const loadScheduleEvents = useCallback(async (bandId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('schedule_events')
+        .select('*')
+        .eq('band_id', bandId)
+        .order('scheduled_at', { ascending: true });
+
+      if (error) throw error;
+
+      const normalizeDateValue = (value: unknown): string | null => {
+        if (!value) return null;
+
+        if (value instanceof Date) {
+          return value.toISOString();
+        }
+
+        if (typeof value === 'number') {
+          const date = new Date(value);
+          return Number.isNaN(date.getTime()) ? null : date.toISOString();
+        }
+
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          const normalized = trimmed.includes(' ') && !trimmed.includes('T')
+            ? trimmed.replace(' ', 'T')
+            : trimmed;
+          const date = new Date(normalized);
+          if (!Number.isNaN(date.getTime())) {
+            return date.toISOString();
+          }
+        }
+
+        return null;
+      };
+
+      const extractEventDate = (event: RawScheduleEvent): string | null => {
+        const candidates = [
+          event?.scheduled_at,
+          event?.scheduledAt,
+          event?.event_at,
+          event?.eventAt,
+          event?.event_date,
+          event?.eventDate,
+          event?.scheduled_date,
+          event?.scheduledDate,
+          event?.start_time,
+          event?.startTime,
+          event?.start_at,
+          event?.startAt,
+          event?.datetime,
+          event?.dateTime,
+          event?.date_time
+        ];
+
+        for (const candidate of candidates) {
+          const iso = normalizeDateValue(candidate);
+          if (iso) return iso;
+        }
+
+        if (event?.date) {
+          const datePart = typeof event.date === 'string' ? event.date : null;
+          const timePart = typeof event.time === 'string' ? event.time : null;
+          if (datePart && timePart) {
+            const iso = normalizeDateValue(`${datePart}T${timePart}`);
+            if (iso) return iso;
+          }
+
+          if (datePart) {
+            const iso = normalizeDateValue(datePart);
+            if (iso) return iso;
+          }
+        }
+
+        return null;
+      };
+
+      const isUpcomingStatus = (status?: string | null) => {
+        if (!status) return true;
+        const normalized = status.toLowerCase();
+        return !['completed', 'cancelled', 'past'].includes(normalized);
+      };
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const eventsArray: RawScheduleEvent[] = Array.isArray(data) ? (data as RawScheduleEvent[]) : [];
+
+      const normalizedEvents = eventsArray
+        .map((event) => {
+          const scheduledIso = extractEventDate(event);
+          const timestamp = scheduledIso ? new Date(scheduledIso).getTime() : null;
+
+          return {
+            id: event.id,
+            title: event.title ?? 'Scheduled Event',
+            description: event.description ?? event.details ?? event.notes ?? null,
+            eventType: event.event_type ?? event.type ?? null,
+            scheduledAt: scheduledIso,
+            timestamp: Number.isNaN(timestamp ?? NaN) ? null : timestamp,
+            location: event.location ?? event.venue ?? event.place ?? event.address ?? null,
+            status: event.status ?? event.state ?? event.event_status ?? null
+          } as BandScheduleEvent;
+        })
+        .filter((event) => {
+          if (!event.timestamp) return false;
+          if (!isUpcomingStatus(event.status)) return false;
+          return event.timestamp >= startOfToday.getTime();
+        })
+        .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+        .slice(0, 5);
+
+      setUpcomingEvents(normalizedEvents);
+    } catch (error) {
+      console.error('Error loading schedule events:', error);
+      setUpcomingEvents([]);
+    }
+  }, []);
 
   useEffect(() => {
-    if (user) {
-      loadBandData();
-    }
-  }, [user]);
+    if (!band?.id) return;
 
-  const loadBandData = async () => {
-    try {
-      // Check if user has a band (as leader or member)
-      const { data: memberData, error: memberError } = await supabase
-        .from('band_members')
-        .select(`
-          *,
-          bands!band_members_band_id_fkey(*)
-        `)
-        .eq('user_id', user!.id)
-        .single();
+    const bandId = band.id;
 
-      if (memberError && memberError.code !== 'PGRST116') {
-        throw memberError;
-      }
+    const realtimeChannel = supabase
+      .channel(`band-manager-${bandId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'songs',
+          filter: `band_id=eq.${bandId}`
+        },
+        () => {
+          loadBandStats(bandId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'albums',
+          filter: `band_id=eq.${bandId}`
+        },
+        () => {
+          loadBandStats(bandId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'schedule_events',
+          filter: `band_id=eq.${bandId}`
+        },
+        () => {
+          loadScheduleEvents(bandId);
+        }
+      )
+      .subscribe();
 
-      if (memberData?.bands) {
-        setBand(memberData.bands);
-        await loadBandMembers(memberData.bands.id);
-      }
-    } catch (error: any) {
-      console.error('Error loading band data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      supabase.removeChannel(realtimeChannel);
+    };
+  }, [band?.id, loadBandStats, loadScheduleEvents]);
 
-  const loadBandMembers = async (bandId: string) => {
+  const loadBandMembers = useCallback(async (bandId: string) => {
+    if (!user) return;
     try {
       const { data, error } = await supabase
         .from('band_members')
@@ -104,17 +323,69 @@ const BandManager = () => {
 
       const membersWithData = data.map((member: any) => ({
         ...member,
-        name: member.user_id === user!.id ? 'You' : (member.profile?.display_name || 'Unknown'),
+        name: member.user_id === user.id ? 'You' : (member.profile?.display_name || 'Unknown'),
         avatar_url: member.profile?.avatar_url || '',
-        is_player: member.user_id === user!.id,
+        is_player: member.user_id === user.id,
         skills: member.skills || {}
       }));
 
       setMembers(membersWithData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading band members:', error);
     }
-  };
+  }, [user]);
+
+  const loadBandData = useCallback(async () => {
+    if (!user) {
+      setBand(null);
+      setMembers([]);
+      setSongCount(0);
+      setAlbumCount(0);
+      setUpcomingEvents([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data: memberData, error: memberError } = await supabase
+        .from('band_members')
+        .select(`
+          *,
+          bands!band_members_band_id_fkey(*)
+        `)
+        .eq('user_id', user.id)
+        .single();
+
+      if (memberError && memberError.code !== 'PGRST116') {
+        throw memberError;
+      }
+
+      if (memberData?.bands) {
+        const bandRecord = memberData.bands as Band;
+        setBand(bandRecord);
+
+        await Promise.all([
+          loadBandMembers(bandRecord.id),
+          loadBandStats(bandRecord.id),
+          loadScheduleEvents(bandRecord.id)
+        ]);
+      } else {
+        setBand(null);
+        setMembers([]);
+        setSongCount(0);
+        setAlbumCount(0);
+        setUpcomingEvents([]);
+      }
+    } catch (error) {
+      console.error('Error loading band data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loadBandMembers, loadBandStats, loadScheduleEvents]);
+
+  useEffect(() => {
+    loadBandData();
+  }, [loadBandData]);
 
   const createBand = async () => {
     if (!user || !profile) return;
@@ -147,7 +418,11 @@ const BandManager = () => {
       if (memberError) throw memberError;
 
       setBand(bandData);
-      await loadBandMembers(bandData.id);
+      await Promise.all([
+        loadBandMembers(bandData.id),
+        loadBandStats(bandData.id),
+        loadScheduleEvents(bandData.id)
+      ]);
 
       toast({
         title: "Band Created!",
@@ -176,6 +451,68 @@ const BandManager = () => {
     if (value >= 80) return "text-success";
     if (value >= 60) return "text-warning";
     return "text-muted-foreground";
+  };
+
+  const getEventTypeIcon = (type?: string | null) => {
+    const normalized = type?.toLowerCase() ?? '';
+
+    if (normalized.includes('record')) return <Mic className="h-4 w-4 text-primary" />;
+    if (normalized.includes('rehearsal') || normalized.includes('practice')) return <Drum className="h-4 w-4 text-primary" />;
+    if (normalized.includes('meeting')) return <Users className="h-4 w-4 text-primary" />;
+    if (normalized.includes('tour')) return <Star className="h-4 w-4 text-primary" />;
+    if (normalized.includes('gig') || normalized.includes('show') || normalized.includes('concert')) {
+      return <Music className="h-4 w-4 text-primary" />;
+    }
+
+    return <Music className="h-4 w-4 text-primary" />;
+  };
+
+  const formatEventType = (type?: string | null) => {
+    if (!type) return null;
+    return type
+      .replace(/[_-]/g, ' ')
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const getEventTimingLabel = (timestamp: number | null) => {
+    if (!timestamp) return 'Date TBA';
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const eventDate = new Date(timestamp);
+    if (Number.isNaN(eventDate.getTime())) return 'Date TBA';
+
+    const startOfEventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime();
+    const diffDays = Math.round((startOfEventDay - startOfToday) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays < 0) {
+      const daysAgo = Math.abs(diffDays);
+      return `${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+    }
+    return `In ${diffDays} days`;
+  };
+
+  const formatEventDateTime = (scheduledAt: string | null) => {
+    if (!scheduledAt) return 'Date TBA';
+    const eventDate = new Date(scheduledAt);
+    if (Number.isNaN(eventDate.getTime())) return 'Date TBA';
+
+    const datePart = eventDate.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: eventDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+    });
+
+    const timePart = eventDate.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return `${datePart} • ${timePart}`;
   };
 
   if (loading) {
@@ -403,7 +740,9 @@ const BandManager = () => {
                     <p className="text-sm text-muted-foreground">Creative output</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-primary">0</span>
+                <span className="text-lg font-bold text-primary">
+                  {songCount.toLocaleString()}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-accent/10">
@@ -414,7 +753,9 @@ const BandManager = () => {
                     <p className="text-sm text-muted-foreground">Studio recordings</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-accent">0</span>
+                <span className="text-lg font-bold text-accent">
+                  {albumCount.toLocaleString()}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -422,38 +763,61 @@ const BandManager = () => {
           <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle>Weekly Schedule</CardTitle>
-              <CardDescription>Upcoming band activities</CardDescription>
+              <CardDescription>
+                {upcomingEvents.length > 0
+                  ? `${upcomingEvents.length} upcoming event${upcomingEvents.length === 1 ? '' : 's'}`
+                  : 'Upcoming band activities'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">Band Practice</p>
-                    <p className="text-sm text-muted-foreground">Studio rehearsal</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">Today</Badge>
+              {upcomingEvents.length === 0 ? (
+                <div className="p-4 rounded-lg border border-dashed border-primary/30 bg-secondary/20 text-sm text-muted-foreground">
+                  No upcoming events scheduled. Add gigs, rehearsals, or meetings to keep your band active.
                 </div>
-              </div>
-              
-              <div className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">Recording Session</p>
-                    <p className="text-sm text-muted-foreground">New single</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">Tomorrow</Badge>
-                </div>
-              </div>
+              ) : (
+                upcomingEvents.map((event) => {
+                  const typeLabel = formatEventType(event.eventType);
+                  const timingLabel = getEventTimingLabel(event.timestamp);
+                  const dateTimeLabel = formatEventDateTime(event.scheduledAt);
 
-              <div className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">Live Gig</p>
-                    <p className="text-sm text-muted-foreground">The Underground Club</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">Saturday</Badge>
-                </div>
-              </div>
+                  return (
+                    <div key={event.id} className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 text-primary">
+                            {getEventTypeIcon(event.eventType)}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium">{event.title}</p>
+                              {typeLabel && (
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {typeLabel}
+                                </Badge>
+                              )}
+                            </div>
+                            {event.description && (
+                              <p className="text-sm text-muted-foreground">{event.description}</p>
+                            )}
+                            {event.location && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {event.location}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <Badge variant="outline" className="text-xs">
+                            {timingLabel}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground">{dateTimeLabel}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </div>
