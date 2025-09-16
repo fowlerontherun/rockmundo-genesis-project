@@ -1,20 +1,26 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Play, 
-  Users, 
-  TrendingUp, 
-  DollarSign, 
-  Star, 
-  Music, 
-  Radio,
-  Globe,
-  Heart,
+import {
+  Play,
+  Users,
+  DollarSign,
+  Music,
   Share2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,7 +123,7 @@ const StreamingPlatforms = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useGameData();
-  
+
   const [platforms, setPlatforms] = useState<StreamingPlatform[]>([]);
   const [playerAccounts, setPlayerAccounts] = useState<PlayerStreamingAccount[]>([]);
   const [platformMetrics, setPlatformMetrics] = useState<PlatformMetric[]>([]);
@@ -131,6 +137,15 @@ const StreamingPlatforms = () => {
   });
   const [userSongs, setUserSongs] = useState<SongRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState<PromotionCampaign[]>([]);
+  const [streamingStats, setStreamingStats] = useState(() => ({ ...BASE_STREAMING_STATS }));
+  const [promotionSettings, setPromotionSettings] = useState<Record<string, { platformId: string; budget: number }>>({});
+  const [promoting, setPromoting] = useState<Record<string, boolean>>({});
+  const [playlistSubmitting, setPlaylistSubmitting] = useState<Record<string, boolean>>({});
+  const [selectedSongForPlaylist, setSelectedSongForPlaylist] = useState<string | null>(null);
+  const [playlistBudget, setPlaylistBudget] = useState<number>(150);
+  const [serverMessage, setServerMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
 
   const platformSnapshotsRef = useRef<Record<string, PlatformSnapshot>>({});
   const overviewSnapshotRef = useRef<OverviewSnapshot | null>(null);
@@ -155,23 +170,19 @@ const StreamingPlatforms = () => {
         .from('player_streaming_accounts')
         .select('*')
         .eq('user_id', user.id);
-
       if (accountsError) throw accountsError;
       setPlayerAccounts(accountsData ?? []);
-
       const { data: songsData, error: songsError } = await supabase
         .from('songs')
         .select('*')
         .eq('artist_id', user.id)
         .eq('status', 'released')
         .order('created_at', { ascending: false });
-
       if (songsError) throw songsError;
       const normalizedSongs: SongRecord[] = (songsData ?? []).map((song) => ({
         ...song,
       }));
       setUserSongs(normalizedSongs);
-
     } catch (error: unknown) {
       console.error('Error loading streaming data:', error);
       toast({
@@ -314,7 +325,6 @@ const StreamingPlatforms = () => {
       supabase.removeChannel(channel);
     };
   }, [user, loadData]);
-
   const connectPlatform = async (platformId: string) => {
     if (!user || !profile) return;
 
@@ -422,30 +432,17 @@ const StreamingPlatforms = () => {
       playlistPlacements: 42,
       trending: true
     }
-  ];
 
-  const campaigns = [
-    {
-      id: 1,
-      name: "Playlist Push - Electric Dreams",
-      platform: "Spotify",
-      budget: 2000,
-      playlistsTargeted: 50,
-      newPlacements: 12,
-      streamIncrease: 45000,
-      status: "Active",
-      endDate: "Dec 15, 2024"
-    },
-    {
-      id: 2,
-      name: "YouTube Promotion",
-      platform: "YouTube Music",
-      budget: 1500,
-      playlistsTargeted: 30,
-      newPlacements: 8,
-      streamIncrease: 25000,
-      status: "Completed",
-      endDate: "Nov 30, 2024"
+    const settings = promotionSettings[songId];
+    if (!settings || !settings.platformId) {
+      const message = "Select a platform before launching a promotion.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: message,
+      });
+      return;
     }
   ];
 
@@ -456,11 +453,91 @@ const StreamingPlatforms = () => {
     });
   };
 
-  const handleSubmitToPlaylist = (playlistName: string) => {
-    toast({
-      title: "Playlist Submission Sent!",
-      description: `Your song has been submitted to "${playlistName}".`,
-    });
+  const handleSubmitToPlaylist = async (playlistName: string, playlistPlatform: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Not signed in",
+        description: "You need to be logged in to submit songs.",
+      });
+      return;
+    }
+
+    if (!selectedSongForPlaylist) {
+      const message = "Select a song to submit to the playlist.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "No song selected",
+        description: message,
+      });
+      return;
+    }
+
+    if (playlistBudget <= 0) {
+      const message = "Set a playlist submission budget greater than zero.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Invalid budget",
+        description: message,
+      });
+      return;
+    }
+
+    const platformMatch = platforms.find(platform => platform.name.toLowerCase() === playlistPlatform.toLowerCase());
+
+    setPlaylistSubmitting(prev => ({ ...prev, [playlistName]: true }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke<PromotionFunctionResponse>("promotions", {
+        body: {
+          action: "playlist_submission",
+          songId: selectedSongForPlaylist,
+          platformId: platformMatch?.id,
+          platformName: platformMatch?.name ?? playlistPlatform,
+          budget: playlistBudget,
+          playlistName,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.message ?? "Failed to submit playlist request.");
+      }
+
+      if (data.campaign) {
+        setCampaigns(prev => [data.campaign, ...prev]);
+      }
+
+      if (data.statsDelta) {
+        setStreamingStats(prev => ({
+          totalStreams: prev.totalStreams + (data.statsDelta?.streams ?? 0),
+          revenue: prev.revenue + (data.statsDelta?.revenue ?? 0),
+          listeners: prev.listeners + (data.statsDelta?.listeners ?? 0),
+        }));
+      }
+
+      setServerMessage({ type: "success", text: data.message });
+      toast({
+        title: "Playlist Submission Sent!",
+        description: data.message,
+      });
+    } catch (error: any) {
+      const message = error?.message ?? "Failed to submit playlist request.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Submission failed",
+        description: message,
+      });
+    } finally {
+      setPlaylistSubmitting(prev => ({ ...prev, [playlistName]: false }));
+    }
+
   };
 
   return (
@@ -475,6 +552,18 @@ const StreamingPlatforms = () => {
             Manage your digital music presence and streaming revenue
           </p>
         </div>
+
+        {serverMessage && (
+          <Alert
+            variant={serverMessage.type === "error" ? "destructive" : "default"}
+            className="bg-card/80 border-accent"
+          >
+            <AlertTitle className="font-semibold">
+              {serverMessage.type === "error" ? "Action Failed" : "Action Successful"}
+            </AlertTitle>
+            <AlertDescription>{serverMessage.text}</AlertDescription>
+          </Alert>
+        )}
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full max-w-lg mx-auto grid-cols-4">
@@ -630,6 +719,7 @@ const StreamingPlatforms = () => {
                   </CardContent>
                 </Card>
               ) : (
+
                 userSongs.map((song) => {
                   const totalStreams = song.totalStreams ?? song.streams ?? 0;
                   const totalPlays = song.plays ?? song.streams ?? 0;
@@ -718,6 +808,56 @@ const StreamingPlatforms = () => {
           </TabsContent>
 
           <TabsContent value="playlists" className="space-y-6">
+            {userSongs.length > 0 && (
+              <Card className="bg-card/80 border-accent">
+                <CardHeader>
+                  <CardTitle className="text-cream text-lg">Submission Preferences</CardTitle>
+                  <CardDescription>Select the song and budget for playlist submissions</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="playlist-song-select" className="text-sm text-muted-foreground">
+                      Song to Submit
+                    </Label>
+                    <Select
+                      value={selectedSongForPlaylist ?? undefined}
+                      onValueChange={(value) => setSelectedSongForPlaylist(value)}
+                    >
+                      <SelectTrigger
+                        id="playlist-song-select"
+                        className="bg-background/40 border-accent/30"
+                      >
+                        <SelectValue placeholder="Choose a released song" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userSongs.map(song => (
+                          <SelectItem key={song.id} value={song.id}>
+                            {song.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="playlist-budget-input" className="text-sm text-muted-foreground">
+                      Submission Budget ($)
+                    </Label>
+                    <Input
+                      id="playlist-budget-input"
+                      type="number"
+                      min={25}
+                      value={playlistBudget}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        setPlaylistBudget(Number.isFinite(value) ? value : 0);
+                      }}
+                      className="bg-background/40 border-accent/30"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card className="bg-card/80 border-accent">
                 <CardHeader>
@@ -739,12 +879,13 @@ const StreamingPlatforms = () => {
                       <span className="text-accent">#12, #28</span>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="w-full bg-accent hover:bg-accent/80 text-background"
-                    onClick={() => handleSubmitToPlaylist("Indie Rock Hits")}
+                    onClick={() => handleSubmitToPlaylist("Indie Rock Hits", "Spotify")}
+                    disabled={playlistSubmitting["Indie Rock Hits"] || !selectedSongForPlaylist}
                   >
-                    Submit New Song
+                    {playlistSubmitting["Indie Rock Hits"] ? "Submitting..." : "Submit New Song"}
                   </Button>
                 </CardContent>
               </Card>
@@ -769,12 +910,13 @@ const StreamingPlatforms = () => {
                       <span className="text-accent">#7</span>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="w-full bg-accent hover:bg-accent/80 text-background"
-                    onClick={() => handleSubmitToPlaylist("New Rock")}
+                    onClick={() => handleSubmitToPlaylist("New Rock", "Apple Music")}
+                    disabled={playlistSubmitting["New Rock"] || !selectedSongForPlaylist}
                   >
-                    Submit New Song
+                    {playlistSubmitting["New Rock"] ? "Submitting..." : "Submit New Song"}
                   </Button>
                 </CardContent>
               </Card>
@@ -799,71 +941,105 @@ const StreamingPlatforms = () => {
                       <span className="text-accent">#5, #18, #31</span>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="w-full bg-accent hover:bg-accent/80 text-background"
-                    onClick={() => handleSubmitToPlaylist("Rock Essentials")}
+                    onClick={() => handleSubmitToPlaylist("Rock Essentials", "YouTube Music")}
+                    disabled={playlistSubmitting["Rock Essentials"] || !selectedSongForPlaylist}
                   >
-                    Submit New Song
+                    {playlistSubmitting["Rock Essentials"] ? "Submitting..." : "Submit New Song"}
                   </Button>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
-
           <TabsContent value="campaigns" className="space-y-6">
             <div className="space-y-4">
-              {campaigns.map((campaign) => (
-                <Card key={campaign.id} className="bg-card/80 border-accent">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-cream">{campaign.name}</h3>
-                        <Badge variant="outline">{campaign.platform}</Badge>
-                        <Badge 
-                          className={campaign.status === 'Active' ? 'bg-green-500' : 'bg-blue-500'}
-                        >
-                          {campaign.status}
-                        </Badge>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-cream/60 text-sm">Budget</p>
-                        <p className="text-lg font-bold text-accent">${campaign.budget.toLocaleString()}</p>
-                        <p className="text-cream/60 text-xs">End: {campaign.endDate}</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-cream/60 text-sm">Playlist Results</p>
-                        <p className="text-lg font-bold text-accent">
-                          {campaign.newPlacements}/{campaign.playlistsTargeted}
-                        </p>
-                        <Progress 
-                          value={(campaign.newPlacements / campaign.playlistsTargeted) * 100} 
-                          className="h-2" 
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-cream/60 text-sm">Stream Increase</p>
-                        <p className="text-lg font-bold text-accent">
-                          +{campaign.streamIncrease.toLocaleString()}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="border-accent text-accent">
-                            View Details
-                          </Button>
-                          {campaign.status === 'Active' && (
-                            <Button size="sm" className="bg-accent hover:bg-accent/80 text-background">
-                              Modify
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              {campaigns.length === 0 ? (
+                <Card className="bg-card/80 border-accent">
+                  <CardContent className="py-12 text-center space-y-2">
+                    <h3 className="text-lg font-semibold text-cream">No campaigns yet</h3>
+                    <p className="text-muted-foreground text-sm">
+                      Launch a promotion to see your streaming campaigns here.
+                    </p>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                campaigns.map((campaign) => {
+                  const targeted = campaign.playlists_targeted ?? 0;
+                  const placements = campaign.new_placements ?? 0;
+                  const progress = targeted > 0 ? Math.min((placements / targeted) * 100, 100) : 0;
+                  const statusLabel = campaign.status
+                    ? campaign.status
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (char) => char.toUpperCase())
+                    : "Unknown";
+                  const isActive = campaign.status?.toLowerCase() === "active";
+                  const endDateLabel = campaign.end_date
+                    ? new Date(campaign.end_date).toLocaleDateString()
+                    : "No end date";
+                  const targetedDisplay = targeted > 0 ? targeted : '—';
+
+                  return (
+                    <Card key={campaign.id} className="bg-card/80 border-accent">
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-cream">{campaign.name}</h3>
+                            <Badge variant="outline">{campaign.platform}</Badge>
+                            <Badge className={isActive ? "bg-green-500" : "bg-blue-500"}>
+                              {statusLabel}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-cream/60 text-sm">Budget</p>
+                            <p className="text-lg font-bold text-accent">
+                              ${Number(campaign.budget ?? 0).toLocaleString()}
+                            </p>
+                            <p className="text-cream/60 text-xs">End: {endDateLabel}</p>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-cream/60 text-sm">Playlist Results</p>
+                            <p className="text-lg font-bold text-accent">
+                              {placements}/{targetedDisplay}
+                            </p>
+                            <Progress value={progress} className="h-2" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-cream/60 text-sm">Stream Increase</p>
+                            <p className="text-lg font-bold text-accent">
+                              +{Number(campaign.stream_increase ?? 0).toLocaleString()}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-accent text-accent"
+                              >
+                                View Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-accent hover:bg-accent/80 text-background"
+                                onClick={() =>
+                                  updateCampaign(campaign.id, {
+                                    status: isActive ? "completed" : "active",
+                                  })
+                                }
+                              >
+                                {isActive ? "Mark Complete" : "Reactivate"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
 
             <Card className="bg-card/80 border-accent">
@@ -873,13 +1049,22 @@ const StreamingPlatforms = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button className="bg-accent hover:bg-accent/80 text-background">
+                  <Button
+                    className="bg-accent hover:bg-accent/80 text-background"
+                    onClick={() => handleCreatePresetCampaign("playlist")}
+                  >
                     Playlist Push Campaign
                   </Button>
-                  <Button className="bg-accent hover:bg-accent/80 text-background">
+                  <Button
+                    className="bg-accent hover:bg-accent/80 text-background"
+                    onClick={() => handleCreatePresetCampaign("social")}
+                  >
                     Social Media Boost
                   </Button>
-                  <Button className="bg-accent hover:bg-accent/80 text-background">
+                  <Button
+                    className="bg-accent hover:bg-accent/80 text-background"
+                    onClick={() => handleCreatePresetCampaign("radio")}
+                  >
                     Radio Promotion
                   </Button>
                 </div>

@@ -15,13 +15,13 @@ import {
   Crown
 } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserWithRole {
   id: string;
-  email: string;
+  email: string | null;
   username: string;
   display_name: string;
   role: string;
@@ -29,51 +29,92 @@ interface UserWithRole {
   last_sign_in_at: string;
 }
 
+type RawUser = {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  created_at: string;
+  updated_at: string;
+  user_roles?: unknown;
+  auth_users?: unknown;
+};
+
+const getRelationValue = (relation: unknown, key: string): unknown => {
+  if (Array.isArray(relation)) {
+    for (const item of relation) {
+      if (item && typeof item === 'object' && key in item) {
+        return (item as Record<string, unknown>)[key];
+      }
+    }
+    return null;
+  }
+
+  if (relation && typeof relation === 'object' && key in relation) {
+    return (relation as Record<string, unknown>)[key];
+  }
+
+  return null;
+};
+
+const getEmailFromRelation = (relation: unknown): string | null => {
+  const value = getRelationValue(relation, 'email');
+  return typeof value === 'string' ? value : null;
+};
+
+const getRoleFromRelation = (relation: unknown): string => {
+  const value = getRelationValue(relation, 'role');
+  return typeof value === 'string' && value.length > 0 ? value : 'user';
+};
+
 const Admin = () => {
   const { userRole, isAdmin } = useUserRole();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async (): Promise<void> => {
+    setLoading(true);
     try {
       // Load profiles with roles
       const { data, error } = await supabase
         .from('profiles')
         .select(`
           *,
-          user_roles(role)
+          user_roles(role),
+          auth_users:auth.users(email)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedUsers = data.map(user => ({
+      const rawUsers = (data ?? []) as RawUser[];
+
+      const formattedUsers: UserWithRole[] = rawUsers.map((user) => ({
         id: user.user_id,
-        email: user.username + '@rockmundo.com', // Mock email
+        email: getEmailFromRelation(user.auth_users),
         username: user.username,
-        display_name: user.display_name,
-        role: (user.user_roles as any)?.[0]?.role || 'user',
+        display_name: user.display_name ?? user.username,
+        role: getRoleFromRelation(user.user_roles),
         created_at: user.created_at,
         last_sign_in_at: user.updated_at
       }));
 
       setUsers(formattedUsers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading users:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load users"
+        description: error instanceof Error ? error.message : "Failed to load users"
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
 
   const updateUserRole = async (userId: string, newRole: 'admin' | 'moderator' | 'user') => {
     try {
@@ -98,13 +139,13 @@ const Admin = () => {
         description: `User role updated to ${newRole} successfully`
       });
 
-      loadUsers(); // Refresh the list
-    } catch (error: any) {
+      await loadUsers(); // Refresh the list
+    } catch (error: unknown) {
       console.error('Error updating user role:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update user role"
+        description: error instanceof Error ? error.message : "Failed to update user role"
       });
     }
   };
@@ -179,6 +220,9 @@ const Admin = () => {
                               <div>
                                 <h4 className="font-semibold">{user.display_name}</h4>
                                 <p className="text-sm text-muted-foreground">@{user.username}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Email: {user.email ?? 'N/A'}
+                                </p>
                               </div>
                               <Badge variant={getRoleBadgeVariant(user.role)}>
                                 {user.role}

@@ -200,6 +200,51 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          advance_payment: number
+          contract_type: string
+          created_at: string | null
+          duration_months: number
+          id: string
+          label_id: string | null
+          label_name: string
+          royalty_rate: number
+          signed_at: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          advance_payment?: number
+          contract_type: string
+          created_at?: string | null
+          duration_months: number
+          id?: string
+          label_id?: string | null
+          label_name: string
+          royalty_rate: number
+          signed_at?: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          advance_payment?: number
+          contract_type?: string
+          created_at?: string | null
+          duration_months?: number
+          id?: string
+          label_id?: string | null
+          label_name?: string
+          royalty_rate?: number
+          signed_at?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       equipment_items: {
         Row: {
           category: string
@@ -688,6 +733,81 @@ export type Database = {
           },
         ]
       }
+      promotion_campaigns: {
+        Row: {
+          budget: number
+          campaign_type: string
+          created_at: string | null
+          id: string
+          message: string | null
+          new_placements: number | null
+          platform_id: string | null
+          platform_name: string | null
+          playlist_name: string | null
+          playlists_targeted: number | null
+          song_id: string
+          status: string
+          stream_increase: number | null
+          revenue_generated: number | null
+          listeners_generated: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          budget?: number
+          campaign_type: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          campaign_type?: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id?: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_campaigns_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_campaigns_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -695,9 +815,11 @@ export type Database = {
           cash: number | null
           created_at: string | null
           display_name: string | null
+          engagement_rate: number | null
           experience: number | null
           fame: number | null
           fans: number | null
+          followers: number | null
           id: string
           level: number | null
           updated_at: string | null
@@ -710,9 +832,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -725,9 +849,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -744,9 +870,12 @@ export type Database = {
           fan_growth: number | null
           id: string
           likes: number | null
+          reposts: number | null
           platform: string
           shares: number | null
+          timestamp: string | null
           user_id: string
+          views: number | null
         }
         Insert: {
           comments?: number | null
@@ -755,9 +884,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform: string
           shares?: number | null
+          timestamp?: string | null
           user_id: string
+          views?: number | null
         }
         Update: {
           comments?: number | null
@@ -766,9 +898,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform?: string
           shares?: number | null
+          timestamp?: string | null
           user_id?: string
+          views?: number | null
         }
         Relationships: []
       }
