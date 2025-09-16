@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Music, Play, Pause, Save, Trash2, Star, Clock, Coins, Volume2 } from "lucide-react";
+import { Music, Play, Trash2, Star, Coins, Volume2, Pencil } from "lucide-react";
 
 interface Song {
   id: string;
@@ -44,6 +45,16 @@ const MusicCreation = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editSongForm, setEditSongForm] = useState({
+    title: "",
+    genre: "",
+    lyrics: "",
+    duration: 180
+  });
+  const [updatingSong, setUpdatingSong] = useState(false);
+  const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
 
   const [newSong, setNewSong] = useState({
     title: "",
@@ -79,6 +90,17 @@ const MusicCreation = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openEditDialog = (song: Song) => {
+    setEditingSong(song);
+    setEditSongForm({
+      title: song.title,
+      genre: song.genre,
+      lyrics: song.lyrics ?? "",
+      duration: song.duration
+    });
+    setIsEditDialogOpen(true);
   };
 
   const calculateQuality = (): number => {
@@ -152,7 +174,9 @@ const MusicCreation = () => {
 
       setSongs(prev => [data, ...prev]);
       setNewSong({ title: "", genre: "", lyrics: "", duration: 180 });
-      
+
+      await fetchData();
+
       toast({
         title: "Song Created!",
         description: `"${newSong.title}" was created with ${quality}% quality. +${xpGain} Songwriting XP!`
@@ -224,6 +248,8 @@ const MusicCreation = () => {
       setSongs(prev => prev.map(s => s.id === song.id ? { ...s, status: "recorded" } : s));
       setProfile(prev => prev ? { ...prev, cash: prev.cash - song.recording_cost } : null);
 
+      await fetchData();
+
       toast({
         title: "Recording Complete!",
         description: `"${song.title}" has been recorded and is ready for release!`
@@ -241,7 +267,57 @@ const MusicCreation = () => {
     }
   };
 
+  const updateSong = async () => {
+    if (!editingSong) return;
+    if (!editSongForm.title || !editSongForm.genre) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please provide a title and genre for your song."
+      });
+      return;
+    }
+
+    setUpdatingSong(true);
+
+    try {
+      const { error } = await supabase
+        .from("songs")
+        .update({
+          title: editSongForm.title,
+          genre: editSongForm.genre,
+          lyrics: editSongForm.lyrics || null,
+          duration: editSongForm.duration
+        })
+        .eq("id", editingSong.id);
+
+      if (error) throw error;
+
+      await fetchData();
+
+      toast({
+        title: "Song Updated",
+        description: `"${editSongForm.title}" has been updated.`
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingSong(null);
+      setEditSongForm({ title: "", genre: "", lyrics: "", duration: 180 });
+    } catch (error) {
+      console.error("Error updating song:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Failed to update song. Please try again."
+      });
+    } finally {
+      setUpdatingSong(false);
+    }
+  };
+
   const deleteSong = async (songId: string) => {
+    setDeletingSongId(songId);
+
     try {
       const { error } = await supabase
         .from("songs")
@@ -251,7 +327,15 @@ const MusicCreation = () => {
       if (error) throw error;
 
       setSongs(prev => prev.filter(s => s.id !== songId));
-      
+
+      if (editingSong?.id === songId) {
+        setIsEditDialogOpen(false);
+        setEditingSong(null);
+        setEditSongForm({ title: "", genre: "", lyrics: "", duration: 180 });
+      }
+
+      await fetchData();
+
       toast({
         title: "Song Deleted",
         description: "The song has been removed from your catalog."
@@ -264,6 +348,8 @@ const MusicCreation = () => {
         title: "Delete Failed",
         description: "Failed to delete song. Please try again."
       });
+    } finally {
+      setDeletingSongId(null);
     }
   };
 
@@ -446,7 +532,7 @@ const MusicCreation = () => {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {song.status === "draft" && (
                         <Button
                           onClick={() => recordSong(song)}
@@ -458,13 +544,24 @@ const MusicCreation = () => {
                           Record (${song.recording_cost})
                         </Button>
                       )}
-                      
+
+                      <Button
+                        onClick={() => openEditDialog(song)}
+                        variant="outline"
+                        size="sm"
+                        disabled={updatingSong && editingSong?.id === song.id}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
                       <Button
                         onClick={() => deleteSong(song.id)}
                         variant="destructive"
                         size="sm"
+                        disabled={deletingSongId === song.id}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        {deletingSongId === song.id ? "Deleting..." : "Delete"}
                       </Button>
                     </div>
                   </CardContent>
@@ -474,6 +571,99 @@ const MusicCreation = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setEditingSong(null);
+            setEditSongForm({ title: "", genre: "", lyrics: "", duration: 180 });
+          }
+        }}
+      >
+        <DialogContent>
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              await updateSong();
+            }}
+            className="space-y-6"
+          >
+            <DialogHeader>
+              <DialogTitle>Edit Song</DialogTitle>
+              <DialogDescription>
+                Make changes to your song details and keep your catalog up to date.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Song Title</label>
+                <Input
+                  value={editSongForm.title}
+                  onChange={(e) => setEditSongForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter song title..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Genre</label>
+                <Select
+                  value={editSongForm.genre}
+                  onValueChange={(value) => setEditSongForm(prev => ({ ...prev, genre: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select genre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {genres.map(genre => (
+                      <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Lyrics (Optional)</label>
+              <Textarea
+                value={editSongForm.lyrics}
+                onChange={(e) => setEditSongForm(prev => ({ ...prev, lyrics: e.target.value }))}
+                rows={6}
+                placeholder="Update your lyrics here..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Duration (seconds)</label>
+              <Input
+                type="number"
+                min="30"
+                max="600"
+                value={editSongForm.duration}
+                onChange={(e) => setEditSongForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 180 }))}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={updatingSong}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updatingSong || !editSongForm.title || !editSongForm.genre}
+              >
+                {updatingSong ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
