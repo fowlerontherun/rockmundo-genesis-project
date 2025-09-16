@@ -63,7 +63,8 @@ const PlayerStatistics = () => {
         equipmentResponse,
         achievementsResponse,
         playerAchievementsResponse,
-        achievementSummaryResponse
+        achievementSummaryResponse,
+        gigPerformancesResponse
       ] = await Promise.all([
         supabase
           .from('songs')
@@ -90,13 +91,19 @@ const PlayerStatistics = () => {
           .from('player_achievement_summary')
           .select('earned_count, total_achievements, remaining_count, last_unlocked_at')
           .eq('user_id', user.id)
-          .maybeSingle()
+          .maybeSingle(),
+        supabase
+          .from('gig_performances')
+          .select('id, gig_id, performed_at, earnings, performance_score')
+          .eq('user_id', user.id)
+          .order('performed_at', { ascending: false })
       ]);
 
       if (songsResponse.error) throw songsResponse.error;
       if (equipmentResponse.error) throw equipmentResponse.error;
       if (achievementsResponse.error) throw achievementsResponse.error;
       if (playerAchievementsResponse.error) throw playerAchievementsResponse.error;
+      if (gigPerformancesResponse.error) throw gigPerformancesResponse.error;
       if (achievementSummaryResponse.error && achievementSummaryResponse.status !== 406) {
         throw achievementSummaryResponse.error;
       }
@@ -109,9 +116,7 @@ const PlayerStatistics = () => {
         unlocked_at: string | null;
       }[]) || [];
       const achievementSummary = achievementSummaryResponse.data;
-
-      // Mock gigs data since gig_performances table is new
-      const gigs: Record<string, unknown>[] = [];
+      const gigPerformances = gigPerformancesResponse.data || [];
 
       // Calculate stats
       const totalSongs = songs.length;
@@ -119,7 +124,7 @@ const PlayerStatistics = () => {
       const totalStreams = songs.reduce((sum, s) => sum + (s.streams || 0), 0);
       const totalRevenue = songs.reduce((sum, s) => sum + (s.revenue || 0), 0);
       const bestChartPosition = Math.min(...(songs.filter(s => s.chart_position).map(s => s.chart_position) || [100]));
-      const totalGigs = gigs?.length || 0;
+      const totalGigs = gigPerformances.length;
 
       // Calculate equipment value and bonuses
       const equipmentValue = equipmentItems.reduce((sum, item) => {
