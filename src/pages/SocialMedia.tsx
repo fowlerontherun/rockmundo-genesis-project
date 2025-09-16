@@ -1,3 +1,4 @@
+
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,22 +23,23 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { Heart, MessageCircle, Repeat2, Share, TrendingUp, Users, Eye, Loader2, Pencil, Plus } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
-type CampaignStatus = "Active" | "Completed";
+type SocialPostRow = Database["public"]["Tables"]["social_posts"]["Row"];
 
 type SocialCampaignRow = Database["public"]["Tables"]["social_campaigns"]["Row"];
 
 interface SocialPost {
-  id: number;
+  id: string;
   content: string;
-  timestamp: string;
   likes: number;
   comments: number;
   reposts: number;
   views: number;
+  timestamp: string;
   engagement: number;
 }
 
@@ -136,39 +138,16 @@ const mapCampaignToForm = (campaign: Campaign): CampaignFormState => ({
 const SocialMedia = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const [newPost, setNewPost] = useState("");
-  const [followers, setFollowers] = useState<number | null>(null);
-  const [engagementRate, setEngagementRate] = useState<number | null>(null);
-  const [posts, setPosts] = useState<SocialPost[]>([
-    {
-      id: 1,
-      content: "Just finished recording our new single! Can't wait for you all to hear it 🎸🔥",
-      timestamp: "2 hours ago",
-      likes: 1250,
-      comments: 89,
-      reposts: 234,
-      views: 15600,
-      engagement: 9.8
-    },
-    {
-      id: 2,
-      content: "Behind the scenes at today's photo shoot. New album artwork coming soon! 📸✨",
-      timestamp: "1 day ago",
-      likes: 2100,
-      comments: 156,
-      reposts: 445,
-      views: 28900,
-      engagement: 12.4
-    },
-    {
-      id: 3,
-      content: "Thank you Chicago! What an incredible show tonight. You were AMAZING! 🎤❤️",
-      timestamp: "3 days ago",
-      likes: 3400,
-      comments: 298,
-      reposts: 678,
-      views: 45200,
-      engagement: 15.2
+  const [followers] = useState(24500);
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [posting, setPosting] = useState(false);
+
+  const loadPosts = useCallback(async () => {
+    if (authLoading) {
+      return;
     }
   ]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -486,88 +465,59 @@ const SocialMedia = () => {
     });
   };
 
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!newPost.trim()) return;
-
-    const baseViews = Math.floor(Math.random() * 5000) + 4000;
-    const likeRate = 0.06 + Math.random() * 0.05;
-    const likes = Math.round(baseViews * likeRate);
-    const comments = Math.round(likes * 0.15);
-    const reposts = Math.round(likes * 0.18);
-    const views = baseViews + Math.round(reposts * 8);
-    const engagement = parseFloat(Math.min(100, ((likes + comments + reposts) / views) * 100).toFixed(1));
-
-    setPosts((prevPosts) => {
-      const nextId = prevPosts.length > 0 ? Math.max(...prevPosts.map((post) => post.id)) + 1 : 1;
-      const post: SocialPost = {
-        id: nextId,
-        content: newPost,
-        timestamp: "Just now",
-        likes,
-        comments,
-        reposts,
-        views,
-        engagement
-      };
-      return [post, ...prevPosts];
-    });
-
-    setNewPost("");
-    toast({
-      title: "Post Published!",
-      description: "Your post has been shared across all platforms."
-    });
-
-    if (engagement >= 10) {
-      const followerGain = Math.round(likes * (engagement / 80));
-      const engagementBoost = parseFloat(Math.min(10, engagement / 4).toFixed(2));
-      void applySocialGrowth(
-        followerGain,
-        engagementBoost,
-        `Your latest post is trending! +${followerGain.toLocaleString()} followers and +${engagementBoost.toFixed(2)}% engagement.`
-      );
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Sign in required",
+        description: "You need to be signed in to create a post.",
+      });
+      return;
     }
-  };
 
-  const handleLike = (postId: number) => {
-    let previousPost: SocialPost | null = null;
-    let updatedPost: SocialPost | null = null;
+    const content = newPost.trim();
+    setPosting(true);
 
-    setPosts((prevPosts) =>
-      prevPosts.map((post) => {
-        if (post.id !== postId) return post;
+    try {
+      const initialViews = Math.max(500, Math.round(content.length * (8 + Math.random() * 4)));
+      const { data, error } = await supabase
+        .from("social_posts")
+        .insert({
+          user_id: user.id,
+          platform: "all",
+          content,
+          likes: 0,
+          comments: 0,
+          reposts: 0,
+          shares: 0,
+          views: initialViews,
+          timestamp: new Date().toISOString(),
+          fan_growth: 0,
+        })
+        .select("*")
+        .single();
 
-        previousPost = post;
-        const likeBoost = Math.floor(Math.random() * 40) + 10;
-        const viewBoost = likeBoost * 20;
-        const commentBoost = Math.floor(likeBoost * 0.2);
-        const repostBoost = Math.floor(likeBoost * 0.15);
-        const likes = post.likes + likeBoost;
-        const comments = post.comments + commentBoost;
-        const reposts = post.reposts + repostBoost;
-        const views = post.views + viewBoost;
-        const engagement = parseFloat(
-          Math.min(100, ((likes + comments + reposts) / views) * 100).toFixed(1)
-        );
+      if (error) throw error;
 
-        updatedPost = { ...post, likes, comments, reposts, views, engagement };
-        return updatedPost;
-      })
-    );
-
-    if (previousPost && updatedPost) {
-      const likeGrowth = updatedPost.likes - previousPost.likes;
-      const engagementGrowth = updatedPost.engagement - previousPost.engagement;
-
-      if (likeGrowth > 150 || engagementGrowth > 1.5) {
-        const followerGain = Math.max(0, Math.round(likeGrowth * 1.2));
-        const engagementBoost = Math.max(0, parseFloat(Math.max(engagementGrowth, 0).toFixed(2)));
-        void applySocialGrowth(
-          followerGain,
-          engagementBoost,
-          `Post engagement spiked! +${followerGain.toLocaleString()} followers and +${engagementBoost.toFixed(2)}% engagement.`
-        );
+      if (data) {
+        setPosts((prev) => [mapPost(data as SocialPostRow), ...prev]);
       }
+
+      setNewPost("");
+      toast({
+        title: "Post Published!",
+        description: "Your post has been shared across all platforms.",
+      });
+    } catch (error) {
+      console.error("Error creating post:", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to publish post",
+        description: "Please try again later.",
+      });
+    } finally {
+      setPosting(false);
     }
   };
 
@@ -577,20 +527,22 @@ const SocialMedia = () => {
 
     if (campaign.status === "Completed") {
       toast({
-        title: "Campaign already completed",
-        description: "Launch a new campaign to continue growing your audience.",
+        variant: "destructive",
+        title: "Sign in required",
+        description: "You need to be signed in to like posts.",
       });
       return;
     }
 
-    const followerGain = Math.round(campaign.reach * (campaign.engagement / 100) * 0.02);
-    const engagementBoost = parseFloat(Math.min(15, campaign.engagement / 3).toFixed(2));
+    const existingPost = posts.find((post) => post.id === postId);
+    if (!existingPost) return;
 
-    void applySocialGrowth(
-      followerGain,
-      engagementBoost,
-      `${campaign.name} boosted your audience by +${followerGain.toLocaleString()} followers!`
-    );
+    const updatedLikes = existingPost.likes + 1;
+    const optimisticPost: SocialPost = {
+      ...existingPost,
+      likes: updatedLikes,
+      engagement: calculateEngagement(updatedLikes, existingPost.comments, existingPost.reposts, existingPost.views),
+    };
 
     try {
       await updateCampaign(campaignId, { status: "Completed" });
@@ -690,9 +642,9 @@ const SocialMedia = () => {
                   <Button
                     onClick={handleCreatePost}
                     className="bg-accent hover:bg-accent/80 text-background font-bold"
-                    disabled={!newPost.trim()}
+                    disabled={!newPost.trim() || posting}
                   >
-                    Post Now
+                    {posting ? "Posting..." : "Post Now"}
                   </Button>
                 </div>
               </CardContent>
@@ -701,50 +653,67 @@ const SocialMedia = () => {
             {/* Posts Feed */}
             <div className="space-y-4">
               <h3 className="text-2xl font-bebas text-cream tracking-wide">Recent Posts</h3>
-              {posts.map((post) => (
-                <Card key={post.id} className="bg-card/80 border-accent">
-                  <CardContent className="pt-6">
-                    <div className="space-y-4">
-                      <p className="text-cream leading-relaxed">{post.content}</p>
-                      <div className="flex justify-between items-center text-cream/60 text-sm">
-                        <span>{post.timestamp}</span>
-                        <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-4 w-4" />
-                            {post.views.toLocaleString()}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {post.engagement}% engagement
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-accent/20">
-                        <div className="flex gap-6">
-                          <button
-                            onClick={() => handleLike(post.id)}
-                            className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors"
-                          >
-                            <Heart className="h-4 w-4" />
-                            <span>{post.likes.toLocaleString()}</span>
-                          </button>
-                          <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
-                            <MessageCircle className="h-4 w-4" />
-                            <span>{post.comments.toLocaleString()}</span>
-                          </button>
-                          <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
-                            <Repeat2 className="h-4 w-4" />
-                            <span>{post.reposts.toLocaleString()}</span>
-                          </button>
-                        </div>
-                        <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
-                          <Share className="h-4 w-4" />
-                          Share
-                        </button>
-                      </div>
-                    </div>
+              {(loadingPosts || authLoading) ? (
+                <Card className="bg-card/80 border-accent">
+                  <CardContent className="py-8 text-center text-cream/70">
+                    Fetching your latest posts...
                   </CardContent>
                 </Card>
-              ))}
+              ) : posts.length === 0 ? (
+                <Card className="bg-card/80 border-accent">
+                  <CardContent className="py-8 text-center space-y-2">
+                    <p className="text-cream font-semibold">No posts yet</p>
+                    <p className="text-cream/70 text-sm">
+                      Share your first update to start engaging with your fans.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                posts.map((post) => (
+                  <Card key={post.id} className="bg-card/80 border-accent">
+                    <CardContent className="pt-6">
+                      <div className="space-y-4">
+                        <p className="text-cream leading-relaxed">{post.content}</p>
+                        <div className="flex justify-between items-center text-cream/60 text-sm">
+                          <span>{formatPostTimestamp(post.timestamp)}</span>
+                          <div className="flex items-center gap-4">
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" />
+                              {post.views.toLocaleString()}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {post.engagement.toFixed(1)}% engagement
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-accent/20">
+                          <div className="flex gap-6">
+                            <button
+                              onClick={() => handleLike(post.id)}
+                              className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors"
+                            >
+                              <Heart className="h-4 w-4" />
+                              <span>{post.likes.toLocaleString()}</span>
+                            </button>
+                            <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
+                              <MessageCircle className="h-4 w-4" />
+                              <span>{post.comments.toLocaleString()}</span>
+                            </button>
+                            <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
+                              <Repeat2 className="h-4 w-4" />
+                              <span>{post.reposts.toLocaleString()}</span>
+                            </button>
+                          </div>
+                          <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
+                            <Share className="h-4 w-4" />
+                            Share
+                          </button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
 
