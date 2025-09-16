@@ -357,7 +357,6 @@ const VenueManagement = () => {
       setBookingRows([]);
       return;
     }
-
     void loadRelationships();
     void loadBookings();
   }, [user, loadRelationships, loadBookings]);
@@ -591,12 +590,28 @@ const VenueManagement = () => {
     [user, toast, loadBookings]
   );
 
-  const getRelationshipColor = (relationship: number) => {
-    if (relationship >= 80) return "text-green-400";
-    if (relationship >= 60) return "text-yellow-400";
-    if (relationship >= 40) return "text-orange-400";
-    return "text-red-400";
-  };
+    try {
+      const eventDate = new Date();
+      eventDate.setDate(eventDate.getDate() + 7);
+
+      const insertPayload: Record<string, unknown> = {
+        user_id: user.id,
+        venue_id: venue.id,
+        status: "upcoming",
+        event_date: eventDate.toISOString()
+      };
+
+      const { error } = await supabase
+        .from("venue_bookings")
+        .insert(insertPayload);
+      if (error) throw error;
+
+      await loadBookings();
+
+      toast({
+        title: "Show booked!",
+        description: `Your performance at ${venue.name} has been scheduled.`
+      });
 
   const getStatusColor = (status: string) => {
     const normalized = status.toLowerCase();
@@ -615,7 +630,7 @@ const VenueManagement = () => {
       default:
         return "bg-gray-500";
     }
-  };
+  }, [loadBookings, toast, user]);
 
   const isLoadingVenues = loadingVenues || loadingRelationships;
   const hasVenues = venuesWithDetails.length > 0;
@@ -636,6 +651,10 @@ const VenueManagement = () => {
             <div className="flex items-center gap-2 text-cream">
               <Award className="h-6 w-6" />
               <span className="text-lg">Reputation: {playerReputation}/100</span>
+            </div>
+            <div className="flex items-center gap-2 text-cream/80 text-sm">
+              <Calendar className="h-5 w-5" />
+              <span>{upcomingBookingsCount} upcoming bookings</span>
             </div>
           </div>
         </div>
@@ -805,7 +824,6 @@ const VenueManagement = () => {
               </div>
             )}
           </TabsContent>
-
           <TabsContent value="bookings" className="space-y-6">
             {loadingBookings ? (
               <div className="py-10 text-center text-cream/60">Loading bookings...</div>
@@ -887,7 +905,7 @@ const VenueManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="bg-card/80 border-accent">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-cream text-sm">Total Shows</CardTitle>
+                  <CardTitle className="text-cream text-sm">Upcoming Shows</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-accent">{analyticsData.totalShows}</div>
@@ -907,13 +925,14 @@ const VenueManagement = () => {
               </Card>
               <Card className="bg-card/80 border-accent">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-cream text-sm">Total Revenue</CardTitle>
+                  <CardTitle className="text-cream text-sm">Projected Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-accent">
                     ${Math.round(analyticsData.totalRevenue).toLocaleString()}
                   </div>
                   <p className="text-cream/60 text-sm">From upcoming shows</p>
+
                 </CardContent>
               </Card>
             </div>
@@ -948,6 +967,7 @@ const VenueManagement = () => {
                             </div>
                             <div>
                               <span className="text-cream/60">Relationship: </span>
+
                               <span className={`${getRelationshipColor(venue.relationship)} font-semibold`}>
                                 {venue.relationship}% ({venue.relationshipLevel})
                               </span>
