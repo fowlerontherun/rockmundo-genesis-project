@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
+import type { Database } from "@/integrations/supabase/types";
 
 interface Tour {
   id: string;
@@ -54,6 +55,8 @@ interface TourVenue {
   travel_cost: number | null;
   lodging_cost: number | null;
   misc_cost: number | null;
+  travel_time: number | null;
+  rest_days: number | null;
   status: string | null;
   venues?: {
     name: string;
@@ -85,6 +88,127 @@ interface NewTourVenueDetails {
   miscCost: number;
 }
 
+interface RouteSuggestion {
+  order: TourVenue[];
+  totalDistance: number;
+}
+
+type VenueRow = Database['public']['Tables']['venues']['Row'];
+type TourRow = Database['public']['Tables']['tours']['Row'];
+type TourVenueRow = Database['public']['Tables']['tour_venues']['Row'];
+
+type SupabaseTour = TourRow & {
+  tour_venues?: Array<
+    TourVenueRow & {
+      venues?: Pick<VenueRow, 'name' | 'location' | 'capacity'> | null;
+    }
+  >;
+};
+
+const LOCATION_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "downtown": { lat: 40.7128, lng: -74.006 },
+  "downtown district": { lat: 40.7138, lng: -74.001 },
+  "arts district": { lat: 34.043, lng: -118.235 },
+  "arts quarter": { lat: 34.05, lng: -118.247 },
+  "stadium district": { lat: 39.760, lng: -104.987 },
+  "cultural center": { lat: 41.881, lng: -87.623 },
+  "city park": { lat: 39.756, lng: -104.966 },
+  "suburbs": { lat: 41.0, lng: -87.9 },
+  "uptown": { lat: 41.894, lng: -87.634 },
+  "sports district": { lat: 34.043, lng: -118.267 },
+  "outskirts": { lat: 36.1699, lng: -115.1398 },
+  "central": { lat: 39.0997, lng: -94.5786 },
+};
+
+const DEFAULT_COORDINATE = { lat: 39.5, lng: -98.35 };
+const AVERAGE_TRAVEL_SPEED_KMH = 80;
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
+const EARTH_RADIUS_KM = 6371;
+
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+const getCoordinateForLocation = (location?: string | null) => {
+  if (!location) return DEFAULT_COORDINATE;
+  const normalized = location.trim().toLowerCase();
+  if (LOCATION_COORDINATES[normalized]) {
+    return LOCATION_COORDINATES[normalized];
+  }
+
+  let hash = 0;
+  for (const char of normalized) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+
+  const lat = ((hash % 180000) / 1000) - 90;
+  const lng = (((Math.floor(hash / 180000)) % 360000) / 1000) - 180;
+  return { lat, lng };
+};
+
+const calculateDistanceKm = (fromLocation?: string | null, toLocation?: string | null) => {
+  const from = getCoordinateForLocation(fromLocation);
+  const to = getCoordinateForLocation(toLocation);
+
+  const dLat = toRadians(to.lat - from.lat);
+  const dLng = toRadians(to.lng - from.lng);
+  const lat1 = toRadians(from.lat);
+  const lat2 = toRadians(to.lat);
+
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+
+  return Math.round(EARTH_RADIUS_KM * c * 100) / 100;
+};
+
+const estimateTravelTimeHours = (distanceKm: number) => Number(((distanceKm || 0) / AVERAGE_TRAVEL_SPEED_KMH).toFixed(2));
+
+const calculateRestDaysFromDistance = (distanceKm: number) => Math.max(1, Math.ceil((distanceKm || 0) / 600));
+
+const calculateTravelCostFromDistance = (distanceKm: number) => Math.max(0, Math.round(distanceKm * 0.75 + 150));
+
+const calculateLodgingCostFromRestDays = (restDays: number) => Math.max(0, restDays * 120);
+
+const calculateOptimalRoute = (tourVenues: TourVenue[]): RouteSuggestion => {
+  const stops = (tourVenues || []).filter(Boolean);
+  if (stops.length <= 1) {
+    return { order: stops, totalDistance: 0 };
+  }
+
+  const remaining = [...stops].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const start = remaining.shift();
+  if (!start) {
+    return { order: [], totalDistance: 0 };
+  }
+
+  const optimalOrder: TourVenue[] = [start];
+  let totalDistance = 0;
+
+  while (remaining.length > 0) {
+    const lastStop = optimalOrder[optimalOrder.length - 1];
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    remaining.forEach((candidate, index) => {
+      const distance = calculateDistanceKm(lastStop.venue?.location, candidate.venue?.location);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    });
+
+    const nextStop = remaining.splice(bestIndex, 1)[0];
+    if (!nextStop) {
+      break;
+    }
+
+    if (Number.isFinite(bestDistance)) {
+      totalDistance += bestDistance;
+    }
+    optimalOrder.push(nextStop);
+  }
+
+  return { order: optimalOrder, totalDistance };
+};
+
 const createEmptySchedule = (): VenueScheduleForm => ({
   venueId: "",
   date: "",
@@ -98,7 +222,7 @@ const TourManager = () => {
   const { profile, skills } = useGameData();
   const { toast } = useToast();
   const [tours, setTours] = useState<Tour[]>([]);
-  const [venues, setVenues] = useState<any[]>([]);
+  const [venues, setVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingTour, setCreatingTour] = useState(false);
   const [ticketPriceUpdates, setTicketPriceUpdates] = useState<Record<string, string>>({});
@@ -161,16 +285,31 @@ const TourManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      const mappedTours = (data || []).map(tour => ({
-        ...tour,
-        venues: (tour.tour_venues || []).map(tv => ({
-          ...tv,
-          venue: tv.venues
-        }))
-      })));
+
+      const rawTours = (data ?? []) as SupabaseTour[];
+      const mappedTours: Tour[] = rawTours.map((tourRecord) => {
+        const venuesWithDetails: TourVenue[] = (tourRecord.tour_venues ?? [])
+          .map((tv) => ({
+            ...tv,
+            travel_time: tv.travel_time === null || tv.travel_time === undefined ? 0 : Number(tv.travel_time),
+            rest_days: tv.rest_days === null || tv.rest_days === undefined ? 1 : Number(tv.rest_days),
+            venue: tv.venues ?? undefined
+          }))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        return {
+          ...tourRecord,
+          venues: venuesWithDetails,
+          tour_venues: venuesWithDetails
+        } as Tour;
+      });
+
+      setTours(mappedTours);
       setTicketPriceUpdates({});
       setMarketingSpendUpdates({});
-    } catch (error: any) {
+
+      return mappedTours;
+    } catch (error: unknown) {
       console.error('Error loading tours:', error);
       toast({
         variant: "destructive",
@@ -190,12 +329,23 @@ const TourManager = () => {
 
       if (error) throw error;
       setVenues(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading venues:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const optimalRoutes = useMemo(() => {
+    const routes: Record<string, RouteSuggestion> = {};
+    (tours || []).forEach((tour) => {
+      const route = calculateOptimalRoute(tour.venues || []);
+      if (route.order.length > 0) {
+        routes[tour.id] = route;
+      }
+    });
+    return routes;
+  }, [tours]);
 
   const createTour = async () => {
     if (!user || !profile || !skills) return;
@@ -241,7 +391,7 @@ const TourManager = () => {
 
       setNewTour({ name: "", description: "", start_date: "", end_date: "" });
       await loadTours();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating tour:', error);
       toast({
         variant: "destructive",
@@ -256,19 +406,104 @@ const TourManager = () => {
     if (!user) return false;
 
     try {
-      const { error } = await supabase
+      const selectedTour = tours.find(tour => tour.id === tourId);
+      const selectedVenue = venues.find(venue => venue.id === details.venueId);
+
+      if (!selectedVenue) {
+        toast({
+          variant: "destructive",
+          title: "Unknown venue",
+          description: "We couldn't find details for the selected venue."
+        });
+        return false;
+      }
+
+      const showDate = new Date(details.date);
+      if (Number.isNaN(showDate.getTime())) {
+        toast({
+          variant: "destructive",
+          title: "Invalid date",
+          description: "Please choose a valid show date."
+        });
+        return false;
+      }
+
+      const existingStops = [...(selectedTour?.venues || [])]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      const sameDayConflict = existingStops.find(stop => new Date(stop.date).toDateString() === showDate.toDateString());
+      if (sameDayConflict) {
+        toast({
+          variant: "destructive",
+          title: "Scheduling conflict",
+          description: "There's already a show scheduled for that day."
+        });
+        return false;
+      }
+
+      const previousStop = existingStops.filter(stop => new Date(stop.date) < showDate).pop();
+      const nextStop = existingStops.find(stop => new Date(stop.date) > showDate);
+
+      const previousLocation = previousStop?.venue?.location || venues.find(venue => venue.id === previousStop?.venue_id)?.location;
+      const distanceFromPrevious = previousStop && previousLocation && selectedVenue.location
+        ? calculateDistanceKm(previousLocation, selectedVenue.location)
+        : 0;
+      const travelTime = previousStop ? estimateTravelTimeHours(distanceFromPrevious) : 0;
+      const restDays = previousStop ? calculateRestDaysFromDistance(distanceFromPrevious) : 1;
+
+      if (previousStop) {
+        const previousDate = new Date(previousStop.date);
+        const dayGap = Math.max(0, Math.ceil((showDate.getTime() - previousDate.getTime()) / MILLISECONDS_PER_DAY));
+        if (dayGap < restDays) {
+          toast({
+            variant: "destructive",
+            title: "Not enough recovery time",
+            description: `You need at least ${restDays} rest day(s) after the previous show before performing again.`
+          });
+          return false;
+        }
+      }
+
+      if (nextStop) {
+        const nextLocation = nextStop.venue?.location || venues.find(venue => venue.id === nextStop.venue_id)?.location;
+        if (nextLocation && selectedVenue.location) {
+          const distanceToNext = calculateDistanceKm(selectedVenue.location, nextLocation);
+          const requiredGap = calculateRestDaysFromDistance(distanceToNext);
+          const nextDate = new Date(nextStop.date);
+          const dayGapToNext = Math.max(0, Math.ceil((nextDate.getTime() - showDate.getTime()) / MILLISECONDS_PER_DAY));
+          if (dayGapToNext < requiredGap) {
+            toast({
+              variant: "destructive",
+              title: "Upcoming show conflict",
+              description: `This stop would leave only ${dayGapToNext} rest day(s) before the next show, but ${requiredGap} are required for travel.`
+            });
+            return false;
+          }
+        }
+      }
+
+      const adjustedTravelCost = previousStop && distanceFromPrevious > 0
+        ? Math.max(details.travelCost, calculateTravelCostFromDistance(distanceFromPrevious))
+        : details.travelCost;
+      const adjustedLodgingCost = previousStop && distanceFromPrevious > 0
+        ? Math.max(details.lodgingCost, calculateLodgingCostFromRestDays(restDays))
+        : details.lodgingCost;
+
+      const { data: newTourVenue, error } = await supabase
         .from('tour_venues')
         .insert({
           tour_id: tourId,
           venue_id: details.venueId,
           date: details.date,
           ticket_price: details.ticketPrice,
-          travel_cost: details.travelCost,
-          lodging_cost: details.lodgingCost,
+          travel_cost: adjustedTravelCost,
+          lodging_cost: adjustedLodgingCost,
           misc_cost: details.miscCost,
           tickets_sold: 0,
           revenue: 0,
-          status: 'scheduled'
+          status: 'scheduled',
+          travel_time: travelTime,
+          rest_days: restDays
         })
         .select()
         .single();
@@ -276,8 +511,6 @@ const TourManager = () => {
       if (error) throw error;
 
       if (newTourVenue) {
-        const selectedTour = tours.find(tour => tour.id === tourId);
-        const selectedVenue = venues.find(venue => venue.id === venueId);
         const eventEnd = new Date(newTourVenue.date);
         eventEnd.setHours(eventEnd.getHours() + 3);
 
@@ -287,10 +520,10 @@ const TourManager = () => {
             user_id: user.id,
             event_type: 'tour',
             title: `${selectedTour?.name ?? 'Tour Show'}${selectedVenue ? ` - ${selectedVenue.name}` : ''}`,
-            description: selectedTour?.description ?? (selectedVenue ? `Tour stop at ${selectedVenue.name}` : 'Tour performance'),
+            description: selectedTour?.description ?? `Tour stop at ${selectedVenue.name}`,
             start_time: newTourVenue.date,
             end_time: eventEnd.toISOString(),
-            location: selectedVenue?.location ?? 'TBA',
+            location: selectedVenue.location ?? 'TBA',
             status: 'scheduled',
             tour_venue_id: newTourVenue.id
           });
@@ -307,12 +540,12 @@ const TourManager = () => {
 
       toast({
         title: "Venue Added",
-        description: "Venue has been added to your tour"
+        description: `Travel time: ${travelTime.toFixed(1)}h • Rest days: ${restDays}. Logistics costs have been adjusted for the distance.`
       });
 
-      loadTours();
+      await loadTours();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding venue to tour:', error);
       toast({
         variant: "destructive",
@@ -444,7 +677,7 @@ const TourManager = () => {
       });
 
       await loadTours();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error simulating tour show:', error);
       toast({
         variant: "destructive",
@@ -470,11 +703,11 @@ const TourManager = () => {
     const totalCosts = tour.venues?.reduce((sum, v) => sum + (v.travel_cost || 0) + (v.lodging_cost || 0) + (v.misc_cost || 0), 0) || 0;
     const totalProfit = totalRevenue - totalCosts;
     const totalTickets = tour.venues?.reduce((sum, v) => sum + (v.tickets_sold || 0), 0) || 0;
-    const totalMarketing = tour.venues?.reduce((sum, v) => sum + (v.marketing_spend || 0), 0) || 0;
-    const netProfit = totalRevenue - totalMarketing;
     const completedShows = tour.venues?.filter(v => v.status === 'completed').length || 0;
     const totalShows = tour.venues?.length || 0;
-    return { totalRevenue, totalCosts, totalProfit, totalTickets, completedShows, totalShows };
+    const totalTravelHours = tour.venues?.reduce((sum, v) => sum + (typeof v.travel_time === 'number' ? v.travel_time : Number(v.travel_time || 0)), 0) || 0;
+    const totalRestDays = tour.venues?.reduce((sum, v) => sum + (typeof v.rest_days === 'number' ? v.rest_days : Number(v.rest_days || 0)), 0) || 0;
+    return { totalRevenue, totalCosts, totalProfit, totalTickets, completedShows, totalShows, totalTravelHours, totalRestDays };
   };
 
   if (loading) {
@@ -590,6 +823,7 @@ const TourManager = () => {
             const formattedNetProfit = stats.totalProfit >= 0
               ? `+$${stats.totalProfit.toLocaleString()}`
               : `-$${Math.abs(stats.totalProfit).toLocaleString()}`;
+            const routeSuggestion = optimalRoutes[tour.id];
             return (
               <Card key={tour.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardHeader>
@@ -608,7 +842,7 @@ const TourManager = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Tour Stats */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-success">${stats.totalRevenue.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">Total Revenue</p>
@@ -628,6 +862,11 @@ const TourManager = () => {
                     <div className="text-center">
                       <p className="text-2xl font-bold text-warning">{stats.completedShows}/{stats.totalShows}</p>
                       <p className="text-xs text-muted-foreground">Shows Completed</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-primary">{stats.totalTravelHours.toFixed(1)}h</p>
+                      <p className="text-xs text-muted-foreground">Travel Time</p>
+                      <p className="text-xs text-muted-foreground">{stats.totalRestDays} rest day{stats.totalRestDays === 1 ? '' : 's'}</p>
                     </div>
                   </div>
 
@@ -729,6 +968,23 @@ const TourManager = () => {
                       </Button>
                     </div>
                   </div>
+
+                  {routeSuggestion && routeSuggestion.order.length > 1 && (
+                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-1">
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        Optimal Route Suggestion
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {routeSuggestion.order
+                          .map((stop, index) => `${index + 1}. ${stop.venue?.name ?? 'Unknown Venue'} (${stop.venue?.location ?? 'TBD'})`)
+                          .join(' → ')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Estimated travel: {Math.round(routeSuggestion.totalDistance)} km total
+                      </p>
+                    </div>
+                  )}
 
                   {editingTourId === tour.id && editForm && (
                     <div className="rounded-lg border border-border/40 bg-secondary/20 p-4 space-y-4">
@@ -893,6 +1149,9 @@ const TourManager = () => {
                           const showCosts = travelCost + lodgingCost + miscCost;
                           const showProfit = showRevenue - showCosts;
                           const showProfitColor = showProfit >= 0 ? "text-success" : "text-destructive";
+                          const travelTimeValue = typeof venue.travel_time === 'number' ? venue.travel_time : Number(venue.travel_time || 0);
+                          const restDaysValue = typeof venue.rest_days === 'number' ? venue.rest_days : Number(venue.rest_days || 0);
+                          const formattedTravelTime = Math.round(travelTimeValue * 10) / 10;
 
                           return (
                             <div key={venue.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
@@ -907,6 +1166,9 @@ const TourManager = () => {
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   Costs: ${showCosts.toLocaleString()} (Travel ${travelCost.toLocaleString()} • Lodging ${lodgingCost.toLocaleString()} • Misc ${miscCost.toLocaleString()})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Logistics: {formattedTravelTime.toFixed(1)}h travel • {restDaysValue} rest day{restDaysValue === 1 ? '' : 's'}
                                 </p>
                                 <p className={`text-xs font-semibold ${showProfitColor}`}>
                                   Profit: ${showProfit.toLocaleString()}
