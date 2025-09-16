@@ -1,16 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, MessageCircle, Repeat2, Share, TrendingUp, Users, Eye, Calendar } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Heart, MessageCircle, Repeat2, Share, TrendingUp, Users, Eye } from "lucide-react";
+
+type CampaignStatus = "Active" | "Completed";
+
+interface SocialPost {
+  id: number;
+  content: string;
+  timestamp: string;
+  likes: number;
+  comments: number;
+  reposts: number;
+  views: number;
+  engagement: number;
+}
+
+interface Campaign {
+  id: number;
+  name: string;
+  platform: string;
+  budget: number;
+  reach: number;
+  engagement: number;
+  status: CampaignStatus;
+  startDate: string;
+  endDate: string;
+}
 
 const SocialMedia = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [newPost, setNewPost] = useState("");
-  const [followers] = useState(24500);
-  const [posts, setPosts] = useState([
+  const [followers, setFollowers] = useState<number | null>(null);
+  const [engagementRate, setEngagementRate] = useState<number | null>(null);
+  const [posts, setPosts] = useState<SocialPost[]>([
     {
       id: 1,
       content: "Just finished recording our new single! Can't wait for you all to hear it 🎸🔥",
@@ -42,8 +71,7 @@ const SocialMedia = () => {
       engagement: 15.2
     }
   ]);
-
-  const campaigns = [
+  const [campaigns, setCampaigns] = useState<Campaign[]>([
     {
       id: 1,
       name: "New Single Launch",
@@ -66,36 +94,193 @@ const SocialMedia = () => {
       startDate: "Oct 15, 2024",
       endDate: "Oct 30, 2024"
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) {
+        setFollowers(null);
+        setEngagementRate(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("followers, engagement_rate")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        setFollowers(data?.followers ?? 0);
+        setEngagementRate(data?.engagement_rate ?? 0);
+      } catch (error) {
+        console.error("Error fetching social metrics:", error);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  const applySocialGrowth = async (followerGain: number, engagementBoost: number, message: string) => {
+    if (followerGain <= 0 && engagementBoost <= 0) return;
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Log in to track growth",
+        description: "Sign in to sync social stats with your profile."
+      });
+      return;
+    }
+
+    const currentFollowers = followers ?? 0;
+    const currentEngagement = engagementRate ?? 0;
+    const nextFollowers = Math.max(0, Math.round(currentFollowers + followerGain));
+    const nextEngagement = Math.max(0, Math.min(100, parseFloat((currentEngagement + engagementBoost).toFixed(2))));
+
+    setFollowers(nextFollowers);
+    setEngagementRate(nextEngagement);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        followers: nextFollowers,
+        engagement_rate: nextEngagement,
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error updating social metrics:", error);
+      setFollowers(currentFollowers);
+      setEngagementRate(currentEngagement);
+      toast({
+        variant: "destructive",
+        title: "Couldn't update stats",
+        description: "Please try again after a moment."
+      });
+      return;
+    }
+
+    toast({
+      title: "Social stats updated",
+      description: message
+    });
+  };
 
   const handleCreatePost = () => {
     if (!newPost.trim()) return;
 
-    const post = {
-      id: posts.length + 1,
-      content: newPost,
-      timestamp: "Just now",
-      likes: 0,
-      comments: 0,
-      reposts: 0,
-      views: 0,
-      engagement: 0
-    };
+    const baseViews = Math.floor(Math.random() * 5000) + 4000;
+    const likeRate = 0.06 + Math.random() * 0.05;
+    const likes = Math.round(baseViews * likeRate);
+    const comments = Math.round(likes * 0.15);
+    const reposts = Math.round(likes * 0.18);
+    const views = baseViews + Math.round(reposts * 8);
+    const engagement = parseFloat(Math.min(100, ((likes + comments + reposts) / views) * 100).toFixed(1));
 
-    setPosts([post, ...posts]);
+    setPosts((prevPosts) => {
+      const nextId = prevPosts.length > 0 ? Math.max(...prevPosts.map((post) => post.id)) + 1 : 1;
+      const post: SocialPost = {
+        id: nextId,
+        content: newPost,
+        timestamp: "Just now",
+        likes,
+        comments,
+        reposts,
+        views,
+        engagement
+      };
+      return [post, ...prevPosts];
+    });
+
     setNewPost("");
     toast({
       title: "Post Published!",
-      description: "Your post has been shared across all platforms.",
+      description: "Your post has been shared across all platforms."
     });
+
+    if (engagement >= 10) {
+      const followerGain = Math.round(likes * (engagement / 80));
+      const engagementBoost = parseFloat(Math.min(10, engagement / 4).toFixed(2));
+      void applySocialGrowth(
+        followerGain,
+        engagementBoost,
+        `Your latest post is trending! +${followerGain.toLocaleString()} followers and +${engagementBoost.toFixed(2)}% engagement.`
+      );
+    }
   };
 
   const handleLike = (postId: number) => {
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { ...post, likes: post.likes + 1 }
-        : post
-    ));
+    let previousPost: SocialPost | null = null;
+    let updatedPost: SocialPost | null = null;
+
+    setPosts((prevPosts) =>
+      prevPosts.map((post) => {
+        if (post.id !== postId) return post;
+
+        previousPost = post;
+        const likeBoost = Math.floor(Math.random() * 40) + 10;
+        const viewBoost = likeBoost * 20;
+        const commentBoost = Math.floor(likeBoost * 0.2);
+        const repostBoost = Math.floor(likeBoost * 0.15);
+        const likes = post.likes + likeBoost;
+        const comments = post.comments + commentBoost;
+        const reposts = post.reposts + repostBoost;
+        const views = post.views + viewBoost;
+        const engagement = parseFloat(
+          Math.min(100, ((likes + comments + reposts) / views) * 100).toFixed(1)
+        );
+
+        updatedPost = { ...post, likes, comments, reposts, views, engagement };
+        return updatedPost;
+      })
+    );
+
+    if (previousPost && updatedPost) {
+      const likeGrowth = updatedPost.likes - previousPost.likes;
+      const engagementGrowth = updatedPost.engagement - previousPost.engagement;
+
+      if (likeGrowth > 150 || engagementGrowth > 1.5) {
+        const followerGain = Math.max(0, Math.round(likeGrowth * 1.2));
+        const engagementBoost = Math.max(0, parseFloat(Math.max(engagementGrowth, 0).toFixed(2)));
+        void applySocialGrowth(
+          followerGain,
+          engagementBoost,
+          `Post engagement spiked! +${followerGain.toLocaleString()} followers and +${engagementBoost.toFixed(2)}% engagement.`
+        );
+      }
+    }
+  };
+
+  const handleRunCampaign = (campaignId: number) => {
+    const campaign = campaigns.find((item) => item.id === campaignId);
+    if (!campaign) return;
+
+    if (campaign.status === "Completed") {
+      toast({
+        title: "Campaign already completed",
+        description: "Launch a new campaign to continue growing your audience.",
+      });
+      return;
+    }
+
+    const followerGain = Math.round(campaign.reach * (campaign.engagement / 100) * 0.02);
+    const engagementBoost = parseFloat(Math.min(15, campaign.engagement / 3).toFixed(2));
+
+    void applySocialGrowth(
+      followerGain,
+      engagementBoost,
+      `${campaign.name} boosted your audience by +${followerGain.toLocaleString()} followers!`
+    );
+
+    setCampaigns((prevCampaigns) =>
+      prevCampaigns.map((item) =>
+        item.id === campaignId ? { ...item, status: "Completed" } : item
+      )
+    );
   };
 
   return (
@@ -121,7 +306,9 @@ const SocialMedia = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{followers.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-accent">
+                {followers !== null ? followers.toLocaleString() : "--"}
+              </div>
               <p className="text-cream/60 text-sm">+12% this week</p>
             </CardContent>
           </Card>
@@ -133,7 +320,9 @@ const SocialMedia = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">8.9%</div>
+              <div className="text-2xl font-bold text-accent">
+                {engagementRate !== null ? `${engagementRate.toFixed(1)}%` : "--"}
+              </div>
               <p className="text-cream/60 text-sm">Above average</p>
             </CardContent>
           </Card>
@@ -182,7 +371,7 @@ const SocialMedia = () => {
                     <Badge variant="outline">TikTok</Badge>
                     <Badge variant="outline">Facebook</Badge>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleCreatePost}
                     className="bg-accent hover:bg-accent/80 text-background font-bold"
                     disabled={!newPost.trim()}
@@ -215,20 +404,20 @@ const SocialMedia = () => {
                       </div>
                       <div className="flex justify-between items-center pt-2 border-t border-accent/20">
                         <div className="flex gap-6">
-                          <button 
+                          <button
                             onClick={() => handleLike(post.id)}
                             className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors"
                           >
                             <Heart className="h-4 w-4" />
-                            <span>{post.likes}</span>
+                            <span>{post.likes.toLocaleString()}</span>
                           </button>
                           <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
                             <MessageCircle className="h-4 w-4" />
-                            <span>{post.comments}</span>
+                            <span>{post.comments.toLocaleString()}</span>
                           </button>
                           <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
                             <Repeat2 className="h-4 w-4" />
-                            <span>{post.reposts}</span>
+                            <span>{post.reposts.toLocaleString()}</span>
                           </button>
                         </div>
                         <button className="flex items-center gap-2 text-cream/80 hover:text-accent transition-colors">
@@ -255,8 +444,8 @@ const SocialMedia = () => {
                   <div key={campaign.id} className="space-y-3 p-4 border border-accent/20 rounded-lg">
                     <div className="flex justify-between items-start">
                       <h4 className="font-semibold text-cream">{campaign.name}</h4>
-                      <Badge 
-                        variant={campaign.status === 'Active' ? 'default' : 'secondary'}
+                      <Badge
+                        variant={campaign.status === "Active" ? "default" : "secondary"}
                         className="text-xs"
                       >
                         {campaign.status}
@@ -283,6 +472,13 @@ const SocialMedia = () => {
                     <div className="text-xs text-cream/60">
                       {campaign.startDate} - {campaign.endDate}
                     </div>
+                    <Button
+                      onClick={() => handleRunCampaign(campaign.id)}
+                      className="w-full bg-accent hover:bg-accent/80 text-background"
+                      disabled={campaign.status === "Completed"}
+                    >
+                      {campaign.status === "Completed" ? "Campaign Completed" : "Run Campaign"}
+                    </Button>
                   </div>
                 ))}
                 <Button className="w-full bg-accent hover:bg-accent/80 text-background">
