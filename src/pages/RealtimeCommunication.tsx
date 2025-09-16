@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
+import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { 
   MessageSquare, 
@@ -51,9 +53,13 @@ interface JamSession {
   skill_requirement: number;
 }
 
+type NotificationRow = Tables<'notifications'>;
+type NotificationType = NotificationRow['type'];
+
 interface Notification {
   id: string;
-  type: 'gig_invite' | 'band_request' | 'fan_milestone' | 'achievement' | 'system';
+  user_id: string;
+  type: NotificationType;
   title: string;
   message: string;
   timestamp: string;
@@ -61,14 +67,56 @@ interface Notification {
   priority: 'low' | 'medium' | 'high';
 }
 
+const DEFAULT_NOTIFICATION_TYPE: NotificationType = 'system';
+
+const NOTIFICATION_TITLES: Record<NotificationType, string> = {
+  gig_invite: 'Gig Invitation',
+  band_request: 'Band Request',
+  fan_milestone: 'Fan Milestone',
+  achievement: 'Achievement Unlocked',
+  system: 'System Alert'
+};
+
+const NOTIFICATION_PRIORITIES: Record<NotificationType, 'low' | 'medium' | 'high'> = {
+  gig_invite: 'high',
+  band_request: 'medium',
+  fan_milestone: 'low',
+  achievement: 'medium',
+  system: 'low'
+};
+
+const sortNotificationsByTimestamp = (items: Notification[]) =>
+  [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+const mapNotificationRow = (notification: NotificationRow): Notification => {
+  const type = notification.type ?? DEFAULT_NOTIFICATION_TYPE;
+  const resolvedType = (type in NOTIFICATION_TITLES ? type : DEFAULT_NOTIFICATION_TYPE) as NotificationType;
+
+  const title = NOTIFICATION_TITLES[resolvedType] ?? NOTIFICATION_TITLES[DEFAULT_NOTIFICATION_TYPE];
+  const priority = NOTIFICATION_PRIORITIES[resolvedType] ?? NOTIFICATION_PRIORITIES[DEFAULT_NOTIFICATION_TYPE];
+
+  return {
+    id: notification.id,
+    user_id: notification.user_id,
+    type: resolvedType,
+    title,
+    message: notification.message,
+    timestamp: notification.timestamp,
+    read: notification.read,
+    priority
+  };
+};
+
 const RealtimeCommunication: React.FC = () => {
   const { user } = useAuth();
   const { profile } = useGameData();
+  const userId = user?.id;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [jamSessions, setJamSessions] = useState<JamSession[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [selectedChannel, setSelectedChannel] = useState('general');
+  const selectedChannelRef = useRef(selectedChannel);
   const [isConnected, setIsConnected] = useState(false);
   const [activeJam, setActiveJam] = useState<JamSession | null>(null);
   const [jamTempo, setJamTempo] = useState(120);
@@ -81,28 +129,116 @@ const RealtimeCommunication: React.FC = () => {
     { id: 'vip', name: 'VIP Lounge', icon: Crown, public: false, requirement: 'Level 10+' },
   ];
 
+  const unreadCount = notifications.filter(notification => !notification.read).length;
+
   useEffect(() => {
-    if (user) {
-      initializeRealtime();
-      loadChatHistory();
-      loadJamSessions();
-      loadNotifications();
+    selectedChannelRef.current = selectedChannel;
+  }, [selectedChannel]);
+
+  useEffect(() => {
+    if (!user) {
+      setIsConnected(false);
+      return;
     }
 
+    const cleanupRealtime = initializeRealtime();
+    loadChatHistory();
+    loadJamSessions();
+
     return () => {
-      // Cleanup WebSocket connections
+      cleanupRealtime();
       setIsConnected(false);
     };
-  }, [user]);
+  }, [user, initializeRealtime]);
 
-  const initializeRealtime = () => {
-    // Simulate WebSocket connection
-    setTimeout(() => {
+  useEffect(() => {
+    if (!userId) {
+      setNotifications([]);
+      return;
+    }
+
+    let isActive = true;
+
+    const fetchNotifications = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', userId)
+          .order('timestamp', { ascending: false });
+
+        if (error) throw error;
+        if (!isActive) return;
+
+        const mapped = (data ?? []).map(mapNotificationRow);
+        setNotifications(sortNotificationsByTimestamp(mapped));
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+        if (isActive) {
+          toast.error('Failed to load notifications.');
+        }
+      }
+    };
+
+    fetchNotifications();
+
+    return () => {
+      isActive = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`public:notifications:user:${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
+      }, payload => {
+        const newNotification = mapNotificationRow(payload.new as NotificationRow);
+        setNotifications(prev => {
+          if (prev.some(notification => notification.id === newNotification.id)) {
+            return prev;
+          }
+          const updated = [newNotification, ...prev];
+          return sortNotificationsByTimestamp(updated);
+        });
+        toast(newNotification.title, {
+          description: newNotification.message
+        });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
+      }, payload => {
+        const updatedNotification = mapNotificationRow(payload.new as NotificationRow);
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification.id === updatedNotification.id ? updatedNotification : notification
+          )
+        );
+      });
+
+    channel.subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  const initializeRealtime = useCallback(() => {
+    const connectionTimeout = setTimeout(() => {
       setIsConnected(true);
       toast.success('Connected to RockMundo Live!');
     }, 1000);
 
-    // Simulate receiving messages
     const messageInterval = setInterval(() => {
       if (Math.random() > 0.7) {
         const randomMessages = [
@@ -112,24 +248,27 @@ const RealtimeCommunication: React.FC = () => {
           'Check out my new song on the charts!',
           'Equipment trade: Gibson Les Paul for Fender Strat',
         ];
-        
+
         const newMessage: ChatMessage = {
           id: Date.now().toString(),
           user_id: 'random',
           username: `Player${Math.floor(Math.random() * 1000)}`,
           message: randomMessages[Math.floor(Math.random() * randomMessages.length)],
           timestamp: new Date().toISOString(),
-          channel: selectedChannel,
+          channel: selectedChannelRef.current,
           user_level: Math.floor(Math.random() * 50) + 1,
           user_badge: Math.random() > 0.7 ? 'Premium' : undefined
         };
-        
+
         setMessages(prev => [...prev.slice(-49), newMessage]);
       }
     }, 5000);
 
-    return () => clearInterval(messageInterval);
-  };
+    return () => {
+      clearTimeout(connectionTimeout);
+      clearInterval(messageInterval);
+    };
+  }, []);
 
   const loadChatHistory = () => {
     // Simulate loading chat history
@@ -206,39 +345,6 @@ const RealtimeCommunication: React.FC = () => {
     setJamSessions(sessions);
   };
 
-  const loadNotifications = () => {
-    const notifs: Notification[] = [
-      {
-        id: '1',
-        type: 'gig_invite',
-        title: 'Gig Invitation',
-        message: 'You\'ve been invited to perform at Central Arena',
-        timestamp: new Date().toISOString(),
-        read: false,
-        priority: 'high'
-      },
-      {
-        id: '2',
-        type: 'achievement',
-        title: 'Achievement Unlocked!',
-        message: 'You earned the "Rising Star" achievement',
-        timestamp: new Date(Date.now() - 1800000).toISOString(),
-        read: false,
-        priority: 'medium'
-      },
-      {
-        id: '3',
-        type: 'fan_milestone',
-        title: 'Fan Milestone',
-        message: 'You reached 1,000 fans! Keep it up!',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        read: true,
-        priority: 'low'
-      }
-    ];
-    setNotifications(notifs);
-  };
-
   const sendMessage = () => {
     if (!currentMessage.trim() || !user) return;
 
@@ -278,13 +384,34 @@ const RealtimeCommunication: React.FC = () => {
     toast.info('Left jam session');
   };
 
-  const markNotificationRead = (notificationId: string) => {
-    setNotifications(prev => prev.map(notif => 
-      notif.id === notificationId ? { ...notif, read: true } : notif
-    ));
+  const markNotificationRead = async (notificationId: string) => {
+    if (!userId) return;
+
+    const existing = notifications.find(notification => notification.id === notificationId);
+    if (!existing || existing.read) return;
+
+    const previousNotifications = notifications.map(notification => ({ ...notification }));
+
+    setNotifications(prev =>
+      prev.map(notification =>
+        notification.id === notificationId ? { ...notification, read: true } : notification
+      )
+    );
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error marking notification as read:', error);
+      setNotifications(previousNotifications);
+      toast.error('Failed to update notification status.');
+    }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: 'low' | 'medium' | 'high') => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-100';
       case 'medium': return 'text-yellow-600 bg-yellow-100';
@@ -399,9 +526,9 @@ const RealtimeCommunication: React.FC = () => {
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-6 h-6" />
                 Notifications
-                {notifications.filter(n => !n.read).length > 0 && (
+                {unreadCount > 0 && (
                   <Badge variant="destructive">
-                    {notifications.filter(n => !n.read).length}
+                    {unreadCount}
                   </Badge>
                 )}
               </CardTitle>
@@ -415,7 +542,7 @@ const RealtimeCommunication: React.FC = () => {
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                         !notification.read ? 'bg-blue-50 border-blue-200' : 'hover:bg-muted'
                       }`}
-                      onClick={() => markNotificationRead(notification.id)}
+                      onClick={() => void markNotificationRead(notification.id)}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm">{notification.title}</span>

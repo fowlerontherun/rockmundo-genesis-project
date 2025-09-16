@@ -541,6 +541,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          id: string
+          message: string
+          read: boolean
+          timestamp: string
+          type: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message: string
+          read?: boolean
+          timestamp?: string
+          type: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message?: string
+          read?: boolean
+          timestamp?: string
+          type?: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_achievements: {
         Row: {
           achievement_id: string
