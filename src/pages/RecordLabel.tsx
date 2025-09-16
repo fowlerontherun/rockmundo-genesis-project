@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { meetsRequirements, calculateGigPayment } from "@/utils/gameBalance";
 
 interface RecordLabel {
@@ -37,6 +38,10 @@ interface RecordLabel {
   requirements: Record<string, number>;
   description: string;
   benefits: string[];
+}
+
+interface RecordLabelForm extends Omit<RecordLabel, "id"> {
+  id?: string;
 }
 
 interface Contract {
@@ -55,11 +60,28 @@ const RecordLabel = () => {
   const { user } = useAuth();
   const { profile, skills, refetch } = useGameData();
   const { toast } = useToast();
+  const { isAdmin: isAdminRole, loading: roleLoading } = useUserRole();
   const [labels, setLabels] = useState<RecordLabel[]>([]);
   const [playerContracts, setPlayerContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [releasedSongCount, setReleasedSongCount] = useState(0);
   const [bestChartPosition, setBestChartPosition] = useState<number | null>(null);
+  const [labelForm, setLabelForm] = useState<RecordLabelForm>(() => ({
+    name: "",
+    prestige: 1,
+    advance_payment: 0,
+    royalty_rate: 0.1,
+    description: "",
+    requirements: {},
+    benefits: []
+  }));
+  const [requirementKey, setRequirementKey] = useState("");
+  const [requirementValue, setRequirementValue] = useState("");
+  const [benefitInput, setBenefitInput] = useState("");
+  const [savingLabel, setSavingLabel] = useState(false);
+  const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
+
+  const canManageLabels = !roleLoading && isAdminRole();
 
   useEffect(() => {
     if (user) {
@@ -71,53 +93,55 @@ const RecordLabel = () => {
 
   const loadLabels = async () => {
     try {
-      // Mock record labels data (in a real app, these would be in the database)
-      const mockLabels: RecordLabel[] = [
-        {
-          id: '1',
-          name: 'Indie Underground Records',
-          prestige: 1,
-          advance_payment: 5000,
-          royalty_rate: 0.15,
-          requirements: { fame: 500, songs: 3 },
-          description: 'A small independent label focusing on emerging artists.',
-          benefits: ['Studio access', 'Basic promotion', 'Digital distribution']
-        },
-        {
-          id: '2',
-          name: 'City Sounds Music',
-          prestige: 2,
-          advance_payment: 15000,
-          royalty_rate: 0.12,
-          requirements: { fame: 2000, songs: 5, performance: 60 },
-          description: 'Regional label with good distribution network.',
-          benefits: ['Professional recording', 'Radio promotion', 'Regional touring support']
-        },
-        {
-          id: '3',
-          name: 'Thunder Records',
-          prestige: 3,
-          advance_payment: 50000,
-          royalty_rate: 0.10,
-          requirements: { fame: 10000, songs: 8, performance: 80, chart_position: 50 },
-          description: 'Major label with national reach and big budgets.',
-          benefits: ['Top-tier studios', 'National radio', 'Music videos', 'Tour support']
-        },
-        {
-          id: '4',
-          name: 'Global Megacorp Music',
-          prestige: 4,
-          advance_payment: 200000,
-          royalty_rate: 0.08,
-          requirements: { fame: 50000, songs: 12, performance: 95, chart_position: 10 },
-          description: 'International mega-label for superstar artists only.',
-          benefits: ['World-class production', 'Global promotion', 'International tours', 'Award campaigns']
-        }
-      ];
+      const { data, error } = await supabase
+        .from('record_labels')
+        .select('id, name, prestige, advance_payment, royalty_rate, description, requirements, benefits')
+        .order('prestige', { ascending: true })
+        .order('advance_payment', { ascending: true });
 
-      setLabels(mockLabels);
+      if (error) throw error;
+
+      const formattedLabels: RecordLabel[] = (data ?? []).map((label) => {
+        const requirementsData = (label as { requirements?: Record<string, unknown> }).requirements ?? {};
+        const normalizedRequirements = Object.entries(requirementsData).reduce<Record<string, number>>(
+          (acc, [key, value]) => {
+            const numericValue =
+              typeof value === 'number'
+                ? value
+                : typeof value === 'string'
+                  ? Number(value)
+                  : 0;
+
+            if (!Number.isNaN(numericValue)) {
+              acc[key] = numericValue;
+            }
+            return acc;
+          },
+          {}
+        );
+
+        const benefitsData = (label as { benefits?: unknown }).benefits;
+
+        return {
+          id: (label as { id: string }).id,
+          name: (label as { name?: string }).name ?? 'Unknown Label',
+          prestige: (label as { prestige?: number }).prestige ?? 0,
+          advance_payment: (label as { advance_payment?: number }).advance_payment ?? 0,
+          royalty_rate: typeof (label as { royalty_rate?: unknown }).royalty_rate === 'string'
+            ? parseFloat((label as { royalty_rate?: string }).royalty_rate ?? '0')
+            : (label as { royalty_rate?: number }).royalty_rate ?? 0,
+          description: (label as { description?: string }).description ?? '',
+          requirements: normalizedRequirements,
+          benefits: Array.isArray(benefitsData)
+            ? benefitsData.filter((benefit): benefit is string => typeof benefit === 'string')
+            : []
+        };
+      });
+
+      setLabels(formattedLabels);
     } catch (error) {
       console.error('Error loading labels:', error);
+      setLabels([]);
       toast({
         variant: "destructive",
         title: "Error",
@@ -209,6 +233,217 @@ const RecordLabel = () => {
       setBestChartPosition(bestPosition);
     } catch (error) {
       console.error('Error loading player career stats:', error);
+    }
+  };
+
+  const resetLabelForm = () => {
+    setLabelForm({
+      id: undefined,
+      name: "",
+      prestige: 1,
+      advance_payment: 0,
+      royalty_rate: 0.1,
+      description: "",
+      requirements: {},
+      benefits: []
+    });
+    setRequirementKey("");
+    setRequirementValue("");
+    setBenefitInput("");
+  };
+
+  const startEditLabel = (label: RecordLabel) => {
+    setLabelForm({
+      id: label.id,
+      name: label.name,
+      prestige: label.prestige,
+      advance_payment: label.advance_payment,
+      royalty_rate: label.royalty_rate,
+      description: label.description,
+      requirements: { ...label.requirements },
+      benefits: [...label.benefits]
+    });
+  };
+
+  const addRequirement = () => {
+    const key = requirementKey.trim();
+    const value = Number(requirementValue);
+
+    if (!key) {
+      toast({
+        variant: "destructive",
+        title: "Requirement name needed",
+        description: "Enter a requirement key before adding it."
+      });
+      return;
+    }
+
+    if (Number.isNaN(value) || value < 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid requirement value",
+        description: "Requirement values must be positive numbers."
+      });
+      return;
+    }
+
+    setLabelForm((prev) => ({
+      ...prev,
+      requirements: {
+        ...prev.requirements,
+        [key]: value
+      }
+    }));
+    setRequirementKey("");
+    setRequirementValue("");
+  };
+
+  const removeRequirement = (key: string) => {
+    setLabelForm((prev) => {
+      const updatedRequirements = { ...prev.requirements };
+      delete updatedRequirements[key];
+      return {
+        ...prev,
+        requirements: updatedRequirements
+      };
+    });
+  };
+
+  const addBenefit = () => {
+    const benefit = benefitInput.trim();
+    if (!benefit) {
+      toast({
+        variant: "destructive",
+        title: "Benefit description needed",
+        description: "Enter a benefit before adding it."
+      });
+      return;
+    }
+
+    setLabelForm((prev) => ({
+      ...prev,
+      benefits: [...prev.benefits, benefit]
+    }));
+    setBenefitInput("");
+  };
+
+  const removeBenefit = (index: number) => {
+    setLabelForm((prev) => ({
+      ...prev,
+      benefits: prev.benefits.filter((_, benefitIndex) => benefitIndex !== index)
+    }));
+  };
+
+  const handleLabelFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedName = labelForm.name.trim();
+    const trimmedDescription = labelForm.description.trim();
+
+    if (!trimmedName) {
+      toast({
+        variant: "destructive",
+        title: "Label name required",
+        description: "Please provide a name for the record label."
+      });
+      return;
+    }
+
+    if (!trimmedDescription) {
+      toast({
+        variant: "destructive",
+        title: "Description required",
+        description: "Add a description so players understand this label."
+      });
+      return;
+    }
+
+    setSavingLabel(true);
+
+    try {
+      const payload = {
+        name: trimmedName,
+        prestige: Math.min(Math.max(labelForm.prestige, 1), 5),
+        advance_payment: Math.max(Math.round(labelForm.advance_payment), 0),
+        royalty_rate: Math.min(Math.max(Number(labelForm.royalty_rate), 0), 1),
+        description: trimmedDescription,
+        requirements: labelForm.requirements,
+        benefits: labelForm.benefits
+      };
+
+      if (labelForm.id) {
+        const { error } = await supabase
+          .from('record_labels')
+          .update(payload)
+          .eq('id', labelForm.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Label updated",
+          description: `${payload.name} has been updated.`
+        });
+      } else {
+        const { error } = await supabase
+          .from('record_labels')
+          .insert(payload);
+
+        if (error) throw error;
+
+        toast({
+          title: "Label created",
+          description: `${payload.name} is now available to players.`
+        });
+      }
+
+      resetLabelForm();
+      await loadLabels();
+    } catch (error) {
+      console.error('Error saving label:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save record label"
+      });
+    } finally {
+      setSavingLabel(false);
+    }
+  };
+
+  const handleDeleteLabel = async (labelId: string) => {
+    if (!confirm('Are you sure you want to delete this record label? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingLabelId(labelId);
+
+      const { error } = await supabase
+        .from('record_labels')
+        .delete()
+        .eq('id', labelId);
+
+      if (error) throw error;
+
+      if (labelForm.id === labelId) {
+        resetLabelForm();
+      }
+
+      toast({
+        title: "Label deleted",
+        description: "The record label has been removed."
+      });
+
+      await loadLabels();
+    } catch (error) {
+      console.error('Error deleting label:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete record label"
+      });
+    } finally {
+      setDeletingLabelId(null);
     }
   };
 
@@ -481,9 +716,12 @@ const RecordLabel = () => {
         </div>
 
         <Tabs defaultValue="available" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${canManageLabels ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="available">Available Labels</TabsTrigger>
             <TabsTrigger value="contracts">My Contracts ({playerContracts.length})</TabsTrigger>
+            {canManageLabels && (
+              <TabsTrigger value="manage">Manage Labels</TabsTrigger>
+            )}
           </TabsList>
 
           {/* Available Labels */}
@@ -654,6 +892,234 @@ const RecordLabel = () => {
               )}
             </div>
           </TabsContent>
+          {canManageLabels && (
+            <TabsContent value="manage">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                  <CardHeader>
+                    <CardTitle>{labelForm.id ? 'Edit Record Label' : 'Create Record Label'}</CardTitle>
+                    <CardDescription>
+                      Configure the labels that appear for players. Adjust requirements and benefits to balance progression.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleLabelFormSubmit} className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="label-name">Label Name</Label>
+                          <Input
+                            id="label-name"
+                            placeholder="Thunder Records"
+                            value={labelForm.name}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, name: event.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="label-prestige">Prestige Level</Label>
+                          <Input
+                            id="label-prestige"
+                            type="number"
+                            min={1}
+                            max={5}
+                            value={labelForm.prestige}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, prestige: Number(event.target.value) }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="label-advance">Advance Payment</Label>
+                          <Input
+                            id="label-advance"
+                            type="number"
+                            min={0}
+                            step={1000}
+                            value={labelForm.advance_payment}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, advance_payment: Number(event.target.value) }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="label-royalty">Royalty Rate</Label>
+                          <Input
+                            id="label-royalty"
+                            type="number"
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={labelForm.royalty_rate}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, royalty_rate: Number(event.target.value) }))}
+                          />
+                          <p className="text-xs text-muted-foreground">Enter as a decimal (e.g. 0.12 for 12%).</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label>Requirements</Label>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Input
+                              placeholder="Requirement (e.g. fame)"
+                              value={requirementKey}
+                              onChange={(event) => setRequirementKey(event.target.value)}
+                              className="sm:flex-1"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="Value"
+                              value={requirementValue}
+                              onChange={(event) => setRequirementValue(event.target.value)}
+                              className="sm:w-32"
+                            />
+                            <Button type="button" variant="secondary" onClick={addRequirement}>
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {Object.keys(labelForm.requirements).length > 0 ? (
+                            <div className="space-y-2">
+                              {Object.entries(labelForm.requirements).map(([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="flex items-center justify-between rounded-md border border-dashed border-primary/20 bg-secondary/30 px-3 py-2"
+                                >
+                                  <span className="text-sm font-medium">
+                                    {getRequirementLabel(key)}: {getRequirementDisplayValue(key, value)}
+                                  </span>
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => removeRequirement(key)}>
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Add requirements to gate higher prestige labels.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label>Benefits</Label>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Input
+                              placeholder="Benefit (e.g. Studio access)"
+                              value={benefitInput}
+                              onChange={(event) => setBenefitInput(event.target.value)}
+                              className="sm:flex-1"
+                            />
+                            <Button type="button" variant="secondary" onClick={addBenefit}>
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {labelForm.benefits.length > 0 ? (
+                            <div className="space-y-2">
+                              {labelForm.benefits.map((benefit, index) => (
+                                <div
+                                  key={`${benefit}-${index}`}
+                                  className="flex items-center justify-between rounded-md border border-dashed border-primary/20 bg-secondary/30 px-3 py-2"
+                                >
+                                  <span className="text-sm">{benefit}</span>
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => removeBenefit(index)}>
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Share perks that make signing appealing.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="submit" disabled={savingLabel}>
+                          {savingLabel ? 'Saving...' : labelForm.id ? 'Update Label' : 'Create Label'}
+                        </Button>
+                        {labelForm.id && (
+                          <Button type="button" variant="outline" onClick={resetLabelForm}>
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                  <CardHeader>
+                    <CardTitle>Existing Labels</CardTitle>
+                    <CardDescription>Review current labels and make adjustments as your economy evolves.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {labels.length > 0 ? labels.map((label) => (
+                        <div key={label.id} className="space-y-3 rounded-lg border border-primary/20 bg-secondary/20 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-lg font-semibold">{label.name}</h3>
+                              <p className="text-sm text-muted-foreground">{label.description}</p>
+                            </div>
+                            <Badge variant="outline">Prestige {label.prestige}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Advance</p>
+                              <p className="font-medium">${label.advance_payment.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Royalty</p>
+                              <p className="font-medium">{(label.royalty_rate * 100).toFixed(1)}%</p>
+                            </div>
+                          </div>
+                          {Object.keys(label.requirements).length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(label.requirements).map(([key, value]) => (
+                                <Badge key={`${label.id}-${key}`} variant="secondary" className="text-xs">
+                                  {getRequirementLabel(key)}: {getRequirementDisplayValue(key, value)}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {label.benefits.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {label.benefits.map((benefit, index) => (
+                                <Badge key={`${label.id}-benefit-${index}`} variant="outline" className="text-xs">
+                                  {benefit}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <Button size="sm" variant="outline" onClick={() => startEditLabel(label)}>
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => void handleDeleteLabel(label.id)}
+                              disabled={deletingLabelId === label.id}
+                            >
+                              {deletingLabelId === label.id ? 'Deleting...' : 'Delete'}
+                            </Button>
+                          </div>
+                        </div>
+                      )) : (
+                        <Card className="border-dashed border-primary/20 bg-secondary/10">
+                          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                            No record labels found. Create one to populate the player marketplace.
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

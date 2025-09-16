@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +68,10 @@ const PlayerStatistics = () => {
   const { profile, skills } = useGameData();
   const [extendedStats, setExtendedStats] = useState<ExtendedStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const [selectedLeaderboardMetric, setSelectedLeaderboardMetric] = useState<LeaderboardMetric>("fame");
 
   const fetchExtendedStats = useCallback(async () => {
     if (!user) return;
@@ -242,11 +249,43 @@ const PlayerStatistics = () => {
     }
   }, [user]);
 
+  const fetchLeaderboard = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      setLeaderboardLoading(true);
+      setLeaderboardError(null);
+
+      const { data, error } = await supabase
+        .from('leaderboards')
+        .select('*');
+
+      if (error) throw error;
+
+      const rows = ((data ?? []) as LeaderboardRow[]).map(row => ({
+        ...row,
+        total_revenue: Number(row.total_revenue ?? 0),
+      }));
+
+      setLeaderboardEntries(rows);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error fetching leaderboard:', error.message);
+      } else {
+        console.error('Error fetching leaderboard:', error);
+      }
+      setLeaderboardError('Failed to load leaderboard data.');
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       fetchExtendedStats();
+      fetchLeaderboard();
     }
-  }, [user, fetchExtendedStats]);
+  }, [user, fetchExtendedStats, fetchLeaderboard]);
 
   useEffect(() => {
     if (!user) return;
@@ -263,6 +302,7 @@ const PlayerStatistics = () => {
         },
         () => {
           fetchExtendedStats();
+          fetchLeaderboard();
         }
       )
       .subscribe();
@@ -270,7 +310,25 @@ const PlayerStatistics = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchExtendedStats]);
+  }, [user, fetchExtendedStats, fetchLeaderboard]);
+
+  const metricConfig = leaderboardMetricConfig[selectedLeaderboardMetric];
+  const sortedLeaderboard = useMemo(() => {
+    const entries = [...leaderboardEntries];
+    return entries.sort((a, b) => b[metricConfig.field] - a[metricConfig.field]);
+  }, [leaderboardEntries, metricConfig.field]);
+  const topLeaderboardEntries = useMemo(() => sortedLeaderboard.slice(0, 5), [sortedLeaderboard]);
+  const playerRank = useMemo(() => {
+    if (!user) return null;
+    const index = sortedLeaderboard.findIndex(entry => entry.user_id === user.id);
+    return index === -1 ? null : index + 1;
+  }, [sortedLeaderboard, user]);
+  const playerMetricValue = useMemo(() => {
+    if (!user) return 0;
+    const entry = leaderboardEntries.find(item => item.user_id === user.id);
+    if (!entry) return 0;
+    return entry[metricConfig.field];
+  }, [leaderboardEntries, metricConfig.field, user]);
 
   if (loading || !profile || !skills) {
     return (
@@ -288,6 +346,8 @@ const PlayerStatistics = () => {
   const skillAverage = Math.round(
     (skills.performance + (skills.songwriting || 0) + (skills.guitar || 0) + (skills.vocals || 0) + (skills.drums || 0)) / 5
   );
+  const playerAvatarLabel = (profile.display_name || profile.username || 'P').slice(0, 2).toUpperCase();
+  const MetricIcon = metricConfig.icon;
 
   const weeklyMetricsConfig: Array<{
     key: 'songs' | 'gigs' | 'fans';
@@ -449,6 +509,134 @@ const PlayerStatistics = () => {
                     )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Global Leaderboards */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Global Leaderboards
+                    </CardTitle>
+                    <CardDescription>{metricConfig.description}</CardDescription>
+                  </div>
+                  <ToggleGroup
+                    type="single"
+                    value={selectedLeaderboardMetric}
+                    onValueChange={(value) => {
+                      if (value) {
+                        setSelectedLeaderboardMetric(value as LeaderboardMetric);
+                      }
+                    }}
+                    className="grid grid-cols-3 gap-2 md:inline-flex"
+                  >
+                    {Object.entries(leaderboardMetricConfig).map(([key, config]) => {
+                      const metricKey = key as LeaderboardMetric;
+                      const OptionIcon = config.icon;
+                      return (
+                        <ToggleGroupItem
+                          key={metricKey}
+                          value={metricKey}
+                          className="px-3 py-2 text-sm font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                        >
+                          <span className="flex items-center gap-2">
+                            <OptionIcon className="h-4 w-4" />
+                            {config.label}
+                          </span>
+                        </ToggleGroupItem>
+                      );
+                    })}
+                  </ToggleGroup>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="rounded-lg border border-primary/30 bg-muted/40 p-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage
+                          src={profile.avatar_url || undefined}
+                          alt={profile.display_name || profile.username || 'Player avatar'}
+                        />
+                        <AvatarFallback>{playerAvatarLabel}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Your Position</p>
+                        <p className="text-2xl font-bold text-primary">
+                          {playerRank ? `#${playerRank}` : "Unranked"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-start gap-2 text-sm md:items-end">
+                      <div className="flex items-center gap-2 text-base font-semibold text-foreground">
+                        <MetricIcon className="h-4 w-4 text-primary" />
+                        <span>{metricConfig.format(playerMetricValue)}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{metricConfig.label}</span>
+                      {!playerRank && (
+                        <span className="text-xs text-muted-foreground">
+                          Complete more activities to enter the leaderboard.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {leaderboardError && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    {leaderboardError}
+                  </div>
+                )}
+                <div className="space-y-3">
+                  {leaderboardLoading ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Skeleton key={index} className="h-14 w-full" />
+                      ))}
+                    </div>
+                  ) : topLeaderboardEntries.length > 0 ? (
+                    topLeaderboardEntries.map((entry, index) => {
+                      const displayName = entry.display_name || entry.username || 'Unknown Artist';
+                      const isCurrentUser = entry.user_id === user?.id;
+                      const metricValue = metricConfig.format(entry[metricConfig.field]);
+                      return (
+                        <div
+                          key={entry.user_id}
+                          className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                            isCurrentUser ? 'border-primary bg-primary/10' : 'border-border bg-card/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg font-bold text-muted-foreground">#{index + 1}</span>
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={entry.avatar_url || undefined} alt={displayName} />
+                              <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-semibold">{displayName}</div>
+                              {entry.username && (
+                                <div className="text-xs text-muted-foreground">@{entry.username}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center justify-end gap-2 text-sm font-semibold">
+                              <MetricIcon className="h-4 w-4 text-primary" />
+                              <span>{metricValue}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">{metricConfig.label}</div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No leaderboard data available yet. Keep playing to be featured here.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

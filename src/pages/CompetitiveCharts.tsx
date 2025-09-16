@@ -17,6 +17,7 @@ interface PlayerRanking {
   display_name: string;
   level: number;
   fame: number;
+  score: number;
   total_plays: number;
   hit_songs: number;
   rank: number;
@@ -37,7 +38,9 @@ interface Competition {
   category: string;
   requirements: Record<string, number>;
   is_active: boolean;
+  is_completed: boolean;
   user_registered: boolean;
+  status: 'upcoming' | 'active' | 'completed';
 }
 
 interface Achievement {
@@ -51,16 +54,17 @@ interface Achievement {
   unlocked?: boolean;
 }
 
-type ProfileSummary = Pick<
-  Database['public']['Tables']['profiles']['Row'],
-  'id' | 'user_id' | 'username' | 'display_name' | 'level' | 'fame' | 'avatar_url'
->;
-type SongSummary = Pick<Database['public']['Tables']['songs']['Row'], 'artist_id' | 'plays' | 'popularity'>;
-type EventParticipantSummary = Pick<Database['public']['Tables']['event_participants']['Row'], 'event_id' | 'user_id'>;
+type CompetitionRow = Database['public']['Tables']['competitions']['Row'];
+type CompetitionParticipantRow = Database['public']['Tables']['competition_participants']['Row'];
+type PlayerRankingRow = Database['public']['Tables']['player_rankings']['Row'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type CompetitionWithParticipants = CompetitionRow & {
+  competition_participants: CompetitionParticipantRow[] | null;
+};
 
 const CompetitiveCharts: React.FC = () => {
   const { user } = useAuth();
-  const { profile, skills } = useGameData();
+  const { profile, skills, refetch: refetchGameData } = useGameData();
   const [playerRankings, setPlayerRankings] = useState<PlayerRanking[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -88,141 +92,227 @@ const CompetitiveCharts: React.FC = () => {
       return;
     }
 
-    const previousRanks = previousRankingsRef.current;
+    try {
+      const previousRanks = previousRankingsRef.current;
 
-    const { data: topProfiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, user_id, username, display_name, level, fame, avatar_url')
-      .order('fame', { ascending: false })
-      .limit(50);
+      const { data, error } = await supabase
+        .from('player_rankings')
+        .select(
+          'id, rank, trend, total_plays, hit_songs, score, profile:profiles!inner(id, user_id, username, display_name, level, fame, avatar_url)'
+        )
+        .eq('ranking_type', 'global')
+        .order('rank', { ascending: true })
+        .limit(50);
 
-    if (profilesError) throw profilesError;
+      if (error) throw error;
 
-    let profilesList: ProfileSummary[] = (topProfiles ?? []) as ProfileSummary[];
-    let userProfileRecord = profilesList.find((item) => item.user_id === user.id);
+      const rankingRows = (data ?? []) as (PlayerRankingRow & { profile: ProfileRow | null })[];
 
-    if (!userProfileRecord) {
-      const { data: currentUserProfile, error: userProfileError } = await supabase
-        .from('profiles')
-        .select('id, user_id, username, display_name, level, fame, avatar_url')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const mapped = rankingRows.map((row) => {
+        const profileData = row.profile;
+        const baseTrend =
+          row.trend === 'up' || row.trend === 'down' || row.trend === 'same'
+            ? (row.trend as PlayerRanking['trend'])
+            : 'same';
+        const playerId = profileData?.user_id ?? profileData?.id ?? row.id;
 
-      if (userProfileError) throw userProfileError;
+        return {
+          id: playerId,
+          username: profileData?.username ?? 'player',
+          display_name: profileData?.display_name ?? profileData?.username ?? 'Unknown Artist',
+          level: profileData?.level ?? 1,
+          fame: profileData?.fame ?? 0,
+          score: Number(row.score ?? row.total_plays ?? 0),
+          total_plays: Number(row.total_plays ?? 0),
+          hit_songs: row.hit_songs ?? 0,
+          rank: row.rank ?? 0,
+          trend: baseTrend,
+          avatar_url: profileData?.avatar_url ?? undefined,
+        } satisfies PlayerRanking;
+      });
 
-      if (currentUserProfile) {
-        profilesList = [...profilesList, currentUserProfile as ProfileSummary];
-        userProfileRecord = currentUserProfile as ProfileSummary;
-      } else if (profile) {
-        const fallbackProfile: ProfileSummary = {
-          id: profile.id,
-          user_id: user.id,
-          username: profile.username,
-          display_name: profile.display_name,
-          level: profile.level,
-          fame: profile.fame,
-          avatar_url: profile.avatar_url ?? null,
-        };
-        profilesList = [...profilesList, fallbackProfile];
-        userProfileRecord = fallbackProfile;
+      const updatedRankings: PlayerRanking[] = [];
+      const nextPreviousRanks = new Map<string, number>();
+
+      mapped.forEach((player) => {
+        const previousRank = previousRanks.get(player.id);
+        let trend: PlayerRanking['trend'] = player.trend;
+        if (previousRank && previousRank !== player.rank) {
+          trend = previousRank > player.rank ? 'up' : 'down';
+        }
+        const playerWithTrend: PlayerRanking = { ...player, trend };
+        updatedRankings.push(playerWithTrend);
+        if (player.rank > 0) {
+          nextPreviousRanks.set(player.id, player.rank);
+        }
+      });
+
+      let computedUserRank =
+        updatedRankings.find((entry) => entry.id === user.id || entry.id === profile?.id) ?? null;
+
+      if (!computedUserRank && profile?.id) {
+        const { data: userRankingData, error: userRankingError } = await supabase
+          .from('player_rankings')
+          .select(
+            'id, rank, trend, total_plays, hit_songs, score, profile:profiles!inner(id, user_id, username, display_name, level, fame, avatar_url)'
+          )
+          .eq('ranking_type', 'global')
+          .eq('profile_id', profile.id)
+          .maybeSingle();
+
+        if (userRankingError) {
+          console.error('Error fetching user ranking:', userRankingError);
+        }
+
+        if (userRankingData && userRankingData.profile) {
+          const profileData = userRankingData.profile as ProfileRow;
+          const fallbackTrend =
+            userRankingData.trend === 'up' || userRankingData.trend === 'down'
+              ? (userRankingData.trend as PlayerRanking['trend'])
+              : 'same';
+
+          computedUserRank = {
+            id: profileData.user_id ?? profileData.id ?? userRankingData.id,
+            username: profileData.username ?? 'player',
+            display_name: profileData.display_name ?? profileData.username ?? 'Unknown Artist',
+            level: profileData.level ?? 1,
+            fame: profileData.fame ?? 0,
+            score: Number(userRankingData.score ?? userRankingData.total_plays ?? 0),
+            total_plays: Number(userRankingData.total_plays ?? 0),
+            hit_songs: userRankingData.hit_songs ?? 0,
+            rank: userRankingData.rank ?? 0,
+            trend: fallbackTrend,
+            avatar_url: profileData.avatar_url ?? undefined,
+          };
+          if (computedUserRank.rank > 0) {
+            nextPreviousRanks.set(computedUserRank.id, computedUserRank.rank);
+          }
+          updatedRankings.push(computedUserRank);
+        } else if (profile) {
+          computedUserRank = {
+            id: user.id,
+            username: profile.username,
+            display_name: profile.display_name,
+            level: profile.level,
+            fame: profile.fame,
+            score: profile.fame,
+            total_plays: 0,
+            hit_songs: 0,
+            rank: 0,
+            trend: 'same',
+            avatar_url: profile.avatar_url ?? undefined,
+          };
+        }
       }
-    }
 
-    if (profilesList.length === 0) {
+      previousRankingsRef.current = nextPreviousRanks;
+      setPlayerRankings(updatedRankings);
+      setUserRank(computedUserRank);
+    } catch (error) {
+      console.error('Error fetching player rankings:', error);
       setPlayerRankings([]);
       setUserRank(null);
       previousRankingsRef.current = new Map();
-      return;
     }
+  }, [
+    user?.id,
+    profile?.id,
+    profile?.username,
+    profile?.display_name,
+    profile?.level,
+    profile?.fame,
+    profile?.avatar_url,
+  ]);
 
-    const artistIds = Array.from(
-      new Set(profilesList.map((item) => item.user_id).filter((id): id is string => Boolean(id)))
-    );
+  const finalizeCompetition = useCallback(async (competition: CompetitionWithParticipants) => {
+    try {
+      const endDate = new Date(competition.end_date);
+      const now = new Date();
+      if (Number.isNaN(endDate.getTime()) || endDate > now) {
+        return false;
+      }
 
-    let songsData: SongSummary[] = [];
-    if (artistIds.length > 0) {
-      const { data: songs, error: songsError } = await supabase
-        .from('songs')
-        .select('artist_id, plays, popularity')
-        .in('artist_id', artistIds);
+      const { data: participantRows, error: participantsError } = await supabase
+        .from('competition_participants')
+        .select('id, profile_id, score, final_rank, prize_amount, awarded_at')
+        .eq('competition_id', competition.id);
 
-      if (songsError) throw songsError;
-      songsData = (songs ?? []) as SongSummary[];
+      if (participantsError) throw participantsError;
+
+      const participants = (participantRows ?? []) as CompetitionParticipantRow[];
+
+      if (participants.length === 0) {
+        if (competition.is_completed && !competition.is_active) {
+          return false;
+        }
+
+        const { error: updateCompetitionError } = await supabase
+          .from('competitions')
+          .update({
+            is_active: false,
+            is_completed: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', competition.id);
+
+        if (updateCompetitionError) throw updateCompetitionError;
+        return true;
+      }
+
+      const alreadyFinalized = participants.every((participant) => participant.final_rank != null);
+      if (alreadyFinalized && competition.is_completed) {
+        return false;
+      }
+
+      const sortedParticipants = [...participants].sort(
+        (a, b) => Number(b.score ?? 0) - Number(a.score ?? 0)
+      );
+
+      const prizePool = Math.max(Number(competition.prize_pool ?? 0), 0);
+      const distribution = [0.5, 0.3, 0.2];
+      const rawPrizes = distribution.map((share) => prizePool * share);
+      let remainingPrize = Math.round(prizePool);
+      const roundedPrizes = rawPrizes.map((value) => {
+        const rounded = Math.round(value);
+        remainingPrize -= rounded;
+        return rounded;
+      });
+      if (remainingPrize !== 0 && roundedPrizes.length > 0) {
+        roundedPrizes[0] += remainingPrize;
+      }
+
+      const awardTimestamp = new Date().toISOString();
+
+      const updates = sortedParticipants.map((participant, index) => ({
+        id: participant.id,
+        final_rank: index + 1,
+        prize_amount: index < roundedPrizes.length ? Math.max(roundedPrizes[index], 0) : 0,
+        awarded_at: awardTimestamp,
+      }));
+
+      const { error: updateParticipantsError } = await supabase
+        .from('competition_participants')
+        .upsert(updates);
+
+      if (updateParticipantsError) throw updateParticipantsError;
+
+      const { error: updateCompetitionError } = await supabase
+        .from('competitions')
+        .update({
+          is_active: false,
+          is_completed: true,
+          updated_at: awardTimestamp,
+        })
+        .eq('id', competition.id);
+
+      if (updateCompetitionError) throw updateCompetitionError;
+
+      return true;
+    } catch (error) {
+      console.error('Error finalizing competition:', error);
+      return false;
     }
-
-    const statsByArtist = new Map<string, { totalPlays: number; hitSongs: number }>();
-
-    songsData.forEach((song) => {
-      if (!song.artist_id) return;
-      const stats = statsByArtist.get(song.artist_id) ?? { totalPlays: 0, hitSongs: 0 };
-      const plays = typeof song.plays === 'number' ? song.plays : 0;
-      const popularity = typeof song.popularity === 'number' ? song.popularity : 0;
-      stats.totalPlays += plays;
-      if (popularity >= 80 || plays >= 100000) {
-        stats.hitSongs += 1;
-      }
-      statsByArtist.set(song.artist_id, stats);
-    });
-
-    let higherRankCount: number | null = null;
-    if (userProfileRecord) {
-      const { count, error: countError } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .gt('fame', userProfileRecord.fame ?? 0);
-
-      if (countError) {
-        console.error('Error calculating user rank position:', countError);
-      } else if (typeof count === 'number') {
-        higherRankCount = count;
-      }
-    }
-
-    const ranked = profilesList
-      .map((profileRow) => {
-        const stats = statsByArtist.get(profileRow.user_id) ?? { totalPlays: 0, hitSongs: 0 };
-        const playerId = profileRow.user_id ?? profileRow.id;
-        return {
-          id: playerId,
-          username: profileRow.username || 'player',
-          display_name: profileRow.display_name || profileRow.username || 'Unknown Artist',
-          level: profileRow.level ?? 1,
-          fame: profileRow.fame ?? 0,
-          total_plays: stats.totalPlays,
-          hit_songs: stats.hitSongs,
-          rank: 0,
-          trend: 'same' as PlayerRanking['trend'],
-          avatar_url: profileRow.avatar_url ?? undefined,
-        };
-      })
-      .sort((a, b) => b.fame - a.fame);
-
-    const updatedRankings: PlayerRanking[] = [];
-    const nextPreviousRanks = new Map<string, number>();
-    let computedUserRank: PlayerRanking | null = null;
-
-    ranked.forEach((player, index) => {
-      let rank = index + 1;
-      if (player.id === user.id && higherRankCount != null) {
-        rank = higherRankCount + 1;
-      }
-      const previousRank = previousRanks.get(player.id);
-      let trend: PlayerRanking['trend'] = 'same';
-      if (previousRank && previousRank !== rank) {
-        trend = previousRank > rank ? 'up' : 'down';
-      }
-      const playerWithRank: PlayerRanking = { ...player, rank, trend };
-      updatedRankings.push(playerWithRank);
-      nextPreviousRanks.set(player.id, rank);
-      if (player.id === user.id) {
-        computedUserRank = playerWithRank;
-      }
-    });
-
-    previousRankingsRef.current = nextPreviousRanks;
-    setPlayerRankings(updatedRankings);
-    setUserRank(computedUserRank);
-  }, [user, profile]);
+  }, []);
 
   const fetchCompetitions = useCallback(async () => {
     if (!user) {
@@ -231,108 +321,103 @@ const CompetitiveCharts: React.FC = () => {
       return;
     }
 
-    const { data: eventsData, error: eventsError } = await supabase
-      .from('game_events')
-      .select(
-        'id, title, description, start_date, end_date, rewards, requirements, max_participants, current_participants, event_type, is_active'
-      )
-      .order('start_date', { ascending: true });
+    const loadCompetitions = async () => {
+      const { data, error } = await supabase
+        .from('competitions')
+        .select('*, competition_participants (id, profile_id, score, final_rank, prize_amount, awarded_at)')
+        .order('start_date', { ascending: true });
 
-    if (eventsError) throw eventsError;
+      if (error) throw error;
+      return (data ?? []) as CompetitionWithParticipants[];
+    };
 
-    const eventIds = (eventsData ?? []).map((event) => event.id).filter((id): id is string => Boolean(id));
+    try {
+      const initialCompetitions = await loadCompetitions();
+      const now = new Date();
 
-    let participants: EventParticipantSummary[] = [];
-    if (eventIds.length > 0) {
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('event_participants')
-        .select('event_id, user_id')
-        .in('event_id', eventIds);
+      const competitionsNeedingFinalization = initialCompetitions.filter((competition) => {
+        const endDate = new Date(competition.end_date);
+        return (
+          !competition.is_completed &&
+          !Number.isNaN(endDate.getTime()) &&
+          endDate <= now
+        );
+      });
 
-      if (participantsError) throw participantsError;
-      participants = (participantsData ?? []) as EventParticipantSummary[];
-    }
-
-    const participantCounts = new Map<string, number>();
-    const registeredSet = new Set<string>();
-
-    participants.forEach((entry) => {
-      participantCounts.set(entry.event_id, (participantCounts.get(entry.event_id) ?? 0) + 1);
-      if (entry.user_id === user.id) {
-        registeredSet.add(entry.event_id);
+      if (competitionsNeedingFinalization.length > 0) {
+        await Promise.all(competitionsNeedingFinalization.map((competition) => finalizeCompetition(competition)));
       }
-    });
 
-    const now = new Date();
-    const competitionsData: Competition[] = (eventsData ?? []).map((event) => {
-      const requirementEntries = Object.entries((event.requirements ?? {}) as Record<string, unknown>);
-      const rewardEntries = Object.entries((event.rewards ?? {}) as Record<string, unknown>);
+      const competitionsAfterFinalization =
+        competitionsNeedingFinalization.length > 0 ? await loadCompetitions() : initialCompetitions;
 
-      const normalizedRequirements: Record<string, number> = {};
-      let entryFee = 0;
+      const registeredSet = new Set<string>();
 
-      requirementEntries.forEach(([key, value]) => {
-        if (key === 'entry_fee' || key === 'entryFee') {
-          if (typeof value === 'number') {
-            entryFee = value;
-          } else if (typeof value === 'string') {
-            const parsed = Number(value);
-            if (!Number.isNaN(parsed)) {
-              entryFee = parsed;
-            }
-          }
-        } else if (typeof value === 'number') {
-          normalizedRequirements[key] = value;
-        } else if (typeof value === 'string') {
-          const parsed = Number(value);
-          if (!Number.isNaN(parsed)) {
-            normalizedRequirements[key] = parsed;
-          }
+      const competitionsData: Competition[] = competitionsAfterFinalization.map((competition) => {
+        const participants = competition.competition_participants ?? [];
+        const participantCount = participants.length;
+        const userRegistered =
+          Boolean(profile?.id) &&
+          participants.some((participant) => participant.profile_id === profile?.id);
+        if (userRegistered) {
+          registeredSet.add(competition.id);
         }
+
+        const requirementsRecord: Record<string, number> = {};
+        if (
+          competition.requirements &&
+          typeof competition.requirements === 'object' &&
+          !Array.isArray(competition.requirements)
+        ) {
+          Object.entries(competition.requirements as Record<string, unknown>).forEach(([key, value]) => {
+            const numericValue = Number(value);
+            if (!Number.isNaN(numericValue)) {
+              requirementsRecord[key] = numericValue;
+            }
+          });
+        }
+
+        const maxParticipants =
+          competition.max_participants && competition.max_participants > 0
+            ? competition.max_participants
+            : Math.max(participantCount, 1);
+
+        const startDate = new Date(competition.start_date);
+        const endDate = new Date(competition.end_date);
+        const hasStarted = !Number.isNaN(startDate.getTime()) && startDate <= now;
+        const hasEnded = !Number.isNaN(endDate.getTime()) && endDate < now;
+
+        const isCompleted = competition.is_completed || hasEnded;
+        const isActive = competition.is_active && !isCompleted;
+        const status: Competition['status'] =
+          isCompleted ? 'completed' : hasStarted && isActive ? 'active' : 'upcoming';
+
+        return {
+          id: competition.id,
+          name: competition.name,
+          description: competition.description ?? '',
+          start_date: competition.start_date,
+          end_date: competition.end_date,
+          prize_pool: Number(competition.prize_pool ?? 0),
+          entry_fee: Number(competition.entry_fee ?? 0),
+          participants: participantCount,
+          max_participants: maxParticipants,
+          category: competition.category ?? 'general',
+          requirements: requirementsRecord,
+          is_active: isActive,
+          is_completed: isCompleted,
+          user_registered: userRegistered,
+          status,
+        };
       });
 
-      let prizePool = 0;
-      rewardEntries.forEach(([key, value]) => {
-        if (key === 'prize_pool' || key === 'prizePool' || key === 'cash') {
-          if (typeof value === 'number') {
-            prizePool = value;
-          } else if (typeof value === 'string') {
-            const parsed = Number(value);
-            if (!Number.isNaN(parsed)) {
-              prizePool = parsed;
-            }
-          }
-        }
-      });
-
-      const participantsCount = participantCounts.get(event.id) ?? event.current_participants ?? 0;
-      const maxParticipants =
-        event.max_participants && event.max_participants > 0 ? event.max_participants : Math.max(participantsCount, 1);
-      const startDate = new Date(event.start_date);
-      const endDate = new Date(event.end_date);
-      const isActive =
-        typeof event.is_active === 'boolean' ? event.is_active : startDate <= now && endDate >= now;
-
-      return {
-        id: event.id,
-        name: event.title,
-        description: event.description ?? '',
-        start_date: event.start_date,
-        end_date: event.end_date,
-        prize_pool: prizePool,
-        entry_fee: entryFee,
-        participants: participantsCount,
-        max_participants: maxParticipants,
-        category: event.event_type,
-        requirements: normalizedRequirements,
-        is_active: isActive,
-        user_registered: registeredSet.has(event.id),
-      };
-    });
-
-    setCompetitions(competitionsData);
-    setRegisteredCompetitions(registeredSet);
-  }, [user]);
+      setCompetitions(competitionsData);
+      setRegisteredCompetitions(registeredSet);
+    } catch (error) {
+      console.error('Error fetching competitions:', error);
+      toast.error('Failed to load competitions');
+    }
+  }, [user, profile?.id, finalizeCompetition]);
 
   const loadCompetitiveData = useCallback(async () => {
     if (!user) {
@@ -376,13 +461,13 @@ const CompetitiveCharts: React.FC = () => {
 
     const rankingChannel = supabase
       .channel('global-rankings-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handleRankingRealtime)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'songs' }, handleRankingRealtime);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'player_rankings' }, handleRankingRealtime)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handleRankingRealtime);
 
     const competitionsChannel = supabase
       .channel('competition-events-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_events' }, handleCompetitionRealtime)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_participants' }, handleCompetitionRealtime);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'competitions' }, handleCompetitionRealtime)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'competition_participants' }, handleCompetitionRealtime);
 
     rankingChannel.subscribe();
     competitionsChannel.subscribe();
@@ -399,6 +484,13 @@ const CompetitiveCharts: React.FC = () => {
     const competition = competitions.find((c) => c.id === competitionId);
     if (!competition) return;
 
+    const now = new Date();
+    const endDate = new Date(competition.end_date);
+    if (competition.is_completed || endDate < now) {
+      toast.error('This competition has already ended');
+      return;
+    }
+
     if (competition.user_registered || registeredCompetitions.has(competitionId)) {
       toast.info('You are already registered for this competition');
       return;
@@ -406,6 +498,11 @@ const CompetitiveCharts: React.FC = () => {
 
     if (competition.participants >= competition.max_participants) {
       toast.error('This competition is already full');
+      return;
+    }
+
+    if (!competition.is_active) {
+      toast.error('Registration is closed for this competition');
       return;
     }
 
@@ -431,9 +528,30 @@ const CompetitiveCharts: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.from('event_participants').insert({
-        event_id: competitionId,
-        user_id: user.id,
+      let participantScore = profile.fame;
+
+      const { data: rankingScore, error: rankingError } = await supabase
+        .from('player_rankings')
+        .select('score')
+        .eq('profile_id', profile.id)
+        .eq('ranking_type', 'global')
+        .maybeSingle();
+
+      if (rankingError) {
+        console.error('Error loading player score for competition:', rankingError);
+      }
+
+      if (rankingScore?.score != null) {
+        const parsedScore = Number(rankingScore.score);
+        if (!Number.isNaN(parsedScore)) {
+          participantScore = parsedScore;
+        }
+      }
+
+      const { error } = await supabase.from('competition_participants').insert({
+        competition_id: competitionId,
+        profile_id: profile.id,
+        score: participantScore,
       });
 
       if (error) {
@@ -442,6 +560,20 @@ const CompetitiveCharts: React.FC = () => {
           return;
         }
         throw error;
+      }
+
+      if (competition.entry_fee > 0) {
+        const newBalance = Math.max((profile.cash ?? 0) - competition.entry_fee, 0);
+        const { error: balanceError } = await supabase
+          .from('profiles')
+          .update({ cash: newBalance })
+          .eq('id', profile.id);
+
+        if (balanceError) throw balanceError;
+      }
+
+      if (typeof refetchGameData === 'function') {
+        await refetchGameData();
       }
 
       setRegisteredCompetitions((prev) => {
@@ -466,6 +598,71 @@ const CompetitiveCharts: React.FC = () => {
     } catch (error: any) {
       console.error('Error registering for competition:', error);
       toast.error('Failed to register for competition');
+    }
+  };
+
+  const leaveCompetition = async (competitionId: string) => {
+    if (!profile || !user) return;
+
+    const competition = competitions.find((c) => c.id === competitionId);
+    if (!competition) return;
+
+    if (!competition.user_registered && !registeredCompetitions.has(competitionId)) {
+      toast.info("You're not registered for this competition");
+      return;
+    }
+
+    const startDate = new Date(competition.start_date);
+    const now = new Date();
+    if (startDate <= now) {
+      toast.error('You can no longer leave this competition');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('competition_participants')
+        .delete()
+        .eq('competition_id', competitionId)
+        .eq('profile_id', profile.id);
+
+      if (error) throw error;
+
+      if (competition.entry_fee > 0) {
+        const { error: refundError } = await supabase
+          .from('profiles')
+          .update({ cash: (profile.cash ?? 0) + competition.entry_fee })
+          .eq('id', profile.id);
+
+        if (refundError) throw refundError;
+      }
+
+      if (typeof refetchGameData === 'function') {
+        await refetchGameData();
+      }
+
+      setRegisteredCompetitions((prev) => {
+        const updated = new Set(prev);
+        updated.delete(competitionId);
+        return updated;
+      });
+
+      setCompetitions((prev) =>
+        prev.map((c) =>
+          c.id === competitionId
+            ? {
+                ...c,
+                participants: Math.max(c.participants - 1, 0),
+                user_registered: false,
+              }
+            : c
+        )
+      );
+
+      toast.success(`Left ${competition.name}`);
+    } catch (error) {
+      console.error('Error leaving competition:', error);
+      toast.error('Failed to leave competition');
     }
   };
 
@@ -606,66 +803,113 @@ const CompetitiveCharts: React.FC = () => {
 
         <TabsContent value="competitions" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {competitions.map((competition) => (
-              <Card key={competition.id} className={`${competition.is_active ? 'border-green-500/30' : 'border-orange-500/30'}`}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{competition.name}</CardTitle>
-                    <Badge variant={competition.is_active ? "default" : "secondary"}>
-                      {competition.is_active ? 'Active' : 'Starting Soon'}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{competition.description}</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">Prize Pool</div>
-                      <div className="font-bold text-green-500">${competition.prize_pool.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Entry Fee</div>
-                      <div className="font-bold">${competition.entry_fee}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Participants</div>
-                      <div className="font-bold">{competition.participants}/{competition.max_participants}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Category</div>
-                      <div className="font-bold capitalize">{competition.category}</div>
-                    </div>
-                  </div>
+            {competitions.map((competition) => {
+              const now = new Date();
+              const startDate = new Date(competition.start_date);
+              const endDate = new Date(competition.end_date);
+              const hasStarted = !Number.isNaN(startDate.getTime()) && startDate <= now;
+              const hasEnded = !Number.isNaN(endDate.getTime()) && endDate < now;
+              const statusLabel =
+                competition.status === 'completed'
+                  ? 'Completed'
+                  : competition.status === 'active'
+                  ? 'Active'
+                  : 'Starting Soon';
+              const badgeVariant =
+                competition.status === 'active'
+                  ? 'default'
+                  : competition.status === 'completed'
+                  ? 'outline'
+                  : 'secondary';
+              const borderClass =
+                competition.status === 'active'
+                  ? 'border-green-500/30'
+                  : competition.status === 'completed'
+                  ? 'border-slate-500/30'
+                  : 'border-orange-500/30';
+              const canLeave = competition.user_registered && !hasStarted;
+              const canJoin =
+                !competition.user_registered &&
+                competition.is_active &&
+                !hasEnded &&
+                competition.status !== 'completed';
+              const buttonDisabled =
+                competition.status === 'completed' ||
+                (competition.user_registered
+                  ? !canLeave
+                  : !canJoin || competition.participants >= competition.max_participants);
+              const buttonLabel = competition.user_registered
+                ? canLeave
+                  ? 'Leave Competition'
+                  : 'Registered'
+                : competition.status === 'completed'
+                ? 'Completed'
+                : competition.participants >= competition.max_participants
+                ? 'Full'
+                : competition.is_active
+                ? 'Join Competition'
+                : 'Registration Closed';
+              const handleAction = competition.user_registered ? leaveCompetition : registerForCompetition;
 
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-2">Requirements:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {Object.entries(competition.requirements).map(([key, value]) => (
-                        <Badge key={key} variant="outline" className="text-xs">
-                          {key}: {value}
-                        </Badge>
-                      ))}
+              return (
+                <Card key={competition.id} className={borderClass}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{competition.name}</CardTitle>
+                      <Badge variant={badgeVariant}>{statusLabel}</Badge>
                     </div>
-                  </div>
+                    <p className="text-sm text-muted-foreground">{competition.description}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Prize Pool</div>
+                        <div className="font-bold text-green-500">${competition.prize_pool.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Entry Fee</div>
+                        <div className="font-bold">${competition.entry_fee}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Participants</div>
+                        <div className="font-bold">{competition.participants}/{competition.max_participants}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Category</div>
+                        <div className="font-bold capitalize">{competition.category}</div>
+                      </div>
+                    </div>
 
-                  <Progress
-                    value={Math.min(
-                      100,
-                      (competition.participants / Math.max(competition.max_participants, 1)) * 100
-                    )}
-                    className="h-2"
-                  />
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-2">Requirements:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(competition.requirements).map(([key, value]) => (
+                          <Badge key={key} variant="outline" className="text-xs">
+                            {key}: {value}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
 
-                  <Button 
-                    onClick={() => registerForCompetition(competition.id)}
-                    disabled={!competition.is_active || competition.user_registered}
-                    className="w-full"
-                  >
-                    {competition.user_registered ? 'Registered' : 'Register'}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Progress
+                      value={Math.min(
+                        100,
+                        (competition.participants / Math.max(competition.max_participants, 1)) * 100
+                      )}
+                      className="h-2"
+                    />
+
+                    <Button
+                      onClick={() => handleAction(competition.id)}
+                      disabled={buttonDisabled}
+                      className="w-full"
+                    >
+                      {buttonLabel}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 

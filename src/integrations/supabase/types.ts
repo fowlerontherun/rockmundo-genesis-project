@@ -80,6 +80,50 @@ export type Database = {
         }
         Relationships: []
       }
+      band_invitations: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          id: string
+          invitee_id: string | null
+          inviter_id: string
+          responded_at: string | null
+          role: string
+          salary: number | null
+          status: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          id?: string
+          invitee_id?: string | null
+          inviter_id: string
+          responded_at?: string | null
+          role: string
+          salary?: number | null
+          status?: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          id?: string
+          invitee_id?: string | null
+          inviter_id?: string
+          responded_at?: string | null
+          role?: string
+          salary?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_invitations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       band_members: {
         Row: {
           band_id: string
@@ -197,6 +241,105 @@ export type Database = {
           trend?: string | null
           trend_change?: number | null
           weeks_on_chart?: number | null
+        }
+        Relationships: []
+      }
+      competition_participants: {
+        Row: {
+          awarded_at: string | null
+          competition_id: string
+          final_rank: number | null
+          id: string
+          joined_at: string | null
+          prize_amount: number
+          profile_id: string
+          score: number
+        }
+        Insert: {
+          awarded_at?: string | null
+          competition_id: string
+          final_rank?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_amount?: number
+          profile_id: string
+          score?: number
+        }
+        Update: {
+          awarded_at?: string | null
+          competition_id?: string
+          final_rank?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_amount?: number
+          profile_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_participants_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          end_date: string
+          entry_fee: number
+          id: string
+          is_active: boolean
+          is_completed: boolean
+          max_participants: number
+          name: string
+          prize_pool: number
+          requirements: Json
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date: string
+          entry_fee?: number
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          max_participants?: number
+          name: string
+          prize_pool?: number
+          requirements?: Json
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          entry_fee?: number
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          max_participants?: number
+          name?: string
+          prize_pool?: number
+          requirements?: Json
+          start_date?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -422,6 +565,45 @@ export type Database = {
         }
         Relationships: []
       }
+      genre_statistics: {
+        Row: {
+          avg_popularity: number
+          chart_date: string
+          chart_type: string
+          created_at: string
+          genre: string
+          growth: number
+          id: string
+          top_song: string | null
+          total_plays: number
+          total_songs: number
+        }
+        Insert: {
+          avg_popularity?: number
+          chart_date: string
+          chart_type?: string
+          created_at?: string
+          genre: string
+          growth?: number
+          id?: string
+          top_song?: string | null
+          total_plays?: number
+          total_songs?: number
+        }
+        Update: {
+          avg_popularity?: number
+          chart_date?: string
+          chart_type?: string
+          created_at?: string
+          genre?: string
+          growth?: number
+          id?: string
+          top_song?: string | null
+          total_plays?: number
+          total_songs?: number
+        }
+        Relationships: []
+      }
       gig_performances: {
         Row: {
           earnings: number | null
@@ -541,6 +723,65 @@ export type Database = {
         }
         Relationships: []
       }
+      jam_sessions: {
+        Row: {
+          access_code: string | null
+          created_at: string
+          current_participants: number
+          description: string | null
+          genre: string
+          host_id: string
+          id: string
+          is_private: boolean
+          max_participants: number
+          name: string
+          participant_ids: string[]
+          skill_requirement: number
+          tempo: number
+          updated_at: string
+        }
+        Insert: {
+          access_code?: string | null
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          genre: string
+          host_id: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string
+        }
+        Update: {
+          access_code?: string | null
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          genre?: string
+          host_id?: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name?: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_sessions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       player_achievements: {
         Row: {
           achievement_id: string
@@ -576,6 +817,50 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_rankings: {
+        Row: {
+          calculated_at: string
+          hit_songs: number
+          id: string
+          profile_id: string
+          rank: number
+          ranking_type: string
+          score: number
+          total_plays: number
+          trend: string
+        }
+        Insert: {
+          calculated_at?: string
+          hit_songs?: number
+          id?: string
+          profile_id: string
+          rank: number
+          ranking_type?: string
+          score?: number
+          total_plays?: number
+          trend?: string
+        }
+        Update: {
+          calculated_at?: string
+          hit_songs?: number
+          id?: string
+          profile_id?: string
+          rank?: number
+          ranking_type?: string
+          score?: number
+          total_plays?: number
+          trend?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_rankings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -733,6 +1018,81 @@ export type Database = {
           },
         ]
       }
+      promotion_campaigns: {
+        Row: {
+          budget: number
+          campaign_type: string
+          created_at: string | null
+          id: string
+          message: string | null
+          new_placements: number | null
+          platform_id: string | null
+          platform_name: string | null
+          playlist_name: string | null
+          playlists_targeted: number | null
+          song_id: string
+          status: string
+          stream_increase: number | null
+          revenue_generated: number | null
+          listeners_generated: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          budget?: number
+          campaign_type: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          campaign_type?: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id?: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_campaigns_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_campaigns_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -740,9 +1100,11 @@ export type Database = {
           cash: number | null
           created_at: string | null
           display_name: string | null
+          engagement_rate: number | null
           experience: number | null
           fame: number | null
           fans: number | null
+          followers: number | null
           id: string
           level: number | null
           updated_at: string | null
@@ -755,9 +1117,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -770,14 +1134,58 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      schedule_events: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          location: string
+          status: string
+          time: string
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          location: string
+          status?: string
+          time: string
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          location?: string
+          status?: string
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -789,9 +1197,12 @@ export type Database = {
           fan_growth: number | null
           id: string
           likes: number | null
+          reposts: number | null
           platform: string
           shares: number | null
+          timestamp: string | null
           user_id: string
+          views: number | null
         }
         Insert: {
           comments?: number | null
@@ -800,9 +1211,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform: string
           shares?: number | null
+          timestamp?: string | null
           user_id: string
+          views?: number | null
         }
         Update: {
           comments?: number | null
@@ -811,9 +1225,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform?: string
           shares?: number | null
+          timestamp?: string | null
           user_id?: string
+          views?: number | null
         }
         Relationships: []
       }
@@ -824,6 +1241,9 @@ export type Database = {
           genre: string
           id: string
           lyrics: string | null
+          master_quality: number | null
+          mix_quality: number | null
+          production_cost: number | null
           quality_score: number
           release_date: string | null
           revenue: number
@@ -839,6 +1259,9 @@ export type Database = {
           genre: string
           id?: string
           lyrics?: string | null
+          master_quality?: number | null
+          mix_quality?: number | null
+          production_cost?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -854,6 +1277,9 @@ export type Database = {
           genre?: string
           id?: string
           lyrics?: string | null
+          master_quality?: number | null
+          mix_quality?: number | null
+          production_cost?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -895,6 +1321,47 @@ export type Database = {
         }
         Relationships: []
       }
+      streaming_stats: {
+        Row: {
+          created_at: string
+          id: string
+          platform_breakdown: Json
+          song_id: string
+          total_revenue: number
+          total_streams: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform_breakdown?: Json
+          song_id: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform_breakdown?: Json
+          song_id?: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_stats_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       tour_venues: {
         Row: {
           date: string
@@ -904,6 +1371,9 @@ export type Database = {
           ticket_price: number | null
           tickets_sold: number | null
           tour_id: string
+          travel_cost: number | null
+          lodging_cost: number | null
+          misc_cost: number | null
           venue_id: string
         }
         Insert: {
@@ -914,6 +1384,9 @@ export type Database = {
           ticket_price?: number | null
           tickets_sold?: number | null
           tour_id: string
+          travel_cost?: number | null
+          lodging_cost?: number | null
+          misc_cost?: number | null
           venue_id: string
         }
         Update: {
@@ -924,6 +1397,9 @@ export type Database = {
           ticket_price?: number | null
           tickets_sold?: number | null
           tour_id?: string
+          travel_cost?: number | null
+          lodging_cost?: number | null
+          misc_cost?: number | null
           venue_id?: string
         }
         Relationships: [
@@ -1063,6 +1539,20 @@ export type Database = {
       }
     }
     Views: {
+      leaderboards: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          experience: number
+          fame: number
+          total_achievements: number
+          total_gigs: number
+          total_revenue: number
+          user_id: string
+          username: string | null
+        }
+        Relationships: []
+      },
       player_achievement_summary: {
         Row: {
           earned_count: number
@@ -1102,6 +1592,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      join_jam_session: {
+        Args: { p_session_id: string }
+        Returns: Database["public"]["Tables"]["jam_sessions"]["Row"]
       }
     }
     Enums: {

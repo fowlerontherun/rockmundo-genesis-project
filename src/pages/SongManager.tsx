@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Song {
   id: string;
@@ -31,6 +32,94 @@ interface Song {
   updated_at?: string;
 }
 
+interface StreamingAccountRecord {
+  id: string;
+  followers: number | null;
+  platform?: {
+    id?: string;
+    name?: string;
+    revenue_per_play?: number | null;
+  } | null;
+}
+
+interface BreakdownSource {
+  key: string;
+  name: string;
+  weight: number;
+  revenuePerPlay: number;
+  platformId?: string;
+}
+
+interface StreamingStatsBreakdownEntry {
+  key: string;
+  platformId?: string;
+  name: string;
+  streams: number;
+  revenue: number;
+  revenuePerPlay: number;
+}
+
+const DEFAULT_REVENUE_PER_PLAY = 0.003;
+
+const DEFAULT_STREAMING_PLATFORM_DISTRIBUTION: BreakdownSource[] = [
+  { key: "spotify", name: "Spotify", weight: 45, revenuePerPlay: 0.003 },
+  { key: "apple_music", name: "Apple Music", weight: 25, revenuePerPlay: 0.007 },
+  { key: "youtube_music", name: "YouTube Music", weight: 20, revenuePerPlay: 0.002 },
+  { key: "tidal", name: "Tidal", weight: 10, revenuePerPlay: 0.01 }
+];
+
+const slugifyPlatformKey = (value: string, fallback: string) => {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+  return slug || fallback;
+};
+
+const buildInitialStreamingBreakdown = (
+  initialStreams: number,
+  accounts: StreamingAccountRecord[] | null | undefined
+): StreamingStatsBreakdownEntry[] => {
+  const sources: BreakdownSource[] = (accounts && accounts.length > 0)
+    ? accounts.map((account) => {
+        const platformName = account.platform?.name?.trim() || "Streaming Platform";
+        return {
+          key: account.platform?.id || slugifyPlatformKey(platformName, account.id),
+          name: platformName,
+          weight: Math.max(account.followers ?? 0, 1),
+          revenuePerPlay: account.platform?.revenue_per_play ?? DEFAULT_REVENUE_PER_PLAY,
+          platformId: account.platform?.id ?? undefined
+        };
+      })
+    : DEFAULT_STREAMING_PLATFORM_DISTRIBUTION.map((entry) => ({ ...entry }));
+
+  if (sources.length === 0) {
+    return [];
+  }
+
+  const totalWeight = sources.reduce((sum, entry) => sum + (entry.weight || 0), 0) || sources.length;
+  let allocatedStreams = 0;
+
+  return sources.map((entry, index) => {
+    const ratio = totalWeight > 0 ? entry.weight / totalWeight : 1 / sources.length;
+    const isLast = index === sources.length - 1;
+    const streams = isLast
+      ? Math.max(initialStreams - allocatedStreams, 0)
+      : Math.max(Math.floor(initialStreams * ratio), 0);
+    allocatedStreams += streams;
+    const revenue = streams * entry.revenuePerPlay;
+
+    return {
+      key: entry.key || `platform_${index}`,
+      platformId: entry.platformId,
+      name: entry.name,
+      streams,
+      revenue,
+      revenuePerPlay: entry.revenuePerPlay
+    };
+  });
+};
+
 const SongManager = () => {
   const { user } = useAuth();
   const { profile, skills, updateProfile } = useGameData();
@@ -44,28 +133,125 @@ const SongManager = () => {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRecordDialogOpen, setIsRecordDialogOpen] = useState(false);
+  const [growthHistory, setGrowthHistory] = useState<SongGrowthRecord[]>([]);
+
+  const POLL_INTERVAL = 30000;
 
   const genres = [
-    'Rock', 'Pop', 'Hip Hop', 'Jazz', 'Blues', 'Country', 
+    'Rock', 'Pop', 'Hip Hop', 'Jazz', 'Blues', 'Country',
     'Electronic', 'Folk', 'Reggae', 'Metal', 'Punk', 'Alternative'
   ];
 
-  useEffect(() => {
-    if (user) {
-      fetchSongs();
+  const fetchSongs = useCallback(async () => {
+    if (!user?.id) {
+      setSongs([]);
+      setLoading(false);
+      return;
     }
-  }, [user]);
+
+  const createStreamingStatsRecord = async (
+    songId: string,
+    totalStreams: number
+  ): Promise<StreamingStatsBreakdownEntry[]> => {
+    if (!user) {
+      return [];
+    }
+
+    try {
+      const { data: accountData, error: accountsError } = await supabase
+        .from('player_streaming_accounts')
+        .select(`
+          id,
+          followers,
+          platform:streaming_platforms!player_streaming_accounts_platform_id_fkey (
+            id,
+            name,
+            revenue_per_play
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('is_connected', true);
+
+      if (accountsError) {
+        throw accountsError;
+      }
+
+      const breakdown = buildInitialStreamingBreakdown(
+        totalStreams,
+        (accountData as StreamingAccountRecord[] | null | undefined)
+      );
+
+      const totalRevenue = breakdown.reduce((sum, entry) => sum + entry.revenue, 0);
+      const breakdownPayload = breakdown.map((entry) => ({
+        platform_id: entry.platformId ?? null,
+        key: entry.key,
+        name: entry.name,
+        streams: entry.streams,
+        revenue: Number(entry.revenue.toFixed(2)),
+        revenue_per_play: entry.revenuePerPlay
+      }));
+
+      const { error: statsError } = await supabase
+        .from('streaming_stats')
+        .upsert({
+          song_id: songId,
+          user_id: user.id,
+          total_streams: totalStreams,
+          total_revenue: Number(totalRevenue.toFixed(2)),
+          platform_breakdown: breakdownPayload as Json
+        }, {
+          onConflict: 'song_id'
+        });
+
+      if (statsError) {
+        throw statsError;
+      }
+
+      return breakdown;
+    } catch (statsError) {
+      console.error('Error creating streaming stats:', statsError);
+      return [];
+    }
+  };
+
+  const enqueueStreamingSimulation = async (
+    songId: string,
+    totalStreams: number,
+    breakdown: StreamingStatsBreakdownEntry[]
+  ) => {
+    if (breakdown.length === 0 || totalStreams <= 0) {
+      return;
+    }
+
+    try {
+      await supabase.functions.invoke('queue-streaming-simulation', {
+        body: {
+          songId,
+          totalStreams,
+          breakdown: breakdown.map((entry) => ({
+            key: entry.key,
+            name: entry.name,
+            streams: entry.streams,
+            revenue: Number(entry.revenue.toFixed(2))
+          }))
+        }
+      });
+    } catch (jobError) {
+      // The edge function may not be configured in all environments.
+      console.info('Streaming simulation job not queued:', jobError);
+    }
+  };
 
   const fetchSongs = async () => {
     try {
       const { data, error } = await supabase
         .from('songs')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSongs(data || []);
+      setSongs((data || []).map(normalizeSongRecord));
     } catch (error: any) {
       console.error('Error fetching songs:', error);
       toast({
@@ -76,7 +262,161 @@ const SongManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, toast]);
+
+  const fetchGrowthHistory = useCallback(async () => {
+    if (!user?.id) {
+      setGrowthHistory([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('song_stream_growth_history')
+        .select('id, song_id, user_id, streams_added, revenue_added, recorded_at, songs(title)')
+        .eq('user_id', user.id)
+        .order('recorded_at', { ascending: false })
+        .limit(200);
+
+      if (error) throw error;
+      setGrowthHistory((data || []).map(normalizeGrowthRecord));
+    } catch (error) {
+      console.error('Error fetching song growth:', error);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setSongs([]);
+      setGrowthHistory([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    fetchSongs();
+    fetchGrowthHistory();
+  }, [user?.id, fetchSongs, fetchGrowthHistory]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      fetchSongs();
+      fetchGrowthHistory();
+    }, POLL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [user?.id, fetchSongs, fetchGrowthHistory]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`songs-updates-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'songs',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT' && payload.new) {
+            const normalized = normalizeSongRecord(payload.new);
+            setSongs((prev) => {
+              const exists = prev.some((song) => song.id === normalized.id);
+
+              if (exists) {
+                return prev.map((song) =>
+                  song.id === normalized.id ? { ...song, ...normalized } : song
+                );
+              }
+
+              return [normalized, ...prev].sort(
+                (a, b) =>
+                  new Date(b.created_at).getTime() -
+                  new Date(a.created_at).getTime()
+              );
+            });
+          }
+
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const normalized = normalizeSongRecord(payload.new);
+            setSongs((prev) =>
+              prev.map((song) =>
+                song.id === normalized.id ? { ...song, ...normalized } : song
+              )
+            );
+          }
+
+          if (payload.eventType === 'DELETE' && payload.old) {
+            const deletedId = (payload.old as { id?: string })?.id;
+            if (deletedId) {
+              setSongs((prev) => prev.filter((song) => song.id !== deletedId));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`song-growth-updates-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'song_stream_growth_history',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (!payload.new) {
+            return;
+          }
+
+          const normalized = normalizeGrowthRecord(payload.new);
+          setGrowthHistory((prev) => {
+            if (prev.some((entry) => entry.id === normalized.id)) {
+              return prev;
+            }
+
+            const updated = [normalized, ...prev];
+            return updated.slice(0, 200);
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  const dailyGrowth = useMemo(
+    () => summarizeGrowth(growthHistory, songs, 1),
+    [growthHistory, songs]
+  );
+
+  const weeklyGrowth = useMemo(
+    () => summarizeGrowth(growthHistory, songs, 7),
+    [growthHistory, songs]
+  );
 
   const createSong = async () => {
     if (!user || !newSong.title || !newSong.genre) {
@@ -111,7 +451,7 @@ const SongManager = () => {
 
       if (error) throw error;
 
-      setSongs(prev => [data, ...prev]);
+      setSongs(prev => [normalizeSongRecord(data), ...prev]);
       setNewSong({ title: '', genre: '', lyrics: '' });
       setIsCreateDialogOpen(false);
       
@@ -187,9 +527,19 @@ const SongManager = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "You must be logged in to release a song."
+      });
+      return;
+    }
+
     try {
       const initialStreams = Math.floor(song.quality_score * (profile?.fans || 0) / 100);
       const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8));
+      const initialRevenue = Number((initialStreams * 0.01).toFixed(2));
 
       const { error } = await supabase
         .from('songs')
@@ -198,16 +548,17 @@ const SongManager = () => {
           release_date: new Date().toISOString(),
           streams: initialStreams,
           chart_position: chartPosition,
-          revenue: initialStreams * 0.01
+          revenue: initialRevenue
         })
         .eq('id', song.id);
 
       if (error) throw error;
 
+      const breakdown = await createStreamingStatsRecord(song.id, initialStreams);
       const fameGain = Math.floor(song.quality_score / 2);
-      await updateProfile({ 
+      await updateProfile({
         fame: (profile?.fame || 0) + fameGain,
-        cash: (profile?.cash || 0) + (initialStreams * 0.01)
+        cash: (profile?.cash || 0) + initialRevenue
       });
 
       setSongs(prev => prev.map(s => 
@@ -218,11 +569,24 @@ const SongManager = () => {
               release_date: new Date().toISOString(),
               streams: initialStreams,
               chart_position: chartPosition,
-              revenue: initialStreams * 0.01
+              revenue: initialRevenue
             }
           : s
       ));
-      
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('streaming:refresh', {
+          detail: {
+            songId: song.id,
+            streams: initialStreams
+          }
+        }));
+      }
+
+      if (breakdown.length > 0) {
+        void enqueueStreamingSimulation(song.id, initialStreams, breakdown);
+      }
+
       toast({
         title: "Song Released",
         description: `"${song.title}" is now available to fans! +${fameGain} fame!`
@@ -247,7 +611,8 @@ const SongManager = () => {
       if (error) throw error;
 
       setSongs(prev => prev.filter(s => s.id !== songId));
-      
+      setGrowthHistory(prev => prev.filter(record => record.song_id !== songId));
+
       toast({
         title: "Song Deleted",
         description: "Song has been removed from your collection"
@@ -269,6 +634,58 @@ const SongManager = () => {
       case 'released': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
       default: return 'bg-muted text-muted-foreground';
     }
+  };
+
+  const renderGrowthPanel = (summary: GrowthSummary, windowLabel: string) => {
+    if (summary.totals.streams <= 0) {
+      return (
+        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          No streaming activity recorded in the {windowLabel}.
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Stream growth captured over the {windowLabel}.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-lg bg-muted/60 p-4">
+            <p className="text-sm text-muted-foreground">Total Streams</p>
+            <p className="text-2xl font-bold">{summary.totals.streams.toLocaleString()}</p>
+          </div>
+          <div className="rounded-lg bg-muted/60 p-4">
+            <p className="text-sm text-muted-foreground">Streaming Revenue</p>
+            <p className="text-2xl font-bold">${summary.totals.revenue.toFixed(2)}</p>
+          </div>
+          <div className="rounded-lg bg-muted/60 p-4">
+            <p className="text-sm text-muted-foreground">Active Songs</p>
+            <p className="text-2xl font-bold">{summary.bySong.length}</p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {summary.bySong.slice(0, 5).map((entry, index) => (
+            <div
+              key={entry.songId}
+              className="flex items-center justify-between rounded-lg border bg-background/60 px-4 py-2"
+            >
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                  #{index + 1}
+                </Badge>
+                <div>
+                  <p className="font-semibold">{entry.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    +{entry.streams.toLocaleString()} streams · +${entry.revenue.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const totalSongs = songs.length;
@@ -343,6 +760,33 @@ const SongManager = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Streaming Growth */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Streaming Growth</CardTitle>
+            <CardDescription>
+              Automatic audience growth based on song quality and marketing skills
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="daily" className="w-full">
+              <TabsList className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+                <TabsTrigger value="daily">Daily</TabsTrigger>
+                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+              </TabsList>
+              <TabsContent value="daily" className="mt-4">
+                {renderGrowthPanel(dailyGrowth, 'last 24 hours')}
+              </TabsContent>
+              <TabsContent value="weekly" className="mt-4">
+                {renderGrowthPanel(weeklyGrowth, 'last 7 days')}
+              </TabsContent>
+            </Tabs>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Streaming metrics refresh automatically every 15 minutes.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Create Song Button */}
         <div className="flex justify-end">
