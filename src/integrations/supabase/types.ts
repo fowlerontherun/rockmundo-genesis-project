@@ -1271,6 +1271,47 @@ export type Database = {
         }
         Relationships: []
       }
+      streaming_stats: {
+        Row: {
+          created_at: string
+          id: string
+          platform_breakdown: Json
+          song_id: string
+          total_revenue: number
+          total_streams: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform_breakdown?: Json
+          song_id: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform_breakdown?: Json
+          song_id?: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_stats_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       tour_venues: {
         Row: {
           date: string

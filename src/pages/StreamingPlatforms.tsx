@@ -61,7 +61,23 @@ interface PlatformSnapshot {
   monthlyRevenue: number;
 }
 
-interface OverviewSnapshot {
+interface StreamingStatsRecord {
+  id: string;
+  song_id: string;
+  user_id: string;
+  total_streams: number | null;
+  total_revenue: number | null;
+  platform_breakdown: unknown;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+interface SongWithPlatformData {
+  id: string;
+  title: string;
+  album?: string | null;
+  genre?: string | null;
+  status?: string | null;
   totalStreams: number;
   totalRevenue: number;
   totalListeners: number;
@@ -104,10 +120,61 @@ const formatCompactNumber = (value: number) => {
   return compactNumberFormatter.format(value);
 };
 
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 0,
+const buildPlatformBreakdownFromStats = (
+  stats: StreamingStatsRecord | undefined
+): PlatformBreakdown[] | null => {
+  if (!stats || !Array.isArray(stats.platform_breakdown)) {
+    return null;
+  }
+
+  const entries = (stats.platform_breakdown as Array<Record<string, unknown>>)
+    .map((entry, index) => {
+      const entryRecord = entry as Record<string, unknown>;
+      const rawKey = entryRecord.key;
+      const rawName = entryRecord.name ?? entryRecord.label ?? rawKey;
+      const label = typeof rawName === "string"
+        ? rawName
+        : typeof rawKey === "string"
+          ? formatPlatformLabel(rawKey)
+          : `Platform ${index + 1}`;
+
+      const key = typeof rawKey === "string"
+        ? rawKey
+        : label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+      const streams = safeNumber(entryRecord.streams);
+      const revenue = entryRecord.revenue !== undefined && entryRecord.revenue !== null
+        ? safeNumber(entryRecord.revenue)
+        : streams * safeNumber(entryRecord["revenue_per_play"]);
+
+      return {
+        key,
+        label,
+        streams,
+        revenue,
+      };
+    })
+    .filter((entry) => entry.streams > 0 || entry.revenue > 0);
+
+  return entries.length > 0 ? entries : null;
+};
+
+const formatLargeNumber = (value: number): string => {
+  if (!Number.isFinite(value)) return "0";
+  if (Math.abs(value) >= 1_000_000) {
+    const formatted = (value / 1_000_000).toFixed(1);
+    return `${parseFloat(formatted)}M`;
+  }
+  if (Math.abs(value) >= 1_000) {
+    const formatted = (value / 1_000).toFixed(1);
+    return `${parseFloat(formatted)}K`;
+  }
+  return Math.round(value).toLocaleString();
+};
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
   maximumFractionDigits: 2,
 });
 
@@ -145,17 +212,13 @@ const StreamingPlatforms = () => {
   const [selectedSongForPlaylist, setSelectedSongForPlaylist] = useState<string | null>(null);
   const [playlistBudget, setPlaylistBudget] = useState<number>(150);
   const [serverMessage, setServerMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-
   const platformSnapshotsRef = useRef<Record<string, PlatformSnapshot>>({});
   const overviewSnapshotRef = useRef<OverviewSnapshot | null>(null);
 
   const loadData = useCallback(async (showLoading = false) => {
     if (!user) return;
 
-    if (showLoading) {
-      setLoading(true);
-    }
+    setLoading(true);
 
     try {
       const { data: platformsData, error: platformsError } = await supabase
@@ -178,12 +241,101 @@ const StreamingPlatforms = () => {
         .eq('artist_id', user.id)
         .eq('status', 'released')
         .order('created_at', { ascending: false });
-      if (songsError) throw songsError;
-      const normalizedSongs: SongRecord[] = (songsData ?? []).map((song) => ({
-        ...song,
-      }));
-      setUserSongs(normalizedSongs);
-    } catch (error: unknown) {
+
+      if (songsResponse.error) {
+        // Some environments may use user_id instead of artist_id
+        if (songsResponse.error.message?.toLowerCase().includes('artist_id')) {
+          const fallbackResponse = await supabase
+            .from('songs')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'released')
+            .order('created_at', { ascending: false });
+
+          if (fallbackResponse.error) throw fallbackResponse.error;
+          songsData = (fallbackResponse.data as SongRecord[]) || [];
+        } else {
+          throw songsResponse.error;
+        }
+      } else {
+        songsData = (songsResponse.data as SongRecord[]) || [];
+      }
+
+      let streamingStatsData: StreamingStatsRecord[] = [];
+      if (songsData.length > 0) {
+        const songIds = songsData.map((song) => song.id);
+        const { data: statsData, error: statsError } = await supabase
+          .from('streaming_stats')
+          .select('*')
+          .eq('user_id', user.id)
+          .in('song_id', songIds);
+
+        if (statsError) throw statsError;
+        streamingStatsData = (statsData as StreamingStatsRecord[]) || [];
+      }
+
+      const statsMap = new Map<string, StreamingStatsRecord>();
+      streamingStatsData.forEach((stat) => {
+        if (stat?.song_id) {
+          statsMap.set(stat.song_id, stat);
+        }
+      });
+
+      const streamingPlatforms = platformsData || [];
+      const formattedSongs: SongWithPlatformData[] = songsData.map((song) => {
+        const stats = statsMap.get(song.id);
+        const statsBreakdown = buildPlatformBreakdownFromStats(stats);
+        const platformBreakdown = (statsBreakdown && statsBreakdown.length > 0)
+          ? statsBreakdown
+          : buildPlatformBreakdown(song, streamingPlatforms);
+
+        const breakdownStreams = platformBreakdown.reduce(
+          (total, entry) => total + entry.streams,
+          0
+        );
+        let breakdownRevenue = platformBreakdown.reduce(
+          (total, entry) => total + entry.revenue,
+          0
+        );
+
+        if (stats) {
+          const statsRevenue = safeNumber(stats.total_revenue);
+          if (statsRevenue > 0) {
+            breakdownRevenue = statsRevenue;
+          }
+        } else if (
+          breakdownRevenue === 0 &&
+          song.revenue !== undefined &&
+          song.revenue !== null
+        ) {
+          breakdownRevenue = safeNumber(song.revenue);
+        }
+
+        let totalStreamsValue =
+          breakdownStreams > 0 ? breakdownStreams : safeNumber(song.streams);
+
+        if (stats) {
+          const statsStreams = safeNumber(stats.total_streams);
+          if (statsStreams > 0) {
+            totalStreamsValue = statsStreams;
+          }
+        }
+
+        return {
+          id: song.id,
+          title: song.title,
+          album: song.album ?? song.album_name ?? song.albumTitle ?? null,
+          genre: song.genre ?? undefined,
+          status: song.status ?? undefined,
+          totalStreams: totalStreamsValue,
+          totalRevenue: breakdownRevenue,
+          platformBreakdown,
+        };
+      });
+
+      setUserSongs(formattedSongs);
+
+    } catch (error) {
       console.error('Error loading streaming data:', error);
       toast({
         variant: "destructive",
@@ -206,125 +358,13 @@ const StreamingPlatforms = () => {
   }, [user, loadData]);
 
   useEffect(() => {
-    platformSnapshotsRef.current = {};
-    overviewSnapshotRef.current = null;
-    setPlatformMetrics([]);
-    setOverviewMetrics({
-      totalStreams: 0,
-      totalRevenue: 0,
-      totalListeners: 0,
-      streamsGrowth: 0,
-      revenueGrowth: 0,
-      listenersGrowth: 0,
-    });
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!platforms.length) {
-      setPlatformMetrics([]);
-      setOverviewMetrics({
-        totalStreams: 0,
-        totalRevenue: 0,
-        totalListeners: 0,
-        streamsGrowth: 0,
-        revenueGrowth: 0,
-        listenersGrowth: 0,
-      });
-      return;
-    }
-
-    const metrics = platforms.map((platform) => {
-      const account = playerAccounts.find((acc) => acc.platform_id === platform.id);
-      const monthlyListeners = account?.followers ?? 0;
-      const monthlyStreams = account?.monthly_plays ?? 0;
-      const monthlyRevenue = account?.monthly_revenue !== null && account?.monthly_revenue !== undefined
-        ? Number(account.monthly_revenue)
-        : 0;
-
-      const previousSnapshot = platformSnapshotsRef.current[platform.id];
-      const growth = calculateGrowth(previousSnapshot?.monthlyStreams, monthlyStreams);
-
-      platformSnapshotsRef.current[platform.id] = {
-        monthlyListeners,
-        monthlyStreams,
-        monthlyRevenue,
-      };
-
-      return {
-        ...platform,
-        monthlyListeners,
-        monthlyStreams,
-        monthlyRevenue,
-        growth,
-        isConnected: Boolean(account?.is_connected),
-      };
-    });
-
-    setPlatformMetrics(metrics);
-
-    const totalStreams = metrics.reduce((sum, metric) => sum + metric.monthlyStreams, 0);
-    const totalRevenue = metrics.reduce((sum, metric) => sum + metric.monthlyRevenue, 0);
-    const totalListeners = metrics.reduce((sum, metric) => sum + metric.monthlyListeners, 0);
-
-    const previousTotals = overviewSnapshotRef.current;
-
-    const streamsGrowth = calculateGrowth(previousTotals?.totalStreams, totalStreams);
-    const revenueGrowth = calculateGrowth(previousTotals?.totalRevenue, totalRevenue);
-    const listenersGrowth = calculateGrowth(previousTotals?.totalListeners, totalListeners);
-
-    overviewSnapshotRef.current = {
-      totalStreams,
-      totalRevenue,
-      totalListeners,
+    const handleStreamingRefresh = () => {
+      loadData();
     };
 
-    setOverviewMetrics({
-      totalStreams,
-      totalRevenue,
-      totalListeners,
-      streamsGrowth,
-      revenueGrowth,
-      listenersGrowth,
-    });
-  }, [platforms, playerAccounts]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel(`streaming-metrics-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'player_streaming_accounts',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          loadData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'songs',
-        },
-        (payload) => {
-          const record = (payload.new ?? payload.old) as { user_id?: string; artist_id?: string } | null;
-          if (record && (record.user_id === user.id || record.artist_id === user.id)) {
-            loadData();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, loadData]);
+    window.addEventListener('streaming:refresh', handleStreamingRefresh);
+    return () => window.removeEventListener('streaming:refresh', handleStreamingRefresh);
+  }, [loadData]);
   const connectPlatform = async (platformId: string) => {
     if (!user || !profile) return;
 

@@ -14,6 +14,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Song {
   id: string;
@@ -31,133 +32,92 @@ interface Song {
   updated_at?: string;
 }
 
-interface SongGrowthRecord {
+interface StreamingAccountRecord {
   id: string;
-  song_id: string;
-  user_id: string;
-  streams_added: number;
-  revenue_added: number;
-  recorded_at: string;
-  songs?: {
-    title?: string | null;
+  followers: number | null;
+  platform?: {
+    id?: string;
+    name?: string;
+    revenue_per_play?: number | null;
   } | null;
 }
 
-interface GrowthSummary {
-  totals: {
-    streams: number;
-    revenue: number;
-  };
-  bySong: {
-    songId: string;
-    title: string;
-    streams: number;
-    revenue: number;
-  }[];
+interface BreakdownSource {
+  key: string;
+  name: string;
+  weight: number;
+  revenuePerPlay: number;
+  platformId?: string;
 }
 
-const normalizeNumeric = (value: unknown): number => {
-  if (value === null || value === undefined) {
-    return 0;
-  }
+interface StreamingStatsBreakdownEntry {
+  key: string;
+  platformId?: string;
+  name: string;
+  streams: number;
+  revenue: number;
+  revenuePerPlay: number;
+}
 
-  if (typeof value === 'number') {
-    return value;
-  }
+const DEFAULT_REVENUE_PER_PLAY = 0.003;
 
-  const parsed = parseFloat(String(value));
-  return Number.isNaN(parsed) ? 0 : parsed;
+const DEFAULT_STREAMING_PLATFORM_DISTRIBUTION: BreakdownSource[] = [
+  { key: "spotify", name: "Spotify", weight: 45, revenuePerPlay: 0.003 },
+  { key: "apple_music", name: "Apple Music", weight: 25, revenuePerPlay: 0.007 },
+  { key: "youtube_music", name: "YouTube Music", weight: 20, revenuePerPlay: 0.002 },
+  { key: "tidal", name: "Tidal", weight: 10, revenuePerPlay: 0.01 }
+];
+
+const slugifyPlatformKey = (value: string, fallback: string) => {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+  return slug || fallback;
 };
 
-const normalizeInteger = (value: unknown): number => {
-  if (value === null || value === undefined) {
-    return 0;
+const buildInitialStreamingBreakdown = (
+  initialStreams: number,
+  accounts: StreamingAccountRecord[] | null | undefined
+): StreamingStatsBreakdownEntry[] => {
+  const sources: BreakdownSource[] = (accounts && accounts.length > 0)
+    ? accounts.map((account) => {
+        const platformName = account.platform?.name?.trim() || "Streaming Platform";
+        return {
+          key: account.platform?.id || slugifyPlatformKey(platformName, account.id),
+          name: platformName,
+          weight: Math.max(account.followers ?? 0, 1),
+          revenuePerPlay: account.platform?.revenue_per_play ?? DEFAULT_REVENUE_PER_PLAY,
+          platformId: account.platform?.id ?? undefined
+        };
+      })
+    : DEFAULT_STREAMING_PLATFORM_DISTRIBUTION.map((entry) => ({ ...entry }));
+
+  if (sources.length === 0) {
+    return [];
   }
 
-  if (typeof value === 'number') {
-    return Math.round(value);
-  }
+  const totalWeight = sources.reduce((sum, entry) => sum + (entry.weight || 0), 0) || sources.length;
+  let allocatedStreams = 0;
 
-  const parsed = parseInt(String(value), 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
+  return sources.map((entry, index) => {
+    const ratio = totalWeight > 0 ? entry.weight / totalWeight : 1 / sources.length;
+    const isLast = index === sources.length - 1;
+    const streams = isLast
+      ? Math.max(initialStreams - allocatedStreams, 0)
+      : Math.max(Math.floor(initialStreams * ratio), 0);
+    allocatedStreams += streams;
+    const revenue = streams * entry.revenuePerPlay;
 
-const normalizeSongRecord = (record: any): Song => ({
-  id: record.id,
-  title: record.title,
-  genre: record.genre,
-  lyrics: record.lyrics ?? undefined,
-  quality_score: normalizeInteger(record.quality_score),
-  release_date: record.release_date ?? undefined,
-  chart_position:
-    record.chart_position === null || record.chart_position === undefined
-      ? undefined
-      : normalizeInteger(record.chart_position),
-  streams: normalizeInteger(record.streams),
-  revenue: Number(normalizeNumeric(record.revenue).toFixed(2)),
-  status: record.status as Song['status'],
-  created_at: record.created_at,
-  user_id: record.user_id,
-  updated_at: record.updated_at ?? undefined,
-});
-
-const normalizeGrowthRecord = (record: any): SongGrowthRecord => ({
-  id: record.id,
-  song_id: record.song_id,
-  user_id: record.user_id,
-  streams_added: normalizeInteger(record.streams_added),
-  revenue_added: Number(normalizeNumeric(record.revenue_added).toFixed(2)),
-  recorded_at: record.recorded_at,
-  songs: record.songs ?? undefined,
-});
-
-const summarizeGrowth = (
-  records: SongGrowthRecord[],
-  songs: Song[],
-  days: number
-): GrowthSummary => {
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  const totals = { streams: 0, revenue: 0 };
-  const perSong = new Map<
-    string,
-    { songId: string; title: string; streams: number; revenue: number }
-  >();
-
-  records.forEach((record) => {
-    const recordedTime = new Date(record.recorded_at).getTime();
-
-    if (Number.isNaN(recordedTime) || recordedTime < cutoff) {
-      return;
-    }
-
-    totals.streams += record.streams_added;
-    totals.revenue += record.revenue_added;
-
-    const fallbackTitle =
-      songs.find((song) => song.id === record.song_id)?.title || 'Unknown Song';
-    const title = record.songs?.title || fallbackTitle;
-
-    if (perSong.has(record.song_id)) {
-      const entry = perSong.get(record.song_id)!;
-      entry.streams += record.streams_added;
-      entry.revenue = Number((entry.revenue + record.revenue_added).toFixed(2));
-    } else {
-      perSong.set(record.song_id, {
-        songId: record.song_id,
-        title,
-        streams: record.streams_added,
-        revenue: Number(record.revenue_added.toFixed(2)),
-      });
-    }
+    return {
+      key: entry.key || `platform_${index}`,
+      platformId: entry.platformId,
+      name: entry.name,
+      streams,
+      revenue,
+      revenuePerPlay: entry.revenuePerPlay
+    };
   });
-
-  return {
-    totals: {
-      streams: totals.streams,
-      revenue: Number(totals.revenue.toFixed(2)),
-    },
-    bySong: Array.from(perSong.values()).sort((a, b) => b.streams - a.streams),
-  };
 };
 
 const SongManager = () => {
@@ -189,6 +149,100 @@ const SongManager = () => {
       return;
     }
 
+  const createStreamingStatsRecord = async (
+    songId: string,
+    totalStreams: number
+  ): Promise<StreamingStatsBreakdownEntry[]> => {
+    if (!user) {
+      return [];
+    }
+
+    try {
+      const { data: accountData, error: accountsError } = await supabase
+        .from('player_streaming_accounts')
+        .select(`
+          id,
+          followers,
+          platform:streaming_platforms!player_streaming_accounts_platform_id_fkey (
+            id,
+            name,
+            revenue_per_play
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('is_connected', true);
+
+      if (accountsError) {
+        throw accountsError;
+      }
+
+      const breakdown = buildInitialStreamingBreakdown(
+        totalStreams,
+        (accountData as StreamingAccountRecord[] | null | undefined)
+      );
+
+      const totalRevenue = breakdown.reduce((sum, entry) => sum + entry.revenue, 0);
+      const breakdownPayload = breakdown.map((entry) => ({
+        platform_id: entry.platformId ?? null,
+        key: entry.key,
+        name: entry.name,
+        streams: entry.streams,
+        revenue: Number(entry.revenue.toFixed(2)),
+        revenue_per_play: entry.revenuePerPlay
+      }));
+
+      const { error: statsError } = await supabase
+        .from('streaming_stats')
+        .upsert({
+          song_id: songId,
+          user_id: user.id,
+          total_streams: totalStreams,
+          total_revenue: Number(totalRevenue.toFixed(2)),
+          platform_breakdown: breakdownPayload as Json
+        }, {
+          onConflict: 'song_id'
+        });
+
+      if (statsError) {
+        throw statsError;
+      }
+
+      return breakdown;
+    } catch (statsError) {
+      console.error('Error creating streaming stats:', statsError);
+      return [];
+    }
+  };
+
+  const enqueueStreamingSimulation = async (
+    songId: string,
+    totalStreams: number,
+    breakdown: StreamingStatsBreakdownEntry[]
+  ) => {
+    if (breakdown.length === 0 || totalStreams <= 0) {
+      return;
+    }
+
+    try {
+      await supabase.functions.invoke('queue-streaming-simulation', {
+        body: {
+          songId,
+          totalStreams,
+          breakdown: breakdown.map((entry) => ({
+            key: entry.key,
+            name: entry.name,
+            streams: entry.streams,
+            revenue: Number(entry.revenue.toFixed(2))
+          }))
+        }
+      });
+    } catch (jobError) {
+      // The edge function may not be configured in all environments.
+      console.info('Streaming simulation job not queued:', jobError);
+    }
+  };
+
+  const fetchSongs = async () => {
     try {
       const { data, error } = await supabase
         .from('songs')
@@ -473,6 +527,15 @@ const SongManager = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "You must be logged in to release a song."
+      });
+      return;
+    }
+
     try {
       const initialStreams = Math.floor(song.quality_score * (profile?.fans || 0) / 100);
       const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8));
@@ -491,6 +554,7 @@ const SongManager = () => {
 
       if (error) throw error;
 
+      const breakdown = await createStreamingStatsRecord(song.id, initialStreams);
       const fameGain = Math.floor(song.quality_score / 2);
       await updateProfile({
         fame: (profile?.fame || 0) + fameGain,
@@ -509,7 +573,20 @@ const SongManager = () => {
             }
           : s
       ));
-      
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('streaming:refresh', {
+          detail: {
+            songId: song.id,
+            streams: initialStreams
+          }
+        }));
+      }
+
+      if (breakdown.length > 0) {
+        void enqueueStreamingSimulation(song.id, initialStreams, breakdown);
+      }
+
       toast({
         title: "Song Released",
         description: `"${song.title}" is now available to fans! +${fameGain} fame!`
