@@ -740,9 +740,11 @@ export type Database = {
           cash: number | null
           created_at: string | null
           display_name: string | null
+          engagement_rate: number | null
           experience: number | null
           fame: number | null
           fans: number | null
+          followers: number | null
           id: string
           level: number | null
           updated_at: string | null
@@ -755,9 +757,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -770,9 +774,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
