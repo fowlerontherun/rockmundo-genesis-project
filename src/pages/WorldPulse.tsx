@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -29,7 +30,7 @@ interface ChartEntry {
   genre: string;
   plays: number;
   popularity: number;
-  trend: 'up' | 'down' | 'same';
+  trend: "up" | "down" | "same";
   trendChange: number;
   weeksOnChart: number;
 }
@@ -361,7 +362,17 @@ const WorldPulse = () => {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  const loadGenreStatistics = useCallback(async (week: string) => {
+    setIsGenreLoading(true);
+    try {
+      const { data, error: genreError } = await supabase
+        .from("genre_statistics")
+        .select("*")
+        .eq("chart_type", "weekly")
+        .eq("chart_date", week)
+        .order("total_plays", { ascending: false });
 
   const handlePrevWeek = () => {
     setCurrentWeekIndex((prev) => {
@@ -388,36 +399,51 @@ const WorldPulse = () => {
     return <span className="h-4 w-4 text-muted-foreground">-</span>;
   };
 
-  const getTrendColor = (trend: string) => {
+  const getTrendColor = (trend: ChartEntry["trend"]) => {
     switch (trend) {
-      case 'up': return 'text-success';
-      case 'down': return 'text-destructive';
-      default: return 'text-muted-foreground';
+      case "up":
+        return "text-success";
+      case "down":
+        return "text-destructive";
+      default:
+        return "text-muted-foreground";
     }
   };
 
   const getRankBadge = (rank: number) => {
-    if (rank === 1) return <Crown className="h-4 w-4 text-yellow-500" />;
-    if (rank === 2) return <Award className="h-4 w-4 text-gray-400" />;
-    if (rank === 3) return <Award className="h-4 w-4 text-amber-600" />;
+    if (rank === 1) {
+      return <Crown className="h-4 w-4 text-yellow-500" />;
+    }
+    if (rank === 2) {
+      return <Award className="h-4 w-4 text-gray-400" />;
+    }
+    if (rank === 3) {
+      return <Award className="h-4 w-4 text-amber-600" />;
+    }
     return <span className="text-lg font-bold text-muted-foreground">#{rank}</span>;
   };
+
+  const weeklyDescription = selectedWeek
+    ? `Most popular songs for ${formatDateLabel(selectedWeek, "Week of ")}`
+    : "Select a week to view rankings";
+  const dailyDescription = getDailyLabel(latestDailyDate);
+  const currentWeekLabel = getWeekLabel(selectedWeek);
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               World Pulse Charts
             </h1>
             <p className="text-muted-foreground">Global music trends and rankings</p>
+            {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="border-primary/20">
               <Calendar className="h-3 w-3 mr-1" />
-              {currentWeek}
+              {currentWeekLabel}
             </Badge>
             <Button
               variant="outline"
@@ -632,6 +658,7 @@ const WorldPulse = () => {
                           className={genre.growth > 10 ? "bg-gradient-primary" : ""}
                         >
                           {genre.growth > 0 ? '+' : ''}{genre.growth.toFixed(1)}%
+
                         </Badge>
                       </CardTitle>
                     </CardHeader>

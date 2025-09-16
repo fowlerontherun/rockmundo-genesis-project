@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { meetsRequirements, calculateGigPayment } from "@/utils/gameBalance";
 
 interface RecordLabel {
@@ -39,27 +40,59 @@ interface RecordLabel {
   benefits: string[];
 }
 
+type ContractType = 'demo' | 'single' | 'album' | 'exclusive';
+type ContractStatus = 'pending' | 'active' | 'completed' | 'terminated';
+type RenewalOption = 'manual' | 'auto' | 'none';
+
 interface Contract {
   id: string;
   label_id: string | null;
   label_name: string;
-  contract_type: 'demo' | 'single' | 'album' | 'exclusive';
+  contract_type: ContractType;
   duration_months: number;
   advance_payment: number;
+  advance_balance: number;
+  recouped_amount: number;
   royalty_rate: number;
   signed_at: string;
-  status: 'pending' | 'active' | 'completed' | 'terminated';
+  end_date: string | null;
+  status: ContractStatus;
+  renewal_option: RenewalOption;
+  termination_reason: string | null;
 }
+
+const parseContractType = (value: unknown): ContractType => {
+  if (value === 'demo' || value === 'single' || value === 'album' || value === 'exclusive') {
+    return value;
+  }
+  return 'demo';
+};
+
+const parseContractStatus = (value: unknown): ContractStatus => {
+  if (value === 'pending' || value === 'active' || value === 'completed' || value === 'terminated') {
+    return value;
+  }
+  return 'active';
+};
+
+const parseRenewalOption = (value: unknown): RenewalOption => {
+  if (value === 'auto' || value === 'manual' || value === 'none') {
+    return value;
+  }
+  return 'manual';
+};
 
 const RecordLabel = () => {
   const { user } = useAuth();
   const { profile, skills, refetch } = useGameData();
   const { toast } = useToast();
+  const { isAdmin: isAdminRole, loading: roleLoading } = useUserRole();
   const [labels, setLabels] = useState<RecordLabel[]>([]);
   const [playerContracts, setPlayerContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [releasedSongCount, setReleasedSongCount] = useState(0);
   const [bestChartPosition, setBestChartPosition] = useState<number | null>(null);
+  const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -71,53 +104,55 @@ const RecordLabel = () => {
 
   const loadLabels = async () => {
     try {
-      // Mock record labels data (in a real app, these would be in the database)
-      const mockLabels: RecordLabel[] = [
-        {
-          id: '1',
-          name: 'Indie Underground Records',
-          prestige: 1,
-          advance_payment: 5000,
-          royalty_rate: 0.15,
-          requirements: { fame: 500, songs: 3 },
-          description: 'A small independent label focusing on emerging artists.',
-          benefits: ['Studio access', 'Basic promotion', 'Digital distribution']
-        },
-        {
-          id: '2',
-          name: 'City Sounds Music',
-          prestige: 2,
-          advance_payment: 15000,
-          royalty_rate: 0.12,
-          requirements: { fame: 2000, songs: 5, performance: 60 },
-          description: 'Regional label with good distribution network.',
-          benefits: ['Professional recording', 'Radio promotion', 'Regional touring support']
-        },
-        {
-          id: '3',
-          name: 'Thunder Records',
-          prestige: 3,
-          advance_payment: 50000,
-          royalty_rate: 0.10,
-          requirements: { fame: 10000, songs: 8, performance: 80, chart_position: 50 },
-          description: 'Major label with national reach and big budgets.',
-          benefits: ['Top-tier studios', 'National radio', 'Music videos', 'Tour support']
-        },
-        {
-          id: '4',
-          name: 'Global Megacorp Music',
-          prestige: 4,
-          advance_payment: 200000,
-          royalty_rate: 0.08,
-          requirements: { fame: 50000, songs: 12, performance: 95, chart_position: 10 },
-          description: 'International mega-label for superstar artists only.',
-          benefits: ['World-class production', 'Global promotion', 'International tours', 'Award campaigns']
-        }
-      ];
+      const { data, error } = await supabase
+        .from('record_labels')
+        .select('id, name, prestige, advance_payment, royalty_rate, description, requirements, benefits')
+        .order('prestige', { ascending: true })
+        .order('advance_payment', { ascending: true });
 
-      setLabels(mockLabels);
+      if (error) throw error;
+
+      const formattedLabels: RecordLabel[] = (data ?? []).map((label) => {
+        const requirementsData = (label as { requirements?: Record<string, unknown> }).requirements ?? {};
+        const normalizedRequirements = Object.entries(requirementsData).reduce<Record<string, number>>(
+          (acc, [key, value]) => {
+            const numericValue =
+              typeof value === 'number'
+                ? value
+                : typeof value === 'string'
+                  ? Number(value)
+                  : 0;
+
+            if (!Number.isNaN(numericValue)) {
+              acc[key] = numericValue;
+            }
+            return acc;
+          },
+          {}
+        );
+
+        const benefitsData = (label as { benefits?: unknown }).benefits;
+
+        return {
+          id: (label as { id: string }).id,
+          name: (label as { name?: string }).name ?? 'Unknown Label',
+          prestige: (label as { prestige?: number }).prestige ?? 0,
+          advance_payment: (label as { advance_payment?: number }).advance_payment ?? 0,
+          royalty_rate: typeof (label as { royalty_rate?: unknown }).royalty_rate === 'string'
+            ? parseFloat((label as { royalty_rate?: string }).royalty_rate ?? '0')
+            : (label as { royalty_rate?: number }).royalty_rate ?? 0,
+          description: (label as { description?: string }).description ?? '',
+          requirements: normalizedRequirements,
+          benefits: Array.isArray(benefitsData)
+            ? benefitsData.filter((benefit): benefit is string => typeof benefit === 'string')
+            : []
+        };
+      });
+
+      setLabels(formattedLabels);
     } catch (error) {
       console.error('Error loading labels:', error);
+      setLabels([]);
       toast({
         variant: "destructive",
         title: "Error",
@@ -135,7 +170,7 @@ const RecordLabel = () => {
       const { data, error } = await supabase
         .from('contracts')
         .select(
-          'id, label_id, label_name, contract_type, duration_months, advance_payment, royalty_rate, signed_at, status'
+          'id, label_id, label_name, contract_type, duration_months, advance_payment, royalty_rate, signed_at, end_date, status, renewal_option, termination_reason'
         )
         .eq('user_id', user.id)
         .order('signed_at', { ascending: false });
@@ -146,14 +181,17 @@ const RecordLabel = () => {
         id: contract.id,
         label_id: contract.label_id,
         label_name: contract.label_name,
-        contract_type: contract.contract_type as Contract['contract_type'],
-        duration_months: contract.duration_months,
+        contract_type: parseContractType(contract.contract_type),
+        duration_months: contract.duration_months ?? 0,
         advance_payment: contract.advance_payment ?? 0,
         royalty_rate: typeof contract.royalty_rate === 'string'
           ? parseFloat(contract.royalty_rate)
           : contract.royalty_rate ?? 0,
         signed_at: contract.signed_at ?? new Date().toISOString(),
-        status: (contract.status as Contract['status']) ?? 'active'
+        end_date: contract.end_date ?? null,
+        status: parseContractStatus(contract.status),
+        renewal_option: parseRenewalOption(contract.renewal_option),
+        termination_reason: contract.termination_reason ?? null
       }));
 
       setPlayerContracts(parsedContracts);
@@ -209,6 +247,217 @@ const RecordLabel = () => {
       setBestChartPosition(bestPosition);
     } catch (error) {
       console.error('Error loading player career stats:', error);
+    }
+  };
+
+  const resetLabelForm = () => {
+    setLabelForm({
+      id: undefined,
+      name: "",
+      prestige: 1,
+      advance_payment: 0,
+      royalty_rate: 0.1,
+      description: "",
+      requirements: {},
+      benefits: []
+    });
+    setRequirementKey("");
+    setRequirementValue("");
+    setBenefitInput("");
+  };
+
+  const startEditLabel = (label: RecordLabel) => {
+    setLabelForm({
+      id: label.id,
+      name: label.name,
+      prestige: label.prestige,
+      advance_payment: label.advance_payment,
+      royalty_rate: label.royalty_rate,
+      description: label.description,
+      requirements: { ...label.requirements },
+      benefits: [...label.benefits]
+    });
+  };
+
+  const addRequirement = () => {
+    const key = requirementKey.trim();
+    const value = Number(requirementValue);
+
+    if (!key) {
+      toast({
+        variant: "destructive",
+        title: "Requirement name needed",
+        description: "Enter a requirement key before adding it."
+      });
+      return;
+    }
+
+    if (Number.isNaN(value) || value < 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid requirement value",
+        description: "Requirement values must be positive numbers."
+      });
+      return;
+    }
+
+    setLabelForm((prev) => ({
+      ...prev,
+      requirements: {
+        ...prev.requirements,
+        [key]: value
+      }
+    }));
+    setRequirementKey("");
+    setRequirementValue("");
+  };
+
+  const removeRequirement = (key: string) => {
+    setLabelForm((prev) => {
+      const updatedRequirements = { ...prev.requirements };
+      delete updatedRequirements[key];
+      return {
+        ...prev,
+        requirements: updatedRequirements
+      };
+    });
+  };
+
+  const addBenefit = () => {
+    const benefit = benefitInput.trim();
+    if (!benefit) {
+      toast({
+        variant: "destructive",
+        title: "Benefit description needed",
+        description: "Enter a benefit before adding it."
+      });
+      return;
+    }
+
+    setLabelForm((prev) => ({
+      ...prev,
+      benefits: [...prev.benefits, benefit]
+    }));
+    setBenefitInput("");
+  };
+
+  const removeBenefit = (index: number) => {
+    setLabelForm((prev) => ({
+      ...prev,
+      benefits: prev.benefits.filter((_, benefitIndex) => benefitIndex !== index)
+    }));
+  };
+
+  const handleLabelFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedName = labelForm.name.trim();
+    const trimmedDescription = labelForm.description.trim();
+
+    if (!trimmedName) {
+      toast({
+        variant: "destructive",
+        title: "Label name required",
+        description: "Please provide a name for the record label."
+      });
+      return;
+    }
+
+    if (!trimmedDescription) {
+      toast({
+        variant: "destructive",
+        title: "Description required",
+        description: "Add a description so players understand this label."
+      });
+      return;
+    }
+
+    setSavingLabel(true);
+
+    try {
+      const payload = {
+        name: trimmedName,
+        prestige: Math.min(Math.max(labelForm.prestige, 1), 5),
+        advance_payment: Math.max(Math.round(labelForm.advance_payment), 0),
+        royalty_rate: Math.min(Math.max(Number(labelForm.royalty_rate), 0), 1),
+        description: trimmedDescription,
+        requirements: labelForm.requirements,
+        benefits: labelForm.benefits
+      };
+
+      if (labelForm.id) {
+        const { error } = await supabase
+          .from('record_labels')
+          .update(payload)
+          .eq('id', labelForm.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Label updated",
+          description: `${payload.name} has been updated.`
+        });
+      } else {
+        const { error } = await supabase
+          .from('record_labels')
+          .insert(payload);
+
+        if (error) throw error;
+
+        toast({
+          title: "Label created",
+          description: `${payload.name} is now available to players.`
+        });
+      }
+
+      resetLabelForm();
+      await loadLabels();
+    } catch (error) {
+      console.error('Error saving label:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save record label"
+      });
+    } finally {
+      setSavingLabel(false);
+    }
+  };
+
+  const handleDeleteLabel = async (labelId: string) => {
+    if (!confirm('Are you sure you want to delete this record label? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingLabelId(labelId);
+
+      const { error } = await supabase
+        .from('record_labels')
+        .delete()
+        .eq('id', labelId);
+
+      if (error) throw error;
+
+      if (labelForm.id === labelId) {
+        resetLabelForm();
+      }
+
+      toast({
+        title: "Label deleted",
+        description: "The record label has been removed."
+      });
+
+      await loadLabels();
+    } catch (error) {
+      console.error('Error deleting label:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete record label"
+      });
+    } finally {
+      setDeletingLabelId(null);
     }
   };
 
@@ -324,6 +573,339 @@ const RecordLabel = () => {
     return unmetMessages;
   };
 
+  const calculateContractEndDate = (startDate: Date, months: number) => {
+    const endDate = new Date(startDate);
+    const originalDay = startDate.getDate();
+    endDate.setMonth(endDate.getMonth() + months);
+
+    // Adjust for months with fewer days to avoid rolling over to the following month
+    if (endDate.getDate() < originalDay) {
+      endDate.setDate(0);
+    }
+
+    return endDate;
+  };
+
+  const getContractProgress = (contract: Contract) => {
+    if (!contract.end_date) return 0;
+
+    const start = new Date(contract.signed_at);
+    const end = new Date(contract.end_date);
+    const now = new Date();
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return 0;
+    }
+
+    if (contract.status === 'completed' || contract.status === 'terminated') {
+      return 100;
+    }
+
+    const totalDuration = end.getTime() - start.getTime();
+    if (totalDuration <= 0) {
+      return 100;
+    }
+
+    const elapsed = Math.min(Math.max(now.getTime() - start.getTime(), 0), totalDuration);
+    return Math.min(100, Math.round((elapsed / totalDuration) * 100));
+  };
+
+  const formatRemainingDuration = (contract: Contract) => {
+    if (!contract.end_date) {
+      return 'No end date set';
+    }
+
+    const end = new Date(contract.end_date);
+    if (Number.isNaN(end.getTime())) {
+      return 'End date unavailable';
+    }
+
+    if (contract.status === 'completed') {
+      return `Completed on ${end.toLocaleDateString()}`;
+    }
+
+    if (contract.status === 'terminated') {
+      return `Terminated on ${end.toLocaleDateString()}`;
+    }
+
+    const now = new Date();
+    const diffMs = end.getTime() - now.getTime();
+    const isPast = diffMs < 0;
+    const absoluteDiffMs = Math.abs(diffMs);
+    const totalDays = Math.floor(absoluteDiffMs / (1000 * 60 * 60 * 24));
+    const months = Math.floor(totalDays / 30);
+    const days = totalDays % 30;
+
+    const parts: string[] = [];
+    if (months > 0) {
+      parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+    }
+    if (days > 0) {
+      parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    }
+    if (parts.length === 0) {
+      parts.push('Less than a day');
+    }
+
+    const durationText = parts.join(' ');
+    return isPast ? `Expired ${durationText} ago` : `${durationText} remaining`;
+  };
+
+  const getRenewalOptionLabel = (option: RenewalOption) => {
+    switch (option) {
+      case 'auto':
+        return 'Auto renew enabled';
+      case 'none':
+        return 'No renewal planned';
+      default:
+        return 'Manual review';
+    }
+  };
+
+  const renewContract = async (contract: Contract) => {
+    if (!user || contract.status !== 'active') return;
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const now = new Date();
+      const endDate = contract.end_date ? new Date(contract.end_date) : now;
+      const renewalStart = endDate > now ? endDate : now;
+      const months = contract.duration_months > 0 ? contract.duration_months : 1;
+      const newEndDate = calculateContractEndDate(renewalStart, months);
+
+      const { error: contractError } = await supabase
+        .from('contracts')
+        .update({
+          signed_at: renewalStart.toISOString(),
+          end_date: newEndDate.toISOString(),
+          status: 'active',
+          renewal_option: 'manual',
+          termination_reason: null
+        })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (contractError) throw contractError;
+
+      const { error: activityError } = await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'contract',
+          message: `Renewed contract with ${contract.label_name}`,
+          earnings: 0
+        });
+
+      if (activityError) throw activityError;
+
+      await loadPlayerContracts();
+
+      toast({
+        title: 'Contract Renewed',
+        description: `${contract.label_name} renewed for another ${months} month${months !== 1 ? 's' : ''}.`
+      });
+    } catch (error) {
+      console.error('Error renewing contract:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to renew contract'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
+  const toggleAutoRenew = async (contract: Contract) => {
+    if (!user) return;
+    if (contract.status !== 'active') {
+      toast({
+        variant: 'destructive',
+        title: 'Action unavailable',
+        description: 'Only active contracts can update renewal preferences.'
+      });
+      return;
+    }
+
+    const nextOption: RenewalOption = contract.renewal_option === 'auto' ? 'manual' : 'auto';
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const { error } = await supabase
+        .from('contracts')
+        .update({ renewal_option: nextOption })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await loadPlayerContracts();
+
+      toast({
+        title: nextOption === 'auto' ? 'Auto-renew enabled' : 'Auto-renew disabled',
+        description:
+          nextOption === 'auto'
+            ? `${contract.label_name} will renew automatically when it ends.`
+            : `${contract.label_name} will require manual review at the end date.`
+      });
+    } catch (error) {
+      console.error('Error updating renewal option:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update renewal option'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
+  const completeContract = async (contract: Contract) => {
+    if (!user || !profile || contract.status !== 'active') return;
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const currentCash = profile.cash ?? 0;
+      const currentFame = profile.fame ?? 0;
+      const completionBonus = Math.floor(contract.advance_payment * 0.2);
+      const fameBoost = Math.max(10, Math.floor(contract.duration_months * 2));
+
+      const { error: contractError } = await supabase
+        .from('contracts')
+        .update({
+          status: 'completed',
+          end_date: new Date().toISOString(),
+          renewal_option: 'none',
+          termination_reason: null
+        })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (contractError) throw contractError;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          cash: currentCash + completionBonus,
+          fame: currentFame + fameBoost
+        })
+        .eq('user_id', user.id);
+
+      if (profileError) throw profileError;
+
+      const { error: activityError } = await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'contract',
+          message: `Completed contract with ${contract.label_name}`,
+          earnings: completionBonus
+        });
+
+      if (activityError) throw activityError;
+
+      await loadPlayerContracts();
+      await refetch();
+
+      toast({
+        title: 'Contract Completed',
+        description: `Completion bonus $${completionBonus.toLocaleString()} and +${fameBoost} fame awarded.`
+      });
+    } catch (error) {
+      console.error('Error completing contract:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to complete contract'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
+  const terminateContract = async (contract: Contract) => {
+    if (!user || !profile || contract.status !== 'active') return;
+
+    const confirmation = window.confirm(
+      'Terminating a contract early will apply financial penalties and fame loss. Do you want to continue?'
+    );
+
+    if (!confirmation) {
+      return;
+    }
+
+    const reasonInput = window.prompt('Provide a reason for the termination (optional):');
+    const terminationReason = reasonInput && reasonInput.trim().length > 0
+      ? reasonInput.trim()
+      : 'Artist terminated the contract early';
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const currentCash = profile.cash ?? 0;
+      const currentFame = profile.fame ?? 0;
+      const cashPenaltyBase = Math.floor(contract.advance_payment * 0.15);
+      const cashPenalty = Math.min(cashPenaltyBase, currentCash);
+      const famePenaltyBase = Math.floor(contract.duration_months * 1.5);
+      const famePenalty = Math.min(currentFame, Math.max(5, famePenaltyBase));
+
+      const { error: contractError } = await supabase
+        .from('contracts')
+        .update({
+          status: 'terminated',
+          end_date: new Date().toISOString(),
+          renewal_option: 'none',
+          termination_reason: terminationReason
+        })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (contractError) throw contractError;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          cash: currentCash - cashPenalty,
+          fame: Math.max(currentFame - famePenalty, 0)
+        })
+        .eq('user_id', user.id);
+
+      if (profileError) throw profileError;
+
+      const { error: activityError } = await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'contract',
+          message: `Terminated contract with ${contract.label_name}`,
+          earnings: -cashPenalty
+        });
+
+      if (activityError) throw activityError;
+
+      await loadPlayerContracts();
+      await refetch();
+
+      toast({
+        variant: 'destructive',
+        title: 'Contract Terminated',
+        description: `Penalty of $${cashPenalty.toLocaleString()} and ${famePenalty} fame applied.`
+      });
+    } catch (error) {
+      console.error('Error terminating contract:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to terminate contract'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
   const signContract = async (label: RecordLabel, contractType: string) => {
     if (!user || !profile || !skills) return;
 
@@ -344,7 +926,9 @@ const RecordLabel = () => {
       }
 
       // Calculate contract terms based on type
-      let duration, advance, royalty;
+      let duration: number;
+      let advance: number;
+      let royalty: number;
       switch (contractType) {
         case 'demo':
           duration = 6;
@@ -371,6 +955,8 @@ const RecordLabel = () => {
       }
 
       const currentCash = profile.cash ?? 0;
+      const signedAt = new Date();
+      const contractEndDate = calculateContractEndDate(signedAt, duration);
 
       const { data: newContract, error: contractError } = await supabase
         .from('contracts')
@@ -381,8 +967,14 @@ const RecordLabel = () => {
           contract_type: contractType,
           duration_months: duration,
           advance_payment: advance,
+          advance_balance: advance,
+          recouped_amount: 0,
           royalty_rate: royalty,
-          status: 'active'
+          status: 'active',
+          signed_at: signedAt.toISOString(),
+          end_date: contractEndDate.toISOString(),
+          renewal_option: 'manual',
+          termination_reason: null
         })
         .select()
         .single();
@@ -481,9 +1073,12 @@ const RecordLabel = () => {
         </div>
 
         <Tabs defaultValue="available" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${canManageLabels ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="available">Available Labels</TabsTrigger>
             <TabsTrigger value="contracts">My Contracts ({playerContracts.length})</TabsTrigger>
+            {canManageLabels && (
+              <TabsTrigger value="manage">Manage Labels</TabsTrigger>
+            )}
           </TabsList>
 
           {/* Available Labels */}
@@ -588,57 +1183,144 @@ const RecordLabel = () => {
           {/* Player Contracts */}
           <TabsContent value="contracts">
             <div className="space-y-4">
-              {playerContracts.length > 0 ? playerContracts.map((contract) => (
-                <Card key={contract.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <FileText className="h-5 w-5 text-primary" />
-                          {contract.label_name}
-                        </CardTitle>
-                        <CardDescription className="capitalize">
-                          {contract.contract_type} Contract • {contract.duration_months} months
-                        </CardDescription>
+              {playerContracts.length > 0 ? playerContracts.map((contract) => {
+                const isProcessing = contractActionLoading === contract.id;
+                return (
+                  <Card key={contract.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            {contract.label_name}
+                          </CardTitle>
+                          <CardDescription className="capitalize">
+                            {contract.contract_type} Contract • {contract.duration_months} months
+                          </CardDescription>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={
+                            contract.status === 'active' ? 'text-success border-success' :
+                            contract.status === 'pending' ? 'text-warning border-warning' :
+                            contract.status === 'completed' ? 'text-primary border-primary' :
+                            'text-destructive border-destructive'
+                          }
+                        >
+                          {contract.status}
+                        </Badge>
                       </div>
-                      <Badge 
-                        variant="outline" 
-                        className={
-                          contract.status === 'active' ? 'text-success border-success' :
-                          contract.status === 'pending' ? 'text-warning border-warning' :
-                          'text-muted-foreground'
-                        }
-                      >
-                        {contract.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Advance Received</p>
-                        <p className="font-semibold text-success">${contract.advance_payment.toLocaleString()}</p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Advance Received</p>
+                          <p className="font-semibold text-success">${contract.advance_payment.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Royalty Rate</p>
+                          <p className="font-semibold text-primary">{(contract.royalty_rate * 100).toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Signed Date</p>
+                          <p className="font-semibold">{new Date(contract.signed_at).toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">End Date</p>
+                          <p className="font-semibold">
+                            {contract.end_date ? new Date(contract.end_date).toLocaleDateString() : 'Not set'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Royalty Rate</p>
-                        <p className="font-semibold text-primary">{(contract.royalty_rate * 100).toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Signed Date</p>
-                        <p className="font-semibold">{new Date(contract.signed_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
 
-                    {contract.status === 'active' && (
-                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                        <p className="text-sm text-primary font-medium">
-                          ✨ Active contract benefits: Professional recording, promotion support, and higher royalties
-                        </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Remaining Duration</p>
+                          <p className="font-semibold">{formatRemainingDuration(contract)}</p>
+                          <Progress value={getContractProgress(contract)} className="mt-2" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Renewal Preference</p>
+                          <p className="font-semibold">{getRenewalOptionLabel(contract.renewal_option)}</p>
+                          {contract.renewal_option === 'auto' && contract.status === 'active' && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              This deal will renew automatically when it reaches the end date.
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )) : (
+
+                      {contract.status === 'active' && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button
+                            size="sm"
+                            onClick={() => renewContract(contract)}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? 'Processing…' : 'Renew Contract'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => completeContract(contract)}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? 'Working…' : 'Complete Contract'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => terminateContract(contract)}
+                            disabled={isProcessing}
+                          >
+                            Terminate Contract
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleAutoRenew(contract)}
+                            disabled={isProcessing}
+                          >
+                            {contract.renewal_option === 'auto' ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
+                          </Button>
+                        </div>
+                      )}
+
+                      {contract.status === 'active' && (
+                        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                          <p className="text-sm text-primary font-medium">
+                            ✨ Active contract benefits: Professional recording, promotion support, and higher royalties
+                          </p>
+                        </div>
+                      )}
+
+                      {contract.status === 'completed' && (
+                        <div className="p-3 rounded-lg bg-success/10 border border-success/30">
+                          <p className="text-sm text-success font-medium">
+                            🎉 Contract completed! Your team celebrated the release and you received completion rewards.
+                          </p>
+                        </div>
+                      )}
+
+                      {contract.status === 'terminated' && (
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/40">
+                          <p className="text-sm text-destructive font-medium">
+                            ⚠️ Contract terminated. {contract.termination_reason || 'No reason provided.'}
+                          </p>
+                        </div>
+                      )}
+
+                      {contract.status === 'pending' && (
+                        <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
+                          <p className="text-sm text-warning font-medium">
+                            ⏳ Awaiting final approval from the label. Check back soon for updates.
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              }) : (
                 <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                   <CardContent className="text-center py-12">
                     <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -654,6 +1336,234 @@ const RecordLabel = () => {
               )}
             </div>
           </TabsContent>
+          {canManageLabels && (
+            <TabsContent value="manage">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                  <CardHeader>
+                    <CardTitle>{labelForm.id ? 'Edit Record Label' : 'Create Record Label'}</CardTitle>
+                    <CardDescription>
+                      Configure the labels that appear for players. Adjust requirements and benefits to balance progression.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleLabelFormSubmit} className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="label-name">Label Name</Label>
+                          <Input
+                            id="label-name"
+                            placeholder="Thunder Records"
+                            value={labelForm.name}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, name: event.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="label-prestige">Prestige Level</Label>
+                          <Input
+                            id="label-prestige"
+                            type="number"
+                            min={1}
+                            max={5}
+                            value={labelForm.prestige}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, prestige: Number(event.target.value) }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="label-advance">Advance Payment</Label>
+                          <Input
+                            id="label-advance"
+                            type="number"
+                            min={0}
+                            step={1000}
+                            value={labelForm.advance_payment}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, advance_payment: Number(event.target.value) }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="label-royalty">Royalty Rate</Label>
+                          <Input
+                            id="label-royalty"
+                            type="number"
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={labelForm.royalty_rate}
+                            onChange={(event) => setLabelForm((prev) => ({ ...prev, royalty_rate: Number(event.target.value) }))}
+                          />
+                          <p className="text-xs text-muted-foreground">Enter as a decimal (e.g. 0.12 for 12%).</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label>Requirements</Label>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Input
+                              placeholder="Requirement (e.g. fame)"
+                              value={requirementKey}
+                              onChange={(event) => setRequirementKey(event.target.value)}
+                              className="sm:flex-1"
+                            />
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="Value"
+                              value={requirementValue}
+                              onChange={(event) => setRequirementValue(event.target.value)}
+                              className="sm:w-32"
+                            />
+                            <Button type="button" variant="secondary" onClick={addRequirement}>
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {Object.keys(labelForm.requirements).length > 0 ? (
+                            <div className="space-y-2">
+                              {Object.entries(labelForm.requirements).map(([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="flex items-center justify-between rounded-md border border-dashed border-primary/20 bg-secondary/30 px-3 py-2"
+                                >
+                                  <span className="text-sm font-medium">
+                                    {getRequirementLabel(key)}: {getRequirementDisplayValue(key, value)}
+                                  </span>
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => removeRequirement(key)}>
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Add requirements to gate higher prestige labels.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label>Benefits</Label>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Input
+                              placeholder="Benefit (e.g. Studio access)"
+                              value={benefitInput}
+                              onChange={(event) => setBenefitInput(event.target.value)}
+                              className="sm:flex-1"
+                            />
+                            <Button type="button" variant="secondary" onClick={addBenefit}>
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {labelForm.benefits.length > 0 ? (
+                            <div className="space-y-2">
+                              {labelForm.benefits.map((benefit, index) => (
+                                <div
+                                  key={`${benefit}-${index}`}
+                                  className="flex items-center justify-between rounded-md border border-dashed border-primary/20 bg-secondary/30 px-3 py-2"
+                                >
+                                  <span className="text-sm">{benefit}</span>
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => removeBenefit(index)}>
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Share perks that make signing appealing.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="submit" disabled={savingLabel}>
+                          {savingLabel ? 'Saving...' : labelForm.id ? 'Update Label' : 'Create Label'}
+                        </Button>
+                        {labelForm.id && (
+                          <Button type="button" variant="outline" onClick={resetLabelForm}>
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+                <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                  <CardHeader>
+                    <CardTitle>Existing Labels</CardTitle>
+                    <CardDescription>Review current labels and make adjustments as your economy evolves.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {labels.length > 0 ? labels.map((label) => (
+                        <div key={label.id} className="space-y-3 rounded-lg border border-primary/20 bg-secondary/20 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-lg font-semibold">{label.name}</h3>
+                              <p className="text-sm text-muted-foreground">{label.description}</p>
+                            </div>
+                            <Badge variant="outline">Prestige {label.prestige}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-muted-foreground">Advance</p>
+                              <p className="font-medium">${label.advance_payment.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Royalty</p>
+                              <p className="font-medium">{(label.royalty_rate * 100).toFixed(1)}%</p>
+                            </div>
+                          </div>
+                          {Object.keys(label.requirements).length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(label.requirements).map(([key, value]) => (
+                                <Badge key={`${label.id}-${key}`} variant="secondary" className="text-xs">
+                                  {getRequirementLabel(key)}: {getRequirementDisplayValue(key, value)}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {label.benefits.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {label.benefits.map((benefit, index) => (
+                                <Badge key={`${label.id}-benefit-${index}`} variant="outline" className="text-xs">
+                                  {benefit}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <Button size="sm" variant="outline" onClick={() => startEditLabel(label)}>
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => void handleDeleteLabel(label.id)}
+                              disabled={deletingLabelId === label.id}
+                            >
+                              {deletingLabelId === label.id ? 'Deleting...' : 'Delete'}
+                            </Button>
+                          </div>
+                        </div>
+                      )) : (
+                        <Card className="border-dashed border-primary/20 bg-secondary/10">
+                          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                            No record labels found. Create one to populate the player marketplace.
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

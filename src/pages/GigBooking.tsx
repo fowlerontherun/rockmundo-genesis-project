@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
+import { applyEquipmentWear } from "@/utils/equipmentWear";
 
 interface Venue {
   id: string;
@@ -172,6 +173,32 @@ const GigBooking = () => {
         }
       };
 
+      const eventEndTime = new Date(futureDate);
+      eventEndTime.setHours(eventEndTime.getHours() + 2);
+
+      const { error: scheduleError } = await supabase
+        .from('schedule_events')
+        .insert({
+          user_id: user.id,
+          event_type: 'gig',
+          title: `Gig at ${venue.name}`,
+          description: `Live performance at ${venue.name}`,
+          start_time: futureDate.toISOString(),
+          end_time: eventEndTime.toISOString(),
+          location: venue.location,
+          status: 'scheduled',
+          gig_id: data.id
+        });
+
+      if (scheduleError) {
+        console.error('Error adding gig to schedule:', scheduleError);
+        toast({
+          variant: "destructive",
+          title: "Schedule update failed",
+          description: "Gig booked but the schedule couldn't be updated automatically."
+        });
+      }
+
       setPlayerGigs(prev => [...prev, newGig]);
       
       await addActivity('gig', `Booked gig at ${venue.name}`, 0);
@@ -243,14 +270,25 @@ const GigBooking = () => {
       ));
 
       await addActivity(
-        'gig', 
+        'gig',
         `Performed at ${gig.venue.name} (${attendance} attendance)`,
         actualPayment
       );
 
+      let wearNotice = '';
+
+      try {
+        const wearSummary = await applyEquipmentWear(user.id, 'gig');
+        if (wearSummary?.updates.length) {
+          wearNotice = ` Gear wear detected on ${wearSummary.updates.length} item${wearSummary.updates.length > 1 ? 's' : ''}. Check the inventory manager for repairs.`;
+        }
+      } catch (wearError) {
+        console.error('Failed to apply equipment wear after gig', wearError);
+      }
+
       toast({
         title: isSuccess ? "Great performance!" : "Performance complete",
-        description: `Earned $${actualPayment}, +${fanGain} fans, +${expGain} XP`,
+        description: `Earned $${actualPayment}, +${fanGain} fans, +${expGain} XP.${wearNotice}`,
       });
     } catch (error: any) {
       console.error('Error performing gig:', error);
