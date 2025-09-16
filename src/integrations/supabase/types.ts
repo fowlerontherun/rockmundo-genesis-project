@@ -824,6 +824,9 @@ export type Database = {
           genre: string
           id: string
           lyrics: string | null
+          master_quality: number | null
+          mix_quality: number | null
+          production_cost: number | null
           quality_score: number
           release_date: string | null
           revenue: number
@@ -839,6 +842,9 @@ export type Database = {
           genre: string
           id?: string
           lyrics?: string | null
+          master_quality?: number | null
+          mix_quality?: number | null
+          production_cost?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -854,6 +860,9 @@ export type Database = {
           genre?: string
           id?: string
           lyrics?: string | null
+          master_quality?: number | null
+          mix_quality?: number | null
+          production_cost?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
