@@ -15,16 +15,18 @@ interface InventoryItem {
   id: string;
   equipment_id: string;
   user_id: string;
-  equipped: boolean;
+  is_equipped: boolean;
+  equipped?: boolean;
   condition: number;
   created_at: string;
+  purchased_at: string;
   equipment: {
     id: string;
     name: string;
     category: string;
     rarity: string;
-    base_price: number;
-    stat_boosts: Record<string, number>;
+    price: number;
+    stat_boosts: any; // Use any to handle JSON type from Supabase
     description: string;
   };
 }
@@ -56,12 +58,12 @@ const InventoryManager = () => {
         .from('player_equipment')
         .select(`
           *,
-          equipment:equipment_id (
+          equipment:equipment_items!player_equipment_equipment_id_fkey (
             id,
             name,
             category,
             rarity,
-            base_price,
+            price,
             stat_boosts,
             description
           )
@@ -85,15 +87,6 @@ const InventoryManager = () => {
 
   const equipItem = async (item: InventoryItem) => {
     try {
-      // Unequip other items of the same category
-      const { error: unequipError } = await supabase
-        .from('player_equipment')
-        .update({ equipped: false })
-        .eq('user_id', user?.id)
-        .eq('equipment.category', item.equipment.category)
-        .neq('id', item.id);
-
-      // Equip the selected item
       const { error } = await supabase
         .from('player_equipment')
         .update({ equipped: true })
@@ -152,7 +145,7 @@ const InventoryManager = () => {
   };
 
   const repairItem = async (item: InventoryItem) => {
-    const repairCost = Math.floor(item.equipment.base_price * 0.1);
+    const repairCost = Math.floor(item.equipment.price * 0.1);
     
     if (!profile || profile.cash < repairCost) {
       toast({
@@ -195,7 +188,7 @@ const InventoryManager = () => {
 
   const sellItem = async (item: InventoryItem) => {
     const sellPrice = Math.floor(
-      item.equipment.base_price * 0.6 * (item.condition / 100)
+      item.equipment.price * 0.6 * (item.condition / 100)
     );
 
     try {
@@ -257,9 +250,9 @@ const InventoryManager = () => {
     ? inventory 
     : inventory.filter(item => item.equipment.category === selectedCategory);
 
-  const equippedItems = inventory.filter(item => item.equipped);
+  const equippedItems = inventory.filter(item => item.equipped || item.is_equipped);
   const totalValue = inventory.reduce((sum, item) => 
-    sum + Math.floor(item.equipment.base_price * (item.condition / 100)), 0
+    sum + Math.floor(item.equipment.price * (item.condition / 100)), 0
   );
 
   if (loading) {
@@ -336,7 +329,7 @@ const InventoryManager = () => {
           <TabsContent value={selectedCategory}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredInventory.map((item) => (
-                <Card key={item.id} className={`hover:shadow-lg transition-shadow ${item.equipped ? 'ring-2 ring-primary' : ''}`}>
+                <Card key={item.id} className={`hover:shadow-lg transition-shadow ${(item.equipped || item.is_equipped) ? 'ring-2 ring-primary' : ''}`}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
@@ -347,7 +340,7 @@ const InventoryManager = () => {
                         <Badge className={getRarityColor(item.equipment.rarity)}>
                           {item.equipment.rarity}
                         </Badge>
-                        {item.equipped && (
+                        {(item.equipped || item.is_equipped) && (
                           <Badge variant="outline" className="text-primary border-primary">
                             Equipped
                           </Badge>
@@ -375,11 +368,11 @@ const InventoryManager = () => {
                       <div>
                         <h4 className="text-sm font-semibold mb-2">Stat Boosts</h4>
                         <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(item.equipment.stat_boosts).map(([stat, boost]) => (
+                          {Object.entries(item.equipment.stat_boosts || {}).map(([stat, boost]) => (
                             <div key={stat} className="flex items-center gap-1 text-sm">
                               {getStatIcon(stat)}
                               <span className="capitalize">{stat}</span>
-                              <span className="text-green-600">+{boost}</span>
+                              <span className="text-green-600">+{String(boost)}</span>
                             </div>
                           ))}
                         </div>
@@ -390,14 +383,14 @@ const InventoryManager = () => {
                     <div className="text-sm">
                       <div className="flex justify-between">
                         <span>Value:</span>
-                        <span>${Math.floor(item.equipment.base_price * (item.condition / 100)).toLocaleString()}</span>
+                        <span>${Math.floor(item.equipment.price * (item.condition / 100)).toLocaleString()}</span>
                       </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex gap-2 flex-wrap">
-                      {!item.equipped ? (
-                        <Button 
+                      {!(item.equipped || item.is_equipped) ? (
+                        <Button
                           size="sm"
                           onClick={() => equipItem(item)}
                         >
@@ -420,7 +413,7 @@ const InventoryManager = () => {
                           onClick={() => repairItem(item)}
                         >
                           <Wrench className="h-4 w-4 mr-1" />
-                          Repair (${Math.floor(item.equipment.base_price * 0.1)})
+                          Repair (${Math.floor(item.equipment.price * 0.1)})
                         </Button>
                       )}
                       

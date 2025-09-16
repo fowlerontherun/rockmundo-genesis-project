@@ -28,6 +28,7 @@ interface Song {
   status: 'draft' | 'recorded' | 'released';
   created_at: string;
   user_id: string;
+  updated_at?: string;
 }
 
 const SongManager = () => {
@@ -89,7 +90,7 @@ const SongManager = () => {
 
     try {
       const qualityScore = Math.floor(
-        ((skills?.composition || 0) + (skills?.creativity || 0)) / 2 + 
+        ((skills?.songwriting || 0) + (skills?.performance || 0)) / 2 + 
         Math.random() * 20 - 10
       );
 

@@ -198,22 +198,7 @@ export type Database = {
           trend_change?: number | null
           weeks_on_chart?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "chart_entries_song_id_fkey"
-            columns: ["song_id"]
-            isOneToOne: false
-            referencedRelation: "songs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_chart_entries_song"
-            columns: ["song_id"]
-            isOneToOne: false
-            referencedRelation: "songs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       equipment_items: {
         Row: {
@@ -392,6 +377,33 @@ export type Database = {
         }
         Relationships: []
       }
+      gig_performances: {
+        Row: {
+          earnings: number | null
+          gig_id: string | null
+          id: string
+          performance_score: number | null
+          performed_at: string
+          user_id: string
+        }
+        Insert: {
+          earnings?: number | null
+          gig_id?: string | null
+          id?: string
+          performance_score?: number | null
+          performed_at?: string
+          user_id: string
+        }
+        Update: {
+          earnings?: number | null
+          gig_id?: string | null
+          id?: string
+          performance_score?: number | null
+          performed_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gigs: {
         Row: {
           attendance: number | null
@@ -525,21 +537,30 @@ export type Database = {
       }
       player_equipment: {
         Row: {
+          condition: number | null
+          created_at: string | null
           equipment_id: string
+          equipped: boolean | null
           id: string
           is_equipped: boolean | null
           purchased_at: string | null
           user_id: string
         }
         Insert: {
+          condition?: number | null
+          created_at?: string | null
           equipment_id: string
+          equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
           purchased_at?: string | null
           user_id: string
         }
         Update: {
+          condition?: number | null
+          created_at?: string | null
           equipment_id?: string
+          equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
           purchased_at?: string | null
@@ -565,36 +586,51 @@ export type Database = {
       player_skills: {
         Row: {
           bass: number | null
+          business: number | null
+          composition: number | null
           created_at: string | null
+          creativity: number | null
           drums: number | null
           guitar: number | null
           id: string
+          marketing: number | null
           performance: number | null
           songwriting: number | null
+          technical: number | null
           updated_at: string | null
           user_id: string
           vocals: number | null
         }
         Insert: {
           bass?: number | null
+          business?: number | null
+          composition?: number | null
           created_at?: string | null
+          creativity?: number | null
           drums?: number | null
           guitar?: number | null
           id?: string
+          marketing?: number | null
           performance?: number | null
           songwriting?: number | null
+          technical?: number | null
           updated_at?: string | null
           user_id: string
           vocals?: number | null
         }
         Update: {
           bass?: number | null
+          business?: number | null
+          composition?: number | null
           created_at?: string | null
+          creativity?: number | null
           drums?: number | null
           guitar?: number | null
           id?: string
+          marketing?: number | null
           performance?: number | null
           songwriting?: number | null
+          technical?: number | null
           updated_at?: string | null
           user_id?: string
           vocals?: number | null
@@ -661,6 +697,7 @@ export type Database = {
           display_name: string | null
           experience: number | null
           fame: number | null
+          fans: number | null
           id: string
           level: number | null
           updated_at: string | null
@@ -675,6 +712,7 @@ export type Database = {
           display_name?: string | null
           experience?: number | null
           fame?: number | null
+          fans?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -689,6 +727,7 @@ export type Database = {
           display_name?: string | null
           experience?: number | null
           fame?: number | null
+          fans?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -735,65 +774,51 @@ export type Database = {
       }
       songs: {
         Row: {
-          artist_id: string
-          band_id: string | null
-          created_at: string | null
-          duration: number | null
-          genre: string | null
+          chart_position: number | null
+          created_at: string
+          genre: string
           id: string
           lyrics: string | null
-          plays: number | null
-          popularity: number | null
-          quality_score: number | null
-          recording_cost: number | null
+          quality_score: number
           release_date: string | null
-          status: string | null
+          revenue: number
+          status: string
+          streams: number
           title: string
-          updated_at: string | null
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          artist_id: string
-          band_id?: string | null
-          created_at?: string | null
-          duration?: number | null
-          genre?: string | null
+          chart_position?: number | null
+          created_at?: string
+          genre: string
           id?: string
           lyrics?: string | null
-          plays?: number | null
-          popularity?: number | null
-          quality_score?: number | null
-          recording_cost?: number | null
+          quality_score?: number
           release_date?: string | null
-          status?: string | null
+          revenue?: number
+          status?: string
+          streams?: number
           title: string
-          updated_at?: string | null
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          artist_id?: string
-          band_id?: string | null
-          created_at?: string | null
-          duration?: number | null
-          genre?: string | null
+          chart_position?: number | null
+          created_at?: string
+          genre?: string
           id?: string
           lyrics?: string | null
-          plays?: number | null
-          popularity?: number | null
-          quality_score?: number | null
-          recording_cost?: number | null
+          quality_score?: number
           release_date?: string | null
-          status?: string | null
+          revenue?: number
+          status?: string
+          streams?: number
           title?: string
-          updated_at?: string | null
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "songs_band_id_fkey"
-            columns: ["band_id"]
-            isOneToOne: false
-            referencedRelation: "bands"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       streaming_platforms: {
         Row: {
