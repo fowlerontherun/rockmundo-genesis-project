@@ -10,13 +10,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { calculateLevel, getFameTitle } from "@/utils/gameBalance";
+import { calculateLevel, getFameTitle, calculateEquipmentBonus } from "@/utils/gameBalance";
 import {
-  User, 
-  TrendingUp, 
-  Star, 
-  Music, 
-  Calendar, 
+  User,
+  TrendingUp,
+  Star,
+  Music,
+  Calendar,
   DollarSign,
   Trophy,
   Users,
@@ -24,8 +24,11 @@ import {
   Target,
   BarChart3,
   Crown,
-  type LucideIcon
+  ArrowUpRight,
+  ArrowDownRight,
+  ArrowRight
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface AchievementProgress {
   total: number;
@@ -33,6 +36,12 @@ interface AchievementProgress {
   remaining: number;
   progress: number;
   lastUnlockedAt: string | null;
+}
+
+interface WeeklyMetric {
+  value: number;
+  change: number;
+  previous: number;
 }
 
 interface ExtendedStats {
@@ -45,51 +54,14 @@ interface ExtendedStats {
   equipmentValue: number;
   equipmentBonus: Record<string, number>;
   weeklyStats: {
-    streams: number;
-    revenue: number;
-    fans: number;
-    fame: number;
+    songs: WeeklyMetric;
+    gigs: WeeklyMetric;
+    fans: WeeklyMetric;
   };
   achievements: AchievementProgress;
 }
 
-type LeaderboardRow = Database["public"]["Views"]["leaderboards"]["Row"];
-
-type LeaderboardEntry = LeaderboardRow;
-
-type LeaderboardMetric = "fame" | "gigs" | "achievements";
-
-type LeaderboardField = "fame" | "total_gigs" | "total_achievements";
-
-const leaderboardMetricConfig: Record<LeaderboardMetric, {
-  label: string;
-  description: string;
-  field: LeaderboardField;
-  icon: LucideIcon;
-  format: (value: number) => string;
-}> = {
-  fame: {
-    label: "Fame",
-    description: "Overall celebrity status across Rockmundo.",
-    field: "fame",
-    icon: Crown,
-    format: (value: number) => value.toLocaleString(),
-  },
-  gigs: {
-    label: "Gigs Performed",
-    description: "Total gigs completed by each performer.",
-    field: "total_gigs",
-    icon: Calendar,
-    format: (value: number) => value.toLocaleString(),
-  },
-  achievements: {
-    label: "Achievements",
-    description: "Unlocked achievements by dedicated artists.",
-    field: "total_achievements",
-    icon: Trophy,
-    format: (value: number) => value.toLocaleString(),
-  },
-};
+type WeeklyStatsRow = Database['public']['Views']['weekly_stats']['Row'];
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
@@ -111,7 +83,8 @@ const PlayerStatistics = () => {
         achievementsResponse,
         playerAchievementsResponse,
         achievementSummaryResponse,
-        gigPerformancesResponse
+        gigPerformancesResponse,
+        weeklyStatsResponse
       ] = await Promise.all([
         supabase
           .from('songs')
@@ -143,7 +116,14 @@ const PlayerStatistics = () => {
           .from('gig_performances')
           .select('id, gig_id, performed_at, earnings, performance_score')
           .eq('user_id', user.id)
-          .order('performed_at', { ascending: false })
+          .order('performed_at', { ascending: false }),
+        supabase
+          .from('weekly_stats')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('week_start', { ascending: false })
+          .limit(1)
+          .maybeSingle()
       ]);
 
       if (songsResponse.error) throw songsResponse.error;
@@ -153,6 +133,9 @@ const PlayerStatistics = () => {
       if (gigPerformancesResponse.error) throw gigPerformancesResponse.error;
       if (achievementSummaryResponse.error && achievementSummaryResponse.status !== 406) {
         throw achievementSummaryResponse.error;
+      }
+      if (weeklyStatsResponse.error && weeklyStatsResponse.status !== 406) {
+        throw weeklyStatsResponse.error;
       }
 
       const songs = songsResponse.data || [];
@@ -164,6 +147,41 @@ const PlayerStatistics = () => {
       }[]) || [];
       const achievementSummary = achievementSummaryResponse.data;
       const gigPerformances = gigPerformancesResponse.data || [];
+      const weeklyStatsRow = weeklyStatsResponse.data as WeeklyStatsRow | null;
+
+      const buildMetric = (
+        value?: number | null,
+        change?: number | null,
+        previous?: number | null
+      ): WeeklyMetric => ({
+        value: value ?? 0,
+        change: change ?? 0,
+        previous: previous ?? 0
+      });
+
+      const weeklyStats = weeklyStatsRow
+        ? {
+            songs: buildMetric(
+              weeklyStatsRow.songs_created,
+              weeklyStatsRow.songs_change,
+              weeklyStatsRow.previous_songs
+            ),
+            gigs: buildMetric(
+              weeklyStatsRow.gigs_performed,
+              weeklyStatsRow.gigs_change,
+              weeklyStatsRow.previous_gigs
+            ),
+            fans: buildMetric(
+              weeklyStatsRow.fan_change,
+              weeklyStatsRow.fans_change,
+              weeklyStatsRow.previous_fans
+            )
+          }
+        : {
+            songs: buildMetric(),
+            gigs: buildMetric(),
+            fans: buildMetric()
+          };
 
       // Calculate stats
       const totalSongs = songs.length;
@@ -202,15 +220,6 @@ const PlayerStatistics = () => {
         ? Math.min(100, Math.round((earnedAchievements / totalAchievements) * 100))
         : 0;
 
-      // Mock weekly stats (in real implementation, this would be calculated from historical data)
-      const profileFans = (profile as { fans?: number | null })?.fans ?? 0;
-      const weeklyStats = {
-        streams: Math.floor(totalStreams * 0.1),
-        revenue: Math.floor(totalRevenue * 0.1),
-        fans: Math.floor(profileFans * 0.05),
-        fame: Math.floor((profile?.fame || 0) * 0.02)
-      };
-
       setExtendedStats({
         totalSongs,
         releasedSongs,
@@ -238,7 +247,7 @@ const PlayerStatistics = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, profile]);
+  }, [user]);
 
   const fetchLeaderboard = useCallback(async () => {
     if (!user) return;
@@ -339,6 +348,38 @@ const PlayerStatistics = () => {
   );
   const playerAvatarLabel = (profile.display_name || profile.username || 'P').slice(0, 2).toUpperCase();
   const MetricIcon = metricConfig.icon;
+
+  const weeklyMetricsConfig: Array<{
+    key: 'songs' | 'gigs' | 'fans';
+    title: string;
+    icon: LucideIcon;
+    description: string;
+    valueClass: string;
+    positivePrefix?: boolean;
+  }> = [
+    {
+      key: 'songs',
+      title: 'Songs Created',
+      icon: Music,
+      description: 'New tracks completed this week',
+      valueClass: 'text-blue-600'
+    },
+    {
+      key: 'gigs',
+      title: 'Gigs Performed',
+      icon: Calendar,
+      description: 'Shows played for your fans',
+      valueClass: 'text-purple-600'
+    },
+    {
+      key: 'fans',
+      title: 'Fans Gained',
+      icon: Users,
+      description: 'Net fan growth across all activities',
+      valueClass: 'text-green-600',
+      positivePrefix: true
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -609,31 +650,43 @@ const PlayerStatistics = () => {
                 <CardDescription>Your recent activity and growth</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {extendedStats?.weeklyStats.streams.toLocaleString() || 0}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Streams This Week</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      ${extendedStats?.weeklyStats.revenue.toFixed(2) || '0.00'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Revenue This Week</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      +{extendedStats?.weeklyStats.fans.toLocaleString() || 0}
-                    </div>
-                    <div className="text-sm text-muted-foreground">New Fans</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-600">
-                      +{extendedStats?.weeklyStats.fame.toLocaleString() || 0}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Fame Gained</div>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {weeklyMetricsConfig.map(({ key, title, icon: Icon, description, valueClass, positivePrefix }) => {
+                    const metric = extendedStats?.weeklyStats[key] ?? { value: 0, change: 0, previous: 0 };
+                    const { value, change, previous } = metric;
+                    const formattedValue = positivePrefix
+                      ? value > 0
+                        ? `+${value.toLocaleString()}`
+                        : value.toLocaleString()
+                      : value.toLocaleString();
+                    const ChangeIcon = change > 0 ? ArrowUpRight : change < 0 ? ArrowDownRight : ArrowRight;
+                    const changeColor =
+                      change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-muted-foreground';
+                    const formattedChange = change > 0 ? `+${change.toLocaleString()}` : change.toLocaleString();
+                    const comparisonText =
+                      previous === 0
+                        ? 'No activity last week'
+                        : `vs ${previous.toLocaleString()} last week`;
+
+                    return (
+                      <div
+                        key={key}
+                        className="rounded-lg border border-primary/20 bg-muted/30 p-4 text-center shadow-sm"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <Icon className="h-6 w-6 text-primary" />
+                          <span className={`text-2xl font-bold ${valueClass}`}>{formattedValue}</span>
+                        </div>
+                        <p className="mt-1 text-sm font-medium text-muted-foreground">{title}</p>
+                        <div className="mt-3 flex items-center justify-center gap-2 text-sm">
+                          <ChangeIcon className={`h-4 w-4 ${changeColor}`} />
+                          <span className={`${changeColor} font-semibold`}>{formattedChange}</span>
+                          <span className="text-muted-foreground">{comparisonText}</span>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">{description}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
