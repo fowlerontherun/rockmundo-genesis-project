@@ -41,18 +41,19 @@ interface RecordLabel {
 
 interface Contract {
   id: string;
+  label_id: string | null;
   label_name: string;
   contract_type: 'demo' | 'single' | 'album' | 'exclusive';
   duration_months: number;
   advance_payment: number;
   royalty_rate: number;
-  signed_date: string;
+  signed_at: string;
   status: 'pending' | 'active' | 'completed' | 'terminated';
 }
 
 const RecordLabel = () => {
   const { user } = useAuth();
-  const { profile, skills } = useGameData();
+  const { profile, skills, refetch } = useGameData();
   const { toast } = useToast();
   const [labels, setLabels] = useState<RecordLabel[]>([]);
   const [playerContracts, setPlayerContracts] = useState<Contract[]>([]);
@@ -112,7 +113,7 @@ const RecordLabel = () => {
       ];
 
       setLabels(mockLabels);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading labels:', error);
       toast({
         variant: "destructive",
@@ -128,23 +129,34 @@ const RecordLabel = () => {
     if (!user) return;
 
     try {
-      // Mock contracts data (in a real app, these would be in the database)
-      const mockContracts: Contract[] = [
-        {
-          id: '1',
-          label_name: 'Indie Underground Records',
-          contract_type: 'single',
-          duration_months: 12,
-          advance_payment: 5000,
-          royalty_rate: 0.15,
-          signed_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'active'
-        }
-      ];
+      const { data, error } = await supabase
+        .from('contracts')
+        .select(
+          'id, label_id, label_name, contract_type, duration_months, advance_payment, royalty_rate, signed_at, status'
+        )
+        .eq('user_id', user.id)
+        .order('signed_at', { ascending: false });
 
-      setPlayerContracts(mockContracts);
-    } catch (error: any) {
+      if (error) throw error;
+
+      const parsedContracts: Contract[] = (data ?? []).map((contract) => ({
+        id: contract.id,
+        label_id: contract.label_id,
+        label_name: contract.label_name,
+        contract_type: contract.contract_type as Contract['contract_type'],
+        duration_months: contract.duration_months,
+        advance_payment: contract.advance_payment ?? 0,
+        royalty_rate: typeof contract.royalty_rate === 'string'
+          ? parseFloat(contract.royalty_rate)
+          : contract.royalty_rate ?? 0,
+        signed_at: contract.signed_at ?? new Date().toISOString(),
+        status: (contract.status as Contract['status']) ?? 'active'
+      }));
+
+      setPlayerContracts(parsedContracts);
+    } catch (error) {
       console.error('Error loading contracts:', error);
+      setPlayerContracts([]);
     }
   };
 
@@ -198,14 +210,38 @@ const RecordLabel = () => {
           return;
       }
 
-      // Update player cash with advance payment
-      await supabase
+      const currentCash = profile.cash ?? 0;
+
+      const { data: newContract, error: contractError } = await supabase
+        .from('contracts')
+        .insert({
+          user_id: user.id,
+          label_id: label.id,
+          label_name: label.name,
+          contract_type: contractType,
+          duration_months: duration,
+          advance_payment: advance,
+          royalty_rate: royalty,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (contractError) throw contractError;
+
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update({ cash: profile.cash + advance })
+        .update({ cash: currentCash + advance })
         .eq('user_id', user.id);
 
-      // Add activity
-      await supabase
+      if (profileError) {
+        if (newContract?.id) {
+          await supabase.from('contracts').delete().eq('id', newContract.id);
+        }
+        throw profileError;
+      }
+
+      const { error: activityError } = await supabase
         .from('activity_feed')
         .insert({
           user_id: user.id,
@@ -214,15 +250,16 @@ const RecordLabel = () => {
           earnings: advance
         });
 
+      if (activityError) throw activityError;
+
+      await loadPlayerContracts();
+      await refetch();
+
       toast({
         title: "Contract Signed!",
         description: `Welcome to ${label.name}! You received $${advance.toLocaleString()} advance payment.`
       });
-
-      // In a real app, you'd save the contract to the database
-      // For now, just refresh the data
-      loadPlayerContracts();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error signing contract:', error);
       toast({
         variant: "destructive",
@@ -433,7 +470,7 @@ const RecordLabel = () => {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Signed Date</p>
-                        <p className="font-semibold">{new Date(contract.signed_date).toLocaleDateString()}</p>
+                        <p className="font-semibold">{new Date(contract.signed_at).toLocaleDateString()}</p>
                       </div>
                     </div>
 
