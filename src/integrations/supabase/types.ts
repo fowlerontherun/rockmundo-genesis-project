@@ -1287,6 +1287,7 @@ export type Database = {
       songs: {
         Row: {
           chart_position: number | null
+          co_writers: string[]
           created_at: string
           genre: string
           id: string
@@ -1298,6 +1299,7 @@ export type Database = {
           release_date: string | null
           marketing_budget: number | null
           revenue: number
+          split_percentages: number[]
           status: string
           streams: number
           title: string
@@ -1306,6 +1308,7 @@ export type Database = {
         }
         Insert: {
           chart_position?: number | null
+          co_writers?: string[]
           created_at?: string
           genre: string
           id?: string
@@ -1317,6 +1320,7 @@ export type Database = {
           release_date?: string | null
           marketing_budget?: number | null
           revenue?: number
+          split_percentages?: number[]
           status?: string
           streams?: number
           title: string
@@ -1325,6 +1329,7 @@ export type Database = {
         }
         Update: {
           chart_position?: number | null
+          co_writers?: string[]
           created_at?: string
           genre?: string
           id?: string
@@ -1336,6 +1341,7 @@ export type Database = {
           release_date?: string | null
           marketing_budget?: number | null
           revenue?: number
+          split_percentages?: number[]
           status?: string
           streams?: number
           title?: string

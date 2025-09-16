@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { applyRoyaltyRecoupment } from "@/utils/contracts";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
-import type { Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 interface Song {
   id: string;
@@ -32,6 +32,8 @@ interface Song {
   created_at: string;
   user_id: string;
   updated_at?: string;
+  co_writers: string[];
+  split_percentages: number[];
 }
 
 interface StreamingAccountRecord {
@@ -59,6 +61,46 @@ interface StreamingStatsBreakdownEntry {
   streams: number;
   revenue: number;
   revenuePerPlay: number;
+}
+
+interface CollaboratorShare {
+  id: string;
+  name: string;
+  percentage: number;
+  streams: number;
+  revenue: number;
+  isOwner: boolean;
+}
+
+interface CollaboratorInputRow {
+  collaborator: string;
+  percentage: string;
+}
+
+interface SongGrowthRecord {
+  id: string;
+  song_id: string;
+  user_id: string;
+  streams_added: number;
+  revenue_added: number;
+  recorded_at: string;
+  title: string;
+}
+
+interface GrowthSummaryEntry {
+  songId: string;
+  title: string;
+  streams: number;
+  revenue: number;
+  shares: CollaboratorShare[];
+}
+
+interface GrowthSummary {
+  totals: {
+    streams: number;
+    revenue: number;
+  };
+  bySong: GrowthSummaryEntry[];
 }
 
 const DEFAULT_REVENUE_PER_PLAY = 0.003;
@@ -122,18 +164,195 @@ const buildInitialStreamingBreakdown = (
   });
 };
 
-const parseIsoDate = (value?: string | null): Date | null => {
-  if (!value) {
-    return null;
-  }
+type SongRow = Database["public"]["Tables"]["songs"]["Row"];
 
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+type SongGrowthHistoryRow = {
+  id?: string | null;
+  song_id?: string | null;
+  user_id?: string | null;
+  streams_added?: number | null;
+  revenue_added?: number | null;
+  recorded_at?: string | null;
+  songs?: { title?: string | null } | null;
 };
 
-const formatDateTimeLocal = (date: Date) => {
-  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return adjusted.toISOString().slice(0, 16);
+const toNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizeSongRecord = (record: SongRow): Song => ({
+  id: record.id,
+  title: record.title,
+  genre: record.genre,
+  lyrics: record.lyrics ?? undefined,
+  quality_score: toNumber(record.quality_score, 0),
+  release_date: record.release_date ?? undefined,
+  chart_position: record.chart_position ?? undefined,
+  streams: toNumber(record.streams, 0),
+  revenue: Number(toNumber(record.revenue, 0).toFixed(2)),
+  status: (record.status as Song["status"]) ?? 'draft',
+  created_at: record.created_at,
+  user_id: record.user_id,
+  updated_at: record.updated_at ?? undefined,
+  co_writers: record.co_writers ?? [],
+  split_percentages: (record.split_percentages ?? []).map((value) => toNumber(value, 0)),
+});
+
+const normalizeGrowthRecord = (record: SongGrowthHistoryRow): SongGrowthRecord => {
+  const fallbackId = record.id ?? `${record.song_id ?? 'song'}-${record.recorded_at ?? Date.now()}`;
+
+  return {
+    id: fallbackId,
+    song_id: record.song_id ?? '',
+    user_id: record.user_id ?? '',
+    streams_added: toNumber(record.streams_added, 0),
+    revenue_added: Number(toNumber(record.revenue_added, 0).toFixed(2)),
+    recorded_at: record.recorded_at ?? new Date().toISOString(),
+    title: record.songs?.title ?? 'Unknown Song',
+  };
+};
+
+const calculateOwnerPercentage = (song: Song) => {
+  const collaboratorTotal = song.split_percentages.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+  return Math.max(0, Number((100 - collaboratorTotal).toFixed(2)));
+};
+
+const calculateCollaboratorShares = (song: Song, ownerName: string): CollaboratorShare[] => {
+  const sanitizedEntries = song.co_writers
+    .map((writer, index) => ({
+      name: writer.trim(),
+      percentage: Number.isFinite(song.split_percentages[index]) ? Number(song.split_percentages[index]) : 0,
+    }))
+    .filter((entry) => entry.name.length > 0 && entry.percentage > 0);
+
+  const ownerPercentage = calculateOwnerPercentage(song);
+
+  let allocatedStreams = 0;
+  let allocatedRevenue = 0;
+
+  const collaboratorShares = sanitizedEntries.map((entry) => {
+    const percentage = Number(entry.percentage.toFixed(2));
+    const streamsShare = Math.floor((song.streams * percentage) / 100);
+    allocatedStreams += streamsShare;
+    const revenueShare = Number(((song.revenue * percentage) / 100).toFixed(2));
+    allocatedRevenue += revenueShare;
+
+    return {
+      id: `${song.id}-${entry.name}`,
+      name: entry.name,
+      percentage,
+      streams: streamsShare,
+      revenue: revenueShare,
+      isOwner: false,
+    } satisfies CollaboratorShare;
+  });
+
+  const ownerStreams = Math.max(song.streams - allocatedStreams, 0);
+  const ownerRevenue = Math.max(Number((song.revenue - allocatedRevenue).toFixed(2)), 0);
+
+  return [
+    {
+      id: `${song.id}-owner`,
+      name: ownerName,
+      percentage: Number(ownerPercentage.toFixed(2)),
+      streams: ownerStreams,
+      revenue: ownerRevenue,
+      isOwner: true,
+    },
+    ...collaboratorShares,
+  ];
+};
+
+const summarizeGrowth = (
+  history: SongGrowthRecord[],
+  songs: Song[],
+  windowInDays: number,
+  ownerName: string
+): GrowthSummary => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - windowInDays);
+
+  const songById = new Map(songs.map((song) => [song.id, song]));
+  const summaryMap = new Map<string, GrowthSummaryEntry>();
+
+  let totalStreams = 0;
+  let totalRevenue = 0;
+
+  history.forEach((entry) => {
+    const recordedAt = new Date(entry.recorded_at);
+    if (Number.isNaN(recordedAt.getTime()) || recordedAt < cutoff) {
+      return;
+    }
+
+    totalStreams += entry.streams_added;
+    totalRevenue += entry.revenue_added;
+
+    const song = songById.get(entry.song_id);
+    const summaryEntry = summaryMap.get(entry.song_id) ?? {
+      songId: entry.song_id,
+      title: song?.title ?? entry.title,
+      streams: 0,
+      revenue: 0,
+      shares: [] as CollaboratorShare[],
+    };
+
+    summaryEntry.streams += entry.streams_added;
+    summaryEntry.revenue = Number((summaryEntry.revenue + entry.revenue_added).toFixed(2));
+
+    const incrementalSong = song
+      ? { ...song, streams: entry.streams_added, revenue: entry.revenue_added }
+      : null;
+
+    const shares = incrementalSong
+      ? calculateCollaboratorShares(incrementalSong, ownerName)
+      : [
+          {
+            id: `${entry.song_id}-owner`,
+            name: ownerName,
+            percentage: 100,
+            streams: entry.streams_added,
+            revenue: Number(entry.revenue_added.toFixed(2)),
+            isOwner: true,
+          },
+        ];
+
+    shares.forEach((share) => {
+      const existingShare = summaryEntry.shares.find(
+        (currentShare) => currentShare.name === share.name && currentShare.isOwner === share.isOwner
+      );
+
+      if (existingShare) {
+        existingShare.streams += share.streams;
+        existingShare.revenue = Number((existingShare.revenue + share.revenue).toFixed(2));
+        existingShare.percentage = share.percentage;
+      } else {
+        summaryEntry.shares.push({ ...share });
+      }
+    });
+
+    summaryMap.set(entry.song_id, summaryEntry);
+  });
+
+  const bySong = Array.from(summaryMap.values()).map((entry) => {
+    entry.shares.sort((a, b) => {
+      if (a.isOwner === b.isOwner) {
+        return b.revenue - a.revenue;
+      }
+      return a.isOwner ? -1 : 1;
+    });
+    return entry;
+  });
+
+  bySong.sort((a, b) => b.streams - a.streams);
+
+  return {
+    totals: {
+      streams: totalStreams,
+      revenue: Number(totalRevenue.toFixed(2)),
+    },
+    bySong,
+  };
 };
 
 const SongManager = () => {
@@ -155,6 +374,9 @@ const SongManager = () => {
     marketingBudget: 0
   });
   const [growthHistory, setGrowthHistory] = useState<SongGrowthRecord[]>([]);
+  const [collaboratorSong, setCollaboratorSong] = useState<Song | null>(null);
+  const [isCollaboratorDialogOpen, setIsCollaboratorDialogOpen] = useState(false);
+  const [collaboratorsForm, setCollaboratorsForm] = useState<CollaboratorInputRow[]>([]);
 
   const releasingSongsRef = useRef<Set<string>>(new Set());
   const profileRef = useRef(profile);
@@ -170,19 +392,160 @@ const SongManager = () => {
 
   const POLL_INTERVAL = 30000;
 
+  const ownerDisplayName = profile?.stage_name?.trim() || 'You';
+
   const genres = [
     'Rock', 'Pop', 'Hip Hop', 'Jazz', 'Blues', 'Country',
     'Electronic', 'Folk', 'Reggae', 'Metal', 'Punk', 'Alternative'
   ];
 
-  const fetchSongs = useCallback(async () => {
-    if (!user?.id) {
-      setSongs([]);
-      setLoading(false);
+  const openCollaboratorDialog = (song: Song) => {
+    setCollaboratorSong(song);
+    const initialRows = song.co_writers.length
+      ? song.co_writers.map((writer, index) => ({
+          collaborator: writer,
+          percentage: String(song.split_percentages[index] ?? 0)
+        }))
+      : [{ collaborator: '', percentage: '' }];
+    setCollaboratorsForm(initialRows);
+    setIsCollaboratorDialogOpen(true);
+  };
+
+  const closeCollaboratorDialog = () => {
+    setIsCollaboratorDialogOpen(false);
+    setCollaboratorSong(null);
+    setCollaboratorsForm([]);
+  };
+
+  const updateCollaboratorRow = (index: number, field: keyof CollaboratorInputRow, value: string) => {
+    setCollaboratorsForm((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const addCollaboratorRow = () => {
+    setCollaboratorsForm((prev) => [...prev, { collaborator: '', percentage: '' }]);
+  };
+
+  const removeCollaboratorRow = (index: number) => {
+    setCollaboratorsForm((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const collaboratorPreviewSong = useMemo(() => {
+    if (!collaboratorSong) {
+      return null;
+    }
+
+    if (collaboratorsForm.length === 0) {
+      return { ...collaboratorSong, co_writers: [], split_percentages: [] };
+    }
+
+    const names = collaboratorsForm.map((row) => row.collaborator.trim());
+    const percentages = collaboratorsForm.map((row) => {
+      const numeric = Number(row.percentage);
+      return Number.isFinite(numeric) ? numeric : 0;
+    });
+
+    return { ...collaboratorSong, co_writers: names, split_percentages: percentages };
+  }, [collaboratorSong, collaboratorsForm]);
+
+  const collaboratorPreviewShares = useMemo(
+    () => (collaboratorPreviewSong ? calculateCollaboratorShares(collaboratorPreviewSong, ownerDisplayName) : []),
+    [collaboratorPreviewSong, ownerDisplayName]
+  );
+
+  const collaboratorPreviewOwnerPercentage = useMemo(
+    () => (collaboratorPreviewSong ? calculateOwnerPercentage(collaboratorPreviewSong) : 100),
+    [collaboratorPreviewSong]
+  );
+
+  const handleSaveCollaborators = async () => {
+    if (!collaboratorSong) {
       return;
     }
 
-  const createStreamingStatsRecord = useCallback(async (
+    const sanitizedEntries = collaboratorsForm
+      .map((row) => ({
+        name: row.collaborator.trim(),
+        percentage: Number(row.percentage)
+      }))
+      .filter((entry) => entry.name.length > 0 || entry.percentage > 0);
+
+    if (
+      sanitizedEntries.some(
+        (entry) => entry.name.length === 0 || Number.isNaN(entry.percentage) || entry.percentage < 0
+      )
+    ) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid split',
+        description: 'Provide a collaborator name and a valid percentage for each split.'
+      });
+      return;
+    }
+
+    const totalPercentage = sanitizedEntries.reduce((sum, entry) => sum + entry.percentage, 0);
+
+    if (totalPercentage > 100) {
+      toast({
+        variant: 'destructive',
+        title: 'Split exceeds 100%',
+        description: 'Collaborator splits cannot exceed 100% in total.'
+      });
+      return;
+    }
+
+    const names = sanitizedEntries.map((entry) => entry.name);
+    const percentages = sanitizedEntries.map((entry) => Number((Math.round(entry.percentage * 100) / 100).toFixed(2)));
+
+    try {
+      const { error } = await supabase
+        .from('songs')
+        .update({
+          co_writers: names,
+          split_percentages: percentages
+        })
+        .eq('id', collaboratorSong.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setSongs((prev) =>
+        prev.map((song) =>
+          song.id === collaboratorSong.id
+            ? { ...song, co_writers: names, split_percentages: percentages }
+            : song
+        )
+      );
+
+      setCollaboratorSong((prev) =>
+        prev ? { ...prev, co_writers: names, split_percentages: percentages } : prev
+      );
+
+      const remainingPercentage = Math.max(0, Number((100 - totalPercentage).toFixed(2)));
+
+      toast({
+        title: 'Collaborators updated',
+        description: names.length
+          ? `${ownerDisplayName} now keeps ${remainingPercentage}% of this song.`
+          : 'You now keep 100% of this song.'
+      });
+
+      closeCollaboratorDialog();
+    } catch (error) {
+      console.error('Error updating collaborators:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Update failed',
+        description: 'Could not save collaborator splits. Please try again.'
+      });
+    }
+  };
+
+  const createStreamingStatsRecord = async (
     songId: string,
     totalStreams: number
   ): Promise<StreamingStatsBreakdownEntry[]> => {
@@ -275,7 +638,13 @@ const SongManager = () => {
     }
   }, []);
 
-  const fetchSongs = async () => {
+  const fetchSongs = useCallback(async () => {
+    if (!user?.id) {
+      setSongs([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('songs')
@@ -442,13 +811,13 @@ const SongManager = () => {
   }, [user?.id]);
 
   const dailyGrowth = useMemo(
-    () => summarizeGrowth(growthHistory, songs, 1),
-    [growthHistory, songs]
+    () => summarizeGrowth(growthHistory, songs, 1, ownerDisplayName),
+    [growthHistory, songs, ownerDisplayName]
   );
 
   const weeklyGrowth = useMemo(
-    () => summarizeGrowth(growthHistory, songs, 7),
-    [growthHistory, songs]
+    () => summarizeGrowth(growthHistory, songs, 7, ownerDisplayName),
+    [growthHistory, songs, ownerDisplayName]
   );
 
   const createSong = async () => {
@@ -477,7 +846,8 @@ const SongManager = () => {
           status: 'draft',
           streams: 0,
           revenue: 0,
-          marketing_budget: 0,
+          co_writers: [],
+          split_percentages: [],
           user_id: user.id
         }])
         .select()
@@ -603,7 +973,12 @@ const SongManager = () => {
       const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8) - chartBonus);
       const releaseTimestamp = releaseDate.toISOString();
       const royaltyEarnings = Number((initialStreams * 0.01).toFixed(2));
-
+      const ownerPercentage = calculateOwnerPercentage(song);
+      const ownerRevenueShare = Number(((royaltyEarnings * ownerPercentage) / 100).toFixed(2));
+      const collaboratorShares = calculateCollaboratorShares(
+        { ...song, streams: initialStreams, revenue: royaltyEarnings },
+        ownerDisplayName
+      );
       const { error } = await supabase
         .from('songs')
         .update({
@@ -618,10 +993,7 @@ const SongManager = () => {
 
       if (error) throw error;
 
-      const breakdown = await createStreamingStatsRecord(song.id, initialStreams);
-      await enqueueStreamingSimulation(song.id, initialStreams, breakdown);
-
-      const { cashToPlayer, totalRecouped } = await applyRoyaltyRecoupment(user.id, royaltyEarnings);
+      const { cashToPlayer, totalRecouped } = await applyRoyaltyRecoupment(user.id, ownerRevenueShare);
       const fameGain = Math.floor(song.quality_score / 2);
       const updatedFame = (currentProfile.fame ?? 0) + fameGain;
       const newCashTotal = (currentProfile.cash ?? 0) - marketingBudget + cashToPlayer;
@@ -656,6 +1028,10 @@ const SongManager = () => {
       ));
 
       const royaltiesFormatted = royaltyEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const playerShareFormatted = ownerRevenueShare.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
       const recoupedFormatted = totalRecouped.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const cashAddedFormatted = cashToPlayer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const marketingFormatted = marketingBudget.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -664,15 +1040,16 @@ const SongManager = () => {
         : `"${song.title}" is now available to fans!`;
       const fameMessage = ` +${fameGain} fame.`;
       const royaltyMessage = totalRecouped > 0
-        ? ` Earned $${royaltiesFormatted} in royalties with $${recoupedFormatted} applied toward your advance. $${cashAddedFormatted} added to cash.`
-        : ` Earned $${cashAddedFormatted} in royalties added directly to your cash.`;
-      const marketingMessage = marketingBudget > 0
-        ? ` Spent $${marketingFormatted} on marketing.`
-        : '';
+        ? ` Earned $${royaltiesFormatted} overall with ${ownerDisplayName} receiving $${playerShareFormatted} (${ownerPercentage.toFixed(2)}% share). $${recoupedFormatted} applied toward your advance and $${cashAddedFormatted} added to cash.`
+        : ` Earned $${royaltiesFormatted} overall with ${ownerDisplayName} receiving $${playerShareFormatted} (${ownerPercentage.toFixed(2)}% share). $${cashAddedFormatted} added to cash.`;
+      const collaboratorSummary = collaboratorShares
+        .filter((share) => !share.isOwner)
+        .map((share) => `${share.name} ${share.percentage.toFixed(2)}%`)
+        .join(' · ');
 
       toast({
         title: "Song Released",
-        description: introMessage + fameMessage + royaltyMessage + marketingMessage
+        description: baseMessage + royaltyMessage + (collaboratorSummary ? ` Splits: ${collaboratorSummary}.` : '')
       });
     } catch (error: any) {
       console.error('Error releasing song:', error);
@@ -924,6 +1301,16 @@ const SongManager = () => {
                   <p className="text-xs text-muted-foreground">
                     +{entry.streams.toLocaleString()} streams · +${entry.revenue.toFixed(2)}
                   </p>
+                  {entry.shares.length > 1 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {entry.shares
+                        .map(
+                          (share) =>
+                            `${share.name}: +${share.streams.toLocaleString()} streams · $${share.revenue.toFixed(2)}`
+                        )
+                        .join(' • ')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1096,10 +1483,9 @@ const SongManager = () => {
         {/* Songs List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {songs.map((song) => {
-            const displayStatus = getDisplayStatus(song);
-            const releaseDate = parseIsoDate(song.release_date);
-            const isScheduled = displayStatus === 'scheduled' && releaseDate;
-            const marketingBudget = Math.max(0, Number(song.marketing_budget ?? 0));
+            const shareBreakdown = calculateCollaboratorShares(song, ownerDisplayName);
+            const hasCollaborators = song.co_writers.length > 0;
+            const ownerShareLabel = shareBreakdown[0]?.percentage ?? 100;
 
             return (
               <Card key={song.id} className="hover:shadow-lg transition-shadow">
@@ -1108,10 +1494,7 @@ const SongManager = () => {
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{song.title}</CardTitle>
                       <CardDescription>{song.genre}</CardDescription>
-                    </div>
-                    <Badge className={getStatusColor(displayStatus)}>
-                      {displayStatus}
-                    </Badge>
+
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1162,6 +1545,61 @@ const SongManager = () => {
                         <span>${song.revenue.toFixed(2)}</span>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span>Splits</span>
+                      <span>{ownerShareLabel.toFixed(2)}% yours</span>
+                    </div>
+                    <div className="space-y-1">
+                      {shareBreakdown.map((share) => (
+                        <div key={share.id} className="flex items-center justify-between text-xs">
+                          <span className={share.isOwner ? 'font-semibold' : ''}>
+                            {share.isOwner && share.name !== 'You'
+                              ? `${share.name} (You)`
+                              : share.isOwner
+                                ? 'You'
+                                : share.name}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {share.percentage.toFixed(2)}% · {share.streams.toLocaleString()} streams · ${share.revenue.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {!hasCollaborators && (
+                      <p className="text-xs text-muted-foreground">
+                        Invite co-writers to share future revenue and streaming growth.
+                      </p>
+                    )}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => openCollaboratorDialog(song)}
+                  >
+                    <Edit3 className="mr-2 h-4 w-4" />
+                    Manage Collaborators
+                  </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  {song.status === 'draft' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedSong(song);
+                        setIsRecordDialogOpen(true);
+                      }}
+                    >
+                      Record ($500)
+                    </Button>
                   )}
 
                   <div className="flex gap-2">
@@ -1194,8 +1632,17 @@ const SongManager = () => {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                </CardContent>
+                  )}
+                  
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={() => deleteSong(song.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
               </Card>
             );
           })}
@@ -1216,74 +1663,95 @@ const SongManager = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Release Song Dialog */}
-        <Dialog open={isReleaseDialogOpen} onOpenChange={setIsReleaseDialogOpen}>
-          <DialogContent>
+        <Dialog open={isCollaboratorDialogOpen} onOpenChange={(open) => (!open ? closeCollaboratorDialog() : undefined)}>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Plan Release</DialogTitle>
+              <DialogTitle>Manage Collaborators</DialogTitle>
               <DialogDescription>
-                Choose when to release "{selectedSong?.title}" and set your marketing budget.
+                Invite co-writers and adjust revenue splits for "{collaboratorSong?.title}".
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="release-date">Release Date</Label>
-                <Input
-                  id="release-date"
-                  type="datetime-local"
-                  min={formatDateTimeLocal(new Date())}
-                  value={releaseForm.releaseDate}
-                  onChange={(e) => setReleaseForm(prev => ({ ...prev, releaseDate: e.target.value }))}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Future releases will go live automatically at the scheduled time.
+              <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                <p>
+                  {ownerDisplayName} keeps{' '}
+                  <span className="font-semibold">{collaboratorPreviewOwnerPercentage.toFixed(2)}%</span>{' '}
+                  of this song.
                 </p>
+                <p>Splits must total 100% or less. Any remaining share stays with you.</p>
               </div>
-              <div>
-                <Label htmlFor="marketing-budget">Marketing Budget</Label>
-                <Input
-                  id="marketing-budget"
-                  type="number"
-                  min={0}
-                  step={50}
-                  value={releaseForm.marketingBudget}
-                  onChange={(e) => {
-                    const nextValue = Number(e.target.value);
-                    setReleaseForm(prev => ({
-                      ...prev,
-                      marketingBudget: Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0
-                    }));
-                  }}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Marketing spend is deducted when the release goes live.
-                </p>
+
+              <div className="space-y-4">
+                {collaboratorsForm.map((row, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
+                  >
+                    <div>
+                      <Label htmlFor={`collaborator-${index}`}>Collaborator</Label>
+                      <Input
+                        id={`collaborator-${index}`}
+                        value={row.collaborator}
+                        onChange={(event) => updateCollaboratorRow(index, 'collaborator', event.target.value)}
+                        placeholder="collaborator@email.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`percentage-${index}`}>Split %</Label>
+                      <Input
+                        id={`percentage-${index}`}
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={row.percentage}
+                        onChange={(event) => updateCollaboratorRow(index, 'percentage', event.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-end justify-end">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCollaboratorRow(index)}
+                        aria-label="Remove collaborator"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                <Button variant="outline" size="sm" onClick={addCollaboratorRow} className="w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" /> Add Collaborator
+                </Button>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Current Cash: ${profile?.cash?.toLocaleString() || 0}
-              </div>
-              {profile && releaseForm.marketingBudget > (profile.cash ?? 0) && (
-                <p className="text-xs text-destructive">
-                  Your budget exceeds available cash.
-                </p>
+
+              {collaboratorPreviewShares.length > 0 && (
+                <div className="rounded-md border bg-muted/40 p-3 space-y-1 text-xs">
+                  <p className="font-semibold uppercase tracking-wide text-muted-foreground">Preview distribution</p>
+                  {collaboratorPreviewShares.map((share) => (
+                    <div key={share.id} className="flex items-center justify-between">
+                      <span className={share.isOwner ? 'font-semibold' : ''}>
+                        {share.isOwner && share.name !== 'You'
+                          ? `${share.name} (You)`
+                          : share.isOwner
+                            ? 'You'
+                            : share.name}
+                      </span>
+                      <span>
+                        {share.percentage.toFixed(2)}% · {share.streams.toLocaleString()} streams · ${share.revenue.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsReleaseDialogOpen(false)}>
+              <Button variant="outline" onClick={closeCollaboratorDialog}>
                 Cancel
               </Button>
-              <Button
-                onClick={scheduleRelease}
-                disabled={
-                  !releaseForm.releaseDate ||
-                  (profile ? releaseForm.marketingBudget > (profile.cash ?? 0) : false)
-                }
-              >
-                {releaseForm.releaseDate && !Number.isNaN(new Date(releaseForm.releaseDate).getTime()) &&
-                new Date(releaseForm.releaseDate).getTime() <= Date.now()
-                  ? 'Release Now'
-                  : 'Schedule Release'}
+              <Button onClick={handleSaveCollaborators} disabled={!collaboratorSong}>
+                Save Splits
               </Button>
             </DialogFooter>
           </DialogContent>
