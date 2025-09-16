@@ -177,27 +177,77 @@ export type Database = {
           }
         ]
       }
+      band_events: {
+        Row: {
+          band_id: string
+          chemistry_change: number
+          cost: number
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          morale_change: number
+          triggered_by: string
+        }
+        Insert: {
+          band_id: string
+          chemistry_change?: number
+          cost?: number
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          morale_change?: number
+          triggered_by: string
+        }
+        Update: {
+          band_id?: string
+          chemistry_change?: number
+          cost?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          morale_change?: number
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       band_members: {
         Row: {
+          chemistry: number
           band_id: string
           id: string
           joined_at: string | null
+          morale: number
           role: string
           salary: number | null
           user_id: string
         }
         Insert: {
+          chemistry?: number
           band_id: string
           id?: string
           joined_at?: string | null
+          morale?: number
           role: string
           salary?: number | null
           user_id: string
         }
         Update: {
+          chemistry?: number
           band_id?: string
           id?: string
           joined_at?: string | null
+          morale?: number
           role?: string
           salary?: number | null
           user_id?: string
