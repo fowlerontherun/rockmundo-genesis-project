@@ -275,7 +275,16 @@ const Auth = () => {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6 space-y-2">
+        <div className="text-center mt-6 space-y-4">
+          <Alert className="bg-primary/10 border-primary/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-left">
+              <strong>Admin Access:</strong> For testing admin features, use:<br/>
+              Email: <code>admin@rockmundo.com</code><br/>
+              Password: <code>admin123</code>
+            </AlertDescription>
+          </Alert>
+          
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Guitar className="h-4 w-4" />
             <p className="text-sm font-oswald">Ready to rock the world?</p>
