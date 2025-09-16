@@ -57,11 +57,14 @@ const RecordLabel = () => {
   const [labels, setLabels] = useState<RecordLabel[]>([]);
   const [playerContracts, setPlayerContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [releasedSongCount, setReleasedSongCount] = useState(0);
+  const [bestChartPosition, setBestChartPosition] = useState<number | null>(null);
 
   useEffect(() => {
     if (user) {
       loadLabels();
       loadPlayerContracts();
+      loadPlayerCareerStats();
     }
   }, [user]);
 
@@ -148,21 +151,178 @@ const RecordLabel = () => {
     }
   };
 
+  const loadPlayerCareerStats = async () => {
+    if (!user) return;
+
+    try {
+      const { data: songsData, error: songsError } = await supabase
+        .from('songs')
+        .select('id, status, chart_position')
+        .eq('user_id', user.id);
+
+      if (songsError) throw songsError;
+
+      const songs = songsData || [];
+      const releasedSongs = songs.filter(song => song.status === 'released');
+      setReleasedSongCount(releasedSongs.length);
+
+      let bestPosition: number | null = null;
+      const releasedSongIds = releasedSongs.map(song => song.id);
+
+      if (releasedSongIds.length > 0) {
+        const { data: chartData, error: chartError } = await supabase
+          .from('chart_entries')
+          .select('rank')
+          .in('song_id', releasedSongIds)
+          .order('rank', { ascending: true })
+          .limit(1);
+
+        if (chartError) throw chartError;
+
+        if (chartData && chartData.length > 0) {
+          bestPosition = chartData[0].rank;
+        }
+      }
+
+      if (bestPosition === null) {
+        const songPositions = songs
+          .map(song => song.chart_position)
+          .filter((position): position is number => typeof position === 'number' && position > 0);
+
+        if (songPositions.length > 0) {
+          bestPosition = Math.min(...songPositions);
+        }
+      }
+
+      setBestChartPosition(bestPosition);
+    } catch (error) {
+      console.error('Error loading player career stats:', error);
+    }
+  };
+
+  const requirementLabels: Record<string, string> = {
+    fame: 'Fame',
+    songs: 'Released Songs',
+    performance: 'Performance',
+    chart_position: 'Chart Peak'
+  };
+
+  const getRequirementThresholdValue = (key: string, value: number): number => {
+    if (key === 'chart_position') {
+      return Math.max(0, 101 - value);
+    }
+    return value;
+  };
+
+  const getPlayerStatValue = (key: string): number => {
+    switch (key) {
+      case 'fame':
+        return profile?.fame ?? 0;
+      case 'songs':
+        return releasedSongCount;
+      case 'performance':
+        return skills?.performance ?? 0;
+      case 'chart_position':
+        return bestChartPosition !== null ? Math.max(0, 101 - bestChartPosition) : 0;
+      default: {
+        const profileRecord = profile as Record<string, unknown> | null;
+        if (profileRecord && typeof profileRecord[key] === 'number') {
+          return profileRecord[key] as number;
+        }
+        const skillsRecord = skills as Record<string, unknown> | null;
+        if (skillsRecord && typeof skillsRecord[key] === 'number') {
+          return skillsRecord[key] as number;
+        }
+        return 0;
+      }
+    }
+  };
+
+  const getRequirementLabel = (key: string): string => {
+    if (requirementLabels[key]) {
+      return requirementLabels[key];
+    }
+    return key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const getPlayerDisplayValue = (key: string): string => {
+    switch (key) {
+      case 'fame':
+        return (profile?.fame ?? 0).toLocaleString();
+      case 'songs':
+        return releasedSongCount.toString();
+      case 'performance':
+        return (skills?.performance ?? 0).toString();
+      case 'chart_position':
+        return bestChartPosition !== null ? `#${bestChartPosition}` : 'Uncharted';
+      default: {
+        const profileRecord = profile as Record<string, unknown> | null;
+        if (profileRecord && typeof profileRecord[key] === 'number') {
+          return (profileRecord[key] as number).toLocaleString();
+        }
+        const skillsRecord = skills as Record<string, unknown> | null;
+        if (skillsRecord && typeof skillsRecord[key] === 'number') {
+          return (skillsRecord[key] as number).toLocaleString();
+        }
+        return '0';
+      }
+    }
+  };
+
+  const getRequirementDisplayValue = (key: string, value: number): string => {
+    switch (key) {
+      case 'fame':
+        return value.toLocaleString();
+      case 'songs':
+        return value.toString();
+      case 'performance':
+        return value.toString();
+      case 'chart_position':
+        return `Top ${value}`;
+      default:
+        return value.toString();
+    }
+  };
+
+  const buildNormalizedRequirements = (requirements: Record<string, number>): Record<string, number> => {
+    return Object.fromEntries(
+      Object.entries(requirements).map(([key, value]) => [key, getRequirementThresholdValue(key, value)])
+    ) as Record<string, number>;
+  };
+
+  const buildPlayerStats = (requirements: Record<string, number>): Record<string, number> => {
+    return Object.fromEntries(
+      Object.keys(requirements).map((key) => [key, getPlayerStatValue(key)])
+    ) as Record<string, number>;
+  };
+
+  const getUnmetRequirementMessages = (requirements: Record<string, number>): string[] => {
+    const unmetMessages: string[] = [];
+
+    Object.entries(requirements).forEach(([key, value]) => {
+      if (getPlayerStatValue(key) < getRequirementThresholdValue(key, value)) {
+        unmetMessages.push(
+          `${getRequirementLabel(key)}: ${getRequirementDisplayValue(key, value)} required (you have ${getPlayerDisplayValue(key)})`
+        );
+      }
+    });
+
+    return unmetMessages;
+  };
+
   const signContract = async (label: RecordLabel, contractType: string) => {
     if (!user || !profile || !skills) return;
 
     try {
       // Check if player meets requirements
-      const playerStats = {
-        fame: profile.fame,
-        songs: 0, // TODO: Get from songs count
-        performance: skills.performance,
-        chart_position: 100 // TODO: Get from charts
-      };
-
-      const { meets, missing } = meetsRequirements(label.requirements, playerStats);
+      const normalizedRequirements = buildNormalizedRequirements(label.requirements);
+      const playerStats = buildPlayerStats(label.requirements);
+      const { meets } = meetsRequirements(normalizedRequirements, playerStats);
 
       if (!meets) {
+        const missing = getUnmetRequirementMessages(label.requirements);
         toast({
           variant: "destructive",
           title: "Requirements Not Met",
@@ -255,14 +415,9 @@ const RecordLabel = () => {
   const canSign = (label: RecordLabel) => {
     if (!profile || !skills) return false;
 
-    const playerStats = {
-      fame: profile.fame,
-      songs: 0, // TODO: Get actual song count
-      performance: skills.performance,
-      chart_position: 100 // TODO: Get actual chart position
-    };
-
-    const { meets } = meetsRequirements(label.requirements, playerStats);
+    const normalizedRequirements = buildNormalizedRequirements(label.requirements);
+    const playerStats = buildPlayerStats(label.requirements);
+    const { meets } = meetsRequirements(normalizedRequirements, playerStats);
     return meets;
   };
 
@@ -334,16 +489,16 @@ const RecordLabel = () => {
                       <h4 className="font-semibold mb-2">Requirements</h4>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {Object.entries(label.requirements).map(([req, value]) => {
-                          const playerValue = req === 'fame' ? profile?.fame || 0 :
-                                            req === 'performance' ? skills?.performance || 0 :
-                                            req === 'songs' ? 0 : // TODO: Get actual count
-                                            req === 'chart_position' ? 100 : 0; // TODO: Get actual position
-
-                          const meets = playerValue >= value;
+                          const threshold = getRequirementThresholdValue(req, value);
+                          const playerValue = getPlayerStatValue(req);
+                          const meets = playerValue >= threshold;
+                          const requirementLabel = getRequirementLabel(req);
+                          const playerDisplay = getPlayerDisplayValue(req);
+                          const requirementDisplay = getRequirementDisplayValue(req, value);
                           return (
                             <div key={req} className={`flex justify-between ${meets ? 'text-success' : 'text-muted-foreground'}`}>
-                              <span className="capitalize">{req.replace('_', ' ')}</span>
-                              <span>{playerValue}/{value} {meets ? '✓' : '✗'}</span>
+                              <span>{requirementLabel}</span>
+                              <span>{playerDisplay} / {requirementDisplay} {meets ? '✓' : '✗'}</span>
                             </div>
                           );
                         })}
