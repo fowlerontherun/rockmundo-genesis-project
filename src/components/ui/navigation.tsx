@@ -22,7 +22,9 @@ import {
   Heart,
   Play,
   Menu,
-  X
+  X,
+  MessageSquare,
+  Globe
 } from "lucide-react";
 
 const Navigation = () => {
@@ -88,6 +90,14 @@ const Navigation = () => {
         { icon: ShoppingCart, label: "Enhanced Store", path: "/equipment-enhanced" },
         { icon: Users, label: "Enhanced Fans", path: "/fans-enhanced" },
         { icon: MapPin, label: "Tour System", path: "/tours-system" },
+      ]
+    },
+    {
+      title: "Advanced Systems",
+      items: [
+        { icon: MessageSquare, label: "Live Chat", path: "/communication" },
+        { icon: Globe, label: "World Events", path: "/world" },
+        { icon: Settings, label: "Admin Panel", path: "/admin" },
       ]
     }
   ];

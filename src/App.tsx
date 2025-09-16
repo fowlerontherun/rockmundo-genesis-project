@@ -33,6 +33,9 @@ import EnhancedFanManagement from "./pages/EnhancedFanManagement";
 import AdvancedGigSystem from "./pages/AdvancedGigSystem";
 import CompetitiveCharts from "./pages/CompetitiveCharts";
 import TouringSystem from "./pages/TouringSystem";
+import AdminDashboard from "./pages/AdminDashboard";
+import RealtimeCommunication from "./pages/RealtimeCommunication";
+import WorldEnvironment from "./pages/WorldEnvironment";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +76,9 @@ function App() {
                 <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                 <Route path="charts-competitive" element={<CompetitiveCharts />} />
                 <Route path="tours-system" element={<TouringSystem />} />
+                <Route path="admin" element={<AdminDashboard />} />
+                <Route path="communication" element={<RealtimeCommunication />} />
+                <Route path="world" element={<WorldEnvironment />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
