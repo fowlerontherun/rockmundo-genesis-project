@@ -48,6 +48,7 @@ const Navigation = () => {
       items: [
         { icon: Music, label: "Music Studio", path: "/music" },
         { icon: Play, label: "Music Creation", path: "/create" },
+        { icon: Music, label: "Song Manager", path: "/songs" },
         { icon: TrendingUp, label: "Skill Training", path: "/training" },
       ]
     },
@@ -72,6 +73,7 @@ const Navigation = () => {
       title: "Business & Economy",
       items: [
         { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
+        { icon: ShoppingCart, label: "Inventory", path: "/inventory" },
         { icon: Building2, label: "Record Label", path: "/labels" },
         { icon: Play, label: "Streaming", path: "/streaming" },
       ]
@@ -97,6 +99,7 @@ const Navigation = () => {
       items: [
         { icon: MessageSquare, label: "Live Chat", path: "/communication" },
         { icon: Globe, label: "World Events", path: "/world" },
+        { icon: TrendingUp, label: "Statistics", path: "/statistics" },
         { icon: Settings, label: "Admin Panel", path: "/admin" },
       ]
     }

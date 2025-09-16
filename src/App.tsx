@@ -36,6 +36,9 @@ import TouringSystem from "./pages/TouringSystem";
 import AdminDashboard from "./pages/AdminDashboard";
 import RealtimeCommunication from "./pages/RealtimeCommunication";
 import WorldEnvironment from "./pages/WorldEnvironment";
+import SongManager from "./pages/SongManager";
+import InventoryManager from "./pages/InventoryManager";
+import PlayerStatistics from "./pages/PlayerStatistics";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +82,9 @@ function App() {
                 <Route path="admin" element={<AdminDashboard />} />
                 <Route path="communication" element={<RealtimeCommunication />} />
                 <Route path="world" element={<WorldEnvironment />} />
+                <Route path="songs" element={<SongManager />} />
+                <Route path="inventory" element={<InventoryManager />} />
+                <Route path="statistics" element={<PlayerStatistics />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
