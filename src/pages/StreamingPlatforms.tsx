@@ -44,6 +44,38 @@ interface PlayerStreamingAccount {
   platform?: StreamingPlatform;
 }
 
+interface StreamingCampaign {
+  id: string;
+  user_id: string;
+  platform: string;
+  name: string;
+  budget: number;
+  status: string;
+  playlists_targeted?: number | null;
+  new_placements?: number | null;
+  stream_increase?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+type StreamingCampaignInput = {
+  name: string;
+  platform: string;
+  budget: number;
+  status?: string;
+  playlists_targeted?: number;
+  new_placements?: number;
+  stream_increase?: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  notes?: string | null;
+};
+
+type CampaignPreset = "playlist" | "social" | "radio";
+
 const StreamingPlatforms = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -52,6 +84,7 @@ const StreamingPlatforms = () => {
   const [platforms, setPlatforms] = useState<StreamingPlatform[]>([]);
   const [playerAccounts, setPlayerAccounts] = useState<PlayerStreamingAccount[]>([]);
   const [userSongs, setUserSongs] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<StreamingCampaign[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -59,6 +92,22 @@ const StreamingPlatforms = () => {
       loadData();
     }
   }, [user]);
+
+  const loadCampaigns = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('streaming_campaigns')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    setCampaigns((data as StreamingCampaign[]) || []);
+  };
 
   const loadData = async () => {
     try {
@@ -94,6 +143,8 @@ const StreamingPlatforms = () => {
       if (songsError) throw songsError;
       setUserSongs(songsData || []);
 
+      await loadCampaigns();
+
     } catch (error: any) {
       console.error('Error loading streaming data:', error);
       toast({
@@ -104,6 +155,147 @@ const StreamingPlatforms = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const createCampaign = async (campaign: StreamingCampaignInput) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('streaming_campaigns')
+        .insert({
+          user_id: user.id,
+          platform: campaign.platform,
+          name: campaign.name,
+          budget: campaign.budget,
+          status: campaign.status ?? 'planned',
+          playlists_targeted: campaign.playlists_targeted ?? 0,
+          new_placements: campaign.new_placements ?? 0,
+          stream_increase: campaign.stream_increase ?? 0,
+          start_date: campaign.start_date ?? null,
+          end_date: campaign.end_date ?? null,
+          notes: campaign.notes ?? null,
+        });
+
+      if (error) throw error;
+
+      await loadCampaigns();
+
+      toast({
+        title: "Campaign created",
+        description: "Your streaming campaign has been created.",
+      });
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      toast({
+        variant: "destructive",
+        title: "Campaign creation failed",
+        description: "Unable to create campaign. Please try again.",
+      });
+    }
+  };
+
+  const updateCampaign = async (
+    campaignId: string,
+    updates: Partial<StreamingCampaignInput>
+  ) => {
+    if (!user) return;
+
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined)
+      ) as Partial<StreamingCampaignInput>;
+
+      if (payload.start_date !== undefined) {
+        payload.start_date = payload.start_date ?? null;
+      }
+
+      if (payload.end_date !== undefined) {
+        payload.end_date = payload.end_date ?? null;
+      }
+
+      if (payload.notes !== undefined) {
+        payload.notes = payload.notes ?? null;
+      }
+
+      const { error } = await supabase
+        .from('streaming_campaigns')
+        .update(payload)
+        .eq('id', campaignId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await loadCampaigns();
+
+      toast({
+        title: "Campaign updated",
+        description: "Your campaign changes have been saved.",
+      });
+    } catch (error) {
+      console.error('Error updating campaign:', error);
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: "Unable to update campaign. Please try again.",
+      });
+    }
+  };
+
+  const handleCreatePresetCampaign = async (preset: CampaignPreset) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Sign in required",
+        description: "You need to sign in to manage streaming campaigns.",
+      });
+      return;
+    }
+
+    const now = new Date();
+    const startDate = now.toISOString().split('T')[0];
+    const endDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+
+    const basePresets: Record<CampaignPreset, Omit<StreamingCampaignInput, 'start_date' | 'end_date'>> = {
+      playlist: {
+        name: `Playlist Push ${startDate}`,
+        platform: "Spotify",
+        budget: 2000,
+        status: "active",
+        playlists_targeted: 40,
+        new_placements: 0,
+        stream_increase: 0,
+        notes: "Quick-start playlist outreach campaign.",
+      },
+      social: {
+        name: `Social Boost ${startDate}`,
+        platform: "YouTube Music",
+        budget: 1500,
+        status: "planned",
+        playlists_targeted: 25,
+        new_placements: 0,
+        stream_increase: 0,
+        notes: "Social media amplification for your latest release.",
+      },
+      radio: {
+        name: `Radio Promotion ${startDate}`,
+        platform: "Apple Music",
+        budget: 1200,
+        status: "planned",
+        playlists_targeted: 15,
+        new_placements: 0,
+        stream_increase: 0,
+        notes: "Targeted radio-style promotion across major platforms.",
+      },
+    };
+
+    await createCampaign({
+      ...basePresets[preset],
+      start_date: startDate,
+      end_date: endDate,
+    });
   };
 
   const connectPlatform = async (platformId: string) => {
@@ -266,31 +458,6 @@ const StreamingPlatforms = () => {
       revenue: 5800,
       playlistPlacements: 42,
       trending: true
-    }
-  ];
-
-  const campaigns = [
-    {
-      id: 1,
-      name: "Playlist Push - Electric Dreams",
-      platform: "Spotify",
-      budget: 2000,
-      playlistsTargeted: 50,
-      newPlacements: 12,
-      streamIncrease: 45000,
-      status: "Active",
-      endDate: "Dec 15, 2024"
-    },
-    {
-      id: 2,
-      name: "YouTube Promotion",
-      platform: "YouTube Music",
-      budget: 1500,
-      playlistsTargeted: 30,
-      newPlacements: 8,
-      streamIncrease: 25000,
-      status: "Completed",
-      endDate: "Nov 30, 2024"
     }
   ];
 
@@ -614,57 +781,91 @@ const StreamingPlatforms = () => {
 
           <TabsContent value="campaigns" className="space-y-6">
             <div className="space-y-4">
-              {campaigns.map((campaign) => (
-                <Card key={campaign.id} className="bg-card/80 border-accent">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-cream">{campaign.name}</h3>
-                        <Badge variant="outline">{campaign.platform}</Badge>
-                        <Badge 
-                          className={campaign.status === 'Active' ? 'bg-green-500' : 'bg-blue-500'}
-                        >
-                          {campaign.status}
-                        </Badge>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-cream/60 text-sm">Budget</p>
-                        <p className="text-lg font-bold text-accent">${campaign.budget.toLocaleString()}</p>
-                        <p className="text-cream/60 text-xs">End: {campaign.endDate}</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-cream/60 text-sm">Playlist Results</p>
-                        <p className="text-lg font-bold text-accent">
-                          {campaign.newPlacements}/{campaign.playlistsTargeted}
-                        </p>
-                        <Progress 
-                          value={(campaign.newPlacements / campaign.playlistsTargeted) * 100} 
-                          className="h-2" 
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-cream/60 text-sm">Stream Increase</p>
-                        <p className="text-lg font-bold text-accent">
-                          +{campaign.streamIncrease.toLocaleString()}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="border-accent text-accent">
-                            View Details
-                          </Button>
-                          {campaign.status === 'Active' && (
-                            <Button size="sm" className="bg-accent hover:bg-accent/80 text-background">
-                              Modify
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              {campaigns.length === 0 ? (
+                <Card className="bg-card/80 border-accent">
+                  <CardContent className="py-12 text-center space-y-2">
+                    <h3 className="text-lg font-semibold text-cream">No campaigns yet</h3>
+                    <p className="text-muted-foreground text-sm">
+                      Launch a promotion to see your streaming campaigns here.
+                    </p>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                campaigns.map((campaign) => {
+                  const targeted = campaign.playlists_targeted ?? 0;
+                  const placements = campaign.new_placements ?? 0;
+                  const progress = targeted > 0 ? Math.min((placements / targeted) * 100, 100) : 0;
+                  const statusLabel = campaign.status
+                    ? campaign.status
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (char) => char.toUpperCase())
+                    : "Unknown";
+                  const isActive = campaign.status?.toLowerCase() === "active";
+                  const endDateLabel = campaign.end_date
+                    ? new Date(campaign.end_date).toLocaleDateString()
+                    : "No end date";
+                  const targetedDisplay = targeted > 0 ? targeted : '—';
+
+                  return (
+                    <Card key={campaign.id} className="bg-card/80 border-accent">
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-cream">{campaign.name}</h3>
+                            <Badge variant="outline">{campaign.platform}</Badge>
+                            <Badge className={isActive ? "bg-green-500" : "bg-blue-500"}>
+                              {statusLabel}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-cream/60 text-sm">Budget</p>
+                            <p className="text-lg font-bold text-accent">
+                              ${Number(campaign.budget ?? 0).toLocaleString()}
+                            </p>
+                            <p className="text-cream/60 text-xs">End: {endDateLabel}</p>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-cream/60 text-sm">Playlist Results</p>
+                            <p className="text-lg font-bold text-accent">
+                              {placements}/{targetedDisplay}
+                            </p>
+                            <Progress value={progress} className="h-2" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-cream/60 text-sm">Stream Increase</p>
+                            <p className="text-lg font-bold text-accent">
+                              +{Number(campaign.stream_increase ?? 0).toLocaleString()}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-accent text-accent"
+                              >
+                                View Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-accent hover:bg-accent/80 text-background"
+                                onClick={() =>
+                                  updateCampaign(campaign.id, {
+                                    status: isActive ? "completed" : "active",
+                                  })
+                                }
+                              >
+                                {isActive ? "Mark Complete" : "Reactivate"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
 
             <Card className="bg-card/80 border-accent">
@@ -674,13 +875,22 @@ const StreamingPlatforms = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button className="bg-accent hover:bg-accent/80 text-background">
+                  <Button
+                    className="bg-accent hover:bg-accent/80 text-background"
+                    onClick={() => handleCreatePresetCampaign("playlist")}
+                  >
                     Playlist Push Campaign
                   </Button>
-                  <Button className="bg-accent hover:bg-accent/80 text-background">
+                  <Button
+                    className="bg-accent hover:bg-accent/80 text-background"
+                    onClick={() => handleCreatePresetCampaign("social")}
+                  >
                     Social Media Boost
                   </Button>
-                  <Button className="bg-accent hover:bg-accent/80 text-background">
+                  <Button
+                    className="bg-accent hover:bg-accent/80 text-background"
+                    onClick={() => handleCreatePresetCampaign("radio")}
+                  >
                     Radio Promotion
                   </Button>
                 </div>
