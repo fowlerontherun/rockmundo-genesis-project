@@ -1,20 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   Heart, 
-  MessageCircle, 
-  Share2, 
+  MessageCircle,
+  Share2,
   TrendingUp,
   Instagram,
   Twitter,
   Music,
   Send,
-  ThumbsUp
+  ThumbsUp,
+  Clock,
+  Trash2,
+  Upload,
+  Image as ImageIcon,
+  Video as VideoIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +39,10 @@ interface SocialPost {
   shares: number;
   fan_growth: number;
   created_at: string;
+  media_url?: string | null;
+  media_path?: string | null;
+  media_type?: "image" | "video" | null;
+  scheduled_for?: string | null;
 }
 
 interface FanDemographics {
@@ -58,8 +70,15 @@ const FanManagement = () => {
   const [postContent, setPostContent] = useState("");
   const [fanStats, setFanStats] = useState<FanDemographics | null>(null);
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
+  const [scheduledPosts, setScheduledPosts] = useState<SocialPost[]>([]);
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
+  const [activeTab, setActiveTab] = useState<"published" | "scheduled">("published");
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -86,20 +105,224 @@ const FanManagement = () => {
   };
 
   const loadSocialPosts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('social_posts')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+    if (!user) return;
 
-      if (error) throw error;
-      setSocialPosts(data || []);
+    try {
+      const nowIso = new Date().toISOString();
+      const [publishedResult, scheduledResult] = await Promise.all([
+        supabase
+          .from('social_posts')
+          .select('*')
+          .eq('user_id', user.id)
+          .or(`scheduled_for.is.null,scheduled_for.lte.${nowIso}`)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('social_posts')
+          .select('*')
+          .eq('user_id', user.id)
+          .gt('scheduled_for', nowIso)
+          .order('scheduled_for', { ascending: true })
+      ]);
+
+      if (publishedResult.error) throw publishedResult.error;
+      if (scheduledResult.error) throw scheduledResult.error;
+
+      let publishedData = publishedResult.data || [];
+      const now = new Date();
+
+      const duePosts = publishedData.filter(
+        (post) => post.scheduled_for && new Date(post.scheduled_for) <= now
+      );
+
+      if (duePosts.length > 0) {
+        const duePostIds = duePosts.map((post) => post.id);
+        const { error: finalizeError } = await supabase
+          .from('social_posts')
+          .update({ scheduled_for: null })
+          .in('id', duePostIds);
+
+        if (finalizeError) {
+          console.error('Error finalizing scheduled posts:', finalizeError);
+        } else {
+          await applyScheduledPostEffects(duePosts, 'Scheduled social post published');
+          publishedData = publishedData.map((post) =>
+            duePostIds.includes(post.id) ? { ...post, scheduled_for: null } : post
+          );
+        }
+      }
+
+      setSocialPosts(publishedData);
+      setScheduledPosts(scheduledResult.data || []);
     } catch (error: any) {
       console.error('Error loading social posts:', error);
     }
   };
+
+  const formatDateTimeLocal = (date: Date) => {
+    const pad = (value: number) => value.toString().padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const clearMediaSelection = () => {
+    setMediaFile(null);
+    setMediaPreview(null);
+    setMediaType(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleMediaChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      clearMediaSelection();
+      return;
+    }
+
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+
+    if (!isImage && !isVideo) {
+      toast({
+        variant: "destructive",
+        title: "Unsupported file",
+        description: "Please upload an image or video file.",
+      });
+      event.target.value = "";
+      clearMediaSelection();
+      return;
+    }
+
+    setMediaFile(file);
+    setMediaType(isVideo ? "video" : "image");
+    setMediaPreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveMedia = () => {
+    clearMediaSelection();
+  };
+
+  const handleDeleteScheduledPost = async (post: SocialPost) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('social_posts')
+        .delete()
+        .eq('id', post.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      if (post.media_path) {
+        const { error: removeError } = await supabase.storage
+          .from('social-posts')
+          .remove([post.media_path]);
+
+        if (removeError) {
+          console.error('Error removing media from storage:', removeError);
+        }
+      }
+
+      await loadSocialPosts();
+      toast({
+        title: "Scheduled post removed",
+        description: "The scheduled post has been deleted.",
+      });
+    } catch (error: any) {
+      console.error('Error removing scheduled post:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to remove the scheduled post.",
+      });
+    }
+  };
+
+  const applyScheduledPostEffects = async (posts: SocialPost[], activityMessage: string) => {
+    if (!posts.length || !user) return;
+
+    const totalFanGrowth = posts.reduce((sum, post) => sum + (post.fan_growth || 0), 0);
+
+    if (totalFanGrowth !== 0) {
+      let currentFanData = fanStats;
+
+      if (!currentFanData) {
+        const { data } = await supabase
+          .from('fan_demographics')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        currentFanData = data as FanDemographics | null;
+      }
+
+      if (currentFanData) {
+        await supabase
+          .from('fan_demographics')
+          .update({
+            total_fans: (currentFanData.total_fans ?? 0) + totalFanGrowth,
+            weekly_growth: (currentFanData.weekly_growth ?? 0) + totalFanGrowth,
+          })
+          .eq('user_id', user.id);
+      }
+    }
+
+    const totalFameGain = posts.reduce((sum, post) => sum + Math.round((post.fan_growth || 0) / 2), 0);
+
+    if (totalFameGain !== 0 && profile) {
+      await updateProfile({
+        fame: (profile.fame || 0) + totalFameGain,
+      });
+    }
+
+    await addActivity('social', activityMessage, 0);
+    await loadFanData();
+  };
+
+  const handlePublishScheduledPost = async (post: SocialPost) => {
+    if (!user) return;
+
+    try {
+      const nowIso = new Date().toISOString();
+      const { error } = await supabase
+        .from('social_posts')
+        .update({
+          scheduled_for: null,
+          created_at: nowIso,
+          timestamp: nowIso,
+        })
+        .eq('id', post.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await applyScheduledPostEffects([post], 'Scheduled social post published');
+      await loadSocialPosts();
+
+      toast({
+        title: "Post published",
+        description: "Your scheduled post is now live.",
+      });
+    } catch (error: any) {
+      console.error('Error publishing scheduled post:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to publish the scheduled post.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (mediaPreview) {
+        URL.revokeObjectURL(mediaPreview);
+      }
+    };
+  }, [mediaPreview]);
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -110,20 +333,59 @@ const FanManagement = () => {
     }
   };
 
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case "positive": return "border-l-success";
-      case "request": return "border-l-warning";
-      case "question": return "border-l-primary";
-      default: return "border-l-muted";
-    }
-  };
-
   const handlePost = async () => {
     if (!postContent.trim() || !user || !profile) return;
 
+    const scheduledDate = scheduledTime ? new Date(scheduledTime) : null;
+
+    if (scheduledDate && Number.isNaN(scheduledDate.getTime())) {
+      toast({
+        variant: "destructive",
+        title: "Invalid schedule",
+        description: "Please select a valid date and time.",
+      });
+      return;
+    }
+
+    if (scheduledDate && scheduledDate.getTime() <= Date.now()) {
+      toast({
+        variant: "destructive",
+        title: "Schedule in the future",
+        description: "Choose a time in the future for your scheduled post.",
+      });
+      return;
+    }
+
     setPosting(true);
+    let uploadedMediaPath: string | null = null;
     try {
+      const scheduledIso = scheduledDate ? scheduledDate.toISOString() : null;
+
+      let mediaUrl: string | null = null;
+      let mediaTypeValue: "image" | "video" | null = null;
+
+      if (mediaFile) {
+        const uniqueSegment =
+          typeof globalThis.crypto !== "undefined" && typeof globalThis.crypto.randomUUID === "function"
+            ? globalThis.crypto.randomUUID()
+            : Math.random().toString(36).slice(2);
+        uploadedMediaPath = `${user.id}/${uniqueSegment}-${mediaFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('social-posts')
+          .upload(uploadedMediaPath, mediaFile, {
+            contentType: mediaFile.type,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicData } = supabase.storage
+          .from('social-posts')
+          .getPublicUrl(uploadedMediaPath);
+
+        mediaUrl = publicData.publicUrl;
+        mediaTypeValue = mediaType ?? (mediaFile.type.startsWith('video/') ? 'video' : 'image');
+      }
+
       // Calculate engagement metrics based on player fame and random factors
       const baseLikes = Math.round((profile.fame || 0) * (0.1 + Math.random() * 0.2));
       const baseComments = Math.round(baseLikes * (0.1 + Math.random() * 0.15));
@@ -132,51 +394,84 @@ const FanManagement = () => {
 
       // Create posts for multiple platforms
       const platforms = ['instagram', 'twitter', 'youtube'];
-      const postPromises = platforms.map(platform => 
-        supabase
-          .from('social_posts')
-          .insert({
-            user_id: user.id,
-            platform,
-            content: postContent,
-            likes: Math.round(baseLikes * (0.8 + Math.random() * 0.4)),
-            comments: Math.round(baseComments * (0.8 + Math.random() * 0.4)),
-            shares: Math.round(baseShares * (0.8 + Math.random() * 0.4)),
-            fan_growth: Math.round(fanGrowth * (0.8 + Math.random() * 0.4))
-          })
-      );
+      const postPromises = platforms.map(platform => {
+        const payload: Record<string, any> = {
+          user_id: user.id,
+          platform,
+          content: postContent,
+          likes: Math.round(baseLikes * (0.8 + Math.random() * 0.4)),
+          comments: Math.round(baseComments * (0.8 + Math.random() * 0.4)),
+          shares: Math.round(baseShares * (0.8 + Math.random() * 0.4)),
+          fan_growth: Math.round(fanGrowth * (0.8 + Math.random() * 0.4))
+        };
 
-      await Promise.all(postPromises);
+        if (mediaUrl) {
+          payload.media_url = mediaUrl;
+          payload.media_path = uploadedMediaPath;
+          payload.media_type = mediaTypeValue;
+        }
 
-      // Update fan demographics
-      if (fanStats) {
-        const totalFanGrowth = fanGrowth * platforms.length;
-        await supabase
-          .from('fan_demographics')
-          .update({
-            total_fans: fanStats.total_fans + totalFanGrowth,
-            weekly_growth: fanStats.weekly_growth + totalFanGrowth
-          })
-          .eq('user_id', user.id);
-      }
+        if (scheduledIso) {
+          payload.scheduled_for = scheduledIso;
+          payload.created_at = scheduledIso;
+          payload.timestamp = scheduledIso;
+        }
 
-      // Update player fame
-      const fameGain = Math.round(fanGrowth / 2);
-      await updateProfile({ 
-        fame: (profile.fame || 0) + fameGain 
+        return supabase.from('social_posts').insert(payload);
       });
 
-      await addActivity('social', `Posted on social media`, 0);
+      const results = await Promise.all(postPromises);
+      const insertError = results.find(result => result.error)?.error;
+
+      if (insertError) throw insertError;
+
+      if (!scheduledIso) {
+        if (fanStats) {
+          const totalFanGrowth = fanGrowth * platforms.length;
+          await supabase
+            .from('fan_demographics')
+            .update({
+              total_fans: fanStats.total_fans + totalFanGrowth,
+              weekly_growth: fanStats.weekly_growth + totalFanGrowth
+            })
+            .eq('user_id', user.id);
+        }
+
+        const fameGain = Math.round(fanGrowth / 2);
+        await updateProfile({
+          fame: (profile.fame || 0) + fameGain
+        });
+
+        await addActivity('social', `Posted on social media`, 0);
+        toast({
+          title: "Post Shared!",
+          description: `Your message gained ${fanGrowth * platforms.length} new fans across all platforms!`,
+        });
+      } else {
+        await addActivity('social', `Scheduled a social post`, 0);
+        toast({
+          title: "Post Scheduled!",
+          description: `Your update will publish on ${scheduledDate!.toLocaleString()}.`,
+        });
+        setActiveTab('scheduled');
+      }
+
       await loadFanData();
       await loadSocialPosts();
 
-      toast({
-        title: "Post Shared!",
-        description: `Your message gained ${fanGrowth * platforms.length} new fans across all platforms!`,
-      });
       setPostContent("");
+      setScheduledTime("");
+      clearMediaSelection();
     } catch (error: any) {
       console.error('Error posting:', error);
+      if (uploadedMediaPath) {
+        const { error: removeError } = await supabase.storage
+          .from('social-posts')
+          .remove([uploadedMediaPath]);
+        if (removeError) {
+          console.error('Error cleaning up uploaded media:', removeError);
+        }
+      }
       toast({
         variant: "destructive",
         title: "Error",
@@ -186,6 +481,9 @@ const FanManagement = () => {
       setPosting(false);
     }
   };
+
+  const scheduleMinimumValue = formatDateTimeLocal(new Date());
+  const isScheduling = Boolean(scheduledTime);
 
   if (loading) {
     return (
@@ -274,27 +572,83 @@ const FanManagement = () => {
                 onChange={(e) => setPostContent(e.target.value)}
                 className="min-h-[100px] bg-secondary/50"
               />
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="post-media" className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Attach media
+                  </Label>
+                  <Input
+                    id="post-media"
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*,video/*"
+                    onChange={handleMediaChange}
+                    disabled={posting}
+                    className="bg-secondary/50"
+                  />
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    <Upload className="h-3 w-3" />
+                    Images or videos help boost engagement.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="post-schedule" className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Schedule (optional)
+                  </Label>
+                  <Input
+                    id="post-schedule"
+                    type="datetime-local"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    min={scheduleMinimumValue}
+                    disabled={posting}
+                    className="bg-secondary/50"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to publish immediately.
+                  </p>
+                </div>
+              </div>
+              {mediaPreview && (
+                <div className="rounded-md border border-border/40 overflow-hidden">
+                  {mediaType === 'video' ? (
+                    <video src={mediaPreview} controls className="w-full max-h-72 object-cover" />
+                  ) : (
+                    <img src={mediaPreview} alt="Selected media preview" className="w-full max-h-72 object-cover" />
+                  )}
+                  <div className="flex items-center justify-between px-3 py-2 bg-secondary/60">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {mediaType === 'video' ? <VideoIcon className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}
+                      <span>Attached media preview</span>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={handleRemoveMedia} disabled={posting}>
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                   {fanStats && [
                     { platform: 'instagram', followers: fanStats.platform_instagram },
                     { platform: 'twitter', followers: fanStats.platform_twitter },
                     { platform: 'youtube', followers: fanStats.platform_youtube },
                     { platform: 'tiktok', followers: fanStats.platform_tiktok }
                   ].map(({ platform, followers }) => (
-                    <div key={platform} className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <div key={platform} className="flex items-center gap-1">
                       {getPlatformIcon(platform)}
                       {followers || 0}
                     </div>
                   ))}
                 </div>
-                <Button 
+                <Button
                   onClick={handlePost}
                   disabled={!postContent.trim() || posting}
                   className="bg-gradient-primary hover:shadow-electric"
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {posting ? "Posting..." : "Post"}
+                  {posting ? (isScheduling ? "Scheduling..." : "Posting...") : (isScheduling ? "Schedule Post" : "Post")}
                 </Button>
               </div>
             </CardContent>
@@ -305,42 +659,119 @@ const FanManagement = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-accent" />
-                Recent Posts
+                Social Posts
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {socialPosts.length === 0 ? (
-                <div className="text-center py-8">
-                  <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No posts yet. Share something with your fans!</p>
-                </div>
-              ) : (
-                socialPosts.map((post) => (
-                  <div key={post.id} className="p-3 rounded-lg bg-secondary/30 space-y-2">
-                    <div className="flex items-center gap-2">
-                      {getPlatformIcon(post.platform)}
-                      <Badge variant="outline" className="text-xs">
-                        {post.platform}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {new Date(post.created_at).toLocaleDateString()}
-                      </span>
+            <CardContent>
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => setActiveTab(value as "published" | "scheduled")}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="published">Published</TabsTrigger>
+                  <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+                </TabsList>
+                <TabsContent value="published" className="space-y-4">
+                  {socialPosts.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No posts yet. Share something with your fans!</p>
                     </div>
-                    <p className="text-sm">{post.content}</p>
-                    <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <ThumbsUp className="h-3 w-3" /> {post.likes}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle className="h-3 w-3" /> {post.comments}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Share2 className="h-3 w-3" /> {post.shares}
-                      </span>
+                  ) : (
+                    socialPosts.map((post) => (
+                      <div key={post.id} className="p-3 rounded-lg bg-secondary/30 space-y-3 border border-border/30">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {getPlatformIcon(post.platform)}
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {post.platform}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {new Date(post.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+                        {post.media_url && (
+                          <div className="rounded-md overflow-hidden border border-border/40">
+                            {post.media_type === 'video' ? (
+                              <video src={post.media_url} controls className="w-full max-h-64 object-cover" />
+                            ) : (
+                              <img src={post.media_url} alt="Social post media" className="w-full max-h-64 object-cover" />
+                            )}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <ThumbsUp className="h-3 w-3" /> {post.likes}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-3 w-3" /> {post.comments}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Share2 className="h-3 w-3" /> {post.shares}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+                <TabsContent value="scheduled" className="space-y-4">
+                  {scheduledPosts.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No upcoming posts. Schedule content to plan ahead.</p>
                     </div>
-                  </div>
-                ))
-              )}
+                  ) : (
+                    scheduledPosts.map((post) => (
+                      <div key={post.id} className="p-3 rounded-lg bg-secondary/30 space-y-3 border border-border/30">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {getPlatformIcon(post.platform)}
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {post.platform}
+                          </Badge>
+                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> Scheduled
+                          </Badge>
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            Publishes {post.scheduled_for ? new Date(post.scheduled_for).toLocaleString() : "soon"}
+                          </span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+                        {post.media_url && (
+                          <div className="rounded-md overflow-hidden border border-border/40">
+                            {post.media_type === 'video' ? (
+                              <video src={post.media_url} controls className="w-full max-h-64 object-cover" />
+                            ) : (
+                              <img src={post.media_url} alt="Scheduled post media" className="w-full max-h-64 object-cover" />
+                            )}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                          <div className="flex gap-4">
+                            <span className="flex items-center gap-1">
+                              <ThumbsUp className="h-3 w-3" /> {post.likes}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle className="h-3 w-3" /> {post.comments}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Share2 className="h-3 w-3" /> {post.shares}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handlePublishScheduledPost(post)}>
+                              <Send className="h-3 w-3 mr-2" /> Publish now
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDeleteScheduledPost(post)}>
+                              <Trash2 className="h-3 w-3 mr-2" /> Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
