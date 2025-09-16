@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { 
-  Settings, 
-  Users, 
+import {
+  Users,
   BarChart3, 
   AlertTriangle, 
   Shield, 
@@ -42,17 +41,17 @@ interface SystemMetrics {
 interface FeatureFlag {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   enabled: boolean;
-  category: string;
+  category: string | null;
 }
 
 interface UserAction {
   id: string;
-  user_id: string;
-  username: string;
+  user_id: string | null;
+  username: string | null;
   action: string;
-  details: string;
+  details: string | null;
   timestamp: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
 }
@@ -65,6 +64,44 @@ interface SeasonConfig {
   multipliers: Record<string, number>;
   active: boolean;
 }
+
+interface NewSeasonForm {
+  name: string;
+  start_date: string;
+  end_date: string;
+  multipliers: string;
+  active: boolean;
+}
+
+const USER_ACTIONS_PAGE_SIZE = 10;
+
+type FeatureFlagRecord = {
+  id: string;
+  name: string;
+  description?: string | null;
+  enabled?: boolean | null;
+  category?: string | null;
+};
+
+type SeasonRecord = {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  multipliers?: Record<string, number> | null;
+  active?: boolean | null;
+};
+
+type UserActionRecord = {
+  id: string;
+  user_id?: string | null;
+  username?: string | null;
+  action?: string | null;
+  details?: string | null;
+  timestamp?: string | null;
+  created_at?: string | null;
+  severity?: string | null;
+};
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -83,18 +120,126 @@ const AdminDashboard: React.FC = () => {
     end_date: '',
     rewards: ''
   });
+  const [userActionsPage, setUserActionsPage] = useState(0);
+  const [userActionsTotal, setUserActionsTotal] = useState(0);
+  const [userActionsLoading, setUserActionsLoading] = useState(false);
+  const [userActionsHasMore, setUserActionsHasMore] = useState(false);
+  const [userActionsTotalKnown, setUserActionsTotalKnown] = useState(true);
+  const [updatingFlagId, setUpdatingFlagId] = useState<string | null>(null);
+  const [banningUser, setBanningUser] = useState(false);
+  const [creatingSeason, setCreatingSeason] = useState(false);
+  const [newSeason, setNewSeason] = useState<NewSeasonForm>({
+    name: '',
+    start_date: '',
+    end_date: '',
+    multipliers: '',
+    active: false
+  });
 
   useEffect(() => {
     if (user) {
       loadAdminData();
     }
-  }, [user]);
+  }, [user, loadAdminData]);
 
-  const loadAdminData = async () => {
+  const fetchFeatureFlags = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('feature_flags')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    const normalizedFlags = (data ?? []).map((flag: FeatureFlagRecord) => ({
+      id: flag.id,
+      name: flag.name,
+      description: flag.description ?? null,
+      enabled: Boolean(flag.enabled),
+      category: flag.category ?? null
+    })) as FeatureFlag[];
+
+    setFeatureFlags(normalizedFlags);
+  }, []);
+
+  const fetchSeasons = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('seasons')
+      .select('*')
+      .order('start_date', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    const normalizedSeasons = (data ?? []).map((season: SeasonRecord) => ({
+      id: season.id,
+      name: season.name,
+      start_date: season.start_date,
+      end_date: season.end_date,
+      multipliers: (season.multipliers as Record<string, number> | null) ?? {},
+      active: Boolean(season.active)
+    })) as SeasonConfig[];
+
+    setSeasons(normalizedSeasons);
+  }, []);
+
+  const fetchUserActions = useCallback(async (page: number) => {
+    setUserActionsLoading(true);
+
+    try {
+      const from = page * USER_ACTIONS_PAGE_SIZE;
+      const to = from + USER_ACTIONS_PAGE_SIZE - 1;
+
+      let result = await supabase
+        .from('user_actions')
+        .select('*', { count: 'exact' })
+        .order('timestamp', { ascending: false })
+        .range(from, to);
+
+      if (result.error && result.error.message?.toLowerCase().includes('timestamp')) {
+        result = await supabase
+          .from('user_actions')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(from, to);
+      }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      const normalizedActions = (result.data ?? []).map((action: UserActionRecord) => ({
+        id: action.id,
+        user_id: action.user_id ?? null,
+        username: action.username ?? null,
+        action: action.action ?? '',
+        details: action.details ?? null,
+        timestamp: action.timestamp ?? action.created_at ?? new Date().toISOString(),
+        severity: (action.severity ?? 'low') as UserAction['severity'],
+      })) as UserAction[];
+
+      const totalCount = result.count ?? normalizedActions.length;
+
+      setUserActions(normalizedActions);
+      setUserActionsTotal(totalCount);
+      setUserActionsTotalKnown(result.count !== null && result.count !== undefined);
+      setUserActionsHasMore(
+        result.count === null
+          ? normalizedActions.length === USER_ACTIONS_PAGE_SIZE
+          : (page + 1) * USER_ACTIONS_PAGE_SIZE < totalCount
+      );
+      setUserActionsPage(page);
+    } finally {
+      setUserActionsLoading(false);
+    }
+  }, []);
+
+  const loadAdminData = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Load system metrics (simulated)
+
       const metricsData: SystemMetrics = {
         total_users: 1247,
         active_users_24h: 156,
@@ -107,63 +252,57 @@ const AdminDashboard: React.FC = () => {
       };
       setMetrics(metricsData);
 
-      // Load feature flags (simulated)
-      const flagsData: FeatureFlag[] = [
-        { id: '1', name: 'realtime_chat', description: 'Enable real-time chat system', enabled: true, category: 'communication' },
-        { id: '2', name: 'tournaments', description: 'Enable tournament system', enabled: true, category: 'competition' },
-        { id: '3', name: 'advanced_gigs', description: 'Enable advanced gig mechanics', enabled: false, category: 'performance' },
-        { id: '4', name: 'weather_system', description: 'Enable weather effects on tours', enabled: true, category: 'world' },
-        { id: '5', name: 'mod_support', description: 'Enable user-generated content', enabled: false, category: 'modding' },
-        { id: '6', name: 'live_events', description: 'Enable live events system', enabled: true, category: 'events' },
+      const tasks = [
+        { name: 'feature flags', promise: fetchFeatureFlags() },
+        { name: 'seasons', promise: fetchSeasons() },
+        { name: 'user actions', promise: fetchUserActions(0) }
       ];
-      setFeatureFlags(flagsData);
 
-      // Load user actions (simulated)
-      const actionsData: UserAction[] = [
-        { id: '1', user_id: '1', username: 'RockStar99', action: 'Large Cash Transfer', details: 'Transferred $50,000 to unknown user', timestamp: new Date().toISOString(), severity: 'high' },
-        { id: '2', user_id: '2', username: 'BandLeader', action: 'Multiple Account Creation', details: 'Created 5 accounts in 10 minutes', timestamp: new Date(Date.now() - 3600000).toISOString(), severity: 'medium' },
-        { id: '3', user_id: '3', username: 'MusicMaker', action: 'Inappropriate Content', details: 'Posted offensive lyrics in song', timestamp: new Date(Date.now() - 7200000).toISOString(), severity: 'critical' },
-      ];
-      setUserActions(actionsData);
+      const results = await Promise.allSettled(tasks.map(task => task.promise));
+      const failures = results
+        .map((result, index) => ({ result, name: tasks[index].name }))
+        .filter((item): item is { result: PromiseRejectedResult; name: string } => item.result.status === 'rejected');
 
-      // Load seasons (simulated)
-      const seasonsData: SeasonConfig[] = [
-        { 
-          id: '1', 
-          name: 'Summer Festival Season', 
-          start_date: '2024-06-01', 
-          end_date: '2024-08-31', 
-          multipliers: { gig_payment: 1.5, fan_gain: 1.3, experience: 1.2 },
-          active: true 
-        },
-        { 
-          id: '2', 
-          name: 'Holiday Special', 
-          start_date: '2024-12-01', 
-          end_date: '2024-12-31', 
-          multipliers: { merch_sales: 2.0, streaming_revenue: 1.4 },
-          active: false 
-        }
-      ];
-      setSeasons(seasonsData);
-
-    } catch (error: any) {
+      if (failures.length > 0) {
+        failures.forEach((failure) => {
+          console.error(`Error loading ${failure.name}:`, failure.result.reason);
+        });
+        const failureNames = failures.map((failure) => failure.name).join(', ');
+        toast.error(`Failed to load ${failureNames}. Please try again.`);
+      }
+    } catch (error) {
       console.error('Error loading admin data:', error);
       toast.error('Failed to load admin data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchFeatureFlags, fetchSeasons, fetchUserActions]);
 
-  const toggleFeatureFlag = async (flagId: string) => {
+  const toggleFeatureFlag = async (flagId: string, newValue: boolean) => {
+    const previousFlags = featureFlags.map(flag => ({ ...flag }));
+
+    setUpdatingFlagId(flagId);
+    setFeatureFlags(prev => prev.map(flag =>
+      flag.id === flagId ? { ...flag, enabled: newValue } : flag
+    ));
+
     try {
-      setFeatureFlags(prev => prev.map(flag => 
-        flag.id === flagId ? { ...flag, enabled: !flag.enabled } : flag
-      ));
+      const { error } = await supabase
+        .from('feature_flags')
+        .update({ enabled: newValue })
+        .eq('id', flagId);
+
+      if (error) {
+        throw error;
+      }
+
       toast.success('Feature flag updated successfully');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating feature flag:', error);
+      setFeatureFlags(previousFlags);
       toast.error('Failed to update feature flag');
+    } finally {
+      setUpdatingFlagId(null);
     }
   };
 
@@ -174,13 +313,38 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      // In a real implementation, this would call a ban API
+      setBanningUser(true);
+
+      const payload = {
+        user_id: selectedUser,
+        username: selectedUser,
+        action: 'User Ban',
+        details: banReason,
+        timestamp: new Date().toISOString(),
+        severity: 'critical' as const
+      };
+
+      const { error } = await supabase.from('user_actions').insert([payload]);
+
+      if (error) {
+        throw error;
+      }
+
       toast.success(`User ${selectedUser} has been banned: ${banReason}`);
       setSelectedUser('');
       setBanReason('');
-    } catch (error: any) {
+
+      try {
+        await fetchUserActions(0);
+      } catch (refreshError) {
+        console.error('Error refreshing user actions:', refreshError);
+        toast.error('User banned, but failed to refresh activity log');
+      }
+    } catch (error) {
       console.error('Error banning user:', error);
       toast.error('Failed to ban user');
+    } finally {
+      setBanningUser(false);
     }
   };
 
@@ -201,11 +365,131 @@ const AdminDashboard: React.FC = () => {
         end_date: '',
         rewards: ''
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating event:', error);
       toast.error('Failed to create event');
     }
   };
+
+  const createSeason = async () => {
+    if (!newSeason.name || !newSeason.start_date || !newSeason.end_date) {
+      toast.error('Please provide a name, start date, and end date for the season');
+      return;
+    }
+
+    let multipliersPayload: Record<string, number> = {};
+
+    if (newSeason.multipliers.trim()) {
+      try {
+        const parsed = JSON.parse(newSeason.multipliers);
+
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          throw new Error('Multipliers must be a JSON object');
+        }
+
+        multipliersPayload = Object.entries(parsed).reduce((acc, [key, value]) => {
+          const numericValue = Number(value);
+
+          if (!Number.isFinite(numericValue)) {
+            throw new Error('Multipliers must contain numeric values');
+          }
+
+          acc[key] = numericValue;
+          return acc;
+        }, {} as Record<string, number>);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid multipliers format';
+        toast.error(message);
+        return;
+      }
+    }
+
+    try {
+      setCreatingSeason(true);
+
+      const { error } = await supabase.from('seasons').insert([{
+        name: newSeason.name,
+        start_date: newSeason.start_date,
+        end_date: newSeason.end_date,
+        multipliers: multipliersPayload,
+        active: newSeason.active
+      }]);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Season "${newSeason.name}" created successfully`);
+      setNewSeason({
+        name: '',
+        start_date: '',
+        end_date: '',
+        multipliers: '',
+        active: false
+      });
+
+      try {
+        await fetchSeasons();
+      } catch (refreshError) {
+        console.error('Error refreshing seasons:', refreshError);
+        toast.error('Season created, but failed to refresh list');
+      }
+    } catch (error) {
+      console.error('Error creating season:', error);
+      toast.error('Failed to create season');
+    } finally {
+      setCreatingSeason(false);
+    }
+  };
+
+  const handleUserActionsPageChange = async (direction: 'previous' | 'next') => {
+    const totalPages = userActionsTotal > 0
+      ? Math.ceil(userActionsTotal / USER_ACTIONS_PAGE_SIZE)
+      : userActionsHasMore
+        ? userActionsPage + 2
+        : 1;
+
+    if (direction === 'previous') {
+      if (userActionsPage === 0) {
+        return;
+      }
+
+      const previousPage = userActionsPage - 1;
+
+      try {
+        await fetchUserActions(previousPage);
+      } catch (error) {
+        console.error('Error loading user actions:', error);
+        toast.error('Failed to load user actions');
+      }
+
+      return;
+    }
+
+    if (!userActionsHasMore && userActionsPage + 1 >= totalPages) {
+      return;
+    }
+
+    const nextPage = userActionsPage + 1;
+
+    try {
+      await fetchUserActions(nextPage);
+    } catch (error) {
+      console.error('Error loading user actions:', error);
+      toast.error('Failed to load user actions');
+    }
+  };
+
+  const totalUserActionsPages = userActionsTotal > 0
+    ? Math.max(1, Math.ceil(userActionsTotal / USER_ACTIONS_PAGE_SIZE))
+    : userActionsHasMore
+      ? userActionsPage + 2
+      : Math.max(1, userActionsPage + (userActions.length > 0 ? 1 : 0));
+
+  const userActionsStart = userActions.length === 0 ? 0 : userActionsPage * USER_ACTIONS_PAGE_SIZE + 1;
+  const userActionsEnd = userActions.length === 0 ? 0 : userActionsPage * USER_ACTIONS_PAGE_SIZE + userActions.length;
+  const canGoToPreviousPage = userActionsPage > 0;
+  const canGoToNextPage = userActionsHasMore || (userActionsTotal > 0 && userActionsPage + 1 < totalUserActionsPages);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -335,29 +619,74 @@ const AdminDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {userActions.map((action) => (
-                  <div key={action.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Badge className={getSeverityColor(action.severity)}>
-                        {action.severity.toUpperCase()}
-                      </Badge>
-                      <div>
-                        <div className="font-medium">{action.username}</div>
-                        <div className="text-sm text-muted-foreground">{action.action}</div>
-                        <div className="text-xs text-muted-foreground">{action.details}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(action.timestamp).toLocaleDateString()}
-                      </div>
-                      <Button size="sm" variant="outline">
-                        Investigate
-                      </Button>
-                    </div>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    {userActions.length === 0
+                      ? 'No actions to display'
+                      : userActionsTotalKnown
+                        ? `Showing ${userActionsStart}-${userActionsEnd} of ${userActionsTotal}`
+                        : `Showing ${userActionsStart}-${userActionsEnd}${userActionsHasMore ? '+' : ''}`}
                   </div>
-                ))}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUserActionsPageChange('previous')}
+                      disabled={userActionsLoading || !canGoToPreviousPage}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {userActionsPage + 1}
+                      {userActionsTotalKnown ? ` of ${totalUserActionsPages}` : userActionsHasMore ? ' +' : ''}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUserActionsPageChange('next')}
+                      disabled={userActionsLoading || !canGoToNextPage}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+                {userActionsLoading ? (
+                  <div className="flex justify-center py-6">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                  </div>
+                ) : userActions.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    No suspicious activity found.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {userActions.map((action) => (
+                      <div key={action.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Badge className={getSeverityColor(action.severity)}>
+                            {action.severity.toUpperCase()}
+                          </Badge>
+                          <div>
+                            <div className="font-medium">{action.username ?? 'Unknown user'}</div>
+                            <div className="text-sm text-muted-foreground">{action.action}</div>
+                            {action.details && (
+                              <div className="text-xs text-muted-foreground">{action.details}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right space-y-2">
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(action.timestamp).toLocaleString()}
+                          </div>
+                          <Button size="sm" variant="outline">
+                            Investigate
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -377,12 +706,17 @@ const AdminDashboard: React.FC = () => {
                   <div key={flag.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <div className="font-medium">{flag.name}</div>
-                      <div className="text-sm text-muted-foreground">{flag.description}</div>
-                      <Badge variant="outline" className="mt-1">{flag.category}</Badge>
+                      <div className="text-sm text-muted-foreground">
+                        {flag.description ?? 'No description provided'}
+                      </div>
+                      <Badge variant="outline" className="mt-1">
+                        {flag.category ?? 'uncategorized'}
+                      </Badge>
                     </div>
                     <Switch
                       checked={flag.enabled}
-                      onCheckedChange={() => toggleFeatureFlag(flag.id)}
+                      onCheckedChange={(checked) => toggleFeatureFlag(flag.id, checked)}
+                      disabled={updatingFlagId === flag.id}
                     />
                   </div>
                 ))}
@@ -418,10 +752,15 @@ const AdminDashboard: React.FC = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={banUser} variant="destructive" className="flex-1">
-                    Ban User
+                  <Button
+                    onClick={banUser}
+                    variant="destructive"
+                    className="flex-1"
+                    disabled={banningUser}
+                  >
+                    {banningUser ? 'Banning...' : 'Ban User'}
                   </Button>
-                  <Button variant="outline" className="flex-1">
+                  <Button variant="outline" className="flex-1" disabled={banningUser}>
                     Warn User
                   </Button>
                 </div>
@@ -536,35 +875,109 @@ const AdminDashboard: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <Database className="w-6 h-6" />
+                Create Season
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Season Name</label>
+                  <Input
+                    value={newSeason.name}
+                    onChange={(e) => setNewSeason(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Summer Festival Season"
+                  />
+                </div>
+                <div className="flex items-center gap-3 md:justify-end pt-2">
+                  <Switch
+                    id="season-active"
+                    checked={newSeason.active}
+                    onCheckedChange={(checked) => setNewSeason(prev => ({ ...prev, active: checked }))}
+                  />
+                  <label htmlFor="season-active" className="text-sm font-medium">Active</label>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Start Date</label>
+                  <Input
+                    type="date"
+                    value={newSeason.start_date}
+                    onChange={(e) => setNewSeason(prev => ({ ...prev, start_date: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">End Date</label>
+                  <Input
+                    type="date"
+                    value={newSeason.end_date}
+                    onChange={(e) => setNewSeason(prev => ({ ...prev, end_date: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Multipliers (JSON)</label>
+                <Textarea
+                  value={newSeason.multipliers}
+                  onChange={(e) => setNewSeason(prev => ({ ...prev, multipliers: e.target.value }))}
+                  placeholder='{"gig_payment": 1.5, "fan_gain": 1.3}'
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Provide key-value pairs where each value is a numeric multiplier (e.g. 1.5).
+                </p>
+              </div>
+              <Button onClick={createSeason} className="w-full" disabled={creatingSeason}>
+                {creatingSeason ? 'Creating Season...' : 'Create Season'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Globe className="w-6 h-6" />
                 Season Management
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {seasons.map((season) => (
-                  <div key={season.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-medium">{season.name}</h3>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(season.start_date).toLocaleDateString()} - {new Date(season.end_date).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <Badge variant={season.active ? "default" : "secondary"}>
-                        {season.active ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {Object.entries(season.multipliers).map(([key, value]) => (
-                        <div key={key} className="text-center p-2 bg-muted rounded">
-                          <div className="text-sm font-medium">{key.replace('_', ' ')}</div>
-                          <div className="text-lg font-bold text-primary">{value}x</div>
-                        </div>
-                      ))}
-                    </div>
+                {seasons.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    No seasons configured yet.
                   </div>
-                ))}
+                ) : (
+                  seasons.map((season) => (
+                    <div key={season.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-medium">{season.name}</h3>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(season.start_date).toLocaleDateString()} - {new Date(season.end_date).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <Badge variant={season.active ? "default" : "secondary"}>
+                          {season.active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {Object.entries(season.multipliers).length > 0 ? (
+                          Object.entries(season.multipliers).map(([key, value]) => (
+                            <div key={key} className="text-center p-2 bg-muted rounded">
+                              <div className="text-sm font-medium">{key.replace(/_/g, ' ')}</div>
+                              <div className="text-lg font-bold text-primary">{value}x</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-full text-center text-sm text-muted-foreground">
+                            No multipliers configured.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
