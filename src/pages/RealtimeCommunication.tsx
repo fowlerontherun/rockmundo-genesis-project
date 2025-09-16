@@ -64,6 +64,29 @@ type JamSessionRecord = JamSessionRow & {
   } | null;
 };
 
+type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: string | null;
+  message: string;
+  timestamp: string;
+  read: boolean;
+};
+
+type NotificationType = 'gig_invite' | 'band_request' | 'fan_milestone' | 'achievement' | 'system';
+
+type ChatMessageRow = {
+  id: string;
+  user_id: string;
+  channel: string;
+  message?: string | null;
+  content?: string | null;
+  created_at: string;
+  username?: string | null;
+  user_level?: number | null;
+  user_badge?: string | null;
+};
+
 interface JamSession {
   id: string;
   name: string;
@@ -221,9 +244,27 @@ const RealtimeCommunication: React.FC = () => {
 
   const unreadCount = notifications.filter(notification => !notification.read).length;
 
+  const appendMessage = useCallback((incoming: ChatMessage) => {
+    setMessages(prev => {
+      if (prev.some(message => message.id === incoming.id)) {
+        return prev;
+      }
+
+      const next = [...prev, incoming];
+      next.sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
-    selectedChannelRef.current = selectedChannel;
-  }, [selectedChannel]);
+    if (!user) {
+      return;
+    }
+
+    void loadJamSessions();
+  }, [user, loadJamSessions]);
 
   useEffect(() => {
     if (!user) {
@@ -232,6 +273,7 @@ const RealtimeCommunication: React.FC = () => {
       if (channelRef.current) {
         void supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+
       }
       return;
     }
@@ -501,6 +543,10 @@ const RealtimeCommunication: React.FC = () => {
       setIsLoadingSessions(false);
     }
   }, [activeJamId]);
+  const sendMessage = useCallback(async () => {
+    if (!currentMessage.trim() || !user) {
+      return;
+    }
 
   const sendMessage = useCallback(async () => {
     if (!currentMessage.trim() || !user) {
@@ -531,7 +577,6 @@ const RealtimeCommunication: React.FC = () => {
         })
         .select('*')
         .single();
-
       if (error) {
         throw error;
       }
@@ -553,7 +598,6 @@ const RealtimeCommunication: React.FC = () => {
       toast.error(errorMessage);
     }
   }, [currentMessage, profile, selectedChannel, user]);
-
   const createSession = async () => {
     if (!profile || !currentUserId) {
       toast.error('You need a player profile to create jam sessions');
