@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -229,10 +228,106 @@ const formatBookingDate = (booking: VenueBookingRow) => {
   };
 };
 
+type VenueRelationshipRow = Tables<"venue_relationships">;
+
+type VenueBaseConfig = {
+  id: number;
+  name: string;
+  capacity: number;
+  location: string;
+  relationship: number;
+  bookedShows: number;
+  revenue: number;
+  reputation: string;
+  unlocked: boolean;
+  requirements: string;
+  perks: string[];
+};
+
+type VenueCardData = VenueBaseConfig & {
+  supabaseId?: string;
+  relationshipLevel: string;
+};
+
+type VenueBookingDisplay = {
+  id: string;
+  venueName: string;
+  eventDate: string;
+  eventTime: string;
+  capacity: number;
+  soldTickets: number;
+  ticketPrice: number;
+  revenue: number;
+  status: string;
+  progress: number;
+};
+
+const BASE_VENUES: VenueBaseConfig[] = [
+  {
+    id: 1,
+    name: "The Underground",
+    capacity: 150,
+    location: "Downtown",
+    relationship: 85,
+    bookedShows: 3,
+    revenue: 12000,
+    reputation: "Rising",
+    unlocked: true,
+    requirements: "None",
+    perks: ["Intimate setting", "Great acoustics", "Loyal fanbase"]
+  },
+  {
+    id: 2,
+    name: "City Music Hall",
+    capacity: 500,
+    location: "Midtown",
+    relationship: 60,
+    bookedShows: 1,
+    revenue: 25000,
+    reputation: "Established",
+    unlocked: true,
+    requirements: "200+ fan following",
+    perks: ["Professional sound", "VIP area", "Merchandise booth"]
+  },
+  {
+    id: 3,
+    name: "Arena Stadium",
+    capacity: 15000,
+    location: "Sports District",
+    relationship: 0,
+    bookedShows: 0,
+    revenue: 0,
+    reputation: "Elite",
+    unlocked: false,
+    requirements: "50,000+ fans, Major label deal",
+    perks: ["Massive exposure", "Premium sound system", "Media coverage"]
+  },
+  {
+    id: 4,
+    name: "Festival Grounds",
+    capacity: 25000,
+    location: "City Outskirts",
+    relationship: 20,
+    bookedShows: 0,
+    revenue: 0,
+    reputation: "Legendary",
+    unlocked: false,
+    requirements: "100,000+ fans, Chart success",
+    perks: ["Festival circuit access", "International exposure", "Record deal opportunities"]
+  }
+];
+
+const deriveRelationshipLevel = (relationship: number) => {
+  if (relationship >= 80) return "Headliner";
+  if (relationship >= 60) return "Preferred";
+  if (relationship >= 40) return "Trusted";
+  if (relationship >= 20) return "Acquaintance";
+  return "Unknown";
+};
+
 const VenueManagement = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-
   const [playerReputation] = useState(75);
   const [activeTab, setActiveTab] = useState("venues");
   const [venues, setVenues] = useState<VenueRow[]>([]);
@@ -532,7 +627,6 @@ const VenueManagement = () => {
       const { error } = await supabase
         .from("venue_bookings")
         .insert(insertPayload);
-
       if (error) throw error;
 
       await loadBookings();
