@@ -240,7 +240,7 @@ const TourManager = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      const { data: newTourVenue, error } = await supabase
         .from('tour_venues')
         .insert({
           tour_id: tourId,
@@ -250,9 +250,41 @@ const TourManager = () => {
           tickets_sold: 0,
           revenue: 0,
           status: 'scheduled'
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      if (newTourVenue) {
+        const selectedTour = tours.find(tour => tour.id === tourId);
+        const selectedVenue = venues.find(venue => venue.id === venueId);
+        const eventEnd = new Date(newTourVenue.date);
+        eventEnd.setHours(eventEnd.getHours() + 3);
+
+        const { error: scheduleError } = await supabase
+          .from('schedule_events')
+          .insert({
+            user_id: user.id,
+            event_type: 'tour',
+            title: `${selectedTour?.name ?? 'Tour Show'}${selectedVenue ? ` - ${selectedVenue.name}` : ''}`,
+            description: selectedTour?.description ?? (selectedVenue ? `Tour stop at ${selectedVenue.name}` : 'Tour performance'),
+            start_time: newTourVenue.date,
+            end_time: eventEnd.toISOString(),
+            location: selectedVenue?.location ?? 'TBA',
+            status: 'scheduled',
+            tour_venue_id: newTourVenue.id
+          });
+
+        if (scheduleError) {
+          console.error('Error adding tour stop to schedule:', scheduleError);
+          toast({
+            variant: "destructive",
+            title: "Schedule update failed",
+            description: "Tour stop added but the schedule couldn't be updated automatically."
+          });
+        }
+      }
 
       toast({
         title: "Venue Added",
