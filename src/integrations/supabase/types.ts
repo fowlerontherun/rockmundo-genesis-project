@@ -1018,7 +1018,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      player_achievement_summary: {
+        Row: {
+          earned_count: number
+          last_unlocked_at: string | null
+          remaining_count: number
+          total_achievements: number
+          user_id: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +22,14 @@ import {
   Crown
 } from "lucide-react";
 
+interface AchievementProgress {
+  total: number;
+  earned: number;
+  remaining: number;
+  progress: number;
+  lastUnlockedAt: string | null;
+}
+
 interface ExtendedStats {
   totalSongs: number;
   releasedSongs: number;
@@ -37,7 +45,7 @@ interface ExtendedStats {
     fans: number;
     fame: number;
   };
-  achievements: number;
+  achievements: AchievementProgress;
 }
 
 const PlayerStatistics = () => {
@@ -46,50 +54,80 @@ const PlayerStatistics = () => {
   const [extendedStats, setExtendedStats] = useState<ExtendedStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchExtendedStats();
-    }
-  }, [user]);
+  const fetchExtendedStats = useCallback(async () => {
+    if (!user) return;
 
-  const fetchExtendedStats = async () => {
     try {
-      // Fetch songs data
-      const { data: songs } = await supabase
-        .from('songs')
-        .select('*')
-        .eq('user_id', user?.id);
+      const [
+        songsResponse,
+        equipmentResponse,
+        achievementsResponse,
+        playerAchievementsResponse,
+        achievementSummaryResponse
+      ] = await Promise.all([
+        supabase
+          .from('songs')
+          .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('player_equipment')
+          .select(`
+            *,
+            equipment:equipment_items!player_equipment_equipment_id_fkey (
+              price,
+              stat_boosts
+            )
+          `)
+          .eq('user_id', user.id),
+        supabase
+          .from('achievements')
+          .select('id'),
+        supabase
+          .from('player_achievements')
+          .select('achievement_id, unlocked_at')
+          .eq('user_id', user.id),
+        supabase
+          .from('player_achievement_summary')
+          .select('earned_count, total_achievements, remaining_count, last_unlocked_at')
+          .eq('user_id', user.id)
+          .maybeSingle()
+      ]);
 
-      // Fetch equipment data
-      const { data: equipment } = await supabase
-        .from('player_equipment')
-        .select(`
-          *,
-          equipment:equipment_items!player_equipment_equipment_id_fkey (
-            price,
-            stat_boosts
-          )
-        `)
-        .eq('user_id', user?.id);
+      if (songsResponse.error) throw songsResponse.error;
+      if (equipmentResponse.error) throw equipmentResponse.error;
+      if (achievementsResponse.error) throw achievementsResponse.error;
+      if (playerAchievementsResponse.error) throw playerAchievementsResponse.error;
+      if (achievementSummaryResponse.error && achievementSummaryResponse.status !== 406) {
+        throw achievementSummaryResponse.error;
+      }
+
+      const songs = songsResponse.data || [];
+      const equipmentItems = equipmentResponse.data || [];
+      const achievementsData = achievementsResponse.data || [];
+      const playerAchievements = (playerAchievementsResponse.data as {
+        achievement_id: string;
+        unlocked_at: string | null;
+      }[]) || [];
+      const achievementSummary = achievementSummaryResponse.data;
 
       // Mock gigs data since gig_performances table is new
-      const gigs: any[] = [];
+      const gigs: Record<string, unknown>[] = [];
 
       // Calculate stats
-      const totalSongs = songs?.length || 0;
-      const releasedSongs = songs?.filter(s => s.status === 'released').length || 0;
-      const totalStreams = songs?.reduce((sum, s) => sum + (s.streams || 0), 0) || 0;
-      const totalRevenue = songs?.reduce((sum, s) => sum + (s.revenue || 0), 0) || 0;
-      const bestChartPosition = Math.min(...(songs?.filter(s => s.chart_position).map(s => s.chart_position) || [100]));
+      const totalSongs = songs.length;
+      const releasedSongs = songs.filter(s => s.status === 'released').length;
+      const totalStreams = songs.reduce((sum, s) => sum + (s.streams || 0), 0);
+      const totalRevenue = songs.reduce((sum, s) => sum + (s.revenue || 0), 0);
+      const bestChartPosition = Math.min(...(songs.filter(s => s.chart_position).map(s => s.chart_position) || [100]));
       const totalGigs = gigs?.length || 0;
 
       // Calculate equipment value and bonuses
-      const equipmentValue = equipment?.reduce((sum, item) => {
+      const equipmentValue = equipmentItems.reduce((sum, item) => {
         const price = item.equipment?.price || 0;
         return sum + Math.floor(price * (item.condition / 100));
-      }, 0) || 0;
+      }, 0);
 
-      const equippedItems = equipment?.filter(item => item.equipped || item.is_equipped) || [];
+      const equippedItems = equipmentItems.filter(item => item.equipped || item.is_equipped);
       const equipmentBonus = equippedItems.reduce((bonus, item) => {
         const stats = item.equipment?.stat_boosts || {};
         Object.entries(stats).forEach(([stat, value]) => {
@@ -98,11 +136,26 @@ const PlayerStatistics = () => {
         return bonus;
       }, {} as Record<string, number>);
 
+      const totalAchievements = achievementSummary?.total_achievements ?? achievementsData.length;
+      const earnedAchievements = achievementSummary?.earned_count ?? playerAchievements.length;
+      const remainingAchievements = achievementSummary?.remaining_count ?? Math.max(totalAchievements - earnedAchievements, 0);
+      const lastUnlockedAt = achievementSummary?.last_unlocked_at ?? (playerAchievements.length
+        ? playerAchievements.reduce<string | null>((latest, current) => {
+            if (!current.unlocked_at) return latest;
+            if (!latest) return current.unlocked_at;
+            return new Date(current.unlocked_at) > new Date(latest) ? current.unlocked_at : latest;
+          }, null)
+        : null);
+      const achievementProgress = totalAchievements > 0
+        ? Math.min(100, Math.round((earnedAchievements / totalAchievements) * 100))
+        : 0;
+
       // Mock weekly stats (in real implementation, this would be calculated from historical data)
+      const profileFans = (profile as { fans?: number | null })?.fans ?? 0;
       const weeklyStats = {
         streams: Math.floor(totalStreams * 0.1),
         revenue: Math.floor(totalRevenue * 0.1),
-        fans: Math.floor(((profile?.fans as any) || 0) * 0.05),
+        fans: Math.floor(profileFans * 0.05),
         fame: Math.floor((profile?.fame || 0) * 0.02)
       };
 
@@ -116,14 +169,54 @@ const PlayerStatistics = () => {
         equipmentValue,
         equipmentBonus,
         weeklyStats,
-        achievements: 0 // TODO: Implement achievements system
+        achievements: {
+          total: totalAchievements,
+          earned: earnedAchievements,
+          remaining: remainingAchievements,
+          progress: achievementProgress,
+          lastUnlockedAt
+        }
       });
-    } catch (error: any) {
-      console.error('Error fetching extended stats:', error);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error fetching extended stats:', error.message);
+      } else {
+        console.error('Error fetching extended stats:', error);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, profile]);
+
+  useEffect(() => {
+    if (user) {
+      fetchExtendedStats();
+    }
+  }, [user, fetchExtendedStats]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`player-achievements-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'player_achievements',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchExtendedStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchExtendedStats]);
 
   if (loading || !profile || !skills) {
     return (
@@ -229,6 +322,47 @@ const PlayerStatistics = () => {
                     <div className="text-sm text-muted-foreground">Best Chart Position</div>
                   </div>
                 </div>
+                {extendedStats && (
+                  <div className="mt-6 rounded-lg border border-dashed border-primary/30 bg-muted/40 p-4">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-3">
+                        <Trophy className="h-8 w-8 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Achievement Progress</p>
+                          <p className="text-xl font-semibold">
+                            {extendedStats.achievements.earned} / {extendedStats.achievements.total} unlocked
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <Badge variant="secondary" className="uppercase tracking-wide">
+                          {extendedStats.achievements.remaining} remaining
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          {extendedStats.achievements.total > 0
+                            ? `${extendedStats.achievements.progress}% complete`
+                            : 'No achievements available yet'}
+                        </span>
+                      </div>
+                    </div>
+                    <Progress value={extendedStats.achievements.progress} className="mt-4 h-2" />
+                    <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
+                      <span>{extendedStats.achievements.earned} earned</span>
+                      <span>{extendedStats.achievements.remaining} to go</span>
+                    </div>
+                    {extendedStats.achievements.lastUnlockedAt ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Last unlocked on {new Date(extendedStats.achievements.lastUnlockedAt).toLocaleString()}
+                      </p>
+                    ) : (
+                      extendedStats.achievements.total > 0 && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Unlock your first achievement to start your streak!
+                        </p>
+                      )
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
