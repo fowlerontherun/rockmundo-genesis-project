@@ -1272,6 +1272,7 @@ export type Database = {
           production_cost: number | null
           quality_score: number
           release_date: string | null
+          marketing_budget: number | null
           revenue: number
           status: string
           streams: number
@@ -1290,6 +1291,7 @@ export type Database = {
           production_cost?: number | null
           quality_score?: number
           release_date?: string | null
+          marketing_budget?: number | null
           revenue?: number
           status?: string
           streams?: number
@@ -1308,6 +1310,7 @@ export type Database = {
           production_cost?: number | null
           quality_score?: number
           release_date?: string | null
+          marketing_budget?: number | null
           revenue?: number
           status?: string
           streams?: number

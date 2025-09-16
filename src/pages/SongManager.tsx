@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ interface Song {
   lyrics?: string;
   quality_score: number;
   release_date?: string;
+  marketing_budget?: number | null;
   chart_position?: number;
   streams: number;
   revenue: number;
@@ -121,6 +122,20 @@ const buildInitialStreamingBreakdown = (
   });
 };
 
+const parseIsoDate = (value?: string | null): Date | null => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatDateTimeLocal = (date: Date) => {
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return adjusted.toISOString().slice(0, 16);
+};
+
 const SongManager = () => {
   const { user } = useAuth();
   const { profile, skills, updateProfile } = useGameData();
@@ -134,7 +149,24 @@ const SongManager = () => {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRecordDialogOpen, setIsRecordDialogOpen] = useState(false);
+  const [isReleaseDialogOpen, setIsReleaseDialogOpen] = useState(false);
+  const [releaseForm, setReleaseForm] = useState({
+    releaseDate: formatDateTimeLocal(new Date()),
+    marketingBudget: 0
+  });
   const [growthHistory, setGrowthHistory] = useState<SongGrowthRecord[]>([]);
+
+  const releasingSongsRef = useRef<Set<string>>(new Set());
+  const profileRef = useRef(profile);
+  const songsRef = useRef<Song[]>([]);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  useEffect(() => {
+    songsRef.current = songs;
+  }, [songs]);
 
   const POLL_INTERVAL = 30000;
 
@@ -150,7 +182,7 @@ const SongManager = () => {
       return;
     }
 
-  const createStreamingStatsRecord = async (
+  const createStreamingStatsRecord = useCallback(async (
     songId: string,
     totalStreams: number
   ): Promise<StreamingStatsBreakdownEntry[]> => {
@@ -213,9 +245,9 @@ const SongManager = () => {
       console.error('Error creating streaming stats:', statsError);
       return [];
     }
-  };
+  }, [user]);
 
-  const enqueueStreamingSimulation = async (
+  const enqueueStreamingSimulation = useCallback(async (
     songId: string,
     totalStreams: number,
     breakdown: StreamingStatsBreakdownEntry[]
@@ -241,7 +273,7 @@ const SongManager = () => {
       // The edge function may not be configured in all environments.
       console.info('Streaming simulation job not queued:', jobError);
     }
-  };
+  }, []);
 
   const fetchSongs = async () => {
     try {
@@ -445,6 +477,7 @@ const SongManager = () => {
           status: 'draft',
           streams: 0,
           revenue: 0,
+          marketing_budget: 0,
           user_id: user.id
         }])
         .select()
@@ -518,61 +551,106 @@ const SongManager = () => {
     }
   };
 
-  const releaseSong = async (song: Song) => {
+  const releaseSong = useCallback(async (song: Song, triggeredAutomatically = false) => {
     if (song.status !== 'recorded') {
-      toast({
-        variant: "destructive",
-        title: "Cannot Release",
-        description: "Song must be recorded before release!"
-      });
+      if (!triggeredAutomatically) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Release",
+          description: "Song must be recorded before release!"
+        });
+      }
       return;
     }
 
-    if (!user || !profile) {
-      toast({
-        variant: "destructive",
-        title: "Missing Player Data",
-        description: "Please sign in and load your profile before releasing a song."
-      });
+    const releaseDate = parseIsoDate(song.release_date) ?? new Date();
+    const now = new Date();
+    if (releaseDate.getTime() > now.getTime()) {
+      if (!triggeredAutomatically) {
+        toast({
+          title: "Release Scheduled",
+          description: `"${song.title}" will be released on ${releaseDate.toLocaleString()}.`
+        });
+      }
       return;
     }
+
+    const currentProfile = profileRef.current;
+    if (!user || !currentProfile) {
+      if (!triggeredAutomatically) {
+        toast({
+          variant: "destructive",
+          title: "Missing Player Data",
+          description: "Please sign in and load your profile before releasing a song."
+        });
+      }
+      return;
+    }
+
+    if (releasingSongsRef.current.has(song.id)) {
+      return;
+    }
+
+    releasingSongsRef.current.add(song.id);
 
     try {
-      const initialStreams = Math.floor(song.quality_score * (profile?.fans || 0) / 100);
-      const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8));
+      const marketingBudget = Math.max(0, Number(song.marketing_budget ?? 0));
+      const fans = Number(currentProfile.fans ?? 0);
+      const baseStreams = Math.floor(song.quality_score * fans / 100);
+      const marketingBoost = Math.floor(marketingBudget * 20);
+      const initialStreams = Math.max(baseStreams + marketingBoost, 0);
+      const chartBonus = Math.floor(marketingBudget / 500);
+      const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8) - chartBonus);
+      const releaseTimestamp = releaseDate.toISOString();
       const royaltyEarnings = Number((initialStreams * 0.01).toFixed(2));
+
       const { error } = await supabase
         .from('songs')
         .update({
           status: 'released',
-          release_date: new Date().toISOString(),
+          release_date: releaseTimestamp,
           streams: initialStreams,
           chart_position: chartPosition,
-          revenue: royaltyEarnings
+          revenue: royaltyEarnings,
+          marketing_budget: marketingBudget
         })
         .eq('id', song.id);
 
       if (error) throw error;
 
+      const breakdown = await createStreamingStatsRecord(song.id, initialStreams);
+      await enqueueStreamingSimulation(song.id, initialStreams, breakdown);
+
       const { cashToPlayer, totalRecouped } = await applyRoyaltyRecoupment(user.id, royaltyEarnings);
       const fameGain = Math.floor(song.quality_score / 2);
-      const updatedFame = (profile.fame ?? 0) + fameGain;
-      const newCashTotal = (profile.cash ?? 0) + cashToPlayer;
+      const updatedFame = (currentProfile.fame ?? 0) + fameGain;
+      const newCashTotal = (currentProfile.cash ?? 0) - marketingBudget + cashToPlayer;
 
-      await updateProfile({
+      const updatedProfile = await updateProfile({
         fame: updatedFame,
         cash: newCashTotal
       });
+
+      if (updatedProfile) {
+        profileRef.current = updatedProfile;
+      } else {
+        profileRef.current = {
+          ...currentProfile,
+          fame: updatedFame,
+          cash: newCashTotal
+        } as typeof currentProfile;
+      }
 
       setSongs(prev => prev.map(s =>
         s.id === song.id
           ? {
               ...s,
               status: 'released' as const,
-              release_date: new Date().toISOString(),
+              release_date: releaseTimestamp,
               streams: initialStreams,
               chart_position: chartPosition,
-              revenue: royaltyEarnings
+              revenue: royaltyEarnings,
+              marketing_budget: marketingBudget
             }
           : s
       ));
@@ -580,24 +658,181 @@ const SongManager = () => {
       const royaltiesFormatted = royaltyEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const recoupedFormatted = totalRecouped.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const cashAddedFormatted = cashToPlayer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const baseMessage = `"${song.title}" is now available to fans! +${fameGain} fame.`;
+      const marketingFormatted = marketingBudget.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      const introMessage = triggeredAutomatically
+        ? `Your scheduled release "${song.title}" is now live!`
+        : `"${song.title}" is now available to fans!`;
+      const fameMessage = ` +${fameGain} fame.`;
       const royaltyMessage = totalRecouped > 0
         ? ` Earned $${royaltiesFormatted} in royalties with $${recoupedFormatted} applied toward your advance. $${cashAddedFormatted} added to cash.`
         : ` Earned $${cashAddedFormatted} in royalties added directly to your cash.`;
+      const marketingMessage = marketingBudget > 0
+        ? ` Spent $${marketingFormatted} on marketing.`
+        : '';
 
       toast({
         title: "Song Released",
-        description: baseMessage + royaltyMessage
+        description: introMessage + fameMessage + royaltyMessage + marketingMessage
       });
     } catch (error: any) {
       console.error('Error releasing song:', error);
+      const description = triggeredAutomatically
+        ? `We couldn't complete the scheduled release of "${song.title}". Please review the song details and try again.`
+        : "Failed to release song";
+      toast({
+        variant: "destructive",
+        title: "Release Error",
+        description
+      });
+    } finally {
+      releasingSongsRef.current.delete(song.id);
+    }
+  }, [createStreamingStatsRecord, enqueueStreamingSimulation, toast, updateProfile, user]);
+
+  const openReleaseDialog = (song: Song) => {
+    setSelectedSong(song);
+    const releaseDateValue = (() => {
+      const parsed = parseIsoDate(song.release_date);
+      if (!parsed) {
+        return new Date();
+      }
+      return parsed.getTime() < Date.now() ? new Date() : parsed;
+    })();
+
+    setReleaseForm({
+      releaseDate: formatDateTimeLocal(releaseDateValue),
+      marketingBudget: Number(song.marketing_budget ?? 0)
+    });
+    setIsReleaseDialogOpen(true);
+  };
+
+  const scheduleRelease = async () => {
+    if (!selectedSong) {
+      return;
+    }
+
+    const currentProfile = profileRef.current;
+    if (!user || !currentProfile) {
+      toast({
+        variant: "destructive",
+        title: "Missing Player Data",
+        description: "Please sign in and load your profile before scheduling a release."
+      });
+      return;
+    }
+
+    if (!releaseForm.releaseDate) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Release Date",
+        description: "Please choose when you want the song to go live."
+      });
+      return;
+    }
+
+    const parsedDate = new Date(releaseForm.releaseDate);
+    if (Number.isNaN(parsedDate.getTime())) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Release Date",
+        description: "Please provide a valid date and time for the release."
+      });
+      return;
+    }
+
+    const marketingBudget = Math.max(0, Number.isFinite(releaseForm.marketingBudget)
+      ? releaseForm.marketingBudget
+      : 0);
+
+    if (marketingBudget > (currentProfile.cash ?? 0)) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient Funds",
+        description: "Your marketing budget exceeds your available cash."
+      });
+      return;
+    }
+
+    try {
+      const releaseTimestamp = parsedDate.toISOString();
+      const updates = {
+        release_date: releaseTimestamp,
+        marketing_budget: marketingBudget
+      };
+
+      const { error } = await supabase
+        .from('songs')
+        .update(updates)
+        .eq('id', selectedSong.id);
+
+      if (error) throw error;
+
+      setSongs(prev => prev.map(song =>
+        song.id === selectedSong.id
+          ? { ...song, ...updates }
+          : song
+      ));
+      setSelectedSong(prev =>
+        prev && prev.id === selectedSong.id
+          ? { ...prev, ...updates }
+          : prev
+      );
+      setIsReleaseDialogOpen(false);
+
+      const updatedSong: Song = {
+        ...selectedSong,
+        ...updates
+      };
+
+      if (parsedDate.getTime() <= Date.now()) {
+        await releaseSong(updatedSong, false);
+      } else {
+        toast({
+          title: "Release Scheduled",
+          description: `"${selectedSong.title}" will be released on ${parsedDate.toLocaleString()} with a $${marketingBudget.toLocaleString()} marketing campaign.`
+        });
+      }
+    } catch (error: any) {
+      console.error('Error scheduling release:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to release song"
+        description: "Failed to schedule song release"
       });
     }
   };
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const checkScheduledReleases = () => {
+      if (!profileRef.current) {
+        return;
+      }
+
+      const nowTime = Date.now();
+      const readySongs = songsRef.current.filter((song) => {
+        if (song.status !== 'recorded') {
+          return false;
+        }
+
+        const scheduled = parseIsoDate(song.release_date);
+        return scheduled !== null && scheduled.getTime() <= nowTime;
+      });
+
+      readySongs.forEach((readySong) => {
+        releaseSong(readySong, true);
+      });
+    };
+
+    checkScheduledReleases();
+
+    const interval = setInterval(checkScheduledReleases, 15000);
+
+    return () => clearInterval(interval);
+  }, [releaseSong, user?.id]);
 
   const deleteSong = async (songId: string) => {
     try {
@@ -629,9 +864,21 @@ const SongManager = () => {
     switch (status) {
       case 'draft': return 'bg-muted text-muted-foreground';
       case 'recorded': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100';
+      case 'scheduled': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100';
       case 'released': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
       default: return 'bg-muted text-muted-foreground';
     }
+  };
+
+  const getDisplayStatus = (song: Song) => {
+    if (song.status === 'recorded') {
+      const scheduled = parseIsoDate(song.release_date);
+      if (scheduled && scheduled.getTime() > Date.now()) {
+        return 'scheduled';
+      }
+    }
+
+    return song.status;
   };
 
   const renderGrowthPanel = (summary: GrowthSummary, windowLabel: string) => {
@@ -848,79 +1095,110 @@ const SongManager = () => {
 
         {/* Songs List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {songs.map((song) => (
-            <Card key={song.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{song.title}</CardTitle>
-                    <CardDescription>{song.genre}</CardDescription>
-                  </div>
-                  <Badge className={getStatusColor(song.status)}>
-                    {song.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Quality</span>
-                    <span>{song.quality_score}/100</span>
-                  </div>
-                  <Progress value={song.quality_score} className="h-2" />
-                </div>
+          {songs.map((song) => {
+            const displayStatus = getDisplayStatus(song);
+            const releaseDate = parseIsoDate(song.release_date);
+            const isScheduled = displayStatus === 'scheduled' && releaseDate;
+            const marketingBudget = Math.max(0, Number(song.marketing_budget ?? 0));
 
-                {song.status === 'released' && (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Streams:</span>
-                      <span>{song.streams.toLocaleString()}</span>
+            return (
+              <Card key={song.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg">{song.title}</CardTitle>
+                      <CardDescription>{song.genre}</CardDescription>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Chart Position:</span>
-                      <span>#{song.chart_position}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Revenue:</span>
-                      <span>${song.revenue.toFixed(2)}</span>
-                    </div>
+                    <Badge className={getStatusColor(displayStatus)}>
+                      {displayStatus}
+                    </Badge>
                   </div>
-                )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Quality</span>
+                      <span>{song.quality_score}/100</span>
+                    </div>
+                    <Progress value={song.quality_score} className="h-2" />
+                  </div>
 
-                <div className="flex gap-2">
-                  {song.status === 'draft' && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedSong(song);
-                        setIsRecordDialogOpen(true);
-                      }}
-                    >
-                      Record ($500)
-                    </Button>
+                  {isScheduled && releaseDate && (
+                    <div className="rounded-md border border-dashed border-purple-300/60 bg-purple-50/10 p-3 text-sm">
+                      <p className="font-semibold">Scheduled Release</p>
+                      <p className="text-xs text-muted-foreground">
+                        {releaseDate.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Marketing budget: ${marketingBudget.toLocaleString()}
+                      </p>
+                    </div>
                   )}
-                  
-                  {song.status === 'recorded' && (
-                    <Button 
+
+                  {song.status === 'released' && (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Streams:</span>
+                        <span>{song.streams.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Chart Position:</span>
+                        <span>#{song.chart_position}</span>
+                      </div>
+                      {song.release_date && (
+                        <div className="flex justify-between">
+                          <span>Release Date:</span>
+                          <span>{new Date(song.release_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {marketingBudget > 0 && (
+                        <div className="flex justify-between">
+                          <span>Marketing Spend:</span>
+                          <span>${marketingBudget.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>Revenue:</span>
+                        <span>${song.revenue.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    {song.status === 'draft' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedSong(song);
+                          setIsRecordDialogOpen(true);
+                        }}
+                      >
+                        Record ($500)
+                      </Button>
+                    )}
+
+                    {song.status === 'recorded' && (
+                      <Button
+                        size="sm"
+                        onClick={() => openReleaseDialog(song)}
+                      >
+                        {isScheduled ? 'Manage Release' : 'Schedule Release'}
+                      </Button>
+                    )}
+
+                    <Button
                       size="sm"
-                      onClick={() => releaseSong(song)}
+                      variant="destructive"
+                      onClick={() => deleteSong(song.id)}
                     >
-                      Release
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
-                  
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => deleteSong(song.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {songs.length === 0 && (
@@ -938,6 +1216,78 @@ const SongManager = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Release Song Dialog */}
+        <Dialog open={isReleaseDialogOpen} onOpenChange={setIsReleaseDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Plan Release</DialogTitle>
+              <DialogDescription>
+                Choose when to release "{selectedSong?.title}" and set your marketing budget.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="release-date">Release Date</Label>
+                <Input
+                  id="release-date"
+                  type="datetime-local"
+                  min={formatDateTimeLocal(new Date())}
+                  value={releaseForm.releaseDate}
+                  onChange={(e) => setReleaseForm(prev => ({ ...prev, releaseDate: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Future releases will go live automatically at the scheduled time.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="marketing-budget">Marketing Budget</Label>
+                <Input
+                  id="marketing-budget"
+                  type="number"
+                  min={0}
+                  step={50}
+                  value={releaseForm.marketingBudget}
+                  onChange={(e) => {
+                    const nextValue = Number(e.target.value);
+                    setReleaseForm(prev => ({
+                      ...prev,
+                      marketingBudget: Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0
+                    }));
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Marketing spend is deducted when the release goes live.
+                </p>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Current Cash: ${profile?.cash?.toLocaleString() || 0}
+              </div>
+              {profile && releaseForm.marketingBudget > (profile.cash ?? 0) && (
+                <p className="text-xs text-destructive">
+                  Your budget exceeds available cash.
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsReleaseDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={scheduleRelease}
+                disabled={
+                  !releaseForm.releaseDate ||
+                  (profile ? releaseForm.marketingBudget > (profile.cash ?? 0) : false)
+                }
+              >
+                {releaseForm.releaseDate && !Number.isNaN(new Date(releaseForm.releaseDate).getTime()) &&
+                new Date(releaseForm.releaseDate).getTime() <= Date.now()
+                  ? 'Release Now'
+                  : 'Schedule Release'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Record Song Dialog */}
         <Dialog open={isRecordDialogOpen} onOpenChange={setIsRecordDialogOpen}>
