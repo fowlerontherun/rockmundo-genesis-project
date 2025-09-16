@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Music, Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Music, Mail, Lock, User, AlertCircle, Guitar, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import rockmundoLogo from "@/assets/rockmundo-logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -102,30 +103,42 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Music className="h-12 w-12 text-primary" />
-            <h1 className="text-4xl font-bebas tracking-wider bg-gradient-primary bg-clip-text text-transparent">
-              ROCKMUNDO
-            </h1>
+    <div className="min-h-screen bg-gradient-stage flex flex-col items-center justify-center px-4 py-8 sm:px-6">
+      <div className="w-full max-w-sm sm:max-w-md">
+        {/* Logo and Branding */}
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <img 
+              src={rockmundoLogo} 
+              alt="RockMundo Logo" 
+              className="h-16 w-16 sm:h-20 sm:w-20" 
+            />
           </div>
-          <p className="text-muted-foreground font-oswald">Enter the ultimate music MMO experience</p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bebas tracking-wider text-foreground mb-2">
+            ROCKMUNDO
+          </h1>
+          <p className="text-lg sm:text-xl font-oswald text-accent tracking-wide mb-1">
+            LIVE THE DREAM
+          </p>
+          <p className="text-sm text-muted-foreground font-oswald">
+            The Ultimate Music Career Simulation
+          </p>
         </div>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-center">Join the Revolution</CardTitle>
-            <CardDescription className="text-center">
+        <Card className="bg-card/90 backdrop-blur-sm border-primary/30 shadow-electric">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-center text-xl sm:text-2xl font-bebas tracking-wide">
+              JOIN THE REVOLUTION
+            </CardTitle>
+            <CardDescription className="text-center text-sm font-oswald">
               Create your musical legacy or continue your journey
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             <Tabs defaultValue="login" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-secondary/50">
+                <TabsTrigger value="login" className="font-oswald">Sign In</TabsTrigger>
+                <TabsTrigger value="signup" className="font-oswald">Sign Up</TabsTrigger>
               </TabsList>
 
               {error && (
@@ -138,14 +151,14 @@ const Auth = () => {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email" className="font-oswald text-sm">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="login-email"
                         type="email"
                         placeholder="your@email.com"
-                        className="pl-10"
+                        className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={loginData.email}
                         onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                         required
@@ -154,14 +167,14 @@ const Auth = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <Label htmlFor="login-password" className="font-oswald text-sm">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="login-password"
                         type="password"
                         placeholder="••••••••"
-                        className="pl-10"
+                        className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={loginData.password}
                         onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                         required
@@ -171,25 +184,25 @@ const Auth = () => {
 
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-primary hover:shadow-electric"
+                    className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200"
                     disabled={loading}
                   >
-                    {loading ? "Signing In..." : "Sign In"}
+                    {loading ? "SIGNING IN..." : "SIGN IN"}
                   </Button>
                 </form>
               </TabsContent>
 
               <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
+                <form onSubmit={handleSignup} className="space-y-3">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="font-oswald text-sm">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-email"
                         type="email"
                         placeholder="your@email.com"
-                        className="pl-10"
+                        className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={signupData.email}
                         onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
                         required
@@ -198,14 +211,14 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-username">Username</Label>
+                    <Label htmlFor="signup-username" className="font-oswald text-sm">Username</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-username"
                         type="text"
                         placeholder="rockstar123"
-                        className="pl-10"
+                        className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={signupData.username}
                         onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
                         required
@@ -216,14 +229,14 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-displayname">Display Name</Label>
+                    <Label htmlFor="signup-displayname" className="font-oswald text-sm">Stage Name</Label>
                     <div className="relative">
-                      <Music className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Star className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-displayname"
                         type="text"
                         placeholder="Rock Legend"
-                        className="pl-10"
+                        className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={signupData.displayName}
                         onChange={(e) => setSignupData({ ...signupData, displayName: e.target.value })}
                         required
@@ -233,14 +246,14 @@ const Auth = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="font-oswald text-sm">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-password"
                         type="password"
                         placeholder="••••••••"
-                        className="pl-10"
+                        className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
                         value={signupData.password}
                         onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                         required
@@ -251,10 +264,10 @@ const Auth = () => {
 
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-primary hover:shadow-electric"
+                    className="w-full h-11 bg-gradient-primary hover:shadow-electric font-oswald text-base tracking-wide transition-all duration-200 mt-4"
                     disabled={loading}
                   >
-                    {loading ? "Creating Account..." : "Create Account"}
+                    {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
                   </Button>
                 </form>
               </TabsContent>
@@ -262,8 +275,15 @@ const Auth = () => {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6 text-sm text-muted-foreground">
-          <p>Ready to rock the world? 🎸</p>
+        <div className="text-center mt-6 space-y-2">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Guitar className="h-4 w-4" />
+            <p className="text-sm font-oswald">Ready to rock the world?</p>
+            <Guitar className="h-4 w-4" />
+          </div>
+          <p className="text-xs text-muted-foreground/70 font-oswald">
+            Join thousands of musicians living their dream
+          </p>
         </div>
       </div>
     </div>
