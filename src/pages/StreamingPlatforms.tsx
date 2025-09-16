@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,16 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Play, 
-  Users, 
-  TrendingUp, 
-  DollarSign, 
-  Star, 
-  Music, 
-  Radio,
-  Globe,
-  Heart,
+import {
+  Play,
+  Users,
+  DollarSign,
+  Music,
   Share2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,10 +89,10 @@ const StreamingPlatforms = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useGameData();
-  
+
   const [platforms, setPlatforms] = useState<StreamingPlatform[]>([]);
   const [playerAccounts, setPlayerAccounts] = useState<PlayerStreamingAccount[]>([]);
-  const [userSongs, setUserSongs] = useState<any[]>([]);
+  const [userSongs, setUserSongs] = useState<SongWithPlatformData[]>([]);
   const [loading, setLoading] = useState(true);
   const [campaigns, setCampaigns] = useState<PromotionCampaign[]>([]);
   const [streamingStats, setStreamingStats] = useState(() => ({ ...BASE_STREAMING_STATS }));
@@ -108,13 +103,9 @@ const StreamingPlatforms = () => {
   const [playlistBudget, setPlaylistBudget] = useState<number>(150);
   const [serverMessage, setServerMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
+  const loadData = useCallback(async () => {
+    if (!user) return;
 
-  const loadData = async () => {
     try {
       setServerMessage(null);
       // Load streaming platforms
@@ -133,21 +124,75 @@ const StreamingPlatforms = () => {
           *,
           streaming_platforms!player_streaming_accounts_platform_id_fkey(*)
         `)
-        .eq('user_id', user!.id);
+        .eq('user_id', user.id);
 
       if (accountsError) throw accountsError;
       setPlayerAccounts(accountsData || []);
 
-      // Load player's songs
-      const { data: songsData, error: songsError } = await supabase
+      // Load player's songs with streaming metrics
+      let songsData: SongRecord[] = [];
+      const songsResponse = await supabase
         .from('songs')
         .select('*')
-        .eq('artist_id', user!.id)
+        .eq('artist_id', user.id)
         .eq('status', 'released')
         .order('created_at', { ascending: false });
 
-      if (songsError) throw songsError;
-      setUserSongs(songsData || []);
+      if (songsResponse.error) {
+        // Some environments may use user_id instead of artist_id
+        if (songsResponse.error.message?.toLowerCase().includes('artist_id')) {
+          const fallbackResponse = await supabase
+            .from('songs')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'released')
+            .order('created_at', { ascending: false });
+
+          if (fallbackResponse.error) throw fallbackResponse.error;
+          songsData = (fallbackResponse.data as SongRecord[]) || [];
+        } else {
+          throw songsResponse.error;
+        }
+      } else {
+        songsData = (songsResponse.data as SongRecord[]) || [];
+      }
+
+      const streamingPlatforms = platformsData || [];
+      const formattedSongs: SongWithPlatformData[] = songsData.map((song) => {
+        const platformBreakdown = buildPlatformBreakdown(song, streamingPlatforms);
+        const breakdownStreams = platformBreakdown.reduce(
+          (total, entry) => total + entry.streams,
+          0
+        );
+        let breakdownRevenue = platformBreakdown.reduce(
+          (total, entry) => total + entry.revenue,
+          0
+        );
+
+        if (
+          breakdownRevenue === 0 &&
+          song.revenue !== undefined &&
+          song.revenue !== null
+        ) {
+          breakdownRevenue = safeNumber(song.revenue);
+        }
+
+        const totalStreamsValue =
+          breakdownStreams > 0 ? breakdownStreams : safeNumber(song.streams);
+
+        return {
+          id: song.id,
+          title: song.title,
+          album: song.album ?? song.album_name ?? song.albumTitle ?? null,
+          genre: song.genre ?? undefined,
+          status: song.status ?? undefined,
+          totalStreams: totalStreamsValue,
+          totalRevenue: breakdownRevenue,
+          platformBreakdown,
+        };
+      });
+
+      setUserSongs(formattedSongs);
 
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('promotion_campaigns')
@@ -185,7 +230,13 @@ const StreamingPlatforms = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
 
   useEffect(() => {
     if (userSongs.length === 0) {
@@ -277,7 +328,7 @@ const StreamingPlatforms = () => {
         title: "Platform Connected!",
         description: `Successfully connected to ${platform.name}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error connecting platform:', error);
       toast({
         variant: "destructive",
@@ -469,6 +520,7 @@ const StreamingPlatforms = () => {
     } finally {
       setPlaylistSubmitting(prev => ({ ...prev, [playlistName]: false }));
     }
+
   };
 
   return (
@@ -629,49 +681,90 @@ const StreamingPlatforms = () => {
                 </Card>
               ) : (
                 userSongs.map((song) => (
-                <Card key={song.id} className="bg-card/80 border-accent">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                      <div className="lg:col-span-2 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold text-cream">{song.title}</h3>
-                          {song.trending && (
-                            <Badge className="bg-accent text-background text-xs">
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              Trending
-                            </Badge>
+                  <Card key={song.id} className="bg-card/80 border-accent">
+                    <CardContent className="pt-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                        <div className="lg:col-span-2 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-semibold text-cream">{song.title}</h3>
+                            {song.status && (
+                              <Badge variant="outline" className="border-accent text-accent capitalize">
+                                {song.status}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-cream/60">{song.album ?? 'Single Release'}</p>
+                          {song.genre && (
+                            <p className="text-muted-foreground text-sm">
+                              Genre: <span className="text-cream">{song.genre}</span>
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-4 text-sm">
+                            <span className="text-accent font-bold">
+                              {formatLargeNumber(song.totalStreams)} streams
+                            </span>
+                            <span className="text-cream/80">
+                              {currencyFormatter.format(song.totalRevenue)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-2 space-y-3">
+                          <p className="text-cream/60 text-sm">Platform Breakdown</p>
+                          {song.platformBreakdown.length > 0 ? (
+                            <div className="space-y-2">
+                              {song.platformBreakdown.map((platform) => (
+                                <div
+                                  key={`${song.id}-${platform.label}`}
+                                  className="flex items-center justify-between rounded-lg border border-primary/20 bg-background/40 px-3 py-2"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-cream">{platform.label}</span>
+                                    <span className="text-cream/60 text-xs">
+                                      {currencyFormatter.format(platform.revenue)}
+                                    </span>
+                                  </div>
+                                  <span className="text-accent font-semibold">
+                                    {formatLargeNumber(platform.streams)} streams
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-sm">No platform data available yet.</p>
                           )}
                         </div>
-                        <p className="text-cream/60">{song.album}</p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-accent font-bold">
-                            {(song.totalStreams / 1000000).toFixed(1)}M streams
-                          </span>
-                          <span className="text-cream/80">
-                            ${song.revenue.toLocaleString()} revenue
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="lg:col-span-2 space-y-2">
-                        <p className="text-cream/60 text-sm">Platform Breakdown</p>
-                        <div className="space-y-1">
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Total Plays</span>
-                            <span className="text-accent">{song.plays.toLocaleString()}</span>
+                        <div className="space-y-3">
+                          <div className="rounded-lg border border-primary/20 bg-background/40 p-3 text-center">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wide">Total Streams</p>
+                            <p className="text-xl font-bold text-accent">
+                              {formatLargeNumber(song.totalStreams)}
+                            </p>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Popularity</span>
-                            <span className="text-accent">{song.popularity}/100</span>
+                          <div className="rounded-lg border border-primary/20 bg-background/40 p-3 text-center">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wide">Revenue</p>
+                            <p className="text-xl font-bold text-accent">
+                              {currencyFormatter.format(song.totalRevenue)}
+                            </p>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Quality</span>
-                            <span className="text-accent">{song.quality_score}/100</span>
+                          <div className="rounded-lg border border-primary/20 bg-background/40 p-3 text-center">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wide">Genre</p>
+                            <p className="text-lg font-semibold text-cream">{song.genre ?? 'Unknown'}</p>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Status</span>
-                            <span className="text-accent capitalize">{song.status}</span>
-                          </div>
+                          <Button
+                            size="sm"
+                            className="w-full bg-gradient-primary"
+                            onClick={() =>
+                              toast({
+                                title: "Feature Coming Soon!",
+                                description: "Song promotion will be available soon!",
+                              })
+                            }
+                          >
+                            <Share2 className="h-4 w-4 mr-1" />
+                            Promote
+                          </Button>
                         </div>
                       </div>
 

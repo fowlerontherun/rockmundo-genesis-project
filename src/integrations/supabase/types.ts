@@ -815,9 +815,11 @@ export type Database = {
           cash: number | null
           created_at: string | null
           display_name: string | null
+          engagement_rate: number | null
           experience: number | null
           fame: number | null
           fans: number | null
+          followers: number | null
           id: string
           level: number | null
           updated_at: string | null
@@ -830,9 +832,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -845,9 +849,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -864,9 +870,12 @@ export type Database = {
           fan_growth: number | null
           id: string
           likes: number | null
+          reposts: number | null
           platform: string
           shares: number | null
+          timestamp: string | null
           user_id: string
+          views: number | null
         }
         Insert: {
           comments?: number | null
@@ -875,9 +884,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform: string
           shares?: number | null
+          timestamp?: string | null
           user_id: string
+          views?: number | null
         }
         Update: {
           comments?: number | null
@@ -886,9 +898,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform?: string
           shares?: number | null
+          timestamp?: string | null
           user_id?: string
+          views?: number | null
         }
         Relationships: []
       }
