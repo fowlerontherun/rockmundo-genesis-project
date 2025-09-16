@@ -733,6 +733,81 @@ export type Database = {
           },
         ]
       }
+      promotion_campaigns: {
+        Row: {
+          budget: number
+          campaign_type: string
+          created_at: string | null
+          id: string
+          message: string | null
+          new_placements: number | null
+          platform_id: string | null
+          platform_name: string | null
+          playlist_name: string | null
+          playlists_targeted: number | null
+          song_id: string
+          status: string
+          stream_increase: number | null
+          revenue_generated: number | null
+          listeners_generated: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          budget?: number
+          campaign_type: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          campaign_type?: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id?: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_campaigns_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_campaigns_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
