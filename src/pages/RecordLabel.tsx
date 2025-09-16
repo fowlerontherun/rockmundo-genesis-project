@@ -40,23 +40,47 @@ interface RecordLabel {
   benefits: string[];
 }
 
-interface RecordLabelForm extends Omit<RecordLabel, "id"> {
-  id?: string;
-}
+type ContractType = 'demo' | 'single' | 'album' | 'exclusive';
+type ContractStatus = 'pending' | 'active' | 'completed' | 'terminated';
+type RenewalOption = 'manual' | 'auto' | 'none';
 
 interface Contract {
   id: string;
   label_id: string | null;
   label_name: string;
-  contract_type: 'demo' | 'single' | 'album' | 'exclusive';
+  contract_type: ContractType;
   duration_months: number;
   advance_payment: number;
   advance_balance: number;
   recouped_amount: number;
   royalty_rate: number;
   signed_at: string;
-  status: 'pending' | 'active' | 'completed' | 'terminated';
+  end_date: string | null;
+  status: ContractStatus;
+  renewal_option: RenewalOption;
+  termination_reason: string | null;
 }
+
+const parseContractType = (value: unknown): ContractType => {
+  if (value === 'demo' || value === 'single' || value === 'album' || value === 'exclusive') {
+    return value;
+  }
+  return 'demo';
+};
+
+const parseContractStatus = (value: unknown): ContractStatus => {
+  if (value === 'pending' || value === 'active' || value === 'completed' || value === 'terminated') {
+    return value;
+  }
+  return 'active';
+};
+
+const parseRenewalOption = (value: unknown): RenewalOption => {
+  if (value === 'auto' || value === 'manual' || value === 'none') {
+    return value;
+  }
+  return 'manual';
+};
 
 const RecordLabel = () => {
   const { user } = useAuth();
@@ -68,34 +92,7 @@ const RecordLabel = () => {
   const [loading, setLoading] = useState(true);
   const [releasedSongCount, setReleasedSongCount] = useState(0);
   const [bestChartPosition, setBestChartPosition] = useState<number | null>(null);
-  const [labelForm, setLabelForm] = useState<RecordLabelForm>(() => ({
-    name: "",
-    prestige: 1,
-    advance_payment: 0,
-    royalty_rate: 0.1,
-    description: "",
-    requirements: {},
-    benefits: []
-  }));
-  const [requirementKey, setRequirementKey] = useState("");
-  const [requirementValue, setRequirementValue] = useState("");
-  const [benefitInput, setBenefitInput] = useState("");
-  const [savingLabel, setSavingLabel] = useState(false);
-  const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
-
-  const canManageLabels = !roleLoading && isAdminRole();
-
-  const parseNumeric = (value: unknown): number => {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-      const parsed = parseFloat(value);
-      return Number.isNaN(parsed) ? 0 : parsed;
-    }
-    return 0;
-  };
-
-  const formatCurrency = (value: number) =>
-    parseNumeric(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -173,7 +170,7 @@ const RecordLabel = () => {
       const { data, error } = await supabase
         .from('contracts')
         .select(
-          'id, label_id, label_name, contract_type, duration_months, advance_payment, advance_balance, recouped_amount, royalty_rate, signed_at, status'
+          'id, label_id, label_name, contract_type, duration_months, advance_payment, royalty_rate, signed_at, end_date, status, renewal_option, termination_reason'
         )
         .eq('user_id', user.id)
         .order('signed_at', { ascending: false });
@@ -184,16 +181,17 @@ const RecordLabel = () => {
         id: contract.id,
         label_id: contract.label_id,
         label_name: contract.label_name,
-        contract_type: contract.contract_type as Contract['contract_type'],
-        duration_months: contract.duration_months,
-        advance_payment: parseNumeric(contract.advance_payment),
-        advance_balance: parseNumeric(contract.advance_balance),
-        recouped_amount: parseNumeric(contract.recouped_amount),
+        contract_type: parseContractType(contract.contract_type),
+        duration_months: contract.duration_months ?? 0,
+        advance_payment: contract.advance_payment ?? 0,
         royalty_rate: typeof contract.royalty_rate === 'string'
           ? parseFloat(contract.royalty_rate)
           : contract.royalty_rate ?? 0,
         signed_at: contract.signed_at ?? new Date().toISOString(),
-        status: (contract.status as Contract['status']) ?? 'active'
+        end_date: contract.end_date ?? null,
+        status: parseContractStatus(contract.status),
+        renewal_option: parseRenewalOption(contract.renewal_option),
+        termination_reason: contract.termination_reason ?? null
       }));
 
       setPlayerContracts(parsedContracts);
@@ -575,6 +573,339 @@ const RecordLabel = () => {
     return unmetMessages;
   };
 
+  const calculateContractEndDate = (startDate: Date, months: number) => {
+    const endDate = new Date(startDate);
+    const originalDay = startDate.getDate();
+    endDate.setMonth(endDate.getMonth() + months);
+
+    // Adjust for months with fewer days to avoid rolling over to the following month
+    if (endDate.getDate() < originalDay) {
+      endDate.setDate(0);
+    }
+
+    return endDate;
+  };
+
+  const getContractProgress = (contract: Contract) => {
+    if (!contract.end_date) return 0;
+
+    const start = new Date(contract.signed_at);
+    const end = new Date(contract.end_date);
+    const now = new Date();
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return 0;
+    }
+
+    if (contract.status === 'completed' || contract.status === 'terminated') {
+      return 100;
+    }
+
+    const totalDuration = end.getTime() - start.getTime();
+    if (totalDuration <= 0) {
+      return 100;
+    }
+
+    const elapsed = Math.min(Math.max(now.getTime() - start.getTime(), 0), totalDuration);
+    return Math.min(100, Math.round((elapsed / totalDuration) * 100));
+  };
+
+  const formatRemainingDuration = (contract: Contract) => {
+    if (!contract.end_date) {
+      return 'No end date set';
+    }
+
+    const end = new Date(contract.end_date);
+    if (Number.isNaN(end.getTime())) {
+      return 'End date unavailable';
+    }
+
+    if (contract.status === 'completed') {
+      return `Completed on ${end.toLocaleDateString()}`;
+    }
+
+    if (contract.status === 'terminated') {
+      return `Terminated on ${end.toLocaleDateString()}`;
+    }
+
+    const now = new Date();
+    const diffMs = end.getTime() - now.getTime();
+    const isPast = diffMs < 0;
+    const absoluteDiffMs = Math.abs(diffMs);
+    const totalDays = Math.floor(absoluteDiffMs / (1000 * 60 * 60 * 24));
+    const months = Math.floor(totalDays / 30);
+    const days = totalDays % 30;
+
+    const parts: string[] = [];
+    if (months > 0) {
+      parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+    }
+    if (days > 0) {
+      parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    }
+    if (parts.length === 0) {
+      parts.push('Less than a day');
+    }
+
+    const durationText = parts.join(' ');
+    return isPast ? `Expired ${durationText} ago` : `${durationText} remaining`;
+  };
+
+  const getRenewalOptionLabel = (option: RenewalOption) => {
+    switch (option) {
+      case 'auto':
+        return 'Auto renew enabled';
+      case 'none':
+        return 'No renewal planned';
+      default:
+        return 'Manual review';
+    }
+  };
+
+  const renewContract = async (contract: Contract) => {
+    if (!user || contract.status !== 'active') return;
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const now = new Date();
+      const endDate = contract.end_date ? new Date(contract.end_date) : now;
+      const renewalStart = endDate > now ? endDate : now;
+      const months = contract.duration_months > 0 ? contract.duration_months : 1;
+      const newEndDate = calculateContractEndDate(renewalStart, months);
+
+      const { error: contractError } = await supabase
+        .from('contracts')
+        .update({
+          signed_at: renewalStart.toISOString(),
+          end_date: newEndDate.toISOString(),
+          status: 'active',
+          renewal_option: 'manual',
+          termination_reason: null
+        })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (contractError) throw contractError;
+
+      const { error: activityError } = await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'contract',
+          message: `Renewed contract with ${contract.label_name}`,
+          earnings: 0
+        });
+
+      if (activityError) throw activityError;
+
+      await loadPlayerContracts();
+
+      toast({
+        title: 'Contract Renewed',
+        description: `${contract.label_name} renewed for another ${months} month${months !== 1 ? 's' : ''}.`
+      });
+    } catch (error) {
+      console.error('Error renewing contract:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to renew contract'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
+  const toggleAutoRenew = async (contract: Contract) => {
+    if (!user) return;
+    if (contract.status !== 'active') {
+      toast({
+        variant: 'destructive',
+        title: 'Action unavailable',
+        description: 'Only active contracts can update renewal preferences.'
+      });
+      return;
+    }
+
+    const nextOption: RenewalOption = contract.renewal_option === 'auto' ? 'manual' : 'auto';
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const { error } = await supabase
+        .from('contracts')
+        .update({ renewal_option: nextOption })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await loadPlayerContracts();
+
+      toast({
+        title: nextOption === 'auto' ? 'Auto-renew enabled' : 'Auto-renew disabled',
+        description:
+          nextOption === 'auto'
+            ? `${contract.label_name} will renew automatically when it ends.`
+            : `${contract.label_name} will require manual review at the end date.`
+      });
+    } catch (error) {
+      console.error('Error updating renewal option:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update renewal option'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
+  const completeContract = async (contract: Contract) => {
+    if (!user || !profile || contract.status !== 'active') return;
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const currentCash = profile.cash ?? 0;
+      const currentFame = profile.fame ?? 0;
+      const completionBonus = Math.floor(contract.advance_payment * 0.2);
+      const fameBoost = Math.max(10, Math.floor(contract.duration_months * 2));
+
+      const { error: contractError } = await supabase
+        .from('contracts')
+        .update({
+          status: 'completed',
+          end_date: new Date().toISOString(),
+          renewal_option: 'none',
+          termination_reason: null
+        })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (contractError) throw contractError;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          cash: currentCash + completionBonus,
+          fame: currentFame + fameBoost
+        })
+        .eq('user_id', user.id);
+
+      if (profileError) throw profileError;
+
+      const { error: activityError } = await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'contract',
+          message: `Completed contract with ${contract.label_name}`,
+          earnings: completionBonus
+        });
+
+      if (activityError) throw activityError;
+
+      await loadPlayerContracts();
+      await refetch();
+
+      toast({
+        title: 'Contract Completed',
+        description: `Completion bonus $${completionBonus.toLocaleString()} and +${fameBoost} fame awarded.`
+      });
+    } catch (error) {
+      console.error('Error completing contract:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to complete contract'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
+  const terminateContract = async (contract: Contract) => {
+    if (!user || !profile || contract.status !== 'active') return;
+
+    const confirmation = window.confirm(
+      'Terminating a contract early will apply financial penalties and fame loss. Do you want to continue?'
+    );
+
+    if (!confirmation) {
+      return;
+    }
+
+    const reasonInput = window.prompt('Provide a reason for the termination (optional):');
+    const terminationReason = reasonInput && reasonInput.trim().length > 0
+      ? reasonInput.trim()
+      : 'Artist terminated the contract early';
+
+    try {
+      setContractActionLoading(contract.id);
+
+      const currentCash = profile.cash ?? 0;
+      const currentFame = profile.fame ?? 0;
+      const cashPenaltyBase = Math.floor(contract.advance_payment * 0.15);
+      const cashPenalty = Math.min(cashPenaltyBase, currentCash);
+      const famePenaltyBase = Math.floor(contract.duration_months * 1.5);
+      const famePenalty = Math.min(currentFame, Math.max(5, famePenaltyBase));
+
+      const { error: contractError } = await supabase
+        .from('contracts')
+        .update({
+          status: 'terminated',
+          end_date: new Date().toISOString(),
+          renewal_option: 'none',
+          termination_reason: terminationReason
+        })
+        .eq('id', contract.id)
+        .eq('user_id', user.id);
+
+      if (contractError) throw contractError;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          cash: currentCash - cashPenalty,
+          fame: Math.max(currentFame - famePenalty, 0)
+        })
+        .eq('user_id', user.id);
+
+      if (profileError) throw profileError;
+
+      const { error: activityError } = await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'contract',
+          message: `Terminated contract with ${contract.label_name}`,
+          earnings: -cashPenalty
+        });
+
+      if (activityError) throw activityError;
+
+      await loadPlayerContracts();
+      await refetch();
+
+      toast({
+        variant: 'destructive',
+        title: 'Contract Terminated',
+        description: `Penalty of $${cashPenalty.toLocaleString()} and ${famePenalty} fame applied.`
+      });
+    } catch (error) {
+      console.error('Error terminating contract:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to terminate contract'
+      });
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
+
   const signContract = async (label: RecordLabel, contractType: string) => {
     if (!user || !profile || !skills) return;
 
@@ -595,7 +926,9 @@ const RecordLabel = () => {
       }
 
       // Calculate contract terms based on type
-      let duration, advance, royalty;
+      let duration: number;
+      let advance: number;
+      let royalty: number;
       switch (contractType) {
         case 'demo':
           duration = 6;
@@ -622,6 +955,8 @@ const RecordLabel = () => {
       }
 
       const currentCash = profile.cash ?? 0;
+      const signedAt = new Date();
+      const contractEndDate = calculateContractEndDate(signedAt, duration);
 
       const { data: newContract, error: contractError } = await supabase
         .from('contracts')
@@ -635,7 +970,11 @@ const RecordLabel = () => {
           advance_balance: advance,
           recouped_amount: 0,
           royalty_rate: royalty,
-          status: 'active'
+          status: 'active',
+          signed_at: signedAt.toISOString(),
+          end_date: contractEndDate.toISOString(),
+          renewal_option: 'manual',
+          termination_reason: null
         })
         .select()
         .single();
@@ -845,14 +1184,7 @@ const RecordLabel = () => {
           <TabsContent value="contracts">
             <div className="space-y-4">
               {playerContracts.length > 0 ? playerContracts.map((contract) => {
-                const totalAdvance = parseNumeric(contract.advance_payment);
-                const remainingBalance = Math.max(0, parseNumeric(contract.advance_balance));
-                const recoupedAmount = Math.max(0, totalAdvance - remainingBalance);
-                const recoupProgress = totalAdvance > 0
-                  ? Math.min(100, (recoupedAmount / totalAdvance) * 100)
-                  : 100;
-                const isRecouped = remainingBalance <= 0.01;
-
+                const isProcessing = contractActionLoading === contract.id;
                 return (
                   <Card key={contract.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                     <CardHeader>
@@ -871,7 +1203,8 @@ const RecordLabel = () => {
                           className={
                             contract.status === 'active' ? 'text-success border-success' :
                             contract.status === 'pending' ? 'text-warning border-warning' :
-                            'text-muted-foreground'
+                            contract.status === 'completed' ? 'text-primary border-primary' :
+                            'text-destructive border-destructive'
                           }
                         >
                           {contract.status}
@@ -879,10 +1212,10 @@ const RecordLabel = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Advance Received</p>
-                          <p className="font-semibold text-success">${formatCurrency(totalAdvance)}</p>
+                          <p className="font-semibold text-success">${contract.advance_payment.toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Royalty Rate</p>
@@ -892,34 +1225,95 @@ const RecordLabel = () => {
                           <p className="text-sm text-muted-foreground">Signed Date</p>
                           <p className="font-semibold">{new Date(contract.signed_at).toLocaleDateString()}</p>
                         </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">End Date</p>
+                          <p className="font-semibold">
+                            {contract.end_date ? new Date(contract.end_date).toLocaleDateString() : 'Not set'}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>Recoup Progress</span>
-                          <span>{Math.round(recoupProgress)}%</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Remaining Duration</p>
+                          <p className="font-semibold">{formatRemainingDuration(contract)}</p>
+                          <Progress value={getContractProgress(contract)} className="mt-2" />
                         </div>
-                        <Progress value={recoupProgress} className="h-2" />
-                        <div className="flex justify-between text-sm">
-                          <span className="text-success">Recouped: ${formatCurrency(recoupedAmount)}</span>
-                          <span>
-                            Remaining:
-                            <span className={`font-semibold ml-1 ${isRecouped ? 'text-success' : 'text-warning'}`}>
-                              ${formatCurrency(remainingBalance)}
-                            </span>
-                          </span>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Renewal Preference</p>
+                          <p className="font-semibold">{getRenewalOptionLabel(contract.renewal_option)}</p>
+                          {contract.renewal_option === 'auto' && contract.status === 'active' && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              This deal will renew automatically when it reaches the end date.
+                            </p>
+                          )}
                         </div>
-                        {isRecouped && (
-                          <p className="text-sm text-success font-medium">
-                            Advance fully recouped! Future royalties go directly to you.
-                          </p>
-                        )}
                       </div>
+
+                      {contract.status === 'active' && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button
+                            size="sm"
+                            onClick={() => renewContract(contract)}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? 'Processing…' : 'Renew Contract'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => completeContract(contract)}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? 'Working…' : 'Complete Contract'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => terminateContract(contract)}
+                            disabled={isProcessing}
+                          >
+                            Terminate Contract
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleAutoRenew(contract)}
+                            disabled={isProcessing}
+                          >
+                            {contract.renewal_option === 'auto' ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
+                          </Button>
+                        </div>
+                      )}
 
                       {contract.status === 'active' && (
                         <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                           <p className="text-sm text-primary font-medium">
                             ✨ Active contract benefits: Professional recording, promotion support, and higher royalties
+                          </p>
+                        </div>
+                      )}
+
+                      {contract.status === 'completed' && (
+                        <div className="p-3 rounded-lg bg-success/10 border border-success/30">
+                          <p className="text-sm text-success font-medium">
+                            🎉 Contract completed! Your team celebrated the release and you received completion rewards.
+                          </p>
+                        </div>
+                      )}
+
+                      {contract.status === 'terminated' && (
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/40">
+                          <p className="text-sm text-destructive font-medium">
+                            ⚠️ Contract terminated. {contract.termination_reason || 'No reason provided.'}
+                          </p>
+                        </div>
+                      )}
+
+                      {contract.status === 'pending' && (
+                        <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
+                          <p className="text-sm text-warning font-medium">
+                            ⏳ Awaiting final approval from the label. Check back soon for updates.
                           </p>
                         </div>
                       )}
