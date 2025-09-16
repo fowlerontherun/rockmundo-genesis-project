@@ -187,7 +187,7 @@ const MusicCreation = () => {
       const [songUpdate, profileUpdate] = await Promise.all([
         supabase
           .from("songs")
-          .update({ status: "recorded", release_date: new Date().toISOString() })
+          .update({ status: "recorded" })
           .eq("id", song.id),
         supabase
           .from("profiles")
