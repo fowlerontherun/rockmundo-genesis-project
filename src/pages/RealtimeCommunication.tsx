@@ -26,10 +26,7 @@ import {
   Radio,
   Headphones,
   Heart,
-  Share2,
-  Bell,
-  Settings,
-  Globe,
+  Loader2,
   Lock,
   Crown,
   Loader2,
@@ -63,6 +60,17 @@ interface NotificationRow {
   read: boolean;
 }
 
+interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  priority: 'low' | 'medium' | 'high';
+}
+
 interface ChatProfileSummary {
   username: string | null;
   display_name: string | null;
@@ -72,7 +80,7 @@ interface ChatProfileSummary {
 interface ChatMessageRow {
   id: string;
   user_id: string;
-  message: string;
+  message: string | null;
   channel: string | null;
   created_at: string | null;
   username?: string | null;
@@ -104,29 +112,6 @@ type JamSessionRecord = JamSessionRow & {
   } | null;
 };
 
-type NotificationRow = {
-  id: string;
-  user_id: string;
-  type: string | null;
-  message: string;
-  timestamp: string;
-  read: boolean;
-};
-
-type NotificationType = 'gig_invite' | 'band_request' | 'fan_milestone' | 'achievement' | 'system';
-
-type ChatMessageRow = {
-  id: string;
-  user_id: string;
-  channel: string;
-  message?: string | null;
-  content?: string | null;
-  created_at: string;
-  username?: string | null;
-  user_level?: number | null;
-  user_badge?: string | null;
-};
-
 interface JamSession {
   id: string;
   name: string;
@@ -149,6 +134,62 @@ type NewSessionState = {
   skillRequirement: number;
 };
 
+type StreamMap = Record<string, MediaStream>;
+
+type AudioLevelMap = Record<string, number>;
+
+type ParticipantDetailsMap = Record<string, { name: string }>;
+
+type PresenceData = {
+  user_id: string;
+  name?: string;
+};
+
+interface AudioMeterHandle {
+  analyser: AnalyserNode;
+  source: MediaStreamAudioSourceNode;
+  rafId: number;
+}
+
+interface WebRTCPayload {
+  from: string;
+  to: string;
+  sdp?: RTCSessionDescriptionInit;
+  candidate?: RTCIceCandidateInit;
+}
+
+const DEFAULT_NOTIFICATION_TYPE: NotificationType = 'system';
+
+const NOTIFICATION_TITLES: Record<NotificationType, string> = {
+  gig_invite: 'Gig Invitation',
+  band_request: 'Band Request',
+  fan_milestone: 'Fan Milestone',
+  achievement: 'Achievement Unlocked',
+  system: 'System Alert',
+};
+
+const NOTIFICATION_PRIORITIES: Record<NotificationType, 'low' | 'medium' | 'high'> = {
+  gig_invite: 'high',
+  band_request: 'medium',
+  fan_milestone: 'low',
+  achievement: 'medium',
+  system: 'low',
+};
+
+const CHAT_MESSAGES_TABLE =
+  'chat_messages' as unknown as keyof Database['public']['Tables'];
+
+const STUN_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+];
+
+const sortNotificationsByTimestamp = (items: Notification[]) =>
+  [...items].sort(
+    (a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+
 const createDefaultSessionState = (): NewSessionState => ({
   name: '',
   genre: '',
@@ -159,77 +200,24 @@ const createDefaultSessionState = (): NewSessionState => ({
 
 const mapJamSession = (
   record: JamSessionRecord,
-  hostOverride?: JamSessionRecord['host_profile']
+  hostOverride?: JamSessionRecord['host_profile'],
 ): JamSession => {
   const hostProfile = hostOverride ?? record.host_profile;
 
-  return {
-    id: record.id,
-    name: record.name,
-    hostId: record.host_id,
-    hostName: hostProfile?.display_name || hostProfile?.username || 'Unknown Host',
-    genre: record.genre,
-    tempo: record.tempo,
-    maxParticipants: record.max_participants,
-    currentParticipants: record.current_participants,
-    participantIds: record.participant_ids ?? [],
-    skillRequirement: record.skill_requirement,
-    isPrivate: record.is_private,
-  };
-};
-
-type NotificationType = 'gig_invite' | 'band_request' | 'fan_milestone' | 'achievement' | 'system';
-
-type NotificationRow = {
-  id: string;
-  user_id: string;
-  type: NotificationType | null;
-  message: string;
-  timestamp: string;
-  read: boolean;
-};
-
-interface Notification {
-  id: string;
-  user_id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  priority: 'low' | 'medium' | 'high';
-}
-
-const DEFAULT_NOTIFICATION_TYPE: NotificationType = 'system';
-
-const NOTIFICATION_TITLES: Record<NotificationType, string> = {
-  gig_invite: 'Gig Invitation',
-  band_request: 'Band Request',
-  fan_milestone: 'Fan Milestone',
-  achievement: 'Achievement Unlocked',
-  system: 'System Alert'
-};
-
-const NOTIFICATION_PRIORITIES: Record<NotificationType, 'low' | 'medium' | 'high'> = {
-  gig_invite: 'high',
-  band_request: 'medium',
-  fan_milestone: 'low',
-  achievement: 'medium',
-  system: 'low'
-};
-
-const sortNotificationsByTimestamp = (items: Notification[]) =>
-  [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
 const CHAT_MESSAGES_TABLE = 'chat_messages' as unknown as keyof Database['public']['Tables'];
 const CHAT_PARTICIPANTS_TABLE = 'chat_participants' as unknown as keyof Database['public']['Tables'];
-
 const mapNotificationRow = (notification: NotificationRow): Notification => {
   const type = notification.type ?? DEFAULT_NOTIFICATION_TYPE;
-  const resolvedType = (type in NOTIFICATION_TITLES ? type : DEFAULT_NOTIFICATION_TYPE) as NotificationType;
+  const resolvedType = (type in NOTIFICATION_TITLES
+    ? type
+    : DEFAULT_NOTIFICATION_TYPE) as NotificationType;
 
-  const title = NOTIFICATION_TITLES[resolvedType] ?? NOTIFICATION_TITLES[DEFAULT_NOTIFICATION_TYPE];
-  const priority = NOTIFICATION_PRIORITIES[resolvedType] ?? NOTIFICATION_PRIORITIES[DEFAULT_NOTIFICATION_TYPE];
+  const title =
+    NOTIFICATION_TITLES[resolvedType] ??
+    NOTIFICATION_TITLES[DEFAULT_NOTIFICATION_TYPE];
+  const priority =
+    NOTIFICATION_PRIORITIES[resolvedType] ??
+    NOTIFICATION_PRIORITIES[DEFAULT_NOTIFICATION_TYPE];
 
   return {
     id: notification.id,
@@ -239,7 +227,7 @@ const mapNotificationRow = (notification: NotificationRow): Notification => {
     message: notification.message,
     timestamp: notification.timestamp,
     read: notification.read,
-    priority
+    priority,
   };
 };
 
@@ -253,17 +241,20 @@ const mapChatMessageRow = (row: ChatMessageRow): ChatMessage => {
     'Unknown Player';
 
   const potentialLevel = row.user_level ?? relatedProfile?.level ?? undefined;
-  const resolvedLevel = typeof potentialLevel === 'number' ? potentialLevel : undefined;
+  const resolvedLevel =
+    typeof potentialLevel === 'number' ? potentialLevel : undefined;
 
   const resolvedBadge =
     row.user_badge ??
-    (typeof resolvedLevel === 'number' && resolvedLevel > 20 ? 'Pro' : undefined);
+    (typeof resolvedLevel === 'number' && resolvedLevel > 20
+      ? 'Pro'
+      : undefined);
 
   return {
     id: row.id,
     user_id: row.user_id,
     username: resolvedUsername || 'Unknown Player',
-    message: row.message,
+    message: row.message ?? '',
     timestamp: row.created_at ?? new Date().toISOString(),
     channel: row.channel ?? 'general',
     user_level: resolvedLevel ?? 1,
@@ -286,18 +277,19 @@ const mapParticipantRow = (
 const RealtimeCommunication: React.FC = () => {
   const { user } = useAuth();
   const { profile } = useGameData();
-  const userId = user?.id;
+  const userId = user?.id ?? null;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [jamSessions, setJamSessions] = useState<JamSession[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [selectedChannel, setSelectedChannel] = useState('general');
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const hasConnectedRef = useRef(false);
   const [isConnected, setIsConnected] = useState(false);
   const [activeJam, setActiveJam] = useState<JamSession | null>(null);
   const [jamTempo, setJamTempo] = useState(120);
-  const [newSession, setNewSession] = useState<NewSessionState>(createDefaultSessionState());
+  const [newSession, setNewSession] = useState<NewSessionState>(
+    createDefaultSessionState(),
+  );
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
@@ -357,13 +349,41 @@ const RealtimeCommunication: React.FC = () => {
         return prev;
       }
 
-      const next = [...prev, incoming];
-      next.sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-      return next;
-    });
-  }, []);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const hasConnectedRef = useRef(false);
+  const audioChannelRef = useRef<RealtimeChannel | null>(null);
+  const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mixDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(
+    null,
+  );
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const audioMetersRef = useRef<Record<string, AudioMeterHandle>>({});
+  const audioElementsRef = useRef<Record<string, HTMLAudioElement | null>>({});
+  const initiatedPeersRef = useRef<Set<string>>(new Set());
+  const currentSessionIdRef = useRef<string | null>(null);
+  const participantStreamsRef = useRef<StreamMap>({});
+  const participantDetailsRef = useRef<ParticipantDetailsMap>({});
+  const hasStartedRecordingRef = useRef(false);
+
+  const channels = useMemo(
+    () => [
+      { id: 'general', name: 'General Chat', icon: MessageSquare, public: true },
+      { id: 'gigs', name: 'Gig Talk', icon: Music, public: true },
+      { id: 'trading', name: 'Equipment Trade', icon: Share2, public: true },
+      { id: 'beginners', name: 'Beginners Help', icon: Heart, public: true },
+      {
+        id: 'vip',
+        name: 'VIP Lounge',
+        icon: Crown,
+        public: false,
+        requirement: 'Level 10+',
+      },
+    ],
+    [],
+  );
 
   useEffect(() => {
     selectedChannelRef.current = selectedChannel;
@@ -744,8 +764,1025 @@ const RealtimeCommunication: React.FC = () => {
       return;
     }
 
+  useEffect(() => {
+    participantStreamsRef.current = participantStreams;
+  }, [participantStreams]);
+
+  useEffect(() => {
+    participantDetailsRef.current = participantDetails;
+  }, [participantDetails]);
+
+  const ensureAudioContext = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    if (!audioContextRef.current) {
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+
+      if (!AudioContextConstructor) {
+        toast.error('Your browser does not support audio streaming.');
+        return null;
+      }
+
+      const context = new AudioContextConstructor();
+      audioContextRef.current = context;
+      mixDestinationRef.current = context.createMediaStreamDestination();
+    }
+
+    return audioContextRef.current;
+  }, []);
+
+  const destroyAudioMeter = useCallback((participantId: string) => {
+    const meter = audioMetersRef.current[participantId];
+    if (!meter) {
+      return;
+    }
+
+    cancelAnimationFrame(meter.rafId);
+    meter.source.disconnect();
+    meter.analyser.disconnect();
+    delete audioMetersRef.current[participantId];
+
+    const fetchMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from<ChatMessageRow>(CHAT_MESSAGES_TABLE)
+          .select(`
+            id,
+            user_id,
+            message,
+            channel,
+            created_at
+          `)
+          .eq('channel', selectedChannel)
+          .order('created_at', { ascending: true })
+          .limit(100);
+
+  const setupAudioMeter = useCallback(
+    (participantId: string, stream: MediaStream, isLocal: boolean) => {
+      const context = ensureAudioContext();
+      if (!context) {
+        return;
+      }
+
+      destroyAudioMeter(participantId);
+
+      try {
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 256;
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        const source = context.createMediaStreamSource(stream);
+        source.connect(analyser);
+        if (mixDestinationRef.current) {
+          source.connect(mixDestinationRef.current);
+        }
+
+        const updateLevel = () => {
+          analyser.getByteTimeDomainData(dataArray);
+          let sumSquares = 0;
+          for (let i = 0; i < dataArray.length; i += 1) {
+            const value = dataArray[i] - 128;
+            sumSquares += value * value;
+          }
+          const rms = Math.sqrt(sumSquares / dataArray.length);
+          const normalized = Math.min(100, Math.max(0, (rms / 64) * 100));
+
+          setAudioLevels((prev) => ({ ...prev, [participantId]: normalized }));
+          const handle = audioMetersRef.current[participantId];
+          if (handle) {
+            handle.rafId = requestAnimationFrame(updateLevel);
+          }
+        };
+
+        audioMetersRef.current[participantId] = {
+          analyser,
+          source,
+          rafId: requestAnimationFrame(updateLevel),
+        };
+
+        if (isLocal) {
+          setIsAudioReady(true);
+        }
+      } catch (error) {
+        console.error('Failed to create audio meter:', error);
+      }
+    },
+    [destroyAudioMeter, ensureAudioContext],
+  );
+
+  const removeParticipantStream = useCallback(
+    (participantId: string) => {
+      destroyAudioMeter(participantId);
+      setParticipantStreams((prev) => {
+        if (!(participantId in prev)) {
+          return prev;
+        }
+        const { [participantId]: _removed, ...rest } = prev;
+        return rest;
+      });
+      setParticipantDetails((prev) => {
+        if (!(participantId in prev)) {
+          return prev;
+        }
+        const { [participantId]: _removed, ...rest } = prev;
+        return rest;
+      });
+    },
+    [destroyAudioMeter],
+  );
+
+  const cleanupPeer = useCallback(
+    (peerId: string) => {
+      const connection = peerConnectionsRef.current[peerId];
+      if (connection) {
+        try {
+          connection.ontrack = null;
+          connection.onicecandidate = null;
+          connection.close();
+        } catch (error) {
+          console.warn('Error closing peer connection', error);
+        }
+        delete peerConnectionsRef.current[peerId];
+      }
+
+      initiatedPeersRef.current.delete(peerId);
+      removeParticipantStream(peerId);
+    },
+    [removeParticipantStream],
+  );
+
+  const createPeerConnection = useCallback(
+    (peerId: string) => {
+      if (peerConnectionsRef.current[peerId]) {
+        return peerConnectionsRef.current[peerId];
+      }
+
+      const connection = new RTCPeerConnection({ iceServers: STUN_SERVERS });
+      peerConnectionsRef.current[peerId] = connection;
+
+      const localStream = localStreamRef.current;
+      if (localStream) {
+        localStream.getTracks().forEach((track) => {
+          connection.addTrack(track, localStream);
+        });
+      }
+
+      connection.onicecandidate = (event) => {
+        if (!event.candidate || !audioChannelRef.current || !userId) {
+          return;
+        }
+
+        void audioChannelRef.current.send({
+          type: 'broadcast',
+          event: 'webrtc-ice',
+          payload: {
+            from: userId,
+            to: peerId,
+            candidate: event.candidate,
+          },
+        });
+      };
+
+      connection.ontrack = (event) => {
+        const [incomingStream] = event.streams;
+        if (!incomingStream) {
+          return;
+        }
+
+        if (participantStreamsRef.current[peerId] === incomingStream) {
+          return;
+        }
+
+        setParticipantStreams((prev) => ({
+          ...prev,
+          [peerId]: incomingStream,
+        }));
+        setupAudioMeter(peerId, incomingStream, false);
+      };
+
+      connection.onconnectionstatechange = () => {
+        if (
+          connection.connectionState === 'disconnected' ||
+          connection.connectionState === 'failed' ||
+          connection.connectionState === 'closed'
+        ) {
+          cleanupPeer(peerId);
+        }
+      };
+
+      return connection;
+    },
+    [cleanupPeer, setupAudioMeter, userId],
+  );
+  const sendOffer = useCallback(
+    async (peerId: string) => {
+      if (initiatedPeersRef.current.has(peerId)) {
+        return;
+      }
+
+      const channel = audioChannelRef.current;
+      const connection = createPeerConnection(peerId);
+      if (!channel || !connection || !userId) {
+        return;
+      }
+
+      try {
+        const offer = await connection.createOffer();
+        await connection.setLocalDescription(offer);
+
+        initiatedPeersRef.current.add(peerId);
+        const status = await channel.send({
+          type: 'broadcast',
+          event: 'webrtc-offer',
+          payload: {
+            from: userId,
+            to: peerId,
+            sdp: offer,
+          },
+        });
+
+        if (status !== 'ok') {
+          console.warn('Failed to send WebRTC offer', status);
+        }
+      } catch (error) {
+        console.error('Error creating WebRTC offer:', error);
+        initiatedPeersRef.current.delete(peerId);
+      }
+    },
+    [createPeerConnection, userId],
+  );
+
+  const handleOffer = useCallback(
+    async (message: { payload: WebRTCPayload }) => {
+      const data = message.payload;
+      if (!data || !userId || data.to !== userId || !data.sdp) {
+        return;
+      }
+
+      const channel = audioChannelRef.current;
+      const connection = createPeerConnection(data.from);
+      if (!channel || !connection) {
+        return;
+      }
+
+      try {
+        await connection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        const answer = await connection.createAnswer();
+        await connection.setLocalDescription(answer);
+
+        const status = await channel.send({
+          type: 'broadcast',
+          event: 'webrtc-answer',
+          payload: {
+            from: userId,
+            to: data.from,
+            sdp: answer,
+          },
+        });
+
+        if (status !== 'ok') {
+          console.warn('Failed to send WebRTC answer', status);
+        }
+      } catch (error) {
+        console.error('Error handling WebRTC offer:', error);
+      }
+    },
+    [createPeerConnection, userId],
+  );
+
+  const handleAnswer = useCallback(
+    async (message: { payload: WebRTCPayload }) => {
+      const data = message.payload;
+      if (!data || !userId || data.to !== userId || !data.sdp) {
+        return;
+      }
+
+      const connection = peerConnectionsRef.current[data.from];
+      if (!connection) {
+        return;
+      }
+
+      try {
+        await connection.setRemoteDescription(
+          new RTCSessionDescription(data.sdp),
+        );
+      } catch (error) {
+        console.error('Error handling WebRTC answer:', error);
+      }
+    },
+    [userId],
+  );
+
+  const handleIce = useCallback(
+    async (message: { payload: WebRTCPayload }) => {
+      const data = message.payload;
+      if (!data || !userId || data.to !== userId || !data.candidate) {
+        return;
+      }
+
+      const connection = peerConnectionsRef.current[data.from];
+      if (!connection) {
+        return;
+      }
+
+      try {
+        await connection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      } catch (error) {
+        console.error('Error adding ICE candidate:', error);
+      }
+    },
+    [userId],
+  );
+
+  const handleLeaveEvent = useCallback(
+    (message: { payload: { from?: string } }) => {
+      const peerId = message.payload?.from;
+      if (!peerId || peerId === userId) {
+        return;
+      }
+      cleanupPeer(peerId);
+    },
+    [cleanupPeer, userId],
+  );
+
+  const handlePresenceSync = useCallback(() => {
+    const channel = audioChannelRef.current;
+    if (!channel || !userId) {
+      return;
+    }
+
+    const state = channel.presenceState<PresenceData>();
+    const peers = Object.keys(state).filter((key) => key !== userId);
+
+    const detailsUpdate: ParticipantDetailsMap = {};
+    Object.entries(state).forEach(([key, presences]) => {
+      const presenceList = presences as PresenceData[];
+      const latest = presenceList[presenceList.length - 1];
+      if (latest) {
+        detailsUpdate[key] = { name: latest.name ?? 'Participant' };
+      }
+    });
+
+    if (Object.keys(detailsUpdate).length > 0) {
+      setParticipantDetails((prev) => ({ ...prev, ...detailsUpdate }));
+    }
+
+    peers.forEach((peerId) => {
+      createPeerConnection(peerId);
+      if (userId.localeCompare(peerId) < 0) {
+        void sendOffer(peerId);
+      }
+    });
+
+    Object.keys(peerConnectionsRef.current).forEach((existingId) => {
+      if (existingId !== userId && !peers.includes(existingId)) {
+        cleanupPeer(existingId);
+      }
+    });
+  }, [cleanupPeer, createPeerConnection, sendOffer, userId]);
+
+  const startAudioStreaming = useCallback(
+    async (sessionId: string) => {
+      if (!userId) {
+        return;
+      }
+
+      if (
+        currentSessionIdRef.current === sessionId &&
+        audioChannelRef.current
+      ) {
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        toast.error('Audio streaming requires microphone access.');
+        return;
+      }
+
+      try {
+        if (!localStreamRef.current) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          localStreamRef.current = stream;
+          setParticipantStreams((prev) => ({ ...prev, [userId]: stream }));
+          const profileName =
+            profile?.display_name ?? profile?.username ?? 'You';
+          setParticipantDetails((prev) => ({
+            ...prev,
+            [userId]: { name: profileName },
+          }));
+          setupAudioMeter(userId, stream, true);
+        }
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+        toast.error('Unable to access your microphone for the jam session.');
+        return;
+      }
+
+      currentSessionIdRef.current = sessionId;
+
+      const channel = supabase.channel(`jam-audio:${sessionId}`, {
+        config: {
+          presence: { key: userId },
+          broadcast: { self: false },
+        },
+      });
+
+      audioChannelRef.current = channel;
+
+      channel
+        .on('presence', { event: 'sync' }, handlePresenceSync)
+        .on('presence', { event: 'join' }, (payload) => {
+          const joined = (payload.newPresences ?? []) as PresenceData[];
+          if (joined.length > 0) {
+            const update: ParticipantDetailsMap = {};
+            joined.forEach((presence) => {
+              if (presence.user_id) {
+                update[presence.user_id] = {
+                  name: presence.name ?? 'Participant',
+                };
+              }
+            });
+            if (Object.keys(update).length > 0) {
+              setParticipantDetails((prev) => ({ ...prev, ...update }));
+            }
+          }
+        })
+        .on('presence', { event: 'leave' }, (payload) => {
+          const left = (payload.leftPresences ?? []) as PresenceData[];
+          left.forEach((presence) => {
+            if (presence.user_id) {
+              cleanupPeer(presence.user_id);
+            }
+          });
+        })
+        .on('broadcast', { event: 'webrtc-offer' }, handleOffer)
+        .on('broadcast', { event: 'webrtc-answer' }, handleAnswer)
+        .on('broadcast', { event: 'webrtc-ice' }, handleIce)
+        .on('broadcast', { event: 'leave' }, handleLeaveEvent);
+
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          try {
+            await channel.track({
+              user_id: userId,
+              name:
+                profile?.display_name ??
+                profile?.username ??
+                'RockMundo Musician',
+            });
+          } catch (error) {
+            console.error('Failed to join jam audio channel:', error);
+          }
+        }
+      });
+    },
+    [cleanupPeer, handleAnswer, handleIce, handleLeaveEvent, handleOffer, handlePresenceSync, profile, setupAudioMeter, userId],
+  );
+
+  const stopAudioStreaming = useCallback(async () => {
+    if (audioChannelRef.current) {
+      try {
+        if (userId) {
+          await audioChannelRef.current.send({
+            type: 'broadcast',
+            event: 'leave',
+            payload: { from: userId },
+          });
+        }
+      } catch (error) {
+        console.warn('Error notifying peers about leaving:', error);
+      }
+
+      try {
+        await supabase.removeChannel(audioChannelRef.current);
+      } catch (error) {
+        console.warn('Error removing audio channel:', error);
+      }
+
+      audioChannelRef.current = null;
+    }
+
+    Object.keys(peerConnectionsRef.current).forEach((peerId) => {
+      try {
+        peerConnectionsRef.current[peerId].close();
+      } catch (error) {
+        console.warn('Error closing peer connection:', error);
+      }
+      delete peerConnectionsRef.current[peerId];
+    });
+    initiatedPeersRef.current.clear();
+
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+
+    Object.keys(audioMetersRef.current).forEach((participantId) => {
+      destroyAudioMeter(participantId);
+    });
+    audioMetersRef.current = {};
+
+    if (audioContextRef.current) {
+      try {
+        void audioContextRef.current.close();
+      } catch (error) {
+        console.warn('Error closing audio context:', error);
+      }
+      audioContextRef.current = null;
+    }
+
+    mixDestinationRef.current = null;
+    currentSessionIdRef.current = null;
+    participantStreamsRef.current = {};
+    participantDetailsRef.current = {};
+    setParticipantStreams({});
+    setParticipantDetails({});
+    setAudioLevels({});
+    setIsAudioReady(false);
+    hasStartedRecordingRef.current = false;
+
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== 'inactive'
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+    mediaRecorderRef.current = null;
+    recordedChunksRef.current = [];
+    setIsRecording(false);
+  }, [destroyAudioMeter, userId]);
+
+  const startRecordingIfHost = useCallback(() => {
+    if (!activeJam || !userId || userId !== activeJam.hostId) {
+      return;
+    }
+
+    if (!mixDestinationRef.current) {
+      return;
+    }
+
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== 'inactive'
+    ) {
+      return;
+    }
+
+    try {
+      const recorder = new MediaRecorder(mixDestinationRef.current.stream);
+      recordedChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start(1000);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Failed to start session recording:', error);
+      toast.error('Unable to start session recording.');
+    }
+  }, [activeJam, userId]);
+
+  const stopRecordingAndUpload = useCallback(
+    async (sessionId: string): Promise<boolean> => {
+      const uploadBlob = async (blob: Blob) => {
+        if (blob.size === 0) {
+          return false;
+        }
+
+        const filePath = `sessions/${sessionId}-${Date.now()}.webm`;
+        const { error } = await supabase.storage
+          .from('session-recordings')
+          .upload(filePath, blob, {
+            contentType: 'audio/webm',
+            upsert: false,
+          });
+
+        if (error) {
+          console.error('Failed to upload session recording:', error);
+          toast.error('Failed to upload session recording to Supabase.');
+          return false;
+        }
+
+        toast.success('Session recording saved to Supabase storage.');
+        return true;
+      };
+
+      const finalize = async () => {
+        const blob = new Blob(recordedChunksRef.current, {
+          type: 'audio/webm',
+        });
+        recordedChunksRef.current = [];
+        setIsRecording(false);
+        mediaRecorderRef.current = null;
+        return uploadBlob(blob);
+      };
+
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== 'inactive'
+      ) {
+        return await new Promise<boolean>((resolve) => {
+          const recorder = mediaRecorderRef.current;
+          if (!recorder) {
+            resolve(false);
+            return;
+          }
+
+          recorder.onstop = async () => {
+            const success = await finalize();
+            resolve(success);
+          };
+
+          recorder.stop();
+        });
+      }
+
+      if (recordedChunksRef.current.length === 0) {
+        return false;
+      }
+
+      return finalize();
+    },
+    [],
+  );
+  const loadJamSessions = useCallback(async (): Promise<JamSession[]> => {
+    setIsLoadingSessions(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('jam_sessions')
+        .select(`
+          *,
+          host_profile:profiles!jam_sessions_host_id_fkey(username, display_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const records = (data as JamSessionRecord[] | null) ?? [];
+      const mappedSessions = records.map((record) => mapJamSession(record));
+      setJamSessions(mappedSessions);
+
+      if (activeJam) {
+        const updatedActive = mappedSessions.find(
+          (session) => session.id === activeJam.id,
+        );
+
+        if (updatedActive) {
+          setActiveJam(updatedActive);
+          setJamTempo(updatedActive.tempo);
+        } else {
+          setActiveJam(null);
+          setJamTempo(120);
+        }
+      }
+
+      return mappedSessions;
+    } catch (error) {
+      console.error('Error loading jam sessions:', error);
+      toast.error('Failed to load jam sessions');
+      return [];
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, [activeJam]);
+
+  const sendMessage = useCallback(async () => {
+    if (!currentMessage.trim() || !user) {
+      return;
+    }
+
+    const trimmedMessage = currentMessage.trim();
+
+    try {
+      const { data, error } = await supabase
+        .from<ChatMessageRow>(CHAT_MESSAGES_TABLE)
+        .insert({
+          user_id: user.id,
+          channel: selectedChannel,
+          message: trimmedMessage,
+        })
+        .select(`
+          id,
+          user_id,
+          message,
+          channel,
+          created_at
+        `)
+        .single();
+
+      if (error || !data) {
+        throw error ?? new Error('Failed to send message');
+      }
+
+      const insertedRow = data as ChatMessageRow;
+      const messagePayload = mapChatMessageRow({
+        ...insertedRow,
+        channel: insertedRow.channel ?? selectedChannel,
+        created_at: insertedRow.created_at ?? new Date().toISOString(),
+        username:
+          profile?.username ?? profile?.display_name ?? 'You',
+        user_level: profile?.level ?? 1,
+        user_badge:
+          profile?.level && profile.level > 20 ? 'Pro' : undefined,
+      });
+
+      setMessages((prev) => {
+        if (prev.some((existing) => existing.id === messagePayload.id)) {
+          return prev;
+        }
+        return [...prev, messagePayload];
+      });
+
+      if (channelRef.current) {
+        const status = await channelRef.current.send({
+          type: 'broadcast',
+          event: 'new-message',
+          payload: messagePayload,
+        });
+
+        if (status !== 'ok') {
+          console.warn('Broadcast failed with status:', status);
+        }
+      }
+
+      setCurrentMessage('');
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      toast.error('Failed to send message.');
+    }
+  }, [currentMessage, profile, selectedChannel, user]);
+
+  const createSession = useCallback(async () => {
+    if (!profile || !userId) {
+      toast.error('You need a player profile to create jam sessions');
+      return;
+    }
+
+    const trimmedName = newSession.name.trim();
+    const trimmedGenre = newSession.genre.trim();
+    const tempo = Number.isFinite(newSession.tempo)
+      ? Math.max(1, Math.round(newSession.tempo))
+      : 120;
+    const maxParticipants = Number.isFinite(newSession.maxParticipants)
+      ? Math.max(1, Math.round(newSession.maxParticipants))
+      : 4;
+    const skillRequirement = Number.isFinite(newSession.skillRequirement)
+      ? Math.max(0, Math.round(newSession.skillRequirement))
+      : 0;
+
+    if (!trimmedName || !trimmedGenre) {
+      toast.error('Session name and genre are required');
+      return;
+    }
+
+    if (maxParticipants < 1) {
+      toast.error('Jam sessions must allow at least one participant');
+      return;
+    }
+
+    try {
+      setCreatingSession(true);
+
+      const { data: sessionIdData, error: createError } = await supabase
+        .from('jam_sessions')
+        .insert({
+          host_id: userId,
+          name: trimmedName,
+          genre: trimmedGenre,
+          tempo,
+          max_participants: maxParticipants,
+          skill_requirement: skillRequirement,
+          is_private: false,
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        throw createError;
+      }
+
+      if (!sessionIdData) {
+        throw new Error('Unable to create jam session');
+      }
+
+      const { data: joinedData, error: joinError } = await supabase.rpc(
+        'join_jam_session',
+        { p_session_id: sessionIdData.id },
+      );
+
+      if (joinError) {
+        throw joinError;
+      }
+
+      const hostProfile = {
+        display_name: profile.display_name,
+        username: profile.username,
+      };
+
+      let createdSession: JamSession | null = null;
+
+      if (joinedData) {
+        createdSession = mapJamSession(
+          joinedData as JamSessionRecord,
+          hostProfile,
+        );
+        setActiveJam(createdSession);
+        setJamTempo(createdSession.tempo);
+      }
+
+      const sessions = await loadJamSessions();
+
+      if (!createdSession && joinedData) {
+        const fallback = sessions.find(
+          (session) => session.id === (joinedData as JamSessionRow).id,
+        );
+        if (fallback) {
+          setActiveJam(fallback);
+          setJamTempo(fallback.tempo);
+        }
+      }
+
+      setNewSession(createDefaultSessionState());
+      toast.success('Jam session created!');
+    } catch (error) {
+      console.error('Error creating jam session:', error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to create jam session';
+      toast.error(message);
+    } finally {
+      setCreatingSession(false);
+    }
+  }, [loadJamSessions, newSession, profile, userId]);
+
+  const joinSession = useCallback(
+    async (session: JamSession) => {
+      if (!profile || !userId) {
+        toast.error('You need a player profile to join jam sessions');
+        return;
+      }
+
+      if (session.isPrivate) {
+        toast.error('This jam session is private and cannot be joined right now');
+        return;
+      }
+
+      if (session.currentParticipants >= session.maxParticipants) {
+        toast.error('This jam session is already full');
+        return;
+      }
+
+      const avgSkill = (profile.level ?? 0) * 2;
+      if (avgSkill < session.skillRequirement) {
+        toast.error('Your skill level is too low for this jam session');
+        return;
+      }
+
+      if (session.participantIds.includes(userId)) {
+        setActiveJam(session);
+        setJamTempo(session.tempo);
+        toast.info('You are already part of this jam session');
+        return;
+      }
+
+      try {
+        setJoiningSessionId(session.id);
+
+        const { data, error } = await supabase.rpc('join_jam_session', {
+          p_session_id: session.id,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          throw new Error('Unable to join jam session');
+        }
+
+        const hostOverride = {
+          display_name: session.hostName,
+          username: session.hostName,
+        };
+
+        const updatedSession = mapJamSession(
+          data as JamSessionRecord,
+          hostOverride,
+        );
+
+        setJamSessions((prev) => {
+          const exists = prev.some((item) => item.id === updatedSession.id);
+          if (exists) {
+            return prev.map((item) =>
+              item.id === updatedSession.id ? updatedSession : item,
+            );
+          }
+          return [updatedSession, ...prev];
+        });
+
+        setActiveJam(updatedSession);
+        setJamTempo(updatedSession.tempo);
+        toast.success(`Joined ${updatedSession.name}! Get ready to jam!`);
+      } catch (error) {
+        console.error('Error joining jam session:', error);
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Failed to join jam session';
+        toast.error(message);
+      } finally {
+        setJoiningSessionId(null);
+      }
+    },
+    [profile, userId],
+  );
+
+  const leaveJamSession = useCallback(async () => {
+    await stopAudioStreaming();
+    setActiveJam(null);
+    setJamTempo(120);
+    toast.info('Left jam session');
     void loadJamSessions();
-  }, [user, loadJamSessions]);
+  }, [loadJamSessions, stopAudioStreaming]);
+
+  const endJamSession = useCallback(async () => {
+    if (!activeJam || !userId) {
+      return;
+    }
+
+    if (userId !== activeJam.hostId) {
+      await leaveJamSession();
+      return;
+    }
+
+    await stopRecordingAndUpload(activeJam.id);
+    await stopAudioStreaming();
+    setActiveJam(null);
+    setJamTempo(120);
+    toast.success('Jam session ended.');
+    void loadJamSessions();
+  }, [activeJam, leaveJamSession, loadJamSessions, stopAudioStreaming, stopRecordingAndUpload, userId]);
+
+  const markNotificationRead = useCallback(
+    async (notificationId: string) => {
+      if (!userId) {
+        return;
+      }
+
+      const existing = notifications.find(
+        (notification) => notification.id === notificationId,
+      );
+      if (!existing || existing.read) {
+        return;
+      }
+
+      const previousNotifications = notifications.map((notification) => ({
+        ...notification,
+      }));
+
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === notificationId
+            ? { ...notification, read: true }
+            : notification,
+        ),
+      );
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notificationId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        setNotifications(previousNotifications);
+        toast.error('Failed to update notification status.');
+      }
+    },
+    [notifications, userId],
+  );
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    void loadJamSessions();
+  }, [loadJamSessions, user]);
 
   useEffect(() => {
     if (!userId) {
@@ -783,7 +1820,9 @@ const RealtimeCommunication: React.FC = () => {
         }
 
         const rows = (data ?? []) as ChatMessageRow[];
-        const userIds = Array.from(new Set(rows.map(row => row.user_id).filter(Boolean)));
+        const userIds = Array.from(
+          new Set(rows.map((row) => row.user_id).filter(Boolean)),
+        );
 
         let profileMap: Record<string, ChatProfileSummary> = {};
 
@@ -795,14 +1834,14 @@ const RealtimeCommunication: React.FC = () => {
 
           if (!profileError && profileRows) {
             profileMap = Object.fromEntries(
-              profileRows.map(profile => [
-                profile.user_id,
+              profileRows.map((profileRow) => [
+                profileRow.user_id,
                 {
-                  username: profile.username,
-                  display_name: profile.display_name,
-                  level: profile.level,
+                  username: profileRow.username,
+                  display_name: profileRow.display_name,
+                  level: profileRow.level,
                 } satisfies ChatProfileSummary,
-              ])
+              ]),
             );
           }
         }
@@ -811,17 +1850,17 @@ const RealtimeCommunication: React.FC = () => {
           return;
         }
 
-        const mapped = rows.map(row =>
+        const mapped = rows.map((row) =>
           mapChatMessageRow({
             ...row,
             channel: row.channel ?? selectedChannel,
             created_at: row.created_at ?? new Date().toISOString(),
             profiles: profileMap[row.user_id] ?? null,
-          })
+          }),
         );
         setMessages(mapped);
-      } catch (err) {
-        console.error('Error loading chat messages:', err);
+      } catch (error) {
+        console.error('Error loading chat messages:', error);
         if (isActive) {
           toast.error('Failed to load chat messages.');
         }
@@ -855,23 +1894,22 @@ const RealtimeCommunication: React.FC = () => {
 
     setIsConnected(false);
 
-    channel
-      .on('broadcast', { event: 'new-message' }, payload => {
-        const incoming = payload.payload as ChatMessage | undefined;
+    channel.on('broadcast', { event: 'new-message' }, (payload) => {
+      const incoming = payload.payload as ChatMessage | undefined;
 
-        if (!incoming || incoming.channel !== selectedChannel) {
-          return;
+      if (!incoming || incoming.channel !== selectedChannel) {
+        return;
+      }
+
+      setMessages((prev) => {
+        if (prev.some((message) => message.id === incoming.id)) {
+          return prev;
         }
-
-        setMessages(prev => {
-          if (prev.some(message => message.id === incoming.id)) {
-            return prev;
-          }
-          return [...prev, incoming];
-        });
+        return [...prev, incoming];
       });
+    });
 
-    channel.subscribe(status => {
+    channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         setIsConnected(true);
 
@@ -881,7 +1919,11 @@ const RealtimeCommunication: React.FC = () => {
         }
       }
 
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      if (
+        status === 'CHANNEL_ERROR' ||
+        status === 'TIMED_OUT' ||
+        status === 'CLOSED'
+      ) {
         setIsConnected(false);
       }
     });
@@ -906,12 +1948,14 @@ const RealtimeCommunication: React.FC = () => {
     let isActive = true;
 
     const fetchNotifications = async () => {
-        try {
-          const { data, error } = await supabase
-            .from<NotificationRow>('notifications' as unknown as keyof Database['public']['Tables'])
-            .select('*')
-            .eq('user_id', userId)
-            .order('timestamp', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from<NotificationRow>(
+            'notifications' as unknown as keyof Database['public']['Tables'],
+          )
+          .select('*')
+          .eq('user_id', userId)
+          .order('timestamp', { ascending: false });
 
         if (error) {
           throw error;
@@ -920,10 +1964,12 @@ const RealtimeCommunication: React.FC = () => {
         if (!isActive) {
           return;
         }
-        const mapped = (data ?? []).map(item => mapNotificationRow(item as NotificationRow));
+        const mapped = (data ?? []).map((item) =>
+          mapNotificationRow(item as NotificationRow),
+        );
         setNotifications(sortNotificationsByTimestamp(mapped));
-      } catch (err) {
-        console.error('Error loading notifications:', err);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
         if (isActive) {
           toast.error('Failed to load notifications.');
         }
@@ -944,37 +1990,51 @@ const RealtimeCommunication: React.FC = () => {
 
     const channel = supabase
       .channel(`public:notifications:user:${userId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`
-      }, payload => {
-        const newNotification = mapNotificationRow(payload.new as NotificationRow);
-        setNotifications(prev => {
-          if (prev.some(notification => notification.id === newNotification.id)) {
-            return prev;
-          }
-          const updated = [newNotification, ...prev];
-          return sortNotificationsByTimestamp(updated);
-        });
-        toast(newNotification.title, {
-          description: newNotification.message
-        });
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`
-      }, payload => {
-        const updatedNotification = mapNotificationRow(payload.new as NotificationRow);
-        setNotifications(prev =>
-          prev.map(notification =>
-            notification.id === updatedNotification.id ? updatedNotification : notification
-          )
-        );
-      });
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const newNotification = mapNotificationRow(
+            payload.new as NotificationRow,
+          );
+          setNotifications((prev) => {
+            if (prev.some((notification) => notification.id === newNotification.id)) {
+              return prev;
+            }
+            const updated = [newNotification, ...prev];
+            return sortNotificationsByTimestamp(updated);
+          });
+          toast(newNotification.title, {
+            description: newNotification.message,
+          });
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const updatedNotification = mapNotificationRow(
+            payload.new as NotificationRow,
+          );
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.id === updatedNotification.id
+                ? updatedNotification
+                : notification,
+            ),
+          );
+        },
+      );
 
     channel.subscribe();
 
@@ -1120,207 +2180,81 @@ const RealtimeCommunication: React.FC = () => {
       return;
     }
 
-    if (maxParticipants < 1) {
-      toast.error('Jam sessions must allow at least one participant');
-      return;
+  useEffect(() => {
+    if (activeJam && userId) {
+      void startAudioStreaming(activeJam.id);
     }
+  }, [activeJam, startAudioStreaming, userId]);
 
-    try {
-      setCreatingSession(true);
-
-      const { data: sessionIdData, error: createError } = await supabase
-        .from('jam_sessions')
-        .insert({
-          host_id: currentUserId,
-          name: trimmedName,
-          genre: trimmedGenre,
-          tempo,
-          max_participants: maxParticipants,
-          skill_requirement: skillRequirement,
-          is_private: false,
-        })
-        .select('id')
-        .single();
-
-      if (createError) throw createError;
-      if (!sessionIdData) {
-        throw new Error('Unable to create jam session');
+  useEffect(() => {
+    Object.entries(participantStreams).forEach(([participantId, stream]) => {
+      const element = audioElementsRef.current[participantId];
+      if (element && element.srcObject !== stream) {
+        element.srcObject = stream;
       }
+    });
 
-      const { data: joinedData, error: joinError } = await supabase
-        .rpc('join_jam_session', { p_session_id: sessionIdData.id });
-
-      if (joinError) throw joinError;
-
-      const hostProfile = {
-        display_name: profile.display_name,
-        username: profile.username,
-      };
-
-      let createdSession: JamSession | null = null;
-
-      if (joinedData) {
-        createdSession = mapJamSession(joinedData as JamSessionRecord, hostProfile);
-        setActiveJam(createdSession);
-        setJamTempo(createdSession.tempo);
+    const validIds = new Set(Object.keys(participantStreams));
+    Object.entries(audioElementsRef.current).forEach(([participantId, el]) => {
+      if (!validIds.has(participantId) && el) {
+        el.srcObject = null;
       }
+    });
+  }, [participantStreams]);
 
-      const sessions = await loadJamSessions();
-
-      if (!createdSession && joinedData) {
-        const fallback = sessions.find((session) => session.id === (joinedData as JamSessionRow).id);
-        if (fallback) {
-          setActiveJam(fallback);
-          setJamTempo(fallback.tempo);
-        }
-      }
-
-      setNewSession(createDefaultSessionState());
-      toast.success('Jam session created!');
-    } catch (error) {
-      console.error('Error creating jam session:', error);
-      const message = error instanceof Error ? error.message : 'Failed to create jam session';
-      toast.error(message);
-    } finally {
-      setCreatingSession(false);
-    }
-  };
-
-  const joinSession = async (session: JamSession) => {
-    if (!profile || !currentUserId) {
-      toast.error('You need a player profile to join jam sessions');
+  useEffect(() => {
+    if (!activeJam || !userId) {
       return;
     }
 
-    if (session.isPrivate) {
-      toast.error('This jam session is private and cannot be joined right now');
+    if (!isAudioReady) {
       return;
     }
 
-    if (session.currentParticipants >= session.maxParticipants) {
-      toast.error('This jam session is already full');
+    if (userId !== activeJam.hostId) {
       return;
     }
 
-    const avgSkill = profile.level * 2;
-    if (avgSkill < session.skillRequirement) {
-      toast.error('Your skill level is too low for this jam session');
+    if (hasStartedRecordingRef.current) {
       return;
     }
 
-    if (session.participantIds.includes(currentUserId)) {
-      setActiveJam(session);
-      setJamTempo(session.tempo);
-      toast.info('You are already part of this jam session');
-      return;
-    }
+    startRecordingIfHost();
+    hasStartedRecordingRef.current = true;
+  }, [activeJam, isAudioReady, startRecordingIfHost, userId]);
 
-    try {
-      setJoiningSessionId(session.id);
-
-      const { data, error } = await supabase
-        .rpc('join_jam_session', { p_session_id: session.id });
-
-      if (error) throw error;
-      if (!data) {
-        throw new Error('Unable to join jam session');
-      }
-
-      const hostOverride = {
-        display_name: session.hostName,
-        username: session.hostName,
-      };
-
-      const updatedSession = mapJamSession(data as JamSessionRecord, hostOverride);
-
-      setJamSessions((prev) => {
-        const exists = prev.some((item) => item.id === updatedSession.id);
-        if (exists) {
-          return prev.map((item) => (item.id === updatedSession.id ? updatedSession : item));
-        }
-        return [updatedSession, ...prev];
-      });
-
-      setActiveJam(updatedSession);
-      setJamTempo(updatedSession.tempo);
-      toast.success(`Joined ${updatedSession.name}! Get ready to jam!`);
-    } catch (error) {
-      console.error('Error joining jam session:', error);
-      const message = error instanceof Error ? error.message : 'Failed to join jam session';
-      toast.error(message);
-    } finally {
-      setJoiningSessionId(null);
-    }
-  };
-
-  const leaveJamSession = () => {
-    setActiveJam(null);
-    setJamTempo(120);
-    toast.info('Left jam session');
-  };
-
-  const markNotificationRead = async (notificationId: string) => {
-    if (!userId) return;
-
-    const existing = notifications.find(notification => notification.id === notificationId);
-    if (!existing || existing.read) return;
-
-    const previousNotifications = notifications.map(notification => ({ ...notification }));
-
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === notificationId ? { ...notification, read: true } : notification
-      )
-    );
-
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('id', notificationId)
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('Error marking notification as read:', error);
-      setNotifications(previousNotifications);
-      toast.error('Failed to update notification status.');
-    }
-  };
-
-  const getPriorityColor = (priority: 'low' | 'medium' | 'high') => {
-    switch (priority) {
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-blue-600 bg-blue-100';
-    }
-  };
-
-  const getUserBadgeColor = (badge?: string) => {
-    switch (badge) {
-      case 'Premium': return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white';
-      case 'Pro': return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white';
-      default: return 'bg-gray-200 text-gray-700';
-    }
-  };
+  useEffect(() => {
+    return () => {
+      void stopAudioStreaming();
+    };
+  }, [stopAudioStreaming]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">RockMundo Live</h1>
-          <p className="text-muted-foreground">Real-time communication and collaboration</p>
+          <p className="text-muted-foreground">
+            Real-time communication and collaboration
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
-            isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div
+            className={`flex items-center gap-2 px-3 py-1 rounded-full ${
+              isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}
+          >
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            />
             {isConnected ? 'Connected' : 'Connecting...'}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Chat Section */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
@@ -1336,12 +2270,11 @@ const RealtimeCommunication: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Channel Selector */}
               <div className="flex flex-wrap gap-2">
                 {channels.map((channel) => (
                   <Button
                     key={channel.id}
-                    variant={selectedChannel === channel.id ? "default" : "outline"}
+                    variant={selectedChannel === channel.id ? 'default' : 'outline'}
                     size="sm"
                     className="gap-2"
                     onClick={() => handleChannelSelect(channel.id)}
@@ -1354,18 +2287,21 @@ const RealtimeCommunication: React.FC = () => {
                 ))}
               </div>
 
-              {/* Messages */}
               <ScrollArea className="h-80 border rounded-lg p-4">
                 <div className="space-y-3">
                   {messages
-                    .filter(msg => msg.channel === selectedChannel)
+                    .filter((msg) => msg.channel === selectedChannel)
                     .map((message) => (
                       <div key={message.id} className="flex items-start gap-3">
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span className="font-medium">{message.username}</span>
                             {message.user_badge && (
-                              <Badge className={`text-xs ${getUserBadgeColor(message.user_badge)}`}>
+                              <Badge
+                                className={`text-xs ${getUserBadgeColor(
+                                  message.user_badge,
+                                )}`}
+                              >
                                 {message.user_badge}
                               </Badge>
                             )}
@@ -1444,18 +2380,13 @@ const RealtimeCommunication: React.FC = () => {
           </Card>
         </div>
 
-        {/* Notifications */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-6 h-6" />
                 Notifications
-                {unreadCount > 0 && (
-                  <Badge variant="destructive">
-                    {unreadCount}
-                  </Badge>
-                )}
+                {unreadCount > 0 && <Badge variant="destructive">{unreadCount}</Badge>}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1465,17 +2396,23 @@ const RealtimeCommunication: React.FC = () => {
                     <div
                       key={notification.id}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        !notification.read ? 'bg-blue-50 border-blue-200' : 'hover:bg-muted'
+                        !notification.read
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'hover:bg-muted'
                       }`}
                       onClick={() => void markNotificationRead(notification.id)}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm">{notification.title}</span>
+                        <span className="font-medium text-sm">
+                          {notification.title}
+                        </span>
                         <Badge className={`text-xs ${getPriorityColor(notification.priority)}`}>
                           {notification.priority}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">{notification.message}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {notification.message}
+                      </p>
                       <span className="text-xs text-muted-foreground">
                         {new Date(notification.timestamp).toLocaleTimeString()}
                       </span>
@@ -1487,7 +2424,6 @@ const RealtimeCommunication: React.FC = () => {
           </Card>
         </div>
 
-        {/* Jam Sessions */}
         <div className="space-y-4">
           <Card>
             <CardHeader>
@@ -1512,7 +2448,12 @@ const RealtimeCommunication: React.FC = () => {
                         <Input
                           id="jam-session-name"
                           value={newSession.name}
-                          onChange={(e) => setNewSession(prev => ({ ...prev, name: e.target.value }))}
+                          onChange={(e) =>
+                            setNewSession((prev) => ({
+                              ...prev,
+                              name: e.target.value,
+                            }))
+                          }
                           placeholder="Midnight Groove"
                         />
                       </div>
@@ -1521,7 +2462,12 @@ const RealtimeCommunication: React.FC = () => {
                         <Input
                           id="jam-session-genre"
                           value={newSession.genre}
-                          onChange={(e) => setNewSession(prev => ({ ...prev, genre: e.target.value }))}
+                          onChange={(e) =>
+                            setNewSession((prev) => ({
+                              ...prev,
+                              genre: e.target.value,
+                            }))
+                          }
                           placeholder="Funk / Rock"
                         />
                       </div>
@@ -1533,7 +2479,12 @@ const RealtimeCommunication: React.FC = () => {
                           min={40}
                           max={260}
                           value={newSession.tempo}
-                          onChange={(e) => setNewSession(prev => ({ ...prev, tempo: Number(e.target.value) || 0 }))}
+                          onChange={(e) =>
+                            setNewSession((prev) => ({
+                              ...prev,
+                              tempo: Number(e.target.value) || 120,
+                            }))
+                          }
                         />
                       </div>
                       <div className="space-y-1">
@@ -1544,10 +2495,15 @@ const RealtimeCommunication: React.FC = () => {
                           min={1}
                           max={12}
                           value={newSession.maxParticipants}
-                          onChange={(e) => setNewSession(prev => ({ ...prev, maxParticipants: Number(e.target.value) || 0 }))}
+                          onChange={(e) =>
+                            setNewSession((prev) => ({
+                              ...prev,
+                              maxParticipants: Number(e.target.value) || 4,
+                            }))
+                          }
                         />
                       </div>
-                      <div className="space-y-1 sm:col-span-2">
+                      <div className="space-y-1">
                         <Label htmlFor="jam-session-skill">Skill Requirement</Label>
                         <Input
                           id="jam-session-skill"
@@ -1555,11 +2511,22 @@ const RealtimeCommunication: React.FC = () => {
                           min={0}
                           max={100}
                           value={newSession.skillRequirement}
-                          onChange={(e) => setNewSession(prev => ({ ...prev, skillRequirement: Number(e.target.value) || 0 }))}
+                          onChange={(e) =>
+                            setNewSession((prev) => ({
+                              ...prev,
+                              skillRequirement: Number(e.target.value) || 0,
+                            }))
+                          }
                         />
                       </div>
                     </div>
-                    <Button onClick={createSession} disabled={creatingSession} className="w-full sm:w-auto">
+                    <Button
+                      onClick={() => {
+                        void createSession();
+                      }}
+                      disabled={creatingSession}
+                      className="w-full sm:w-auto"
+                    >
                       {creatingSession ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1578,9 +2545,13 @@ const RealtimeCommunication: React.FC = () => {
                 {activeJam ? (
                   <div className="space-y-4">
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h3 className="font-medium text-green-800">Currently Jamming</h3>
+                      <h3 className="font-medium text-green-800">
+                        Currently Jamming
+                      </h3>
                       <p className="text-sm text-green-600">{activeJam.name}</p>
-                      <p className="text-xs text-green-600">Hosted by {activeJam.hostName}</p>
+                      <p className="text-xs text-green-600">
+                        Hosted by {activeJam.hostName}
+                      </p>
                       <div className="flex items-center gap-4 mt-3">
                         <div className="flex items-center gap-2">
                           <Volume2 className="w-4 h-4" />
@@ -1588,17 +2559,116 @@ const RealtimeCommunication: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4" />
-                          <span className="text-sm">{activeJam.currentParticipants}/{activeJam.maxParticipants}</span>
+                          <span className="text-sm">
+                            {activeJam.currentParticipants}/{activeJam.maxParticipants}
+                          </span>
                         </div>
                       </div>
+                      <div className="mt-4 space-y-3">
+                        <div className="flex items-center gap-2 text-xs text-green-700">
+                          <Headphones className="w-4 h-4" />
+                          <span>Live audio stream</span>
+                        </div>
+                        <div className="space-y-2">
+                          {Object.keys(participantStreams).length === 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              Waiting for musicians to connect...
+                            </p>
+                          ) : (
+                            Object.entries(participantStreams).map(
+                              ([participantId]) => {
+                                const level = audioLevels[participantId] ?? 0;
+                                const isLocal = participantId === userId;
+                                const name = isLocal
+                                  ? 'You'
+                                  : participantDetails[participantId]?.name ??
+                                    'Guest Musician';
+
+                                return (
+                                  <div
+                                    key={participantId}
+                                    className="flex items-center gap-3 rounded-md border p-2"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        {isLocal ? (
+                                          <Mic className="w-4 h-4 text-green-600" />
+                                        ) : (
+                                          <Volume2 className="w-4 h-4 text-green-600" />
+                                        )}
+                                        <span className="text-sm font-medium">
+                                          {name}
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 h-2 w-full rounded-full bg-muted">
+                                        <div
+                                          className="h-full rounded-full bg-green-500 transition-all duration-200 ease-out"
+                                          style={{
+                                            width: `${Math.min(
+                                              100,
+                                              Math.max(5, level),
+                                            )}%`,
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                    <audio
+                                      ref={(element) => {
+                                        audioElementsRef.current[participantId] =
+                                          element;
+                                        const stream =
+                                          participantStreamsRef.current[
+                                            participantId
+                                          ];
+                                        if (
+                                          element &&
+                                          stream &&
+                                          element.srcObject !== stream
+                                        ) {
+                                          element.srcObject = stream;
+                                        }
+                                      }}
+                                      autoPlay
+                                      playsInline
+                                      muted={isLocal}
+                                      className="hidden"
+                                    />
+                                  </div>
+                                );
+                              },
+                            )
+                          )}
+                        </div>
+                        {userId === activeJam.hostId && (
+                          <p className="text-xs text-muted-foreground">
+                            {isRecording
+                              ? 'Recording in progress. Your jam will be saved when you end the session.'
+                              : 'Preparing recording...'}
+                          </p>
+                        )}
+                      </div>
                       <div className="flex gap-2 mt-3">
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void endJamSession()}
+                        >
                           <Mic className="w-4 h-4 mr-1" />
-                          Record
+                          {userId === activeJam.hostId
+                            ? 'End & Save Jam'
+                            : 'Leave Jam'}
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={leaveJamSession}>
-                          Leave
-                        </Button>
+                        {userId !== activeJam.hostId && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              void leaveJamSession();
+                            }}
+                          >
+                            Leave
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1616,23 +2686,35 @@ const RealtimeCommunication: React.FC = () => {
                           </div>
                         ) : (
                           jamSessions.map((session) => {
-                            const isMember = currentUserId ? session.participantIds.includes(currentUserId) : false;
+                            const isMember = userId
+                              ? session.participantIds.includes(userId)
+                              : false;
                             const isJoining = joiningSessionId === session.id;
-                            const isFull = session.currentParticipants >= session.maxParticipants;
-                            const isDisabled = isJoining || isMember || isFull || session.isPrivate;
+                            const isFull =
+                              session.currentParticipants >=
+                              session.maxParticipants;
+                            const isDisabled =
+                              isJoining || isMember || isFull || session.isPrivate;
 
                             return (
                               <div key={session.id} className="p-3 border rounded-lg">
                                 <div className="flex items-center justify-between mb-2">
                                   <h3 className="font-medium">{session.name}</h3>
-                                  {session.isPrivate && <Lock className="w-4 h-4 text-muted-foreground" />}
+                                  {session.isPrivate && (
+                                    <Lock className="w-4 h-4 text-muted-foreground" />
+                                  )}
                                 </div>
                                 <div className="text-sm text-muted-foreground space-y-1">
                                   <div>Host: {session.hostName}</div>
                                   <div>Genre: {session.genre}</div>
                                   <div>Tempo: {session.tempo} BPM</div>
-                                  <div>Skill Required: {session.skillRequirement}+</div>
-                                  <div>Players: {session.currentParticipants}/{session.maxParticipants}</div>
+                                  <div>
+                                    Skill Required: {session.skillRequirement}+
+                                  </div>
+                                  <div>
+                                    Players: {session.currentParticipants}/
+                                    {session.maxParticipants}
+                                  </div>
                                 </div>
                                 <Button
                                   size="sm"
