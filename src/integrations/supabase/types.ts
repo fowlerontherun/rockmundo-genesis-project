@@ -1400,6 +1400,8 @@ export type Database = {
           travel_cost: number | null
           lodging_cost: number | null
           misc_cost: number | null
+          travel_time: number | null
+          rest_days: number | null
           venue_id: string
         }
         Insert: {
@@ -1413,6 +1415,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id: string
         }
         Update: {
@@ -1426,6 +1430,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id?: string
         }
         Relationships: [
