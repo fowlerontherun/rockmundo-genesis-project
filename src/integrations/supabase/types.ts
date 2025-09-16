@@ -577,44 +577,55 @@ export type Database = {
         }
         Relationships: []
       }
-      genre_statistics: {
+      global_charts: {
         Row: {
-          avg_popularity: number
           chart_date: string
           chart_type: string
           created_at: string
-          genre: string
-          growth: number
           id: string
-          top_song: string | null
-          total_plays: number
-          total_songs: number
+          rank: number
+          song_id: string
+          total_streams: number
+          trend: string
+          trend_change: number
+          updated_at: string
+          weeks_on_chart: number
         }
         Insert: {
-          avg_popularity?: number
           chart_date: string
-          chart_type?: string
+          chart_type: string
           created_at?: string
-          genre: string
-          growth?: number
           id?: string
-          top_song?: string | null
-          total_plays?: number
-          total_songs?: number
+          rank: number
+          song_id: string
+          total_streams?: number
+          trend?: string
+          trend_change?: number
+          updated_at?: string
+          weeks_on_chart?: number
         }
         Update: {
-          avg_popularity?: number
           chart_date?: string
           chart_type?: string
           created_at?: string
-          genre?: string
-          growth?: number
           id?: string
-          top_song?: string | null
-          total_plays?: number
-          total_songs?: number
+          rank?: number
+          song_id?: string
+          total_streams?: number
+          trend?: string
+          trend_change?: number
+          updated_at?: string
+          weeks_on_chart?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "global_charts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gig_performances: {
         Row: {
@@ -1605,9 +1616,11 @@ export type Database = {
         }
         Returns: boolean
       }
-      join_jam_session: {
-        Args: { p_session_id: string }
-        Returns: Database["public"]["Tables"]["jam_sessions"]["Row"]
+      refresh_global_charts: {
+        Args: {
+          p_limit?: number | null
+        }
+        Returns: null
       }
     }
     Enums: {
