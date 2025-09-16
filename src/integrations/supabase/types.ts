@@ -412,6 +412,7 @@ export type Database = {
           rarity: string | null
           stat_boosts: Json | null
           subcategory: string | null
+          stock: number
         }
         Insert: {
           category: string
@@ -424,6 +425,7 @@ export type Database = {
           rarity?: string | null
           stat_boosts?: Json | null
           subcategory?: string | null
+          stock?: number
         }
         Update: {
           category?: string
@@ -436,6 +438,7 @@ export type Database = {
           rarity?: string | null
           stat_boosts?: Json | null
           subcategory?: string | null
+          stock?: number
         }
         Relationships: []
       }
@@ -1702,6 +1705,22 @@ export type Database = {
           p_limit?: number | null
         }
         Returns: null
+      }
+      purchase_equipment_item: {
+        Args: {
+          p_equipment_id: string
+        }
+        Returns: {
+          player_equipment_id: string
+          remaining_stock: number
+          new_cash: number
+        }[]
+      }
+      restock_equipment_items: {
+        Args: {
+          restock_amount?: number | null
+        }
+        Returns: number
       }
     }
     Enums: {
