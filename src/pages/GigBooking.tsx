@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
+import { applyEquipmentWear } from "@/utils/equipmentWear";
 
 interface Venue {
   id: string;
@@ -269,14 +270,25 @@ const GigBooking = () => {
       ));
 
       await addActivity(
-        'gig', 
+        'gig',
         `Performed at ${gig.venue.name} (${attendance} attendance)`,
         actualPayment
       );
 
+      let wearNotice = '';
+
+      try {
+        const wearSummary = await applyEquipmentWear(user.id, 'gig');
+        if (wearSummary?.updates.length) {
+          wearNotice = ` Gear wear detected on ${wearSummary.updates.length} item${wearSummary.updates.length > 1 ? 's' : ''}. Check the inventory manager for repairs.`;
+        }
+      } catch (wearError) {
+        console.error('Failed to apply equipment wear after gig', wearError);
+      }
+
       toast({
         title: isSuccess ? "Great performance!" : "Performance complete",
-        description: `Earned $${actualPayment}, +${fanGain} fans, +${expGain} XP`,
+        description: `Earned $${actualPayment}, +${fanGain} fans, +${expGain} XP.${wearNotice}`,
       });
     } catch (error: any) {
       console.error('Error performing gig:', error);
