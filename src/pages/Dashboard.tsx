@@ -36,9 +36,11 @@ const Dashboard = () => {
       case "skill": return <TrendingUp className="h-4 w-4" />;
       case "fan": return <Users className="h-4 w-4" />;
       case "song": return <Music className="h-4 w-4" />;
+      case "join": return <Star className="h-4 w-4" />;
       default: return <Star className="h-4 w-4" />;
     }
   };
+
 
   if (loading) {
     return (

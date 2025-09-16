@@ -27,40 +27,42 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Index />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="band" element={<BandManager />} />
-              <Route path="gigs" element={<GigBooking />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="music" element={<MusicStudio />} />
-              <Route path="charts" element={<WorldPulse />} />
-              <Route path="schedule" element={<Schedule />} />
-              <Route path="equipment" element={<EquipmentStore />} />
-              <Route path="fans" element={<FanManagement />} />
-              <Route path="achievements" element={<Achievements />} />
-              <Route path="tours" element={<TourManager />} />
-              <Route path="labels" element={<RecordLabel />} />
-              <Route path="social" element={<SocialMedia />} />
-              <Route path="venues" element={<VenueManagement />} />
-              <Route path="chemistry" element={<BandChemistry />} />
-              <Route path="streaming" element={<StreamingPlatforms />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Index />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="band" element={<BandManager />} />
+                <Route path="gigs" element={<GigBooking />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="music" element={<MusicStudio />} />
+                <Route path="charts" element={<WorldPulse />} />
+                <Route path="schedule" element={<Schedule />} />
+                <Route path="equipment" element={<EquipmentStore />} />
+                <Route path="fans" element={<FanManagement />} />
+                <Route path="achievements" element={<Achievements />} />
+                <Route path="tours" element={<TourManager />} />
+                <Route path="labels" element={<RecordLabel />} />
+                <Route path="social" element={<SocialMedia />} />
+                <Route path="venues" element={<VenueManagement />} />
+                <Route path="chemistry" element={<BandChemistry />} />
+                <Route path="streaming" element={<StreamingPlatforms />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
