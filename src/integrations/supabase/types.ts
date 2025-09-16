@@ -80,6 +80,30 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_participants: {
+        Row: {
+          channel: string
+          id: string
+          status: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       band_invitations: {
         Row: {
           band_id: string
@@ -1400,6 +1424,8 @@ export type Database = {
           travel_cost: number | null
           lodging_cost: number | null
           misc_cost: number | null
+          travel_time: number | null
+          rest_days: number | null
           venue_id: string
         }
         Insert: {
@@ -1413,6 +1439,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id: string
         }
         Update: {
@@ -1426,6 +1454,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id?: string
         }
         Relationships: [
@@ -1706,6 +1736,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      chat_participant_status: "online" | "typing" | "muted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1833,6 +1864,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      chat_participant_status: ["online", "typing", "muted"],
       app_role: ["admin", "moderator", "user"],
     },
   },
