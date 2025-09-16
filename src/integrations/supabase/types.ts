@@ -803,27 +803,33 @@ export type Database = {
       }
       gig_performances: {
         Row: {
+          audience_reaction: Json | null
           earnings: number | null
           gig_id: string | null
           id: string
           performance_score: number | null
           performed_at: string
+          stage_results: Json | null
           user_id: string
         }
         Insert: {
+          audience_reaction?: Json | null
           earnings?: number | null
           gig_id?: string | null
           id?: string
           performance_score?: number | null
           performed_at?: string
+          stage_results?: Json | null
           user_id: string
         }
         Update: {
+          audience_reaction?: Json | null
           earnings?: number | null
           gig_id?: string | null
           id?: string
           performance_score?: number | null
           performed_at?: string
+          stage_results?: Json | null
           user_id?: string
         }
         Relationships: []
