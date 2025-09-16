@@ -5,10 +5,23 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Users,
-  Music,
-  Guitar,
-  Mic,
+
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Users, 
+  Music, 
+  Guitar, 
+  Mic, 
   Drum,
   TrendingUp,
   UserPlus,
@@ -21,16 +34,17 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
+import type { Database } from "@/integrations/supabase/types";
 
 interface BandMember {
   id: string;
   user_id: string;
   band_id: string;
   role: string;
-  salary: number;
-  joined_at: string;
+  salary: number | null;
+  joined_at: string | null;
   name?: string;
-  skills?: any;
+  skills?: PlayerSkillsRow | null;
   avatar_url?: string;
   is_player?: boolean;
 }
@@ -48,55 +62,31 @@ interface Band {
   updated_at: string;
 }
 
-interface BandScheduleEvent {
-  id: string;
-  title: string;
-  description?: string | null;
-  eventType?: string | null;
-  scheduledAt: string | null;
-  timestamp: number | null;
-  location?: string | null;
-  status?: string | null;
-}
+const BAND_ROLES = [
+  "Lead Vocals",
+  "Lead Guitar",
+  "Rhythm Guitar",
+  "Bassist",
+  "Drummer",
+  "Keyboardist",
+  "Producer",
+  "Manager"
+];
 
-interface RawScheduleEvent {
-  id: string;
-  title?: string | null;
-  description?: string | null;
-  details?: string | null;
-  notes?: string | null;
-  event_type?: string | null;
-  type?: string | null;
-  status?: string | null;
-  state?: string | null;
-  event_status?: string | null;
-  location?: string | null;
-  venue?: string | null;
-  place?: string | null;
-  address?: string | null;
-  scheduled_at?: string | Date | number | null;
-  scheduledAt?: string | Date | number | null;
-  event_at?: string | Date | number | null;
-  eventAt?: string | Date | number | null;
-  event_date?: string | Date | number | null;
-  eventDate?: string | Date | number | null;
-  scheduled_date?: string | Date | number | null;
-  scheduledDate?: string | Date | number | null;
-  start_time?: string | Date | number | null;
-  startTime?: string | Date | number | null;
-  start_at?: string | Date | number | null;
-  startAt?: string | Date | number | null;
-  datetime?: string | Date | number | null;
-  dateTime?: string | Date | number | null;
-  date_time?: string | Date | number | null;
-  date?: string | null;
-  time?: string | null;
-  [key: string]: unknown;
-}
+type PlayerSkillsRow = Database['public']['Tables']['player_skills']['Row'];
+
+type BandMemberRow = Database['public']['Tables']['band_members']['Row'] & {
+  profile?: { display_name?: string | null; avatar_url?: string | null };
+  skills?: PlayerSkillsRow | null;
+};
+
+type BandInvitation = Database['public']['Tables']['band_invitations']['Row'] & {
+  band?: Band;
+};
 
 const BandManager = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { profile, skills } = useGameData();
 
   const [band, setBand] = useState<Band | null>(null);
@@ -105,250 +95,34 @@ const BandManager = () => {
   const [gigsPlayed, setGigsPlayed] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [songCount, setSongCount] = useState(0);
-  const [albumCount, setAlbumCount] = useState(0);
-  const [upcomingEvents, setUpcomingEvents] = useState<BandScheduleEvent[]>([]);
-
-  const loadBandStats = useCallback(async (bandId: string) => {
-    try {
-      const [songsResponse, albumsResponse] = await Promise.all([
-        supabase
-          .from('songs')
-          .select('id', { count: 'exact', head: true })
-          .eq('band_id', bandId),
-        supabase
-          .from('albums')
-          .select('id', { count: 'exact', head: true })
-          .eq('band_id', bandId)
-      ]);
-
-      if (songsResponse.error) {
-        console.error('Error loading band songs:', songsResponse.error);
-        setSongCount(0);
-      } else {
-        setSongCount(songsResponse.count ?? 0);
-      }
-
-      if (albumsResponse.error) {
-        console.error('Error loading band albums:', albumsResponse.error);
-        setAlbumCount(0);
-      } else {
-        setAlbumCount(albumsResponse.count ?? 0);
-      }
-    } catch (error) {
-      console.error('Error loading band stats:', error);
-    }
-  }, []);
-
-  const loadScheduleEvents = useCallback(async (bandId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('schedule_events')
-        .select('*')
-        .eq('band_id', bandId)
-        .order('scheduled_at', { ascending: true });
-
-      if (error) throw error;
-
-      const normalizeDateValue = (value: unknown): string | null => {
-        if (!value) return null;
-
-        if (value instanceof Date) {
-          return value.toISOString();
-        }
-
-        if (typeof value === 'number') {
-          const date = new Date(value);
-          return Number.isNaN(date.getTime()) ? null : date.toISOString();
-        }
-
-        if (typeof value === 'string') {
-          const trimmed = value.trim();
-          if (!trimmed) return null;
-          const normalized = trimmed.includes(' ') && !trimmed.includes('T')
-            ? trimmed.replace(' ', 'T')
-            : trimmed;
-          const date = new Date(normalized);
-          if (!Number.isNaN(date.getTime())) {
-            return date.toISOString();
-          }
-        }
-
-        return null;
-      };
-
-      const extractEventDate = (event: RawScheduleEvent): string | null => {
-        const candidates = [
-          event?.scheduled_at,
-          event?.scheduledAt,
-          event?.event_at,
-          event?.eventAt,
-          event?.event_date,
-          event?.eventDate,
-          event?.scheduled_date,
-          event?.scheduledDate,
-          event?.start_time,
-          event?.startTime,
-          event?.start_at,
-          event?.startAt,
-          event?.datetime,
-          event?.dateTime,
-          event?.date_time
-        ];
-
-        for (const candidate of candidates) {
-          const iso = normalizeDateValue(candidate);
-          if (iso) return iso;
-        }
-
-        if (event?.date) {
-          const datePart = typeof event.date === 'string' ? event.date : null;
-          const timePart = typeof event.time === 'string' ? event.time : null;
-          if (datePart && timePart) {
-            const iso = normalizeDateValue(`${datePart}T${timePart}`);
-            if (iso) return iso;
-          }
-
-          if (datePart) {
-            const iso = normalizeDateValue(datePart);
-            if (iso) return iso;
-          }
-        }
-
-        return null;
-      };
-
-      const isUpcomingStatus = (status?: string | null) => {
-        if (!status) return true;
-        const normalized = status.toLowerCase();
-        return !['completed', 'cancelled', 'past'].includes(normalized);
-      };
-
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      const eventsArray: RawScheduleEvent[] = Array.isArray(data) ? (data as RawScheduleEvent[]) : [];
-
-      const normalizedEvents = eventsArray
-        .map((event) => {
-          const scheduledIso = extractEventDate(event);
-          const timestamp = scheduledIso ? new Date(scheduledIso).getTime() : null;
-
-          return {
-            id: event.id,
-            title: event.title ?? 'Scheduled Event',
-            description: event.description ?? event.details ?? event.notes ?? null,
-            eventType: event.event_type ?? event.type ?? null,
-            scheduledAt: scheduledIso,
-            timestamp: Number.isNaN(timestamp ?? NaN) ? null : timestamp,
-            location: event.location ?? event.venue ?? event.place ?? event.address ?? null,
-            status: event.status ?? event.state ?? event.event_status ?? null
-          } as BandScheduleEvent;
-        })
-        .filter((event) => {
-          if (!event.timestamp) return false;
-          if (!isUpcomingStatus(event.status)) return false;
-          return event.timestamp >= startOfToday.getTime();
-        })
-        .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
-        .slice(0, 5);
-
-      setUpcomingEvents(normalizedEvents);
-    } catch (error) {
-      console.error('Error loading schedule events:', error);
-      setUpcomingEvents([]);
-    }
-  }, []);
+  const [isRecruitDialogOpen, setIsRecruitDialogOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState<string>(BAND_ROLES[0]);
+  const [inviteSalary, setInviteSalary] = useState<number>(0);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<BandInvitation[]>([]);
+  const [acceptingInviteId, setAcceptingInviteId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!band?.id) return;
+    if (authLoading) return;
 
-    const bandId = band.id;
-
-    const realtimeChannel = supabase
-      .channel(`band-manager-${bandId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'songs',
-          filter: `band_id=eq.${bandId}`
-        },
-        () => {
-          loadBandStats(bandId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'albums',
-          filter: `band_id=eq.${bandId}`
-        },
-        () => {
-          loadBandStats(bandId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'schedule_events',
-          filter: `band_id=eq.${bandId}`
-        },
-        () => {
-          loadScheduleEvents(bandId);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(realtimeChannel);
-    };
-  }, [band?.id, loadBandStats, loadScheduleEvents]);
-
-  const loadBandMembers = useCallback(async (bandId: string) => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('band_members')
-        .select(`
-          *,
-          profile:profiles(display_name, avatar_url),
-          skills:player_skills(*)
-        `)
-        .eq('band_id', bandId);
-
-      if (error) throw error;
-
-      const membersWithData = data.map((member: any) => ({
-        ...member,
-        name: member.user_id === user.id ? 'You' : (member.profile?.display_name || 'Unknown'),
-        avatar_url: member.profile?.avatar_url || '',
-        is_player: member.user_id === user.id,
-        skills: member.skills || {}
-      }));
-
-      setMembers(membersWithData);
-    } catch (error) {
-      console.error('Error loading band members:', error);
-    }
-  }, [user]);
-
-  const loadBandData = useCallback(async () => {
-    if (!user) {
+    if (user) {
+      loadBandData();
+    } else {
       setBand(null);
       setMembers([]);
-      setSongCount(0);
-      setAlbumCount(0);
-      setUpcomingEvents([]);
+      setPendingInvites([]);
+      setLoading(false);
+    }
+  }, [authLoading, user, loadBandData]);
+
+  const loadBandData = useCallback(async () => {
+    if (!user?.id) {
+      setBand(null);
+      setMembers([]);
+      setPendingInvites([]);
       setLoading(false);
       return;
     }
-
     try {
       const { data: memberData, error: memberError } = await supabase
         .from('band_members')
@@ -364,48 +138,23 @@ const BandManager = () => {
       }
 
       if (memberData?.bands) {
-        const bandRecord = memberData.bands as Band;
-        setBand(bandRecord);
-
-        await Promise.all([
-          loadBandMembers(bandRecord.id),
-          loadBandStats(bandRecord.id),
-          loadScheduleEvents(bandRecord.id)
-        ]);
+        setBand(memberData.bands as Band);
+        setPendingInvites([]);
+        await loadBandMembers(memberData.bands.id);
       } else {
         setBand(null);
         setMembers([]);
-        setSongCount(0);
-        setAlbumCount(0);
-        setUpcomingEvents([]);
+        await loadPendingInvitations();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading band data:', error);
     } finally {
       setLoading(false);
     }
-  }, [user, loadBandMembers, loadBandStats, loadScheduleEvents]);
+  }, [loadBandMembers, loadPendingInvitations, user?.id]);
 
-  useEffect(() => {
-    loadBandData();
-  }, [loadBandData]);
-
-  const loadBandMetrics = async (bandId: string) => {
-    if (!user) return;
-
-    const chartColumns = ['rank', 'position', 'chart_position'] as const;
-    const chartsTable = 'charts' as unknown as keyof Database['public']['Tables'];
-
-    const extractChartPosition = (entry?: Record<string, unknown>): number | null => {
-      if (!entry) return null;
-      for (const column of chartColumns) {
-        const value = entry[column];
-        if (typeof value === 'number' && !Number.isNaN(value)) {
-          return value;
-        }
-      }
-      return null;
-    };
+  const loadBandMembers = useCallback(async (bandId: string) => {
+    if (!user?.id) return;
 
     try {
       let topEntry: Record<string, unknown> | undefined;
@@ -440,55 +189,71 @@ const BandManager = () => {
         }
       }
 
-      setChartPosition(extractChartPosition(topEntry));
-    } catch (error) {
-      console.error('Unexpected error processing chart data:', error);
-      setChartPosition(null);
+      const memberRows = (data ?? []) as BandMemberRow[];
+      const currentUserId = user.id;
+
+      const membersWithData: BandMember[] = memberRows.map((member) => ({
+        id: member.id,
+        band_id: member.band_id,
+        user_id: member.user_id,
+        role: member.role,
+        salary: member.salary ?? null,
+        joined_at: member.joined_at ?? null,
+        name: member.user_id === currentUserId ? 'You' : member.profile?.display_name ?? 'Unknown',
+        avatar_url: member.profile?.avatar_url ?? '',
+        is_player: member.user_id === currentUserId,
+        skills: member.skills ?? null,
+      }));
+
+      setMembers(membersWithData);
+    } catch (error: unknown) {
+      console.error('Error loading band members:', error);
+    }
+  }, [user?.id]);
+
+  const loadPendingInvitations = useCallback(async () => {
+    if (!user?.id) {
+      setPendingInvites([]);
+      return;
     }
 
     try {
-      const { data: performancesData, error: performancesError } = await supabase
-        .from('gig_performances')
-        .select('gig_id')
-        .eq('user_id', user.id);
+      const { data, error } = await supabase
+        .from('band_invitations')
+        .select(`
+          id,
+          band_id,
+          inviter_id,
+          invitee_id,
+          role,
+          salary,
+          status,
+          created_at,
+          responded_at,
+          band:bands (
+            id,
+            name,
+            genre,
+            description,
+            leader_id,
+            popularity,
+            weekly_fans,
+            max_members,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('invitee_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
 
-      if (performancesError) {
-        console.error('Error loading gig performances:', performancesError);
-        setGigsPlayed(null);
-        return;
-      }
+      if (error) throw error;
 
-      const gigIds = Array.from(
-        new Set(
-          (performancesData || [])
-            .map((performance) => performance.gig_id)
-            .filter((gigId): gigId is string => typeof gigId === 'string' && gigId.length > 0)
-        )
-      );
-
-      if (gigIds.length === 0) {
-        setGigsPlayed(0);
-        return;
-      }
-
-      const { data: gigsData, error: gigsError } = await supabase
-        .from('gigs')
-        .select('id')
-        .in('id', gigIds)
-        .eq('band_id', bandId);
-
-      if (gigsError) {
-        console.error('Error filtering gigs by band:', gigsError);
-        setGigsPlayed(null);
-        return;
-      }
-
-      setGigsPlayed(gigsData?.length ?? 0);
-    } catch (error) {
-      console.error('Unexpected error loading gig data:', error);
-      setGigsPlayed(null);
+      setPendingInvites((data as BandInvitation[]) || []);
+    } catch (error: unknown) {
+      console.error('Error loading band invitations:', error);
     }
-  };
+  }, [user?.id]);
 
   const createBand = async () => {
     if (!user || !profile) return;
@@ -531,7 +296,7 @@ const BandManager = () => {
         title: "Band Created!",
         description: "Your musical journey as a band begins now!",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating band:', error);
       toast({
         variant: "destructive",
@@ -540,6 +305,142 @@ const BandManager = () => {
       });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const sendInvite = async () => {
+    if (!user || !band) {
+      toast({
+        variant: "destructive",
+        title: "No Band Available",
+        description: "You need to have an active band before recruiting members.",
+      });
+      return;
+    }
+
+    if (!inviteRole) {
+      toast({
+        variant: "destructive",
+        title: "Role Required",
+        description: "Please select a role for the invitation.",
+      });
+      return;
+    }
+
+    if (band.max_members && members.length >= band.max_members) {
+      toast({
+        variant: "destructive",
+        title: "Band Full",
+        description: "Your band has reached its maximum number of members.",
+      });
+      return;
+    }
+
+    const salaryValue = Number.isFinite(inviteSalary)
+      ? Math.max(0, Math.round(inviteSalary))
+      : 0;
+
+    setSendingInvite(true);
+
+    try {
+      const { error } = await supabase
+        .from('band_invitations')
+        .insert({
+          band_id: band.id,
+          inviter_id: user.id,
+          role: inviteRole,
+          salary: salaryValue,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invitation Sent",
+        description: "Your recruitment invitation is now live.",
+      });
+
+      setIsRecruitDialogOpen(false);
+      setInviteRole(BAND_ROLES[0]);
+      setInviteSalary(0);
+    } catch (error: unknown) {
+      console.error('Error sending band invitation:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to send invitation. Please try again.",
+      });
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  const acceptInvite = async (invitation: BandInvitation) => {
+    if (!user) return;
+
+    setAcceptingInviteId(invitation.id);
+
+    try {
+      const { data: updatedInvitation, error } = await supabase
+        .from('band_invitations')
+        .update({
+          status: 'accepted',
+          invitee_id: user.id,
+          responded_at: new Date().toISOString(),
+        })
+        .eq('id', invitation.id)
+        .eq('status', 'pending')
+        .select(`
+          id,
+          band_id,
+          role,
+          salary
+        `)
+        .single();
+
+      if (error) throw error;
+      if (!updatedInvitation) throw new Error('Invitation not found');
+
+      const { error: memberError } = await supabase
+        .from('band_members')
+        .insert({
+          band_id: updatedInvitation.band_id,
+          user_id: user.id,
+          role: updatedInvitation.role,
+          salary: updatedInvitation.salary ?? 0,
+        });
+
+      if (memberError && memberError.code !== '23505') {
+        throw memberError;
+      }
+
+      setPendingInvites(prev => prev.filter(invite => invite.id !== invitation.id));
+
+      const { data: bandData, error: bandError } = await supabase
+        .from('bands')
+        .select('*')
+        .eq('id', updatedInvitation.band_id)
+        .single();
+
+      if (bandError) throw bandError;
+
+      if (bandData) {
+        setBand(bandData as Band);
+        await loadBandMembers(bandData.id);
+      }
+
+      toast({
+        title: "Invitation Accepted",
+        description: "Welcome to your new band!",
+      });
+    } catch (error: unknown) {
+      console.error('Error accepting band invitation:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to accept invitation.',
+      });
+    } finally {
+      setAcceptingInviteId(null);
     }
   };
 
@@ -629,8 +530,63 @@ const BandManager = () => {
     );
   }
 
-  // If no band, show creation interface
+  // If no band, show pending invitations or creation interface
   if (!band) {
+    if (pendingInvites.length > 0) {
+      return (
+        <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20 w-full max-w-3xl">
+            <CardHeader className="text-center space-y-2">
+              <CardTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                Band Invitations
+              </CardTitle>
+              <CardDescription>
+                {pendingInvites.length > 1
+                  ? "You've received new invitations to join a band. Review and accept the role that fits you best."
+                  : "You've been invited to join a band. Review the offer and accept to begin performing together."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pendingInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="p-4 rounded-lg bg-secondary/30 border border-primary/10 space-y-3"
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {invite.band?.name || "New Band Opportunity"}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {invite.band?.genre ? `${invite.band.genre} • ` : ""}Role: {invite.role}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-sm border-primary/40 text-primary">
+                      ${invite.salary ?? 0}/week
+                    </Badge>
+                  </div>
+                  {invite.band?.description && (
+                    <p className="text-sm text-muted-foreground">
+                      {invite.band.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-end">
+                    <Button
+                      className="bg-gradient-primary"
+                      onClick={() => acceptInvite(invite)}
+                      disabled={acceptingInviteId === invite.id}
+                    >
+                      {acceptingInviteId === invite.id ? "Accepting..." : "Accept Invitation"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
         <Card className="bg-card/80 backdrop-blur-sm border-primary/20 max-w-md">
@@ -662,6 +618,9 @@ const BandManager = () => {
     );
   }
 
+  const isBandAtCapacity = band.max_members ? members.length >= band.max_members : false;
+  const memberCapacityLabel = band.max_members ? `${members.length}/${band.max_members}` : `${members.length}`;
+
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -671,13 +630,80 @@ const BandManager = () => {
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               {band.name}
             </h1>
-            <p className="text-muted-foreground">{band.genre} • {members.length}/{band.max_members} members</p>
+            <p className="text-muted-foreground">{band.genre} • {memberCapacityLabel} members</p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-gradient-primary hover:shadow-electric">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Recruit Member
-            </Button>
+            <Dialog open={isRecruitDialogOpen} onOpenChange={setIsRecruitDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary hover:shadow-electric">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Recruit Member
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Recruit a New Member</DialogTitle>
+                  <DialogDescription>
+                    Customize the role and salary offer for your next band mate.
+                  </DialogDescription>
+                </DialogHeader>
+                {isBandAtCapacity && (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    Your band has reached its member limit. Remove a member before sending new invitations.
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-role">Role</Label>
+                    <Select value={inviteRole} onValueChange={(value) => setInviteRole(value)}>
+                      <SelectTrigger id="invite-role">
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BAND_ROLES.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-salary">Weekly Salary Offer</Label>
+                    <Input
+                      id="invite-salary"
+                      type="number"
+                      min={0}
+                      step={50}
+                      value={inviteSalary}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        setInviteSalary(Number.isNaN(nextValue) ? 0 : nextValue);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Offer a weekly stipend to attract skilled musicians.
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsRecruitDialogOpen(false)}
+                    disabled={sendingInvite}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="bg-gradient-primary"
+                    onClick={sendInvite}
+                    disabled={sendingInvite || !inviteRole || isBandAtCapacity}
+                  >
+                    {sendingInvite ? "Sending..." : "Send Invitation"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" className="border-primary/20 hover:bg-primary/10">
               <Settings className="h-4 w-4 mr-2" />
               Band Settings

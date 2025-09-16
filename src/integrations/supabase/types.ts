@@ -80,6 +80,50 @@ export type Database = {
         }
         Relationships: []
       }
+      band_invitations: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          id: string
+          invitee_id: string | null
+          inviter_id: string
+          responded_at: string | null
+          role: string
+          salary: number | null
+          status: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          id?: string
+          invitee_id?: string | null
+          inviter_id: string
+          responded_at?: string | null
+          role: string
+          salary?: number | null
+          status?: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          id?: string
+          invitee_id?: string | null
+          inviter_id?: string
+          responded_at?: string | null
+          role?: string
+          salary?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_invitations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       band_members: {
         Row: {
           band_id: string
