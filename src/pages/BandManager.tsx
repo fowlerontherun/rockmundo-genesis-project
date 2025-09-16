@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,10 +26,12 @@ import {
   TrendingUp,
   UserPlus,
   Settings,
-  Star
+  Star,
+  MapPin
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import type { Database } from "@/integrations/supabase/types";
@@ -85,9 +88,11 @@ const BandManager = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const { profile, skills } = useGameData();
-  
+
   const [band, setBand] = useState<Band | null>(null);
   const [members, setMembers] = useState<BandMember[]>([]);
+  const [chartPosition, setChartPosition] = useState<number | null>(null);
+  const [gigsPlayed, setGigsPlayed] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [isRecruitDialogOpen, setIsRecruitDialogOpen] = useState(false);
@@ -118,7 +123,6 @@ const BandManager = () => {
       setLoading(false);
       return;
     }
-
     try {
       const { data: memberData, error: memberError } = await supabase
         .from('band_members')
@@ -153,16 +157,37 @@ const BandManager = () => {
     if (!user?.id) return;
 
     try {
-      const { data, error } = await supabase
-        .from('band_members')
-        .select(`
-          *,
-          profile:profiles(display_name, avatar_url),
-          skills:player_skills(*)
-        `)
-        .eq('band_id', bandId);
+      let topEntry: Record<string, unknown> | undefined;
 
-      if (error) throw error;
+      for (const column of chartColumns) {
+        const response = await supabase
+          .from(chartsTable)
+          .select(chartColumns.join(', '))
+          .eq('band_id', bandId)
+          .order(column, { ascending: true })
+          .limit(1);
+
+        if (!response.error) {
+          topEntry = response.data?.[0] as Record<string, unknown> | undefined;
+          if (topEntry) {
+            break;
+          }
+        }
+      }
+
+      if (!topEntry) {
+        const fallbackResponse = await supabase
+          .from(chartsTable)
+          .select(chartColumns.join(', '))
+          .eq('band_id', bandId)
+          .limit(1);
+
+        if (!fallbackResponse.error) {
+          topEntry = fallbackResponse.data?.[0] as Record<string, unknown> | undefined;
+        } else {
+          console.error('Fallback chart query failed:', fallbackResponse.error);
+        }
+      }
 
       const memberRows = (data ?? []) as BandMemberRow[];
       const currentUserId = user.id;
@@ -261,7 +286,11 @@ const BandManager = () => {
       if (memberError) throw memberError;
 
       setBand(bandData);
-      await loadBandMembers(bandData.id);
+      await Promise.all([
+        loadBandMembers(bandData.id),
+        loadBandStats(bandData.id),
+        loadScheduleEvents(bandData.id)
+      ]);
 
       toast({
         title: "Band Created!",
@@ -426,6 +455,68 @@ const BandManager = () => {
     if (value >= 80) return "text-success";
     if (value >= 60) return "text-warning";
     return "text-muted-foreground";
+  };
+
+  const getEventTypeIcon = (type?: string | null) => {
+    const normalized = type?.toLowerCase() ?? '';
+
+    if (normalized.includes('record')) return <Mic className="h-4 w-4 text-primary" />;
+    if (normalized.includes('rehearsal') || normalized.includes('practice')) return <Drum className="h-4 w-4 text-primary" />;
+    if (normalized.includes('meeting')) return <Users className="h-4 w-4 text-primary" />;
+    if (normalized.includes('tour')) return <Star className="h-4 w-4 text-primary" />;
+    if (normalized.includes('gig') || normalized.includes('show') || normalized.includes('concert')) {
+      return <Music className="h-4 w-4 text-primary" />;
+    }
+
+    return <Music className="h-4 w-4 text-primary" />;
+  };
+
+  const formatEventType = (type?: string | null) => {
+    if (!type) return null;
+    return type
+      .replace(/[_-]/g, ' ')
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const getEventTimingLabel = (timestamp: number | null) => {
+    if (!timestamp) return 'Date TBA';
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const eventDate = new Date(timestamp);
+    if (Number.isNaN(eventDate.getTime())) return 'Date TBA';
+
+    const startOfEventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()).getTime();
+    const diffDays = Math.round((startOfEventDay - startOfToday) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays < 0) {
+      const daysAgo = Math.abs(diffDays);
+      return `${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+    }
+    return `In ${diffDays} days`;
+  };
+
+  const formatEventDateTime = (scheduledAt: string | null) => {
+    if (!scheduledAt) return 'Date TBA';
+    const eventDate = new Date(scheduledAt);
+    if (Number.isNaN(eventDate.getTime())) return 'Date TBA';
+
+    const datePart = eventDate.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: eventDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+    });
+
+    const timePart = eventDate.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    return `${datePart} • ${timePart}`;
   };
 
   if (loading) {
@@ -657,9 +748,11 @@ const BandManager = () => {
               <Star className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-warning">{members.length}</div>
+              <div className="text-2xl font-bold text-warning">
+                {chartPosition !== null ? `#${chartPosition}` : 'N/A'}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Band members
+                Best chart ranking
               </p>
             </CardContent>
           </Card>
@@ -671,10 +764,10 @@ const BandManager = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">
-                {new Date(band.created_at).toLocaleDateString()}
+                {gigsPlayed !== null ? gigsPlayed : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground">
-                Band formed
+                Completed gigs
               </p>
             </CardContent>
           </Card>
@@ -778,7 +871,9 @@ const BandManager = () => {
                     <p className="text-sm text-muted-foreground">Creative output</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-primary">0</span>
+                <span className="text-lg font-bold text-primary">
+                  {songCount.toLocaleString()}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-accent/10">
@@ -789,7 +884,9 @@ const BandManager = () => {
                     <p className="text-sm text-muted-foreground">Studio recordings</p>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-accent">0</span>
+                <span className="text-lg font-bold text-accent">
+                  {albumCount.toLocaleString()}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -797,38 +894,61 @@ const BandManager = () => {
           <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
             <CardHeader>
               <CardTitle>Weekly Schedule</CardTitle>
-              <CardDescription>Upcoming band activities</CardDescription>
+              <CardDescription>
+                {upcomingEvents.length > 0
+                  ? `${upcomingEvents.length} upcoming event${upcomingEvents.length === 1 ? '' : 's'}`
+                  : 'Upcoming band activities'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">Band Practice</p>
-                    <p className="text-sm text-muted-foreground">Studio rehearsal</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">Today</Badge>
+              {upcomingEvents.length === 0 ? (
+                <div className="p-4 rounded-lg border border-dashed border-primary/30 bg-secondary/20 text-sm text-muted-foreground">
+                  No upcoming events scheduled. Add gigs, rehearsals, or meetings to keep your band active.
                 </div>
-              </div>
-              
-              <div className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">Recording Session</p>
-                    <p className="text-sm text-muted-foreground">New single</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">Tomorrow</Badge>
-                </div>
-              </div>
+              ) : (
+                upcomingEvents.map((event) => {
+                  const typeLabel = formatEventType(event.eventType);
+                  const timingLabel = getEventTimingLabel(event.timestamp);
+                  const dateTimeLabel = formatEventDateTime(event.scheduledAt);
 
-              <div className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">Live Gig</p>
-                    <p className="text-sm text-muted-foreground">The Underground Club</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">Saturday</Badge>
-                </div>
-              </div>
+                  return (
+                    <div key={event.id} className="p-3 rounded-lg bg-secondary/30 border border-primary/10">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 text-primary">
+                            {getEventTypeIcon(event.eventType)}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium">{event.title}</p>
+                              {typeLabel && (
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {typeLabel}
+                                </Badge>
+                              )}
+                            </div>
+                            {event.description && (
+                              <p className="text-sm text-muted-foreground">{event.description}</p>
+                            )}
+                            {event.location && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {event.location}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <Badge variant="outline" className="text-xs">
+                            {timingLabel}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground">{dateTimeLabel}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </div>
