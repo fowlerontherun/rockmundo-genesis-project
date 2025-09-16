@@ -51,6 +51,8 @@ interface Contract {
   contract_type: 'demo' | 'single' | 'album' | 'exclusive';
   duration_months: number;
   advance_payment: number;
+  advance_balance: number;
+  recouped_amount: number;
   royalty_rate: number;
   signed_at: string;
   status: 'pending' | 'active' | 'completed' | 'terminated';
@@ -82,6 +84,18 @@ const RecordLabel = () => {
   const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
 
   const canManageLabels = !roleLoading && isAdminRole();
+
+  const parseNumeric = (value: unknown): number => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  };
+
+  const formatCurrency = (value: number) =>
+    parseNumeric(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   useEffect(() => {
     if (user) {
@@ -159,7 +173,7 @@ const RecordLabel = () => {
       const { data, error } = await supabase
         .from('contracts')
         .select(
-          'id, label_id, label_name, contract_type, duration_months, advance_payment, royalty_rate, signed_at, status'
+          'id, label_id, label_name, contract_type, duration_months, advance_payment, advance_balance, recouped_amount, royalty_rate, signed_at, status'
         )
         .eq('user_id', user.id)
         .order('signed_at', { ascending: false });
@@ -172,7 +186,9 @@ const RecordLabel = () => {
         label_name: contract.label_name,
         contract_type: contract.contract_type as Contract['contract_type'],
         duration_months: contract.duration_months,
-        advance_payment: contract.advance_payment ?? 0,
+        advance_payment: parseNumeric(contract.advance_payment),
+        advance_balance: parseNumeric(contract.advance_balance),
+        recouped_amount: parseNumeric(contract.recouped_amount),
         royalty_rate: typeof contract.royalty_rate === 'string'
           ? parseFloat(contract.royalty_rate)
           : contract.royalty_rate ?? 0,
@@ -616,6 +632,8 @@ const RecordLabel = () => {
           contract_type: contractType,
           duration_months: duration,
           advance_payment: advance,
+          advance_balance: advance,
+          recouped_amount: 0,
           royalty_rate: royalty,
           status: 'active'
         })
@@ -826,57 +844,89 @@ const RecordLabel = () => {
           {/* Player Contracts */}
           <TabsContent value="contracts">
             <div className="space-y-4">
-              {playerContracts.length > 0 ? playerContracts.map((contract) => (
-                <Card key={contract.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <FileText className="h-5 w-5 text-primary" />
-                          {contract.label_name}
-                        </CardTitle>
-                        <CardDescription className="capitalize">
-                          {contract.contract_type} Contract • {contract.duration_months} months
-                        </CardDescription>
-                      </div>
-                      <Badge 
-                        variant="outline" 
-                        className={
-                          contract.status === 'active' ? 'text-success border-success' :
-                          contract.status === 'pending' ? 'text-warning border-warning' :
-                          'text-muted-foreground'
-                        }
-                      >
-                        {contract.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Advance Received</p>
-                        <p className="font-semibold text-success">${contract.advance_payment.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Royalty Rate</p>
-                        <p className="font-semibold text-primary">{(contract.royalty_rate * 100).toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Signed Date</p>
-                        <p className="font-semibold">{new Date(contract.signed_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
+              {playerContracts.length > 0 ? playerContracts.map((contract) => {
+                const totalAdvance = parseNumeric(contract.advance_payment);
+                const remainingBalance = Math.max(0, parseNumeric(contract.advance_balance));
+                const recoupedAmount = Math.max(0, totalAdvance - remainingBalance);
+                const recoupProgress = totalAdvance > 0
+                  ? Math.min(100, (recoupedAmount / totalAdvance) * 100)
+                  : 100;
+                const isRecouped = remainingBalance <= 0.01;
 
-                    {contract.status === 'active' && (
-                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                        <p className="text-sm text-primary font-medium">
-                          ✨ Active contract benefits: Professional recording, promotion support, and higher royalties
-                        </p>
+                return (
+                  <Card key={contract.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            {contract.label_name}
+                          </CardTitle>
+                          <CardDescription className="capitalize">
+                            {contract.contract_type} Contract • {contract.duration_months} months
+                          </CardDescription>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={
+                            contract.status === 'active' ? 'text-success border-success' :
+                            contract.status === 'pending' ? 'text-warning border-warning' :
+                            'text-muted-foreground'
+                          }
+                        >
+                          {contract.status}
+                        </Badge>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )) : (
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Advance Received</p>
+                          <p className="font-semibold text-success">${formatCurrency(totalAdvance)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Royalty Rate</p>
+                          <p className="font-semibold text-primary">{(contract.royalty_rate * 100).toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Signed Date</p>
+                          <p className="font-semibold">{new Date(contract.signed_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Recoup Progress</span>
+                          <span>{Math.round(recoupProgress)}%</span>
+                        </div>
+                        <Progress value={recoupProgress} className="h-2" />
+                        <div className="flex justify-between text-sm">
+                          <span className="text-success">Recouped: ${formatCurrency(recoupedAmount)}</span>
+                          <span>
+                            Remaining:
+                            <span className={`font-semibold ml-1 ${isRecouped ? 'text-success' : 'text-warning'}`}>
+                              ${formatCurrency(remainingBalance)}
+                            </span>
+                          </span>
+                        </div>
+                        {isRecouped && (
+                          <p className="text-sm text-success font-medium">
+                            Advance fully recouped! Future royalties go directly to you.
+                          </p>
+                        )}
+                      </div>
+
+                      {contract.status === 'active' && (
+                        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                          <p className="text-sm text-primary font-medium">
+                            ✨ Active contract benefits: Professional recording, promotion support, and higher royalties
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              }) : (
                 <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                   <CardContent className="text-center py-12">
                     <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

@@ -345,6 +345,7 @@ export type Database = {
       }
       contracts: {
         Row: {
+          advance_balance: number
           advance_payment: number
           contract_type: string
           created_at: string | null
@@ -352,6 +353,7 @@ export type Database = {
           id: string
           label_id: string | null
           label_name: string
+          recouped_amount: number
           royalty_rate: number
           signed_at: string
           status: string
@@ -359,6 +361,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          advance_balance?: number
           advance_payment?: number
           contract_type: string
           created_at?: string | null
@@ -366,6 +369,7 @@ export type Database = {
           id?: string
           label_id?: string | null
           label_name: string
+          recouped_amount?: number
           royalty_rate: number
           signed_at?: string
           status?: string
@@ -373,6 +377,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          advance_balance?: number
           advance_payment?: number
           contract_type?: string
           created_at?: string | null
@@ -380,6 +385,7 @@ export type Database = {
           id?: string
           label_id?: string | null
           label_name?: string
+          recouped_amount?: number
           royalty_rate?: number
           signed_at?: string
           status?: string
