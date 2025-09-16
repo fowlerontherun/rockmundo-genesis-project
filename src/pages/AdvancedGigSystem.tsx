@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from 'sonner';
-import { Music, Users, Zap, Heart, Star, TrendingUp, Volume2, Mic } from 'lucide-react';
+import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle } from 'lucide-react';
 
 interface Venue {
   id: string;
@@ -48,6 +48,11 @@ interface StageResult {
   feedback: string[];
   bonuses: string[];
 }
+
+const STAGE_FAILURE_THRESHOLD = 50;
+const OVERALL_FAILURE_THRESHOLD = 60;
+const FAILURE_EARNINGS_MULTIPLIER = 0.25;
+const FAILURE_FAME_PENALTY = 15;
 
 const PERFORMANCE_STAGES: PerformanceStage[] = [
   {
@@ -97,6 +102,11 @@ const AdvancedGigSystem: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [totalEarnings, setTotalEarnings] = useState(0);
+  const [performanceFailed, setPerformanceFailed] = useState(false);
+  const [failureReason, setFailureReason] = useState<string | null>(null);
+  const [failedStage, setFailedStage] = useState<string | null>(null);
+  const [fameChange, setFameChange] = useState(0);
+  const [penaltyAmount, setPenaltyAmount] = useState(0);
 
   useEffect(() => {
     if (gigId && user) {
@@ -149,6 +159,18 @@ const AdvancedGigSystem: React.FC = () => {
     setCurrentStage(0);
     setStageProgress(0);
     setStageResults([]);
+    setShowResults(false);
+    setPerformanceFailed(false);
+    setFailureReason(null);
+    setFailedStage(null);
+    setFameChange(0);
+    setPenaltyAmount(0);
+    setAudienceReaction({
+      energy: 50,
+      satisfaction: 50,
+      excitement: 50,
+      singing_along: 0
+    });
     performStage(0);
   };
 
@@ -198,7 +220,7 @@ const AdvancedGigSystem: React.FC = () => {
     if (!skills || !gig) return;
 
     const stage = PERFORMANCE_STAGES[stageIndex];
-    
+
     // Calculate stage score based on skills vs requirements
     let stageScore = 0;
     const feedback: string[] = [];
@@ -236,13 +258,17 @@ const AdvancedGigSystem: React.FC = () => {
       bonuses
     };
 
-    let updatedResults: StageResult[] = [];
+    const updatedResults = [...stageResults, result];
+    setStageResults(updatedResults);
 
-    setStageResults(prev => {
-      const nextResults = [...prev, result];
-      updatedResults = nextResults;
-      return nextResults;
-    });
+    if (result.score < STAGE_FAILURE_THRESHOLD) {
+      finishPerformance(updatedResults, {
+        forcedFailure: true,
+        failedStage: stage.name,
+        failureReason: `${stage.name} score fell below ${STAGE_FAILURE_THRESHOLD}%. The promoter ended the show early.`
+      });
+      return;
+    }
 
     // Move to next stage or finish performance
     if (stageIndex < PERFORMANCE_STAGES.length - 1) {
@@ -256,64 +282,77 @@ const AdvancedGigSystem: React.FC = () => {
     }
   };
 
-  const finishPerformance = async (finalStageResults: StageResult[]) => {
-    if (!gig || !profile || !user) return;
+  const finishPerformance = async (
+    results: StageResult[],
+    options: { forcedFailure?: boolean; failureReason?: string; failedStage?: string } = {}
+  ) => {
+    if (!gig || !profile || !user || results.length === 0) return;
 
-    const stageResultsData = finalStageResults.length ? finalStageResults : stageResults;
+    const averageScore = results.reduce((sum, result) => sum + result.score, 0) / results.length;
+    const baseEarnings = gig.payment || 1000;
+    const potentialEarnings = Math.floor(baseEarnings * (averageScore / 100));
 
-    if (!stageResultsData.length) {
-      console.warn('No stage results available to finalize performance');
-      return;
+    const forcedFailure = options.forcedFailure ?? false;
+    let derivedFailureReason = options.failureReason ?? '';
+    const isFailure = forcedFailure || averageScore < OVERALL_FAILURE_THRESHOLD;
+
+    if (isFailure && !derivedFailureReason) {
+      derivedFailureReason = `Overall performance score fell below ${OVERALL_FAILURE_THRESHOLD}%. The crowd left disappointed.`;
     }
 
-    const averageScore = stageResultsData.reduce((sum, result) => sum + result.score, 0) / stageResultsData.length;
-    const baseEarnings = gig.payment || 1000;
-    const scoreMultiplier = averageScore / 100;
-    const totalEarnings = Math.floor(baseEarnings * scoreMultiplier);
-    const experienceGain = Math.floor(averageScore * 2);
-    const fanGain = Math.floor(averageScore * 0.5);
+    const failureEarnings = Math.floor(baseEarnings * FAILURE_EARNINGS_MULTIPLIER);
+    const totalEarningsValue = isFailure
+      ? Math.min(potentialEarnings, failureEarnings)
+      : potentialEarnings;
+    const fameDelta = isFailure
+      ? -FAILURE_FAME_PENALTY
+      : Math.floor(averageScore * 0.5);
+    const experienceGain = Math.floor(isFailure ? averageScore : averageScore * 2);
+    const penaltyValue = isFailure ? Math.max(0, potentialEarnings - totalEarningsValue) : 0;
 
     setFinalScore(averageScore);
-    setTotalEarnings(totalEarnings);
+    setTotalEarnings(totalEarningsValue);
+    setFameChange(fameDelta);
+    setPenaltyAmount(penaltyValue);
+    setPerformanceFailed(isFailure);
+    setFailureReason(isFailure ? derivedFailureReason : null);
+    setFailedStage(isFailure ? options.failedStage ?? null : null);
 
     try {
-      const finalAudienceReaction = stageResultsData[stageResultsData.length - 1]?.audienceReaction || audienceReaction;
-
-      // Update gig status
+      const updatedFame = Math.max(0, profile.fame + fameDelta);
+      const attendance = Math.floor(gig.venue.capacity * Math.max(averageScore, 10) / 100);
       await supabase
         .from('gigs')
         .update({
-          status: 'completed',
-          attendance: Math.floor(gig.venue.capacity * (averageScore / 100)),
-          fan_gain: fanGain
+          status: isFailure ? 'failed' : 'completed',
+          attendance,
+          fan_gain: fameDelta > 0 ? fameDelta : 0
         })
         .eq('id', gig.id);
 
-      // Store performance history with detailed results
-      await supabase
-        .from('gig_performances')
-        .insert({
-          user_id: user.id,
-          gig_id: gig.id,
-          performance_score: Math.round(averageScore),
-          earnings: totalEarnings,
-          stage_results: stageResultsData,
-          audience_reaction: finalAudienceReaction
-        });
-
-      // Update player profile
       await updateProfile({
-        cash: profile.cash + totalEarnings,
+        cash: profile.cash + totalEarningsValue,
         experience: profile.experience + experienceGain,
-        fame: profile.fame + fanGain
+        fame: updatedFame
       });
 
-      // Add activity
-      await addActivity(
-        'gig_performance',
-        `Performed at ${gig.venue.name} - Score: ${averageScore.toFixed(1)}%`,
-        totalEarnings
-      );
+      await supabase.from('gig_performances').insert({
+        user_id: user.id,
+        gig_id: gig.id,
+        performance_score: Math.round(averageScore),
+        earnings: totalEarningsValue,
+        fame_change: fameDelta,
+        status: isFailure ? 'failed' : 'completed',
+        penalty_applied: isFailure,
+        penalty_amount: penaltyValue,
+        failure_reason: isFailure ? derivedFailureReason : null
+      });
+
+      const activityMessage = isFailure
+        ? `Performance at ${gig.venue.name} fell flat (${averageScore.toFixed(1)}%). Lost ${Math.abs(fameDelta)} fame.`
+        : `Performed at ${gig.venue.name} - Score: ${averageScore.toFixed(1)}%`;
+
+      await addActivity('gig_performance', activityMessage, totalEarningsValue);
 
       try {
         const wearSummary = await applyEquipmentWear(user.id, 'gig');
@@ -323,12 +362,12 @@ const AdvancedGigSystem: React.FC = () => {
       } catch (wearError) {
         console.error('Failed to apply equipment wear after gig performance', wearError);
       }
-
-      setIsPerforming(false);
-      setShowResults(true);
     } catch (error: any) {
       console.error('Error finishing performance:', error);
       toast.error('Failed to save performance results');
+    } finally {
+      setIsPerforming(false);
+      setShowResults(true);
     }
   };
 
@@ -372,25 +411,61 @@ const AdvancedGigSystem: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Star className="w-6 h-6" />
-              Performance Complete!
+              {performanceFailed ? (
+                <AlertTriangle className="w-6 h-6 text-destructive" />
+              ) : (
+                <Star className="w-6 h-6" />
+              )}
+              {performanceFailed ? 'Performance Failed' : 'Performance Complete!'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {performanceFailed && failureReason && (
+              <div className="p-4 bg-destructive/10 border border-destructive rounded-md text-sm text-destructive">
+                {failureReason}
+                {failedStage && (
+                  <div className="mt-1 text-destructive/80">
+                    The {failedStage} stage needs serious attention before your next gig.
+                  </div>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{finalScore.toFixed(1)}%</div>
+                <div className={`text-3xl font-bold ${performanceFailed ? 'text-destructive' : 'text-primary'}`}>
+                  {finalScore.toFixed(1)}%
+                </div>
                 <div className="text-sm text-muted-foreground">Overall Score</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-500">${totalEarnings}</div>
-                <div className="text-sm text-muted-foreground">Earnings</div>
+                <div className={`text-3xl font-bold ${performanceFailed ? 'text-destructive' : 'text-green-500'}`}>
+                  ${totalEarnings}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {performanceFailed ? 'Reduced Payout' : 'Earnings'}
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-500">{Math.floor(finalScore * 0.5)}</div>
-                <div className="text-sm text-muted-foreground">Fans Gained</div>
+                <div
+                  className={`text-3xl font-bold ${fameChange >= 0 ? 'text-blue-500' : 'text-destructive'}`}
+                >
+                  {fameChange >= 0 ? `+${fameChange}` : fameChange}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {fameChange >= 0 ? 'Fans Gained' : 'Fame Lost'}
+                </div>
               </div>
             </div>
+
+            {performanceFailed && penaltyAmount > 0 && (
+              <div className="text-center p-4 bg-muted rounded-md">
+                <div className="text-sm text-muted-foreground">Earnings Penalty</div>
+                <div className="text-2xl font-semibold text-destructive">-${penaltyAmount}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Missed bonus pay due to the failed performance.
+                </div>
+              </div>
+            )}
 
             <Separator />
 
@@ -423,6 +498,11 @@ const AdvancedGigSystem: React.FC = () => {
                         </ul>
                       </div>
                     </div>
+                    {performanceFailed && failedStage === result.stageName && (
+                      <div className="mt-3 text-sm text-destructive">
+                        This stage triggered the failed gig outcome.
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -508,7 +588,7 @@ const AdvancedGigSystem: React.FC = () => {
                 {stageResults.map((result, index) => (
                   <div key={index} className="flex justify-between items-center p-2 bg-muted rounded">
                     <span className="text-sm">{result.stageName}</span>
-                    <Badge variant={result.score >= 80 ? "default" : "secondary"}>
+                    <Badge variant={result.score >= 80 ? "default" : result.score >= 60 ? "secondary" : "destructive"}>
                       {result.score.toFixed(1)}%
                     </Badge>
                   </div>

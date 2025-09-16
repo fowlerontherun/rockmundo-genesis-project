@@ -843,31 +843,43 @@ export type Database = {
         Row: {
           audience_reaction: Json | null
           earnings: number | null
+          failure_reason: string | null
+          fame_change: number | null
           gig_id: string | null
           id: string
+          penalty_amount: number | null
+          penalty_applied: boolean | null
           performance_score: number | null
           performed_at: string
-          stage_results: Json | null
+          status: string | null
           user_id: string
         }
         Insert: {
           audience_reaction?: Json | null
           earnings?: number | null
+          failure_reason?: string | null
+          fame_change?: number | null
           gig_id?: string | null
           id?: string
+          penalty_amount?: number | null
+          penalty_applied?: boolean | null
           performance_score?: number | null
           performed_at?: string
-          stage_results?: Json | null
+          status?: string | null
           user_id: string
         }
         Update: {
           audience_reaction?: Json | null
           earnings?: number | null
+          failure_reason?: string | null
+          fame_change?: number | null
           gig_id?: string | null
           id?: string
+          penalty_amount?: number | null
+          penalty_applied?: boolean | null
           performance_score?: number | null
           performed_at?: string
-          stage_results?: Json | null
+          status?: string | null
           user_id?: string
         }
         Relationships: []
