@@ -38,6 +38,21 @@ type SongRecord = Database["public"]["Tables"]["songs"]["Row"] & {
   trending?: boolean | null;
 };
 
+type PromotionCampaign = Database["public"]["Tables"]["promotion_campaigns"]["Row"] & {
+  platform?: string | null;
+};
+
+type PromotionFunctionResponse = {
+  success: boolean;
+  message: string;
+  campaign?: PromotionCampaign | null;
+  statsDelta?: {
+    streams: number;
+    revenue: number;
+    listeners: number;
+  } | null;
+};
+
 interface PlatformMetric extends StreamingPlatform {
   monthlyListeners: number;
   monthlyStreams: number;
@@ -185,6 +200,44 @@ const formatCurrency = (value: number) => {
 
   return currencyFormatter.format(value);
 };
+
+type PresetCampaignType = "playlist" | "social" | "radio";
+
+const PRESET_CAMPAIGNS: Record<
+  PresetCampaignType,
+  {
+    action: "promotion" | "playlist_submission";
+    budget: number;
+    platformKeyword: string;
+    fallbackPlatformName: string;
+    playlistName?: string;
+  }
+> = {
+  playlist: {
+    action: "playlist_submission",
+    budget: 250,
+    platformKeyword: "spotify",
+    fallbackPlatformName: "Spotify",
+    playlistName: "Editorial Playlist Outreach",
+  },
+  social: {
+    action: "promotion",
+    budget: 180,
+    platformKeyword: "youtube",
+    fallbackPlatformName: "YouTube Music",
+  },
+  radio: {
+    action: "promotion",
+    budget: 220,
+    platformKeyword: "apple",
+    fallbackPlatformName: "Apple Music",
+  },
+};
+
+const normalizeCampaign = (campaign: PromotionCampaign): PromotionCampaign => ({
+  ...campaign,
+  platform: campaign.platform ?? campaign.platform_name ?? null,
+});
 
 const StreamingPlatforms = () => {
   const { toast } = useToast();
@@ -415,6 +468,164 @@ const StreamingPlatforms = () => {
     }
   };
 
+  const updateCampaign = async (
+    campaignId: string,
+    updates: Database["public"]["Tables"]["promotion_campaigns"]["Update"]
+  ) => {
+    if (!user) {
+      const message = "You need to be logged in to manage campaigns.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Not signed in",
+        description: message,
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("promotion_campaigns")
+        .update(updates)
+        .eq("id", campaignId)
+        .eq("user_id", user.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error("Campaign could not be updated.");
+      }
+
+      const updatedCampaign = normalizeCampaign(data as PromotionCampaign);
+
+      setCampaigns((previousCampaigns) =>
+        previousCampaigns.map((campaign) =>
+          campaign.id === campaignId ? updatedCampaign : campaign
+        )
+      );
+
+      const statusMessage = updates.status
+        ? `Campaign status updated to ${updates.status}.`
+        : "Campaign updated successfully.";
+
+      setServerMessage({ type: "success", text: statusMessage });
+      toast({
+        title: "Campaign Updated",
+        description: statusMessage,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update campaign.";
+
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: message,
+      });
+    }
+  };
+
+  const handleCreatePresetCampaign = async (presetType: PresetCampaignType) => {
+    if (!user) {
+      const message = "You need to be logged in to launch a campaign.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Not signed in",
+        description: message,
+      });
+      return;
+    }
+
+    if (userSongs.length === 0) {
+      const message = "Release a song before launching a campaign.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "No songs available",
+        description: message,
+      });
+      return;
+    }
+
+    const preset = PRESET_CAMPAIGNS[presetType];
+    if (!preset) {
+      return;
+    }
+
+    const targetSong = userSongs.reduce((best, song) => {
+      const bestStreams = Number(best.totalStreams ?? best.streams ?? 0);
+      const songStreams = Number(song.totalStreams ?? song.streams ?? 0);
+
+      return songStreams > bestStreams ? song : best;
+    }, userSongs[0]!);
+
+    const targetPlatform = platforms.find((platform) =>
+      platform.name.toLowerCase().includes(preset.platformKeyword)
+    );
+
+    setPromoting((previous) => ({ ...previous, [presetType]: true }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke<PromotionFunctionResponse>(
+        "promotions",
+        {
+          body: {
+            action: preset.action,
+            songId: targetSong.id,
+            platformId: targetPlatform?.id,
+            platformName: targetPlatform?.name ?? preset.fallbackPlatformName,
+            budget: preset.budget,
+            playlistName: preset.playlistName,
+          },
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.message ?? "Failed to launch campaign.");
+      }
+
+      if (data.campaign) {
+        const campaignRecord = normalizeCampaign(data.campaign);
+        setCampaigns((previousCampaigns) => [campaignRecord, ...previousCampaigns]);
+      }
+
+      if (data.statsDelta) {
+        setStreamingStats((previousStats) => ({
+          totalStreams: previousStats.totalStreams + (data.statsDelta?.streams ?? 0),
+          revenue: previousStats.revenue + (data.statsDelta?.revenue ?? 0),
+          listeners: previousStats.listeners + (data.statsDelta?.listeners ?? 0),
+        }));
+      }
+
+      setServerMessage({ type: "success", text: data.message });
+      toast({
+        title: "Campaign Launched!",
+        description: data.message,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to launch campaign.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Campaign failed",
+        description: message,
+      });
+    } finally {
+      setPromoting((previous) => ({ ...previous, [presetType]: false }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
@@ -550,7 +761,8 @@ const StreamingPlatforms = () => {
       }
 
       if (data.campaign) {
-        setCampaigns(prev => [data.campaign, ...prev]);
+        const campaignRecord = normalizeCampaign(data.campaign);
+        setCampaigns(prev => [campaignRecord, ...prev]);
       }
 
       if (data.statsDelta) {
