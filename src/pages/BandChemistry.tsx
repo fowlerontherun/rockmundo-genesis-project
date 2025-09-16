@@ -259,7 +259,6 @@ const BandChemistry = () => {
 
   const fetchPrimaryBandId = useCallback(async (): Promise<string | null> => {
     if (!user) return null;
-
     const { data: leaderBands, error: leaderError } = await supabase
       .from("bands")
       .select("id")
@@ -363,7 +362,6 @@ const BandChemistry = () => {
       setLoading(false);
       return;
     }
-
     setLoading(true);
     try {
       const primaryBandId = await fetchPrimaryBandId();
@@ -529,6 +527,10 @@ const BandChemistry = () => {
     } finally {
       setResolvingConflictId(null);
     }
+
+    return conflict.involved_member_ids
+      .map(memberId => bandMembers.find(member => member.member_id === memberId)?.member_name)
+      .filter((name): name is string => Boolean(name));
   };
 
   if (loading) {
@@ -553,7 +555,7 @@ const BandChemistry = () => {
           <div className="flex items-center justify-center gap-4">
             <div className="flex items-center gap-2 text-cream">
               <Heart className="h-6 w-6" />
-              <span className="text-lg">Band Morale: {bandMorale}/100</span>
+              <span className="text-lg">Band Morale: {bandMoraleDisplay}/100</span>
             </div>
           </div>
           {!bandId && (
@@ -719,7 +721,8 @@ const BandChemistry = () => {
                           <span>Members: {conflict.members.join(", ")}</span>
                           <span>{conflict.timeAgo}</span>
                         </div>
-                      </div>
+                      )}
+
                       <div className="flex gap-2">
                         <Button
                           onClick={() => handleResolveConflict(conflict.id)}
@@ -744,14 +747,16 @@ const BandChemistry = () => {
                           className="border-accent text-accent hover:bg-accent/10"
                           disabled={!bandId}
                         >
-                          Investigate
+                          <Coffee className="h-4 w-4 mr-1" />
+                          Hang Out
                         </Button>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
             {recentConflicts.length === 0 && (
               <Card className="border-accent bg-card/80">
@@ -887,16 +892,30 @@ const BandChemistry = () => {
                           <span className="text-cream/60">Energy: </span>
                           <span className="text-accent">{member.energy}%</span>
                         </div>
-                        <div>
-                          <span className="text-cream/60">Issues: </span>
-                          <span className={member.issues.length > 0 ? "text-red-400" : "text-green-400"}>
-                            {member.issues.length}
-                          </span>
+                        <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-cream/60">Skill: </span>
+                            <span className="text-accent">{member.skill_rating}%</span>
+                          </div>
+                          <div>
+                            <span className="text-cream/60">Loyalty: </span>
+                            <span className="text-accent">{member.loyalty}%</span>
+                          </div>
+                          <div>
+                            <span className="text-cream/60">Energy: </span>
+                            <span className="text-accent">{member.energy}%</span>
+                          </div>
+                          <div>
+                            <span className="text-cream/60">Issues: </span>
+                            <span className={member.issues.length > 0 ? "text-red-400" : "text-green-400"}>
+                              {member.issues.length}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
