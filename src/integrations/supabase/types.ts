@@ -80,6 +80,59 @@ export type Database = {
         }
         Relationships: []
       }
+      band_conflicts: {
+        Row: {
+          band_id: string
+          conflict_type: string
+          created_at: string
+          description: string | null
+          id: string
+          involved_member_ids: string[]
+          issue_tags: string[]
+          resolved: boolean
+          resolved_at: string | null
+          resolution_notes: string | null
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          band_id: string
+          conflict_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          involved_member_ids?: string[]
+          issue_tags?: string[]
+          resolved?: boolean
+          resolved_at?: string | null
+          resolution_notes?: string | null
+          severity: string
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string
+          conflict_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          involved_member_ids?: string[]
+          issue_tags?: string[]
+          resolved?: boolean
+          resolved_at?: string | null
+          resolution_notes?: string | null
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_conflicts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       band_invitations: {
         Row: {
           band_id: string
@@ -124,27 +177,77 @@ export type Database = {
           }
         ]
       }
+      band_events: {
+        Row: {
+          band_id: string
+          chemistry_change: number
+          cost: number
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          morale_change: number
+          triggered_by: string
+        }
+        Insert: {
+          band_id: string
+          chemistry_change?: number
+          cost?: number
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          morale_change?: number
+          triggered_by: string
+        }
+        Update: {
+          band_id?: string
+          chemistry_change?: number
+          cost?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          morale_change?: number
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       band_members: {
         Row: {
+          chemistry: number
           band_id: string
           id: string
           joined_at: string | null
+          morale: number
           role: string
           salary: number | null
           user_id: string
         }
         Insert: {
+          chemistry?: number
           band_id: string
           id?: string
           joined_at?: string | null
+          morale?: number
           role: string
           salary?: number | null
           user_id: string
         }
         Update: {
+          chemistry?: number
           band_id?: string
           id?: string
           joined_at?: string | null
+          morale?: number
           role?: string
           salary?: number | null
           user_id?: string
@@ -164,6 +267,74 @@ export type Database = {
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      band_relations: {
+        Row: {
+          avatar_icon: string | null
+          band_id: string
+          chemistry: number
+          created_at: string
+          energy: number
+          id: string
+          instrument: string
+          issues: string[]
+          loyalty: number
+          skill_rating: number
+          member_id: string
+          member_name: string
+          mood: string
+          morale: number
+          personality: string | null
+          strengths: string[]
+          updated_at: string
+        }
+        Insert: {
+          avatar_icon?: string | null
+          band_id: string
+          chemistry?: number
+          created_at?: string
+          energy?: number
+          id?: string
+          instrument: string
+          issues?: string[]
+          loyalty?: number
+          skill_rating?: number
+          member_id: string
+          member_name: string
+          mood?: string
+          morale?: number
+          personality?: string | null
+          strengths?: string[]
+          updated_at?: string
+        }
+        Update: {
+          avatar_icon?: string | null
+          band_id?: string
+          chemistry?: number
+          created_at?: string
+          energy?: number
+          id?: string
+          instrument?: string
+          issues?: string[]
+          loyalty?: number
+          skill_rating?: number
+          member_id?: string
+          member_name?: string
+          mood?: string
+          morale?: number
+          personality?: string | null
+          strengths?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_relations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
         ]
       }
       bands: {
@@ -412,6 +583,7 @@ export type Database = {
           rarity: string | null
           stat_boosts: Json | null
           subcategory: string | null
+          stock: number
         }
         Insert: {
           category: string
@@ -424,6 +596,7 @@ export type Database = {
           rarity?: string | null
           stat_boosts?: Json | null
           subcategory?: string | null
+          stock?: number
         }
         Update: {
           category?: string
@@ -436,6 +609,7 @@ export type Database = {
           rarity?: string | null
           stat_boosts?: Json | null
           subcategory?: string | null
+          stock?: number
         }
         Relationships: []
       }
@@ -629,27 +803,33 @@ export type Database = {
       }
       gig_performances: {
         Row: {
+          audience_reaction: Json | null
           earnings: number | null
           gig_id: string | null
           id: string
           performance_score: number | null
           performed_at: string
+          stage_results: Json | null
           user_id: string
         }
         Insert: {
+          audience_reaction?: Json | null
           earnings?: number | null
           gig_id?: string | null
           id?: string
           performance_score?: number | null
           performed_at?: string
+          stage_results?: Json | null
           user_id: string
         }
         Update: {
+          audience_reaction?: Json | null
           earnings?: number | null
           gig_id?: string | null
           id?: string
           performance_score?: number | null
           performed_at?: string
+          stage_results?: Json | null
           user_id?: string
         }
         Relationships: []
@@ -1215,6 +1395,51 @@ export type Database = {
         }
         Relationships: []
       }
+      social_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          parent_comment_id: string | null
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       social_posts: {
         Row: {
           comments: number | null
@@ -1223,6 +1448,10 @@ export type Database = {
           fan_growth: number | null
           id: string
           likes: number | null
+          media_path: string | null
+          media_type: string | null
+          media_url: string | null
+          scheduled_for: string | null
           reposts: number | null
           platform: string
           shares: number | null
@@ -1237,6 +1466,10 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          media_path?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          scheduled_for?: string | null
           reposts?: number | null
           platform: string
           shares?: number | null
@@ -1251,6 +1484,10 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          media_path?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          scheduled_for?: string | null
           reposts?: number | null
           platform?: string
           shares?: number | null
@@ -1260,9 +1497,43 @@ export type Database = {
         }
         Relationships: []
       }
+      social_reposts: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_reposts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       songs: {
         Row: {
+          audio_layers: Json | null
           chart_position: number | null
+          co_writers: string[]
           created_at: string
           genre: string
           id: string
@@ -1272,7 +1543,9 @@ export type Database = {
           production_cost: number | null
           quality_score: number
           release_date: string | null
+          marketing_budget: number | null
           revenue: number
+          split_percentages: number[]
           status: string
           streams: number
           title: string
@@ -1280,7 +1553,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_layers?: Json | null
           chart_position?: number | null
+          co_writers?: string[]
           created_at?: string
           genre: string
           id?: string
@@ -1290,7 +1565,9 @@ export type Database = {
           production_cost?: number | null
           quality_score?: number
           release_date?: string | null
+          marketing_budget?: number | null
           revenue?: number
+          split_percentages?: number[]
           status?: string
           streams?: number
           title: string
@@ -1298,7 +1575,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_layers?: Json | null
           chart_position?: number | null
+          co_writers?: string[]
           created_at?: string
           genre?: string
           id?: string
@@ -1308,7 +1587,9 @@ export type Database = {
           production_cost?: number | null
           quality_score?: number
           release_date?: string | null
+          marketing_budget?: number | null
           revenue?: number
+          split_percentages?: number[]
           status?: string
           streams?: number
           title?: string
@@ -1400,6 +1681,8 @@ export type Database = {
           travel_cost: number | null
           lodging_cost: number | null
           misc_cost: number | null
+          travel_time: number | null
+          rest_days: number | null
           venue_id: string
         }
         Insert: {
@@ -1413,6 +1696,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id: string
         }
         Update: {
@@ -1426,6 +1711,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id?: string
         }
         Relationships: [
@@ -1703,9 +1990,26 @@ export type Database = {
         }
         Returns: null
       }
+      purchase_equipment_item: {
+        Args: {
+          p_equipment_id: string
+        }
+        Returns: {
+          player_equipment_id: string
+          remaining_stock: number
+          new_cash: number
+        }[]
+      }
+      restock_equipment_items: {
+        Args: {
+          restock_amount?: number | null
+        }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      chat_participant_status: "online" | "typing" | "muted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1833,6 +2137,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      chat_participant_status: ["online", "typing", "muted"],
       app_role: ["admin", "moderator", "user"],
     },
   },
