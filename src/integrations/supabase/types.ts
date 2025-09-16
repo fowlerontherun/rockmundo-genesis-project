@@ -1195,6 +1195,20 @@ export type Database = {
       }
     }
     Views: {
+      leaderboards: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          experience: number
+          fame: number
+          total_achievements: number
+          total_gigs: number
+          total_revenue: number
+          user_id: string
+          username: string | null
+        }
+        Relationships: []
+      },
       player_achievement_summary: {
         Row: {
           earned_count: number
