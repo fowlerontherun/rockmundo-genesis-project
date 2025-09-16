@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar as CalendarIcon,
   Clock,
+  Bell,
   MapPin,
   Users,
   Music,
@@ -49,6 +50,8 @@ interface ScheduleEvent {
   location: string;
   status: EventStatus;
   description: string | null;
+  reminder_minutes: number | null;
+  last_notified: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -61,6 +64,7 @@ interface EventFormState {
   location: string;
   status: EventStatus;
   description: string;
+  reminder_minutes: number | null;
 }
 
 const eventTypes: { value: EventType; label: string }[] = [
@@ -78,6 +82,66 @@ const statusOptions: { value: EventStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+const reminderOptions: { value: number | null; label: string }[] = [
+  { value: null, label: "No reminder" },
+  { value: 0, label: "At start time" },
+  { value: 5, label: "5 minutes before" },
+  { value: 15, label: "15 minutes before" },
+  { value: 30, label: "30 minutes before" },
+  { value: 60, label: "1 hour before" },
+  { value: 120, label: "2 hours before" },
+  { value: 240, label: "4 hours before" },
+  { value: 1440, label: "1 day before" },
+];
+
+const reminderValueToString = (value: number | null) => (value === null ? "none" : value.toString());
+
+const formatRelativeTime = (minutes: number) => {
+  if (minutes === 0) {
+    return "now";
+  }
+
+  if (minutes < 60) {
+    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  }
+
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return `${days} day${days === 1 ? "" : "s"}`;
+  }
+
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return `${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const parts: string[] = [];
+
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+  }
+
+  if (remainingMinutes > 0) {
+    parts.push(`${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"}`);
+  }
+
+  return parts.join(" ");
+};
+
+const formatReminderLabel = (minutes: number | null) => {
+  if (minutes === null) {
+    return "No reminder";
+  }
+
+  if (minutes === 0) {
+    return "Reminder at start time";
+  }
+
+  return `Reminder ${formatRelativeTime(minutes)} before`;
+};
+
 const createEmptyFormState = (): EventFormState => ({
   title: "",
   type: "gig",
@@ -86,9 +150,12 @@ const createEmptyFormState = (): EventFormState => ({
   location: "",
   status: "upcoming",
   description: "",
+  reminder_minutes: 30,
 });
 
 const normalizeTime = (value: string) => (value.length >= 5 ? value.slice(0, 5) : value);
+
+const REMINDER_CHECK_INTERVAL = 30000;
 
 const sortEvents = (list: ScheduleEvent[]) =>
   [...list].sort((a, b) => {
@@ -166,7 +233,6 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -179,6 +245,7 @@ const Schedule = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const notifiedEventsRef = useRef<Set<string>>(new Set());
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -204,6 +271,11 @@ const Schedule = () => {
         location: event.location,
         status: event.status as EventStatus,
         description: event.description,
+        reminder_minutes:
+          event.reminder_minutes !== null && event.reminder_minutes !== undefined
+            ? Number(event.reminder_minutes)
+            : null,
+        last_notified: event.last_notified ?? null,
         created_at: event.created_at,
         updated_at: event.updated_at,
       }));
@@ -229,6 +301,134 @@ const Schedule = () => {
       setLoading(false);
     }
   }, [fetchEvents, user]);
+
+  useEffect(() => {
+    const activeNotifications = new Set(events.filter((event) => event.last_notified).map((event) => event.id));
+    for (const id of Array.from(notifiedEventsRef.current)) {
+      if (!activeNotifications.has(id)) {
+        notifiedEventsRef.current.delete(id);
+      }
+    }
+  }, [events]);
+
+  const checkReminders = useCallback(async () => {
+    if (!user || loading) {
+      return;
+    }
+
+    const now = new Date();
+
+    const eventsToNotify = events.filter((event) => {
+      if (event.reminder_minutes === null) {
+        return false;
+      }
+
+      if (!["upcoming", "in_progress"].includes(event.status)) {
+        return false;
+      }
+
+      const timeString = event.time.length === 5 ? `${event.time}:00` : event.time;
+      const eventDateTime = new Date(`${event.date}T${timeString}`);
+
+      if (Number.isNaN(eventDateTime.getTime())) {
+        return false;
+      }
+
+      if (eventDateTime.getTime() < now.getTime()) {
+        return false;
+      }
+
+      const reminderTime = new Date(eventDateTime.getTime() - event.reminder_minutes * 60000);
+
+      if (now.getTime() < reminderTime.getTime()) {
+        return false;
+      }
+
+      if (now.getTime() > eventDateTime.getTime()) {
+        return false;
+      }
+
+      if (event.last_notified) {
+        const lastNotifiedDate = new Date(event.last_notified);
+        if (!Number.isNaN(lastNotifiedDate.getTime()) && lastNotifiedDate.getTime() >= reminderTime.getTime()) {
+          return false;
+        }
+      }
+
+      if (notifiedEventsRef.current.has(event.id)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    for (const event of eventsToNotify) {
+      const timeString = event.time.length === 5 ? `${event.time}:00` : event.time;
+      const eventDateTime = new Date(`${event.date}T${timeString}`);
+      const localDate = eventDateTime.toLocaleDateString();
+      const localTime = eventDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const reminderMinutes = event.reminder_minutes ?? 0;
+      const timingDescription =
+        reminderMinutes === 0
+          ? "is starting now"
+          : `starts in ${formatRelativeTime(reminderMinutes)}`;
+
+      toast({
+        title: `Reminder: ${event.title}`,
+        description: `Your event ${timingDescription}. Scheduled for ${localDate} at ${localTime}.`,
+      });
+
+      const timestamp = new Date().toISOString();
+
+      try {
+        const { error: notificationError } = await supabase.from("notifications").insert({
+          user_id: user.id,
+          type: "system",
+          message: `Event Reminder: ${event.title} ${timingDescription}. Scheduled for ${localDate} at ${localTime}.`,
+        });
+
+        if (notificationError) {
+          throw notificationError;
+        }
+      } catch (notificationError) {
+        console.error("Error creating schedule notification:", notificationError);
+      }
+
+      try {
+        const { error: updateError } = await supabase
+          .from("schedule_events")
+          .update({ last_notified: timestamp })
+          .eq("id", event.id)
+          .eq("user_id", user.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        setEvents((prev) =>
+          prev.map((item) => (item.id === event.id ? { ...item, last_notified: timestamp } : item))
+        );
+      } catch (updateError) {
+        console.error("Error updating event reminder timestamp:", updateError);
+      }
+
+      notifiedEventsRef.current.add(event.id);
+    }
+  }, [events, loading, toast, user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void checkReminders();
+    }, REMINDER_CHECK_INTERVAL);
+
+    void checkReminders();
+
+    return () => clearInterval(interval);
+  }, [checkReminders, user]);
 
   const handleFormChange = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
     setFormData((prev) => ({
@@ -261,6 +461,7 @@ const Schedule = () => {
       location: event.location,
       status: event.status,
       description: event.description ?? "",
+      reminder_minutes: event.reminder_minutes,
     });
     setIsEditDialogOpen(true);
   };
@@ -295,6 +496,8 @@ const Schedule = () => {
             location: formData.location,
             status: formData.status,
             description: formData.description ? formData.description : null,
+            reminder_minutes: formData.reminder_minutes,
+            last_notified: null,
           },
         ])
         .select()
@@ -312,6 +515,11 @@ const Schedule = () => {
         location: data.location,
         status: data.status as EventStatus,
         description: data.description,
+        reminder_minutes:
+          data.reminder_minutes !== null && data.reminder_minutes !== undefined
+            ? Number(data.reminder_minutes)
+            : null,
+        last_notified: data.last_notified ?? null,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -349,6 +557,11 @@ const Schedule = () => {
 
     setIsSubmitting(true);
     try {
+      const shouldResetNotification =
+        currentEvent.date !== formData.date ||
+        normalizeTime(currentEvent.time) !== formData.time ||
+        currentEvent.reminder_minutes !== formData.reminder_minutes;
+
       const { data, error } = await supabase
         .from("schedule_events")
         .update({
@@ -359,6 +572,8 @@ const Schedule = () => {
           location: formData.location,
           status: formData.status,
           description: formData.description ? formData.description : null,
+          reminder_minutes: formData.reminder_minutes,
+          ...(shouldResetNotification ? { last_notified: null } : {}),
         })
         .eq("id", currentEvent.id)
         .eq("user_id", user.id)
@@ -377,6 +592,11 @@ const Schedule = () => {
         location: data.location,
         status: data.status as EventStatus,
         description: data.description,
+        reminder_minutes:
+          data.reminder_minutes !== null && data.reminder_minutes !== undefined
+            ? Number(data.reminder_minutes)
+            : null,
+        last_notified: data.last_notified ?? null,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -510,6 +730,27 @@ const Schedule = () => {
       </div>
 
       <div className="grid gap-2">
+        <Label htmlFor="reminder">Reminder</Label>
+        <Select
+          value={reminderValueToString(formData.reminder_minutes)}
+          onValueChange={(value) =>
+            handleFormChange("reminder_minutes", value === "none" ? null : Number(value))
+          }
+        >
+          <SelectTrigger id="reminder">
+            <SelectValue placeholder="Select reminder timing" />
+          </SelectTrigger>
+          <SelectContent>
+            {reminderOptions.map((option) => (
+              <SelectItem key={reminderValueToString(option.value)} value={reminderValueToString(option.value)}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
@@ -568,6 +809,12 @@ const Schedule = () => {
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="truncate">{event.location}</span>
                 </span>
+                {event.reminder_minutes !== null ? (
+                  <span className="flex items-center gap-1">
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatReminderLabel(event.reminder_minutes)}</span>
+                  </span>
+                ) : null}
               </div>
 
               {event.description ? (
@@ -709,6 +956,12 @@ const Schedule = () => {
                                       <MapPin className="h-3 w-3" />
                                       {event.location}
                                     </span>
+                                    {event.reminder_minutes !== null ? (
+                                      <span className="flex items-center gap-1">
+                                        <Bell className="h-3 w-3" />
+                                        {formatReminderLabel(event.reminder_minutes)}
+                                      </span>
+                                    ) : null}
                                   </div>
                                 </div>
                               </div>
