@@ -533,6 +533,7 @@ export type Database = {
           rarity: string | null
           stat_boosts: Json | null
           subcategory: string | null
+          stock: number
         }
         Insert: {
           category: string
@@ -545,6 +546,7 @@ export type Database = {
           rarity?: string | null
           stat_boosts?: Json | null
           subcategory?: string | null
+          stock?: number
         }
         Update: {
           category?: string
@@ -557,6 +559,7 @@ export type Database = {
           rarity?: string | null
           stat_boosts?: Json | null
           subcategory?: string | null
+          stock?: number
         }
         Relationships: []
       }
@@ -1336,6 +1339,51 @@ export type Database = {
         }
         Relationships: []
       }
+      social_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          parent_comment_id: string | null
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "social_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       social_posts: {
         Row: {
           comments: number | null
@@ -1344,6 +1392,10 @@ export type Database = {
           fan_growth: number | null
           id: string
           likes: number | null
+          media_path: string | null
+          media_type: string | null
+          media_url: string | null
+          scheduled_for: string | null
           reposts: number | null
           platform: string
           shares: number | null
@@ -1358,6 +1410,10 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          media_path?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          scheduled_for?: string | null
           reposts?: number | null
           platform: string
           shares?: number | null
@@ -1372,6 +1428,10 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          media_path?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          scheduled_for?: string | null
           reposts?: number | null
           platform?: string
           shares?: number | null
@@ -1381,9 +1441,43 @@ export type Database = {
         }
         Relationships: []
       }
+      social_reposts: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_reposts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       songs: {
         Row: {
+          audio_layers: Json | null
           chart_position: number | null
+          co_writers: string[]
           created_at: string
           genre: string
           id: string
@@ -1393,7 +1487,9 @@ export type Database = {
           production_cost: number | null
           quality_score: number
           release_date: string | null
+          marketing_budget: number | null
           revenue: number
+          split_percentages: number[]
           status: string
           streams: number
           title: string
@@ -1401,7 +1497,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_layers?: Json | null
           chart_position?: number | null
+          co_writers?: string[]
           created_at?: string
           genre: string
           id?: string
@@ -1411,7 +1509,9 @@ export type Database = {
           production_cost?: number | null
           quality_score?: number
           release_date?: string | null
+          marketing_budget?: number | null
           revenue?: number
+          split_percentages?: number[]
           status?: string
           streams?: number
           title: string
@@ -1419,7 +1519,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_layers?: Json | null
           chart_position?: number | null
+          co_writers?: string[]
           created_at?: string
           genre?: string
           id?: string
@@ -1429,7 +1531,9 @@ export type Database = {
           production_cost?: number | null
           quality_score?: number
           release_date?: string | null
+          marketing_budget?: number | null
           revenue?: number
+          split_percentages?: number[]
           status?: string
           streams?: number
           title?: string
@@ -1521,6 +1625,8 @@ export type Database = {
           travel_cost: number | null
           lodging_cost: number | null
           misc_cost: number | null
+          travel_time: number | null
+          rest_days: number | null
           venue_id: string
         }
         Insert: {
@@ -1534,6 +1640,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id: string
         }
         Update: {
@@ -1547,6 +1655,8 @@ export type Database = {
           travel_cost?: number | null
           lodging_cost?: number | null
           misc_cost?: number | null
+          travel_time?: number | null
+          rest_days?: number | null
           venue_id?: string
         }
         Relationships: [
@@ -1648,6 +1758,84 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_bookings: {
+        Row: {
+          actual_attendance: number | null
+          created_at: string | null
+          event_date: string
+          expected_attendance: number | null
+          id: string
+          notes: string | null
+          revenue: number | null
+          status: string
+          ticket_price: number | null
+          updated_at: string | null
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          actual_attendance?: number | null
+          created_at?: string | null
+          event_date: string
+          expected_attendance?: number | null
+          id?: string
+          notes?: string | null
+          revenue?: number | null
+          status?: string
+          ticket_price?: number | null
+          updated_at?: string | null
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          actual_attendance?: number | null
+          created_at?: string | null
+          event_date?: string
+          expected_attendance?: number | null
+          id?: string
+          notes?: string | null
+          revenue?: number | null
+          status?: string
+          ticket_price?: number | null
+          updated_at?: string | null
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: []
+      }
+      venue_relationships: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_interaction_at: string | null
+          relationship_level: string | null
+          relationship_score: number
+          updated_at: string | null
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          relationship_level?: string | null
+          relationship_score: number
+          updated_at?: string | null
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          relationship_level?: string | null
+          relationship_score?: number
+          updated_at?: string | null
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: []
+      }
       venues: {
         Row: {
           base_payment: number | null
@@ -1746,9 +1934,26 @@ export type Database = {
         }
         Returns: null
       }
+      purchase_equipment_item: {
+        Args: {
+          p_equipment_id: string
+        }
+        Returns: {
+          player_equipment_id: string
+          remaining_stock: number
+          new_cash: number
+        }[]
+      }
+      restock_equipment_items: {
+        Args: {
+          restock_amount?: number | null
+        }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      chat_participant_status: "online" | "typing" | "muted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1876,6 +2081,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      chat_participant_status: ["online", "typing", "muted"],
       app_role: ["admin", "moderator", "user"],
     },
   },

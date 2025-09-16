@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar as CalendarIcon,
   Clock,
+  Bell,
   MapPin,
   Users,
   Music,
@@ -34,7 +35,10 @@ import {
   XCircle,
   Edit3,
   Trash2,
+  Repeat,
+  Download,
 } from "lucide-react";
+import { addMonths } from "date-fns";
 
 type EventType = "gig" | "recording" | "rehearsal" | "meeting" | "tour";
 type EventStatus = "upcoming" | "in_progress" | "completed" | "cancelled";
@@ -49,8 +53,13 @@ interface ScheduleEvent {
   location: string;
   status: EventStatus;
   description: string | null;
+  reminder_minutes: number | null;
+  last_notified: string | null;
+  recurrence_rule: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  isOccurrence?: boolean;
+  originalEventId?: string;
 }
 
 interface EventFormState {
@@ -61,6 +70,8 @@ interface EventFormState {
   location: string;
   status: EventStatus;
   description: string;
+  reminder_minutes: number | null;
+  recurrence_rule: string | null;
 }
 
 const eventTypes: { value: EventType; label: string }[] = [
@@ -78,6 +89,100 @@ const statusOptions: { value: EventStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+const reminderOptions: { value: number | null; label: string }[] = [
+  { value: null, label: "No reminder" },
+  { value: 0, label: "At start time" },
+  { value: 5, label: "5 minutes before" },
+  { value: 15, label: "15 minutes before" },
+  { value: 30, label: "30 minutes before" },
+  { value: 60, label: "1 hour before" },
+  { value: 120, label: "2 hours before" },
+  { value: 240, label: "4 hours before" },
+  { value: 1440, label: "1 day before" },
+];
+
+type RecurrenceFrequency = "none" | "daily" | "weekly" | "monthly" | "yearly";
+
+interface RecurrenceSettings {
+  frequency: RecurrenceFrequency;
+  interval: number;
+  count: string;
+  endDate: string;
+}
+
+const DEFAULT_RECURRENCE_SETTINGS: RecurrenceSettings = {
+  frequency: "none",
+  interval: 1,
+  count: "",
+  endDate: "",
+};
+
+const recurrenceFrequencyOptions: { value: RecurrenceFrequency; label: string }[] = [
+  { value: "none", label: "Does not repeat" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly", label: "Yearly" },
+];
+
+const recurrenceUnitText: Record<Exclude<RecurrenceFrequency, "none">, { singular: string; plural: string }> = {
+  daily: { singular: "day", plural: "days" },
+  weekly: { singular: "week", plural: "weeks" },
+  monthly: { singular: "month", plural: "months" },
+  yearly: { singular: "year", plural: "years" },
+};
+
+const MAX_GENERATED_OCCURRENCES = 50;
+const RECURRENCE_LOOKAHEAD_MONTHS = 12;
+
+const reminderValueToString = (value: number | null) => (value === null ? "none" : value.toString());
+
+const formatRelativeTime = (minutes: number) => {
+  if (minutes === 0) {
+    return "now";
+  }
+
+  if (minutes < 60) {
+    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  }
+
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return `${days} day${days === 1 ? "" : "s"}`;
+  }
+
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return `${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const parts: string[] = [];
+
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+  }
+
+  if (remainingMinutes > 0) {
+    parts.push(`${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"}`);
+  }
+
+  return parts.join(" ");
+};
+
+const formatReminderLabel = (minutes: number | null) => {
+  if (minutes === null) {
+    return "No reminder";
+  }
+
+  if (minutes === 0) {
+    return "Reminder at start time";
+  }
+
+  return `Reminder ${formatRelativeTime(minutes)} before`;
+};
+
 const createEmptyFormState = (): EventFormState => ({
   title: "",
   type: "gig",
@@ -86,9 +191,327 @@ const createEmptyFormState = (): EventFormState => ({
   location: "",
   status: "upcoming",
   description: "",
+  reminder_minutes: 30,
+  recurrence_rule: null,
 });
 
 const normalizeTime = (value: string) => (value.length >= 5 ? value.slice(0, 5) : value);
+
+const parseRecurrenceRule = (rule: string | null): RecurrenceSettings => {
+  if (!rule) {
+    return { ...DEFAULT_RECURRENCE_SETTINGS };
+  }
+
+  const settings: RecurrenceSettings = { ...DEFAULT_RECURRENCE_SETTINGS };
+  const parts = rule.split(";").map((part) => part.trim()).filter(Boolean);
+
+  for (const part of parts) {
+    const [rawKey, rawValue] = part.split("=");
+    if (!rawKey || !rawValue) {
+      continue;
+    }
+
+    const key = rawKey.toUpperCase();
+    const value = rawValue.trim();
+
+    if (key === "FREQ") {
+      const lowerValue = value.toLowerCase();
+      if (["daily", "weekly", "monthly", "yearly"].includes(lowerValue)) {
+        settings.frequency = lowerValue as RecurrenceFrequency;
+      }
+    } else if (key === "INTERVAL") {
+      const interval = Number.parseInt(value, 10);
+      if (Number.isFinite(interval) && interval > 0) {
+        settings.interval = interval;
+      }
+    } else if (key === "COUNT") {
+      settings.count = value;
+    } else if (key === "UNTIL") {
+      const normalizedValue = value.replace(/Z$/, "");
+      const datePart = normalizedValue.slice(0, 8);
+      if (datePart.length === 8) {
+        const year = datePart.slice(0, 4);
+        const month = datePart.slice(4, 6);
+        const day = datePart.slice(6, 8);
+        settings.endDate = `${year}-${month}-${day}`;
+      }
+    }
+  }
+
+  if (settings.frequency === "none") {
+    return { ...DEFAULT_RECURRENCE_SETTINGS };
+  }
+
+  return settings;
+};
+
+const buildRecurrenceRule = (settings: RecurrenceSettings): string | null => {
+  if (settings.frequency === "none") {
+    return null;
+  }
+
+  const parts = [`FREQ=${settings.frequency.toUpperCase()}`];
+  const interval = Number.isFinite(settings.interval) ? Math.max(1, Math.floor(settings.interval)) : 1;
+  if (interval > 1) {
+    parts.push(`INTERVAL=${interval}`);
+  }
+
+  const count = settings.count.trim();
+  if (count) {
+    const parsedCount = Number.parseInt(count, 10);
+    if (Number.isFinite(parsedCount) && parsedCount > 0) {
+      parts.push(`COUNT=${parsedCount}`);
+    }
+  }
+
+  if (settings.endDate) {
+    const normalizedDate = settings.endDate.replace(/-/g, "");
+    parts.push(`UNTIL=${normalizedDate}T000000Z`);
+  }
+
+  return parts.join(";");
+};
+
+const getEventStartDate = (date: string, time: string): Date | null => {
+  if (!date || !time) {
+    return null;
+  }
+
+  const normalizedTime = time.length === 5 ? `${time}:00` : time;
+  const startDate = new Date(`${date}T${normalizedTime}`);
+
+  if (Number.isNaN(startDate.getTime())) {
+    return null;
+  }
+
+  return startDate;
+};
+
+const formatDateParts = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return {
+    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+  };
+};
+
+const addIntervalToDate = (date: Date, frequency: RecurrenceFrequency, interval: number) => {
+  const next = new Date(date.getTime());
+  const step = Math.max(1, interval);
+
+  switch (frequency) {
+    case "daily":
+      next.setDate(next.getDate() + step);
+      break;
+    case "weekly":
+      next.setDate(next.getDate() + step * 7);
+      break;
+    case "monthly":
+      next.setMonth(next.getMonth() + step);
+      break;
+    case "yearly":
+      next.setFullYear(next.getFullYear() + step);
+      break;
+    default:
+      break;
+  }
+
+  return next;
+};
+
+const getRecurrenceDescription = (rule: string | null, _date?: string, _time?: string) => {
+  if (!rule) {
+    return null;
+  }
+
+  const settings = parseRecurrenceRule(rule);
+  if (settings.frequency === "none") {
+    return null;
+  }
+
+  const unit = recurrenceUnitText[settings.frequency];
+  const interval = Math.max(1, settings.interval);
+  const intervalLabel = interval === 1 ? unit.singular : `${interval} ${unit.plural}`;
+  let description = `every ${intervalLabel}`;
+
+  if (settings.count) {
+    const countValue = Number.parseInt(settings.count, 10);
+    if (Number.isFinite(countValue) && countValue > 0) {
+      description += ` for ${countValue} occurrence${countValue === 1 ? "" : "s"}`;
+    }
+  }
+
+  if (settings.endDate) {
+    const untilDate = new Date(`${settings.endDate}T00:00:00`);
+    if (!Number.isNaN(untilDate.getTime())) {
+      description += ` until ${untilDate.toLocaleDateString()}`;
+    }
+  }
+
+  return description;
+};
+
+const expandRecurringEvents = (events: ScheduleEvent[]) => {
+  const now = new Date();
+  const rangeEnd = addMonths(now, RECURRENCE_LOOKAHEAD_MONTHS);
+  const expanded: ScheduleEvent[] = [];
+
+  for (const event of events) {
+    expanded.push(event);
+
+    if (!event.recurrence_rule || !["upcoming", "in_progress"].includes(event.status)) {
+      continue;
+    }
+
+    const settings = parseRecurrenceRule(event.recurrence_rule);
+    if (settings.frequency === "none") {
+      continue;
+    }
+
+    const startDate = getEventStartDate(event.date, event.time);
+    if (!startDate) {
+      continue;
+    }
+
+    const untilDate = settings.endDate ? new Date(`${settings.endDate}T23:59:59`) : null;
+    const countValue = settings.count ? Number.parseInt(settings.count, 10) : NaN;
+    let remainingOccurrences = Number.isFinite(countValue) && countValue > 0 ? countValue - 1 : Infinity;
+    const interval = Math.max(1, settings.interval);
+
+    const hasRemainingOccurrences = () => remainingOccurrences === Infinity || remainingOccurrences > 0;
+
+    let nextDate = addIntervalToDate(startDate, settings.frequency, interval);
+
+    while (
+      hasRemainingOccurrences() &&
+      nextDate.getTime() < now.getTime() &&
+      nextDate.toDateString() !== now.toDateString() &&
+      (!untilDate || nextDate.getTime() <= untilDate.getTime()) &&
+      nextDate.getTime() <= rangeEnd.getTime()
+    ) {
+      if (remainingOccurrences !== Infinity) {
+        remainingOccurrences -= 1;
+      }
+
+      if (!hasRemainingOccurrences()) {
+        break;
+      }
+
+      const candidate = addIntervalToDate(nextDate, settings.frequency, interval);
+      if (candidate.getTime() === nextDate.getTime()) {
+        break;
+      }
+      nextDate = candidate;
+    }
+
+    let occurrencesGenerated = 0;
+
+    while (
+      hasRemainingOccurrences() &&
+      occurrencesGenerated < MAX_GENERATED_OCCURRENCES &&
+      nextDate.getTime() <= rangeEnd.getTime()
+    ) {
+      if (untilDate && nextDate.getTime() > untilDate.getTime()) {
+        break;
+      }
+
+      const isPastOccurrence =
+        nextDate.getTime() < now.getTime() && nextDate.toDateString() !== now.toDateString();
+      if (!isPastOccurrence) {
+        const { date: occurrenceDate, time: occurrenceTime } = formatDateParts(nextDate);
+        expanded.push({
+          ...event,
+          id: `${event.id}__${nextDate.getTime()}`,
+          date: occurrenceDate,
+          time: occurrenceTime,
+          isOccurrence: true,
+          originalEventId: event.id,
+        });
+        occurrencesGenerated += 1;
+
+        if (remainingOccurrences !== Infinity) {
+          remainingOccurrences -= 1;
+        }
+      } else {
+        if (remainingOccurrences !== Infinity) {
+          remainingOccurrences -= 1;
+        }
+      }
+
+      if (!hasRemainingOccurrences()) {
+        break;
+      }
+
+      const candidate = addIntervalToDate(nextDate, settings.frequency, interval);
+      if (candidate.getTime() === nextDate.getTime()) {
+        break;
+      }
+      nextDate = candidate;
+    }
+  }
+
+  return sortEvents(expanded);
+};
+
+const formatDateTimeForICS = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+};
+
+const getICSDateRange = (date: string, time: string) => {
+  const start = getEventStartDate(date, time);
+  if (!start) {
+    return null;
+  }
+
+  const end = new Date(start.getTime() + 60 * 60000);
+
+  return {
+    start: formatDateTimeForICS(start),
+    end: formatDateTimeForICS(end),
+  };
+};
+
+const escapeICSValue = (value: string) =>
+  value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+
+const generateICS = (events: ScheduleEvent[]) => {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Rockmundo Genesis//Schedule//EN",
+  ];
+
+  for (const event of events) {
+    const dateRange = getICSDateRange(event.date, event.time);
+    if (!dateRange) {
+      continue;
+    }
+
+    const timestamp = formatDateTimeForICS(new Date());
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:${event.id}@rockmundo`);
+    lines.push(`DTSTAMP:${timestamp}`);
+    lines.push(`DTSTART:${dateRange.start}`);
+    lines.push(`DTEND:${dateRange.end}`);
+    lines.push(`SUMMARY:${escapeICSValue(event.title)}`);
+    if (event.location) {
+      lines.push(`LOCATION:${escapeICSValue(event.location)}`);
+    }
+    if (event.description) {
+      lines.push(`DESCRIPTION:${escapeICSValue(event.description)}`);
+    }
+    if (event.recurrence_rule) {
+      lines.push(`RRULE:${event.recurrence_rule}`);
+    }
+    lines.push("END:VEVENT");
+  }
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+};
+
+const REMINDER_CHECK_INTERVAL = 30000;
 
 const sortEvents = (list: ScheduleEvent[]) =>
   [...list].sort((a, b) => {
@@ -166,12 +589,14 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<EventFormState>(() => createEmptyFormState());
+  const [recurrenceSettings, setRecurrenceSettings] = useState<RecurrenceSettings>(
+    DEFAULT_RECURRENCE_SETTINGS
+  );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<ScheduleEvent | null>(null);
@@ -179,6 +604,7 @@ const Schedule = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const notifiedEventsRef = useRef<Set<string>>(new Set());
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -204,6 +630,12 @@ const Schedule = () => {
         location: event.location,
         status: event.status as EventStatus,
         description: event.description,
+        reminder_minutes:
+          event.reminder_minutes !== null && event.reminder_minutes !== undefined
+            ? Number(event.reminder_minutes)
+            : null,
+        last_notified: event.last_notified ?? null,
+        recurrence_rule: event.recurrence_rule ?? null,
         created_at: event.created_at,
         updated_at: event.updated_at,
       }));
@@ -230,11 +662,206 @@ const Schedule = () => {
     }
   }, [fetchEvents, user]);
 
+  useEffect(() => {
+    const activeNotifications = new Set(events.filter((event) => event.last_notified).map((event) => event.id));
+    for (const id of Array.from(notifiedEventsRef.current)) {
+      if (!activeNotifications.has(id)) {
+        notifiedEventsRef.current.delete(id);
+      }
+    }
+  }, [events]);
+
+  const checkReminders = useCallback(async () => {
+    if (!user || loading) {
+      return;
+    }
+
+    const now = new Date();
+
+    const eventsToNotify = events.filter((event) => {
+      if (event.reminder_minutes === null) {
+        return false;
+      }
+
+      if (!["upcoming", "in_progress"].includes(event.status)) {
+        return false;
+      }
+
+      const timeString = event.time.length === 5 ? `${event.time}:00` : event.time;
+      const eventDateTime = new Date(`${event.date}T${timeString}`);
+
+      if (Number.isNaN(eventDateTime.getTime())) {
+        return false;
+      }
+
+      if (eventDateTime.getTime() < now.getTime()) {
+        return false;
+      }
+
+      const reminderTime = new Date(eventDateTime.getTime() - event.reminder_minutes * 60000);
+
+      if (now.getTime() < reminderTime.getTime()) {
+        return false;
+      }
+
+      if (now.getTime() > eventDateTime.getTime()) {
+        return false;
+      }
+
+      if (event.last_notified) {
+        const lastNotifiedDate = new Date(event.last_notified);
+        if (!Number.isNaN(lastNotifiedDate.getTime()) && lastNotifiedDate.getTime() >= reminderTime.getTime()) {
+          return false;
+        }
+      }
+
+      if (notifiedEventsRef.current.has(event.id)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    for (const event of eventsToNotify) {
+      const timeString = event.time.length === 5 ? `${event.time}:00` : event.time;
+      const eventDateTime = new Date(`${event.date}T${timeString}`);
+      const localDate = eventDateTime.toLocaleDateString();
+      const localTime = eventDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const reminderMinutes = event.reminder_minutes ?? 0;
+      const timingDescription =
+        reminderMinutes === 0
+          ? "is starting now"
+          : `starts in ${formatRelativeTime(reminderMinutes)}`;
+
+      toast({
+        title: `Reminder: ${event.title}`,
+        description: `Your event ${timingDescription}. Scheduled for ${localDate} at ${localTime}.`,
+      });
+
+      const timestamp = new Date().toISOString();
+
+      try {
+        const { error: notificationError } = await supabase.from("notifications").insert({
+          user_id: user.id,
+          type: "system",
+          message: `Event Reminder: ${event.title} ${timingDescription}. Scheduled for ${localDate} at ${localTime}.`,
+        });
+
+        if (notificationError) {
+          throw notificationError;
+        }
+      } catch (notificationError) {
+        console.error("Error creating schedule notification:", notificationError);
+      }
+
+      try {
+        const { error: updateError } = await supabase
+          .from("schedule_events")
+          .update({ last_notified: timestamp })
+          .eq("id", event.id)
+          .eq("user_id", user.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        setEvents((prev) =>
+          prev.map((item) => (item.id === event.id ? { ...item, last_notified: timestamp } : item))
+        );
+      } catch (updateError) {
+        console.error("Error updating event reminder timestamp:", updateError);
+      }
+
+      notifiedEventsRef.current.add(event.id);
+    }
+  }, [events, loading, toast, user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void checkReminders();
+    }, REMINDER_CHECK_INTERVAL);
+
+    void checkReminders();
+
+    return () => clearInterval(interval);
+  }, [checkReminders, user]);
+
   const handleFormChange = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const updateRecurrenceSettings = (updates: Partial<RecurrenceSettings>) => {
+    setRecurrenceSettings((prev) => {
+      let next: RecurrenceSettings;
+
+      if (updates.frequency) {
+        if (updates.frequency === "none") {
+          next = { ...DEFAULT_RECURRENCE_SETTINGS };
+        } else if (updates.frequency !== prev.frequency) {
+          next = {
+            frequency: updates.frequency,
+            interval: 1,
+            count: "",
+            endDate: "",
+          };
+        } else {
+          next = { ...prev, ...updates, frequency: updates.frequency } as RecurrenceSettings;
+        }
+      } else {
+        next = { ...prev, ...updates } as RecurrenceSettings;
+      }
+
+      if (next.frequency !== "none" && (!Number.isFinite(next.interval) || next.interval < 1)) {
+        next.interval = 1;
+      }
+
+      const rule = buildRecurrenceRule(next);
+      handleFormChange("recurrence_rule", rule);
+
+      return next;
+    });
+  };
+
+  const handleExportCalendar = () => {
+    if (events.length === 0) {
+      toast({
+        title: "No events to export",
+        description: "Add an event to your schedule before exporting.",
+      });
+      return;
+    }
+
+    try {
+      const icsContent = generateICS(events);
+      const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "rockmundo-schedule.ics";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Calendar exported",
+        description: "Import the downloaded .ics file into your favorite calendar app.",
+      });
+    } catch (error) {
+      console.error("Error exporting calendar:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't generate the calendar file. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOpenCreateDialog = () => {
@@ -248,6 +875,7 @@ const Schedule = () => {
     }
 
     setFormData(createEmptyFormState());
+    setRecurrenceSettings({ ...DEFAULT_RECURRENCE_SETTINGS });
     setIsCreateDialogOpen(true);
   };
 
@@ -261,7 +889,10 @@ const Schedule = () => {
       location: event.location,
       status: event.status,
       description: event.description ?? "",
+      reminder_minutes: event.reminder_minutes,
+      recurrence_rule: event.recurrence_rule,
     });
+    setRecurrenceSettings(parseRecurrenceRule(event.recurrence_rule));
     setIsEditDialogOpen(true);
   };
 
@@ -293,12 +924,15 @@ const Schedule = () => {
             date: formData.date,
             time: formData.time,
             location: formData.location,
-            status: formData.status,
-            description: formData.description ? formData.description : null,
-          },
-        ])
-        .select()
-        .single();
+          status: formData.status,
+          description: formData.description ? formData.description : null,
+          reminder_minutes: formData.reminder_minutes,
+          last_notified: null,
+          recurrence_rule: formData.recurrence_rule,
+        },
+      ])
+      .select()
+      .single();
 
       if (error) throw error;
 
@@ -312,6 +946,12 @@ const Schedule = () => {
         location: data.location,
         status: data.status as EventStatus,
         description: data.description,
+        reminder_minutes:
+          data.reminder_minutes !== null && data.reminder_minutes !== undefined
+            ? Number(data.reminder_minutes)
+            : null,
+        last_notified: data.last_notified ?? null,
+        recurrence_rule: data.recurrence_rule ?? null,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -319,6 +959,7 @@ const Schedule = () => {
       setEvents((prev) => sortEvents([...prev, newEvent]));
       setIsCreateDialogOpen(false);
       setFormData(createEmptyFormState());
+      setRecurrenceSettings({ ...DEFAULT_RECURRENCE_SETTINGS });
 
       toast({
         title: "Event added",
@@ -349,6 +990,11 @@ const Schedule = () => {
 
     setIsSubmitting(true);
     try {
+      const shouldResetNotification =
+        currentEvent.date !== formData.date ||
+        normalizeTime(currentEvent.time) !== formData.time ||
+        currentEvent.reminder_minutes !== formData.reminder_minutes;
+
       const { data, error } = await supabase
         .from("schedule_events")
         .update({
@@ -359,6 +1005,9 @@ const Schedule = () => {
           location: formData.location,
           status: formData.status,
           description: formData.description ? formData.description : null,
+          reminder_minutes: formData.reminder_minutes,
+          recurrence_rule: formData.recurrence_rule,
+          ...(shouldResetNotification ? { last_notified: null } : {}),
         })
         .eq("id", currentEvent.id)
         .eq("user_id", user.id)
@@ -377,6 +1026,12 @@ const Schedule = () => {
         location: data.location,
         status: data.status as EventStatus,
         description: data.description,
+        reminder_minutes:
+          data.reminder_minutes !== null && data.reminder_minutes !== undefined
+            ? Number(data.reminder_minutes)
+            : null,
+        last_notified: data.last_notified ?? null,
+        recurrence_rule: data.recurrence_rule ?? null,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -385,6 +1040,7 @@ const Schedule = () => {
       setIsEditDialogOpen(false);
       setCurrentEvent(null);
       setFormData(createEmptyFormState());
+      setRecurrenceSettings({ ...DEFAULT_RECURRENCE_SETTINGS });
 
       toast({
         title: "Event updated",
@@ -434,99 +1090,214 @@ const Schedule = () => {
     }
   };
 
-  const renderFormFields = () => (
-    <div className="space-y-4">
-      <div className="grid gap-2">
-        <Label htmlFor="title">Title</Label>
-        <Input
-          id="title"
-          placeholder="Event title"
-          value={formData.title}
-          onChange={(event) => handleFormChange("title", event.target.value)}
-        />
-      </div>
+  const renderFormFields = () => {
+    const recurrenceDescription = getRecurrenceDescription(
+      formData.recurrence_rule,
+      formData.date,
+      formData.time
+    );
+    const intervalUnitLabel =
+      recurrenceSettings.frequency === "none"
+        ? ""
+        : recurrenceUnitText[recurrenceSettings.frequency].plural;
 
-      <div className="grid gap-2">
-        <Label htmlFor="type">Event type</Label>
-        <Select value={formData.type} onValueChange={(value) => handleFormChange("type", value as EventType)}>
-          <SelectTrigger id="type">
-            <SelectValue placeholder="Select event type" />
-          </SelectTrigger>
-          <SelectContent>
-            {eventTypes.map((eventType) => (
-              <SelectItem key={eventType.value} value={eventType.value}>
-                {eventType.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
+    return (
+      <div className="space-y-4">
         <div className="grid gap-2">
-          <Label htmlFor="date">Date</Label>
+          <Label htmlFor="title">Title</Label>
           <Input
-            id="date"
-            type="date"
-            value={formData.date}
-            onChange={(event) => handleFormChange("date", event.target.value)}
+            id="title"
+            placeholder="Event title"
+            value={formData.title}
+            onChange={(event) => handleFormChange("title", event.target.value)}
           />
         </div>
+
         <div className="grid gap-2">
-          <Label htmlFor="time">Time</Label>
+          <Label htmlFor="type">Event type</Label>
+          <Select value={formData.type} onValueChange={(value) => handleFormChange("type", value as EventType)}>
+            <SelectTrigger id="type">
+              <SelectValue placeholder="Select event type" />
+            </SelectTrigger>
+            <SelectContent>
+              {eventTypes.map((eventType) => (
+                <SelectItem key={eventType.value} value={eventType.value}>
+                  {eventType.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-2">
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(event) => handleFormChange("date", event.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="time">Time</Label>
+            <Input
+              id="time"
+              type="time"
+              value={formData.time}
+              onChange={(event) => handleFormChange("time", event.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="location">Location</Label>
           <Input
-            id="time"
-            type="time"
-            value={formData.time}
-            onChange={(event) => handleFormChange("time", event.target.value)}
+            id="location"
+            placeholder="Where is this event taking place?"
+            value={formData.location}
+            onChange={(event) => handleFormChange("location", event.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="status">Status</Label>
+          <Select value={formData.status} onValueChange={(value) => handleFormChange("status", value as EventStatus)}>
+            <SelectTrigger id="status">
+              <SelectValue placeholder="Select event status" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((statusOption) => (
+                <SelectItem key={statusOption.value} value={statusOption.value}>
+                  {statusOption.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="reminder">Reminder</Label>
+          <Select
+            value={reminderValueToString(formData.reminder_minutes)}
+            onValueChange={(value) =>
+              handleFormChange("reminder_minutes", value === "none" ? null : Number(value))
+            }
+          >
+            <SelectTrigger id="reminder">
+              <SelectValue placeholder="Select reminder timing" />
+            </SelectTrigger>
+            <SelectContent>
+              {reminderOptions.map((option) => (
+                <SelectItem key={reminderValueToString(option.value)} value={reminderValueToString(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="recurrence">Recurrence</Label>
+          <Select
+            value={recurrenceSettings.frequency}
+            onValueChange={(value) => updateRecurrenceSettings({ frequency: value as RecurrenceFrequency })}
+          >
+            <SelectTrigger id="recurrence">
+              <SelectValue placeholder="Choose recurrence" />
+            </SelectTrigger>
+            <SelectContent>
+              {recurrenceFrequencyOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {recurrenceSettings.frequency !== "none" ? (
+            <div className="space-y-3 rounded-md border border-border/40 p-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-1">
+                  <Label htmlFor="recurrence-interval">
+                    Repeat every {intervalUnitLabel ? `(${intervalUnitLabel})` : ""}
+                  </Label>
+                  <Input
+                    id="recurrence-interval"
+                    type="number"
+                    min={1}
+                    value={recurrenceSettings.interval}
+                    onChange={(event) => {
+                      const value = Number.parseInt(event.target.value, 10);
+                      updateRecurrenceSettings({ interval: Number.isNaN(value) ? 1 : value });
+                    }}
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="recurrence-count">Number of occurrences (optional)</Label>
+                  <Input
+                    id="recurrence-count"
+                    type="number"
+                    min={1}
+                    placeholder="Leave blank for none"
+                    value={recurrenceSettings.count}
+                    onChange={(event) => {
+                      updateRecurrenceSettings({ count: event.target.value.replace(/[^0-9]/g, "") });
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-1 md:max-w-xs">
+                <Label htmlFor="recurrence-end-date">End date (optional)</Label>
+                <Input
+                  id="recurrence-end-date"
+                  type="date"
+                  min={formData.date}
+                  value={recurrenceSettings.endDate}
+                  onChange={(event) => updateRecurrenceSettings({ endDate: event.target.value })}
+                />
+              </div>
+              {recurrenceDescription ? (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Repeat className="h-4 w-4" />
+                  <span className="italic">Repeats {recurrenceDescription}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Define how often this event repeats.</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">This event will not repeat.</p>
+          )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            placeholder="Add notes or preparation details"
+            value={formData.description}
+            rows={4}
+            onChange={(event) => handleFormChange("description", event.target.value)}
           />
         </div>
       </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          placeholder="Where is this event taking place?"
-          value={formData.location}
-          onChange={(event) => handleFormChange("location", event.target.value)}
-        />
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="status">Status</Label>
-        <Select value={formData.status} onValueChange={(value) => handleFormChange("status", value as EventStatus)}>
-          <SelectTrigger id="status">
-            <SelectValue placeholder="Select event status" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((statusOption) => (
-              <SelectItem key={statusOption.value} value={statusOption.value}>
-                {statusOption.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid gap-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          placeholder="Add notes or preparation details"
-          value={formData.description}
-          rows={4}
-          onChange={(event) => handleFormChange("description", event.target.value)}
-        />
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderEventCard = (
     event: ScheduleEvent,
     options: { highlightToday?: boolean; extraBadge?: string } = {}
   ) => {
     const statusBadgeClass = getStatusBadgeClass(event.status);
+    const baseEvent =
+      event.isOccurrence && event.originalEventId
+        ? events.find((item) => item.id === event.originalEventId) ?? event
+        : event;
+    const recurrenceDescription = getRecurrenceDescription(
+      baseEvent.recurrence_rule,
+      baseEvent.date,
+      baseEvent.time
+    );
     const cardClasses = `bg-card/80 backdrop-blur-sm border-primary/20 ${
       options.highlightToday ? "border-l-4 border-l-primary" : ""
     } ${event.status === "completed" ? "opacity-80" : ""}`;
@@ -550,6 +1321,12 @@ const Schedule = () => {
                     {options.extraBadge}
                   </Badge>
                 ) : null}
+                {baseEvent.recurrence_rule ? (
+                  <Badge variant="outline" className="flex items-center gap-1 border-dashed">
+                    <Repeat className="h-3 w-3" />
+                    {event.isOccurrence ? "Series occurrence" : "Repeats"}
+                  </Badge>
+                ) : null}
                 <Badge variant="outline" className={`capitalize ${statusBadgeClass}`}>
                   {event.status.replace("_", " ")}
                 </Badge>
@@ -568,6 +1345,18 @@ const Schedule = () => {
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="truncate">{event.location}</span>
                 </span>
+                {event.reminder_minutes !== null ? (
+                  <span className="flex items-center gap-1">
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                    <span>{formatReminderLabel(event.reminder_minutes)}</span>
+                  </span>
+                ) : null}
+                {recurrenceDescription ? (
+                  <span className="flex items-center gap-1">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <span>{recurrenceDescription}</span>
+                  </span>
+                ) : null}
               </div>
 
               {event.description ? (
@@ -580,15 +1369,15 @@ const Schedule = () => {
                   <span className="capitalize">{event.status.replace("_", " ")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => openEditDialog(event)}>
+                  <Button variant="outline" size="sm" onClick={() => openEditDialog(baseEvent)}>
                     <Edit3 className="h-4 w-4 mr-1" />
                     Edit
                   </Button>
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => openDeleteDialog(event)}
-                    disabled={isDeleting && deleteTarget?.id === event.id}
+                    onClick={() => openDeleteDialog(baseEvent)}
+                    disabled={isDeleting && deleteTarget?.id === baseEvent.id}
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
                     Delete
@@ -602,15 +1391,17 @@ const Schedule = () => {
     );
   };
 
-  const filteredEvents = selectedDate
-    ? events.filter((event) => isSameDay(event.date, selectedDate))
-    : events;
+  const expandedEvents = useMemo(() => expandRecurringEvents(events), [events]);
 
-  const upcomingEvents = events.filter(
+  const filteredEvents = selectedDate
+    ? expandedEvents.filter((event) => isSameDay(event.date, selectedDate))
+    : expandedEvents;
+
+  const upcomingEvents = expandedEvents.filter(
     (event) => event.status === "upcoming" || event.status === "in_progress"
   );
-  const todayEvents = events.filter((event) => isSameDay(event.date, new Date()));
-  const completedEvents = events.filter((event) => event.status === "completed");
+  const todayEvents = expandedEvents.filter((event) => isSameDay(event.date, new Date()));
+  const completedEvents = expandedEvents.filter((event) => event.status === "completed");
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -625,6 +1416,10 @@ const Schedule = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleExportCalendar} disabled={events.length === 0}>
+              <Download className="h-4 w-4 mr-2" />
+              Export to Calendar
+            </Button>
             <Button className="bg-gradient-primary text-white" onClick={handleOpenCreateDialog}>
               <Plus className="h-4 w-4 mr-2" />
               Add Event
@@ -677,6 +1472,15 @@ const Schedule = () => {
                     <div className="space-y-3">
                       {filteredEvents.map((event) => {
                         const statusBadgeClass = getStatusBadgeClass(event.status);
+                        const baseEvent =
+                          event.isOccurrence && event.originalEventId
+                            ? events.find((item) => item.id === event.originalEventId) ?? event
+                            : event;
+                        const recurrenceDescription = getRecurrenceDescription(
+                          baseEvent.recurrence_rule,
+                          baseEvent.date,
+                          baseEvent.time
+                        );
                         return (
                           <div
                             key={event.id}
@@ -693,6 +1497,12 @@ const Schedule = () => {
                                     <Badge variant="outline" className="capitalize">
                                       {event.type}
                                     </Badge>
+                                    {baseEvent.recurrence_rule ? (
+                                      <Badge variant="outline" className="flex items-center gap-1 border-dashed">
+                                        <Repeat className="h-3 w-3" />
+                                        {event.isOccurrence ? "Series occurrence" : "Repeats"}
+                                      </Badge>
+                                    ) : null}
                                     <Badge
                                       variant="outline"
                                       className={`capitalize ${statusBadgeClass}`}
@@ -709,19 +1519,31 @@ const Schedule = () => {
                                       <MapPin className="h-3 w-3" />
                                       {event.location}
                                     </span>
+                                    {event.reminder_minutes !== null ? (
+                                      <span className="flex items-center gap-1">
+                                        <Bell className="h-3 w-3" />
+                                        {formatReminderLabel(event.reminder_minutes)}
+                                      </span>
+                                    ) : null}
+                                    {recurrenceDescription ? (
+                                      <span className="flex items-center gap-1">
+                                        <Repeat className="h-3 w-3" />
+                                        {recurrenceDescription}
+                                      </span>
+                                    ) : null}
                                   </div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => openEditDialog(event)}>
+                                <Button variant="outline" size="sm" onClick={() => openEditDialog(baseEvent)}>
                                   <Edit3 className="h-4 w-4 mr-1" />
                                   Edit
                                 </Button>
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  onClick={() => openDeleteDialog(event)}
-                                  disabled={isDeleting && deleteTarget?.id === event.id}
+                                  onClick={() => openDeleteDialog(baseEvent)}
+                                  disabled={isDeleting && deleteTarget?.id === baseEvent.id}
                                 >
                                   <Trash2 className="h-4 w-4 mr-1" />
                                   Delete
@@ -850,8 +1672,8 @@ const Schedule = () => {
                       Loading schedule...
                     </CardContent>
                   </Card>
-                ) : events.length > 0 ? (
-                  events.map((event) => renderEventCard(event))
+                ) : expandedEvents.length > 0 ? (
+                  expandedEvents.map((event) => renderEventCard(event))
                 ) : (
                   <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                     <CardContent className="p-6 text-center">
@@ -879,6 +1701,7 @@ const Schedule = () => {
           setIsCreateDialogOpen(open);
           if (!open) {
             setFormData(createEmptyFormState());
+            setRecurrenceSettings({ ...DEFAULT_RECURRENCE_SETTINGS });
           }
         }}
       >
@@ -905,6 +1728,7 @@ const Schedule = () => {
           if (!open) {
             setCurrentEvent(null);
             setFormData(createEmptyFormState());
+            setRecurrenceSettings({ ...DEFAULT_RECURRENCE_SETTINGS });
           }
         }}
       >
@@ -939,6 +1763,7 @@ const Schedule = () => {
             <AlertDialogTitle>Delete event</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{deleteTarget?.title}"? This action cannot be undone.
+              {deleteTarget?.recurrence_rule ? " This will remove all future occurrences." : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
