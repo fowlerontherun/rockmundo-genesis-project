@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 
@@ -53,6 +54,8 @@ const BandManager = () => {
   
   const [band, setBand] = useState<Band | null>(null);
   const [members, setMembers] = useState<BandMember[]>([]);
+  const [chartPosition, setChartPosition] = useState<number | null>(null);
+  const [gigsPlayed, setGigsPlayed] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -80,7 +83,15 @@ const BandManager = () => {
 
       if (memberData?.bands) {
         setBand(memberData.bands);
-        await loadBandMembers(memberData.bands.id);
+        await Promise.all([
+          loadBandMembers(memberData.bands.id),
+          loadBandMetrics(memberData.bands.id)
+        ]);
+      } else {
+        setBand(null);
+        setMembers([]);
+        setChartPosition(null);
+        setGigsPlayed(null);
       }
     } catch (error: any) {
       console.error('Error loading band data:', error);
@@ -116,6 +127,106 @@ const BandManager = () => {
     }
   };
 
+  const loadBandMetrics = async (bandId: string) => {
+    if (!user) return;
+
+    const chartColumns = ['rank', 'position', 'chart_position'] as const;
+    const chartsTable = 'charts' as unknown as keyof Database['public']['Tables'];
+
+    const extractChartPosition = (entry?: Record<string, unknown>): number | null => {
+      if (!entry) return null;
+      for (const column of chartColumns) {
+        const value = entry[column];
+        if (typeof value === 'number' && !Number.isNaN(value)) {
+          return value;
+        }
+      }
+      return null;
+    };
+
+    try {
+      let topEntry: Record<string, unknown> | undefined;
+
+      for (const column of chartColumns) {
+        const response = await supabase
+          .from(chartsTable)
+          .select(chartColumns.join(', '))
+          .eq('band_id', bandId)
+          .order(column, { ascending: true })
+          .limit(1);
+
+        if (!response.error) {
+          topEntry = response.data?.[0] as Record<string, unknown> | undefined;
+          if (topEntry) {
+            break;
+          }
+        }
+      }
+
+      if (!topEntry) {
+        const fallbackResponse = await supabase
+          .from(chartsTable)
+          .select(chartColumns.join(', '))
+          .eq('band_id', bandId)
+          .limit(1);
+
+        if (!fallbackResponse.error) {
+          topEntry = fallbackResponse.data?.[0] as Record<string, unknown> | undefined;
+        } else {
+          console.error('Fallback chart query failed:', fallbackResponse.error);
+        }
+      }
+
+      setChartPosition(extractChartPosition(topEntry));
+    } catch (error) {
+      console.error('Unexpected error processing chart data:', error);
+      setChartPosition(null);
+    }
+
+    try {
+      const { data: performancesData, error: performancesError } = await supabase
+        .from('gig_performances')
+        .select('gig_id')
+        .eq('user_id', user.id);
+
+      if (performancesError) {
+        console.error('Error loading gig performances:', performancesError);
+        setGigsPlayed(null);
+        return;
+      }
+
+      const gigIds = Array.from(
+        new Set(
+          (performancesData || [])
+            .map((performance) => performance.gig_id)
+            .filter((gigId): gigId is string => typeof gigId === 'string' && gigId.length > 0)
+        )
+      );
+
+      if (gigIds.length === 0) {
+        setGigsPlayed(0);
+        return;
+      }
+
+      const { data: gigsData, error: gigsError } = await supabase
+        .from('gigs')
+        .select('id')
+        .in('id', gigIds)
+        .eq('band_id', bandId);
+
+      if (gigsError) {
+        console.error('Error filtering gigs by band:', gigsError);
+        setGigsPlayed(null);
+        return;
+      }
+
+      setGigsPlayed(gigsData?.length ?? 0);
+    } catch (error) {
+      console.error('Unexpected error loading gig data:', error);
+      setGigsPlayed(null);
+    }
+  };
+
   const createBand = async () => {
     if (!user || !profile) return;
 
@@ -147,7 +258,10 @@ const BandManager = () => {
       if (memberError) throw memberError;
 
       setBand(bandData);
-      await loadBandMembers(bandData.id);
+      await Promise.all([
+        loadBandMembers(bandData.id),
+        loadBandMetrics(bandData.id)
+      ]);
 
       toast({
         title: "Band Created!",
@@ -282,9 +396,11 @@ const BandManager = () => {
               <Star className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-warning">{members.length}</div>
+              <div className="text-2xl font-bold text-warning">
+                {chartPosition !== null ? `#${chartPosition}` : 'N/A'}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Band members
+                Best chart ranking
               </p>
             </CardContent>
           </Card>
@@ -296,10 +412,10 @@ const BandManager = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">
-                {new Date(band.created_at).toLocaleDateString()}
+                {gigsPlayed !== null ? gigsPlayed : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground">
-                Band formed
+                Completed gigs
               </p>
             </CardContent>
           </Card>
