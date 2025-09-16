@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,29 +20,98 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
+import type { Database } from "@/integrations/supabase/types";
 
-interface StreamingPlatform {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  min_followers: number;
-  revenue_per_play: number;
-  created_at: string;
+type StreamingPlatform = Database["public"]["Tables"]["streaming_platforms"]["Row"];
+type PlayerStreamingAccount = Database["public"]["Tables"]["player_streaming_accounts"]["Row"];
+type SongRecord = Database["public"]["Tables"]["songs"]["Row"] & {
+  album?: string | null;
+  plays?: number | null;
+  popularity?: number | null;
+  totalStreams?: number | null;
+  trending?: boolean | null;
+};
+
+interface PlatformMetric extends StreamingPlatform {
+  monthlyListeners: number;
+  monthlyStreams: number;
+  monthlyRevenue: number;
+  growth: number;
+  isConnected: boolean;
 }
 
-interface PlayerStreamingAccount {
-  id: string;
-  user_id: string;
-  platform_id: string;
-  is_connected: boolean;
-  followers: number;
-  monthly_plays: number;
-  monthly_revenue: number;
-  connected_at: string;
-  updated_at: string;
-  platform?: StreamingPlatform;
+interface OverviewMetrics {
+  totalStreams: number;
+  totalRevenue: number;
+  totalListeners: number;
+  streamsGrowth: number;
+  revenueGrowth: number;
+  listenersGrowth: number;
 }
+
+interface PlatformSnapshot {
+  monthlyListeners: number;
+  monthlyStreams: number;
+  monthlyRevenue: number;
+}
+
+interface OverviewSnapshot {
+  totalStreams: number;
+  totalRevenue: number;
+  totalListeners: number;
+}
+
+const calculateGrowth = (
+  previous: number | null | undefined,
+  current: number | null | undefined
+) => {
+  if (previous === undefined || previous === null) {
+    return 0;
+  }
+
+  const previousValue = Number(previous);
+  const currentValue = Number(current ?? 0);
+
+  if (previousValue === 0) {
+    return currentValue > 0 ? 100 : 0;
+  }
+
+  return ((currentValue - previousValue) / previousValue) * 100;
+};
+
+const compactNumberFormatter = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+const standardNumberFormatter = new Intl.NumberFormat('en-US');
+
+const formatCompactNumber = (value: number) => {
+  if (!Number.isFinite(value) || value === 0) {
+    return '0';
+  }
+
+  if (Math.abs(value) < 1000) {
+    return standardNumberFormatter.format(Math.round(value));
+  }
+
+  return compactNumberFormatter.format(value);
+};
+
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+const formatCurrency = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return '$0';
+  }
+
+  return currencyFormatter.format(value);
+};
 
 const StreamingPlatforms = () => {
   const { toast } = useToast();
@@ -51,50 +120,59 @@ const StreamingPlatforms = () => {
   
   const [platforms, setPlatforms] = useState<StreamingPlatform[]>([]);
   const [playerAccounts, setPlayerAccounts] = useState<PlayerStreamingAccount[]>([]);
-  const [userSongs, setUserSongs] = useState<any[]>([]);
+  const [platformMetrics, setPlatformMetrics] = useState<PlatformMetric[]>([]);
+  const [overviewMetrics, setOverviewMetrics] = useState<OverviewMetrics>({
+    totalStreams: 0,
+    totalRevenue: 0,
+    totalListeners: 0,
+    streamsGrowth: 0,
+    revenueGrowth: 0,
+    listenersGrowth: 0,
+  });
+  const [userSongs, setUserSongs] = useState<SongRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
+  const platformSnapshotsRef = useRef<Record<string, PlatformSnapshot>>({});
+  const overviewSnapshotRef = useRef<OverviewSnapshot | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async (showLoading = false) => {
+    if (!user) return;
+
+    if (showLoading) {
+      setLoading(true);
+    }
+
     try {
-      // Load streaming platforms
       const { data: platformsData, error: platformsError } = await supabase
         .from('streaming_platforms')
         .select('*')
         .order('name');
 
       if (platformsError) throw platformsError;
-      setPlatforms(platformsData || []);
+      setPlatforms(platformsData ?? []);
 
-      // Load player's streaming accounts
       const { data: accountsData, error: accountsError } = await supabase
         .from('player_streaming_accounts')
-        .select(`
-          *,
-          streaming_platforms!player_streaming_accounts_platform_id_fkey(*)
-        `)
-        .eq('user_id', user!.id);
+        .select('*')
+        .eq('user_id', user.id);
 
       if (accountsError) throw accountsError;
-      setPlayerAccounts(accountsData || []);
+      setPlayerAccounts(accountsData ?? []);
 
-      // Load player's songs
       const { data: songsData, error: songsError } = await supabase
         .from('songs')
         .select('*')
-        .eq('artist_id', user!.id)
+        .eq('artist_id', user.id)
         .eq('status', 'released')
         .order('created_at', { ascending: false });
 
       if (songsError) throw songsError;
-      setUserSongs(songsData || []);
+      const normalizedSongs: SongRecord[] = (songsData ?? []).map((song) => ({
+        ...song,
+      }));
+      setUserSongs(normalizedSongs);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading streaming data:', error);
       toast({
         variant: "destructive",
@@ -102,9 +180,140 @@ const StreamingPlatforms = () => {
         description: "Failed to load streaming data",
       });
     } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (user) {
+      loadData(true);
+    } else {
       setLoading(false);
     }
-  };
+  }, [user, loadData]);
+
+  useEffect(() => {
+    platformSnapshotsRef.current = {};
+    overviewSnapshotRef.current = null;
+    setPlatformMetrics([]);
+    setOverviewMetrics({
+      totalStreams: 0,
+      totalRevenue: 0,
+      totalListeners: 0,
+      streamsGrowth: 0,
+      revenueGrowth: 0,
+      listenersGrowth: 0,
+    });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!platforms.length) {
+      setPlatformMetrics([]);
+      setOverviewMetrics({
+        totalStreams: 0,
+        totalRevenue: 0,
+        totalListeners: 0,
+        streamsGrowth: 0,
+        revenueGrowth: 0,
+        listenersGrowth: 0,
+      });
+      return;
+    }
+
+    const metrics = platforms.map((platform) => {
+      const account = playerAccounts.find((acc) => acc.platform_id === platform.id);
+      const monthlyListeners = account?.followers ?? 0;
+      const monthlyStreams = account?.monthly_plays ?? 0;
+      const monthlyRevenue = account?.monthly_revenue !== null && account?.monthly_revenue !== undefined
+        ? Number(account.monthly_revenue)
+        : 0;
+
+      const previousSnapshot = platformSnapshotsRef.current[platform.id];
+      const growth = calculateGrowth(previousSnapshot?.monthlyStreams, monthlyStreams);
+
+      platformSnapshotsRef.current[platform.id] = {
+        monthlyListeners,
+        monthlyStreams,
+        monthlyRevenue,
+      };
+
+      return {
+        ...platform,
+        monthlyListeners,
+        monthlyStreams,
+        monthlyRevenue,
+        growth,
+        isConnected: Boolean(account?.is_connected),
+      };
+    });
+
+    setPlatformMetrics(metrics);
+
+    const totalStreams = metrics.reduce((sum, metric) => sum + metric.monthlyStreams, 0);
+    const totalRevenue = metrics.reduce((sum, metric) => sum + metric.monthlyRevenue, 0);
+    const totalListeners = metrics.reduce((sum, metric) => sum + metric.monthlyListeners, 0);
+
+    const previousTotals = overviewSnapshotRef.current;
+
+    const streamsGrowth = calculateGrowth(previousTotals?.totalStreams, totalStreams);
+    const revenueGrowth = calculateGrowth(previousTotals?.totalRevenue, totalRevenue);
+    const listenersGrowth = calculateGrowth(previousTotals?.totalListeners, totalListeners);
+
+    overviewSnapshotRef.current = {
+      totalStreams,
+      totalRevenue,
+      totalListeners,
+    };
+
+    setOverviewMetrics({
+      totalStreams,
+      totalRevenue,
+      totalListeners,
+      streamsGrowth,
+      revenueGrowth,
+      listenersGrowth,
+    });
+  }, [platforms, playerAccounts]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`streaming-metrics-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'player_streaming_accounts',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'songs',
+        },
+        (payload) => {
+          const record = (payload.new ?? payload.old) as { user_id?: string; artist_id?: string } | null;
+          if (record && (record.user_id === user.id || record.artist_id === user.id)) {
+            loadData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, loadData]);
 
   const connectPlatform = async (platformId: string) => {
     if (!user || !profile) return;
@@ -114,11 +323,12 @@ const StreamingPlatforms = () => {
       if (!platform) return;
 
       // Check if user meets requirements
-      if ((profile.fame || 0) < platform.min_followers) {
+      const requiredFame = platform.min_followers ?? 0;
+      if ((profile.fame || 0) < requiredFame) {
         toast({
           variant: "destructive",
           title: "Requirements not met",
-          description: `You need ${platform.min_followers} fame to connect to ${platform.name}`,
+          description: `You need ${requiredFame.toLocaleString()} fame to connect to ${platform.name}`,
         });
         return;
       }
@@ -145,7 +355,7 @@ const StreamingPlatforms = () => {
         title: "Platform Connected!",
         description: `Successfully connected to ${platform.name}`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error connecting platform:', error);
       toast({
         variant: "destructive",
@@ -165,61 +375,6 @@ const StreamingPlatforms = () => {
       </div>
     );
   }
-
-  const mockPlatforms = [
-    {
-      id: 1,
-      name: "Spotify",
-      logo: "🎵",
-      monthlyListeners: 450000,
-      streams: 2400000,
-      revenue: 8200,
-      royaltyRate: 0.003,
-      playlists: 45,
-      topPlaylist: "Indie Rock Hits",
-      growth: 12.5,
-      color: "bg-green-500"
-    },
-    {
-      id: 2,
-      name: "Apple Music",
-      logo: "🎶",
-      monthlyListeners: 280000,
-      streams: 1200000,
-      revenue: 4800,
-      royaltyRate: 0.004,
-      playlists: 23,
-      topPlaylist: "New Rock",
-      growth: 8.3,
-      color: "bg-gray-700"
-    },
-    {
-      id: 3,
-      name: "YouTube Music",
-      logo: "📺",
-      monthlyListeners: 320000,
-      streams: 1800000,
-      revenue: 3600,
-      royaltyRate: 0.002,
-      playlists: 67,
-      topPlaylist: "Rock Essentials",
-      growth: 15.2,
-      color: "bg-red-500"
-    },
-    {
-      id: 4,
-      name: "Amazon Music",
-      logo: "📻",
-      monthlyListeners: 150000,
-      streams: 680000,
-      revenue: 2100,
-      royaltyRate: 0.0035,
-      playlists: 18,
-      topPlaylist: "Prime Rock",
-      growth: 6.7,
-      color: "bg-orange-500"
-    }
-  ];
 
   const songs = [
     {
@@ -331,8 +486,12 @@ const StreamingPlatforms = () => {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {platforms.map((platform) => {
-                const account = playerAccounts.find(acc => acc.platform_id === platform.id);
+              {platformMetrics.map((platform) => {
+                const requiredFame = platform.min_followers ?? 0;
+                const revenuePerPlay = Number(platform.revenue_per_play ?? 0);
+                const growthClass = platform.growth >= 0 ? 'text-success' : 'text-destructive';
+                const growthPrefix = platform.growth >= 0 ? '+' : '';
+
                 return (
                   <Card key={platform.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                     <CardHeader className="pb-3">
@@ -341,7 +500,7 @@ const StreamingPlatforms = () => {
                           <span className="text-2xl">{platform.icon || '🎵'}</span>
                           <CardTitle className="text-lg">{platform.name}</CardTitle>
                         </div>
-                        {account?.is_connected ? (
+                        {platform.isConnected ? (
                           <Badge className="bg-success text-success-foreground">Connected</Badge>
                         ) : (
                           <Badge variant="outline">Not Connected</Badge>
@@ -349,41 +508,49 @@ const StreamingPlatforms = () => {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {account?.is_connected ? (
+                      {platform.isConnected ? (
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground text-xs">Followers</span>
-                            <span className="font-bold text-sm">{account.followers.toLocaleString()}</span>
+                            <span className="text-muted-foreground text-xs">Monthly Listeners</span>
+                            <span className="font-bold text-sm">{platform.monthlyListeners.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground text-xs">Monthly Plays</span>
+                            <span className="text-muted-foreground text-xs">Monthly Streams</span>
                             <span className="text-accent font-bold text-sm">
-                              {account.monthly_plays.toLocaleString()}
+                              {platform.monthlyStreams.toLocaleString()}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground text-xs">Revenue</span>
+                            <span className="text-muted-foreground text-xs">Monthly Revenue</span>
                             <span className="text-success font-bold text-sm">
-                              ${account.monthly_revenue.toFixed(2)}
+                              {formatCurrency(platform.monthlyRevenue)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground text-xs">Growth</span>
+                            <span className={`${growthClass} font-bold text-sm`}>
+                              {growthPrefix}{platform.growth.toFixed(1)}%
                             </span>
                           </div>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <p className="text-sm text-muted-foreground">{platform.description}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {platform.description || 'Connect to unlock insights for this platform.'}
+                          </p>
                           <div className="flex justify-between items-center">
                             <span className="text-muted-foreground text-xs">Required Fame:</span>
-                            <span className="font-bold text-sm">{platform.min_followers}</span>
+                            <span className="font-bold text-sm">{requiredFame.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-muted-foreground text-xs">Revenue/Play:</span>
                             <span className="text-success font-bold text-sm">
-                              ${platform.revenue_per_play}
+                              ${revenuePerPlay.toFixed(4)}
                             </span>
                           </div>
                           <Button
                             onClick={() => connectPlatform(platform.id)}
-                            disabled={(profile?.fame || 0) < platform.min_followers}
+                            disabled={(profile?.fame || 0) < requiredFame}
                             className="w-full bg-gradient-primary"
                           >
                             Connect
@@ -405,8 +572,13 @@ const StreamingPlatforms = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-accent">6.1M</div>
-                  <p className="text-cream/60 text-sm">+18% this month</p>
+                  <div className="text-3xl font-bold text-accent">
+                    {formatCompactNumber(overviewMetrics.totalStreams)}
+                  </div>
+                  <p className="text-cream/60 text-sm">
+                    {overviewMetrics.streamsGrowth >= 0 ? '+' : ''}
+                    {overviewMetrics.streamsGrowth.toFixed(1)}% vs last update
+                  </p>
                 </CardContent>
               </Card>
               <Card className="bg-card/80 border-accent">
@@ -417,8 +589,13 @@ const StreamingPlatforms = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-accent">$18,700</div>
-                  <p className="text-cream/60 text-sm">This month</p>
+                  <div className="text-3xl font-bold text-accent">
+                    {formatCurrency(overviewMetrics.totalRevenue)}
+                  </div>
+                  <p className="text-cream/60 text-sm">
+                    {overviewMetrics.revenueGrowth >= 0 ? '+' : ''}
+                    {overviewMetrics.revenueGrowth.toFixed(1)}% vs last update
+                  </p>
                 </CardContent>
               </Card>
               <Card className="bg-card/80 border-accent">
@@ -429,12 +606,18 @@ const StreamingPlatforms = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-accent">1.2M</div>
-                  <p className="text-cream/60 text-sm">Monthly unique</p>
+                  <div className="text-3xl font-bold text-accent">
+                    {formatCompactNumber(overviewMetrics.totalListeners)}
+                  </div>
+                  <p className="text-cream/60 text-sm">
+                    {overviewMetrics.listenersGrowth >= 0 ? '+' : ''}
+                    {overviewMetrics.listenersGrowth.toFixed(1)}% vs last update
+                  </p>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
+
 
           <TabsContent value="songs" className="space-y-6">
             <div className="space-y-4">
@@ -447,73 +630,89 @@ const StreamingPlatforms = () => {
                   </CardContent>
                 </Card>
               ) : (
-                userSongs.map((song) => (
-                <Card key={song.id} className="bg-card/80 border-accent">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                      <div className="lg:col-span-2 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold text-cream">{song.title}</h3>
-                          {song.trending && (
-                            <Badge className="bg-accent text-background text-xs">
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              Trending
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-cream/60">{song.album}</p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-accent font-bold">
-                            {(song.totalStreams / 1000000).toFixed(1)}M streams
-                          </span>
-                          <span className="text-cream/80">
-                            ${song.revenue.toLocaleString()} revenue
-                          </span>
-                        </div>
-                      </div>
+                userSongs.map((song) => {
+                  const totalStreams = song.totalStreams ?? song.streams ?? 0;
+                  const totalPlays = song.plays ?? song.streams ?? 0;
+                  const songRevenue = typeof song.revenue === 'number' ? song.revenue : Number(song.revenue ?? 0);
+                  const popularity = song.popularity ?? 0;
+                  const trending = Boolean(song.trending);
+                  const album = song.album ?? 'Single';
+                  const genre = song.genre ?? 'Unknown';
+                  const status = song.status ?? 'draft';
 
-                      <div className="lg:col-span-2 space-y-2">
-                        <p className="text-cream/60 text-sm">Platform Breakdown</p>
-                        <div className="space-y-1">
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Total Plays</span>
-                            <span className="text-accent">{song.plays.toLocaleString()}</span>
+                  return (
+                    <Card key={song.id} className="bg-card/80 border-accent">
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                          <div className="lg:col-span-2 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-semibold text-cream">{song.title}</h3>
+                              {trending && (
+                                <Badge className="bg-accent text-background text-xs">
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                  Trending
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-cream/60">{album}</p>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-accent font-bold">
+                                {(totalStreams / 1000000).toFixed(1)}M streams
+                              </span>
+                              <span className="text-cream/80">
+                                ${songRevenue.toLocaleString()} revenue
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Popularity</span>
-                            <span className="text-accent">{song.popularity}/100</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Quality</span>
-                            <span className="text-accent">{song.quality_score}/100</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Status</span>
-                            <span className="text-accent capitalize">{song.status}</span>
-                          </div>
-                        </div>
-                      </div>
 
-                        <div className="space-y-2">
-                          <div className="text-center space-y-1">
-                            <p className="text-muted-foreground text-sm">Genre</p>
-                            <p className="text-lg font-bold text-accent">{song.genre || 'Unknown'}</p>
+                          <div className="lg:col-span-2 space-y-2">
+                            <p className="text-cream/60 text-sm">Platform Breakdown</p>
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-sm">
+                                <span>Total Plays</span>
+                                <span className="text-accent">{totalPlays.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span>Popularity</span>
+                                <span className="text-accent">{Math.round(popularity)}/100</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span>Quality</span>
+                                <span className="text-accent">{song.quality_score}/100</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span>Status</span>
+                                <span className="text-accent capitalize">{status}</span>
+                              </div>
+                            </div>
                           </div>
+
                           <div className="space-y-2">
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-gradient-primary"
-                              onClick={() => toast({ title: "Feature Coming Soon!", description: "Song promotion will be available soon!" })}
-                            >
-                              <Share2 className="h-4 w-4 mr-1" />
-                              Promote
-                            </Button>
+                            <div className="text-center space-y-1">
+                              <p className="text-muted-foreground text-sm">Genre</p>
+                              <p className="text-lg font-bold text-accent">{genre}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Button
+                                size="sm"
+                                className="w-full bg-gradient-primary"
+                                onClick={() =>
+                                  toast({
+                                    title: "Feature Coming Soon!",
+                                    description: "Song promotion will be available soon!",
+                                  })
+                                }
+                              >
+                                <Share2 className="h-4 w-4 mr-1" />
+                                Promote
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </div>
           </TabsContent>
