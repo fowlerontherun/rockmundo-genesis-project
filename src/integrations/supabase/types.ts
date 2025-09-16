@@ -422,6 +422,56 @@ export type Database = {
         }
         Relationships: []
       }
+      global_charts: {
+        Row: {
+          chart_date: string
+          chart_type: string
+          created_at: string
+          id: string
+          rank: number
+          song_id: string
+          total_streams: number
+          trend: string
+          trend_change: number
+          updated_at: string
+          weeks_on_chart: number
+        }
+        Insert: {
+          chart_date: string
+          chart_type: string
+          created_at?: string
+          id?: string
+          rank: number
+          song_id: string
+          total_streams?: number
+          trend?: string
+          trend_change?: number
+          updated_at?: string
+          weeks_on_chart?: number
+        }
+        Update: {
+          chart_date?: string
+          chart_type?: string
+          created_at?: string
+          id?: string
+          rank?: number
+          song_id?: string
+          total_streams?: number
+          trend?: string
+          trend_change?: number
+          updated_at?: string
+          weeks_on_chart?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_charts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_performances: {
         Row: {
           earnings: number | null
@@ -1085,6 +1135,12 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      refresh_global_charts: {
+        Args: {
+          p_limit?: number | null
+        }
+        Returns: null
       }
     }
     Enums: {
