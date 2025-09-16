@@ -27,6 +27,9 @@ import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 import SkillTraining from "./pages/SkillTraining";
 import MusicCreation from "./pages/MusicCreation";
+import EnhancedBandManager from "./pages/EnhancedBandManager";
+import EnhancedEquipmentStore from "./pages/EnhancedEquipmentStore";
+import EnhancedFanManagement from "./pages/EnhancedFanManagement";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +64,9 @@ function App() {
                 <Route path="streaming" element={<StreamingPlatforms />} />
                 <Route path="training" element={<SkillTraining />} />
                 <Route path="create" element={<MusicCreation />} />
+                <Route path="band-enhanced" element={<EnhancedBandManager />} />
+                <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
+                <Route path="fans-enhanced" element={<EnhancedFanManagement />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
