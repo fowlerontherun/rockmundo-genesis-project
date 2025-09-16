@@ -166,6 +166,7 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -178,7 +179,6 @@ const Schedule = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
