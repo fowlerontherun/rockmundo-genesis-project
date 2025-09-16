@@ -65,18 +65,18 @@ const Navigation = () => {
   const NavigationContent = ({ isMobile = false }) => (
     <>
       {/* Logo */}
-      <div className={`${isMobile ? 'p-6' : 'p-6'} border-b border-sidebar-border`}>
+      <div className={`${isMobile ? 'p-6' : 'p-6'} border-b border-sidebar-border/50`}>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="h-12 w-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-lg">
-              <Guitar className="h-6 w-6 text-white" />
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary/30 to-primary/60 backdrop-blur-sm border border-primary/40 flex items-center justify-center shadow-xl">
+              <Guitar className="h-6 w-6 text-primary drop-shadow-sm" />
             </div>
           </div>
           <div>
-            <h1 className="text-xl font-bebas tracking-wider text-foreground">
+            <h1 className="text-xl font-bebas tracking-wider bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               ROCKMUNDO
             </h1>
-            <p className="text-xs text-sidebar-foreground font-oswald">LIVE THE DREAM</p>
+            <p className="text-xs text-sidebar-foreground/80 font-oswald">LIVE THE DREAM</p>
           </div>
         </div>
       </div>
@@ -120,13 +120,13 @@ const Navigation = () => {
   return (
     <>
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-sidebar-border">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-background/95 to-background/90 backdrop-blur-md border-b border-primary/20">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-lg">
-              <Guitar className="h-4 w-4 text-white" />
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/30 to-primary/60 backdrop-blur-sm border border-primary/40 flex items-center justify-center shadow-lg">
+              <Guitar className="h-4 w-4 text-primary drop-shadow-sm" />
             </div>
-            <h1 className="text-lg font-bebas tracking-wider text-foreground">
+            <h1 className="text-lg font-bebas tracking-wider bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               ROCKMUNDO
             </h1>
           </div>

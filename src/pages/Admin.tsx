@@ -95,7 +95,7 @@ const Admin = () => {
 
       toast({
         title: "Success",
-        description: "User role updated successfully"
+        description: `User role updated to ${newRole} successfully`
       });
 
       loadUsers(); // Refresh the list
@@ -106,6 +106,12 @@ const Admin = () => {
         title: "Error",
         description: "Failed to update user role"
       });
+    }
+  };
+
+  const makeAdmin = async (userId: string) => {
+    if (confirm("Are you sure you want to make this user an admin? This will give them full administrative privileges.")) {
+      await updateUserRole(userId, 'admin');
     }
   };
 
@@ -184,23 +190,38 @@ const Admin = () => {
                           </div>
                           
                           {isAdmin() && (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateUserRole(user.id, 'moderator')}
-                                disabled={user.role === 'admin'}
-                              >
-                                Make Moderator
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateUserRole(user.id, 'user')}
-                                disabled={user.role === 'admin'}
-                              >
-                                Make User
-                              </Button>
+                            <div className="flex gap-2 flex-wrap">
+                              {user.role !== 'admin' && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => makeAdmin(user.id)}
+                                  className="gap-1"
+                                >
+                                  <Crown className="h-3 w-3" />
+                                  Make Admin
+                                </Button>
+                              )}
+                              {user.role !== 'moderator' && (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => updateUserRole(user.id, 'moderator')}
+                                  disabled={user.role === 'admin'}
+                                >
+                                  Make Moderator
+                                </Button>
+                              )}
+                              {user.role !== 'user' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateUserRole(user.id, 'user')}
+                                  disabled={user.role === 'admin'}
+                                >
+                                  Make User
+                                </Button>
+                              )}
                             </div>
                           )}
                         </div>
