@@ -426,54 +426,9 @@ const StreamingPlatforms = () => {
     );
   }
 
-  const songs = [
-    {
-      id: 1,
-      title: "Electric Dreams",
-      album: "Voltage",
-      totalStreams: 1250000,
-      platforms: {
-        spotify: 650000,
-        apple: 280000,
-        youtube: 220000,
-        amazon: 100000
-      },
-      revenue: 3200,
-      playlistPlacements: 23,
-      trending: true
-    },
-    {
-      id: 2,
-      title: "Midnight Highway",
-      album: "Voltage",
-      totalStreams: 890000,
-      platforms: {
-        spotify: 420000,
-        apple: 190000,
-        youtube: 180000,
-        amazon: 100000
-      },
-      revenue: 2400,
-      playlistPlacements: 18,
-      trending: false
-    },
-    {
-      id: 3,
-      title: "Neon Lights",
-      album: "City Nights",
-      totalStreams: 2100000,
-      platforms: {
-        spotify: 1200000,
-        apple: 450000,
-        youtube: 350000,
-        amazon: 100000
-      },
-      revenue: 5800,
-      playlistPlacements: 42,
-      trending: true
-    }
-
+  const handlePromoteSong = (songId: string) => {
     const settings = promotionSettings[songId];
+
     if (!settings || !settings.platformId) {
       const message = "Select a platform before launching a promotion.";
       setServerMessage({ type: "error", text: message });
@@ -484,12 +439,18 @@ const StreamingPlatforms = () => {
       });
       return;
     }
-  ];
 
-  const handlePromoteSong = (songId: number, platform: string) => {
+    const selectedPlatform = platforms.find((platform) => platform.id === settings.platformId);
+    const platformName = selectedPlatform?.name ?? "your selected platform";
+
+    setServerMessage({
+      type: "success",
+      text: `Promotion launched on ${platformName}.`,
+    });
+
     toast({
       title: "Promotion Started!",
-      description: `Your song is now being promoted on ${platform}.`,
+      description: `Your song is now being promoted on ${platformName}.`,
     });
   };
 
