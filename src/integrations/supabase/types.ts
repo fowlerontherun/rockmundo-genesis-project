@@ -679,67 +679,32 @@ export type Database = {
         }
         Relationships: []
       }
-      global_charts: {
+      notifications: {
         Row: {
-          artist_name: string | null
-          band_name: string | null
-          chart_date: string
-          chart_type: string
-          created_at: string
-          genre: string
           id: string
-          plays: number
-          popularity: number
-          rank: number
-          song_id: string | null
-          song_title: string
-          trend: string
-          trend_change: number
-          weeks_on_chart: number
+          message: string
+          read: boolean
+          timestamp: string
+          type: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
+          user_id: string
         }
         Insert: {
-          artist_name?: string | null
-          band_name?: string | null
-          chart_date: string
-          chart_type: string
-          created_at?: string
-          genre: string
           id?: string
-          plays?: number
-          popularity?: number
-          rank: number
-          song_id?: string | null
-          song_title: string
-          trend?: string
-          trend_change?: number
-          weeks_on_chart?: number
+          message: string
+          read?: boolean
+          timestamp?: string
+          type: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
+          user_id: string
         }
         Update: {
-          artist_name?: string | null
-          band_name?: string | null
-          chart_date?: string
-          chart_type?: string
-          created_at?: string
-          genre?: string
           id?: string
-          plays?: number
-          popularity?: number
-          rank?: number
-          song_id?: string | null
-          song_title?: string
-          trend?: string
-          trend_change?: number
-          weeks_on_chart?: number
+          message?: string
+          read?: boolean
+          timestamp?: string
+          type?: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "global_charts_song_id_fkey"
-            columns: ["song_id"]
-            isOneToOne: false
-            referencedRelation: "songs"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       player_achievements: {
         Row: {
