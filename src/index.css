@@ -6,85 +6,85 @@
 
 @layer base {
   :root {
-    /* RockMundo Brand Colors */
-    --background: 220 25% 8%;        /* Dark blue-black */
-    --foreground: 45 30% 92%;        /* Cream white */
+    /* RockMundo Brand Colors - Updated for #22546e background */
+    --background: 200 47% 28%;        /* #22546e converted to HSL */
+    --foreground: 45 30% 92%;         /* Cream white */
     
-    --card: 220 20% 12%;             /* Slightly lighter dark blue */
-    --card-foreground: 45 25% 90%;   /* Cream text on cards */
+    --card: 200 35% 35%;              /* Lighter version of background */
+    --card-foreground: 45 25% 90%;    /* Cream text on cards */
     
-    --popover: 220 25% 10%;          /* Dark blue popover */
+    --popover: 200 45% 25%;           /* Darker popover */
     --popover-foreground: 45 30% 92%; /* Cream text */
     
-    --primary: 195 85% 45%;          /* RockMundo teal blue */
-    --primary-foreground: 45 30% 95%; /* Cream on primary */
+    --primary: 195 85% 65%;           /* Brighter teal for contrast */
+    --primary-foreground: 200 47% 20%; /* Dark text on primary */
     
-    --secondary: 220 15% 18%;        /* Medium dark blue */
+    --secondary: 200 35% 40%;         /* Lighter secondary */
     --secondary-foreground: 45 20% 85%; /* Lighter cream */
     
-    --muted: 220 15% 15%;            /* Muted dark blue */
-    --muted-foreground: 45 15% 70%;   /* Muted cream */
+    --muted: 200 40% 32%;             /* Muted variant */
+    --muted-foreground: 45 15% 70%;    /* Muted cream */
     
-    --accent: 195 75% 55%;           /* Lighter teal accent */
-    --accent-foreground: 220 25% 15%; /* Dark text on accent */
+    --accent: 195 75% 70%;            /* Even brighter accent for visibility */
+    --accent-foreground: 200 47% 15%; /* Dark text on accent */
     
-    --destructive: 0 65% 55%;        /* Red for destructive actions */
+    --destructive: 0 65% 55%;         /* Red for destructive actions */
     --destructive-foreground: 0 0% 98%; /* White text */
     
-    --success: 120 60% 50%;          /* Green for success */
-    --success-foreground: 0 0% 98%;  /* White text */
+    --success: 120 60% 50%;           /* Green for success */
+    --success-foreground: 0 0% 98%;   /* White text */
     
-    --warning: 45 85% 60%;           /* Gold/yellow for warnings */
-    --warning-foreground: 220 25% 15%; /* Dark text */
+    --warning: 45 85% 60%;            /* Gold/yellow for warnings */
+    --warning-foreground: 200 47% 15%; /* Dark text */
     
-    --border: 220 20% 20%;           /* Border color */
-    --input: 220 20% 16%;            /* Input background */
-    --ring: 195 85% 45%;             /* Focus ring - primary color */
+    --border: 200 30% 45%;            /* Lighter border for visibility */
+    --input: 200 40% 35%;             /* Input background */
+    --ring: 195 85% 65%;              /* Focus ring - bright primary */
     
-    --radius: 0.75rem;               /* Border radius */
+    --radius: 0.75rem;                /* Border radius */
     
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(195 85% 45%), hsl(195 75% 55%));
-    --gradient-stage: linear-gradient(180deg, hsl(220 25% 8%) 0%, hsl(220 20% 12%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(195 85% 45%) 0%, hsl(220 25% 8%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(195 85% 65%), hsl(195 75% 75%));
+    --gradient-stage: linear-gradient(180deg, hsl(200 47% 28%) 0%, hsl(200 35% 35%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(195 85% 65%) 0%, hsl(200 47% 28%) 100%);
     
     /* Shadows */
-    --shadow-electric: 0 0 20px hsl(195 85% 45% / 0.3);
-    --shadow-glow: 0 0 40px hsl(195 75% 55% / 0.2);
+    --shadow-electric: 0 0 20px hsl(195 85% 65% / 0.3);
+    --shadow-glow: 0 0 40px hsl(195 75% 75% / 0.2);
     
     /* Sidebar colors */
-    --sidebar-background: 220 25% 8%;
+    --sidebar-background: 200 47% 28%;
     --sidebar-foreground: 45 25% 85%;
-    --sidebar-primary: 195 85% 45%;
-    --sidebar-primary-foreground: 45 30% 95%;
-    --sidebar-accent: 220 20% 16%;
+    --sidebar-primary: 195 85% 65%;
+    --sidebar-primary-foreground: 200 47% 15%;
+    --sidebar-accent: 200 35% 35%;
     --sidebar-accent-foreground: 45 25% 90%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 195 85% 45%;
+    --sidebar-border: 200 30% 40%;
+    --sidebar-ring: 195 85% 65%;
   }
 
   .dark {
     /* Dark mode uses same colors as light mode for consistency */
-    --background: 220 25% 8%;
+    --background: 200 47% 28%;
     --foreground: 45 30% 92%;
     
-    --card: 220 20% 12%;
+    --card: 200 35% 35%;
     --card-foreground: 45 25% 90%;
     
-    --popover: 220 25% 10%;
+    --popover: 200 45% 25%;
     --popover-foreground: 45 30% 92%;
     
-    --primary: 195 85% 45%;
-    --primary-foreground: 45 30% 95%;
+    --primary: 195 85% 65%;
+    --primary-foreground: 200 47% 20%;
     
-    --secondary: 220 15% 18%;
+    --secondary: 200 35% 40%;
     --secondary-foreground: 45 20% 85%;
     
-    --muted: 220 15% 15%;
+    --muted: 200 40% 32%;
     --muted-foreground: 45 15% 70%;
     
-    --accent: 195 75% 55%;
-    --accent-foreground: 220 25% 15%;
+    --accent: 195 75% 70%;
+    --accent-foreground: 200 47% 15%;
     
     --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 98%;
@@ -93,20 +93,20 @@
     --success-foreground: 0 0% 98%;
     
     --warning: 45 85% 60%;
-    --warning-foreground: 220 25% 15%;
+    --warning-foreground: 200 47% 15%;
     
-    --border: 220 20% 20%;
-    --input: 220 20% 16%;
-    --ring: 195 85% 45%;
+    --border: 200 30% 45%;
+    --input: 200 40% 35%;
+    --ring: 195 85% 65%;
     
-    --sidebar-background: 220 25% 8%;
+    --sidebar-background: 200 47% 28%;
     --sidebar-foreground: 45 25% 85%;
-    --sidebar-primary: 195 85% 45%;
-    --sidebar-primary-foreground: 45 30% 95%;
-    --sidebar-accent: 220 20% 16%;
+    --sidebar-primary: 195 85% 65%;
+    --sidebar-primary-foreground: 200 47% 15%;
+    --sidebar-accent: 200 35% 35%;
     --sidebar-accent-foreground: 45 25% 90%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 195 85% 45%;
+    --sidebar-border: 200 30% 40%;
+    --sidebar-ring: 195 85% 65%;
   }
 }
 
@@ -163,9 +163,9 @@
 
 @keyframes glow {
   from {
-    box-shadow: 0 0 5px hsl(195 85% 45% / 0.3);
+    box-shadow: 0 0 5px hsl(195 85% 65% / 0.3);
   }
   to {
-    box-shadow: 0 0 25px hsl(195 85% 45% / 0.6);
+    box-shadow: 0 0 25px hsl(195 85% 65% / 0.6);
   }
 }
