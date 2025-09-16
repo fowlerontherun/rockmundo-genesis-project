@@ -75,6 +75,29 @@ type JamSessionRecord = JamSessionRow & {
   } | null;
 };
 
+type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: string | null;
+  message: string;
+  timestamp: string;
+  read: boolean;
+};
+
+type NotificationType = 'gig_invite' | 'band_request' | 'fan_milestone' | 'achievement' | 'system';
+
+type ChatMessageRow = {
+  id: string;
+  user_id: string;
+  channel: string;
+  message?: string | null;
+  content?: string | null;
+  created_at: string;
+  username?: string | null;
+  user_level?: number | null;
+  user_badge?: string | null;
+};
+
 interface JamSession {
   id: string;
   name: string;
@@ -234,8 +257,12 @@ const RealtimeCommunication: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    selectedChannelRef.current = selectedChannel;
-  }, [selectedChannel]);
+    if (!user) {
+      return;
+    }
+
+    void loadJamSessions();
+  }, [user, loadJamSessions]);
 
   useEffect(() => {
     if (!user) {
@@ -478,7 +505,6 @@ const RealtimeCommunication: React.FC = () => {
       setIsLoadingSessions(false);
     }
   }, [activeJamId]);
-
   const sendMessage = useCallback(async () => {
     if (!currentMessage.trim() || !user) {
       return;
@@ -489,7 +515,6 @@ const RealtimeCommunication: React.FC = () => {
       profile?.display_name || profile?.username || user.email || 'Unknown';
     const userLevel = profile?.level;
     const userBadge = userLevel && userLevel > 20 ? 'Pro' : undefined;
-
     setCurrentMessage('');
 
     try {
@@ -503,7 +528,6 @@ const RealtimeCommunication: React.FC = () => {
         })
         .select('*')
         .single();
-
       if (error) {
         throw error;
       }
