@@ -4,470 +4,342 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   User, 
-  Upload, 
-  Palette, 
+  Camera, 
+  Save, 
+  Star, 
+  Trophy, 
   Music, 
-  Edit,
-  Save,
-  Camera
+  Users, 
+  DollarSign,
+  Upload,
+  Edit3
 } from "lucide-react";
-
-interface PlayerProfile {
-  id: number;
-  username: string;
-  email: string;
-  bio: string;
-  social_links: string[];
-  avatar?: Avatar;
-}
-
-interface Avatar {
-  id: number;
-  nickname: string;
-  body_type: string;
-  skin_tone: string;
-  face_shape: string;
-  hair_style: string;
-  hair_color: string;
-  top_clothing: string;
-  bottom_clothing: string;
-  shoes: string;
-}
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useGameData } from "@/hooks/useGameData";
 
 const Profile = () => {
   const { toast } = useToast();
-  const [profile, setProfile] = useState<PlayerProfile | null>(null);
+  const { user } = useAuth();
+  const { profile, skills, updateProfile } = useGameData();
+  
   const [isEditing, setIsEditing] = useState(false);
-  const [isCreatingAvatar, setIsCreatingAvatar] = useState(false);
-  const [avatarForm, setAvatarForm] = useState({
-    nickname: "",
-    body_type: "athletic",
-    skin_tone: "medium",
-    face_shape: "oval",
-    hair_style: "shaggy",
-    hair_color: "black",
-    top_clothing: "leather_jacket",
-    bottom_clothing: "ripped_jeans",
-    shoes: "combat_boots"
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    display_name: '',
+    username: '',
+    bio: ''
   });
 
-  const bodyTypes = ["slim", "athletic", "stocky", "curvy"];
-  const skinTones = ["light", "medium", "tan", "dark"];
-  const faceShapes = ["oval", "round", "square", "heart"];
-  const hairStyles = ["shaggy", "mohawk", "long", "buzz", "curly", "straight"];
-  const hairColors = ["black", "brown", "blonde", "red", "blue", "purple", "green"];
-  const clothing = {
-    tops: ["t_shirt", "leather_jacket", "hoodie", "band_tee", "vest"],
-    bottoms: ["jeans", "ripped_jeans", "leather_pants", "shorts", "skirt"],
-    shoes: ["sneakers", "combat_boots", "dress_shoes", "sandals", "high_tops"]
-  };
-
   useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    try {
-      // Simulated API call - replace with actual API
-      const mockProfile = {
-        id: 1,
-        username: "rockstar_demo",
-        email: "demo@rockmundo.test",
-        bio: "Rising rock star from the underground scene",
-        social_links: ["@rockstar_demo", "youtube.com/rockstardemo"],
-        avatar: {
-          id: 1,
-          nickname: "Storm",
-          body_type: "athletic",
-          skin_tone: "medium",
-          face_shape: "oval",
-          hair_style: "shaggy",
-          hair_color: "black",
-          top_clothing: "leather_jacket",
-          bottom_clothing: "ripped_jeans",
-          shoes: "combat_boots"
-        }
-      };
-      setProfile(mockProfile);
-      if (mockProfile.avatar) {
-        setAvatarForm(mockProfile.avatar);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load profile",
-        variant: "destructive"
+    if (profile) {
+      setFormData({
+        display_name: profile.display_name || '',
+        username: profile.username || '',
+        bio: profile.bio || ''
       });
     }
-  };
+  }, [profile]);
 
-  const saveProfile = async () => {
+  const handleSave = async () => {
+    if (!user) return;
+
+    setSaving(true);
     try {
-      // Simulated API call
-      toast({
-        title: "Success",
-        description: "Profile updated successfully"
-      });
+      await updateProfile(formData);
       setIsEditing(false);
-    } catch (error) {
       toast({
+        title: "Profile Updated!",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        variant: "destructive",
         title: "Error",
         description: "Failed to update profile",
-        variant: "destructive"
       });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const createAvatar = async () => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
     try {
-      // Simulated API call
-      const newAvatar = { ...avatarForm, id: Date.now() };
-      setProfile(prev => prev ? { ...prev, avatar: newAvatar } : prev);
-      setIsCreatingAvatar(false);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      await updateProfile({ avatar_url: data.publicUrl });
+
       toast({
-        title: "Success",
-        description: "Avatar created successfully"
+        title: "Avatar Updated!",
+        description: "Your profile picture has been successfully updated.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
       toast({
-        title: "Error",
-        description: "Failed to create avatar",
-        variant: "destructive"
+        variant: "destructive",
+        title: "Upload failed",
+        description: "Failed to upload avatar",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
   if (!profile) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-lg font-oswald">Loading profile...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Profile & Avatar
-          </h1>
-          <Button 
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Player Profile
+            </h1>
+            <p className="text-muted-foreground">Manage your musical identity</p>
+          </div>
+          <Button
             onClick={() => setIsEditing(!isEditing)}
-            variant={isEditing ? "destructive" : "default"}
-            className="bg-gradient-primary hover:shadow-electric"
+            variant={isEditing ? "outline" : "default"}
+            className={isEditing ? "" : "bg-gradient-primary"}
           >
-            {isEditing ? <Save className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
-            {isEditing ? "Save" : "Edit"}
+            <Edit3 className="h-4 w-4 mr-2" />
+            {isEditing ? "Cancel" : "Edit Profile"}
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Profile Info */}
-          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Player Profile
-              </CardTitle>
-              <CardDescription>Your RockMundo identity</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  value={profile.username}
-                  disabled={!isEditing}
-                  onChange={(e) => setProfile({...profile, username: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={profile.email}
-                  disabled={!isEditing}
-                  onChange={(e) => setProfile({...profile, email: e.target.value})}
-                />
-              </div>
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="profile">Profile Info</TabsTrigger>
+            <TabsTrigger value="stats">Statistics</TabsTrigger>
+          </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={profile.bio}
-                  disabled={!isEditing}
-                  onChange={(e) => setProfile({...profile, bio: e.target.value})}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Social Links</Label>
-                <div className="flex flex-wrap gap-2">
-                  {profile.social_links.map((link, index) => (
-                    <Badge key={index} variant="outline" className="border-primary/20">
-                      {link}
-                    </Badge>
-                  ))}
-                </div>
-                {isEditing && (
-                  <Input
-                    placeholder="Add social link..."
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && e.currentTarget.value) {
-                        setProfile({
-                          ...profile, 
-                          social_links: [...profile.social_links, e.currentTarget.value]
-                        });
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                )}
-              </div>
-
-              {isEditing && (
-                <Button onClick={saveProfile} className="w-full bg-gradient-primary">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Profile
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Avatar */}
-          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5 text-accent" />
-                Avatar
-              </CardTitle>
-              <CardDescription>Your visual identity in RockMundo</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {profile.avatar ? (
-                <div className="text-center space-y-4">
-                  <Avatar className="w-24 h-24 mx-auto ring-2 ring-primary/20">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback className="bg-gradient-primary text-white text-xl">
-                      {profile.avatar.nickname.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div>
-                    <h3 className="text-lg font-semibold text-primary">{profile.avatar.nickname}</h3>
-                    <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mt-2">
-                      <div>Body: {profile.avatar.body_type}</div>
-                      <div>Skin: {profile.avatar.skin_tone}</div>
-                      <div>Hair: {profile.avatar.hair_style}</div>
-                      <div>Color: {profile.avatar.hair_color}</div>
+          <TabsContent value="profile" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                      <Avatar className="h-32 w-32">
+                        <AvatarImage src={profile.avatar_url || ""} />
+                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
+                          {(profile.display_name || profile.username || 'U')[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0">
+                        <label htmlFor="avatar-upload" className="cursor-pointer">
+                          <div className="bg-primary hover:bg-primary/80 rounded-full p-2 border-2 border-background">
+                            {uploading ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-background"></div>
+                            ) : (
+                              <Camera className="h-4 w-4 text-primary-foreground" />
+                            )}
+                          </div>
+                          <input
+                            id="avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarUpload}
+                            className="hidden"
+                            disabled={uploading}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    <div className="text-center space-y-1">
+                      <h2 className="text-2xl font-bold">{profile.display_name || profile.username}</h2>
+                      <p className="text-muted-foreground">@{profile.username}</p>
+                      <div className="flex items-center gap-2 justify-center mt-2">
+                        <Badge variant="outline" className="border-primary text-primary">
+                          Level {profile.level || 1}
+                        </Badge>
+                        <Badge variant="outline" className="border-accent text-accent">
+                          {profile.fame || 0} Fame
+                        </Badge>
+                      </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  <Button 
-                    onClick={() => setIsCreatingAvatar(true)}
-                    variant="outline"
-                    className="w-full border-primary/20 hover:bg-primary/10"
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    Customize Avatar
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center space-y-4">
-                  <div className="w-24 h-24 mx-auto rounded-full bg-secondary/30 flex items-center justify-center">
-                    <User className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <Button 
-                    onClick={() => setIsCreatingAvatar(true)}
-                    className="w-full bg-gradient-primary"
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    Create Avatar
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Avatar Creation Modal */}
-        {isCreatingAvatar && (
-          <Card className="bg-card/90 backdrop-blur-sm border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5 text-accent" />
-                {profile.avatar ? "Customize" : "Create"} Avatar
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nickname">Nickname</Label>
-                  <Input
-                    id="nickname"
-                    value={avatarForm.nickname}
-                    onChange={(e) => setAvatarForm({...avatarForm, nickname: e.target.value})}
-                    placeholder="Enter avatar nickname"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Body Type</Label>
-                  <Select value={avatarForm.body_type} onValueChange={(value) => setAvatarForm({...avatarForm, body_type: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bodyTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Skin Tone</Label>
-                  <Select value={avatarForm.skin_tone} onValueChange={(value) => setAvatarForm({...avatarForm, skin_tone: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {skinTones.map((tone) => (
-                        <SelectItem key={tone} value={tone}>
-                          {tone.charAt(0).toUpperCase() + tone.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Face Shape</Label>
-                  <Select value={avatarForm.face_shape} onValueChange={(value) => setAvatarForm({...avatarForm, face_shape: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {faceShapes.map((shape) => (
-                        <SelectItem key={shape} value={shape}>
-                          {shape.charAt(0).toUpperCase() + shape.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hair Style</Label>
-                  <Select value={avatarForm.hair_style} onValueChange={(value) => setAvatarForm({...avatarForm, hair_style: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hairStyles.map((style) => (
-                        <SelectItem key={style} value={style}>
-                          {style.replace('_', ' ').charAt(0).toUpperCase() + style.replace('_', ' ').slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hair Color</Label>
-                  <Select value={avatarForm.hair_color} onValueChange={(value) => setAvatarForm({...avatarForm, hair_color: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hairColors.map((color) => (
-                        <SelectItem key={color} value={color}>
-                          {color.charAt(0).toUpperCase() + color.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Top</Label>
-                  <Select value={avatarForm.top_clothing} onValueChange={(value) => setAvatarForm({...avatarForm, top_clothing: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clothing.tops.map((top) => (
-                        <SelectItem key={top} value={top}>
-                          {top.replace('_', ' ').charAt(0).toUpperCase() + top.replace('_', ' ').slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Bottom</Label>
-                  <Select value={avatarForm.bottom_clothing} onValueChange={(value) => setAvatarForm({...avatarForm, bottom_clothing: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clothing.bottoms.map((bottom) => (
-                        <SelectItem key={bottom} value={bottom}>
-                          {bottom.replace('_', ' ').charAt(0).toUpperCase() + bottom.replace('_', ' ').slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Shoes</Label>
-                  <Select value={avatarForm.shoes} onValueChange={(value) => setAvatarForm({...avatarForm, shoes: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clothing.shoes.map((shoe) => (
-                        <SelectItem key={shoe} value={shoe}>
-                          {shoe.replace('_', ' ').charAt(0).toUpperCase() + shoe.replace('_', ' ').slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      Personal Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="displayName">Display Name</Label>
+                        <Input
+                          id="displayName"
+                          value={formData.display_name}
+                          onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-secondary/50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input
+                          id="username"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-secondary/50" : ""}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bio">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        value={formData.bio}
+                        onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-secondary/50" : ""}
+                        placeholder="Tell the world about your musical journey..."
+                        rows={4}
+                      />
+                    </div>
+                    {isEditing && (
+                      <div className="flex gap-2 pt-4">
+                        <Button 
+                          onClick={handleSave}
+                          disabled={saving}
+                          className="bg-gradient-primary"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          {saving ? "Saving..." : "Save Changes"}
+                        </Button>
+                        <Button 
+                          onClick={() => setIsEditing(false)}
+                          variant="outline"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
+            </div>
+          </TabsContent>
 
-              <div className="flex gap-2">
-                <Button 
-                  onClick={createAvatar}
-                  className="flex-1 bg-gradient-primary"
-                  disabled={!avatarForm.nickname}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {profile.avatar ? "Update" : "Create"} Avatar
-                </Button>
-                <Button 
-                  onClick={() => setIsCreatingAvatar(false)}
-                  variant="outline"
-                  className="border-primary/20"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="stats" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Level</CardTitle>
+                  <Star className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{profile.level || 1}</div>
+                  <Progress value={((profile.experience || 0) % 1000) / 10} className="h-2 mt-2" />
+                  <p className="text-xs text-muted-foreground mt-1">{profile.experience || 0} XP</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Fame</CardTitle>
+                  <Users className="h-4 w-4 text-accent" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-accent">{profile.fame || 0}</div>
+                  <p className="text-xs text-muted-foreground">Total followers</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Cash</CardTitle>
+                  <DollarSign className="h-4 w-4 text-success" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-success">${(profile.cash || 0).toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Available funds</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Experience</CardTitle>
+                  <Trophy className="h-4 w-4 text-warning" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-warning">{profile.experience || 0}</div>
+                  <p className="text-xs text-muted-foreground">Total XP earned</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Music className="h-5 w-5 text-primary" />
+                  Musical Skills
+                </CardTitle>
+                <CardDescription>Your musical abilities and expertise levels</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {skills && Object.entries(skills)
+                    .filter(([key]) => !['id', 'user_id', 'created_at', 'updated_at'].includes(key))
+                    .map(([skill, value]) => (
+                      <div key={skill} className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium capitalize">{skill}</span>
+                          <span className="text-sm font-bold text-primary">{value}/100</span>
+                        </div>
+                        <Progress value={value as number} className="h-2" />
+                        <div className="text-xs text-muted-foreground">
+                          {(value as number) >= 80 ? 'Expert' : 
+                           (value as number) >= 60 ? 'Advanced' : 
+                           (value as number) >= 40 ? 'Intermediate' : 'Beginner'}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
