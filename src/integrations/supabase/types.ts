@@ -787,6 +787,51 @@ export type Database = {
         }
         Relationships: []
       }
+      social_campaigns: {
+        Row: {
+          budget: number
+          created_at: string | null
+          engagement: number
+          end_date: string | null
+          id: string
+          name: string
+          platform: string
+          reach: number
+          start_date: string | null
+          status: "active" | "completed"
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          budget?: number
+          created_at?: string | null
+          engagement?: number
+          end_date?: string | null
+          id?: string
+          name: string
+          platform: string
+          reach?: number
+          start_date?: string | null
+          status?: "active" | "completed"
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          created_at?: string | null
+          engagement?: number
+          end_date?: string | null
+          id?: string
+          name?: string
+          platform?: string
+          reach?: number
+          start_date?: string | null
+          status?: "active" | "completed"
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       social_posts: {
         Row: {
           comments: number | null
