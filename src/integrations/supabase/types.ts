@@ -200,6 +200,51 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          advance_payment: number
+          contract_type: string
+          created_at: string | null
+          duration_months: number
+          id: string
+          label_id: string | null
+          label_name: string
+          royalty_rate: number
+          signed_at: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          advance_payment?: number
+          contract_type: string
+          created_at?: string | null
+          duration_months: number
+          id?: string
+          label_id?: string | null
+          label_name: string
+          royalty_rate: number
+          signed_at?: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          advance_payment?: number
+          contract_type?: string
+          created_at?: string | null
+          duration_months?: number
+          id?: string
+          label_id?: string | null
+          label_name?: string
+          royalty_rate?: number
+          signed_at?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       equipment_items: {
         Row: {
           category: string
