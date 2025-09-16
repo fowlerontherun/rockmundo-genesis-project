@@ -1073,6 +1073,23 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_stats: {
+        Row: {
+          fan_change: number
+          fans_change: number
+          gigs_change: number
+          gigs_performed: number
+          previous_fans: number
+          previous_gigs: number
+          previous_songs: number
+          songs_change: number
+          songs_created: number
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
