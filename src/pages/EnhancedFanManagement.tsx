@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +21,10 @@ import {
   Instagram,
   Twitter,
   Youtube,
-  Zap
+  Zap,
+  Mail,
+  MailOpen,
+  Reply
 } from "lucide-react";
 
 interface FanDemographics {
@@ -60,6 +64,33 @@ interface EngagementCampaign {
   targetDemographic: string;
 }
 
+interface FanMessage {
+  id: string;
+  user_id: string;
+  fan_name: string;
+  message: string;
+  timestamp: string;
+  sentiment: string;
+  is_read: boolean;
+  reply_message: string | null;
+  replied_at: string | null;
+}
+
+const sentimentDisplay: Record<string, { label: string; className: string }> = {
+  positive: {
+    label: "Positive",
+    className: "border-green-500/30 text-green-600 bg-green-500/10",
+  },
+  neutral: {
+    label: "Neutral",
+    className: "border-slate-500/30 text-slate-600 bg-slate-500/10",
+  },
+  negative: {
+    label: "Negative",
+    className: "border-red-500/30 text-red-600 bg-red-500/10",
+  }
+};
+
 const EnhancedFanManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -69,6 +100,10 @@ const EnhancedFanManagement = () => {
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [campaigning, setCampaigning] = useState(false);
+  const [fanMessages, setFanMessages] = useState<FanMessage[]>([]);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [replyLoadingId, setReplyLoadingId] = useState<string | null>(null);
+  const [markingReadId, setMarkingReadId] = useState<string | null>(null);
 
   const [newPost, setNewPost] = useState({
     platform: "",
@@ -129,15 +164,26 @@ const EnhancedFanManagement = () => {
 
   const fetchData = async () => {
     try {
-      const [fanResponse, postsResponse, profileResponse] = await Promise.all([
+      const [fanResponse, postsResponse, profileResponse, messagesResponse] = await Promise.all([
         supabase.from("fan_demographics").select("*").eq("user_id", user?.id).single(),
         supabase.from("social_posts").select("*").eq("user_id", user?.id).order("created_at", { ascending: false }).limit(10),
-        supabase.from("profiles").select("*").eq("user_id", user?.id).single()
+        supabase.from("profiles").select("*").eq("user_id", user?.id).single(),
+        supabase.from("fan_messages").select("*").eq("user_id", user?.id).order("timestamp", { ascending: false })
       ]);
 
       if (fanResponse.data) setFanData(fanResponse.data);
       if (postsResponse.data) setSocialPosts(postsResponse.data);
       if (profileResponse.data) setProfile(profileResponse.data);
+      if (messagesResponse.error) {
+        console.error("Error fetching fan messages:", messagesResponse.error);
+      } else if (messagesResponse.data) {
+        const messages = messagesResponse.data as FanMessage[];
+        setFanMessages(messages);
+        setReplyInputs(messages.reduce((acc, message) => {
+          acc[message.id] = message.reply_message || "";
+          return acc;
+        }, {} as Record<string, string>));
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -330,6 +376,124 @@ const EnhancedFanManagement = () => {
     return platformData ? platformData.color : "text-gray-500";
   };
 
+  const handleReplyChange = (messageId: string, value: string) => {
+    setReplyInputs(prev => ({ ...prev, [messageId]: value }));
+  };
+
+  const markMessageAsRead = async (messageId: string) => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Unable to update message",
+        description: "You need to be signed in to manage fan messages."
+      });
+      return;
+    }
+
+    setMarkingReadId(messageId);
+
+    try {
+      const { error } = await supabase
+        .from("fan_messages")
+        .update({ is_read: true })
+        .eq("id", messageId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setFanMessages(prev =>
+        prev.map(message =>
+          message.id === messageId ? { ...message, is_read: true } : message
+        )
+      );
+
+      toast({
+        title: "Message marked as read",
+        description: "Take a moment to craft the perfect reply."
+      });
+    } catch (error) {
+      console.error("Error marking fan message as read:", error);
+      toast({
+        variant: "destructive",
+        title: "Could not update message",
+        description: "We couldn't mark the message as read. Please try again."
+      });
+    } finally {
+      setMarkingReadId(null);
+    }
+  };
+
+  const sendReply = async (messageId: string) => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Unable to send reply",
+        description: "You need to be signed in to reply to fans."
+      });
+      return;
+    }
+
+    const replyText = (replyInputs[messageId] || "").trim();
+
+    if (!replyText) {
+      toast({
+        variant: "destructive",
+        title: "Reply cannot be empty",
+        description: "Write a quick message before sending your reply."
+      });
+      return;
+    }
+
+    setReplyLoadingId(messageId);
+    const repliedAt = new Date().toISOString();
+
+    try {
+      const { error } = await supabase
+        .from("fan_messages")
+        .update({
+          reply_message: replyText,
+          replied_at: repliedAt,
+          is_read: true
+        })
+        .eq("id", messageId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setFanMessages(prev =>
+        prev.map(message =>
+          message.id === messageId
+            ? { ...message, reply_message: replyText, replied_at: repliedAt, is_read: true }
+            : message
+        )
+      );
+      setReplyInputs(prev => ({ ...prev, [messageId]: replyText }));
+
+      toast({
+        title: "Reply sent!",
+        description: "Your fan will appreciate the personal touch."
+      });
+    } catch (error) {
+      console.error("Error replying to fan message:", error);
+      toast({
+        variant: "destructive",
+        title: "Reply failed",
+        description: "We couldn't send your reply. Please try again."
+      });
+    } finally {
+      setReplyLoadingId(null);
+    }
+  };
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
+  };
+
+  const unreadMessagesCount = fanMessages.filter(message => !message.is_read).length;
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -361,10 +525,13 @@ const EnhancedFanManagement = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="demographics">Demographics</TabsTrigger>
           <TabsTrigger value="social">Social Media</TabsTrigger>
+          <TabsTrigger value="messages">
+            Fan Messages{unreadMessagesCount > 0 ? ` (${unreadMessagesCount})` : ""}
+          </TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
         </TabsList>
 
@@ -594,6 +761,112 @@ const EnhancedFanManagement = () => {
                   <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">No Posts Yet</h3>
                   <p className="text-muted-foreground">Create your first social media post to start engaging with fans!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="messages" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <CardTitle className="font-bebas">FAN MESSAGES</CardTitle>
+                <CardDescription>Read and reply to the fans who reach out to you</CardDescription>
+              </div>
+              {fanMessages.length > 0 && (
+                <Badge variant="secondary" className="text-xs uppercase tracking-wider">
+                  {unreadMessagesCount} unread
+                </Badge>
+              )}
+            </CardHeader>
+            <CardContent>
+              {fanMessages.length > 0 ? (
+                <div className="space-y-4">
+                  {fanMessages.map(message => {
+                    const sentimentKey = (message.sentiment || "neutral").toLowerCase();
+                    const sentiment = sentimentDisplay[sentimentKey] ?? sentimentDisplay.neutral;
+                    const replyValue = replyInputs[message.id] ?? "";
+
+                    return (
+                      <div
+                        key={message.id}
+                        className={`rounded-lg border p-4 space-y-4 transition ${message.is_read ? "bg-background" : "border-primary/40 bg-primary/5 shadow-sm shadow-primary/10"}`}
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="flex items-start gap-3">
+                            <Mail className={`mt-1 h-5 w-5 ${message.is_read ? "text-muted-foreground" : "text-primary"}`} />
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-base font-semibold capitalize">{message.fan_name}</p>
+                                <Badge variant="outline" className={`text-xs capitalize ${sentiment.className}`}>
+                                  {sentiment.label}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDateTime(message.timestamp) || "Just now"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={message.is_read ? "outline" : "default"} className="uppercase tracking-wide text-[10px]">
+                              {message.is_read ? "Read" : "New"}
+                            </Badge>
+                            {!message.is_read && (
+                              <Button
+                                onClick={() => markMessageAsRead(message.id)}
+                                disabled={markingReadId === message.id}
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center gap-2"
+                              >
+                                <MailOpen className="h-4 w-4" />
+                                {markingReadId === message.id ? "Marking..." : "Mark as Read"}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-sm leading-relaxed">{message.message}</p>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium uppercase text-muted-foreground">
+                            Reply to {message.fan_name}
+                          </label>
+                          <Textarea
+                            value={replyValue}
+                            onChange={(event) => handleReplyChange(message.id, event.target.value)}
+                            placeholder="Send a heartfelt message back..."
+                            rows={3}
+                          />
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                              onClick={() => sendReply(message.id)}
+                              disabled={replyLoadingId === message.id || replyValue.trim().length === 0}
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <Reply className="h-4 w-4" />
+                              {replyLoadingId === message.id ? "Sending..." : message.reply_message ? "Update Reply" : "Send Reply"}
+                            </Button>
+                            {message.replied_at && (
+                              <span className="text-xs text-muted-foreground">
+                                Replied on {formatDateTime(message.replied_at)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <MessageCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="text-lg font-medium">No fan messages yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Grow your community and fans will start reaching out with their love and support.
+                  </p>
                 </div>
               )}
             </CardContent>
