@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Music, Mail, Lock, User, AlertCircle, Guitar, Star, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import rockmundoLogo from "@/assets/rockmundo-logo.png";
+import logo from "@/assets/rockmundo-new-logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -181,29 +181,23 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-stage flex flex-col items-center justify-center px-4 py-8 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#4a6b6b] to-[#2d4f4f] flex flex-col items-center justify-center px-4 py-8 sm:px-6">
       <div className="w-full max-w-sm sm:max-w-md">
         {/* Logo and Branding */}
         <div className="text-center mb-6 sm:mb-8">
-          <div className="flex items-center justify-center mb-4">
+          <div className="flex items-center justify-center mb-6">
             <img 
-              src={rockmundoLogo} 
-              alt="RockMundo Logo" 
-              className="h-16 w-16 sm:h-20 sm:w-20" 
+              src={logo} 
+              alt="RockMundo - Live The Dream" 
+              className="h-32 w-auto sm:h-40 md:h-48 object-contain drop-shadow-2xl" 
             />
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bebas tracking-wider text-foreground mb-2">
-            ROCKMUNDO
-          </h1>
-          <p className="text-lg sm:text-xl font-oswald text-accent tracking-wide mb-1">
-            LIVE THE DREAM
-          </p>
-          <p className="text-sm text-muted-foreground font-oswald">
-            The Ultimate Music Career Simulation
+          <p className="text-sm text-white/80 font-oswald max-w-md mx-auto">
+            The Ultimate Music Career Simulation - Build your band, rock the world
           </p>
         </div>
 
-        <Card className="bg-card/90 backdrop-blur-sm border-primary/30 shadow-electric">
+        <Card className="bg-white/95 backdrop-blur-sm border-white/30 shadow-2xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-center text-xl sm:text-2xl font-bebas tracking-wide">
               JOIN THE REVOLUTION
