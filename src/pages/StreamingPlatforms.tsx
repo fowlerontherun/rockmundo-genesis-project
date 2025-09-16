@@ -1,20 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Play, 
-  Users, 
-  TrendingUp, 
-  DollarSign, 
-  Star, 
-  Music, 
-  Radio,
-  Globe,
-  Heart,
+import {
+  Play,
+  Users,
+  DollarSign,
+  Music,
   Share2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,23 +39,237 @@ interface PlayerStreamingAccount {
   platform?: StreamingPlatform;
 }
 
+type PlatformMetricRecord = Record<string, unknown> | null;
+
+interface SongRecord {
+  id: string;
+  title: string;
+  genre?: string | null;
+  status?: string | null;
+  album?: string | null;
+  album_name?: string | null;
+  albumTitle?: string | null;
+  revenue?: number | string | null;
+  streams?: number | string | null;
+  platform_streams?: PlatformMetricRecord;
+  platform_revenue?: PlatformMetricRecord;
+  spotify_streams?: number | string | null;
+  apple_music_streams?: number | string | null;
+  apple_streams?: number | string | null;
+  youtube_music_streams?: number | string | null;
+  youtube_streams?: number | string | null;
+  amazon_music_streams?: number | string | null;
+  amazon_streams?: number | string | null;
+  tidal_streams?: number | string | null;
+  spotify_revenue?: number | string | null;
+  apple_music_revenue?: number | string | null;
+  apple_revenue?: number | string | null;
+  youtube_music_revenue?: number | string | null;
+  youtube_revenue?: number | string | null;
+  amazon_music_revenue?: number | string | null;
+  amazon_revenue?: number | string | null;
+  tidal_revenue?: number | string | null;
+  [key: string]: unknown;
+}
+
+interface PlatformBreakdown {
+  key: string;
+  label: string;
+  streams: number;
+  revenue: number;
+}
+
+interface SongWithPlatformData {
+  id: string;
+  title: string;
+  album?: string | null;
+  genre?: string | null;
+  status?: string | null;
+  totalStreams: number;
+  totalRevenue: number;
+  platformBreakdown: PlatformBreakdown[];
+}
+
+const safeNumber = (value: unknown): number => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return 0;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+};
+
+const formatPlatformLabel = (rawKey: string): string => {
+  const key = rawKey.toLowerCase();
+
+  if (key.includes("spotify")) return "Spotify";
+  if (key.includes("apple")) return "Apple Music";
+  if (key.includes("youtube")) return "YouTube Music";
+  if (key.includes("amazon")) return "Amazon Music";
+  if (key.includes("tidal")) return "Tidal";
+
+  return rawKey
+    .replace(/[_-]+/g, " ")
+    .split(" ")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+};
+
+const buildPlatformBreakdown = (
+  song: SongRecord,
+  platforms: StreamingPlatform[]
+): PlatformBreakdown[] => {
+  const breakdownMap = new Map<string, PlatformBreakdown>();
+
+  const addEntry = (
+    key: string,
+    label: string,
+    streamsValue: unknown,
+    revenueValue?: unknown
+  ) => {
+    const streams = safeNumber(streamsValue);
+    const normalizedLabel = label.toLowerCase();
+    const platformInfo = platforms.find(
+      (platform) => platform.name?.toLowerCase() === normalizedLabel
+    );
+
+    const providedRevenue =
+      revenueValue !== undefined ? safeNumber(revenueValue) : undefined;
+    const revenue =
+      providedRevenue !== undefined
+        ? providedRevenue
+        : streams * (platformInfo?.revenue_per_play ?? 0);
+
+    const existing = breakdownMap.get(normalizedLabel);
+
+    if (existing) {
+      breakdownMap.set(normalizedLabel, {
+        ...existing,
+        streams: existing.streams + streams,
+        revenue: existing.revenue + revenue,
+      });
+      return;
+    }
+
+    breakdownMap.set(normalizedLabel, {
+      key,
+      label: platformInfo?.name ?? label,
+      streams,
+      revenue,
+    });
+  };
+
+  if (song.platform_streams && typeof song.platform_streams === "object") {
+    Object.entries(song.platform_streams).forEach(([key, value]) => {
+      if (value === null || value === undefined) return;
+      const label = formatPlatformLabel(key);
+
+      if (typeof value === "object" && !Array.isArray(value)) {
+        const metric = value as { streams?: unknown; revenue?: unknown };
+        addEntry(key, label, metric.streams ?? value, metric.revenue);
+      } else {
+        addEntry(key, label, value);
+      }
+    });
+  }
+
+  if (song.platform_revenue && typeof song.platform_revenue === "object") {
+    Object.entries(song.platform_revenue).forEach(([key, value]) => {
+      if (value === null || value === undefined) return;
+      const label = formatPlatformLabel(key);
+      const normalizedLabel = label.toLowerCase();
+
+      if (!breakdownMap.has(normalizedLabel)) {
+        addEntry(key, label, 0, value);
+      }
+    });
+  }
+
+  if (breakdownMap.size === 0) {
+    const fallbackFields = [
+      { key: "spotify_streams", label: "Spotify", revenueKey: "spotify_revenue" },
+      {
+        key: "apple_music_streams",
+        label: "Apple Music",
+        revenueKey: "apple_music_revenue",
+      },
+      { key: "apple_streams", label: "Apple Music", revenueKey: "apple_revenue" },
+      {
+        key: "youtube_music_streams",
+        label: "YouTube Music",
+        revenueKey: "youtube_music_revenue",
+      },
+      { key: "youtube_streams", label: "YouTube Music", revenueKey: "youtube_revenue" },
+      {
+        key: "amazon_music_streams",
+        label: "Amazon Music",
+        revenueKey: "amazon_music_revenue",
+      },
+      { key: "amazon_streams", label: "Amazon Music", revenueKey: "amazon_revenue" },
+      { key: "tidal_streams", label: "Tidal", revenueKey: "tidal_revenue" },
+    ];
+
+    fallbackFields.forEach(({ key, label, revenueKey }) => {
+      const streamsValue = (song as Record<string, unknown>)[key];
+      const revenueValue = revenueKey
+        ? (song as Record<string, unknown>)[revenueKey]
+        : undefined;
+
+      if (streamsValue !== undefined && streamsValue !== null) {
+        addEntry(key, label, streamsValue, revenueValue);
+      }
+    });
+  }
+
+  const breakdown = Array.from(breakdownMap.values()).filter(
+    (entry) => entry.streams > 0 || entry.revenue > 0
+  );
+
+  breakdown.sort((a, b) => b.streams - a.streams);
+
+  return breakdown;
+};
+
+const formatLargeNumber = (value: number): string => {
+  if (!Number.isFinite(value)) return "0";
+  if (Math.abs(value) >= 1_000_000) {
+    const formatted = (value / 1_000_000).toFixed(1);
+    return `${parseFloat(formatted)}M`;
+  }
+  if (Math.abs(value) >= 1_000) {
+    const formatted = (value / 1_000).toFixed(1);
+    return `${parseFloat(formatted)}K`;
+  }
+  return Math.round(value).toLocaleString();
+};
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 2,
+});
+
 const StreamingPlatforms = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useGameData();
-  
+
   const [platforms, setPlatforms] = useState<StreamingPlatform[]>([]);
   const [playerAccounts, setPlayerAccounts] = useState<PlayerStreamingAccount[]>([]);
-  const [userSongs, setUserSongs] = useState<any[]>([]);
+  const [userSongs, setUserSongs] = useState<SongWithPlatformData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
+  const loadData = useCallback(async () => {
+    if (!user) return;
 
-  const loadData = async () => {
     try {
       // Load streaming platforms
       const { data: platformsData, error: platformsError } = await supabase
@@ -78,23 +287,77 @@ const StreamingPlatforms = () => {
           *,
           streaming_platforms!player_streaming_accounts_platform_id_fkey(*)
         `)
-        .eq('user_id', user!.id);
+        .eq('user_id', user.id);
 
       if (accountsError) throw accountsError;
       setPlayerAccounts(accountsData || []);
 
-      // Load player's songs
-      const { data: songsData, error: songsError } = await supabase
+      // Load player's songs with streaming metrics
+      let songsData: SongRecord[] = [];
+      const songsResponse = await supabase
         .from('songs')
         .select('*')
-        .eq('artist_id', user!.id)
+        .eq('artist_id', user.id)
         .eq('status', 'released')
         .order('created_at', { ascending: false });
 
-      if (songsError) throw songsError;
-      setUserSongs(songsData || []);
+      if (songsResponse.error) {
+        // Some environments may use user_id instead of artist_id
+        if (songsResponse.error.message?.toLowerCase().includes('artist_id')) {
+          const fallbackResponse = await supabase
+            .from('songs')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'released')
+            .order('created_at', { ascending: false });
 
-    } catch (error: any) {
+          if (fallbackResponse.error) throw fallbackResponse.error;
+          songsData = (fallbackResponse.data as SongRecord[]) || [];
+        } else {
+          throw songsResponse.error;
+        }
+      } else {
+        songsData = (songsResponse.data as SongRecord[]) || [];
+      }
+
+      const streamingPlatforms = platformsData || [];
+      const formattedSongs: SongWithPlatformData[] = songsData.map((song) => {
+        const platformBreakdown = buildPlatformBreakdown(song, streamingPlatforms);
+        const breakdownStreams = platformBreakdown.reduce(
+          (total, entry) => total + entry.streams,
+          0
+        );
+        let breakdownRevenue = platformBreakdown.reduce(
+          (total, entry) => total + entry.revenue,
+          0
+        );
+
+        if (
+          breakdownRevenue === 0 &&
+          song.revenue !== undefined &&
+          song.revenue !== null
+        ) {
+          breakdownRevenue = safeNumber(song.revenue);
+        }
+
+        const totalStreamsValue =
+          breakdownStreams > 0 ? breakdownStreams : safeNumber(song.streams);
+
+        return {
+          id: song.id,
+          title: song.title,
+          album: song.album ?? song.album_name ?? song.albumTitle ?? null,
+          genre: song.genre ?? undefined,
+          status: song.status ?? undefined,
+          totalStreams: totalStreamsValue,
+          totalRevenue: breakdownRevenue,
+          platformBreakdown,
+        };
+      });
+
+      setUserSongs(formattedSongs);
+
+    } catch (error) {
       console.error('Error loading streaming data:', error);
       toast({
         variant: "destructive",
@@ -104,7 +367,13 @@ const StreamingPlatforms = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
 
   const connectPlatform = async (platformId: string) => {
     if (!user || !profile) return;
@@ -145,7 +414,7 @@ const StreamingPlatforms = () => {
         title: "Platform Connected!",
         description: `Successfully connected to ${platform.name}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error connecting platform:', error);
       toast({
         variant: "destructive",
@@ -165,109 +434,6 @@ const StreamingPlatforms = () => {
       </div>
     );
   }
-
-  const mockPlatforms = [
-    {
-      id: 1,
-      name: "Spotify",
-      logo: "🎵",
-      monthlyListeners: 450000,
-      streams: 2400000,
-      revenue: 8200,
-      royaltyRate: 0.003,
-      playlists: 45,
-      topPlaylist: "Indie Rock Hits",
-      growth: 12.5,
-      color: "bg-green-500"
-    },
-    {
-      id: 2,
-      name: "Apple Music",
-      logo: "🎶",
-      monthlyListeners: 280000,
-      streams: 1200000,
-      revenue: 4800,
-      royaltyRate: 0.004,
-      playlists: 23,
-      topPlaylist: "New Rock",
-      growth: 8.3,
-      color: "bg-gray-700"
-    },
-    {
-      id: 3,
-      name: "YouTube Music",
-      logo: "📺",
-      monthlyListeners: 320000,
-      streams: 1800000,
-      revenue: 3600,
-      royaltyRate: 0.002,
-      playlists: 67,
-      topPlaylist: "Rock Essentials",
-      growth: 15.2,
-      color: "bg-red-500"
-    },
-    {
-      id: 4,
-      name: "Amazon Music",
-      logo: "📻",
-      monthlyListeners: 150000,
-      streams: 680000,
-      revenue: 2100,
-      royaltyRate: 0.0035,
-      playlists: 18,
-      topPlaylist: "Prime Rock",
-      growth: 6.7,
-      color: "bg-orange-500"
-    }
-  ];
-
-  const songs = [
-    {
-      id: 1,
-      title: "Electric Dreams",
-      album: "Voltage",
-      totalStreams: 1250000,
-      platforms: {
-        spotify: 650000,
-        apple: 280000,
-        youtube: 220000,
-        amazon: 100000
-      },
-      revenue: 3200,
-      playlistPlacements: 23,
-      trending: true
-    },
-    {
-      id: 2,
-      title: "Midnight Highway",
-      album: "Voltage",
-      totalStreams: 890000,
-      platforms: {
-        spotify: 420000,
-        apple: 190000,
-        youtube: 180000,
-        amazon: 100000
-      },
-      revenue: 2400,
-      playlistPlacements: 18,
-      trending: false
-    },
-    {
-      id: 3,
-      title: "Neon Lights",
-      album: "City Nights",
-      totalStreams: 2100000,
-      platforms: {
-        spotify: 1200000,
-        apple: 450000,
-        youtube: 350000,
-        amazon: 100000
-      },
-      revenue: 5800,
-      playlistPlacements: 42,
-      trending: true
-    }
-  ];
 
   const campaigns = [
     {
@@ -293,13 +459,6 @@ const StreamingPlatforms = () => {
       endDate: "Nov 30, 2024"
     }
   ];
-
-  const handlePromoteSong = (songId: number, platform: string) => {
-    toast({
-      title: "Promotion Started!",
-      description: `Your song is now being promoted on ${platform}.`,
-    });
-  };
 
   const handleSubmitToPlaylist = (playlistName: string) => {
     toast({
@@ -448,71 +607,94 @@ const StreamingPlatforms = () => {
                 </Card>
               ) : (
                 userSongs.map((song) => (
-                <Card key={song.id} className="bg-card/80 border-accent">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                      <div className="lg:col-span-2 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold text-cream">{song.title}</h3>
-                          {song.trending && (
-                            <Badge className="bg-accent text-background text-xs">
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              Trending
-                            </Badge>
+                  <Card key={song.id} className="bg-card/80 border-accent">
+                    <CardContent className="pt-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                        <div className="lg:col-span-2 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-semibold text-cream">{song.title}</h3>
+                            {song.status && (
+                              <Badge variant="outline" className="border-accent text-accent capitalize">
+                                {song.status}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-cream/60">{song.album ?? 'Single Release'}</p>
+                          {song.genre && (
+                            <p className="text-muted-foreground text-sm">
+                              Genre: <span className="text-cream">{song.genre}</span>
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-4 text-sm">
+                            <span className="text-accent font-bold">
+                              {formatLargeNumber(song.totalStreams)} streams
+                            </span>
+                            <span className="text-cream/80">
+                              {currencyFormatter.format(song.totalRevenue)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-2 space-y-3">
+                          <p className="text-cream/60 text-sm">Platform Breakdown</p>
+                          {song.platformBreakdown.length > 0 ? (
+                            <div className="space-y-2">
+                              {song.platformBreakdown.map((platform) => (
+                                <div
+                                  key={`${song.id}-${platform.label}`}
+                                  className="flex items-center justify-between rounded-lg border border-primary/20 bg-background/40 px-3 py-2"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-cream">{platform.label}</span>
+                                    <span className="text-cream/60 text-xs">
+                                      {currencyFormatter.format(platform.revenue)}
+                                    </span>
+                                  </div>
+                                  <span className="text-accent font-semibold">
+                                    {formatLargeNumber(platform.streams)} streams
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-sm">No platform data available yet.</p>
                           )}
                         </div>
-                        <p className="text-cream/60">{song.album}</p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-accent font-bold">
-                            {(song.totalStreams / 1000000).toFixed(1)}M streams
-                          </span>
-                          <span className="text-cream/80">
-                            ${song.revenue.toLocaleString()} revenue
-                          </span>
+
+                        <div className="space-y-3">
+                          <div className="rounded-lg border border-primary/20 bg-background/40 p-3 text-center">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wide">Total Streams</p>
+                            <p className="text-xl font-bold text-accent">
+                              {formatLargeNumber(song.totalStreams)}
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-primary/20 bg-background/40 p-3 text-center">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wide">Revenue</p>
+                            <p className="text-xl font-bold text-accent">
+                              {currencyFormatter.format(song.totalRevenue)}
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-primary/20 bg-background/40 p-3 text-center">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wide">Genre</p>
+                            <p className="text-lg font-semibold text-cream">{song.genre ?? 'Unknown'}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="w-full bg-gradient-primary"
+                            onClick={() =>
+                              toast({
+                                title: "Feature Coming Soon!",
+                                description: "Song promotion will be available soon!",
+                              })
+                            }
+                          >
+                            <Share2 className="h-4 w-4 mr-1" />
+                            Promote
+                          </Button>
                         </div>
                       </div>
-
-                      <div className="lg:col-span-2 space-y-2">
-                        <p className="text-cream/60 text-sm">Platform Breakdown</p>
-                        <div className="space-y-1">
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Total Plays</span>
-                            <span className="text-accent">{song.plays.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Popularity</span>
-                            <span className="text-accent">{song.popularity}/100</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Quality</span>
-                            <span className="text-accent">{song.quality_score}/100</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span>Status</span>
-                            <span className="text-accent capitalize">{song.status}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                        <div className="space-y-2">
-                          <div className="text-center space-y-1">
-                            <p className="text-muted-foreground text-sm">Genre</p>
-                            <p className="text-lg font-bold text-accent">{song.genre || 'Unknown'}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-gradient-primary"
-                              onClick={() => toast({ title: "Feature Coming Soon!", description: "Song promotion will be available soon!" })}
-                            >
-                              <Share2 className="h-4 w-4 mr-1" />
-                              Promote
-                            </Button>
-                          </div>
-                        </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
                 ))
               )}
             </div>
