@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Guitar, 
   Mic, 
@@ -11,32 +12,196 @@ import {
   ShoppingCart,
   Zap,
   Volume2,
-  Music
+  Music,
+  Shirt,
+  AlertCircle,
+  Check
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useGameData } from "@/hooks/useGameData";
+
+interface EquipmentItem {
+  id: string;
+  name: string;
+  category: string;
+  subcategory: string;
+  price: number;
+  rarity: string;
+  stat_boosts: Record<string, number>;
+  description: string;
+  image_url?: string;
+}
+
+interface PlayerEquipment {
+  id: string;
+  equipment_id: string;
+  is_equipped: boolean;
+  purchased_at: string;
+}
 
 const EquipmentStore = () => {
   const { toast } = useToast();
-  const [playerCash] = useState(15420);
-  const [ownedEquipment, setOwnedEquipment] = useState<string[]>([]);
+  const { user } = useAuth();
+  const { profile, updateProfile } = useGameData();
+  
+  const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
+  const [playerEquipment, setPlayerEquipment] = useState<PlayerEquipment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
 
-  const equipment = {
-    guitars: [
-      { id: "acoustic-basic", name: "Acoustic Guitar", price: 300, boost: "+5 Acoustic Performance", icon: <Guitar className="h-6 w-6" />, rarity: "common" },
-      { id: "electric-starter", name: "Electric Guitar Starter", price: 800, boost: "+8 Rock Performance", icon: <Zap className="h-6 w-6" />, rarity: "common" },
-      { id: "gibson-les-paul", name: "Gibson Les Paul", price: 2500, boost: "+15 Rock Performance", icon: <Guitar className="h-6 w-6" />, rarity: "rare" },
-      { id: "fender-stratocaster", name: "Fender Stratocaster", price: 3200, boost: "+18 Lead Guitar", icon: <Zap className="h-6 w-6" />, rarity: "epic" }
-    ],
-    microphones: [
-      { id: "sm58", name: "Shure SM58", price: 120, boost: "+6 Vocal Clarity", icon: <Mic className="h-6 w-6" />, rarity: "common" },
-      { id: "condenser-pro", name: "Condenser Mic Pro", price: 450, boost: "+12 Studio Recording", icon: <Mic className="h-6 w-6" />, rarity: "rare" },
-      { id: "neumann-u87", name: "Neumann U87", price: 1800, boost: "+20 Studio Quality", icon: <Mic className="h-6 w-6" />, rarity: "legendary" }
-    ],
-    audio: [
-      { id: "headphones-basic", name: "Studio Headphones", price: 80, boost: "+4 Mix Quality", icon: <Headphones className="h-6 w-6" />, rarity: "common" },
-      { id: "monitor-speakers", name: "Studio Monitors", price: 600, boost: "+10 Production", icon: <Volume2 className="h-6 w-6" />, rarity: "rare" },
-      { id: "interface-pro", name: "Audio Interface Pro", price: 1200, boost: "+15 Recording Quality", icon: <Music className="h-6 w-6" />, rarity: "epic" }
-    ]
+  useEffect(() => {
+    if (user) {
+      loadEquipment();
+      loadPlayerEquipment();
+    }
+  }, [user]);
+
+  const loadEquipment = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('equipment_items')
+        .select('*')
+        .order('category, price');
+
+      if (error) throw error;
+      setEquipment((data || []).map(item => ({
+        ...item,
+        stat_boosts: item.stat_boosts as Record<string, number>
+      })));
+    } catch (error: any) {
+      console.error('Error loading equipment:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load equipment store",
+      });
+    }
+  };
+
+  const loadPlayerEquipment = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('player_equipment')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setPlayerEquipment(data || []);
+    } catch (error: any) {
+      console.error('Error loading player equipment:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const purchaseEquipment = async (item: EquipmentItem) => {
+    if (!user || !profile) return;
+
+    if (profile.cash < item.price) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient funds",
+        description: `You need $${item.price} but only have $${profile.cash}`,
+      });
+      return;
+    }
+
+    // Check if already owned
+    const alreadyOwned = playerEquipment.some(eq => eq.equipment_id === item.id);
+    if (alreadyOwned) {
+      toast({
+        variant: "destructive",
+        title: "Already owned",
+        description: "You already own this equipment",
+      });
+      return;
+    }
+
+    setPurchasing(item.id);
+
+    try {
+      // Deduct money from profile
+      const newCash = profile.cash - item.price;
+      await updateProfile({ cash: newCash });
+
+      // Add equipment to player inventory
+      const { data, error } = await supabase
+        .from('player_equipment')
+        .insert({
+          user_id: user.id,
+          equipment_id: item.id,
+          is_equipped: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setPlayerEquipment(prev => [...prev, data]);
+
+      // Add activity
+      await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'purchase',
+          message: `Purchased ${item.name}`,
+          earnings: -item.price
+        });
+
+      toast({
+        title: "Purchase successful!",
+        description: `You bought ${item.name} for $${item.price}`,
+      });
+    } catch (error: any) {
+      console.error('Error purchasing equipment:', error);
+      toast({
+        variant: "destructive",
+        title: "Purchase failed",
+        description: "Failed to complete purchase",
+      });
+    } finally {
+      setPurchasing(null);
+    }
+  };
+
+  const toggleEquipment = async (equipment: PlayerEquipment) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('player_equipment')
+        .update({ is_equipped: !equipment.is_equipped })
+        .eq('id', equipment.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setPlayerEquipment(prev => 
+        prev.map(eq => 
+          eq.id === equipment.id 
+            ? { ...eq, is_equipped: !eq.is_equipped }
+            : eq
+        )
+      );
+
+      toast({
+        title: equipment.is_equipped ? "Unequipped" : "Equipped",
+        description: `Equipment ${equipment.is_equipped ? 'unequipped' : 'equipped'} successfully`,
+      });
+    } catch (error: any) {
+      console.error('Error toggling equipment:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update equipment",
+      });
+    }
   };
 
   const getRarityColor = (rarity: string) => {
@@ -49,70 +214,53 @@ const EquipmentStore = () => {
     }
   };
 
-  const handlePurchase = (item: any) => {
-    if (playerCash >= item.price) {
-      setOwnedEquipment([...ownedEquipment, item.id]);
-      toast({
-        title: "Equipment Purchased!",
-        description: `You bought ${item.name} for $${item.price}`,
-      });
-    } else {
-      toast({
-        title: "Not Enough Cash",
-        description: `You need $${item.price - playerCash} more to buy this item`,
-        variant: "destructive"
-      });
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "guitar": return <Guitar className="h-6 w-6" />;
+      case "microphone": return <Mic className="h-6 w-6" />;
+      case "audio": return <Headphones className="h-6 w-6" />;
+      case "clothing": return <Shirt className="h-6 w-6" />;
+      default: return <Music className="h-6 w-6" />;
     }
   };
 
-  const renderEquipmentGrid = (items: any[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {items.map((item) => (
-        <Card key={item.id} className="bg-card/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="text-primary">{item.icon}</div>
-                <div>
-                  <CardTitle className="text-lg">{item.name}</CardTitle>
-                  <Badge className={`text-xs mt-1 ${getRarityColor(item.rarity)}`}>
-                    {item.rarity}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            <CardDescription>{item.boost}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 text-success font-bold">
-                <DollarSign className="h-4 w-4" />
-                {item.price.toLocaleString()}
-              </div>
-              <Button 
-                onClick={() => handlePurchase(item)}
-                disabled={ownedEquipment.includes(item.id) || playerCash < item.price}
-                className="bg-gradient-primary hover:shadow-electric"
-              >
-                {ownedEquipment.includes(item.id) ? (
-                  "Owned"
-                ) : (
-                  <>
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Buy
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+  const isOwned = (itemId: string) => {
+    return playerEquipment.some(eq => eq.equipment_id === itemId);
+  };
+
+  const getOwnedEquipment = (itemId: string) => {
+    return playerEquipment.find(eq => eq.equipment_id === itemId);
+  };
+
+  const getStatBoostDisplay = (boosts: Record<string, number>) => {
+    return Object.entries(boosts).map(([stat, value]) => (
+      <span key={stat} className="text-xs text-success">
+        +{value} {stat}
+      </span>
+    ));
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-lg font-oswald">Loading equipment store...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const categories = ['guitar', 'microphone', 'audio', 'clothing'];
+  const groupedEquipment = categories.reduce((acc, category) => {
+    acc[category] = equipment.filter(item => item.category === category);
+    return acc;
+  }, {} as Record<string, EquipmentItem[]>);
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -120,42 +268,160 @@ const EquipmentStore = () => {
             </h1>
             <p className="text-muted-foreground">Upgrade your gear to boost your performance</p>
           </div>
-          <Card className="bg-card/80 backdrop-blur-sm border-success/20">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-success font-bold">
-                <DollarSign className="h-5 w-5" />
-                ${playerCash.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-primary/20 rounded-lg px-4 py-2">
+              <DollarSign className="h-5 w-5 text-success" />
+              <span className="text-xl font-bold text-success">
+                ${profile?.cash?.toLocaleString() || 0}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <Tabs defaultValue="guitars" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
-            <TabsTrigger value="guitars" className="flex items-center gap-2">
-              <Guitar className="h-4 w-4" />
-              Guitars
-            </TabsTrigger>
-            <TabsTrigger value="microphones" className="flex items-center gap-2">
-              <Mic className="h-4 w-4" />
-              Microphones
-            </TabsTrigger>
-            <TabsTrigger value="audio" className="flex items-center gap-2">
-              <Headphones className="h-4 w-4" />
-              Audio Gear
-            </TabsTrigger>
+        <Tabs defaultValue="store" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="store">Store</TabsTrigger>
+            <TabsTrigger value="inventory">My Equipment</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="guitars" className="mt-6">
-            {renderEquipmentGrid(equipment.guitars)}
+          <TabsContent value="store">
+            <Tabs defaultValue="guitar" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="guitar" className="flex items-center gap-2">
+                  <Guitar className="h-4 w-4" />
+                  Guitars
+                </TabsTrigger>
+                <TabsTrigger value="microphone" className="flex items-center gap-2">
+                  <Mic className="h-4 w-4" />
+                  Microphones
+                </TabsTrigger>
+                <TabsTrigger value="audio" className="flex items-center gap-2">
+                  <Headphones className="h-4 w-4" />
+                  Audio
+                </TabsTrigger>
+                <TabsTrigger value="clothing" className="flex items-center gap-2">
+                  <Shirt className="h-4 w-4" />
+                  Style
+                </TabsTrigger>
+              </TabsList>
+
+              {categories.map(category => (
+                <TabsContent key={category} value={category}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groupedEquipment[category]?.map((item) => (
+                      <Card key={item.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              {getCategoryIcon(item.category)}
+                              <div>
+                                <CardTitle className="text-lg">{item.name}</CardTitle>
+                                <Badge className={getRarityColor(item.rarity)} variant="outline">
+                                  {item.rarity}
+                                </Badge>
+                              </div>
+                            </div>
+                            {isOwned(item.id) && (
+                              <Check className="h-5 w-5 text-success" />
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <CardDescription>{item.description}</CardDescription>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {getStatBoostDisplay(item.stat_boosts)}
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4 text-success" />
+                              <span className="text-xl font-bold">${item.price.toLocaleString()}</span>
+                            </div>
+                            
+                            <Button
+                              onClick={() => purchaseEquipment(item)}
+                              disabled={isOwned(item.id) || purchasing === item.id || (profile?.cash || 0) < item.price}
+                              className="bg-gradient-primary hover:shadow-electric"
+                            >
+                              {purchasing === item.id ? (
+                                "Purchasing..."
+                              ) : isOwned(item.id) ? (
+                                "Owned"
+                              ) : (
+                                <>
+                                  <ShoppingCart className="h-4 w-4 mr-2" />
+                                  Buy
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
           </TabsContent>
 
-          <TabsContent value="microphones" className="mt-6">
-            {renderEquipmentGrid(equipment.microphones)}
-          </TabsContent>
+          <TabsContent value="inventory">
+            <div className="space-y-6">
+              {playerEquipment.length === 0 ? (
+                <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                  <CardContent className="text-center py-12">
+                    <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">No Equipment Yet</h3>
+                    <p className="text-muted-foreground">Visit the store to buy your first piece of equipment!</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {playerEquipment.map((playerEq) => {
+                    const item = equipment.find(eq => eq.id === playerEq.equipment_id);
+                    if (!item) return null;
 
-          <TabsContent value="audio" className="mt-6">
-            {renderEquipmentGrid(equipment.audio)}
+                    return (
+                      <Card key={playerEq.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              {getCategoryIcon(item.category)}
+                              <div>
+                                <CardTitle className="text-lg">{item.name}</CardTitle>
+                                <Badge className={getRarityColor(item.rarity)} variant="outline">
+                                  {item.rarity}
+                                </Badge>
+                              </div>
+                            </div>
+                            {playerEq.is_equipped && (
+                              <Badge variant="default" className="bg-success text-success-foreground">
+                                Equipped
+                              </Badge>
+                            )}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <CardDescription>{item.description}</CardDescription>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {getStatBoostDisplay(item.stat_boosts)}
+                          </div>
+
+                          <Button
+                            onClick={() => toggleEquipment(playerEq)}
+                            variant={playerEq.is_equipped ? "outline" : "default"}
+                            className="w-full"
+                          >
+                            {playerEq.is_equipped ? "Unequip" : "Equip"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>

@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          rarity: string | null
+          requirements: Json | null
+          rewards: Json | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          rarity?: string | null
+          requirements?: Json | null
+          rewards?: Json | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          rarity?: string | null
+          requirements?: Json | null
+          rewards?: Json | null
+        }
+        Relationships: []
+      }
       activity_feed: {
         Row: {
           activity_type: string
@@ -165,6 +201,45 @@ export type Database = {
           },
         ]
       }
+      equipment_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          rarity: string | null
+          stat_boosts: Json | null
+          subcategory: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          rarity?: string | null
+          stat_boosts?: Json | null
+          subcategory?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          rarity?: string | null
+          stat_boosts?: Json | null
+          subcategory?: string | null
+        }
+        Relationships: []
+      }
       event_participants: {
         Row: {
           event_id: string
@@ -199,6 +274,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fan_demographics: {
+        Row: {
+          age_18_25: number | null
+          age_26_35: number | null
+          age_36_45: number | null
+          age_45_plus: number | null
+          engagement_rate: number | null
+          id: string
+          platform_instagram: number | null
+          platform_tiktok: number | null
+          platform_twitter: number | null
+          platform_youtube: number | null
+          total_fans: number | null
+          updated_at: string | null
+          user_id: string
+          weekly_growth: number | null
+        }
+        Insert: {
+          age_18_25?: number | null
+          age_26_35?: number | null
+          age_36_45?: number | null
+          age_45_plus?: number | null
+          engagement_rate?: number | null
+          id?: string
+          platform_instagram?: number | null
+          platform_tiktok?: number | null
+          platform_twitter?: number | null
+          platform_youtube?: number | null
+          total_fans?: number | null
+          updated_at?: string | null
+          user_id: string
+          weekly_growth?: number | null
+        }
+        Update: {
+          age_18_25?: number | null
+          age_26_35?: number | null
+          age_36_45?: number | null
+          age_45_plus?: number | null
+          engagement_rate?: number | null
+          id?: string
+          platform_instagram?: number | null
+          platform_tiktok?: number | null
+          platform_twitter?: number | null
+          platform_youtube?: number | null
+          total_fans?: number | null
+          updated_at?: string | null
+          user_id?: string
+          weekly_growth?: number | null
+        }
+        Relationships: []
       }
       game_events: {
         Row: {
@@ -323,6 +449,70 @@ export type Database = {
         }
         Relationships: []
       }
+      player_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          progress: Json | null
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          progress?: Json | null
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          progress?: Json | null
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_equipment: {
+        Row: {
+          equipment_id: string
+          id: string
+          is_equipped: boolean | null
+          purchased_at: string | null
+          user_id: string
+        }
+        Insert: {
+          equipment_id: string
+          id?: string
+          is_equipped?: boolean | null
+          purchased_at?: string | null
+          user_id: string
+        }
+        Update: {
+          equipment_id?: string
+          id?: string
+          is_equipped?: boolean | null
+          purchased_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_skills: {
         Row: {
           bass: number | null
@@ -361,6 +551,50 @@ export type Database = {
           vocals?: number | null
         }
         Relationships: []
+      }
+      player_streaming_accounts: {
+        Row: {
+          connected_at: string | null
+          followers: number | null
+          id: string
+          is_connected: boolean | null
+          monthly_plays: number | null
+          monthly_revenue: number | null
+          platform_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          connected_at?: string | null
+          followers?: number | null
+          id?: string
+          is_connected?: boolean | null
+          monthly_plays?: number | null
+          monthly_revenue?: number | null
+          platform_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          connected_at?: string | null
+          followers?: number | null
+          id?: string
+          is_connected?: boolean | null
+          monthly_plays?: number | null
+          monthly_revenue?: number | null
+          platform_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_streaming_accounts_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -407,16 +641,57 @@ export type Database = {
         }
         Relationships: []
       }
+      social_posts: {
+        Row: {
+          comments: number | null
+          content: string
+          created_at: string | null
+          fan_growth: number | null
+          id: string
+          likes: number | null
+          platform: string
+          shares: number | null
+          user_id: string
+        }
+        Insert: {
+          comments?: number | null
+          content: string
+          created_at?: string | null
+          fan_growth?: number | null
+          id?: string
+          likes?: number | null
+          platform: string
+          shares?: number | null
+          user_id: string
+        }
+        Update: {
+          comments?: number | null
+          content?: string
+          created_at?: string | null
+          fan_growth?: number | null
+          id?: string
+          likes?: number | null
+          platform?: string
+          shares?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       songs: {
         Row: {
           artist_id: string
           band_id: string | null
           created_at: string | null
+          duration: number | null
           genre: string | null
           id: string
+          lyrics: string | null
           plays: number | null
           popularity: number | null
+          quality_score: number | null
+          recording_cost: number | null
           release_date: string | null
+          status: string | null
           title: string
           updated_at: string | null
         }
@@ -424,11 +699,16 @@ export type Database = {
           artist_id: string
           band_id?: string | null
           created_at?: string | null
+          duration?: number | null
           genre?: string | null
           id?: string
+          lyrics?: string | null
           plays?: number | null
           popularity?: number | null
+          quality_score?: number | null
+          recording_cost?: number | null
           release_date?: string | null
+          status?: string | null
           title: string
           updated_at?: string | null
         }
@@ -436,17 +716,147 @@ export type Database = {
           artist_id?: string
           band_id?: string | null
           created_at?: string | null
+          duration?: number | null
           genre?: string | null
           id?: string
+          lyrics?: string | null
           plays?: number | null
           popularity?: number | null
+          quality_score?: number | null
+          recording_cost?: number | null
           release_date?: string | null
+          status?: string | null
           title?: string
           updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "songs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      streaming_platforms: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          min_followers: number | null
+          name: string
+          revenue_per_play: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          min_followers?: number | null
+          name: string
+          revenue_per_play?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          min_followers?: number | null
+          name?: string
+          revenue_per_play?: number | null
+        }
+        Relationships: []
+      }
+      tour_venues: {
+        Row: {
+          date: string
+          id: string
+          revenue: number | null
+          status: string | null
+          ticket_price: number | null
+          tickets_sold: number | null
+          tour_id: string
+          venue_id: string
+        }
+        Insert: {
+          date: string
+          id?: string
+          revenue?: number | null
+          status?: string | null
+          ticket_price?: number | null
+          tickets_sold?: number | null
+          tour_id: string
+          venue_id: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          revenue?: number | null
+          status?: string | null
+          ticket_price?: number | null
+          tickets_sold?: number | null
+          tour_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_venues_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_venues_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tours: {
+        Row: {
+          band_id: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: string | null
+          total_revenue: number | null
+          user_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: string | null
+          total_revenue?: number | null
+          user_id: string
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string | null
+          total_revenue?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tours_band_id_fkey"
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
