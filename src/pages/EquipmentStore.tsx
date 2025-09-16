@@ -15,12 +15,13 @@ import {
   Music,
   Shirt,
   AlertCircle,
-  Check
+  Check,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerSkills } from "@/hooks/useGameData";
 
 interface EquipmentItem {
   id: string;
@@ -38,23 +39,89 @@ interface PlayerEquipment {
   id: string;
   equipment_id: string;
   is_equipped: boolean;
-  purchased_at: string;
+  purchased_at: string | null;
+  equipped?: boolean;
+  upgrade_level: number;
 }
+
+interface EquipmentUpgrade {
+  id: string;
+  equipment_id: string;
+  tier: number;
+  cost: number;
+  stat_boosts: Record<string, number>;
+  description?: string | null;
+}
+
+const normalizeStatBoosts = (boosts: unknown): Record<string, number> => {
+  if (!boosts || typeof boosts !== "object" || Array.isArray(boosts)) {
+    return {};
+  }
+
+  return Object.entries(boosts as Record<string, unknown>).reduce((acc, [stat, value]) => {
+    const numericValue = typeof value === "number" ? value : Number(value);
+    if (!Number.isNaN(numericValue)) {
+      acc[stat] = numericValue;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+};
+
+const calculateTotalEquipmentBonus = (
+  playerEquipmentList: PlayerEquipment[],
+  equipmentList: EquipmentItem[],
+  upgradeMap: Record<string, EquipmentUpgrade[]>
+): Record<string, number> => {
+  if (!playerEquipmentList.length || !equipmentList.length) {
+    return {};
+  }
+
+  const equipmentLookup = new Map(equipmentList.map(item => [item.id, item]));
+  const totalBonus: Record<string, number> = {};
+
+  playerEquipmentList.forEach(playerItem => {
+    const baseItem = equipmentLookup.get(playerItem.equipment_id);
+    if (!baseItem) return;
+
+    const isEquipped = Boolean(playerItem.is_equipped ?? playerItem.equipped);
+    if (!isEquipped) return;
+
+    Object.entries(baseItem.stat_boosts || {}).forEach(([stat, value]) => {
+      totalBonus[stat] = (totalBonus[stat] || 0) + value;
+    });
+
+    const appliedUpgrades = upgradeMap[playerItem.equipment_id] || [];
+    if (!appliedUpgrades.length) return;
+
+    appliedUpgrades
+      .filter(upgrade => upgrade.tier <= (playerItem.upgrade_level ?? 0))
+      .forEach(upgrade => {
+        Object.entries(upgrade.stat_boosts).forEach(([stat, value]) => {
+          totalBonus[stat] = (totalBonus[stat] || 0) + value;
+        });
+      });
+  });
+
+  return totalBonus;
+};
 
 const EquipmentStore = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, updateProfile } = useGameData();
-  
+  const { profile, updateProfile, skills, updateSkills } = useGameData();
+
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [playerEquipment, setPlayerEquipment] = useState<PlayerEquipment[]>([]);
+  const [equipmentUpgrades, setEquipmentUpgrades] = useState<Record<string, EquipmentUpgrade[]>>({});
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [upgrading, setUpgrading] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       loadEquipment();
       loadPlayerEquipment();
+      loadEquipmentUpgrades();
     }
   }, [user]);
 
@@ -68,7 +135,7 @@ const EquipmentStore = () => {
       if (error) throw error;
       setEquipment((data || []).map(item => ({
         ...item,
-        stat_boosts: item.stat_boosts as Record<string, number>
+        stat_boosts: normalizeStatBoosts(item.stat_boosts)
       })));
     } catch (error: any) {
       console.error('Error loading equipment:', error);
@@ -76,6 +143,48 @@ const EquipmentStore = () => {
         variant: "destructive",
         title: "Error",
         description: "Failed to load equipment store",
+      });
+    }
+  };
+
+  const loadEquipmentUpgrades = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('equipment_upgrades')
+        .select('*')
+        .order('tier', { ascending: true });
+
+      if (error) throw error;
+
+      const grouped = (data || []).reduce((acc, upgrade) => {
+        const entry: EquipmentUpgrade = {
+          id: upgrade.id,
+          equipment_id: upgrade.equipment_id,
+          tier: upgrade.tier,
+          cost: upgrade.cost,
+          stat_boosts: normalizeStatBoosts(upgrade.stat_boosts),
+          description: upgrade.description ?? null
+        };
+
+        if (!acc[entry.equipment_id]) {
+          acc[entry.equipment_id] = [];
+        }
+
+        acc[entry.equipment_id]!.push(entry);
+        return acc;
+      }, {} as Record<string, EquipmentUpgrade[]>);
+
+      Object.keys(grouped).forEach(key => {
+        grouped[key].sort((a, b) => a.tier - b.tier);
+      });
+
+      setEquipmentUpgrades(grouped);
+    } catch (error: any) {
+      console.error('Error loading equipment upgrades:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load equipment upgrades",
       });
     }
   };
@@ -90,7 +199,12 @@ const EquipmentStore = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setPlayerEquipment(data || []);
+      setPlayerEquipment((data || []).map(item => ({
+        ...item,
+        is_equipped: Boolean(item.is_equipped ?? item.equipped),
+        equipped: 'equipped' in item ? Boolean(item.equipped ?? item.is_equipped) : undefined,
+        upgrade_level: item.upgrade_level ?? 0
+      })));
     } catch (error: any) {
       console.error('Error loading player equipment:', error);
     } finally {
@@ -142,7 +256,14 @@ const EquipmentStore = () => {
       if (error) throw error;
 
       // Update local state
-      setPlayerEquipment(prev => [...prev, data]);
+      const normalizedEquipment: PlayerEquipment = {
+        ...data,
+        is_equipped: Boolean(data.is_equipped ?? data.equipped),
+        equipped: 'equipped' in data ? Boolean(data.equipped ?? data.is_equipped) : undefined,
+        upgrade_level: data.upgrade_level ?? 0,
+        purchased_at: data.purchased_at ?? null,
+      };
+      setPlayerEquipment(prev => [...prev, normalizedEquipment]);
 
       // Add activity
       await supabase
@@ -182,10 +303,10 @@ const EquipmentStore = () => {
       if (error) throw error;
 
       // Update local state
-      setPlayerEquipment(prev => 
-        prev.map(eq => 
-          eq.id === equipment.id 
-            ? { ...eq, is_equipped: !eq.is_equipped }
+      setPlayerEquipment(prev =>
+        prev.map(eq =>
+          eq.id === equipment.id
+            ? { ...eq, is_equipped: !eq.is_equipped, equipped: !eq.is_equipped }
             : eq
         )
       );
@@ -232,12 +353,149 @@ const EquipmentStore = () => {
     return playerEquipment.find(eq => eq.equipment_id === itemId);
   };
 
+  const getUpgradesForItem = (equipmentId: string) => {
+    return equipmentUpgrades[equipmentId] || [];
+  };
+
+  const getNextUpgrade = (equipmentId: string, currentTier: number) => {
+    return getUpgradesForItem(equipmentId).find(upgrade => upgrade.tier === currentTier + 1);
+  };
+
+  const getMaxUpgradeTier = (equipmentId: string) => {
+    const upgrades = getUpgradesForItem(equipmentId);
+    if (!upgrades.length) return 0;
+    return upgrades[upgrades.length - 1].tier;
+  };
+
   const getStatBoostDisplay = (boosts: Record<string, number>) => {
     return Object.entries(boosts).map(([stat, value]) => (
       <span key={stat} className="text-xs text-success">
         +{value} {stat}
       </span>
     ));
+  };
+
+  const upgradeEquipment = async (playerEq: PlayerEquipment) => {
+    if (!user || !profile) return;
+
+    const item = equipment.find(eq => eq.id === playerEq.equipment_id);
+    if (!item) {
+      toast({
+        variant: "destructive",
+        title: "Upgrade unavailable",
+        description: "Unable to locate this equipment item."
+      });
+      return;
+    }
+
+    const currentTier = playerEq.upgrade_level ?? 0;
+    const nextUpgrade = getNextUpgrade(playerEq.equipment_id, currentTier);
+
+    if (!nextUpgrade) {
+      toast({
+        title: "Max level reached",
+        description: `${item.name} is already fully upgraded.`,
+      });
+      return;
+    }
+
+    const currentCash = profile.cash || 0;
+    if (currentCash < nextUpgrade.cost) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient funds",
+        description: `Upgrading requires $${nextUpgrade.cost.toLocaleString()}, but you only have $${currentCash.toLocaleString()}.`
+      });
+      return;
+    }
+
+    const originalCash = currentCash;
+    const newCash = originalCash - nextUpgrade.cost;
+    const previousBonus = calculateTotalEquipmentBonus(playerEquipment, equipment, equipmentUpgrades);
+    const updatedPlayerEquipment = playerEquipment.map(eq =>
+      eq.id === playerEq.id
+        ? { ...eq, upgrade_level: currentTier + 1 }
+        : eq
+    );
+
+    setUpgrading(playerEq.id);
+
+    let profileUpdated = false;
+
+    try {
+      await updateProfile({ cash: newCash });
+      profileUpdated = true;
+
+      const { error } = await supabase
+        .from('player_equipment')
+        .update({ upgrade_level: currentTier + 1 })
+        .eq('id', playerEq.id);
+
+      if (error) throw error;
+
+      setPlayerEquipment(updatedPlayerEquipment);
+
+      const newBonus = calculateTotalEquipmentBonus(updatedPlayerEquipment, equipment, equipmentUpgrades);
+      const deltaStats: Record<string, number> = {};
+      const affectedStats = new Set([
+        ...Object.keys(previousBonus),
+        ...Object.keys(newBonus)
+      ]);
+
+      affectedStats.forEach(stat => {
+        const diff = (newBonus[stat] || 0) - (previousBonus[stat] || 0);
+        if (diff !== 0) {
+          deltaStats[stat] = diff;
+        }
+      });
+
+      if (Object.keys(deltaStats).length > 0 && skills) {
+        const skillUpdates: Partial<PlayerSkills> = {};
+
+        Object.entries(deltaStats).forEach(([stat, diff]) => {
+          if (stat in skills) {
+            const key = stat as keyof PlayerSkills;
+            const currentValue = skills[key] || 0;
+            skillUpdates[key] = Math.max(0, currentValue + diff);
+          }
+        });
+
+        if (Object.keys(skillUpdates).length > 0) {
+          await updateSkills(skillUpdates);
+        }
+      }
+
+      await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'upgrade',
+          message: `Upgraded ${item.name} to Tier ${nextUpgrade.tier}`,
+          earnings: -nextUpgrade.cost
+        });
+
+      toast({
+        title: "Upgrade successful!",
+        description: `${item.name} has reached Tier ${nextUpgrade.tier}.`
+      });
+    } catch (error: any) {
+      console.error('Error upgrading equipment:', error);
+      if (profileUpdated) {
+        try {
+          await updateProfile({ cash: originalCash });
+        } catch (rollbackError) {
+          console.error('Failed to revert cash after upgrade error:', rollbackError);
+        }
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Upgrade failed",
+        description: "We couldn't apply that upgrade. Please try again."
+      });
+    } finally {
+      setUpgrading(null);
+    }
   };
 
   if (loading) {
@@ -381,6 +639,14 @@ const EquipmentStore = () => {
                     const item = equipment.find(eq => eq.id === playerEq.equipment_id);
                     if (!item) return null;
 
+                    const upgradesForItem = getUpgradesForItem(item.id);
+                    const currentTier = playerEq.upgrade_level ?? 0;
+                    const nextUpgrade = getNextUpgrade(item.id, currentTier);
+                    const maxTier = getMaxUpgradeTier(item.id);
+                    const isUpgrading = upgrading === playerEq.id;
+                    const availableCash = profile?.cash ?? 0;
+                    const upgradeDisabled = !nextUpgrade || isUpgrading || availableCash < nextUpgrade.cost;
+
                     return (
                       <Card key={playerEq.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                         <CardHeader>
@@ -401,20 +667,84 @@ const EquipmentStore = () => {
                             )}
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-5">
                           <CardDescription>{item.description}</CardDescription>
-                          
+
                           <div className="flex flex-wrap gap-2">
                             {getStatBoostDisplay(item.stat_boosts)}
                           </div>
 
-                          <Button
-                            onClick={() => toggleEquipment(playerEq)}
-                            variant={playerEq.is_equipped ? "outline" : "default"}
-                            className="w-full"
-                          >
-                            {playerEq.is_equipped ? "Unequip" : "Equip"}
-                          </Button>
+                          <div className="space-y-3">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <Button
+                                onClick={() => toggleEquipment(playerEq)}
+                                variant={playerEq.is_equipped ? "outline" : "default"}
+                                className="w-full sm:w-auto"
+                              >
+                                {playerEq.is_equipped ? "Unequip" : "Equip"}
+                              </Button>
+
+                              <Button
+                                onClick={() => upgradeEquipment(playerEq)}
+                                variant="secondary"
+                                className="w-full sm:w-auto"
+                                disabled={upgradeDisabled}
+                              >
+                                {isUpgrading ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Upgrading...
+                                  </>
+                                ) : nextUpgrade ? (
+                                  <>
+                                    <Zap className="h-4 w-4 mr-2" />
+                                    Upgrade (${nextUpgrade.cost.toLocaleString()})
+                                  </>
+                                ) : (
+                                  <>
+                                    <Zap className="h-4 w-4 mr-2" />
+                                    Max Tier
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+
+                            <div className="rounded-lg border border-primary/20 bg-card/60 px-3 py-2 space-y-2">
+                              <div className="flex items-center justify-between text-sm font-medium">
+                                <span>
+                                  Current Tier: {currentTier}
+                                  {maxTier ? ` / ${maxTier}` : ''}
+                                </span>
+                                {nextUpgrade && (
+                                  <span className="flex items-center gap-1 text-success">
+                                    <DollarSign className="h-3 w-3" />
+                                    {nextUpgrade.cost.toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+
+                              {nextUpgrade ? (
+                                <>
+                                  <div className="flex flex-wrap gap-2">
+                                    {getStatBoostDisplay(nextUpgrade.stat_boosts)}
+                                  </div>
+                                  {nextUpgrade.description && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {nextUpgrade.description}
+                                    </p>
+                                  )}
+                                </>
+                              ) : upgradesForItem.length > 0 ? (
+                                <p className="text-xs text-muted-foreground">
+                                  Fully upgraded.
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  No upgrades available for this item yet.
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </CardContent>
                       </Card>
                     );

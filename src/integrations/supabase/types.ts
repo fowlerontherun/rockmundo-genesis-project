@@ -439,6 +439,44 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment_upgrades: {
+        Row: {
+          cost: number
+          created_at: string | null
+          description: string | null
+          equipment_id: string
+          id: string
+          stat_boosts: Json
+          tier: number
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          description?: string | null
+          equipment_id: string
+          id?: string
+          stat_boosts?: Json
+          tier: number
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          description?: string | null
+          equipment_id?: string
+          id?: string
+          stat_boosts?: Json
+          tier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_upgrades_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       event_participants: {
         Row: {
           event_id: string
@@ -897,6 +935,7 @@ export type Database = {
           id: string
           is_equipped: boolean | null
           purchased_at: string | null
+          upgrade_level: number
           user_id: string
         }
         Insert: {
@@ -907,6 +946,7 @@ export type Database = {
           id?: string
           is_equipped?: boolean | null
           purchased_at?: string | null
+          upgrade_level?: number
           user_id: string
         }
         Update: {
@@ -917,6 +957,7 @@ export type Database = {
           id?: string
           is_equipped?: boolean | null
           purchased_at?: string | null
+          upgrade_level?: number
           user_id?: string
         }
         Relationships: [
