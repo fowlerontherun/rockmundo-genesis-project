@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Guitar, 
-  Mic, 
+import {
+  Guitar,
+  Mic,
   Headphones,
   DollarSign,
   ShoppingCart,
@@ -30,6 +30,7 @@ interface EquipmentItem {
   subcategory: string;
   price: number;
   rarity: string;
+  stock: number;
   stat_boosts: Record<string, number>;
   description: string;
   image_url?: string;
@@ -109,7 +110,6 @@ const EquipmentStore = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile, updateProfile, skills, updateSkills } = useGameData();
-
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [playerEquipment, setPlayerEquipment] = useState<PlayerEquipment[]>([]);
   const [equipmentUpgrades, setEquipmentUpgrades] = useState<Record<string, EquipmentUpgrade[]>>({});
@@ -213,7 +213,34 @@ const EquipmentStore = () => {
   };
 
   const purchaseEquipment = async (item: EquipmentItem) => {
-    if (!user || !profile) return;
+    if (purchasing) return;
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: "Please sign in to purchase equipment.",
+      });
+      return;
+    }
+
+    if (!profile) {
+      toast({
+        variant: "destructive",
+        title: "Profile unavailable",
+        description: "We couldn't load your profile. Please try again.",
+      });
+      return;
+    }
+
+    if (item.stock <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Out of stock",
+        description: `${item.name} is currently unavailable.`,
+      });
+      return;
+    }
 
     if (profile.cash < item.price) {
       toast({
@@ -224,7 +251,6 @@ const EquipmentStore = () => {
       return;
     }
 
-    // Check if already owned
     const alreadyOwned = playerEquipment.some(eq => eq.equipment_id === item.id);
     if (alreadyOwned) {
       toast({
@@ -238,19 +264,8 @@ const EquipmentStore = () => {
     setPurchasing(item.id);
 
     try {
-      // Deduct money from profile
-      const newCash = profile.cash - item.price;
-      await updateProfile({ cash: newCash });
-
-      // Add equipment to player inventory
       const { data, error } = await supabase
-        .from('player_equipment')
-        .insert({
-          user_id: user.id,
-          equipment_id: item.id,
-          is_equipped: false
-        })
-        .select()
+        .rpc('purchase_equipment_item', { p_equipment_id: item.id })
         .single();
 
       if (error) throw error;
@@ -276,15 +291,19 @@ const EquipmentStore = () => {
         });
 
       toast({
-        title: "Purchase successful!",
+        title: 'Purchase successful!',
         description: `You bought ${item.name} for $${item.price}`,
       });
+
+      await loadEquipment();
+      await loadPlayerEquipment();
+      await refetch?.();
     } catch (error: any) {
       console.error('Error purchasing equipment:', error);
       toast({
-        variant: "destructive",
-        title: "Purchase failed",
-        description: "Failed to complete purchase",
+        variant: 'destructive',
+        title: 'Purchase failed',
+        description: 'Failed to complete purchase',
       });
     } finally {
       setPurchasing(null);
@@ -579,9 +598,20 @@ const EquipmentStore = () => {
                                 </Badge>
                               </div>
                             </div>
-                            {isOwned(item.id) && (
-                              <Check className="h-5 w-5 text-success" />
-                            )}
+                            <div className="flex flex-col items-end gap-2">
+                              {item.stock <= 0 && (
+                                <Badge variant="destructive" className="flex items-center gap-1 text-xs">
+                                  <Lock className="h-3 w-3" />
+                                  Out of Stock
+                                </Badge>
+                              )}
+                              {isOwned(item.id) && (
+                                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                                  <Check className="h-3 w-3" />
+                                  Owned
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -592,20 +622,39 @@ const EquipmentStore = () => {
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4 text-success" />
-                              <span className="text-xl font-bold">${item.price.toLocaleString()}</span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <DollarSign className="h-4 w-4 text-success" />
+                                <span className="text-xl font-bold">${item.price.toLocaleString()}</span>
+                              </div>
+                              <Badge
+                                variant={item.stock > 0 ? "outline" : "destructive"}
+                                className="w-fit text-xs flex items-center gap-1"
+                              >
+                                {item.stock > 0 ? (
+                                  `${item.stock} in stock`
+                                ) : (
+                                  <>
+                                    <Lock className="h-3 w-3" />
+                                    Out of Stock
+                                  </>
+                                )}
+                              </Badge>
                             </div>
-                            
+
                             <Button
                               onClick={() => purchaseEquipment(item)}
-                              disabled={isOwned(item.id) || purchasing === item.id || (profile?.cash || 0) < item.price}
+                              disabled={isOwned(item.id) || purchasing !== null || (profile?.cash || 0) < item.price || item.stock <= 0}
                               className="bg-gradient-primary hover:shadow-electric"
                             >
                               {purchasing === item.id ? (
                                 "Purchasing..."
                               ) : isOwned(item.id) ? (
                                 "Owned"
+                              ) : item.stock <= 0 ? (
+                                "Out of Stock"
+                              ) : (profile?.cash || 0) < item.price ? (
+                                "Can't Afford"
                               ) : (
                                 <>
                                   <ShoppingCart className="h-4 w-4 mr-2" />

@@ -21,7 +21,8 @@ import {
   Users,
   DollarSign,
   Music,
-  Share2
+  Share2,
+  TrendingUp,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +37,29 @@ type SongRecord = Database["public"]["Tables"]["songs"]["Row"] & {
   popularity?: number | null;
   totalStreams?: number | null;
   trending?: boolean | null;
+};
+type PromotionCampaignRow = Database["public"]["Tables"]["promotion_campaigns"]["Row"];
+
+interface PlatformBreakdown {
+  key: string;
+  label: string;
+  streams: number;
+  revenue: number;
+}
+
+type PromotionCampaign = Database["public"]["Tables"]["promotion_campaigns"]["Row"] & {
+  platform?: string | null;
+};
+
+type PromotionFunctionResponse = {
+  success: boolean;
+  message: string;
+  campaign?: PromotionCampaign | null;
+  statsDelta?: {
+    streams: number;
+    revenue: number;
+    listeners: number;
+  } | null;
 };
 
 interface PlatformMetric extends StreamingPlatform {
@@ -53,6 +77,12 @@ interface OverviewMetrics {
   streamsGrowth: number;
   revenueGrowth: number;
   listenersGrowth: number;
+}
+
+interface OverviewSnapshot {
+  totalStreams: number;
+  totalRevenue: number;
+  totalListeners: number;
 }
 
 interface PlatformSnapshot {
@@ -80,8 +110,214 @@ interface SongWithPlatformData {
   status?: string | null;
   totalStreams: number;
   totalRevenue: number;
-  totalListeners: number;
+  platformBreakdown: PlatformBreakdown[];
+  totalListeners?: number;
 }
+
+interface PromotionCampaign extends PromotionCampaignRow {
+  name?: string | null;
+  platform?: string | null;
+  end_date?: string | null;
+}
+
+interface PromotionFunctionResponse {
+  success: boolean;
+  message: string;
+  campaign?: PromotionCampaign | null;
+  statsDelta?: {
+    streams: number;
+    revenue: number;
+    listeners: number;
+  } | null;
+}
+
+const BASE_STREAMING_STATS = {
+  totalStreams: 0,
+  revenue: 0,
+  listeners: 0,
+} as const;
+
+const DEFAULT_REVENUE_PER_PLAY = 0.003;
+
+interface PlatformSourceMeta {
+  key: string;
+  label: string;
+  weight: number;
+  revenuePerPlay: number;
+}
+
+const DEFAULT_PLATFORM_DISTRIBUTION: PlatformSourceMeta[] = [
+  { key: "spotify", label: "Spotify", weight: 45, revenuePerPlay: 0.0032 },
+  { key: "apple-music", label: "Apple Music", weight: 25, revenuePerPlay: 0.007 },
+  { key: "youtube-music", label: "YouTube Music", weight: 20, revenuePerPlay: 0.0025 },
+  { key: "soundcloud", label: "SoundCloud", weight: 10, revenuePerPlay: 0.002 }
+];
+
+const normalizePlatformKey = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
+const formatPlatformLabel = (value: string): string => {
+  const cleaned = value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) {
+    return "Platform";
+  }
+
+  return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const safeNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  if (typeof value === "bigint") {
+    return Number(value);
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  return fallback;
+};
+
+const buildPlatformBreakdown = (
+  song: SongRecord,
+  streamingPlatforms: StreamingPlatform[]
+): PlatformBreakdown[] => {
+  const songRecord = song as Record<string, unknown>;
+  const totalStreams = safeNumber(
+    songRecord.totalStreams ?? songRecord.streams ?? songRecord.plays
+  );
+  const totalRevenue = safeNumber(
+    songRecord.totalRevenue ?? songRecord.revenue
+  );
+
+  const platformSources: PlatformSourceMeta[] = streamingPlatforms.length > 0
+    ? streamingPlatforms.map((platform, index) => {
+        const label = platform.name?.trim() || `Platform ${index + 1}`;
+        const keyBase = platform.id?.trim() || label;
+        const normalizedKey = normalizePlatformKey(keyBase);
+        const weight = Math.max(safeNumber(platform.min_followers, 1), 1);
+        const revenuePerPlay = safeNumber(
+          platform.revenue_per_play,
+          DEFAULT_REVENUE_PER_PLAY
+        );
+
+        return {
+          key: platform.id ?? (normalizedKey || `platform-${index + 1}`),
+          label,
+          weight,
+          revenuePerPlay,
+        };
+      })
+    : DEFAULT_PLATFORM_DISTRIBUTION.map((entry) => ({ ...entry }));
+
+  const metadataLookup = new Map<string, PlatformSourceMeta>();
+  platformSources.forEach((source, index) => {
+    const normalizedKey = normalizePlatformKey(source.key) || `platform-${index + 1}`;
+    metadataLookup.set(normalizedKey, source);
+    metadataLookup.set(normalizePlatformKey(source.label), source);
+  });
+
+  DEFAULT_PLATFORM_DISTRIBUTION.forEach((entry) => {
+    const normalizedKey = normalizePlatformKey(entry.key);
+    if (!metadataLookup.has(normalizedKey)) {
+      metadataLookup.set(normalizedKey, entry);
+    }
+  });
+
+  const rawPlatforms = songRecord.platforms;
+  if (rawPlatforms && typeof rawPlatforms === "object" && !Array.isArray(rawPlatforms)) {
+    const explicitEntries = Object.entries(rawPlatforms as Record<string, unknown>)
+      .map(([rawKey, rawValue], index) => {
+        const normalizedKey = normalizePlatformKey(rawKey);
+        const metadata = metadataLookup.get(normalizedKey) ?? {
+          key: normalizedKey || `platform-${index + 1}`,
+          label: formatPlatformLabel(rawKey),
+          weight: 1,
+          revenuePerPlay: DEFAULT_REVENUE_PER_PLAY,
+        };
+
+        const streams = safeNumber(rawValue);
+        const revenue = totalRevenue > 0 && totalStreams > 0
+          ? (streams / totalStreams) * totalRevenue
+          : streams * metadata.revenuePerPlay;
+
+        return {
+          key: metadata.key,
+          label: metadata.label,
+          streams,
+          revenue: Number.isFinite(revenue) ? revenue : 0,
+        };
+      })
+      .filter((entry) => entry.streams > 0 || entry.revenue > 0);
+
+    if (explicitEntries.length > 0) {
+      return explicitEntries;
+    }
+  }
+
+  const sources = platformSources.length > 0
+    ? platformSources
+    : DEFAULT_PLATFORM_DISTRIBUTION;
+
+  if (sources.length === 0) {
+    return [];
+  }
+
+  const totalWeight = sources.reduce((sum, entry) => sum + (entry.weight || 0), 0) || sources.length;
+  const allocationBasis = totalStreams > 0
+    ? totalStreams
+    : totalRevenue > 0
+      ? Math.round(totalRevenue / DEFAULT_REVENUE_PER_PLAY)
+      : 0;
+
+  let allocatedStreams = 0;
+  let allocatedRevenue = 0;
+
+  const fallbackEntries = sources.map((source, index) => {
+    const weight = source.weight > 0 ? source.weight : 1;
+    const ratio = totalWeight > 0 ? weight / totalWeight : 1 / sources.length;
+
+    let streams = 0;
+    if (allocationBasis > 0) {
+      streams = index === sources.length - 1
+        ? Math.max(allocationBasis - allocatedStreams, 0)
+        : Math.max(Math.round(allocationBasis * ratio), 0);
+      allocatedStreams += streams;
+    }
+
+    let revenue = 0;
+    if (totalRevenue > 0) {
+      revenue = allocationBasis > 0
+        ? (streams / allocationBasis) * totalRevenue
+        : totalRevenue * ratio;
+
+      if (index === sources.length - 1) {
+        revenue = totalRevenue - allocatedRevenue;
+      }
+
+      allocatedRevenue += revenue;
+    } else {
+      revenue = streams * source.revenuePerPlay;
+    }
+
+    return {
+      key: source.key,
+      label: source.label,
+      streams,
+      revenue: Number.isFinite(revenue) ? revenue : 0,
+    };
+  });
+
+  return fallbackEntries.filter((entry) => entry.streams > 0 || entry.revenue > 0);
+};
 
 const calculateGrowth = (
   previous: number | null | undefined,
@@ -186,6 +422,44 @@ const formatCurrency = (value: number) => {
   return currencyFormatter.format(value);
 };
 
+type PresetCampaignType = "playlist" | "social" | "radio";
+
+const PRESET_CAMPAIGNS: Record<
+  PresetCampaignType,
+  {
+    action: "promotion" | "playlist_submission";
+    budget: number;
+    platformKeyword: string;
+    fallbackPlatformName: string;
+    playlistName?: string;
+  }
+> = {
+  playlist: {
+    action: "playlist_submission",
+    budget: 250,
+    platformKeyword: "spotify",
+    fallbackPlatformName: "Spotify",
+    playlistName: "Editorial Playlist Outreach",
+  },
+  social: {
+    action: "promotion",
+    budget: 180,
+    platformKeyword: "youtube",
+    fallbackPlatformName: "YouTube Music",
+  },
+  radio: {
+    action: "promotion",
+    budget: 220,
+    platformKeyword: "apple",
+    fallbackPlatformName: "Apple Music",
+  },
+};
+
+const normalizeCampaign = (campaign: PromotionCampaign): PromotionCampaign => ({
+  ...campaign,
+  platform: campaign.platform ?? campaign.platform_name ?? null,
+});
+
 const StreamingPlatforms = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -235,12 +509,14 @@ const StreamingPlatforms = () => {
         .eq('user_id', user.id);
       if (accountsError) throw accountsError;
       setPlayerAccounts(accountsData ?? []);
-      const { data: songsData, error: songsError } = await supabase
+      const songsResponse = await supabase
         .from('songs')
         .select('*')
         .eq('artist_id', user.id)
         .eq('status', 'released')
         .order('created_at', { ascending: false });
+
+      let finalSongs = songsResponse.data as SongRecord[] | null | undefined;
 
       if (songsResponse.error) {
         // Some environments may use user_id instead of artist_id
@@ -253,13 +529,13 @@ const StreamingPlatforms = () => {
             .order('created_at', { ascending: false });
 
           if (fallbackResponse.error) throw fallbackResponse.error;
-          songsData = (fallbackResponse.data as SongRecord[]) || [];
+          finalSongs = (fallbackResponse.data as SongRecord[]) ?? [];
         } else {
           throw songsResponse.error;
         }
-      } else {
-        songsData = (songsResponse.data as SongRecord[]) || [];
       }
+
+      const songsData: SongRecord[] = finalSongs ?? [];
 
       let streamingStatsData: StreamingStatsRecord[] = [];
       if (songsData.length > 0) {
@@ -415,6 +691,164 @@ const StreamingPlatforms = () => {
     }
   };
 
+  const updateCampaign = async (
+    campaignId: string,
+    updates: Database["public"]["Tables"]["promotion_campaigns"]["Update"]
+  ) => {
+    if (!user) {
+      const message = "You need to be logged in to manage campaigns.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Not signed in",
+        description: message,
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("promotion_campaigns")
+        .update(updates)
+        .eq("id", campaignId)
+        .eq("user_id", user.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error("Campaign could not be updated.");
+      }
+
+      const updatedCampaign = normalizeCampaign(data as PromotionCampaign);
+
+      setCampaigns((previousCampaigns) =>
+        previousCampaigns.map((campaign) =>
+          campaign.id === campaignId ? updatedCampaign : campaign
+        )
+      );
+
+      const statusMessage = updates.status
+        ? `Campaign status updated to ${updates.status}.`
+        : "Campaign updated successfully.";
+
+      setServerMessage({ type: "success", text: statusMessage });
+      toast({
+        title: "Campaign Updated",
+        description: statusMessage,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update campaign.";
+
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: message,
+      });
+    }
+  };
+
+  const handleCreatePresetCampaign = async (presetType: PresetCampaignType) => {
+    if (!user) {
+      const message = "You need to be logged in to launch a campaign.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Not signed in",
+        description: message,
+      });
+      return;
+    }
+
+    if (userSongs.length === 0) {
+      const message = "Release a song before launching a campaign.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "No songs available",
+        description: message,
+      });
+      return;
+    }
+
+    const preset = PRESET_CAMPAIGNS[presetType];
+    if (!preset) {
+      return;
+    }
+
+    const targetSong = userSongs.reduce((best, song) => {
+      const bestStreams = Number(best.totalStreams ?? best.streams ?? 0);
+      const songStreams = Number(song.totalStreams ?? song.streams ?? 0);
+
+      return songStreams > bestStreams ? song : best;
+    }, userSongs[0]!);
+
+    const targetPlatform = platforms.find((platform) =>
+      platform.name.toLowerCase().includes(preset.platformKeyword)
+    );
+
+    setPromoting((previous) => ({ ...previous, [presetType]: true }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke<PromotionFunctionResponse>(
+        "promotions",
+        {
+          body: {
+            action: preset.action,
+            songId: targetSong.id,
+            platformId: targetPlatform?.id,
+            platformName: targetPlatform?.name ?? preset.fallbackPlatformName,
+            budget: preset.budget,
+            playlistName: preset.playlistName,
+          },
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.message ?? "Failed to launch campaign.");
+      }
+
+      if (data.campaign) {
+        const campaignRecord = normalizeCampaign(data.campaign);
+        setCampaigns((previousCampaigns) => [campaignRecord, ...previousCampaigns]);
+      }
+
+      if (data.statsDelta) {
+        setStreamingStats((previousStats) => ({
+          totalStreams: previousStats.totalStreams + (data.statsDelta?.streams ?? 0),
+          revenue: previousStats.revenue + (data.statsDelta?.revenue ?? 0),
+          listeners: previousStats.listeners + (data.statsDelta?.listeners ?? 0),
+        }));
+      }
+
+      setServerMessage({ type: "success", text: data.message });
+      toast({
+        title: "Campaign Launched!",
+        description: data.message,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to launch campaign.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Campaign failed",
+        description: message,
+      });
+    } finally {
+      setPromoting((previous) => ({ ...previous, [presetType]: false }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
@@ -426,54 +860,9 @@ const StreamingPlatforms = () => {
     );
   }
 
-  const songs = [
-    {
-      id: 1,
-      title: "Electric Dreams",
-      album: "Voltage",
-      totalStreams: 1250000,
-      platforms: {
-        spotify: 650000,
-        apple: 280000,
-        youtube: 220000,
-        amazon: 100000
-      },
-      revenue: 3200,
-      playlistPlacements: 23,
-      trending: true
-    },
-    {
-      id: 2,
-      title: "Midnight Highway",
-      album: "Voltage",
-      totalStreams: 890000,
-      platforms: {
-        spotify: 420000,
-        apple: 190000,
-        youtube: 180000,
-        amazon: 100000
-      },
-      revenue: 2400,
-      playlistPlacements: 18,
-      trending: false
-    },
-    {
-      id: 3,
-      title: "Neon Lights",
-      album: "City Nights",
-      totalStreams: 2100000,
-      platforms: {
-        spotify: 1200000,
-        apple: 450000,
-        youtube: 350000,
-        amazon: 100000
-      },
-      revenue: 5800,
-      playlistPlacements: 42,
-      trending: true
-    }
-
+  const handlePromoteSong = (songId: string) => {
     const settings = promotionSettings[songId];
+
     if (!settings || !settings.platformId) {
       const message = "Select a platform before launching a promotion.";
       setServerMessage({ type: "error", text: message });
@@ -484,12 +873,18 @@ const StreamingPlatforms = () => {
       });
       return;
     }
-  ];
 
-  const handlePromoteSong = (songId: number, platform: string) => {
+    const selectedPlatform = platforms.find((platform) => platform.id === settings.platformId);
+    const platformName = selectedPlatform?.name ?? "your selected platform";
+
+    setServerMessage({
+      type: "success",
+      text: `Promotion launched on ${platformName}.`,
+    });
+
     toast({
       title: "Promotion Started!",
-      description: `Your song is now being promoted on ${platform}.`,
+      description: `Your song is now being promoted on ${platformName}.`,
     });
   };
 
@@ -550,7 +945,8 @@ const StreamingPlatforms = () => {
       }
 
       if (data.campaign) {
-        setCampaigns(prev => [data.campaign, ...prev]);
+        const campaignRecord = normalizeCampaign(data.campaign);
+        setCampaigns(prev => [campaignRecord, ...prev]);
       }
 
       if (data.statsDelta) {
