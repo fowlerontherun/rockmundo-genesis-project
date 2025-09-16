@@ -15,6 +15,11 @@ import EquipmentStore from "./pages/EquipmentStore";
 import FanManagement from "./pages/FanManagement";
 import Achievements from "./pages/Achievements";
 import TourManager from "./pages/TourManager";
+import RecordLabel from "./pages/RecordLabel";
+import SocialMedia from "./pages/SocialMedia";
+import VenueManagement from "./pages/VenueManagement";
+import BandChemistry from "./pages/BandChemistry";
+import StreamingPlatforms from "./pages/StreamingPlatforms";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +46,11 @@ const App = () => (
             <Route path="fans" element={<FanManagement />} />
             <Route path="achievements" element={<Achievements />} />
             <Route path="tours" element={<TourManager />} />
+            <Route path="labels" element={<RecordLabel />} />
+            <Route path="social" element={<SocialMedia />} />
+            <Route path="venues" element={<VenueManagement />} />
+            <Route path="chemistry" element={<BandChemistry />} />
+            <Route path="streaming" element={<StreamingPlatforms />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

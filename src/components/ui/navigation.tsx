@@ -12,7 +12,11 @@ import {
   ShoppingCart,
   Trophy,
   MapPin,
-  User
+  User,
+  Building2,
+  Share2,
+  Heart,
+  Play
 } from "lucide-react";
 
 const Navigation = () => {
@@ -22,9 +26,14 @@ const Navigation = () => {
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Users, label: "Band", path: "/band" },
+    { icon: Heart, label: "Chemistry", path: "/chemistry" },
     { icon: Calendar, label: "Gigs", path: "/gigs" },
+    { icon: MapPin, label: "Venues", path: "/venues" },
     { icon: Music, label: "Studio", path: "/music" },
+    { icon: Play, label: "Streaming", path: "/streaming" },
     { icon: TrendingUp, label: "Charts", path: "/charts" },
+    { icon: Building2, label: "Labels", path: "/labels" },
+    { icon: Share2, label: "Social", path: "/social" },
     { icon: Calendar, label: "Schedule", path: "/schedule" },
     { icon: ShoppingCart, label: "Equipment", path: "/equipment" },
     { icon: Users, label: "Fans", path: "/fans" },
