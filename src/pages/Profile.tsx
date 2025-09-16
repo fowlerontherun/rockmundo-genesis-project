@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,33 +11,67 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   User, 
   Camera, 
-  Save, 
-  Star, 
-  Trophy, 
-  Music, 
-  Users, 
+  Save,
+  Star,
+  Trophy,
+  Music,
+  Users,
   DollarSign,
   Upload,
-  Edit3
+  Edit3,
+  TrendingUp,
+  Heart
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 
+interface FanMetrics {
+  total_fans: number | null;
+  weekly_growth: number | null;
+  engagement_rate: number | null;
+  updated_at: string | null;
+}
+
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile, skills, updateProfile } = useGameData();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [fanMetrics, setFanMetrics] = useState<FanMetrics | null>(null);
   const [formData, setFormData] = useState({
     display_name: '',
     username: '',
     bio: ''
   });
+
+  const fetchFanMetrics = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('fan_demographics')
+        .select('total_fans, weekly_growth, engagement_rate, updated_at')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          setFanMetrics(null);
+          return;
+        }
+        throw error;
+      }
+
+      setFanMetrics(data as FanMetrics);
+    } catch (err) {
+      console.error('Error fetching fan metrics:', err);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (profile) {
@@ -48,6 +82,66 @@ const Profile = () => {
       });
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (!user) {
+      setFanMetrics(null);
+      return;
+    }
+
+    fetchFanMetrics();
+  }, [user, fetchFanMetrics]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`profile-fan-metrics-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'fan_demographics',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchFanMetrics();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'social_posts',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchFanMetrics();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_feed',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          const activityType = (payload.new as { activity_type?: string })?.activity_type;
+          if (activityType === 'campaign') {
+            fetchFanMetrics();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user, fetchFanMetrics]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -108,6 +202,16 @@ const Profile = () => {
       setUploading(false);
     }
   };
+
+  const totalFansValue = fanMetrics?.total_fans ?? 0;
+  const weeklyGrowthValue = fanMetrics?.weekly_growth ?? 0;
+  const weeklyGrowthDisplay = `${weeklyGrowthValue >= 0 ? '+' : ''}${Math.abs(weeklyGrowthValue).toLocaleString()}`;
+  const weeklyGrowthClass = weeklyGrowthValue >= 0 ? 'text-success' : 'text-destructive';
+  const engagementRateValue = fanMetrics?.engagement_rate ?? 0;
+  const engagementRateDisplay = Number.isFinite(engagementRateValue)
+    ? Number(engagementRateValue).toFixed(1).replace(/\.0$/, '')
+    : '0';
+  const lastUpdatedLabel = fanMetrics?.updated_at ? new Date(fanMetrics.updated_at).toLocaleString() : null;
 
   if (!profile) {
     return (
@@ -308,6 +412,49 @@ const Profile = () => {
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Fan Insights
+                </CardTitle>
+                <CardDescription>Real-time metrics from your audience growth</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="rounded-lg border border-primary/10 bg-secondary/40 p-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+                      <span>Total Fans</span>
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
+                    <p className="text-2xl font-bold text-primary">{totalFansValue.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">All-time supporters cheering you on</p>
+                  </div>
+                  <div className="rounded-lg border border-primary/10 bg-secondary/40 p-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+                      <span>Weekly Growth</span>
+                      <TrendingUp className="h-4 w-4 text-success" />
+                    </div>
+                    <p className={`text-2xl font-bold ${weeklyGrowthClass}`}>{weeklyGrowthDisplay}</p>
+                    <p className="text-xs text-muted-foreground">New fans gained over the last seven days</p>
+                  </div>
+                  <div className="rounded-lg border border-primary/10 bg-secondary/40 p-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+                      <span>Engagement Rate</span>
+                      <Heart className="h-4 w-4 text-accent" />
+                    </div>
+                    <p className="text-2xl font-bold text-accent">{engagementRateDisplay}%</p>
+                    <p className="text-xs text-muted-foreground">Percentage of fans interacting with your content</p>
+                  </div>
+                </div>
+                {lastUpdatedLabel && (
+                  <p className="mt-4 text-xs text-muted-foreground text-right">
+                    Updated {lastUpdatedLabel}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
               <CardHeader>

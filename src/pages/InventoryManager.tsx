@@ -3,12 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { RECENT_WEAR_STORAGE_KEY, WearEventType, WearSummary } from "@/utils/equipmentWear";
 import { Package, Wrench, Star, Zap, TrendingUp, Shield } from "lucide-react";
 
 interface InventoryItem {
@@ -31,12 +33,15 @@ interface InventoryItem {
   };
 }
 
+const WEAR_NOTICE_EXPIRATION_MS = 1000 * 60 * 60 * 24;
+
 const InventoryManager = () => {
   const { user } = useAuth();
   const { profile, updateProfile } = useGameData();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [wearSummary, setWearSummary] = useState<WearSummary | null>(null);
 
   const categories = [
     { value: 'all', label: 'All Items' },
@@ -49,6 +54,42 @@ const InventoryManager = () => {
   useEffect(() => {
     if (user) {
       fetchInventory();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!user) {
+      setWearSummary(null);
+      return;
+    }
+
+    try {
+      const storedSummary = localStorage.getItem(RECENT_WEAR_STORAGE_KEY);
+
+      if (!storedSummary) {
+        setWearSummary(null);
+        return;
+      }
+
+      const parsed: WearSummary = JSON.parse(storedSummary);
+
+      if (parsed.userId !== user.id) {
+        setWearSummary(null);
+        return;
+      }
+
+      if (Date.now() - parsed.timestamp > WEAR_NOTICE_EXPIRATION_MS) {
+        localStorage.removeItem(RECENT_WEAR_STORAGE_KEY);
+        setWearSummary(null);
+        return;
+      }
+
+      setWearSummary(parsed);
+    } catch (error) {
+      console.error('Failed to parse wear summary from storage', error);
+      setWearSummary(null);
     }
   }, [user]);
 
@@ -219,6 +260,27 @@ const InventoryManager = () => {
     }
   };
 
+  const dismissWearUpdates = () => {
+    setWearSummary(null);
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(RECENT_WEAR_STORAGE_KEY);
+    }
+  };
+
+  const getWearEventLabel = (eventType: WearEventType) => {
+    switch (eventType) {
+      case 'gig':
+        return 'gig performance';
+      case 'tour':
+        return 'tour show';
+      case 'rehearsal':
+        return 'rehearsal session';
+      default:
+        return 'session';
+    }
+  };
+
   const getRarityColor = (rarity: string) => {
     switch (rarity.toLowerCase()) {
       case 'common': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
@@ -246,12 +308,13 @@ const InventoryManager = () => {
     }
   };
 
-  const filteredInventory = selectedCategory === 'all' 
-    ? inventory 
+  const filteredInventory = selectedCategory === 'all'
+    ? inventory
     : inventory.filter(item => item.equipment.category === selectedCategory);
 
   const equippedItems = inventory.filter(item => item.equipped || item.is_equipped);
-  const totalValue = inventory.reduce((sum, item) => 
+  const wearUpdatesAvailable = Boolean(wearSummary && wearSummary.updates.length > 0);
+  const totalValue = inventory.reduce((sum, item) =>
     sum + Math.floor(item.equipment.price * (item.condition / 100)), 0
   );
 
@@ -278,6 +341,48 @@ const InventoryManager = () => {
             Manage your equipment collection and optimize your setup
           </p>
         </div>
+
+        {wearUpdatesAvailable && wearSummary && (
+          <Alert className="relative border-amber-500/40 bg-amber-500/10">
+            <Wrench className="h-4 w-4 text-amber-500" />
+            <div className="pr-12 space-y-2">
+              <AlertTitle>
+                Wear detected after your last {getWearEventLabel(wearSummary.eventType)}
+              </AlertTitle>
+              <AlertDescription>
+                <p className="text-sm text-muted-foreground">
+                  Updated {new Date(wearSummary.timestamp).toLocaleString()}
+                </p>
+                <ul className="mt-3 space-y-1">
+                  {wearSummary.updates.map((update) => (
+                    <li key={update.itemId} className="flex items-center justify-between text-sm">
+                      <div className="font-medium">
+                        {update.itemName}
+                        {update.category ? (
+                          <span className="text-muted-foreground"> ({update.category})</span>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-destructive">-{Math.round(update.change)}%</span>
+                        <span className={getConditionColor(update.newCondition)}>
+                          {Math.round(update.newCondition)}%
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="absolute top-2 right-2"
+              onClick={dismissWearUpdates}
+            >
+              Dismiss
+            </Button>
+          </Alert>
+        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
