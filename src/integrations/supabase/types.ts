@@ -679,32 +679,64 @@ export type Database = {
         }
         Relationships: []
       }
-      notifications: {
+      jam_sessions: {
         Row: {
+          access_code: string | null
+          created_at: string
+          current_participants: number
+          description: string | null
+          genre: string
+          host_id: string
           id: string
-          message: string
-          read: boolean
-          timestamp: string
-          type: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
-          user_id: string
+          is_private: boolean
+          max_participants: number
+          name: string
+          participant_ids: string[]
+          skill_requirement: number
+          tempo: number
+          updated_at: string
         }
         Insert: {
+          access_code?: string | null
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          genre: string
+          host_id: string
           id?: string
-          message: string
-          read?: boolean
-          timestamp?: string
-          type: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
-          user_id: string
+          is_private?: boolean
+          max_participants?: number
+          name: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string
         }
         Update: {
+          access_code?: string | null
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          genre?: string
+          host_id?: string
           id?: string
-          message?: string
-          read?: boolean
-          timestamp?: string
-          type?: "gig_invite" | "band_request" | "fan_milestone" | "achievement" | "system"
-          user_id?: string
+          is_private?: boolean
+          max_participants?: number
+          name?: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jam_sessions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       player_achievements: {
         Row: {
@@ -1499,6 +1531,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      join_jam_session: {
+        Args: { p_session_id: string }
+        Returns: Database["public"]["Tables"]["jam_sessions"]["Row"]
       }
     }
     Enums: {
