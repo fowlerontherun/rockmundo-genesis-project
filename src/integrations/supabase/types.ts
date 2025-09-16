@@ -200,6 +200,105 @@ export type Database = {
         }
         Relationships: []
       }
+      competition_participants: {
+        Row: {
+          awarded_at: string | null
+          competition_id: string
+          final_rank: number | null
+          id: string
+          joined_at: string | null
+          prize_amount: number
+          profile_id: string
+          score: number
+        }
+        Insert: {
+          awarded_at?: string | null
+          competition_id: string
+          final_rank?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_amount?: number
+          profile_id: string
+          score?: number
+        }
+        Update: {
+          awarded_at?: string | null
+          competition_id?: string
+          final_rank?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_amount?: number
+          profile_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_participants_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          end_date: string
+          entry_fee: number
+          id: string
+          is_active: boolean
+          is_completed: boolean
+          max_participants: number
+          name: string
+          prize_pool: number
+          requirements: Json
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date: string
+          entry_fee?: number
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          max_participants?: number
+          name: string
+          prize_pool?: number
+          requirements?: Json
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          entry_fee?: number
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          max_participants?: number
+          name?: string
+          prize_pool?: number
+          requirements?: Json
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           advance_payment: number
@@ -677,6 +776,50 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_rankings: {
+        Row: {
+          calculated_at: string
+          hit_songs: number
+          id: string
+          profile_id: string
+          rank: number
+          ranking_type: string
+          score: number
+          total_plays: number
+          trend: string
+        }
+        Insert: {
+          calculated_at?: string
+          hit_songs?: number
+          id?: string
+          profile_id: string
+          rank: number
+          ranking_type?: string
+          score?: number
+          total_plays?: number
+          trend?: string
+        }
+        Update: {
+          calculated_at?: string
+          hit_songs?: number
+          id?: string
+          profile_id?: string
+          rank?: number
+          ranking_type?: string
+          score?: number
+          total_plays?: number
+          trend?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_rankings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
