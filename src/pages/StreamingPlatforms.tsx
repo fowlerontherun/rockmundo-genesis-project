@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Play, 
@@ -44,6 +54,42 @@ interface PlayerStreamingAccount {
   platform?: StreamingPlatform;
 }
 
+interface PromotionCampaign {
+  id: string;
+  user_id: string;
+  song_id: string;
+  platform_id: string | null;
+  platform_name: string | null;
+  campaign_type: string;
+  budget: number;
+  status: string;
+  playlist_name: string | null;
+  playlists_targeted: number | null;
+  new_placements: number | null;
+  stream_increase: number | null;
+  revenue_generated: number | null;
+  message: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+interface PromotionFunctionResponse {
+  success: boolean;
+  message: string;
+  campaign?: PromotionCampaign;
+  statsDelta?: {
+    streams: number;
+    revenue: number;
+    listeners: number;
+  };
+}
+
+const BASE_STREAMING_STATS = {
+  totalStreams: 6_100_000,
+  revenue: 18_700,
+  listeners: 1_200_000,
+};
+
 const StreamingPlatforms = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -53,6 +99,14 @@ const StreamingPlatforms = () => {
   const [playerAccounts, setPlayerAccounts] = useState<PlayerStreamingAccount[]>([]);
   const [userSongs, setUserSongs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState<PromotionCampaign[]>([]);
+  const [streamingStats, setStreamingStats] = useState(() => ({ ...BASE_STREAMING_STATS }));
+  const [promotionSettings, setPromotionSettings] = useState<Record<string, { platformId: string; budget: number }>>({});
+  const [promoting, setPromoting] = useState<Record<string, boolean>>({});
+  const [playlistSubmitting, setPlaylistSubmitting] = useState<Record<string, boolean>>({});
+  const [selectedSongForPlaylist, setSelectedSongForPlaylist] = useState<string | null>(null);
+  const [playlistBudget, setPlaylistBudget] = useState<number>(150);
+  const [serverMessage, setServerMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -62,6 +116,7 @@ const StreamingPlatforms = () => {
 
   const loadData = async () => {
     try {
+      setServerMessage(null);
       // Load streaming platforms
       const { data: platformsData, error: platformsError } = await supabase
         .from('streaming_platforms')
@@ -94,6 +149,32 @@ const StreamingPlatforms = () => {
       if (songsError) throw songsError;
       setUserSongs(songsData || []);
 
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('promotion_campaigns')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false });
+
+      if (campaignsError) throw campaignsError;
+      setCampaigns(campaignsData || []);
+
+      if (campaignsData && campaignsData.length > 0) {
+        const streamsBoost = campaignsData.reduce((total, campaign) => total + (campaign.stream_increase ?? 0), 0);
+        const revenueBoost = campaignsData.reduce((total, campaign) => total + (campaign.revenue_generated ?? 0), 0);
+        const listenersBoost = campaignsData.reduce(
+          (total, campaign) => total + (campaign.listeners_generated ?? 0),
+          0
+        );
+
+        setStreamingStats({
+          totalStreams: BASE_STREAMING_STATS.totalStreams + streamsBoost,
+          revenue: BASE_STREAMING_STATS.revenue + revenueBoost,
+          listeners: BASE_STREAMING_STATS.listeners + listenersBoost,
+        });
+      } else {
+        setStreamingStats({ ...BASE_STREAMING_STATS });
+      }
+
     } catch (error: any) {
       console.error('Error loading streaming data:', error);
       toast({
@@ -104,6 +185,57 @@ const StreamingPlatforms = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (userSongs.length === 0) {
+      setSelectedSongForPlaylist(null);
+      return;
+    }
+
+    if (!selectedSongForPlaylist || !userSongs.some(song => song.id === selectedSongForPlaylist)) {
+      setSelectedSongForPlaylist(userSongs[0].id);
+    }
+  }, [userSongs, selectedSongForPlaylist]);
+
+  useEffect(() => {
+    if (userSongs.length === 0 || platforms.length === 0) {
+      return;
+    }
+
+    const defaultPlatformId =
+      playerAccounts.find(account => account.is_connected)?.platform_id ??
+      platforms[0]?.id ??
+      null;
+
+    if (!defaultPlatformId) {
+      return;
+    }
+
+    setPromotionSettings(prev => {
+      const updated = { ...prev };
+      userSongs.forEach(song => {
+        const existing = updated[song.id];
+        if (!existing) {
+          updated[song.id] = { platformId: defaultPlatformId, budget: 500 };
+        } else if (!existing.platformId) {
+          updated[song.id] = { ...existing, platformId: defaultPlatformId };
+        }
+      });
+      return updated;
+    });
+  }, [userSongs, platforms, playerAccounts]);
+
+  const formatLargeNumber = (value: number) => {
+    if (value >= 1_000_000) {
+      return `${(value / 1_000_000).toFixed(1)}M`;
+    }
+
+    if (value >= 1_000) {
+      return `${(value / 1_000).toFixed(1)}K`;
+    }
+
+    return value.toLocaleString();
   };
 
   const connectPlatform = async (platformId: string) => {
@@ -166,146 +298,177 @@ const StreamingPlatforms = () => {
     );
   }
 
-  const mockPlatforms = [
-    {
-      id: 1,
-      name: "Spotify",
-      logo: "🎵",
-      monthlyListeners: 450000,
-      streams: 2400000,
-      revenue: 8200,
-      royaltyRate: 0.003,
-      playlists: 45,
-      topPlaylist: "Indie Rock Hits",
-      growth: 12.5,
-      color: "bg-green-500"
-    },
-    {
-      id: 2,
-      name: "Apple Music",
-      logo: "🎶",
-      monthlyListeners: 280000,
-      streams: 1200000,
-      revenue: 4800,
-      royaltyRate: 0.004,
-      playlists: 23,
-      topPlaylist: "New Rock",
-      growth: 8.3,
-      color: "bg-gray-700"
-    },
-    {
-      id: 3,
-      name: "YouTube Music",
-      logo: "📺",
-      monthlyListeners: 320000,
-      streams: 1800000,
-      revenue: 3600,
-      royaltyRate: 0.002,
-      playlists: 67,
-      topPlaylist: "Rock Essentials",
-      growth: 15.2,
-      color: "bg-red-500"
-    },
-    {
-      id: 4,
-      name: "Amazon Music",
-      logo: "📻",
-      monthlyListeners: 150000,
-      streams: 680000,
-      revenue: 2100,
-      royaltyRate: 0.0035,
-      playlists: 18,
-      topPlaylist: "Prime Rock",
-      growth: 6.7,
-      color: "bg-orange-500"
+  const handlePromoteSong = async (songId: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Not signed in",
+        description: "You need to be logged in to promote songs.",
+      });
+      return;
     }
-  ];
 
-  const songs = [
-    {
-      id: 1,
-      title: "Electric Dreams",
-      album: "Voltage",
-      totalStreams: 1250000,
-      platforms: {
-        spotify: 650000,
-        apple: 280000,
-        youtube: 220000,
-        amazon: 100000
-      },
-      revenue: 3200,
-      playlistPlacements: 23,
-      trending: true
-    },
-    {
-      id: 2,
-      title: "Midnight Highway",
-      album: "Voltage",
-      totalStreams: 890000,
-      platforms: {
-        spotify: 420000,
-        apple: 190000,
-        youtube: 180000,
-        amazon: 100000
-      },
-      revenue: 2400,
-      playlistPlacements: 18,
-      trending: false
-    },
-    {
-      id: 3,
-      title: "Neon Lights",
-      album: "City Nights",
-      totalStreams: 2100000,
-      platforms: {
-        spotify: 1200000,
-        apple: 450000,
-        youtube: 350000,
-        amazon: 100000
-      },
-      revenue: 5800,
-      playlistPlacements: 42,
-      trending: true
+    const settings = promotionSettings[songId];
+    if (!settings || !settings.platformId) {
+      const message = "Select a platform before launching a promotion.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: message,
+      });
+      return;
     }
-  ];
 
-  const campaigns = [
-    {
-      id: 1,
-      name: "Playlist Push - Electric Dreams",
-      platform: "Spotify",
-      budget: 2000,
-      playlistsTargeted: 50,
-      newPlacements: 12,
-      streamIncrease: 45000,
-      status: "Active",
-      endDate: "Dec 15, 2024"
-    },
-    {
-      id: 2,
-      name: "YouTube Promotion",
-      platform: "YouTube Music",
-      budget: 1500,
-      playlistsTargeted: 30,
-      newPlacements: 8,
-      streamIncrease: 25000,
-      status: "Completed",
-      endDate: "Nov 30, 2024"
+    if (settings.budget <= 0) {
+      const message = "Enter a budget greater than zero to start a promotion.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Invalid budget",
+        description: message,
+      });
+      return;
     }
-  ];
 
-  const handlePromoteSong = (songId: number, platform: string) => {
-    toast({
-      title: "Promotion Started!",
-      description: `Your song is now being promoted on ${platform}.`,
-    });
+    const platformDetails = platforms.find(platform => platform.id === settings.platformId);
+    const platformName = platformDetails?.name ?? null;
+
+    setPromoting(prev => ({ ...prev, [songId]: true }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke<PromotionFunctionResponse>("promotions", {
+        body: {
+          action: "promotion",
+          songId,
+          platformId: settings.platformId,
+          platformName,
+          budget: settings.budget,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.message ?? "Failed to start promotion.");
+      }
+
+      if (data.campaign) {
+        setCampaigns(prev => [data.campaign, ...prev]);
+      }
+
+      if (data.statsDelta) {
+        setStreamingStats(prev => ({
+          totalStreams: prev.totalStreams + (data.statsDelta?.streams ?? 0),
+          revenue: prev.revenue + (data.statsDelta?.revenue ?? 0),
+          listeners: prev.listeners + (data.statsDelta?.listeners ?? 0),
+        }));
+      }
+
+      setServerMessage({ type: "success", text: data.message });
+      toast({
+        title: "Promotion Started!",
+        description: data.message,
+      });
+    } catch (error: any) {
+      const message = error?.message ?? "Failed to start promotion.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Promotion failed",
+        description: message,
+      });
+    } finally {
+      setPromoting(prev => ({ ...prev, [songId]: false }));
+    }
   };
 
-  const handleSubmitToPlaylist = (playlistName: string) => {
-    toast({
-      title: "Playlist Submission Sent!",
-      description: `Your song has been submitted to "${playlistName}".`,
-    });
+  const handleSubmitToPlaylist = async (playlistName: string, playlistPlatform: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Not signed in",
+        description: "You need to be logged in to submit songs.",
+      });
+      return;
+    }
+
+    if (!selectedSongForPlaylist) {
+      const message = "Select a song to submit to the playlist.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "No song selected",
+        description: message,
+      });
+      return;
+    }
+
+    if (playlistBudget <= 0) {
+      const message = "Set a playlist submission budget greater than zero.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Invalid budget",
+        description: message,
+      });
+      return;
+    }
+
+    const platformMatch = platforms.find(platform => platform.name.toLowerCase() === playlistPlatform.toLowerCase());
+
+    setPlaylistSubmitting(prev => ({ ...prev, [playlistName]: true }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke<PromotionFunctionResponse>("promotions", {
+        body: {
+          action: "playlist_submission",
+          songId: selectedSongForPlaylist,
+          platformId: platformMatch?.id,
+          platformName: platformMatch?.name ?? playlistPlatform,
+          budget: playlistBudget,
+          playlistName,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.message ?? "Failed to submit playlist request.");
+      }
+
+      if (data.campaign) {
+        setCampaigns(prev => [data.campaign, ...prev]);
+      }
+
+      if (data.statsDelta) {
+        setStreamingStats(prev => ({
+          totalStreams: prev.totalStreams + (data.statsDelta?.streams ?? 0),
+          revenue: prev.revenue + (data.statsDelta?.revenue ?? 0),
+          listeners: prev.listeners + (data.statsDelta?.listeners ?? 0),
+        }));
+      }
+
+      setServerMessage({ type: "success", text: data.message });
+      toast({
+        title: "Playlist Submission Sent!",
+        description: data.message,
+      });
+    } catch (error: any) {
+      const message = error?.message ?? "Failed to submit playlist request.";
+      setServerMessage({ type: "error", text: message });
+      toast({
+        variant: "destructive",
+        title: "Submission failed",
+        description: message,
+      });
+    } finally {
+      setPlaylistSubmitting(prev => ({ ...prev, [playlistName]: false }));
+    }
   };
 
   return (
@@ -320,6 +483,18 @@ const StreamingPlatforms = () => {
             Manage your digital music presence and streaming revenue
           </p>
         </div>
+
+        {serverMessage && (
+          <Alert
+            variant={serverMessage.type === "error" ? "destructive" : "default"}
+            className="bg-card/80 border-accent"
+          >
+            <AlertTitle className="font-semibold">
+              {serverMessage.type === "error" ? "Action Failed" : "Action Successful"}
+            </AlertTitle>
+            <AlertDescription>{serverMessage.text}</AlertDescription>
+          </Alert>
+        )}
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full max-w-lg mx-auto grid-cols-4">
@@ -405,7 +580,9 @@ const StreamingPlatforms = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-accent">6.1M</div>
+                  <div className="text-3xl font-bold text-accent">
+                    {formatLargeNumber(streamingStats.totalStreams)}
+                  </div>
                   <p className="text-cream/60 text-sm">+18% this month</p>
                 </CardContent>
               </Card>
@@ -417,7 +594,9 @@ const StreamingPlatforms = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-accent">$18,700</div>
+                  <div className="text-3xl font-bold text-accent">
+                    ${streamingStats.revenue.toLocaleString()}
+                  </div>
                   <p className="text-cream/60 text-sm">This month</p>
                 </CardContent>
               </Card>
@@ -429,7 +608,9 @@ const StreamingPlatforms = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-accent">1.2M</div>
+                  <div className="text-3xl font-bold text-accent">
+                    {formatLargeNumber(streamingStats.listeners)}
+                  </div>
                   <p className="text-cream/60 text-sm">Monthly unique</p>
                 </CardContent>
               </Card>
@@ -494,19 +675,93 @@ const StreamingPlatforms = () => {
                         </div>
                       </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <div className="text-center space-y-1">
                             <p className="text-muted-foreground text-sm">Genre</p>
                             <p className="text-lg font-bold text-accent">{song.genre || 'Unknown'}</p>
                           </div>
-                          <div className="space-y-2">
-                            <Button 
-                              size="sm" 
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor={`promotion-platform-${song.id}`}
+                                className="text-xs text-muted-foreground"
+                              >
+                                Promotion Platform
+                              </Label>
+                              <Select
+                                value={promotionSettings[song.id]?.platformId || undefined}
+                                onValueChange={(value) =>
+                                  setPromotionSettings(prev => ({
+                                    ...prev,
+                                    [song.id]: {
+                                      platformId: value,
+                                      budget: prev[song.id]?.budget ?? 500,
+                                    },
+                                  }))
+                                }
+                              >
+                                <SelectTrigger
+                                  id={`promotion-platform-${song.id}`}
+                                  className="bg-background/40 border-accent/30 text-sm"
+                                >
+                                  <SelectValue placeholder="Select platform" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {platforms.map((platform) => (
+                                    <SelectItem key={platform.id} value={platform.id}>
+                                      {platform.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor={`promotion-budget-${song.id}`}
+                                className="text-xs text-muted-foreground"
+                              >
+                                Budget ($)
+                              </Label>
+                              <Input
+                                id={`promotion-budget-${song.id}`}
+                                type="number"
+                                min={50}
+                                value={promotionSettings[song.id]?.budget ?? 500}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  setPromotionSettings(prev => {
+                                    const fallbackPlatformId =
+                                      prev[song.id]?.platformId ??
+                                      playerAccounts.find(account => account.is_connected)?.platform_id ??
+                                      platforms[0]?.id ??
+                                      "";
+
+                                    return {
+                                      ...prev,
+                                      [song.id]: {
+                                        platformId: fallbackPlatformId,
+                                        budget: Number.isFinite(value) ? value : 0,
+                                      },
+                                    };
+                                  });
+                                }}
+                                className="bg-background/40 border-accent/30 text-sm"
+                              />
+                            </div>
+                            <Button
+                              size="sm"
                               className="w-full bg-gradient-primary"
-                              onClick={() => toast({ title: "Feature Coming Soon!", description: "Song promotion will be available soon!" })}
+                              onClick={() => handlePromoteSong(song.id)}
+                              disabled={promoting[song.id] || !promotionSettings[song.id]?.platformId}
                             >
-                              <Share2 className="h-4 w-4 mr-1" />
-                              Promote
+                              {promoting[song.id] ? (
+                                "Promoting..."
+                              ) : (
+                                <span className="flex items-center justify-center gap-1">
+                                  <Share2 className="h-4 w-4" />
+                                  Promote
+                                </span>
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -519,6 +774,56 @@ const StreamingPlatforms = () => {
           </TabsContent>
 
           <TabsContent value="playlists" className="space-y-6">
+            {userSongs.length > 0 && (
+              <Card className="bg-card/80 border-accent">
+                <CardHeader>
+                  <CardTitle className="text-cream text-lg">Submission Preferences</CardTitle>
+                  <CardDescription>Select the song and budget for playlist submissions</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="playlist-song-select" className="text-sm text-muted-foreground">
+                      Song to Submit
+                    </Label>
+                    <Select
+                      value={selectedSongForPlaylist ?? undefined}
+                      onValueChange={(value) => setSelectedSongForPlaylist(value)}
+                    >
+                      <SelectTrigger
+                        id="playlist-song-select"
+                        className="bg-background/40 border-accent/30"
+                      >
+                        <SelectValue placeholder="Choose a released song" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userSongs.map(song => (
+                          <SelectItem key={song.id} value={song.id}>
+                            {song.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="playlist-budget-input" className="text-sm text-muted-foreground">
+                      Submission Budget ($)
+                    </Label>
+                    <Input
+                      id="playlist-budget-input"
+                      type="number"
+                      min={25}
+                      value={playlistBudget}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        setPlaylistBudget(Number.isFinite(value) ? value : 0);
+                      }}
+                      className="bg-background/40 border-accent/30"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card className="bg-card/80 border-accent">
                 <CardHeader>
@@ -540,12 +845,13 @@ const StreamingPlatforms = () => {
                       <span className="text-accent">#12, #28</span>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="w-full bg-accent hover:bg-accent/80 text-background"
-                    onClick={() => handleSubmitToPlaylist("Indie Rock Hits")}
+                    onClick={() => handleSubmitToPlaylist("Indie Rock Hits", "Spotify")}
+                    disabled={playlistSubmitting["Indie Rock Hits"] || !selectedSongForPlaylist}
                   >
-                    Submit New Song
+                    {playlistSubmitting["Indie Rock Hits"] ? "Submitting..." : "Submit New Song"}
                   </Button>
                 </CardContent>
               </Card>
@@ -570,12 +876,13 @@ const StreamingPlatforms = () => {
                       <span className="text-accent">#7</span>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="w-full bg-accent hover:bg-accent/80 text-background"
-                    onClick={() => handleSubmitToPlaylist("New Rock")}
+                    onClick={() => handleSubmitToPlaylist("New Rock", "Apple Music")}
+                    disabled={playlistSubmitting["New Rock"] || !selectedSongForPlaylist}
                   >
-                    Submit New Song
+                    {playlistSubmitting["New Rock"] ? "Submitting..." : "Submit New Song"}
                   </Button>
                 </CardContent>
               </Card>
@@ -600,12 +907,13 @@ const StreamingPlatforms = () => {
                       <span className="text-accent">#5, #18, #31</span>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="w-full bg-accent hover:bg-accent/80 text-background"
-                    onClick={() => handleSubmitToPlaylist("Rock Essentials")}
+                    onClick={() => handleSubmitToPlaylist("Rock Essentials", "YouTube Music")}
+                    disabled={playlistSubmitting["Rock Essentials"] || !selectedSongForPlaylist}
                   >
-                    Submit New Song
+                    {playlistSubmitting["Rock Essentials"] ? "Submitting..." : "Submit New Song"}
                   </Button>
                 </CardContent>
               </Card>
@@ -614,57 +922,95 @@ const StreamingPlatforms = () => {
 
           <TabsContent value="campaigns" className="space-y-6">
             <div className="space-y-4">
-              {campaigns.map((campaign) => (
-                <Card key={campaign.id} className="bg-card/80 border-accent">
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-center">
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-cream">{campaign.name}</h3>
-                        <Badge variant="outline">{campaign.platform}</Badge>
-                        <Badge 
-                          className={campaign.status === 'Active' ? 'bg-green-500' : 'bg-blue-500'}
-                        >
-                          {campaign.status}
-                        </Badge>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-cream/60 text-sm">Budget</p>
-                        <p className="text-lg font-bold text-accent">${campaign.budget.toLocaleString()}</p>
-                        <p className="text-cream/60 text-xs">End: {campaign.endDate}</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-cream/60 text-sm">Playlist Results</p>
-                        <p className="text-lg font-bold text-accent">
-                          {campaign.newPlacements}/{campaign.playlistsTargeted}
-                        </p>
-                        <Progress 
-                          value={(campaign.newPlacements / campaign.playlistsTargeted) * 100} 
-                          className="h-2" 
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <p className="text-cream/60 text-sm">Stream Increase</p>
-                        <p className="text-lg font-bold text-accent">
-                          +{campaign.streamIncrease.toLocaleString()}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="border-accent text-accent">
-                            View Details
-                          </Button>
-                          {campaign.status === 'Active' && (
-                            <Button size="sm" className="bg-accent hover:bg-accent/80 text-background">
-                              Modify
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              {campaigns.length === 0 ? (
+                <Card className="bg-card/80 border-accent">
+                  <CardContent className="py-10 text-center space-y-2">
+                    <Star className="h-8 w-8 text-accent mx-auto" />
+                    <p className="text-cream font-semibold">No campaigns yet</p>
+                    <p className="text-cream/60 text-sm">
+                      Launch a promotion or playlist submission to see it tracked here.
+                    </p>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                campaigns.map((campaign) => {
+                  const platformLabel =
+                    campaign.platform_name ??
+                    platforms.find(platform => platform.id === campaign.platform_id)?.name ??
+                    "Unknown Platform";
+                  const statusLabel = campaign.status
+                    ? campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)
+                    : "Active";
+                  const statusColor =
+                    campaign.status === "active"
+                      ? "bg-green-500"
+                      : campaign.status === "pending"
+                        ? "bg-yellow-500"
+                        : "bg-blue-500";
+                  const progressTarget = campaign.playlists_targeted ?? 0;
+                  const progressValue =
+                    progressTarget > 0
+                      ? Math.min(100, ((campaign.new_placements ?? 0) / progressTarget) * 100)
+                      : 0;
+                  const messageLabel =
+                    campaign.message ??
+                    (campaign.campaign_type === "playlist"
+                      ? `Playlist submission to ${campaign.playlist_name ?? platformLabel}`
+                      : `Promotion on ${platformLabel}`);
+                  const createdLabel = campaign.created_at
+                    ? new Date(campaign.created_at).toLocaleDateString()
+                    : "Recently";
+
+                  return (
+                    <Card key={campaign.id} className="bg-card/80 border-accent">
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-cream">{messageLabel}</h3>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="outline">{platformLabel}</Badge>
+                              <Badge variant="outline" className="capitalize">
+                                {campaign.campaign_type}
+                              </Badge>
+                              <Badge className={`${statusColor} text-background`}>{statusLabel}</Badge>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-cream/60 text-sm">Budget</p>
+                            <p className="text-lg font-bold text-accent">${campaign.budget.toLocaleString()}</p>
+                            <p className="text-cream/60 text-xs">Created: {createdLabel}</p>
+                            {campaign.playlist_name && (
+                              <p className="text-cream/60 text-xs">Playlist: {campaign.playlist_name}</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-cream/60 text-sm">Playlist Results</p>
+                            <p className="text-lg font-bold text-accent">
+                              {campaign.new_placements ?? 0}/{campaign.playlists_targeted ?? 0}
+                            </p>
+                            <Progress value={progressValue} className="h-2" />
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-cream/60 text-sm">Performance Impact</p>
+                            <p className="text-lg font-bold text-accent">
+                              +{(campaign.stream_increase ?? 0).toLocaleString()} streams
+                            </p>
+                            <p className="text-cream/80 text-sm">
+                              +${(campaign.revenue_generated ?? 0).toLocaleString()} revenue
+                            </p>
+                            <p className="text-cream/60 text-xs">
+                              +{campaign.listeners_generated ?? 0} listeners
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
 
             <Card className="bg-card/80 border-accent">
