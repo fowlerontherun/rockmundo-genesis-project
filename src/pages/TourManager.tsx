@@ -27,6 +27,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
+import { applyEquipmentWear } from "@/utils/equipmentWear";
 
 interface Tour {
   id: string;
@@ -451,9 +452,20 @@ const TourManager = () => {
         })
         .eq('user_id', user.id);
 
+      let wearNotice = '';
+
+      try {
+        const wearSummary = await applyEquipmentWear(user.id, 'tour');
+        if (wearSummary?.updates.length) {
+          wearNotice = ` Gear wear detected on ${wearSummary.updates.length} item${wearSummary.updates.length > 1 ? 's' : ''}. Check the inventory manager to repair them.`;
+        }
+      } catch (wearError) {
+        console.error('Failed to apply equipment wear after tour show', wearError);
+      }
+
       toast({
         title: "Show Complete!",
-        description: `Great performance! Earned $${revenue} and ${fameGain} fame`
+        description: `Great performance! Earned $${revenue} and ${fameGain} fame.${wearNotice}`
       });
 
       await loadTours();

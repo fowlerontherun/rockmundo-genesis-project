@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
+import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from 'sonner';
 import { Music, Users, Zap, Heart, Star, TrendingUp, Volume2, Mic } from 'lucide-react';
 
@@ -286,6 +287,15 @@ const AdvancedGigSystem: React.FC = () => {
         `Performed at ${gig.venue.name} - Score: ${averageScore.toFixed(1)}%`,
         totalEarnings
       );
+
+      try {
+        const wearSummary = await applyEquipmentWear(user.id, 'gig');
+        if (wearSummary?.updates.length) {
+          toast.info('Your equipment took some wear after the show. Check your inventory to keep it in top shape.');
+        }
+      } catch (wearError) {
+        console.error('Failed to apply equipment wear after gig performance', wearError);
+      }
 
       setIsPerforming(false);
       setShowResults(true);
