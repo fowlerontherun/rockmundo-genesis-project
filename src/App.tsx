@@ -11,6 +11,10 @@ import Profile from "./pages/Profile";
 import MusicStudio from "./pages/MusicStudio";
 import WorldPulse from "./pages/WorldPulse";
 import Schedule from "./pages/Schedule";
+import EquipmentStore from "./pages/EquipmentStore";
+import FanManagement from "./pages/FanManagement";
+import Achievements from "./pages/Achievements";
+import TourManager from "./pages/TourManager";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +37,10 @@ const App = () => (
             <Route path="music" element={<MusicStudio />} />
             <Route path="charts" element={<WorldPulse />} />
             <Route path="schedule" element={<Schedule />} />
+            <Route path="equipment" element={<EquipmentStore />} />
+            <Route path="fans" element={<FanManagement />} />
+            <Route path="achievements" element={<Achievements />} />
+            <Route path="tours" element={<TourManager />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

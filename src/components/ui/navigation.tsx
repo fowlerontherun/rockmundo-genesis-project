@@ -8,7 +8,11 @@ import {
   TrendingUp, 
   Settings, 
   LogOut,
-  Guitar
+  Guitar,
+  ShoppingCart,
+  Trophy,
+  MapPin,
+  User
 } from "lucide-react";
 
 const Navigation = () => {
@@ -19,9 +23,14 @@ const Navigation = () => {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Users, label: "Band", path: "/band" },
     { icon: Calendar, label: "Gigs", path: "/gigs" },
-    { icon: Music, label: "Studio", path: "/studio" },
+    { icon: Music, label: "Studio", path: "/music" },
     { icon: TrendingUp, label: "Charts", path: "/charts" },
-    { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: Calendar, label: "Schedule", path: "/schedule" },
+    { icon: ShoppingCart, label: "Equipment", path: "/equipment" },
+    { icon: Users, label: "Fans", path: "/fans" },
+    { icon: Trophy, label: "Achievements", path: "/achievements" },
+    { icon: MapPin, label: "Tours", path: "/tours" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
 
   const handleLogout = () => {
