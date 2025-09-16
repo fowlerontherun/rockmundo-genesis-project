@@ -1223,6 +1223,10 @@ export type Database = {
           fan_growth: number | null
           id: string
           likes: number | null
+          media_path: string | null
+          media_type: string | null
+          media_url: string | null
+          scheduled_for: string | null
           reposts: number | null
           platform: string
           shares: number | null
@@ -1237,6 +1241,10 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          media_path?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          scheduled_for?: string | null
           reposts?: number | null
           platform: string
           shares?: number | null
@@ -1251,6 +1259,10 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          media_path?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          scheduled_for?: string | null
           reposts?: number | null
           platform?: string
           shares?: number | null
