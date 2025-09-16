@@ -172,6 +172,32 @@ const GigBooking = () => {
         }
       };
 
+      const eventEndTime = new Date(futureDate);
+      eventEndTime.setHours(eventEndTime.getHours() + 2);
+
+      const { error: scheduleError } = await supabase
+        .from('schedule_events')
+        .insert({
+          user_id: user.id,
+          event_type: 'gig',
+          title: `Gig at ${venue.name}`,
+          description: `Live performance at ${venue.name}`,
+          start_time: futureDate.toISOString(),
+          end_time: eventEndTime.toISOString(),
+          location: venue.location,
+          status: 'scheduled',
+          gig_id: data.id
+        });
+
+      if (scheduleError) {
+        console.error('Error adding gig to schedule:', scheduleError);
+        toast({
+          variant: "destructive",
+          title: "Schedule update failed",
+          description: "Gig booked but the schedule couldn't be updated automatically."
+        });
+      }
+
       setPlayerGigs(prev => [...prev, newGig]);
       
       await addActivity('gig', `Booked gig at ${venue.name}`, 0);
