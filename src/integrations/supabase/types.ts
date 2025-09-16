@@ -206,12 +206,15 @@ export type Database = {
           contract_type: string
           created_at: string | null
           duration_months: number
+          end_date: string | null
           id: string
           label_id: string | null
           label_name: string
+          renewal_option: string | null
           royalty_rate: number
           signed_at: string
           status: string
+          termination_reason: string | null
           updated_at: string | null
           user_id: string
         }
@@ -220,12 +223,15 @@ export type Database = {
           contract_type: string
           created_at?: string | null
           duration_months: number
+          end_date?: string | null
           id?: string
           label_id?: string | null
           label_name: string
+          renewal_option?: string | null
           royalty_rate: number
           signed_at?: string
           status?: string
+          termination_reason?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -234,12 +240,15 @@ export type Database = {
           contract_type?: string
           created_at?: string | null
           duration_months?: number
+          end_date?: string | null
           id?: string
           label_id?: string | null
           label_name?: string
+          renewal_option?: string | null
           royalty_rate?: number
           signed_at?: string
           status?: string
+          termination_reason?: string | null
           updated_at?: string | null
           user_id?: string
         }
