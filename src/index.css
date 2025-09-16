@@ -6,92 +6,107 @@
 
 @layer base {
   :root {
-    /* Rock-inspired color palette */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-
-    /* Electric purple as primary */
-    --primary: 280 100% 70%;
-    --primary-foreground: 240 10% 3.9%;
-    --primary-glow: 280 100% 80%;
-
-    /* Dark gray secondary */
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-
-    /* Hot pink accent */
-    --accent: 320 100% 70%;
-    --accent-foreground: 240 10% 3.9%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 280 100% 70%;
-
-    --radius: 0.75rem;
-
-    /* Rock-themed gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(280 100% 70%), hsl(320 100% 70%));
-    --gradient-stage: linear-gradient(180deg, hsl(240 10% 3.9%), hsl(280 100% 10%));
-    --gradient-spotlight: radial-gradient(circle, hsl(280 100% 70% / 0.3), transparent 70%);
-
-    /* Glow effects */
-    --shadow-electric: 0 0 30px hsl(280 100% 70% / 0.5);
-    --shadow-stage: 0 10px 40px hsl(240 10% 3.9% / 0.8);
-
-    /* Success/warning colors for game stats */
-    --success: 120 100% 50%;
-    --warning: 45 100% 60%;
-    --chart-color-1: 280 100% 70%;
-    --chart-color-2: 320 100% 70%;
-    --chart-color-3: 200 100% 70%;
-    --chart-color-4: 45 100% 60%;
-
-    /* Sidebar for game navigation */
-    --sidebar-background: 240 10% 3.9%;
-    --sidebar-foreground: 240 5% 64.9%;
-    --sidebar-primary: 280 100% 70%;
-    --sidebar-primary-foreground: 240 10% 3.9%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 280 100% 70%;
-
-    /* Animation timing */
-    --transition-rock: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* RockMundo Brand Colors */
+    --background: 220 25% 8%;        /* Dark blue-black */
+    --foreground: 45 30% 92%;        /* Cream white */
+    
+    --card: 220 20% 12%;             /* Slightly lighter dark blue */
+    --card-foreground: 45 25% 90%;   /* Cream text on cards */
+    
+    --popover: 220 25% 10%;          /* Dark blue popover */
+    --popover-foreground: 45 30% 92%; /* Cream text */
+    
+    --primary: 195 85% 45%;          /* RockMundo teal blue */
+    --primary-foreground: 45 30% 95%; /* Cream on primary */
+    
+    --secondary: 220 15% 18%;        /* Medium dark blue */
+    --secondary-foreground: 45 20% 85%; /* Lighter cream */
+    
+    --muted: 220 15% 15%;            /* Muted dark blue */
+    --muted-foreground: 45 15% 70%;   /* Muted cream */
+    
+    --accent: 195 75% 55%;           /* Lighter teal accent */
+    --accent-foreground: 220 25% 15%; /* Dark text on accent */
+    
+    --destructive: 0 65% 55%;        /* Red for destructive actions */
+    --destructive-foreground: 0 0% 98%; /* White text */
+    
+    --success: 120 60% 50%;          /* Green for success */
+    --success-foreground: 0 0% 98%;  /* White text */
+    
+    --warning: 45 85% 60%;           /* Gold/yellow for warnings */
+    --warning-foreground: 220 25% 15%; /* Dark text */
+    
+    --border: 220 20% 20%;           /* Border color */
+    --input: 220 20% 16%;            /* Input background */
+    --ring: 195 85% 45%;             /* Focus ring - primary color */
+    
+    --radius: 0.75rem;               /* Border radius */
+    
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(195 85% 45%), hsl(195 75% 55%));
+    --gradient-stage: linear-gradient(180deg, hsl(220 25% 8%) 0%, hsl(220 20% 12%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(195 85% 45%) 0%, hsl(220 25% 8%) 100%);
+    
+    /* Shadows */
+    --shadow-electric: 0 0 20px hsl(195 85% 45% / 0.3);
+    --shadow-glow: 0 0 40px hsl(195 75% 55% / 0.2);
+    
+    /* Sidebar colors */
+    --sidebar-background: 220 25% 8%;
+    --sidebar-foreground: 45 25% 85%;
+    --sidebar-primary: 195 85% 45%;
+    --sidebar-primary-foreground: 45 30% 95%;
+    --sidebar-accent: 220 20% 16%;
+    --sidebar-accent-foreground: 45 25% 90%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 195 85% 45%;
   }
 
-  .light {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 280 100% 50%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 320 100% 50%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
+  .dark {
+    /* Dark mode uses same colors as light mode for consistency */
+    --background: 220 25% 8%;
+    --foreground: 45 30% 92%;
+    
+    --card: 220 20% 12%;
+    --card-foreground: 45 25% 90%;
+    
+    --popover: 220 25% 10%;
+    --popover-foreground: 45 30% 92%;
+    
+    --primary: 195 85% 45%;
+    --primary-foreground: 45 30% 95%;
+    
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 45 20% 85%;
+    
+    --muted: 220 15% 15%;
+    --muted-foreground: 45 15% 70%;
+    
+    --accent: 195 75% 55%;
+    --accent-foreground: 220 25% 15%;
+    
+    --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 280 100% 50%;
+    
+    --success: 120 60% 50%;
+    --success-foreground: 0 0% 98%;
+    
+    --warning: 45 85% 60%;
+    --warning-foreground: 220 25% 15%;
+    
+    --border: 220 20% 20%;
+    --input: 220 20% 16%;
+    --ring: 195 85% 45%;
+    
+    --sidebar-background: 220 25% 8%;
+    --sidebar-foreground: 45 25% 85%;
+    --sidebar-primary: 195 85% 45%;
+    --sidebar-primary-foreground: 45 30% 95%;
+    --sidebar-accent: 220 20% 16%;
+    --sidebar-accent-foreground: 45 25% 90%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 195 85% 45%;
   }
 }
 
@@ -99,8 +114,58 @@
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
+    font-family: 'Oswald', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+}
+
+/* Custom utility classes */
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.bg-gradient-stage {
+  background: var(--gradient-stage);
+}
+
+.bg-gradient-hero {
+  background: var(--gradient-hero);
+}
+
+.shadow-electric {
+  box-shadow: var(--shadow-electric);
+}
+
+.shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+.font-rock {
+  font-family: 'Rock Salt', cursive;
+}
+
+.font-bebas {
+  font-family: 'Bebas Neue', sans-serif;
+}
+
+.font-oswald {
+  font-family: 'Oswald', sans-serif;
+}
+
+/* Animation classes */
+.animate-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 5px hsl(195 85% 45% / 0.3);
+  }
+  to {
+    box-shadow: 0 0 25px hsl(195 85% 45% / 0.6);
   }
 }

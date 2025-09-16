@@ -74,10 +74,10 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bebas tracking-wider bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
               Welcome back, {playerStats.name}
             </h1>
-            <p className="text-muted-foreground">Ready to rock the world?</p>
+            <p className="text-muted-foreground font-oswald">Ready to rock the world?</p>
           </div>
           <div className="flex gap-2">
             <Button 

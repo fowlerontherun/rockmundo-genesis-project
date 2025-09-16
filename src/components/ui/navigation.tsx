@@ -45,14 +45,18 @@ const Navigation = () => {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-primary">
-            <Guitar className="h-6 w-6 text-primary-foreground" />
+          <div className="relative">
+            <img 
+              src="/src/assets/rockmundo-logo.png" 
+              alt="RockMundo Logo"
+              className="h-12 w-auto"
+            />
           </div>
           <div>
-            <h1 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
-              RockMundo
+            <h1 className="text-xl font-bebas tracking-wider text-foreground">
+              ROCKMUNDO
             </h1>
-            <p className="text-xs text-sidebar-foreground">Music Career Sim</p>
+            <p className="text-xs text-sidebar-foreground font-oswald">LIVE THE DREAM</p>
           </div>
         </div>
       </div>

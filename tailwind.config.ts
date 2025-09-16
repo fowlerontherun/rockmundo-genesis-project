@@ -13,6 +13,12 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        'rock': ['Rock Salt', 'cursive'],
+        'bebas': ['Bebas Neue', 'sans-serif'], 
+        'oswald': ['Oswald', 'sans-serif'],
+        'sans': ['Oswald', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -22,7 +28,6 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
-          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -31,6 +36,14 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -58,26 +71,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        success: "hsl(var(--success))",
-        warning: "hsl(var(--warning))",
-        chart: {
-          1: "hsl(var(--chart-color-1))",
-          2: "hsl(var(--chart-color-2))",
-          3: "hsl(var(--chart-color-3))",
-          4: "hsl(var(--chart-color-4))",
-        },
       },
       backgroundImage: {
-        "gradient-primary": "var(--gradient-primary)",
-        "gradient-stage": "var(--gradient-stage)",
-        "gradient-spotlight": "var(--gradient-spotlight)",
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-stage': 'var(--gradient-stage)', 
+        'gradient-hero': 'var(--gradient-hero)',
       },
       boxShadow: {
-        electric: "var(--shadow-electric)",
-        stage: "var(--shadow-stage)",
-      },
-      transitionTimingFunction: {
-        rock: "var(--transition-rock)",
+        'electric': 'var(--shadow-electric)',
+        'glow': 'var(--shadow-glow)',
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -86,20 +88,12 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {

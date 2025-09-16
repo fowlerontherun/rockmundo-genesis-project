@@ -43,21 +43,26 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-spotlight opacity-30" />
+      <div className="absolute inset-0 bg-gradient-hero opacity-20" />
       
       <Card className="w-full max-w-md relative z-10 border-primary/20 bg-card/95 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 rounded-full bg-gradient-primary">
-              <Music className="h-8 w-8 text-primary-foreground" />
+          {/* Logo and branding */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/src/assets/rockmundo-logo.png" 
+                alt="RockMundo Logo"
+                className="h-24 w-auto animate-glow"
+              />
             </div>
+            <h1 className="text-5xl font-bebas tracking-wider text-foreground mb-2">
+              ROCKMUNDO
+            </h1>
+            <p className="text-lg font-oswald text-muted-foreground tracking-wide">
+              LIVE THE DREAM
+            </p>
           </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            RockMundo
-          </CardTitle>
-          <CardDescription>
-            Enter your music career simulation
-          </CardDescription>
         </CardHeader>
         
         <CardContent>
