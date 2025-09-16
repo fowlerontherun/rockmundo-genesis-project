@@ -30,6 +30,9 @@ import MusicCreation from "./pages/MusicCreation";
 import EnhancedBandManager from "./pages/EnhancedBandManager";
 import EnhancedEquipmentStore from "./pages/EnhancedEquipmentStore";
 import EnhancedFanManagement from "./pages/EnhancedFanManagement";
+import AdvancedGigSystem from "./pages/AdvancedGigSystem";
+import CompetitiveCharts from "./pages/CompetitiveCharts";
+import TouringSystem from "./pages/TouringSystem";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +70,9 @@ function App() {
                 <Route path="band-enhanced" element={<EnhancedBandManager />} />
                 <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
                 <Route path="fans-enhanced" element={<EnhancedFanManagement />} />
+                <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
+                <Route path="charts-competitive" element={<CompetitiveCharts />} />
+                <Route path="tours-system" element={<TouringSystem />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
