@@ -80,29 +80,58 @@ export type Database = {
         }
         Relationships: []
       }
-      chat_participants: {
+      band_conflicts: {
         Row: {
-          channel: string
+          band_id: string
+          conflict_type: string
+          created_at: string
+          description: string | null
           id: string
-          status: Database["public"]["Enums"]["chat_participant_status"]
-          updated_at: string | null
-          user_id: string
+          involved_member_ids: string[]
+          issue_tags: string[]
+          resolved: boolean
+          resolved_at: string | null
+          resolution_notes: string | null
+          severity: string
+          updated_at: string
         }
         Insert: {
-          channel?: string
+          band_id: string
+          conflict_type: string
+          created_at?: string
+          description?: string | null
           id?: string
-          status?: Database["public"]["Enums"]["chat_participant_status"]
-          updated_at?: string | null
-          user_id: string
+          involved_member_ids?: string[]
+          issue_tags?: string[]
+          resolved?: boolean
+          resolved_at?: string | null
+          resolution_notes?: string | null
+          severity: string
+          updated_at?: string
         }
         Update: {
-          channel?: string
+          band_id?: string
+          conflict_type?: string
+          created_at?: string
+          description?: string | null
           id?: string
-          status?: Database["public"]["Enums"]["chat_participant_status"]
-          updated_at?: string | null
-          user_id?: string
+          involved_member_ids?: string[]
+          issue_tags?: string[]
+          resolved?: boolean
+          resolved_at?: string | null
+          resolution_notes?: string | null
+          severity?: string
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "band_conflicts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       band_invitations: {
         Row: {
@@ -188,6 +217,74 @@ export type Database = {
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      band_relations: {
+        Row: {
+          avatar_icon: string | null
+          band_id: string
+          chemistry: number
+          created_at: string
+          energy: number
+          id: string
+          instrument: string
+          issues: string[]
+          loyalty: number
+          skill_rating: number
+          member_id: string
+          member_name: string
+          mood: string
+          morale: number
+          personality: string | null
+          strengths: string[]
+          updated_at: string
+        }
+        Insert: {
+          avatar_icon?: string | null
+          band_id: string
+          chemistry?: number
+          created_at?: string
+          energy?: number
+          id?: string
+          instrument: string
+          issues?: string[]
+          loyalty?: number
+          skill_rating?: number
+          member_id: string
+          member_name: string
+          mood?: string
+          morale?: number
+          personality?: string | null
+          strengths?: string[]
+          updated_at?: string
+        }
+        Update: {
+          avatar_icon?: string | null
+          band_id?: string
+          chemistry?: number
+          created_at?: string
+          energy?: number
+          id?: string
+          instrument?: string
+          issues?: string[]
+          loyalty?: number
+          skill_rating?: number
+          member_id?: string
+          member_name?: string
+          mood?: string
+          morale?: number
+          personality?: string | null
+          strengths?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_relations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
         ]
       }
       bands: {
