@@ -7,24 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Music,
-  Play,
-  Pause,
-  Trash2,
-  Star,
-  Coins,
-  Volume2,
-  Mic,
-  Square,
-  Waveform,
-  Loader2,
-  Upload,
-  Layers,
-} from "lucide-react";
+import { Music, Play, Trash2, Star, Coins, Volume2, Pencil } from "lucide-react";
 
 interface Song {
   id: string;
@@ -202,471 +189,17 @@ const MusicCreation = () => {
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [recordingSession, setRecordingSession] = useState(false);
-  const [audioRecordingSongId, setAudioRecordingSongId] = useState<string | null>(null);
-  const [localRecordings, setLocalRecordings] = useState<Record<string, LocalRecording[]>>({});
-  const [uploadingLayer, setUploadingLayer] = useState<string | null>(null);
-  const [previewSongId, setPreviewSongId] = useState<string | null>(null);
-  const [previewLoadingSongId, setPreviewLoadingSongId] = useState<string | null>(null);
-
-  const toneRef = useRef<ToneModule | null>(null);
-  const toneLoadPromiseRef = useRef<Promise<ToneModule | null> | null>(null);
-  const recorderRef = useRef<RecorderInstance | null>(null);
-  const previewPlayersRef = useRef<TonePlayer[]>([]);
-  const previewTimeoutRef = useRef<number | null>(null);
-  const localRecordingsRef = useRef<Record<string, LocalRecording[]>>({});
-
-  const loadTone = useCallback(async (): Promise<ToneModule | null> => {
-    if (toneRef.current) {
-      return toneRef.current;
-    }
-
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const existingTone = window.Tone as ToneModule | undefined;
-    if (existingTone) {
-      toneRef.current = existingTone;
-      return existingTone;
-    }
-
-    if (toneLoadPromiseRef.current) {
-      return toneLoadPromiseRef.current;
-    }
-
-    toneLoadPromiseRef.current = new Promise<ToneModule | null>((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.min.js";
-      script.async = true;
-      script.onload = () => {
-        toneLoadPromiseRef.current = null;
-        const loadedTone = window.Tone as ToneModule | undefined;
-        if (loadedTone) {
-          toneRef.current = loadedTone;
-          resolve(loadedTone);
-        } else {
-          reject(new Error("Tone.js failed to load"));
-        }
-      };
-      script.onerror = () => {
-        toneLoadPromiseRef.current = null;
-        reject(new Error("Failed to load Tone.js"));
-      };
-      document.body.appendChild(script);
-    });
-
-    return toneLoadPromiseRef.current;
-  }, []);
-
-  const stopPreview = useCallback(() => {
-    if (typeof window !== "undefined" && previewTimeoutRef.current) {
-      window.clearTimeout(previewTimeoutRef.current);
-      previewTimeoutRef.current = null;
-    }
-
-    previewPlayersRef.current.forEach((player) => {
-      try {
-        player.stop?.();
-      } catch (error) {
-        console.error("Error stopping player", error);
-      }
-      try {
-        player.dispose?.();
-      } catch (error) {
-        console.error("Error disposing player", error);
-      }
-    });
-
-    previewPlayersRef.current = [];
-    setPreviewSongId(null);
-    setPreviewLoadingSongId(null);
-  }, []);
-
-  useEffect(() => {
-    localRecordingsRef.current = localRecordings;
-  }, [localRecordings]);
-
-  useEffect(() => {
-    return () => {
-      stopPreview();
-
-      if (recorderRef.current?.mic?.close) {
-        try {
-          recorderRef.current.mic.close();
-        } catch (error) {
-          console.error("Error closing microphone", error);
-        }
-      }
-      recorderRef.current = null;
-
-      if (typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
-        Object.values(localRecordingsRef.current).forEach((layers) => {
-          layers.forEach((layer) => {
-            URL.revokeObjectURL(layer.url);
-          });
-        });
-      }
-    };
-  }, [stopPreview]);
-
-  const getAudioDuration = useCallback((url: string): Promise<number> => {
-    if (typeof document === "undefined") {
-      return Promise.resolve(0);
-    }
-
-    return new Promise((resolve) => {
-      const audio = document.createElement("audio");
-      const cleanup = () => {
-        audio.removeEventListener("loadedmetadata", onLoadedMetadata);
-        audio.removeEventListener("error", onError);
-      };
-
-      const onLoadedMetadata = () => {
-        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-        cleanup();
-        resolve(duration);
-      };
-
-      const onError = () => {
-        cleanup();
-        resolve(0);
-      };
-
-      audio.preload = "metadata";
-      audio.addEventListener("loadedmetadata", onLoadedMetadata);
-      audio.addEventListener("error", onError);
-      audio.src = url;
-    });
-  }, []);
-
-  const startAudioRecording = useCallback(
-    async (songId: string) => {
-      if (audioRecordingSongId && audioRecordingSongId !== songId) {
-        toast({
-          title: "Finish current recording",
-          description: "Stop the ongoing recording before starting a new one.",
-        });
-        return;
-      }
-
-      try {
-        const Tone = await loadTone();
-        if (!Tone) {
-          throw new Error("Tone.js is unavailable");
-        }
-
-        stopPreview();
-
-        if (Tone.start) {
-          await Tone.start();
-        } else if (Tone.context?.state === "suspended") {
-          await Tone.context.resume();
-        }
-
-        const mic = new Tone.UserMedia();
-        await mic.open();
-
-        const recorder = new Tone.Recorder();
-        mic.connect(recorder);
-
-        recorderRef.current = { recorder, mic };
-        await recorder.start?.();
-        setAudioRecordingSongId(songId);
-      } catch (error) {
-        console.error("Error starting audio recording:", error);
-        toast({
-          variant: "destructive",
-          title: "Microphone unavailable",
-          description: "We couldn't access your microphone. Please check permissions and try again.",
-        });
-
-        if (recorderRef.current?.mic?.close) {
-          try {
-            recorderRef.current.mic.close();
-          } catch (closeError) {
-            console.error("Error closing microphone after failure:", closeError);
-          }
-        }
-        recorderRef.current = null;
-        setAudioRecordingSongId(null);
-      }
-    },
-    [audioRecordingSongId, loadTone, stopPreview, toast]
-  );
-
-  const stopAudioRecording = useCallback(
-    async (song: Song) => {
-      const activeRecorder = recorderRef.current;
-      if (!activeRecorder) {
-        setAudioRecordingSongId(null);
-        return;
-      }
-
-      try {
-        const { recorder, mic } = activeRecorder;
-        const recording: Blob = await recorder.stop();
-        mic.disconnect?.();
-        if (mic.close) {
-          await mic.close();
-        }
-        recorderRef.current = null;
-
-        const objectUrl = URL.createObjectURL(recording);
-        const duration = await getAudioDuration(objectUrl);
-        const pendingLayers = localRecordingsRef.current[song.id] ?? [];
-        const layerName = `Layer ${(song.audio_layers?.length ?? 0) + pendingLayers.length + 1}`;
-
-        setLocalRecordings((prev) => ({
-          ...prev,
-          [song.id]: [...(prev[song.id] ?? []), { name: layerName, url: objectUrl, blob: recording, duration }],
-        }));
-
-        toast({
-          title: "Layer captured",
-          description: "Preview and save your new recording from the layers panel.",
-        });
-      } catch (error) {
-        console.error("Error finalizing recording:", error);
-        toast({
-          variant: "destructive",
-          title: "Recording failed",
-          description: "We couldn't capture the audio. Please try again.",
-        });
-
-        if (recorderRef.current?.mic?.close) {
-          try {
-            recorderRef.current.mic.close();
-          } catch (closeError) {
-            console.error("Error closing microphone after failure:", closeError);
-          }
-        }
-        recorderRef.current = null;
-      } finally {
-        setAudioRecordingSongId(null);
-      }
-    },
-    [getAudioDuration, toast]
-  );
-
-  const discardLocalLayer = useCallback(
-    (songId: string, index: number) => {
-      const existingLayers = localRecordingsRef.current[songId] ?? [];
-      const targetLayer = existingLayers[index];
-      if (targetLayer) {
-        stopPreview();
-        if (typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
-          URL.revokeObjectURL(targetLayer.url);
-        }
-      }
-
-      setLocalRecordings((prev) => {
-        const songLayers = prev[songId] ?? [];
-        const filteredLayers = songLayers.filter((_, i) => i !== index);
-        const nextLayers = { ...prev };
-        if (filteredLayers.length > 0) {
-          nextLayers[songId] = filteredLayers;
-        } else {
-          delete nextLayers[songId];
-        }
-        return nextLayers;
-      });
-    },
-    [stopPreview]
-  );
-
-  const saveRecordedLayer = useCallback(
-    async (song: Song, layer: LocalRecording, index: number) => {
-      if (!user) {
-        toast({
-          variant: "destructive",
-          title: "Sign in required",
-          description: "You need to be logged in to store recordings.",
-        });
-        return;
-      }
-
-      stopPreview();
-
-      const identifier = `${song.id}-${index}`;
-      setUploadingLayer(identifier);
-
-      try {
-        const extension = layer.blob.type.includes("wav")
-          ? "wav"
-          : layer.blob.type.includes("mp3")
-          ? "mp3"
-          : layer.blob.type.includes("ogg")
-          ? "ogg"
-          : "webm";
-
-        const sanitizedName = slugifyName(layer.name) || "layer";
-        const storagePath = `${user.id}/${song.id}/${Date.now()}-${sanitizedName}.${extension}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("song-recordings")
-          .upload(storagePath, layer.blob, {
-            contentType: layer.blob.type,
-            upsert: true,
-          });
-
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        const { data: publicUrlData } = supabase.storage.from("song-recordings").getPublicUrl(storagePath);
-
-        if (!publicUrlData?.publicUrl) {
-          throw new Error("Unable to obtain public URL for uploaded audio");
-        }
-
-        const newLayer: SongLayer = {
-          name: layer.name,
-          url: publicUrlData.publicUrl,
-          duration: Number.isFinite(layer.duration) ? Number(layer.duration.toFixed(2)) : undefined,
-          storagePath,
-          created_at: new Date().toISOString(),
-        };
-
-        const updatedLayers = [...(song.audio_layers ?? []), newLayer];
-
-        const { data: updatedSongData, error: updateError } = await supabase
-          .from("songs")
-          .update({ audio_layers: updatedLayers })
-          .eq("id", song.id)
-          .select()
-          .single();
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        const normalizedSong = normalizeSong(updatedSongData as SupabaseSongRow);
-
-        setSongs((prev) => prev.map((s) => (s.id === song.id ? normalizedSong : s)));
-
-        setLocalRecordings((prev) => {
-          const songLayers = prev[song.id] ?? [];
-          const filteredLayers = songLayers.filter((_, i) => i !== index);
-          const nextLayers = { ...prev };
-          if (filteredLayers.length > 0) {
-            nextLayers[song.id] = filteredLayers;
-          } else {
-            delete nextLayers[song.id];
-          }
-          return nextLayers;
-        });
-
-        if (typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") {
-          URL.revokeObjectURL(layer.url);
-        }
-
-        toast({
-          title: "Layer saved",
-          description: `${layer.name} was uploaded and linked to ${song.title}.`,
-        });
-      } catch (error) {
-        console.error("Error saving recorded layer:", error);
-        toast({
-          variant: "destructive",
-          title: "Upload failed",
-          description: "We couldn't save this take. Please try again.",
-        });
-      } finally {
-        setUploadingLayer(null);
-      }
-    },
-    [stopPreview, toast, user]
-  );
-
-  const togglePreviewMix = useCallback(
-    async (song: Song) => {
-      if (previewSongId === song.id) {
-        stopPreview();
-        return;
-      }
-
-      stopPreview();
-
-      const storedLayers = Array.isArray(song.audio_layers) ? song.audio_layers : [];
-      const pendingLayersForSong = localRecordings[song.id] ?? [];
-      const combinedLayers: SongLayer[] = [
-        ...storedLayers,
-        ...pendingLayersForSong.map((layer) => ({
-          name: layer.name,
-          url: layer.url,
-          duration: layer.duration,
-        })),
-      ];
-
-      if (combinedLayers.length === 0) {
-        toast({
-          title: "No layers to preview",
-          description: "Record or upload a layer to hear a mix preview.",
-        });
-        return;
-      }
-
-      try {
-        setPreviewLoadingSongId(song.id);
-        const Tone = await loadTone();
-        if (!Tone) {
-          throw new Error("Tone.js is unavailable");
-        }
-
-        if (Tone.start) {
-          await Tone.start();
-        } else if (Tone.context?.state === "suspended") {
-          await Tone.context.resume();
-        }
-
-        const players: TonePlayer[] = [];
-        for (const layer of combinedLayers) {
-          const playerSource = new Tone.Player({ url: layer.url, autostart: false });
-          const destinationPlayer = playerSource.toDestination ? playerSource.toDestination() : playerSource;
-          if (destinationPlayer.loaded) {
-            await destinationPlayer.loaded();
-          } else if (destinationPlayer.load) {
-            await destinationPlayer.load(layer.url);
-          }
-          players.push(destinationPlayer);
-        }
-
-        previewPlayersRef.current = players;
-        setPreviewSongId(song.id);
-        players.forEach((player) => {
-          player.start?.();
-        });
-
-        const longestDuration = Math.max(
-          0,
-          ...combinedLayers.map((layer) =>
-            layer.duration && Number.isFinite(layer.duration) ? layer.duration : 0
-          )
-        );
-
-        if (longestDuration > 0 && typeof window !== "undefined") {
-          if (previewTimeoutRef.current) {
-            window.clearTimeout(previewTimeoutRef.current);
-          }
-          previewTimeoutRef.current = window.setTimeout(() => {
-            stopPreview();
-          }, Math.ceil(longestDuration * 1000) + 500);
-        }
-      } catch (error) {
-        console.error("Error preparing preview mix:", error);
-        toast({
-          variant: "destructive",
-          title: "Preview failed",
-          description: "We couldn't start playback. Please try again.",
-        });
-        stopPreview();
-      } finally {
-        setPreviewLoadingSongId(null);
-      }
-    },
-    [loadTone, localRecordings, previewSongId, stopPreview, toast]
-  );
+  const [recording, setRecording] = useState(false);
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editSongForm, setEditSongForm] = useState({
+    title: "",
+    genre: "",
+    lyrics: "",
+    duration: 180
+  });
+  const [updatingSong, setUpdatingSong] = useState(false);
+  const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
 
   const [newSong, setNewSong] = useState({
     title: "",
@@ -706,6 +239,17 @@ const MusicCreation = () => {
       fetchData();
     }
   }, [fetchData, user]);
+
+  const openEditDialog = (song: Song) => {
+    setEditingSong(song);
+    setEditSongForm({
+      title: song.title,
+      genre: song.genre,
+      lyrics: song.lyrics ?? "",
+      duration: song.duration
+    });
+    setIsEditDialogOpen(true);
+  };
 
   const calculateQuality = (): number => {
     if (!skills) return 30;
@@ -782,7 +326,9 @@ const MusicCreation = () => {
         setSongs(prev => [normalized, ...prev]);
       }
       setNewSong({ title: "", genre: "", lyrics: "", duration: 180 });
-      
+
+      await fetchData();
+
       toast({
         title: "Song Created!",
         description: `"${newSong.title}" was created with ${quality}% quality. +${xpGain} Songwriting XP!`
@@ -854,6 +400,8 @@ const MusicCreation = () => {
       setSongs(prev => prev.map(s => s.id === song.id ? { ...s, status: "recorded" } : s));
       setProfile(prev => prev ? { ...prev, cash: prev.cash - song.recording_cost } : null);
 
+      await fetchData();
+
       toast({
         title: "Recording Complete!",
         description: `"${song.title}" has been recorded and is ready for release!`
@@ -871,7 +419,57 @@ const MusicCreation = () => {
     }
   };
 
+  const updateSong = async () => {
+    if (!editingSong) return;
+    if (!editSongForm.title || !editSongForm.genre) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please provide a title and genre for your song."
+      });
+      return;
+    }
+
+    setUpdatingSong(true);
+
+    try {
+      const { error } = await supabase
+        .from("songs")
+        .update({
+          title: editSongForm.title,
+          genre: editSongForm.genre,
+          lyrics: editSongForm.lyrics || null,
+          duration: editSongForm.duration
+        })
+        .eq("id", editingSong.id);
+
+      if (error) throw error;
+
+      await fetchData();
+
+      toast({
+        title: "Song Updated",
+        description: `"${editSongForm.title}" has been updated.`
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingSong(null);
+      setEditSongForm({ title: "", genre: "", lyrics: "", duration: 180 });
+    } catch (error) {
+      console.error("Error updating song:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Failed to update song. Please try again."
+      });
+    } finally {
+      setUpdatingSong(false);
+    }
+  };
+
   const deleteSong = async (songId: string) => {
+    setDeletingSongId(songId);
+
     try {
       const { error } = await supabase
         .from("songs")
@@ -921,6 +519,14 @@ const MusicCreation = () => {
 
       setSongs(prev => prev.filter(s => s.id !== songId));
 
+      if (editingSong?.id === songId) {
+        setIsEditDialogOpen(false);
+        setEditingSong(null);
+        setEditSongForm({ title: "", genre: "", lyrics: "", duration: 180 });
+      }
+
+      await fetchData();
+
       toast({
         title: "Song Deleted",
         description: "The song has been removed from your catalog."
@@ -933,6 +539,8 @@ const MusicCreation = () => {
         title: "Delete Failed",
         description: "Failed to delete song. Please try again."
       });
+    } finally {
+      setDeletingSongId(null);
     }
   };
 
@@ -1122,155 +730,7 @@ const MusicCreation = () => {
                       </div>
                     )}
 
-                    <div className="space-y-3 rounded-lg border border-muted/40 bg-muted/10 p-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            <Layers className="h-4 w-4 text-blue-400" />
-                            Studio Layers
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Record takes, stack layers, and audition your mix instantly.
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant={audioRecordingSongId === song.id ? "destructive" : "outline"}
-                            disabled={
-                              (audioRecordingSongId !== null && audioRecordingSongId !== song.id) ||
-                              previewSongId === song.id ||
-                              previewLoadingSongId === song.id ||
-                              uploadingLayer !== null
-                            }
-                            onClick={() =>
-                              audioRecordingSongId === song.id
-                                ? stopAudioRecording(song)
-                                : startAudioRecording(song.id)
-                            }
-                          >
-                            {audioRecordingSongId === song.id ? (
-                              <>
-                                <Square className="mr-1 h-4 w-4" />
-                                Stop
-                              </>
-                            ) : (
-                              <>
-                                <Mic className="mr-1 h-4 w-4" />
-                                Record Layer
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={previewSongId === song.id ? "secondary" : "outline"}
-                            disabled={
-                              totalLayerCount === 0 ||
-                              audioRecordingSongId !== null ||
-                              previewLoadingSongId === song.id
-                            }
-                            onClick={() => togglePreviewMix(song)}
-                          >
-                            {previewSongId === song.id ? (
-                              <>
-                                <Pause className="mr-1 h-4 w-4" />
-                                Stop Preview
-                              </>
-                            ) : previewLoadingSongId === song.id ? (
-                              <>
-                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                Preparing
-                              </>
-                            ) : (
-                              <>
-                                <Play className="mr-1 h-4 w-4" />
-                                Preview Mix
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {storedLayers.length > 0 &&
-                          storedLayers.map((layer, index) => (
-                            <div
-                              key={`${song.id}-stored-${index}`}
-                              className="space-y-2 rounded border border-muted bg-background/80 p-2"
-                            >
-                              <div className="flex items-center justify-between text-sm font-medium">
-                                <span className="flex items-center gap-2">
-                                  <Waveform className="h-4 w-4 text-blue-400" />
-                                  {layer.name || `Layer ${index + 1}`}
-                                </span>
-                                {layer.duration ? (
-                                  <span className="text-xs text-muted-foreground">{formatDuration(layer.duration)}</span>
-                                ) : null}
-                              </div>
-                              <audio controls src={layer.url} className="w-full" preload="metadata" />
-                            </div>
-                          ))}
-
-                        {pendingLayers.map((layer, index) => {
-                          const identifier = `${song.id}-${index}`;
-                          const isUploading = uploadingLayer === identifier;
-                          return (
-                            <div
-                              key={`${song.id}-pending-${index}`}
-                              className="space-y-2 rounded border border-primary/40 bg-primary/10 p-3"
-                            >
-                              <div className="flex items-center justify-between text-sm font-medium">
-                                <span className="flex items-center gap-2">
-                                  <Waveform className="h-4 w-4 text-primary" />
-                                  {layer.name}
-                                  <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                                    Pending
-                                  </Badge>
-                                </span>
-                                {layer.duration ? (
-                                  <span className="text-xs text-muted-foreground">{formatDuration(layer.duration)}</span>
-                                ) : null}
-                              </div>
-                              <audio controls src={layer.url} className="w-full" preload="metadata" />
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => saveRecordedLayer(song, layer, index)}
-                                  disabled={isUploading}
-                                >
-                                  {isUploading ? (
-                                    <>
-                                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                      Saving...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Upload className="mr-1 h-4 w-4" />
-                                      Save to Supabase
-                                    </>
-                                  )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => discardLocalLayer(song.id, index)}
-                                  disabled={isUploading}
-                                >
-                                  Discard
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {totalLayerCount === 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            No recordings yet. Capture a new take or save a layer to start building this track.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {song.status === "draft" && (
                         <Button
                           onClick={() => recordSong(song)}
@@ -1282,13 +742,24 @@ const MusicCreation = () => {
                           Record (${song.recording_cost})
                         </Button>
                       )}
-                      
+
+                      <Button
+                        onClick={() => openEditDialog(song)}
+                        variant="outline"
+                        size="sm"
+                        disabled={updatingSong && editingSong?.id === song.id}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
                       <Button
                         onClick={() => deleteSong(song.id)}
                         variant="destructive"
                         size="sm"
+                        disabled={deletingSongId === song.id}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        {deletingSongId === song.id ? "Deleting..." : "Delete"}
                       </Button>
                     </div>
                   </CardContent>
@@ -1299,6 +770,99 @@ const MusicCreation = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setEditingSong(null);
+            setEditSongForm({ title: "", genre: "", lyrics: "", duration: 180 });
+          }
+        }}
+      >
+        <DialogContent>
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              await updateSong();
+            }}
+            className="space-y-6"
+          >
+            <DialogHeader>
+              <DialogTitle>Edit Song</DialogTitle>
+              <DialogDescription>
+                Make changes to your song details and keep your catalog up to date.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Song Title</label>
+                <Input
+                  value={editSongForm.title}
+                  onChange={(e) => setEditSongForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter song title..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Genre</label>
+                <Select
+                  value={editSongForm.genre}
+                  onValueChange={(value) => setEditSongForm(prev => ({ ...prev, genre: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select genre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {genres.map(genre => (
+                      <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Lyrics (Optional)</label>
+              <Textarea
+                value={editSongForm.lyrics}
+                onChange={(e) => setEditSongForm(prev => ({ ...prev, lyrics: e.target.value }))}
+                rows={6}
+                placeholder="Update your lyrics here..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Duration (seconds)</label>
+              <Input
+                type="number"
+                min="30"
+                max="600"
+                value={editSongForm.duration}
+                onChange={(e) => setEditSongForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 180 }))}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={updatingSong}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updatingSong || !editSongForm.title || !editSongForm.genre}
+              >
+                {updatingSong ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
