@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,9 @@ const mapPost = (post: SocialPostRow): SocialPost => {
   };
 };
 
+
 const SocialMedia = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [newPost, setNewPost] = useState("");
@@ -129,11 +132,84 @@ const SocialMedia = () => {
       startDate: "Oct 15, 2024",
       endDate: "Oct 30, 2024"
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) {
+        setFollowers(null);
+        setEngagementRate(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("followers, engagement_rate")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        setFollowers(data?.followers ?? 0);
+        setEngagementRate(data?.engagement_rate ?? 0);
+      } catch (error) {
+        console.error("Error fetching social metrics:", error);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  const applySocialGrowth = async (followerGain: number, engagementBoost: number, message: string) => {
+    if (followerGain <= 0 && engagementBoost <= 0) return;
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Log in to track growth",
+        description: "Sign in to sync social stats with your profile."
+      });
+      return;
+    }
+
+    const currentFollowers = followers ?? 0;
+    const currentEngagement = engagementRate ?? 0;
+    const nextFollowers = Math.max(0, Math.round(currentFollowers + followerGain));
+    const nextEngagement = Math.max(0, Math.min(100, parseFloat((currentEngagement + engagementBoost).toFixed(2))));
+
+    setFollowers(nextFollowers);
+    setEngagementRate(nextEngagement);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        followers: nextFollowers,
+        engagement_rate: nextEngagement,
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error updating social metrics:", error);
+      setFollowers(currentFollowers);
+      setEngagementRate(currentEngagement);
+      toast({
+        variant: "destructive",
+        title: "Couldn't update stats",
+        description: "Please try again after a moment."
+      });
+      return;
+    }
+
+    toast({
+      title: "Social stats updated",
+      description: message
+    });
+  };
 
   const handleCreatePost = async () => {
     if (!newPost.trim()) return;
-
     if (!user) {
       toast({
         variant: "destructive",
@@ -256,7 +332,9 @@ const SocialMedia = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{followers.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-accent">
+                {followers !== null ? followers.toLocaleString() : "--"}
+              </div>
               <p className="text-cream/60 text-sm">+12% this week</p>
             </CardContent>
           </Card>
@@ -268,7 +346,9 @@ const SocialMedia = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">8.9%</div>
+              <div className="text-2xl font-bold text-accent">
+                {engagementRate !== null ? `${engagementRate.toFixed(1)}%` : "--"}
+              </div>
               <p className="text-cream/60 text-sm">Above average</p>
             </CardContent>
           </Card>
@@ -407,8 +487,8 @@ const SocialMedia = () => {
                   <div key={campaign.id} className="space-y-3 p-4 border border-accent/20 rounded-lg">
                     <div className="flex justify-between items-start">
                       <h4 className="font-semibold text-cream">{campaign.name}</h4>
-                      <Badge 
-                        variant={campaign.status === 'Active' ? 'default' : 'secondary'}
+                      <Badge
+                        variant={campaign.status === "Active" ? "default" : "secondary"}
                         className="text-xs"
                       >
                         {campaign.status}
@@ -435,6 +515,13 @@ const SocialMedia = () => {
                     <div className="text-xs text-cream/60">
                       {campaign.startDate} - {campaign.endDate}
                     </div>
+                    <Button
+                      onClick={() => handleRunCampaign(campaign.id)}
+                      className="w-full bg-accent hover:bg-accent/80 text-background"
+                      disabled={campaign.status === "Completed"}
+                    >
+                      {campaign.status === "Completed" ? "Campaign Completed" : "Run Campaign"}
+                    </Button>
                   </div>
                 ))}
                 <Button className="w-full bg-accent hover:bg-accent/80 text-background">

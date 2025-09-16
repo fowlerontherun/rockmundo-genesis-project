@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
 import { toast } from 'sonner';
+import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -240,7 +241,7 @@ const TouringSystem: React.FC = () => {
   };
 
   const executeTourShow = async (tourId: string, venueIndex: number) => {
-    if (!profile) return;
+    if (!user || !profile) return;
 
     const tour = tours.find(t => t.id === tourId);
     if (!tour || !tour.venues[venueIndex]) return;
@@ -277,6 +278,15 @@ const TouringSystem: React.FC = () => {
         `Performed at ${venue.venue_name} - ${ticketsSold} tickets sold`,
         netEarnings
       );
+
+      try {
+        const wearSummary = await applyEquipmentWear(user.id, 'tour');
+        if (wearSummary?.updates.length) {
+          toast.info('Your gear took some wear on the road. Visit the inventory manager to plan repairs.');
+        }
+      } catch (wearError) {
+        console.error('Failed to apply equipment wear after executing tour show', wearError);
+      }
 
       toast.success(`Show completed! Sold ${ticketsSold} tickets for $${revenue.toLocaleString()}`);
       loadTourData();
