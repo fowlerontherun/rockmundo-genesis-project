@@ -1527,6 +1527,84 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_bookings: {
+        Row: {
+          actual_attendance: number | null
+          created_at: string | null
+          event_date: string
+          expected_attendance: number | null
+          id: string
+          notes: string | null
+          revenue: number | null
+          status: string
+          ticket_price: number | null
+          updated_at: string | null
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          actual_attendance?: number | null
+          created_at?: string | null
+          event_date: string
+          expected_attendance?: number | null
+          id?: string
+          notes?: string | null
+          revenue?: number | null
+          status?: string
+          ticket_price?: number | null
+          updated_at?: string | null
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          actual_attendance?: number | null
+          created_at?: string | null
+          event_date?: string
+          expected_attendance?: number | null
+          id?: string
+          notes?: string | null
+          revenue?: number | null
+          status?: string
+          ticket_price?: number | null
+          updated_at?: string | null
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: []
+      }
+      venue_relationships: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_interaction_at: string | null
+          relationship_level: string | null
+          relationship_score: number
+          updated_at: string | null
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          relationship_level?: string | null
+          relationship_score: number
+          updated_at?: string | null
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          relationship_level?: string | null
+          relationship_score?: number
+          updated_at?: string | null
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: []
+      }
       venues: {
         Row: {
           base_payment: number | null
