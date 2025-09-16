@@ -200,6 +200,105 @@ export type Database = {
         }
         Relationships: []
       }
+      competition_participants: {
+        Row: {
+          awarded_at: string | null
+          competition_id: string
+          final_rank: number | null
+          id: string
+          joined_at: string | null
+          prize_amount: number
+          profile_id: string
+          score: number
+        }
+        Insert: {
+          awarded_at?: string | null
+          competition_id: string
+          final_rank?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_amount?: number
+          profile_id: string
+          score?: number
+        }
+        Update: {
+          awarded_at?: string | null
+          competition_id?: string
+          final_rank?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_amount?: number
+          profile_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_participants_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          end_date: string
+          entry_fee: number
+          id: string
+          is_active: boolean
+          is_completed: boolean
+          max_participants: number
+          name: string
+          prize_pool: number
+          requirements: Json
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date: string
+          entry_fee?: number
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          max_participants?: number
+          name: string
+          prize_pool?: number
+          requirements?: Json
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          entry_fee?: number
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          max_participants?: number
+          name?: string
+          prize_pool?: number
+          requirements?: Json
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           advance_payment: number
@@ -422,6 +521,45 @@ export type Database = {
         }
         Relationships: []
       }
+      genre_statistics: {
+        Row: {
+          avg_popularity: number
+          chart_date: string
+          chart_type: string
+          created_at: string
+          genre: string
+          growth: number
+          id: string
+          top_song: string | null
+          total_plays: number
+          total_songs: number
+        }
+        Insert: {
+          avg_popularity?: number
+          chart_date: string
+          chart_type?: string
+          created_at?: string
+          genre: string
+          growth?: number
+          id?: string
+          top_song?: string | null
+          total_plays?: number
+          total_songs?: number
+        }
+        Update: {
+          avg_popularity?: number
+          chart_date?: string
+          chart_type?: string
+          created_at?: string
+          genre?: string
+          growth?: number
+          id?: string
+          top_song?: string | null
+          total_plays?: number
+          total_songs?: number
+        }
+        Relationships: []
+      }
       gig_performances: {
         Row: {
           earnings: number | null
@@ -541,6 +679,68 @@ export type Database = {
         }
         Relationships: []
       }
+      global_charts: {
+        Row: {
+          artist_name: string | null
+          band_name: string | null
+          chart_date: string
+          chart_type: string
+          created_at: string
+          genre: string
+          id: string
+          plays: number
+          popularity: number
+          rank: number
+          song_id: string | null
+          song_title: string
+          trend: string
+          trend_change: number
+          weeks_on_chart: number
+        }
+        Insert: {
+          artist_name?: string | null
+          band_name?: string | null
+          chart_date: string
+          chart_type: string
+          created_at?: string
+          genre: string
+          id?: string
+          plays?: number
+          popularity?: number
+          rank: number
+          song_id?: string | null
+          song_title: string
+          trend?: string
+          trend_change?: number
+          weeks_on_chart?: number
+        }
+        Update: {
+          artist_name?: string | null
+          band_name?: string | null
+          chart_date?: string
+          chart_type?: string
+          created_at?: string
+          genre?: string
+          id?: string
+          plays?: number
+          popularity?: number
+          rank?: number
+          song_id?: string | null
+          song_title?: string
+          trend?: string
+          trend_change?: number
+          weeks_on_chart?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_charts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       player_achievements: {
         Row: {
           achievement_id: string
@@ -576,6 +776,50 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_rankings: {
+        Row: {
+          calculated_at: string
+          hit_songs: number
+          id: string
+          profile_id: string
+          rank: number
+          ranking_type: string
+          score: number
+          total_plays: number
+          trend: string
+        }
+        Insert: {
+          calculated_at?: string
+          hit_songs?: number
+          id?: string
+          profile_id: string
+          rank: number
+          ranking_type?: string
+          score?: number
+          total_plays?: number
+          trend?: string
+        }
+        Update: {
+          calculated_at?: string
+          hit_songs?: number
+          id?: string
+          profile_id?: string
+          rank?: number
+          ranking_type?: string
+          score?: number
+          total_plays?: number
+          trend?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_rankings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -733,6 +977,81 @@ export type Database = {
           },
         ]
       }
+      promotion_campaigns: {
+        Row: {
+          budget: number
+          campaign_type: string
+          created_at: string | null
+          id: string
+          message: string | null
+          new_placements: number | null
+          platform_id: string | null
+          platform_name: string | null
+          playlist_name: string | null
+          playlists_targeted: number | null
+          song_id: string
+          status: string
+          stream_increase: number | null
+          revenue_generated: number | null
+          listeners_generated: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          budget?: number
+          campaign_type: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          budget?: number
+          campaign_type?: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          new_placements?: number | null
+          platform_id?: string | null
+          platform_name?: string | null
+          playlist_name?: string | null
+          playlists_targeted?: number | null
+          song_id?: string
+          status?: string
+          stream_increase?: number | null
+          revenue_generated?: number | null
+          listeners_generated?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_campaigns_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_campaigns_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -740,9 +1059,11 @@ export type Database = {
           cash: number | null
           created_at: string | null
           display_name: string | null
+          engagement_rate: number | null
           experience: number | null
           fame: number | null
           fans: number | null
+          followers: number | null
           id: string
           level: number | null
           updated_at: string | null
@@ -755,9 +1076,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
@@ -770,14 +1093,58 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
           id?: string
           level?: number | null
           updated_at?: string | null
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      schedule_events: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          location: string
+          status: string
+          time: string
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          location: string
+          status?: string
+          time: string
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          location?: string
+          status?: string
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -789,9 +1156,12 @@ export type Database = {
           fan_growth: number | null
           id: string
           likes: number | null
+          reposts: number | null
           platform: string
           shares: number | null
+          timestamp: string | null
           user_id: string
+          views: number | null
         }
         Insert: {
           comments?: number | null
@@ -800,9 +1170,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform: string
           shares?: number | null
+          timestamp?: string | null
           user_id: string
+          views?: number | null
         }
         Update: {
           comments?: number | null
@@ -811,9 +1184,12 @@ export type Database = {
           fan_growth?: number | null
           id?: string
           likes?: number | null
+          reposts?: number | null
           platform?: string
           shares?: number | null
+          timestamp?: string | null
           user_id?: string
+          views?: number | null
         }
         Relationships: []
       }
@@ -824,6 +1200,9 @@ export type Database = {
           genre: string
           id: string
           lyrics: string | null
+          master_quality: number | null
+          mix_quality: number | null
+          production_cost: number | null
           quality_score: number
           release_date: string | null
           revenue: number
@@ -839,6 +1218,9 @@ export type Database = {
           genre: string
           id?: string
           lyrics?: string | null
+          master_quality?: number | null
+          mix_quality?: number | null
+          production_cost?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -854,6 +1236,9 @@ export type Database = {
           genre?: string
           id?: string
           lyrics?: string | null
+          master_quality?: number | null
+          mix_quality?: number | null
+          production_cost?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -894,6 +1279,47 @@ export type Database = {
           revenue_per_play?: number | null
         }
         Relationships: []
+      }
+      streaming_stats: {
+        Row: {
+          created_at: string
+          id: string
+          platform_breakdown: Json
+          song_id: string
+          total_revenue: number
+          total_streams: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform_breakdown?: Json
+          song_id: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform_breakdown?: Json
+          song_id?: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_stats_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       tour_venues: {
         Row: {
@@ -1072,6 +1498,20 @@ export type Database = {
       }
     }
     Views: {
+      leaderboards: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          experience: number
+          fame: number
+          total_achievements: number
+          total_gigs: number
+          total_revenue: number
+          user_id: string
+          username: string | null
+        }
+        Relationships: []
+      },
       player_achievement_summary: {
         Row: {
           earned_count: number
