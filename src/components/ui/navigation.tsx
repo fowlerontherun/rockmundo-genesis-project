@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Home, 
   Users, 
@@ -22,6 +23,7 @@ import {
 const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
 
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
@@ -42,9 +44,9 @@ const Navigation = () => {
     { icon: User, label: "Profile", path: "/profile" },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem("rockmundo_token");
-    navigate("/login");
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
   };
 
   const isActive = (path: string) => location.pathname === path;

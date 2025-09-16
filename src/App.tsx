@@ -3,7 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
+import { AuthProvider } from "./hooks/useAuth";
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
 import GigBooking from "./pages/GigBooking";
@@ -27,35 +29,37 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="band" element={<BandManager />} />
-            <Route path="gigs" element={<GigBooking />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="music" element={<MusicStudio />} />
-            <Route path="charts" element={<WorldPulse />} />
-            <Route path="schedule" element={<Schedule />} />
-            <Route path="equipment" element={<EquipmentStore />} />
-            <Route path="fans" element={<FanManagement />} />
-            <Route path="achievements" element={<Achievements />} />
-            <Route path="tours" element={<TourManager />} />
-            <Route path="labels" element={<RecordLabel />} />
-            <Route path="social" element={<SocialMedia />} />
-            <Route path="venues" element={<VenueManagement />} />
-            <Route path="chemistry" element={<BandChemistry />} />
-            <Route path="streaming" element={<StreamingPlatforms />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Index />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="band" element={<BandManager />} />
+              <Route path="gigs" element={<GigBooking />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="music" element={<MusicStudio />} />
+              <Route path="charts" element={<WorldPulse />} />
+              <Route path="schedule" element={<Schedule />} />
+              <Route path="equipment" element={<EquipmentStore />} />
+              <Route path="fans" element={<FanManagement />} />
+              <Route path="achievements" element={<Achievements />} />
+              <Route path="tours" element={<TourManager />} />
+              <Route path="labels" element={<RecordLabel />} />
+              <Route path="social" element={<SocialMedia />} />
+              <Route path="venues" element={<VenueManagement />} />
+              <Route path="chemistry" element={<BandChemistry />} />
+              <Route path="streaming" element={<StreamingPlatforms />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Music, 
   Users, 
@@ -13,44 +14,15 @@ import {
   Headphones,
   DollarSign,
   Star,
-  Play
+  Play,
+  AlertCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useGameData } from "@/hooks/useGameData";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [playerStats, setPlayerStats] = useState({
-    name: "Demo Player",
-    level: 15,
-    experience: 2450,
-    experienceToNext: 3000,
-    cash: 15420,
-    fame: 342,
-    skills: {
-      vocals: 75,
-      guitar: 82,
-      bass: 45,
-      drums: 38,
-      songwriting: 68,
-      performance: 71
-    }
-  });
-
-  const [bandInfo, setBandInfo] = useState({
-    name: "Electric Dreams",
-    members: 4,
-    genre: "Alternative Rock",
-    popularity: 67,
-    weeklyFans: 1234,
-    upcomingGigs: 3
-  });
-
-  const [recentActivity, setRecentActivity] = useState([
-    { type: "gig", message: "Performed at The Underground Club", time: "2 hours ago", earnings: 850 },
-    { type: "skill", message: "Guitar skill increased to 82", time: "1 day ago" },
-    { type: "fan", message: "Gained 45 new fans", time: "2 days ago" },
-    { type: "song", message: "Completed 'Midnight Echo'", time: "3 days ago" }
-  ]);
+  const { profile, skills, activities, loading, error } = useGameData();
 
   const skillColor = (value: number) => {
     if (value >= 80) return "text-success";
@@ -68,6 +40,40 @@ const Dashboard = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-lg font-oswald">Loading your music empire...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-stage p-6">
+        <div className="max-w-2xl mx-auto">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Error loading your data: {error}
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile || !skills) {
+    return null;
+  }
+
+  // Calculate experience to next level (simple formula)
+  const experienceToNext = profile.level * 1000;
+  const experienceProgress = (profile.experience % 1000);
+
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -75,7 +81,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bebas tracking-wider bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-              Welcome back, {playerStats.name}
+              Welcome back, {profile.display_name || profile.username}
             </h1>
             <p className="text-muted-foreground font-oswald">Ready to rock the world?</p>
           </div>
@@ -106,13 +112,13 @@ const Dashboard = () => {
               <Star className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-primary">{playerStats.level}</div>
+              <div className="text-2xl font-bold text-primary">{profile.level}</div>
               <Progress 
-                value={(playerStats.experience / playerStats.experienceToNext) * 100} 
+                value={(experienceProgress / 1000) * 100} 
                 className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                {playerStats.experience}/{playerStats.experienceToNext} XP
+                {experienceProgress}/1000 XP to level {profile.level + 1}
               </p>
             </CardContent>
           </Card>
@@ -124,7 +130,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-success">
-                ${playerStats.cash.toLocaleString()}
+                ${profile.cash.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
                 From recent performances
@@ -138,9 +144,9 @@ const Dashboard = () => {
               <TrendingUp className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{playerStats.fame}</div>
+              <div className="text-2xl font-bold text-accent">{profile.fame}</div>
               <p className="text-xs text-muted-foreground">
-                +12 this week
+                Keep performing to gain more fame!
               </p>
             </CardContent>
           </Card>
@@ -151,9 +157,9 @@ const Dashboard = () => {
               <Users className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-primary">{bandInfo.popularity}%</div>
+              <div className="text-2xl font-bold text-primary">Solo Artist</div>
               <p className="text-xs text-muted-foreground">
-                {bandInfo.weeklyFans} new fans this week
+                Create or join a band to unlock more features
               </p>
             </CardContent>
           </Card>
@@ -170,13 +176,15 @@ const Dashboard = () => {
               <CardDescription>Your musical abilities</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(playerStats.skills).map(([skill, value]) => (
+              {Object.entries(skills).filter(([key]) => 
+                ['vocals', 'guitar', 'bass', 'drums', 'songwriting', 'performance'].includes(key)
+              ).map(([skill, value]) => (
                 <div key={skill} className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="capitalize font-medium">{skill}</span>
-                    <span className={skillColor(value)}>{value}/100</span>
+                    <span className={skillColor(value as number)}>{value}/100</span>
                   </div>
-                  <Progress value={value} className="h-2" />
+                  <Progress value={value as number} className="h-2" />
                 </div>
               ))}
             </CardContent>
@@ -189,19 +197,19 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Headphones className="h-5 w-5 text-accent" />
-                  {bandInfo.name}
+                  Solo Career
                 </CardTitle>
-                <CardDescription>{bandInfo.genre}</CardDescription>
+                <CardDescription>Build your musical empire</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Members</p>
-                    <p className="font-semibold">{bandInfo.members}</p>
+                    <p className="text-muted-foreground">Status</p>
+                    <p className="font-semibold">Independent Artist</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Upcoming Gigs</p>
-                    <p className="font-semibold">{bandInfo.upcomingGigs}</p>
+                    <p className="text-muted-foreground">Next Goal</p>
+                    <p className="font-semibold">Form a Band</p>
                   </div>
                 </div>
               </CardContent>
@@ -216,22 +224,28 @@ const Dashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start gap-3 p-2 rounded-lg bg-secondary/30">
+                {activities.length > 0 ? activities.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-secondary/30">
                     <div className="text-primary mt-0.5">
-                      {getActivityIcon(activity.type)}
+                      {getActivityIcon(activity.activity_type)}
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
-                      {activity.earnings && (
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.created_at).toLocaleDateString()}
+                      </p>
+                      {activity.earnings > 0 && (
                         <Badge variant="outline" className="mt-1 text-xs border-success text-success">
                           +${activity.earnings}
                         </Badge>
                       )}
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-center text-muted-foreground text-sm py-4">
+                    No recent activity. Start your musical journey!
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
