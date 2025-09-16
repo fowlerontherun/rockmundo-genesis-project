@@ -21,7 +21,8 @@ import {
   Users,
   DollarSign,
   Music,
-  Share2
+  Share2,
+  TrendingUp,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,6 +38,14 @@ type SongRecord = Database["public"]["Tables"]["songs"]["Row"] & {
   totalStreams?: number | null;
   trending?: boolean | null;
 };
+type PromotionCampaignRow = Database["public"]["Tables"]["promotion_campaigns"]["Row"];
+
+interface PlatformBreakdown {
+  key: string;
+  label: string;
+  streams: number;
+  revenue: number;
+}
 
 interface PlatformMetric extends StreamingPlatform {
   monthlyListeners: number;
@@ -53,6 +62,12 @@ interface OverviewMetrics {
   streamsGrowth: number;
   revenueGrowth: number;
   listenersGrowth: number;
+}
+
+interface OverviewSnapshot {
+  totalStreams: number;
+  totalRevenue: number;
+  totalListeners: number;
 }
 
 interface PlatformSnapshot {
@@ -80,8 +95,214 @@ interface SongWithPlatformData {
   status?: string | null;
   totalStreams: number;
   totalRevenue: number;
-  totalListeners: number;
+  platformBreakdown: PlatformBreakdown[];
+  totalListeners?: number;
 }
+
+interface PromotionCampaign extends PromotionCampaignRow {
+  name?: string | null;
+  platform?: string | null;
+  end_date?: string | null;
+}
+
+interface PromotionFunctionResponse {
+  success: boolean;
+  message: string;
+  campaign?: PromotionCampaign | null;
+  statsDelta?: {
+    streams: number;
+    revenue: number;
+    listeners: number;
+  } | null;
+}
+
+const BASE_STREAMING_STATS = {
+  totalStreams: 0,
+  revenue: 0,
+  listeners: 0,
+} as const;
+
+const DEFAULT_REVENUE_PER_PLAY = 0.003;
+
+interface PlatformSourceMeta {
+  key: string;
+  label: string;
+  weight: number;
+  revenuePerPlay: number;
+}
+
+const DEFAULT_PLATFORM_DISTRIBUTION: PlatformSourceMeta[] = [
+  { key: "spotify", label: "Spotify", weight: 45, revenuePerPlay: 0.0032 },
+  { key: "apple-music", label: "Apple Music", weight: 25, revenuePerPlay: 0.007 },
+  { key: "youtube-music", label: "YouTube Music", weight: 20, revenuePerPlay: 0.0025 },
+  { key: "soundcloud", label: "SoundCloud", weight: 10, revenuePerPlay: 0.002 }
+];
+
+const normalizePlatformKey = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
+const formatPlatformLabel = (value: string): string => {
+  const cleaned = value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) {
+    return "Platform";
+  }
+
+  return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const safeNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  if (typeof value === "bigint") {
+    return Number(value);
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  return fallback;
+};
+
+const buildPlatformBreakdown = (
+  song: SongRecord,
+  streamingPlatforms: StreamingPlatform[]
+): PlatformBreakdown[] => {
+  const songRecord = song as Record<string, unknown>;
+  const totalStreams = safeNumber(
+    songRecord.totalStreams ?? songRecord.streams ?? songRecord.plays
+  );
+  const totalRevenue = safeNumber(
+    songRecord.totalRevenue ?? songRecord.revenue
+  );
+
+  const platformSources: PlatformSourceMeta[] = streamingPlatforms.length > 0
+    ? streamingPlatforms.map((platform, index) => {
+        const label = platform.name?.trim() || `Platform ${index + 1}`;
+        const keyBase = platform.id?.trim() || label;
+        const normalizedKey = normalizePlatformKey(keyBase);
+        const weight = Math.max(safeNumber(platform.min_followers, 1), 1);
+        const revenuePerPlay = safeNumber(
+          platform.revenue_per_play,
+          DEFAULT_REVENUE_PER_PLAY
+        );
+
+        return {
+          key: platform.id ?? (normalizedKey || `platform-${index + 1}`),
+          label,
+          weight,
+          revenuePerPlay,
+        };
+      })
+    : DEFAULT_PLATFORM_DISTRIBUTION.map((entry) => ({ ...entry }));
+
+  const metadataLookup = new Map<string, PlatformSourceMeta>();
+  platformSources.forEach((source, index) => {
+    const normalizedKey = normalizePlatformKey(source.key) || `platform-${index + 1}`;
+    metadataLookup.set(normalizedKey, source);
+    metadataLookup.set(normalizePlatformKey(source.label), source);
+  });
+
+  DEFAULT_PLATFORM_DISTRIBUTION.forEach((entry) => {
+    const normalizedKey = normalizePlatformKey(entry.key);
+    if (!metadataLookup.has(normalizedKey)) {
+      metadataLookup.set(normalizedKey, entry);
+    }
+  });
+
+  const rawPlatforms = songRecord.platforms;
+  if (rawPlatforms && typeof rawPlatforms === "object" && !Array.isArray(rawPlatforms)) {
+    const explicitEntries = Object.entries(rawPlatforms as Record<string, unknown>)
+      .map(([rawKey, rawValue], index) => {
+        const normalizedKey = normalizePlatformKey(rawKey);
+        const metadata = metadataLookup.get(normalizedKey) ?? {
+          key: normalizedKey || `platform-${index + 1}`,
+          label: formatPlatformLabel(rawKey),
+          weight: 1,
+          revenuePerPlay: DEFAULT_REVENUE_PER_PLAY,
+        };
+
+        const streams = safeNumber(rawValue);
+        const revenue = totalRevenue > 0 && totalStreams > 0
+          ? (streams / totalStreams) * totalRevenue
+          : streams * metadata.revenuePerPlay;
+
+        return {
+          key: metadata.key,
+          label: metadata.label,
+          streams,
+          revenue: Number.isFinite(revenue) ? revenue : 0,
+        };
+      })
+      .filter((entry) => entry.streams > 0 || entry.revenue > 0);
+
+    if (explicitEntries.length > 0) {
+      return explicitEntries;
+    }
+  }
+
+  const sources = platformSources.length > 0
+    ? platformSources
+    : DEFAULT_PLATFORM_DISTRIBUTION;
+
+  if (sources.length === 0) {
+    return [];
+  }
+
+  const totalWeight = sources.reduce((sum, entry) => sum + (entry.weight || 0), 0) || sources.length;
+  const allocationBasis = totalStreams > 0
+    ? totalStreams
+    : totalRevenue > 0
+      ? Math.round(totalRevenue / DEFAULT_REVENUE_PER_PLAY)
+      : 0;
+
+  let allocatedStreams = 0;
+  let allocatedRevenue = 0;
+
+  const fallbackEntries = sources.map((source, index) => {
+    const weight = source.weight > 0 ? source.weight : 1;
+    const ratio = totalWeight > 0 ? weight / totalWeight : 1 / sources.length;
+
+    let streams = 0;
+    if (allocationBasis > 0) {
+      streams = index === sources.length - 1
+        ? Math.max(allocationBasis - allocatedStreams, 0)
+        : Math.max(Math.round(allocationBasis * ratio), 0);
+      allocatedStreams += streams;
+    }
+
+    let revenue = 0;
+    if (totalRevenue > 0) {
+      revenue = allocationBasis > 0
+        ? (streams / allocationBasis) * totalRevenue
+        : totalRevenue * ratio;
+
+      if (index === sources.length - 1) {
+        revenue = totalRevenue - allocatedRevenue;
+      }
+
+      allocatedRevenue += revenue;
+    } else {
+      revenue = streams * source.revenuePerPlay;
+    }
+
+    return {
+      key: source.key,
+      label: source.label,
+      streams,
+      revenue: Number.isFinite(revenue) ? revenue : 0,
+    };
+  });
+
+  return fallbackEntries.filter((entry) => entry.streams > 0 || entry.revenue > 0);
+};
 
 const calculateGrowth = (
   previous: number | null | undefined,
