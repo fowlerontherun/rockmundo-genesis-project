@@ -1,11 +1,6 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -13,26 +8,29 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database, Tables } from '@/integrations/supabase/types';
+import type { Tables, Database } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import {
-  Bell,
-  Crown,
+  MessageSquare,
+  Users,
+  Send,
+  Music,
+  Volume2,
+  VolumeX,
+  Mic,
+  Play,
+  Pause,
+  Radio,
   Headphones,
   Heart,
   Loader2,
   Lock,
-  MessageSquare,
-  Mic,
-  Music,
-  Play,
-  Radio,
-  Send,
-  Share2,
-  Users,
-  Volume2,
+  Crown,
+  Loader2,
+  UserX
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -89,6 +87,19 @@ interface ChatMessageRow {
   user_level?: number | null;
   user_badge?: string | null;
   profiles?: ChatProfileSummary | null;
+  profile?: ChatProfileSummary | null;
+}
+
+type ChatParticipantRow = Tables<'chat_participants'>;
+
+type ParticipantStatus = 'online' | 'typing' | 'muted';
+
+interface ChatParticipant {
+  id: string;
+  user_id: string;
+  channel: string;
+  status: ParticipantStatus;
+  updated_at: string;
   profile?: ChatProfileSummary | null;
 }
 
@@ -193,22 +204,8 @@ const mapJamSession = (
 ): JamSession => {
   const hostProfile = hostOverride ?? record.host_profile;
 
-  return {
-    id: record.id,
-    name: record.name,
-    hostId: record.host_id,
-    hostName:
-      hostProfile?.display_name || hostProfile?.username || 'Unknown Host',
-    genre: record.genre,
-    tempo: record.tempo,
-    maxParticipants: record.max_participants,
-    currentParticipants: record.current_participants,
-    participantIds: record.participant_ids ?? [],
-    skillRequirement: record.skill_requirement,
-    isPrivate: record.is_private,
-  };
-};
-
+const CHAT_MESSAGES_TABLE = 'chat_messages' as unknown as keyof Database['public']['Tables'];
+const CHAT_PARTICIPANTS_TABLE = 'chat_participants' as unknown as keyof Database['public']['Tables'];
 const mapNotificationRow = (notification: NotificationRow): Notification => {
   const type = notification.type ?? DEFAULT_NOTIFICATION_TYPE;
   const resolvedType = (type in NOTIFICATION_TITLES
@@ -265,27 +262,17 @@ const mapChatMessageRow = (row: ChatMessageRow): ChatMessage => {
   };
 };
 
-const getPriorityColor = (priority: 'low' | 'medium' | 'high') => {
-  switch (priority) {
-    case 'high':
-      return 'text-red-600 bg-red-100';
-    case 'medium':
-      return 'text-yellow-600 bg-yellow-100';
-    default:
-      return 'text-blue-600 bg-blue-100';
-  }
-};
-
-const getUserBadgeColor = (badge?: string) => {
-  switch (badge) {
-    case 'Premium':
-      return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white';
-    case 'Pro':
-      return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white';
-    default:
-      return 'bg-gray-200 text-gray-700';
-  }
-};
+const mapParticipantRow = (
+  row: ChatParticipantRow,
+  profileSummary?: ChatProfileSummary | null
+): ChatParticipant => ({
+  id: row.id,
+  user_id: row.user_id,
+  channel: row.channel ?? 'general',
+  status: (row.status ?? 'online') as ParticipantStatus,
+  updated_at: row.updated_at ?? new Date().toISOString(),
+  profile: profileSummary ?? null,
+});
 
 const RealtimeCommunication: React.FC = () => {
   const { user } = useAuth();
@@ -306,12 +293,61 @@ const RealtimeCommunication: React.FC = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
-  const [participantStreams, setParticipantStreams] = useState<StreamMap>({});
-  const [audioLevels, setAudioLevels] = useState<AudioLevelMap>({});
-  const [participantDetails, setParticipantDetails] =
-    useState<ParticipantDetailsMap>({});
-  const [isRecording, setIsRecording] = useState(false);
-  const [isAudioReady, setIsAudioReady] = useState(false);
+  const activeJamId = activeJam?.id;
+  const currentUserId = user?.id;
+  const { isAdmin: isAdminRole } = useUserRole();
+  const isAdminUser = isAdminRole();
+  const [participants, setParticipants] = useState<ChatParticipant[]>([]);
+  const [selfParticipant, setSelfParticipant] = useState<ChatParticipant | null>(null);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedChannelRef = useRef(selectedChannel);
+
+  const channels = [
+    { id: 'general', name: 'General Chat', icon: MessageSquare, public: true },
+    { id: 'gigs', name: 'Gig Talk', icon: Music, public: true },
+    { id: 'trading', name: 'Equipment Trade', icon: Share2, public: true },
+    { id: 'beginners', name: 'Beginners Help', icon: Heart, public: true },
+    { id: 'vip', name: 'VIP Lounge', icon: Crown, public: false, requirement: 'Level 10+' },
+  ];
+
+  const unreadCount = notifications.filter(notification => !notification.read).length;
+  const isMuted = selfParticipant?.status === 'muted';
+  const typingParticipants = useMemo(
+    () =>
+      participants.filter(
+        participant => participant.status === 'typing' && participant.user_id !== userId
+      ),
+    [participants, userId]
+  );
+  const typingNames = useMemo(
+    () =>
+      typingParticipants.map(participant =>
+        participant.profile?.display_name ??
+        participant.profile?.username ??
+        'Someone'
+      ),
+    [typingParticipants]
+  );
+  const typingMessage = useMemo(() => {
+    if (typingNames.length === 0) {
+      return '';
+    }
+    if (typingNames.length === 1) {
+      return `${typingNames[0]} is typing...`;
+    }
+    if (typingNames.length === 2) {
+      return `${typingNames[0]} and ${typingNames[1]} are typing...`;
+    }
+    return `${typingNames[0]} and ${typingNames.length - 1} others are typing...`;
+  }, [typingNames]);
+
+  const appendMessage = useCallback((incoming: ChatMessage) => {
+    setMessages(prev => {
+      if (prev.some(message => message.id === incoming.id)) {
+        return prev;
+      }
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const hasConnectedRef = useRef(false);
@@ -349,8 +385,384 @@ const RealtimeCommunication: React.FC = () => {
     [],
   );
 
-  const unreadCount = notifications.filter((notification) => !notification.read)
-    .length;
+  useEffect(() => {
+    selectedChannelRef.current = selectedChannel;
+  }, [selectedChannel]);
+
+  useEffect(() => () => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+  }, []);
+
+  const loadParticipants = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from<ChatParticipantRow>(CHAT_PARTICIPANTS_TABLE)
+        .select('id, user_id, channel, status, updated_at')
+        .eq('channel', selectedChannel);
+
+      if (error) {
+        throw error;
+      }
+
+      const rows = data ?? [];
+      const userIds = rows.map(row => row.user_id);
+      let profileMap: Record<string, ChatProfileSummary> = {};
+
+      if (userIds.length > 0) {
+        const { data: profileRows, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, level')
+          .in('user_id', userIds);
+
+        if (!profileError && profileRows) {
+          profileMap = Object.fromEntries(
+            profileRows.map(profileRow => [
+              profileRow.user_id,
+              {
+                username: profileRow.username,
+                display_name: profileRow.display_name,
+                level: profileRow.level,
+              } satisfies ChatProfileSummary,
+            ])
+          );
+        }
+      }
+
+      const mapped = rows.map(row =>
+        mapParticipantRow(row, profileMap[row.user_id] ?? null)
+      );
+
+      setParticipants(mapped);
+      setOnlineCount(mapped.length);
+    } catch (error) {
+      console.error('Error loading chat participants:', error);
+      setParticipants([]);
+      setOnlineCount(0);
+    }
+  }, [selectedChannel]);
+
+  const fetchSelfParticipant = useCallback(async () => {
+    if (!userId) {
+      setSelfParticipant(null);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from<ChatParticipantRow>(CHAT_PARTICIPANTS_TABLE)
+      .select('id, user_id, channel, status, updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error loading self participant:', error);
+      return;
+    }
+
+    if (!data) {
+      setSelfParticipant(null);
+      return;
+    }
+
+    const profileSummary = profile
+      ? {
+          username: profile.username,
+          display_name: profile.display_name,
+          level: profile.level,
+        }
+      : null;
+
+    setSelfParticipant(mapParticipantRow(data, profileSummary));
+  }, [profile, userId]);
+
+  const syncPresence = useCallback(
+    async (status: ParticipantStatus, channelOverride?: string) => {
+      if (!userId) {
+        return { success: false as const };
+      }
+
+      const targetChannel = channelOverride ?? selectedChannelRef.current;
+      if (!targetChannel) {
+        return { success: false as const };
+      }
+
+      const { error } = await supabase
+        .from<ChatParticipantRow>(CHAT_PARTICIPANTS_TABLE)
+        .upsert(
+          {
+            user_id: userId,
+            channel: targetChannel,
+            status,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' }
+        );
+
+      if (error) {
+        console.error('Failed to sync chat presence:', error);
+        return { success: false as const, error };
+      }
+
+      await Promise.all([fetchSelfParticipant(), loadParticipants()]);
+      return { success: true as const };
+    },
+    [fetchSelfParticipant, loadParticipants, userId]
+  );
+
+  const handleInputChange = useCallback(
+    (value: string) => {
+      setCurrentMessage(value);
+
+      if (!userId || isMuted) {
+        return;
+      }
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+
+      if (!value.trim()) {
+        if (isTyping) {
+          setIsTyping(false);
+          void syncPresence('online');
+        }
+        return;
+      }
+
+      if (!isTyping) {
+        setIsTyping(true);
+        void syncPresence('typing');
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        void syncPresence('online');
+      }, 2000);
+    },
+    [isMuted, isTyping, syncPresence, userId]
+  );
+
+  const handleMuteUser = useCallback(
+    async (targetUserId: string) => {
+      if (!isAdminUser || !targetUserId || targetUserId === userId) {
+        if (targetUserId === userId) {
+          toast.error('You cannot mute yourself.');
+        }
+        return;
+      }
+
+      const channelId = selectedChannelRef.current ?? selectedChannel;
+
+      try {
+        const { data, error } = await supabase
+          .from<ChatParticipantRow>(CHAT_PARTICIPANTS_TABLE)
+          .update({
+            status: 'muted',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', targetUserId)
+          .eq('channel', channelId)
+          .select('id')
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          toast.warning('User is not currently active in this channel.');
+          return;
+        }
+
+        await loadParticipants();
+        toast.success('User muted successfully.');
+      } catch (error) {
+        console.error('Error muting user:', error);
+        toast.error('Unable to mute user.');
+      }
+    },
+    [isAdminUser, loadParticipants, selectedChannel, userId]
+  );
+
+  const handleKickUser = useCallback(
+    async (targetUserId: string) => {
+      if (!isAdminUser || !targetUserId || targetUserId === userId) {
+        if (targetUserId === userId) {
+          toast.error('You cannot remove yourself.');
+        }
+        return;
+      }
+
+      const channelId = selectedChannelRef.current ?? selectedChannel;
+
+      try {
+        const { data, error } = await supabase
+          .from<ChatParticipantRow>(CHAT_PARTICIPANTS_TABLE)
+          .delete()
+          .eq('user_id', targetUserId)
+          .eq('channel', channelId)
+          .select('id')
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          toast.warning('User is not currently active in this channel.');
+          return;
+        }
+
+        await loadParticipants();
+        toast.success('User removed from chat.');
+      } catch (error) {
+        console.error('Error removing user:', error);
+        toast.error('Unable to remove user.');
+      }
+    },
+    [isAdminUser, loadParticipants, selectedChannel, userId]
+  );
+
+  const handleChannelSelect = useCallback(
+    (channelId: string) => {
+      if (channelId === selectedChannel) {
+        return;
+      }
+
+      setSelectedChannel(channelId);
+      setCurrentMessage('');
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      setIsTyping(false);
+
+      if (!userId) {
+        return;
+      }
+
+      if (isMuted) {
+        toast.error('You are muted and cannot change channels until an admin unmutes you.');
+        return;
+      }
+
+      void (async () => {
+        const result = await syncPresence('online', channelId);
+        if (!result.success) {
+          const errorCode = (result.error as { code?: string } | undefined)?.code;
+          if (errorCode === '42501') {
+            toast.error('Unable to join the channel due to permissions.');
+          }
+        }
+      })();
+    },
+    [isMuted, selectedChannel, syncPresence, userId]
+  );
+
+  useEffect(() => {
+    void loadParticipants();
+  }, [loadParticipants]);
+
+  useEffect(() => {
+    const presenceChannel = supabase
+      .channel(`chat-participants:${selectedChannel}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chat_participants',
+        filter: `channel=eq.${selectedChannel}`,
+      }, () => {
+        void loadParticipants();
+      });
+
+    presenceChannel.subscribe();
+
+    return () => {
+      void supabase.removeChannel(presenceChannel);
+    };
+  }, [loadParticipants, selectedChannel]);
+
+  useEffect(() => {
+    if (!userId) {
+      setSelfParticipant(null);
+      return;
+    }
+
+    const selfChannel = supabase
+      .channel(`chat-participants:self:${userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chat_participants',
+        filter: `user_id=eq.${userId}`,
+      }, payload => {
+        if (payload.eventType === 'DELETE') {
+          setSelfParticipant(null);
+          return;
+        }
+
+        const newRow = payload.new as ChatParticipantRow;
+        const profileSummary = profile
+          ? {
+              username: profile.username,
+              display_name: profile.display_name,
+              level: profile.level,
+            }
+          : null;
+
+        setSelfParticipant(mapParticipantRow(newRow, profileSummary));
+      });
+
+    selfChannel.subscribe();
+    void fetchSelfParticipant();
+
+    return () => {
+      void supabase.removeChannel(selfChannel);
+    };
+  }, [fetchSelfParticipant, profile, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    void (async () => {
+      const result = await syncPresence('online');
+      if (!result.success) {
+        const errorCode = (result.error as { code?: string } | undefined)?.code;
+        if (errorCode === '42501') {
+          toast.error('You are muted and cannot join the chat right now.');
+        }
+      }
+    })();
+
+    return () => {
+      void supabase
+        .from<ChatParticipantRow>(CHAT_PARTICIPANTS_TABLE)
+        .delete()
+        .eq('user_id', userId);
+    };
+  }, [syncPresence, userId]);
+
+  useEffect(() => {
+    if (!userId || isMuted) {
+      return;
+    }
+
+    if (selfParticipant && selfParticipant.channel === selectedChannel) {
+      return;
+    }
+
+    void syncPresence('online', selectedChannel);
+  }, [isMuted, selectedChannel, selfParticipant, syncPresence, userId]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
 
   useEffect(() => {
     participantStreamsRef.current = participantStreams;
@@ -395,14 +807,20 @@ const RealtimeCommunication: React.FC = () => {
     meter.analyser.disconnect();
     delete audioMetersRef.current[participantId];
 
-    setAudioLevels((prev) => {
-      if (!(participantId in prev)) {
-        return prev;
-      }
-      const { [participantId]: _removed, ...rest } = prev;
-      return rest;
-    });
-  }, []);
+    const fetchMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from<ChatMessageRow>(CHAT_MESSAGES_TABLE)
+          .select(`
+            id,
+            user_id,
+            message,
+            channel,
+            created_at
+          `)
+          .eq('channel', selectedChannel)
+          .order('created_at', { ascending: true })
+          .limit(100);
 
   const setupAudioMeter = useCallback(
     (participantId: string, stream: MediaStream, isLocal: boolean) => {
@@ -1624,6 +2042,143 @@ const RealtimeCommunication: React.FC = () => {
       void supabase.removeChannel(channel);
     };
   }, [userId]);
+  const loadJamSessions = useCallback(async (): Promise<JamSession[]> => {
+    setIsLoadingSessions(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('jam_sessions')
+        .select(`
+          *,
+          host_profile:profiles!jam_sessions_host_id_fkey(username, display_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const records = (data as JamSessionRecord[] | null) ?? [];
+      const mappedSessions = records.map((record) => mapJamSession(record));
+
+      setJamSessions(mappedSessions);
+
+      if (activeJamId) {
+        const updatedActive = mappedSessions.find((session) => session.id === activeJamId);
+
+        if (updatedActive) {
+          setActiveJam(updatedActive);
+          setJamTempo(updatedActive.tempo);
+        } else {
+          setActiveJam(null);
+          setJamTempo(120);
+        }
+      }
+      return mappedSessions;
+    } catch (err) {
+      console.error('Error loading jam sessions:', err);
+      toast.error('Failed to load jam sessions');
+      return [];
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, [activeJamId]);
+  const sendMessage = useCallback(async () => {
+    const trimmedMessage = currentMessage.trim();
+
+    if (!trimmedMessage || !user) {
+      return;
+    }
+
+    if (isMuted) {
+      toast.error('You are muted and cannot send messages.');
+      return;
+    }
+
+    const channelId = selectedChannelRef.current ?? selectedChannel;
+
+    try {
+      const { data, error } = await supabase
+        .from<ChatMessageRow>(CHAT_MESSAGES_TABLE)
+        .insert({
+          user_id: user.id,
+          channel: channelId,
+          message: trimmedMessage,
+        })
+        .select(`
+          id,
+          user_id,
+          message,
+          channel,
+          created_at
+        `)
+        .single();
+
+      if (error || !data) {
+        throw error ?? new Error('Failed to send message');
+      }
+
+      const insertedRow = data as ChatMessageRow;
+      const messagePayload = mapChatMessageRow({
+        ...insertedRow,
+        channel: insertedRow.channel ?? channelId,
+        created_at: insertedRow.created_at ?? new Date().toISOString(),
+        username: profile?.username ?? 'You',
+        user_level: profile?.level ?? 1,
+        user_badge: profile?.level && profile.level > 20 ? 'Pro' : undefined,
+      });
+
+      setMessages(prev => {
+        if (prev.some(existing => existing.id === messagePayload.id)) {
+          return prev;
+        }
+        return [...prev, messagePayload];
+      });
+
+      const realtimeChannel = channelRef.current;
+      if (realtimeChannel) {
+        const status = await realtimeChannel.send({
+          type: 'broadcast',
+          event: 'new-message',
+          payload: messagePayload,
+        });
+
+        if (status !== 'ok') {
+          console.warn('Broadcast failed with status:', status);
+        }
+      }
+
+      setCurrentMessage('');
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      setIsTyping(false);
+      void syncPresence('online', channelId);
+      toast.success('Message sent!');
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      toast.error('Failed to send message.');
+    }
+  }, [currentMessage, isMuted, profile, selectedChannel, syncPresence, user]);
+  const createSession = async () => {
+    if (!profile || !currentUserId) {
+      toast.error('You need a player profile to create jam sessions');
+      return;
+    }
+
+    const trimmedName = newSession.name.trim();
+    const trimmedGenre = newSession.genre.trim();
+    const tempo = Number.isFinite(newSession.tempo) ? Math.max(1, Math.round(newSession.tempo)) : 120;
+    const maxParticipants = Number.isFinite(newSession.maxParticipants)
+      ? Math.max(1, Math.round(newSession.maxParticipants))
+      : 4;
+    const skillRequirement = Number.isFinite(newSession.skillRequirement)
+      ? Math.max(0, Math.round(newSession.skillRequirement))
+      : 0;
+
+    if (!trimmedName || !trimmedGenre) {
+      toast.error('Session name and genre are required');
+      return;
+    }
 
   useEffect(() => {
     if (activeJam && userId) {
@@ -1703,9 +2258,15 @@ const RealtimeCommunication: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-6 h-6" />
-                Global Chat
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <MessageSquare className="w-6 h-6" />
+                  Global Chat
+                </span>
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Users className="w-4 h-4" />
+                  {onlineCount} online
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1716,8 +2277,8 @@ const RealtimeCommunication: React.FC = () => {
                     variant={selectedChannel === channel.id ? 'default' : 'outline'}
                     size="sm"
                     className="gap-2"
-                    onClick={() => setSelectedChannel(channel.id)}
-                    disabled={!channel.public && (!profile || (profile.level ?? 0) < 10)}
+                    onClick={() => handleChannelSelect(channel.id)}
+                    disabled={!channel.public && (!profile || profile.level < 10)}
                   >
                     <channel.icon className="w-4 h-4" />
                     {channel.name}
@@ -1733,7 +2294,7 @@ const RealtimeCommunication: React.FC = () => {
                     .map((message) => (
                       <div key={message.id} className="flex items-start gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span className="font-medium">{message.username}</span>
                             {message.user_badge && (
                               <Badge
@@ -1750,6 +2311,30 @@ const RealtimeCommunication: React.FC = () => {
                             <span className="text-xs text-muted-foreground">
                               {new Date(message.timestamp).toLocaleTimeString()}
                             </span>
+                            {isAdminUser && message.user_id !== userId && (
+                              <div className="ml-auto flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => void handleMuteUser(message.user_id)}
+                                  title="Mute user"
+                                >
+                                  <VolumeX className="w-4 h-4" />
+                                  <span className="sr-only">Mute user</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => void handleKickUser(message.user_id)}
+                                  title="Remove user"
+                                >
+                                  <UserX className="w-4 h-4" />
+                                  <span className="sr-only">Remove user</span>
+                                </Button>
+                              </div>
+                            )}
                           </div>
                           <p className="text-sm">{message.message}</p>
                         </div>
@@ -1758,28 +2343,39 @@ const RealtimeCommunication: React.FC = () => {
                 </div>
               </ScrollArea>
 
+              {typingMessage && (
+                <p className="text-xs text-muted-foreground">{typingMessage}</p>
+              )}
+
+              {/* Message Input */}
               <div className="flex gap-2">
                 <Input
                   value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder="Type your message..."
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  placeholder={isMuted ? 'Muted by an admin' : 'Type your message...'}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       void sendMessage();
                     }
                   }}
-                  disabled={!isConnected}
+                  disabled={!isConnected || isMuted}
                 />
                 <Button
                   onClick={() => {
                     void sendMessage();
                   }}
-                  disabled={!isConnected || !currentMessage.trim()}
+                  disabled={!isConnected || !currentMessage.trim() || isMuted}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
+
+              {isMuted && (
+                <p className="text-xs text-destructive">
+                  You have been muted by an admin and cannot send messages.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
