@@ -44,6 +44,31 @@ interface WeeklyMetric {
   previous: number;
 }
 
+interface AudienceReactionSnapshot {
+  energy: number;
+  satisfaction: number;
+  excitement: number;
+  singing_along: number;
+}
+
+interface StagePerformanceDetail {
+  stageName: string;
+  score: number;
+  audienceReaction?: AudienceReactionSnapshot;
+  feedback: string[];
+  bonuses: string[];
+}
+
+interface GigPerformanceDetail {
+  id: string;
+  gig_id: string | null;
+  performed_at: string;
+  earnings: number | null;
+  performance_score: number | null;
+  stage_results: StagePerformanceDetail[];
+  audience_reaction: AudienceReactionSnapshot | null;
+}
+
 interface ExtendedStats {
   totalSongs: number;
   releasedSongs: number;
@@ -59,9 +84,57 @@ interface ExtendedStats {
     fans: WeeklyMetric;
   };
   achievements: AchievementProgress;
+  recentGigPerformances: GigPerformanceDetail[];
 }
 
 type WeeklyStatsRow = Database['public']['Views']['weekly_stats']['Row'];
+type GigPerformanceRow = Database['public']['Tables']['gig_performances']['Row'];
+
+const RECENT_GIG_LIMIT = 5;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const toNumber = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parseStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+
+const parseAudienceReaction = (value: unknown): AudienceReactionSnapshot | null => {
+  if (!isRecord(value)) return null;
+
+  return {
+    energy: toNumber(value.energy),
+    satisfaction: toNumber(value.satisfaction),
+    excitement: toNumber(value.excitement),
+    singing_along: toNumber(value.singing_along)
+  };
+};
+
+const parseStageResults = (value: unknown): StagePerformanceDetail[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map(stage => {
+      if (!isRecord(stage)) return null;
+
+      return {
+        stageName: typeof stage.stageName === "string" ? stage.stageName : "Stage",
+        score: toNumber(stage.score),
+        audienceReaction: parseAudienceReaction(stage.audienceReaction),
+        feedback: parseStringArray(stage.feedback),
+        bonuses: parseStringArray(stage.bonuses)
+      };
+    })
+    .filter((stage): stage is StagePerformanceDetail => stage !== null);
+};
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
@@ -114,7 +187,7 @@ const PlayerStatistics = () => {
           .maybeSingle(),
         supabase
           .from('gig_performances')
-          .select('id, gig_id, performed_at, earnings, performance_score')
+          .select('id, gig_id, performed_at, earnings, performance_score, stage_results, audience_reaction')
           .eq('user_id', user.id)
           .order('performed_at', { ascending: false }),
         supabase
@@ -146,7 +219,16 @@ const PlayerStatistics = () => {
         unlocked_at: string | null;
       }[]) || [];
       const achievementSummary = achievementSummaryResponse.data;
-      const gigPerformances = gigPerformancesResponse.data || [];
+      const gigPerformances = (gigPerformancesResponse.data as GigPerformanceRow[] | null) ?? [];
+      const gigPerformanceDetails: GigPerformanceDetail[] = gigPerformances.map(performance => ({
+        id: performance.id,
+        gig_id: performance.gig_id,
+        performed_at: performance.performed_at,
+        earnings: performance.earnings === null ? null : Number(performance.earnings),
+        performance_score: performance.performance_score === null ? null : Number(performance.performance_score),
+        stage_results: parseStageResults(performance.stage_results),
+        audience_reaction: parseAudienceReaction(performance.audience_reaction)
+      }));
       const weeklyStatsRow = weeklyStatsResponse.data as WeeklyStatsRow | null;
 
       const buildMetric = (
@@ -189,7 +271,7 @@ const PlayerStatistics = () => {
       const totalStreams = songs.reduce((sum, s) => sum + (s.streams || 0), 0);
       const totalRevenue = songs.reduce((sum, s) => sum + (s.revenue || 0), 0);
       const bestChartPosition = Math.min(...(songs.filter(s => s.chart_position).map(s => s.chart_position) || [100]));
-      const totalGigs = gigPerformances.length;
+      const totalGigs = gigPerformanceDetails.length;
 
       // Calculate equipment value and bonuses
       const equipmentValue = equipmentItems.reduce((sum, item) => {
@@ -236,7 +318,8 @@ const PlayerStatistics = () => {
           remaining: remainingAchievements,
           progress: achievementProgress,
           lastUnlockedAt
-        }
+        },
+        recentGigPerformances: gigPerformanceDetails
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -838,6 +921,106 @@ const PlayerStatistics = () => {
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Gig Performances</CardTitle>
+                <CardDescription>Detailed breakdowns from your latest shows</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {extendedStats?.recentGigPerformances.length ? (
+                  extendedStats.recentGigPerformances
+                    .slice(0, RECENT_GIG_LIMIT)
+                    .map(performance => {
+                      const energyBadge = performance.audience_reaction
+                        ? Math.round(performance.audience_reaction.energy)
+                        : null;
+
+                      return (
+                        <div key={performance.id} className="space-y-3 rounded-lg border border-muted p-4">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <div className="font-semibold">
+                                {new Date(performance.performed_at).toLocaleString()}
+                              </div>
+                              {performance.performance_score !== null && (
+                                <div className="text-sm text-muted-foreground">
+                                  Score: {performance.performance_score}%
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-sm">
+                              <Badge variant="secondary">
+                                {`Earnings: $${performance.earnings !== null
+                                  ? performance.earnings.toLocaleString()
+                                  : '0'}`}
+                              </Badge>
+                              {energyBadge !== null && (
+                                <Badge variant="outline">Crowd Energy: {energyBadge}%</Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {performance.stage_results.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium text-muted-foreground">Stage Highlights</div>
+                              <div className="space-y-2">
+                                {performance.stage_results.map((stage, index) => (
+                                  <div
+                                    key={`${performance.id}-stage-${index}`}
+                                    className="rounded-md bg-muted/60 p-3"
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="font-medium">{stage.stageName}</span>
+                                      <Badge
+                                        variant={
+                                          stage.score >= 80
+                                            ? 'default'
+                                            : stage.score >= 60
+                                            ? 'secondary'
+                                            : 'destructive'
+                                        }
+                                      >
+                                        {stage.score.toFixed(1)}%
+                                      </Badge>
+                                    </div>
+                                    {stage.audienceReaction && (
+                                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                        <span>Energy: {Math.round(stage.audienceReaction.energy)}%</span>
+                                        <span>Excitement: {Math.round(stage.audienceReaction.excitement)}%</span>
+                                        <span>Satisfaction: {Math.round(stage.audienceReaction.satisfaction)}%</span>
+                                        <span>Singing Along: {Math.round(stage.audienceReaction.singing_along)}%</span>
+                                      </div>
+                                    )}
+                                    {stage.feedback.length > 0 && (
+                                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                        {stage.feedback.map((item, feedbackIndex) => (
+                                          <div key={feedbackIndex}>• {item}</div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {stage.bonuses.length > 0 && (
+                                      <div className="mt-2 space-y-1 text-xs text-green-600">
+                                        {stage.bonuses.map((bonus, bonusIndex) => (
+                                          <div key={bonusIndex}>• {bonus}</div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Complete an advanced gig to unlock detailed performance breakdowns.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="equipment" className="space-y-6">

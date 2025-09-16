@@ -321,7 +321,6 @@ const AdvancedGigSystem: React.FC = () => {
     try {
       const updatedFame = Math.max(0, profile.fame + fameDelta);
       const attendance = Math.floor(gig.venue.capacity * Math.max(averageScore, 10) / 100);
-
       await supabase
         .from('gigs')
         .update({

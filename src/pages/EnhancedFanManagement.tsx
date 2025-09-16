@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +21,10 @@ import {
   Instagram,
   Twitter,
   Youtube,
-  Zap
+  Zap,
+  Mail,
+  MailOpen,
+  Reply
 } from "lucide-react";
 
 interface FanDemographics {
@@ -60,6 +64,33 @@ interface EngagementCampaign {
   targetDemographic: string;
 }
 
+interface FanMessage {
+  id: string;
+  user_id: string;
+  fan_name: string;
+  message: string;
+  timestamp: string;
+  sentiment: string;
+  is_read: boolean;
+  reply_message: string | null;
+  replied_at: string | null;
+}
+
+const sentimentDisplay: Record<string, { label: string; className: string }> = {
+  positive: {
+    label: "Positive",
+    className: "border-green-500/30 text-green-600 bg-green-500/10",
+  },
+  neutral: {
+    label: "Neutral",
+    className: "border-slate-500/30 text-slate-600 bg-slate-500/10",
+  },
+  negative: {
+    label: "Negative",
+    className: "border-red-500/30 text-red-600 bg-red-500/10",
+  }
+};
+
 const EnhancedFanManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -69,7 +100,10 @@ const EnhancedFanManagement = () => {
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [campaigning, setCampaigning] = useState(false);
-
+  const [fanMessages, setFanMessages] = useState<FanMessage[]>([]);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [replyLoadingId, setReplyLoadingId] = useState<string | null>(null);
+  const [markingReadId, setMarkingReadId] = useState<string | null>(null);
   const [newPost, setNewPost] = useState({
     platform: "",
     content: ""
@@ -129,15 +163,26 @@ const EnhancedFanManagement = () => {
 
   const fetchData = async () => {
     try {
-      const [fanResponse, postsResponse, profileResponse] = await Promise.all([
+      const [fanResponse, postsResponse, profileResponse, messagesResponse] = await Promise.all([
         supabase.from("fan_demographics").select("*").eq("user_id", user?.id).single(),
         supabase.from("social_posts").select("*").eq("user_id", user?.id).order("created_at", { ascending: false }).limit(10),
-        supabase.from("profiles").select("*").eq("user_id", user?.id).single()
+        supabase.from("profiles").select("*").eq("user_id", user?.id).single(),
+        supabase.from("fan_messages").select("*").eq("user_id", user?.id).order("timestamp", { ascending: false })
       ]);
 
       if (fanResponse.data) setFanData(fanResponse.data);
       if (postsResponse.data) setSocialPosts(postsResponse.data);
       if (profileResponse.data) setProfile(profileResponse.data);
+      if (messagesResponse.error) {
+        console.error("Error fetching fan messages:", messagesResponse.error);
+      } else if (messagesResponse.data) {
+        const messages = messagesResponse.data as FanMessage[];
+        setFanMessages(messages);
+        setReplyInputs(messages.reduce((acc, message) => {
+          acc[message.id] = message.reply_message || "";
+          return acc;
+        }, {} as Record<string, string>));
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -232,6 +277,8 @@ const EnhancedFanManagement = () => {
   };
 
   const launchCampaign = async (campaign: EngagementCampaign) => {
+    if (!user) return;
+
     if ((profile?.cash || 0) < campaign.cost) {
       toast({
         variant: "destructive",
@@ -244,29 +291,39 @@ const EnhancedFanManagement = () => {
     setCampaigning(true);
 
     try {
-      // Update profile cash
       const newCash = (profile?.cash || 0) - campaign.cost;
+      const performanceMultiplier = 0.75 + Math.random() * 0.5;
+      const actualGrowth = Math.max(0, Math.round(campaign.expectedGrowth * performanceMultiplier));
+      const estimatedRevenue = actualGrowth * FAN_VALUE_PER_FAN;
+      const roiValue = campaign.cost > 0
+        ? Number((((estimatedRevenue - campaign.cost) / campaign.cost) * 100).toFixed(1))
+        : 0;
+      const performanceSummary =
+        actualGrowth > campaign.expectedGrowth
+          ? "Exceeded expectations"
+          : actualGrowth === campaign.expectedGrowth
+            ? "Met expectations"
+            : "Underperformed expectations";
+
       await supabase
         .from("profiles")
         .update({ cash: newCash })
         .eq("user_id", user?.id);
 
-      // Update fan demographics based on campaign
       if (fanData) {
         let updates: Partial<FanDemographics> = {
-          total_fans: fanData.total_fans + campaign.expectedGrowth,
-          weekly_growth: fanData.weekly_growth + campaign.expectedGrowth
+          total_fans: fanData.total_fans + actualGrowth,
+          weekly_growth: fanData.weekly_growth + actualGrowth
         };
 
-        // Apply specific demographic targeting
         if (campaign.targetDemographic === "age_18_25") {
-          updates.age_18_25 = fanData.age_18_25 + Math.round(campaign.expectedGrowth * 0.8);
+          updates.age_18_25 = fanData.age_18_25 + Math.round(actualGrowth * 0.8);
         } else if (campaign.targetDemographic === "age_36_45") {
-          updates.age_36_45 = fanData.age_36_45 + Math.round(campaign.expectedGrowth * 0.8);
+          updates.age_36_45 = fanData.age_36_45 + Math.round(actualGrowth * 0.8);
         } else if (campaign.targetDemographic === "platform_tiktok") {
-          updates.platform_tiktok = fanData.platform_tiktok + Math.round(campaign.expectedGrowth * 0.9);
+          updates.platform_tiktok = fanData.platform_tiktok + Math.round(actualGrowth * 0.9);
         } else if (campaign.targetDemographic === "all_platforms") {
-          const growthPerPlatform = Math.round(campaign.expectedGrowth / 4);
+          const growthPerPlatform = Math.round(actualGrowth / 4);
           updates.platform_instagram = fanData.platform_instagram + growthPerPlatform;
           updates.platform_twitter = fanData.platform_twitter + growthPerPlatform;
           updates.platform_youtube = fanData.platform_youtube + growthPerPlatform;
@@ -278,24 +335,65 @@ const EnhancedFanManagement = () => {
           .update(updates)
           .eq("user_id", user?.id);
 
-        setFanData(prev => prev ? { ...prev, ...updates } : null);
+        setFanData(prev => (prev ? { ...prev, ...updates } : prev));
       }
 
-      // Add activity
+      const formattedTarget = formatTargetDemo(campaign.targetDemographic);
+
+      const { data: insertedCampaign, error: campaignError } = await supabase
+        .from("fan_campaigns")
+        .insert({
+          user_id: user?.id,
+          title: campaign.title,
+          cost: campaign.cost,
+          duration: campaign.duration,
+          expected_growth: campaign.expectedGrowth,
+          target_demo: campaign.targetDemographic,
+          actual_growth: actualGrowth,
+          roi: roiValue,
+          results: {
+            summary: performanceSummary,
+            actual_growth: actualGrowth,
+            expected_growth: campaign.expectedGrowth,
+            estimated_revenue: estimatedRevenue,
+            roi: roiValue,
+            notes: `Targeted ${formattedTarget} audience.`
+          }
+        })
+        .select()
+        .single();
+
+      if (campaignError) throw campaignError;
+
       await supabase
         .from("activity_feed")
         .insert({
           user_id: user?.id,
           activity_type: "campaign",
-          message: `Launched "${campaign.title}" campaign (+${campaign.expectedGrowth} fans)`,
-          earnings: -campaign.cost
+          message: `"${campaign.title}" campaign gained ${actualGrowth} fans (${roiValue.toFixed(1)}% ROI)`,
+          earnings: estimatedRevenue - campaign.cost
         });
 
-      setProfile(prev => prev ? { ...prev, cash: newCash } : null);
+      setProfile(prev => (prev ? { ...prev, cash: newCash } : prev));
+
+      if (insertedCampaign) {
+        const normalizedCampaign: FanCampaignRecord = {
+          ...insertedCampaign,
+          cost: typeof insertedCampaign.cost === "string" ? parseFloat(insertedCampaign.cost) : insertedCampaign.cost,
+          roi:
+            insertedCampaign.roi !== null
+              ? typeof insertedCampaign.roi === "string"
+                ? parseFloat(insertedCampaign.roi)
+                : insertedCampaign.roi
+              : null,
+          results: insertedCampaign.results as CampaignResults | null
+        };
+        setCampaignHistory(prev => [normalizedCampaign, ...prev]);
+      }
 
       toast({
-        title: "Campaign Launched!",
-        description: `"${campaign.title}" is now running and will gain you ${campaign.expectedGrowth} fans over ${campaign.duration} days!`
+        title: "Campaign Completed!",
+        description: `"${campaign.title}" brought in ${actualGrowth} new fans with a ${roiValue.toFixed(1)}% ROI.`
       });
 
     } catch (error) {
@@ -330,6 +428,123 @@ const EnhancedFanManagement = () => {
     return platformData ? platformData.color : "text-gray-500";
   };
 
+  const handleReplyChange = (messageId: string, value: string) => {
+    setReplyInputs(prev => ({ ...prev, [messageId]: value }));
+  };
+
+  const markMessageAsRead = async (messageId: string) => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Unable to update message",
+        description: "You need to be signed in to manage fan messages."
+      });
+      return;
+    }
+
+    setMarkingReadId(messageId);
+
+    try {
+      const { error } = await supabase
+        .from("fan_messages")
+        .update({ is_read: true })
+        .eq("id", messageId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setFanMessages(prev =>
+        prev.map(message =>
+          message.id === messageId ? { ...message, is_read: true } : message
+        )
+      );
+
+      toast({
+        title: "Message marked as read",
+        description: "Take a moment to craft the perfect reply."
+      });
+    } catch (error) {
+      console.error("Error marking fan message as read:", error);
+      toast({
+        variant: "destructive",
+        title: "Could not update message",
+        description: "We couldn't mark the message as read. Please try again."
+      });
+    } finally {
+      setMarkingReadId(null);
+    }
+  };
+
+  const sendReply = async (messageId: string) => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Unable to send reply",
+        description: "You need to be signed in to reply to fans."
+      });
+      return;
+    }
+
+    const replyText = (replyInputs[messageId] || "").trim();
+
+    if (!replyText) {
+      toast({
+        variant: "destructive",
+        title: "Reply cannot be empty",
+        description: "Write a quick message before sending your reply."
+      });
+      return;
+    }
+
+    setReplyLoadingId(messageId);
+    const repliedAt = new Date().toISOString();
+
+    try {
+      const { error } = await supabase
+        .from("fan_messages")
+        .update({
+          reply_message: replyText,
+          replied_at: repliedAt,
+          is_read: true
+        })
+        .eq("id", messageId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setFanMessages(prev =>
+        prev.map(message =>
+          message.id === messageId
+            ? { ...message, reply_message: replyText, replied_at: repliedAt, is_read: true }
+            : message
+        )
+      );
+      setReplyInputs(prev => ({ ...prev, [messageId]: replyText }));
+
+      toast({
+        title: "Reply sent!",
+        description: "Your fan will appreciate the personal touch."
+      });
+    } catch (error) {
+      console.error("Error replying to fan message:", error);
+      toast({
+        variant: "destructive",
+        title: "Reply failed",
+        description: "We couldn't send your reply. Please try again."
+      });
+    } finally {
+      setReplyLoadingId(null);
+    }
+  };
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
+  };
+
+  const unreadMessagesCount = fanMessages.filter(message => !message.is_read).length;
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -361,10 +576,13 @@ const EnhancedFanManagement = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="demographics">Demographics</TabsTrigger>
           <TabsTrigger value="social">Social Media</TabsTrigger>
+          <TabsTrigger value="messages">
+            Fan Messages{unreadMessagesCount > 0 ? ` (${unreadMessagesCount})` : ""}
+          </TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
         </TabsList>
 
@@ -600,6 +818,112 @@ const EnhancedFanManagement = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="messages" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <CardTitle className="font-bebas">FAN MESSAGES</CardTitle>
+                <CardDescription>Read and reply to the fans who reach out to you</CardDescription>
+              </div>
+              {fanMessages.length > 0 && (
+                <Badge variant="secondary" className="text-xs uppercase tracking-wider">
+                  {unreadMessagesCount} unread
+                </Badge>
+              )}
+            </CardHeader>
+            <CardContent>
+              {fanMessages.length > 0 ? (
+                <div className="space-y-4">
+                  {fanMessages.map(message => {
+                    const sentimentKey = (message.sentiment || "neutral").toLowerCase();
+                    const sentiment = sentimentDisplay[sentimentKey] ?? sentimentDisplay.neutral;
+                    const replyValue = replyInputs[message.id] ?? "";
+
+                    return (
+                      <div
+                        key={message.id}
+                        className={`rounded-lg border p-4 space-y-4 transition ${message.is_read ? "bg-background" : "border-primary/40 bg-primary/5 shadow-sm shadow-primary/10"}`}
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="flex items-start gap-3">
+                            <Mail className={`mt-1 h-5 w-5 ${message.is_read ? "text-muted-foreground" : "text-primary"}`} />
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-base font-semibold capitalize">{message.fan_name}</p>
+                                <Badge variant="outline" className={`text-xs capitalize ${sentiment.className}`}>
+                                  {sentiment.label}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDateTime(message.timestamp) || "Just now"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={message.is_read ? "outline" : "default"} className="uppercase tracking-wide text-[10px]">
+                              {message.is_read ? "Read" : "New"}
+                            </Badge>
+                            {!message.is_read && (
+                              <Button
+                                onClick={() => markMessageAsRead(message.id)}
+                                disabled={markingReadId === message.id}
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center gap-2"
+                              >
+                                <MailOpen className="h-4 w-4" />
+                                {markingReadId === message.id ? "Marking..." : "Mark as Read"}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-sm leading-relaxed">{message.message}</p>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium uppercase text-muted-foreground">
+                            Reply to {message.fan_name}
+                          </label>
+                          <Textarea
+                            value={replyValue}
+                            onChange={(event) => handleReplyChange(message.id, event.target.value)}
+                            placeholder="Send a heartfelt message back..."
+                            rows={3}
+                          />
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                              onClick={() => sendReply(message.id)}
+                              disabled={replyLoadingId === message.id || replyValue.trim().length === 0}
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <Reply className="h-4 w-4" />
+                              {replyLoadingId === message.id ? "Sending..." : message.reply_message ? "Update Reply" : "Send Reply"}
+                            </Button>
+                            {message.replied_at && (
+                              <span className="text-xs text-muted-foreground">
+                                Replied on {formatDateTime(message.replied_at)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <MessageCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="text-lg font-medium">No fan messages yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Grow your community and fans will start reaching out with their love and support.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="campaigns" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {campaigns.map(campaign => (
@@ -640,6 +964,123 @@ const EnhancedFanManagement = () => {
               </Card>
             ))}
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-bebas">CAMPAIGN ANALYTICS</CardTitle>
+              <CardDescription>Track performance, ROI, and audience impact from your launches</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {campaignHistory.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Campaigns Run</p>
+                      <p className="text-2xl font-bold">{campaignHistory.length}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Fans Gained</p>
+                      <p className="text-2xl font-bold text-green-500">+{totalCampaignGrowth.toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Spend</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalCampaignSpend)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-4 text-center">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Average ROI</p>
+                      <p
+                        className={`text-2xl font-bold ${averageCampaignRoi >= 0 ? "text-green-500" : "text-red-500"}`}
+                      >
+                        {formatPercentage(averageCampaignRoi)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {bestCampaign && (
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Top Performing Campaign
+                          </p>
+                          <p className="font-medium">{bestCampaign.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            +{bestCampaignGrowth.toLocaleString()} fans • {formatCurrency(bestCampaignSpend)} spend • Target: {formatTargetDemo(bestCampaign.target_demo)}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={bestCampaignRoi >= 0 ? "secondary" : "destructive"}
+                          className="w-fit"
+                        >
+                          ROI {formatPercentage(bestCampaignRoi)}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {campaignHistory.map(campaign => {
+                      const actualGrowth = getActualGrowth(campaign);
+                      const roiValue = getCampaignRoi(campaign);
+                      const roiPositive = roiValue >= 0;
+
+                      return (
+                        <div key={campaign.id} className="space-y-3 rounded-lg border p-4">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <p className="font-semibold">{campaign.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(campaign.completed_at ?? campaign.launched_at).toLocaleDateString()} • Target: {formatTargetDemo(campaign.target_demo)}
+                              </p>
+                            </div>
+                            <Badge variant={roiPositive ? "secondary" : "destructive"} className="w-fit">
+                              ROI {formatPercentage(roiValue)}
+                            </Badge>
+                          </div>
+
+                          {campaign.results?.summary && (
+                            <p className="text-sm text-muted-foreground">{campaign.results.summary}</p>
+                          )}
+
+                          <div className="grid grid-cols-1 gap-3 text-sm text-muted-foreground md:grid-cols-4">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-green-500" />
+                              <span>
+                                +{actualGrowth.toLocaleString()} fans
+                                <span className="ml-1 text-xs text-muted-foreground">
+                                  ({campaign.expected_growth.toLocaleString()} expected)
+                                </span>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <TrendingDown className="h-4 w-4 text-red-500" />
+                              <span>{formatCurrency(typeof campaign.cost === "number" ? campaign.cost : 0)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-blue-500" />
+                              <span>{campaign.duration} days</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Target className="h-4 w-4 text-purple-500" />
+                              <span>{formatTargetDemo(campaign.target_demo)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3 py-8 text-center text-muted-foreground">
+                  <TrendingUp className="mx-auto h-10 w-10" />
+                  <p className="font-medium text-foreground">No campaigns launched yet</p>
+                  <p className="text-sm">
+                    Launch a campaign to see detailed performance analytics and ROI insights.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
