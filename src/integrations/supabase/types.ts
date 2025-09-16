@@ -862,6 +862,48 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_events: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          location: string
+          status: string
+          time: string
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          location: string
+          status?: string
+          time: string
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          location?: string
+          status?: string
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       social_posts: {
         Row: {
           comments: number | null
