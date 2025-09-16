@@ -235,12 +235,14 @@ const StreamingPlatforms = () => {
         .eq('user_id', user.id);
       if (accountsError) throw accountsError;
       setPlayerAccounts(accountsData ?? []);
-      const { data: songsData, error: songsError } = await supabase
+      const songsResponse = await supabase
         .from('songs')
         .select('*')
         .eq('artist_id', user.id)
         .eq('status', 'released')
         .order('created_at', { ascending: false });
+
+      let finalSongs = songsResponse.data as SongRecord[] | null | undefined;
 
       if (songsResponse.error) {
         // Some environments may use user_id instead of artist_id
@@ -253,13 +255,13 @@ const StreamingPlatforms = () => {
             .order('created_at', { ascending: false });
 
           if (fallbackResponse.error) throw fallbackResponse.error;
-          songsData = (fallbackResponse.data as SongRecord[]) || [];
+          finalSongs = (fallbackResponse.data as SongRecord[]) ?? [];
         } else {
           throw songsResponse.error;
         }
-      } else {
-        songsData = (songsResponse.data as SongRecord[]) || [];
       }
+
+      const songsData: SongRecord[] = finalSongs ?? [];
 
       let streamingStatsData: StreamingStatsRecord[] = [];
       if (songsData.length > 0) {
