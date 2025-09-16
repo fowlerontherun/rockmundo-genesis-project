@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { applyRoyaltyRecoupment } from "@/utils/contracts";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
 
 interface Song {
@@ -187,9 +188,19 @@ const SongManager = () => {
       return;
     }
 
+    if (!user || !profile) {
+      toast({
+        variant: "destructive",
+        title: "Missing Player Data",
+        description: "Please sign in and load your profile before releasing a song."
+      });
+      return;
+    }
+
     try {
       const initialStreams = Math.floor(song.quality_score * (profile?.fans || 0) / 100);
       const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8));
+      const royaltyEarnings = Number((initialStreams * 0.01).toFixed(2));
 
       const { error } = await supabase
         .from('songs')
@@ -198,34 +209,46 @@ const SongManager = () => {
           release_date: new Date().toISOString(),
           streams: initialStreams,
           chart_position: chartPosition,
-          revenue: initialStreams * 0.01
+          revenue: royaltyEarnings
         })
         .eq('id', song.id);
 
       if (error) throw error;
 
+      const { cashToPlayer, totalRecouped } = await applyRoyaltyRecoupment(user.id, royaltyEarnings);
       const fameGain = Math.floor(song.quality_score / 2);
-      await updateProfile({ 
-        fame: (profile?.fame || 0) + fameGain,
-        cash: (profile?.cash || 0) + (initialStreams * 0.01)
+      const updatedFame = (profile.fame ?? 0) + fameGain;
+      const newCashTotal = (profile.cash ?? 0) + cashToPlayer;
+
+      await updateProfile({
+        fame: updatedFame,
+        cash: newCashTotal
       });
 
-      setSongs(prev => prev.map(s => 
-        s.id === song.id 
-          ? { 
-              ...s, 
+      setSongs(prev => prev.map(s =>
+        s.id === song.id
+          ? {
+              ...s,
               status: 'released' as const,
               release_date: new Date().toISOString(),
               streams: initialStreams,
               chart_position: chartPosition,
-              revenue: initialStreams * 0.01
+              revenue: royaltyEarnings
             }
           : s
       ));
-      
+
+      const royaltiesFormatted = royaltyEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const recoupedFormatted = totalRecouped.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const cashAddedFormatted = cashToPlayer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const baseMessage = `"${song.title}" is now available to fans! +${fameGain} fame.`;
+      const royaltyMessage = totalRecouped > 0
+        ? ` Earned $${royaltiesFormatted} in royalties with $${recoupedFormatted} applied toward your advance. $${cashAddedFormatted} added to cash.`
+        : ` Earned $${cashAddedFormatted} in royalties added directly to your cash.`;
+
       toast({
         title: "Song Released",
-        description: `"${song.title}" is now available to fans! +${fameGain} fame!`
+        description: baseMessage + royaltyMessage
       });
     } catch (error: any) {
       console.error('Error releasing song:', error);
