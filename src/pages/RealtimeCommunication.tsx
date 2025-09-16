@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
 import { toast } from 'sonner';
-import { 
-  MessageSquare, 
-  Users, 
-  Send, 
+import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+import {
+  MessageSquare,
+  Users,
+  Send,
   Music, 
   Volume2, 
   Mic, 
@@ -25,7 +27,8 @@ import {
   Settings,
   Globe,
   Lock,
-  Crown
+  Crown,
+  Loader2
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -39,17 +42,65 @@ interface ChatMessage {
   user_badge?: string;
 }
 
+type JamSessionRow = Tables<'jam_sessions'>;
+
+type JamSessionRecord = JamSessionRow & {
+  host_profile?: {
+    display_name: string | null;
+    username: string | null;
+  } | null;
+};
+
 interface JamSession {
   id: string;
   name: string;
-  host: string;
-  participants: number;
-  max_participants: number;
+  hostId: string;
+  hostName: string;
   genre: string;
   tempo: number;
-  is_private: boolean;
-  skill_requirement: number;
+  maxParticipants: number;
+  currentParticipants: number;
+  participantIds: string[];
+  skillRequirement: number;
+  isPrivate: boolean;
 }
+
+type NewSessionState = {
+  name: string;
+  genre: string;
+  tempo: number;
+  maxParticipants: number;
+  skillRequirement: number;
+};
+
+const createDefaultSessionState = (): NewSessionState => ({
+  name: '',
+  genre: '',
+  tempo: 120,
+  maxParticipants: 4,
+  skillRequirement: 0,
+});
+
+const mapJamSession = (
+  record: JamSessionRecord,
+  hostOverride?: JamSessionRecord['host_profile']
+): JamSession => {
+  const hostProfile = hostOverride ?? record.host_profile;
+
+  return {
+    id: record.id,
+    name: record.name,
+    hostId: record.host_id,
+    hostName: hostProfile?.display_name || hostProfile?.username || 'Unknown Host',
+    genre: record.genre,
+    tempo: record.tempo,
+    maxParticipants: record.max_participants,
+    currentParticipants: record.current_participants,
+    participantIds: record.participant_ids ?? [],
+    skillRequirement: record.skill_requirement,
+    isPrivate: record.is_private,
+  };
+};
 
 interface Notification {
   id: string;
@@ -72,6 +123,12 @@ const RealtimeCommunication: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [activeJam, setActiveJam] = useState<JamSession | null>(null);
   const [jamTempo, setJamTempo] = useState(120);
+  const [newSession, setNewSession] = useState<NewSessionState>(createDefaultSessionState());
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
+  const activeJamId = activeJam?.id;
+  const currentUserId = user?.id;
 
   const channels = [
     { id: 'general', name: 'General Chat', icon: MessageSquare, public: true },
@@ -85,7 +142,7 @@ const RealtimeCommunication: React.FC = () => {
     if (user) {
       initializeRealtime();
       loadChatHistory();
-      loadJamSessions();
+      void loadJamSessions();
       loadNotifications();
     }
 
@@ -93,7 +150,7 @@ const RealtimeCommunication: React.FC = () => {
       // Cleanup WebSocket connections
       setIsConnected(false);
     };
-  }, [user]);
+  }, [user, loadJamSessions]);
 
   const initializeRealtime = () => {
     // Simulate WebSocket connection
@@ -167,44 +224,45 @@ const RealtimeCommunication: React.FC = () => {
     setMessages(historyMessages);
   };
 
-  const loadJamSessions = () => {
-    const sessions: JamSession[] = [
-      {
-        id: '1',
-        name: 'Rock Legends Jam',
-        host: 'GuitarHero123',
-        participants: 3,
-        max_participants: 5,
-        genre: 'Rock',
-        tempo: 140,
-        is_private: false,
-        skill_requirement: 30
-      },
-      {
-        id: '2',
-        name: 'Jazz Fusion Session',
-        host: 'JazzMaster',
-        participants: 2,
-        max_participants: 4,
-        genre: 'Jazz',
-        tempo: 100,
-        is_private: false,
-        skill_requirement: 40
-      },
-      {
-        id: '3',
-        name: 'Electronic Beats',
-        host: 'SynthWave',
-        participants: 1,
-        max_participants: 3,
-        genre: 'Electronic',
-        tempo: 128,
-        is_private: false,
-        skill_requirement: 20
+  const loadJamSessions = useCallback(async (): Promise<JamSession[]> => {
+    setIsLoadingSessions(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('jam_sessions')
+        .select(`
+          *,
+          host_profile:profiles!jam_sessions_host_id_fkey(username, display_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const records = (data as JamSessionRecord[] | null) ?? [];
+      const mappedSessions = records.map((record) => mapJamSession(record));
+
+      setJamSessions(mappedSessions);
+
+      if (activeJamId) {
+        const updatedActive = mappedSessions.find((session) => session.id === activeJamId);
+
+        if (updatedActive) {
+          setActiveJam(updatedActive);
+          setJamTempo(updatedActive.tempo);
+        } else {
+          setActiveJam(null);
+          setJamTempo(120);
+        }
       }
-    ];
-    setJamSessions(sessions);
-  };
+      return mappedSessions;
+    } catch (err) {
+      console.error('Error loading jam sessions:', err);
+      toast.error('Failed to load jam sessions');
+      return [];
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, [activeJamId]);
 
   const loadNotifications = () => {
     const notifs: Notification[] = [
@@ -258,23 +316,163 @@ const RealtimeCommunication: React.FC = () => {
     toast.success('Message sent!');
   };
 
-  const joinJamSession = (session: JamSession) => {
-    if (!profile) return;
+  const createSession = async () => {
+    if (!profile || !currentUserId) {
+      toast.error('You need a player profile to create jam sessions');
+      return;
+    }
 
-    // Check skill requirement
-    const avgSkill = profile.level * 2; // Simplified skill calculation
-    if (avgSkill < session.skill_requirement) {
+    const trimmedName = newSession.name.trim();
+    const trimmedGenre = newSession.genre.trim();
+    const tempo = Number.isFinite(newSession.tempo) ? Math.max(1, Math.round(newSession.tempo)) : 120;
+    const maxParticipants = Number.isFinite(newSession.maxParticipants)
+      ? Math.max(1, Math.round(newSession.maxParticipants))
+      : 4;
+    const skillRequirement = Number.isFinite(newSession.skillRequirement)
+      ? Math.max(0, Math.round(newSession.skillRequirement))
+      : 0;
+
+    if (!trimmedName || !trimmedGenre) {
+      toast.error('Session name and genre are required');
+      return;
+    }
+
+    if (maxParticipants < 1) {
+      toast.error('Jam sessions must allow at least one participant');
+      return;
+    }
+
+    try {
+      setCreatingSession(true);
+
+      const { data: sessionIdData, error: createError } = await supabase
+        .from('jam_sessions')
+        .insert({
+          host_id: currentUserId,
+          name: trimmedName,
+          genre: trimmedGenre,
+          tempo,
+          max_participants: maxParticipants,
+          skill_requirement: skillRequirement,
+          is_private: false,
+        })
+        .select('id')
+        .single();
+
+      if (createError) throw createError;
+      if (!sessionIdData) {
+        throw new Error('Unable to create jam session');
+      }
+
+      const { data: joinedData, error: joinError } = await supabase
+        .rpc('join_jam_session', { p_session_id: sessionIdData.id });
+
+      if (joinError) throw joinError;
+
+      const hostProfile = {
+        display_name: profile.display_name,
+        username: profile.username,
+      };
+
+      let createdSession: JamSession | null = null;
+
+      if (joinedData) {
+        createdSession = mapJamSession(joinedData as JamSessionRecord, hostProfile);
+        setActiveJam(createdSession);
+        setJamTempo(createdSession.tempo);
+      }
+
+      const sessions = await loadJamSessions();
+
+      if (!createdSession && joinedData) {
+        const fallback = sessions.find((session) => session.id === (joinedData as JamSessionRow).id);
+        if (fallback) {
+          setActiveJam(fallback);
+          setJamTempo(fallback.tempo);
+        }
+      }
+
+      setNewSession(createDefaultSessionState());
+      toast.success('Jam session created!');
+    } catch (error) {
+      console.error('Error creating jam session:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create jam session';
+      toast.error(message);
+    } finally {
+      setCreatingSession(false);
+    }
+  };
+
+  const joinSession = async (session: JamSession) => {
+    if (!profile || !currentUserId) {
+      toast.error('You need a player profile to join jam sessions');
+      return;
+    }
+
+    if (session.isPrivate) {
+      toast.error('This jam session is private and cannot be joined right now');
+      return;
+    }
+
+    if (session.currentParticipants >= session.maxParticipants) {
+      toast.error('This jam session is already full');
+      return;
+    }
+
+    const avgSkill = profile.level * 2;
+    if (avgSkill < session.skillRequirement) {
       toast.error('Your skill level is too low for this jam session');
       return;
     }
 
-    setActiveJam(session);
-    setJamTempo(session.tempo);
-    toast.success(`Joined ${session.name}! Get ready to jam!`);
+    if (session.participantIds.includes(currentUserId)) {
+      setActiveJam(session);
+      setJamTempo(session.tempo);
+      toast.info('You are already part of this jam session');
+      return;
+    }
+
+    try {
+      setJoiningSessionId(session.id);
+
+      const { data, error } = await supabase
+        .rpc('join_jam_session', { p_session_id: session.id });
+
+      if (error) throw error;
+      if (!data) {
+        throw new Error('Unable to join jam session');
+      }
+
+      const hostOverride = {
+        display_name: session.hostName,
+        username: session.hostName,
+      };
+
+      const updatedSession = mapJamSession(data as JamSessionRecord, hostOverride);
+
+      setJamSessions((prev) => {
+        const exists = prev.some((item) => item.id === updatedSession.id);
+        if (exists) {
+          return prev.map((item) => (item.id === updatedSession.id ? updatedSession : item));
+        }
+        return [updatedSession, ...prev];
+      });
+
+      setActiveJam(updatedSession);
+      setJamTempo(updatedSession.tempo);
+      toast.success(`Joined ${updatedSession.name}! Get ready to jam!`);
+    } catch (error) {
+      console.error('Error joining jam session:', error);
+      const message = error instanceof Error ? error.message : 'Failed to join jam session';
+      toast.error(message);
+    } finally {
+      setJoiningSessionId(null);
+    }
   };
 
   const leaveJamSession = () => {
     setActiveJam(null);
+    setJamTempo(120);
     toast.info('Left jam session');
   };
 
@@ -445,62 +643,173 @@ const RealtimeCommunication: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {activeJam ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <h3 className="font-medium text-green-800">Currently Jamming</h3>
-                    <p className="text-sm text-green-600">{activeJam.name}</p>
-                    <div className="flex items-center gap-4 mt-3">
-                      <div className="flex items-center gap-2">
-                        <Volume2 className="w-4 h-4" />
-                        <span className="text-sm">Tempo: {jamTempo} BPM</span>
+              <div className="space-y-4">
+                {profile && (
+                  <div className="p-3 border rounded-lg space-y-3">
+                    <div>
+                      <h3 className="font-medium">Start a Jam Session</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Launch a new collaborative session with your preferred style and tempo.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="jam-session-name">Session Name</Label>
+                        <Input
+                          id="jam-session-name"
+                          value={newSession.name}
+                          onChange={(e) => setNewSession(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Midnight Groove"
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        <span className="text-sm">{activeJam.participants}/{activeJam.max_participants}</span>
+                      <div className="space-y-1">
+                        <Label htmlFor="jam-session-genre">Genre</Label>
+                        <Input
+                          id="jam-session-genre"
+                          value={newSession.genre}
+                          onChange={(e) => setNewSession(prev => ({ ...prev, genre: e.target.value }))}
+                          placeholder="Funk / Rock"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="jam-session-tempo">Tempo (BPM)</Label>
+                        <Input
+                          id="jam-session-tempo"
+                          type="number"
+                          min={40}
+                          max={260}
+                          value={newSession.tempo}
+                          onChange={(e) => setNewSession(prev => ({ ...prev, tempo: Number(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="jam-session-max">Max Participants</Label>
+                        <Input
+                          id="jam-session-max"
+                          type="number"
+                          min={1}
+                          max={12}
+                          value={newSession.maxParticipants}
+                          onChange={(e) => setNewSession(prev => ({ ...prev, maxParticipants: Number(e.target.value) || 0 }))}
+                        />
+                      </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <Label htmlFor="jam-session-skill">Skill Requirement</Label>
+                        <Input
+                          id="jam-session-skill"
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={newSession.skillRequirement}
+                          onChange={(e) => setNewSession(prev => ({ ...prev, skillRequirement: Number(e.target.value) || 0 }))}
+                        />
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" variant="outline">
-                        <Mic className="w-4 h-4 mr-1" />
-                        Record
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={leaveJamSession}>
-                        Leave
-                      </Button>
-                    </div>
+                    <Button onClick={createSession} disabled={creatingSession} className="w-full sm:w-auto">
+                      {creatingSession ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Radio className="w-4 h-4 mr-2" />
+                          Create Session
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </div>
-              ) : (
-                <ScrollArea className="h-64">
-                  <div className="space-y-3">
-                    {jamSessions.map((session) => (
-                      <div key={session.id} className="p-3 border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium">{session.name}</h3>
-                          {session.is_private && <Lock className="w-4 h-4 text-muted-foreground" />}
+                )}
+
+                {activeJam ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <h3 className="font-medium text-green-800">Currently Jamming</h3>
+                      <p className="text-sm text-green-600">{activeJam.name}</p>
+                      <p className="text-xs text-green-600">Hosted by {activeJam.hostName}</p>
+                      <div className="flex items-center gap-4 mt-3">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className="w-4 h-4" />
+                          <span className="text-sm">Tempo: {jamTempo} BPM</span>
                         </div>
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <div>Host: {session.host}</div>
-                          <div>Genre: {session.genre}</div>
-                          <div>Tempo: {session.tempo} BPM</div>
-                          <div>Skill Required: {session.skill_requirement}+</div>
-                          <div>Players: {session.participants}/{session.max_participants}</div>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          <span className="text-sm">{activeJam.currentParticipants}/{activeJam.maxParticipants}</span>
                         </div>
-                        <Button 
-                          size="sm" 
-                          className="w-full mt-2"
-                          onClick={() => joinJamSession(session)}
-                          disabled={session.participants >= session.max_participants}
-                        >
-                          <Play className="w-4 h-4 mr-1" />
-                          Join Jam
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" variant="outline">
+                          <Mic className="w-4 h-4 mr-1" />
+                          Record
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={leaveJamSession}>
+                          Leave
                         </Button>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </ScrollArea>
-              )}
+                ) : (
+                  <ScrollArea className="h-64">
+                    {isLoadingSessions ? (
+                      <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+                        Loading jam sessions...
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {jamSessions.length === 0 ? (
+                          <div className="text-sm text-muted-foreground text-center py-6">
+                            No jam sessions available yet. Be the first to start one!
+                          </div>
+                        ) : (
+                          jamSessions.map((session) => {
+                            const isMember = currentUserId ? session.participantIds.includes(currentUserId) : false;
+                            const isJoining = joiningSessionId === session.id;
+                            const isFull = session.currentParticipants >= session.maxParticipants;
+                            const isDisabled = isJoining || isMember || isFull || session.isPrivate;
+
+                            return (
+                              <div key={session.id} className="p-3 border rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h3 className="font-medium">{session.name}</h3>
+                                  {session.isPrivate && <Lock className="w-4 h-4 text-muted-foreground" />}
+                                </div>
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  <div>Host: {session.hostName}</div>
+                                  <div>Genre: {session.genre}</div>
+                                  <div>Tempo: {session.tempo} BPM</div>
+                                  <div>Skill Required: {session.skillRequirement}+</div>
+                                  <div>Players: {session.currentParticipants}/{session.maxParticipants}</div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="w-full mt-2"
+                                  onClick={() => joinSession(session)}
+                                  disabled={isDisabled}
+                                  variant={isMember ? 'secondary' : 'default'}
+                                >
+                                  {isJoining ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                      Joining...
+                                    </>
+                                  ) : isMember ? (
+                                    'Joined'
+                                  ) : (
+                                    <>
+                                      <Play className="w-4 h-4 mr-1" />
+                                      Join Jam
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </ScrollArea>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
