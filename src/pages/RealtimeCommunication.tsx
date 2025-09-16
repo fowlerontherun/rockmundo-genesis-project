@@ -10,7 +10,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useGameData } from '@/hooks/useGameData';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables, Database } from '@/integrations/supabase/types';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import {
   MessageSquare,
@@ -88,6 +87,29 @@ type JamSessionRecord = JamSessionRow & {
   } | null;
 };
 
+type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: string | null;
+  message: string;
+  timestamp: string;
+  read: boolean;
+};
+
+type NotificationType = 'gig_invite' | 'band_request' | 'fan_milestone' | 'achievement' | 'system';
+
+type ChatMessageRow = {
+  id: string;
+  user_id: string;
+  channel: string;
+  message?: string | null;
+  content?: string | null;
+  created_at: string;
+  username?: string | null;
+  user_level?: number | null;
+  user_badge?: string | null;
+};
+
 interface JamSession {
   id: string;
   name: string;
@@ -139,6 +161,17 @@ const mapJamSession = (
   };
 };
 
+type NotificationType = 'gig_invite' | 'band_request' | 'fan_milestone' | 'achievement' | 'system';
+
+type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: NotificationType | null;
+  message: string;
+  timestamp: string;
+  read: boolean;
+};
+
 interface Notification {
   id: string;
   user_id: string;
@@ -170,6 +203,8 @@ const NOTIFICATION_PRIORITIES: Record<NotificationType, 'low' | 'medium' | 'high
 
 const sortNotificationsByTimestamp = (items: Notification[]) =>
   [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+const CHAT_MESSAGES_TABLE = 'chat_messages' as unknown as keyof Database['public']['Tables'];
 
 const mapNotificationRow = (notification: NotificationRow): Notification => {
   const type = notification.type ?? DEFAULT_NOTIFICATION_TYPE;
@@ -248,6 +283,20 @@ const RealtimeCommunication: React.FC = () => {
   ];
 
   const unreadCount = notifications.filter(notification => !notification.read).length;
+
+  const appendMessage = useCallback((incoming: ChatMessage) => {
+    setMessages(prev => {
+      if (prev.some(message => message.id === incoming.id)) {
+        return prev;
+      }
+
+      const next = [...prev, incoming];
+      next.sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -430,7 +479,6 @@ const RealtimeCommunication: React.FC = () => {
         if (!isActive) {
           return;
         }
-
         const mapped = (data ?? []).map(item => mapNotificationRow(item as NotificationRow));
         setNotifications(sortNotificationsByTimestamp(mapped));
       } catch (err) {
@@ -493,7 +541,6 @@ const RealtimeCommunication: React.FC = () => {
       void supabase.removeChannel(channel);
     };
   }, [userId]);
-
   const loadJamSessions = useCallback(async (): Promise<JamSession[]> => {
     setIsLoadingSessions(true);
 
@@ -533,6 +580,10 @@ const RealtimeCommunication: React.FC = () => {
       setIsLoadingSessions(false);
     }
   }, [activeJamId]);
+  const sendMessage = useCallback(async () => {
+    if (!currentMessage.trim() || !user) {
+      return;
+    }
 
   const sendMessage = async () => {
     if (!currentMessage.trim() || !user) {
@@ -599,6 +650,45 @@ const RealtimeCommunication: React.FC = () => {
     }
   };
 
+    const trimmedMessage = currentMessage.trim();
+    const username = profile?.username || profile?.display_name || 'You';
+    const userLevel = profile?.level ?? 1;
+    const userBadge = profile?.level && profile.level > 20 ? 'Pro' : null;
+
+    try {
+      const { data, error } = await supabase
+        .from<ChatMessageRow>(CHAT_MESSAGES_TABLE)
+        .insert({
+          user_id: user.id,
+          username,
+          message: trimmedMessage,
+          channel: selectedChannel,
+          user_level: userLevel,
+          user_badge: userBadge,
+        })
+        .select('*')
+        .single();
+      if (error) {
+        throw error;
+      }
+
+      const persisted = mapChatMessageRow(data as ChatMessageRow);
+      setCurrentMessage('');
+      const status = await activeChannel.send({
+        type: 'broadcast',
+        event: 'message',
+        payload: persisted,
+      });
+
+      if (status !== 'ok') {
+        throw new Error(`Broadcast failed with status: ${status}`);
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send message.';
+      toast.error(errorMessage);
+    }
+  }, [currentMessage, profile, selectedChannel, user]);
   const createSession = async () => {
     if (!profile || !currentUserId) {
       toast.error('You need a player profile to create jam sessions');
@@ -864,7 +954,7 @@ const RealtimeCommunication: React.FC = () => {
                               </Badge>
                             )}
                             <span className="text-xs text-muted-foreground">
-                              Lv.{message.user_level}
+                              Lv.{message.user_level ?? '?'}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {new Date(message.timestamp).toLocaleTimeString()}
