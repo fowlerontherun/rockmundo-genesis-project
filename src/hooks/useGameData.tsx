@@ -1,35 +1,20 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useAuth } from "@/hooks/useAuth";
+import type { Tables } from "@/integrations/supabase/types";
+import type { PostgrestError } from "@supabase/supabase-js";
 
-export interface PlayerProfile {
-  id: string;
-  username: string;
-  display_name: string;
-  level: number;
-  experience: number;
-  cash: number;
-  fame: number;
-  avatar_url?: string;
-  bio?: string;
-}
+export type PlayerProfile = Tables<'profiles'>;
 
-export interface PlayerSkills {
-  vocals: number;
-  guitar: number;
-  bass: number;
-  drums: number;
-  songwriting: number;
-  performance: number;
-}
+export type PlayerSkills = Tables<'player_skills'>;
 
-export interface ActivityItem {
-  id: string;
-  activity_type: string;
-  message: string;
-  earnings: number;
-  created_at: string;
-}
+export type ActivityItem = Tables<'activity_feed'>;
+
+const isPostgrestError = (error: unknown): error is PostgrestError =>
+  typeof error === "object" &&
+  error !== null &&
+  "message" in error &&
+  "code" in error;
 
 export const useGameData = () => {
   const { user } = useAuth();
@@ -82,12 +67,16 @@ export const useGameData = () => {
 
       setProfile(profileData);
       setSkills(skillsData);
-      setActivities(activitiesData || []);
-    } catch (error: unknown) {
-      const fallbackMessage = 'Failed to fetch game data';
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error('Error fetching game data:', errorMessage, error);
-      setError(errorMessage);
+      setActivities(activitiesData ?? []);
+    } catch (err: unknown) {
+      console.error('Error fetching game data:', err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (isPostgrestError(err)) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred while fetching game data.');
+      }
     } finally {
       setLoading(false);
     }
@@ -105,13 +94,20 @@ export const useGameData = () => {
         .single();
 
       if (error) throw error;
+      if (!data) {
+        throw new Error('No profile data returned from Supabase.');
+      }
       setProfile(data);
       return data;
-    } catch (error: unknown) {
-      const fallbackMessage = 'Failed to update profile';
-      const errorToThrow = error instanceof Error ? error : new Error(fallbackMessage);
-      console.error('Error updating profile:', errorToThrow.message, error);
-      throw errorToThrow;
+    } catch (err: unknown) {
+      console.error('Error updating profile:', err);
+      if (err instanceof Error) {
+        throw err;
+      }
+      if (isPostgrestError(err)) {
+        throw err;
+      }
+      throw new Error('An unknown error occurred while updating the profile.');
     }
   };
 
@@ -127,13 +123,20 @@ export const useGameData = () => {
         .single();
 
       if (error) throw error;
+      if (!data) {
+        throw new Error('No skill data returned from Supabase.');
+      }
       setSkills(data);
       return data;
-    } catch (error: unknown) {
-      const fallbackMessage = 'Failed to update skills';
-      const errorToThrow = error instanceof Error ? error : new Error(fallbackMessage);
-      console.error('Error updating skills:', errorToThrow.message, error);
-      throw errorToThrow;
+    } catch (err: unknown) {
+      console.error('Error updating skills:', err);
+      if (err instanceof Error) {
+        throw err;
+      }
+      if (isPostgrestError(err)) {
+        throw err;
+      }
+      throw new Error('An unknown error occurred while updating skills.');
     }
   };
 
@@ -153,15 +156,22 @@ export const useGameData = () => {
         .single();
 
       if (error) throw error;
-      
+      if (!data) {
+        throw new Error('No activity data returned from Supabase.');
+      }
+
       // Add to local state
       setActivities(prev => [data, ...prev.slice(0, 9)]);
       return data;
-    } catch (error: unknown) {
-      const fallbackMessage = 'Failed to add activity';
-      const errorToThrow = error instanceof Error ? error : new Error(fallbackMessage);
-      console.error('Error adding activity:', errorToThrow.message, error);
-      throw errorToThrow;
+    } catch (err: unknown) {
+      console.error('Error adding activity:', err);
+      if (err instanceof Error) {
+        throw err;
+      }
+      if (isPostgrestError(err)) {
+        throw err;
+      }
+      throw new Error('An unknown error occurred while adding activity.');
     }
   };
 
