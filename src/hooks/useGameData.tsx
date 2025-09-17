@@ -486,21 +486,25 @@ const useProvideGameData = (): GameDataContextValue => {
         updated_at: updates.updated_at ?? new Date().toISOString()
       };
 
-      const { data, error: updateError } = await supabase
-        .from("player_attributes")
-        .update(payload)
-        .eq("profile_id", selectedCharacterId)
-        .select()
-        .maybeSingle();
+      try {
+        const { data, error: updateError } = await supabase
+          .from("player_attributes")
+          .update(payload)
+          .eq("profile_id", selectedCharacterId)
+          .select()
+          .maybeSingle();
 
-      if (updateError) {
+        if (updateError) {
+          throw updateError;
+        }
+
+        const nextAttributes = data ?? (attributes ? { ...attributes, ...payload } : null);
+        setAttributes(nextAttributes);
+        return nextAttributes;
+      } catch (updateError) {
         console.error("Error updating attributes:", updateError);
         throw updateError;
       }
-
-      const nextAttributes = data ?? (attributes ? { ...attributes, ...payload } : null);
-      setAttributes(nextAttributes);
-      return nextAttributes ?? undefined;
     },
     [attributes, selectedCharacterId, user]
   );
