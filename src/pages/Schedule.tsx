@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar as CalendarIcon,
@@ -39,6 +40,7 @@ import {
   Download,
 } from "lucide-react";
 import { addMonths } from "date-fns";
+import { calculateLevel } from "@/utils/gameBalance";
 
 type EventType = "gig" | "recording" | "rehearsal" | "meeting" | "tour";
 type EventStatus = "upcoming" | "in_progress" | "completed" | "cancelled";
@@ -136,6 +138,70 @@ const MAX_GENERATED_OCCURRENCES = 50;
 const RECURRENCE_LOOKAHEAD_MONTHS = 12;
 
 const reminderValueToString = (value: number | null) => (value === null ? "none" : value.toString());
+
+type SkillGainKey =
+  | "performance"
+  | "songwriting"
+  | "technical"
+  | "composition"
+  | "business"
+  | "marketing"
+  | "creativity"
+  | "vocals"
+  | "guitar"
+  | "drums"
+  | "bass";
+
+type SkillGains = Partial<Record<SkillGainKey, number>>;
+
+const EVENT_REWARD_CONFIG: Record<
+  EventType,
+  {
+    label: string;
+    cash: number;
+    experience: number;
+    fame: number;
+    skillGains?: SkillGains;
+  }
+> = {
+  gig: {
+    label: "Gig",
+    cash: 500,
+    experience: 150,
+    fame: 40,
+    skillGains: { performance: 2, marketing: 1 },
+  },
+  recording: {
+    label: "Recording Session",
+    cash: 300,
+    experience: 140,
+    fame: 25,
+    skillGains: { technical: 2, songwriting: 2, creativity: 1 },
+  },
+  rehearsal: {
+    label: "Rehearsal",
+    cash: 150,
+    experience: 90,
+    fame: 15,
+    skillGains: { performance: 1, composition: 1, guitar: 1, drums: 1 },
+  },
+  meeting: {
+    label: "Industry Meeting",
+    cash: 200,
+    experience: 70,
+    fame: 10,
+    skillGains: { business: 2, marketing: 1 },
+  },
+  tour: {
+    label: "Tour Stop",
+    cash: 800,
+    experience: 220,
+    fame: 60,
+    skillGains: { performance: 3, marketing: 2, vocals: 2 },
+  },
+};
+
+const formatSkillLabel = (skill: string) => skill.charAt(0).toUpperCase() + skill.slice(1);
 
 const formatRelativeTime = (minutes: number) => {
   if (minutes === 0) {
@@ -589,6 +655,7 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { profile, skills, updateProfile, updateSkills, addActivity, refetch } = useGameData();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -605,6 +672,16 @@ const Schedule = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const notifiedEventsRef = useRef<Set<string>>(new Set());
+  const profileRef = useRef<PlayerProfile | null>(profile);
+  const skillsRef = useRef<PlayerSkills | null>(skills);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  useEffect(() => {
+    skillsRef.current = skills;
+  }, [skills]);
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -789,6 +866,107 @@ const Schedule = () => {
 
     return () => clearInterval(interval);
   }, [checkReminders, user]);
+
+  const processCompletionRewards = useCallback(
+    async (event: ScheduleEvent) => {
+      const reward = EVENT_REWARD_CONFIG[event.type];
+      if (!reward) {
+        return null;
+      }
+
+      if (!user) {
+        throw new Error("You need to be signed in to claim event rewards.");
+      }
+
+      const activeProfile = profileRef.current;
+      if (!activeProfile) {
+        throw new Error("Profile data is still loading. Please try again.");
+      }
+
+      const profileUpdates: Partial<PlayerProfile> = {};
+      const currentCash = Number(activeProfile.cash ?? 0);
+      const currentExperience = Number(activeProfile.experience ?? 0);
+      const currentFame = Number(activeProfile.fame ?? 0);
+
+      const newCash = currentCash + reward.cash;
+      const newExperience = currentExperience + reward.experience;
+      const newFame = Math.max(0, currentFame + reward.fame);
+
+      profileUpdates.cash = newCash;
+      profileUpdates.experience = newExperience;
+      profileUpdates.fame = newFame;
+
+      const currentLevel =
+        typeof activeProfile.level === "number"
+          ? activeProfile.level
+          : calculateLevel(currentExperience);
+      const newLevel = calculateLevel(newExperience);
+      if (newLevel !== currentLevel) {
+        profileUpdates.level = newLevel;
+      }
+
+      const updatedProfile = await updateProfile(profileUpdates);
+      if (!updatedProfile) {
+        throw new Error("Unable to update profile with completion rewards.");
+      }
+      profileRef.current = updatedProfile;
+
+      const activeSkills = skillsRef.current;
+      const skillSummaries: string[] = [];
+      if (reward.skillGains && activeSkills) {
+        const skillUpdates: Partial<PlayerSkills> = {};
+
+        for (const [key, delta] of Object.entries(reward.skillGains)) {
+          const numericDelta = Number(delta ?? 0);
+          if (numericDelta <= 0) {
+            continue;
+          }
+
+          const skillKey = key as SkillGainKey;
+          const currentValue = Number(
+            activeSkills[skillKey as keyof PlayerSkills] ?? 0
+          );
+          const nextValue = Math.min(100, currentValue + numericDelta);
+          const actualGain = nextValue - currentValue;
+
+          if (actualGain > 0) {
+            skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
+            skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
+          }
+        }
+
+        if (Object.keys(skillUpdates).length > 0) {
+          const updatedSkills = await updateSkills(skillUpdates);
+          if (updatedSkills) {
+            skillsRef.current = updatedSkills;
+          }
+        }
+      }
+
+      const summarySegments = [
+        `+${reward.experience} XP`,
+        `+${reward.fame} fame`,
+        `+$${reward.cash.toLocaleString()} cash`,
+      ];
+
+      if (skillSummaries.length > 0) {
+        summarySegments.push(`Skill gains: ${skillSummaries.join(", ")}`);
+      }
+
+      const activityMessage = `Completed ${event.title} (${reward.label}) — ${summarySegments.join(
+        " • "
+      )}`;
+
+      await addActivity(`schedule_${event.type}`, activityMessage, reward.cash);
+      await refetch();
+
+      return {
+        summary: summarySegments.join(" • "),
+        rewardLabel: reward.label,
+      };
+    },
+    [addActivity, refetch, updateProfile, updateSkills, user]
+  );
 
   const handleFormChange = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
     setFormData((prev) => ({
@@ -990,6 +1168,7 @@ const Schedule = () => {
 
     setIsSubmitting(true);
     try {
+      const previousStatus = currentEvent.status;
       const shouldResetNotification =
         currentEvent.date !== formData.date ||
         normalizeTime(currentEvent.time) !== formData.time ||
@@ -1037,14 +1216,42 @@ const Schedule = () => {
       };
 
       setEvents((prev) => sortEvents(prev.map((event) => (event.id === updatedEvent.id ? updatedEvent : event))));
+
+      let completionResult: { summary: string; rewardLabel: string } | null = null;
+      const wasCompleted = previousStatus !== "completed" && updatedEvent.status === "completed";
+
+      if (wasCompleted) {
+        try {
+          completionResult = await processCompletionRewards(updatedEvent);
+        } catch (rewardError) {
+          console.error("Error applying completion rewards:", rewardError);
+          toast({
+            title: "Rewards not applied",
+            description: "The event was updated, but we couldn't apply completion rewards. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
+
       setIsEditDialogOpen(false);
       setCurrentEvent(null);
       setFormData(createEmptyFormState());
       setRecurrenceSettings({ ...DEFAULT_RECURRENCE_SETTINGS });
 
+      const toastTitle = wasCompleted && completionResult
+        ? `Completed ${completionResult.rewardLabel}`
+        : wasCompleted
+          ? "Event completed"
+          : "Event updated";
+      const toastDescription = wasCompleted && completionResult
+        ? `${updatedEvent.title}: ${completionResult.summary}`
+        : wasCompleted
+          ? `${updatedEvent.title} marked as completed.`
+          : "The schedule event has been updated.";
+
       toast({
-        title: "Event updated",
-        description: "The schedule event has been updated.",
+        title: toastTitle,
+        description: toastDescription,
       });
     } catch (error) {
       console.error("Error updating schedule event:", error);
