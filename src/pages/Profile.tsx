@@ -786,11 +786,12 @@ const Profile = () => {
                     const value = Number(skills?.[skillKey] ?? 0);
                     return (
                       <div key={skillKey} className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium capitalize">{skillKey}</span>
-                          <span className="text-sm font-bold text-primary">{value}/100</span>
-                        </div>
-                        <Progress value={value} className="h-2" />
+                        <span className="text-sm font-medium capitalize">{skillKey}</span>
+                        <Progress
+                          value={value}
+                          className="h-2"
+                          aria-label={`${skillKey} skill level ${value} out of 100`}
+                        />
                         <div className="text-xs text-muted-foreground">
                           {value >= 80
                             ? "Expert"
@@ -821,11 +822,12 @@ const Profile = () => {
                     const percent = Math.min(100, (value / 1000) * 100);
                     return (
                       <div key={attributeKey} className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium capitalize">{attributeKey}</span>
-                          <span className="text-sm font-bold text-primary">{value}/1000</span>
-                        </div>
-                        <Progress value={percent} className="h-2" />
+                        <span className="text-sm font-medium capitalize">{attributeKey}</span>
+                        <Progress
+                          value={percent}
+                          className="h-2"
+                          aria-label={`${attributeKey} attribute score ${value} out of 1000`}
+                        />
                         <div className="text-xs text-muted-foreground">
                           High values unlock greater opportunities and campaign performance.
                         </div>
