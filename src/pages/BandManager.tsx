@@ -119,6 +119,120 @@ const BandManager = () => {
   const [pendingInvites, setPendingInvites] = useState<BandInvitation[]>([]);
   const [acceptingInviteId, setAcceptingInviteId] = useState<string | null>(null);
 
+  const loadBandMembers = useCallback(async (bandId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { data: memberData, error: memberError } = await supabase
+        .from('band_members')
+        .select('id, band_id, user_id, role, salary, joined_at')
+        .eq('band_id', bandId)
+        .order('joined_at', { ascending: true });
+
+      if (memberError) throw memberError;
+
+      const memberRows = (memberData ?? []) as BandMemberRow[];
+      const memberIds = memberRows
+        .map((member) => member.user_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+      let profilesMap = new Map<string, Pick<ProfileRow, 'display_name' | 'avatar_url'>>();
+      let skillsMap = new Map<string, PlayerSkillsRow | null>();
+
+      if (memberIds.length > 0) {
+        const [profilesResponse, skillsResponse] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', memberIds),
+          supabase
+            .from('player_skills')
+            .select('*')
+            .in('user_id', memberIds)
+        ]);
+
+        if (profilesResponse.error) throw profilesResponse.error;
+        if (skillsResponse.error) throw skillsResponse.error;
+
+        profilesMap = new Map(
+          ((profilesResponse.data as ProfileRow[]) ?? []).map((profile) => [profile.user_id, profile])
+        );
+
+        skillsMap = new Map(
+          ((skillsResponse.data as PlayerSkillsRow[]) ?? []).map((skill) => [skill.user_id, skill])
+        );
+      }
+
+      const currentUserId = user.id;
+
+      const membersWithData: BandMember[] = memberRows.map((member) => {
+        const profile = profilesMap.get(member.user_id) ?? null;
+        const memberSkills = skillsMap.get(member.user_id) ?? null;
+
+        return {
+          id: member.id,
+          band_id: member.band_id,
+          user_id: member.user_id,
+          role: member.role,
+          salary: member.salary ?? null,
+          joined_at: member.joined_at ?? null,
+          name: member.user_id === currentUserId ? 'You' : profile?.display_name ?? 'Unknown',
+          avatar_url: profile?.avatar_url ?? '',
+          is_player: member.user_id === currentUserId,
+          skills: memberSkills ?? null,
+        };
+      });
+
+      setMembers(membersWithData);
+    } catch (error: unknown) {
+      console.error('Error loading band members:', error);
+    }
+  }, [user?.id]);
+
+  const loadPendingInvitations = useCallback(async () => {
+    if (!user?.id) {
+      setPendingInvites([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('band_invitations')
+        .select(`
+          id,
+          band_id,
+          inviter_id,
+          invitee_id,
+          role,
+          salary,
+          status,
+          created_at,
+          responded_at,
+          band:bands (
+            id,
+            name,
+            genre,
+            description,
+            leader_id,
+            popularity,
+            weekly_fans,
+            max_members,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('invitee_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setPendingInvites((data as BandInvitation[]) || []);
+    } catch (error: unknown) {
+      console.error('Error loading band invitations:', error);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (authLoading) return;
 
@@ -189,76 +303,6 @@ const BandManager = () => {
     loadScheduleEvents,
     user?.id
   ]);
-
-  const loadBandMembers = useCallback(async (bandId: string) => {
-    if (!user?.id) return;
-
-    try {
-      const { data: memberData, error: memberError } = await supabase
-        .from('band_members')
-        .select('id, band_id, user_id, role, salary, joined_at')
-        .eq('band_id', bandId)
-        .order('joined_at', { ascending: true });
-
-      if (memberError) throw memberError;
-
-      const memberRows = (memberData ?? []) as BandMemberRow[];
-      const memberIds = memberRows
-        .map((member) => member.user_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0);
-
-      let profilesMap = new Map<string, Pick<ProfileRow, 'display_name' | 'avatar_url'>>();
-      let skillsMap = new Map<string, PlayerSkillsRow | null>();
-
-      if (memberIds.length > 0) {
-        const [profilesResponse, skillsResponse] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', memberIds),
-          supabase
-            .from('player_skills')
-            .select('*')
-            .in('user_id', memberIds)
-        ]);
-
-        if (profilesResponse.error) throw profilesResponse.error;
-        if (skillsResponse.error) throw skillsResponse.error;
-
-        profilesMap = new Map(
-          ((profilesResponse.data as ProfileRow[]) ?? []).map((profile) => [profile.user_id, profile])
-        );
-
-        skillsMap = new Map(
-          ((skillsResponse.data as PlayerSkillsRow[]) ?? []).map((skill) => [skill.user_id, skill])
-        );
-      }
-
-      const currentUserId = user.id;
-
-      const membersWithData: BandMember[] = memberRows.map((member) => {
-        const profile = profilesMap.get(member.user_id) ?? null;
-        const memberSkills = skillsMap.get(member.user_id) ?? null;
-
-        return {
-          id: member.id,
-          band_id: member.band_id,
-          user_id: member.user_id,
-          role: member.role,
-          salary: member.salary ?? null,
-          joined_at: member.joined_at ?? null,
-          name: member.user_id === currentUserId ? 'You' : profile?.display_name ?? 'Unknown',
-          avatar_url: profile?.avatar_url ?? '',
-          is_player: member.user_id === currentUserId,
-          skills: memberSkills ?? null,
-        };
-      });
-
-      setMembers(membersWithData);
-    } catch (error: unknown) {
-      console.error('Error loading band members:', error);
-    }
-  }, [user?.id]);
 
   const loadBandStats = useCallback(async (bandId: string) => {
     if (!user?.id || !bandId) {
@@ -458,50 +502,6 @@ const BandManager = () => {
     } catch (error: unknown) {
       console.error('Error loading band schedule:', error);
       setScheduleEvents([]);
-    }
-  }, [user?.id]);
-
-  const loadPendingInvitations = useCallback(async () => {
-    if (!user?.id) {
-      setPendingInvites([]);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('band_invitations')
-        .select(`
-          id,
-          band_id,
-          inviter_id,
-          invitee_id,
-          role,
-          salary,
-          status,
-          created_at,
-          responded_at,
-          band:bands (
-            id,
-            name,
-            genre,
-            description,
-            leader_id,
-            popularity,
-            weekly_fans,
-            max_members,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('invitee_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      setPendingInvites((data as BandInvitation[]) || []);
-    } catch (error: unknown) {
-      console.error('Error loading band invitations:', error);
     }
   }, [user?.id]);
 
