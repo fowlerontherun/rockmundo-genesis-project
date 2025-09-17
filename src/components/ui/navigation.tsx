@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { 
   Home, 
   Users, 

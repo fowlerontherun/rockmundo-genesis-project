@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 
 export interface PlayerProfile {
   id: string;
@@ -83,9 +83,11 @@ export const useGameData = () => {
       setProfile(profileData);
       setSkills(skillsData);
       setActivities(activitiesData || []);
-    } catch (err: any) {
-      console.error('Error fetching game data:', err);
-      setError(err.message);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to fetch game data';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error fetching game data:', errorMessage, error);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -105,9 +107,11 @@ export const useGameData = () => {
       if (error) throw error;
       setProfile(data);
       return data;
-    } catch (err: any) {
-      console.error('Error updating profile:', err);
-      throw err;
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to update profile';
+      const errorToThrow = error instanceof Error ? error : new Error(fallbackMessage);
+      console.error('Error updating profile:', errorToThrow.message, error);
+      throw errorToThrow;
     }
   };
 
@@ -125,9 +129,11 @@ export const useGameData = () => {
       if (error) throw error;
       setSkills(data);
       return data;
-    } catch (err: any) {
-      console.error('Error updating skills:', err);
-      throw err;
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to update skills';
+      const errorToThrow = error instanceof Error ? error : new Error(fallbackMessage);
+      console.error('Error updating skills:', errorToThrow.message, error);
+      throw errorToThrow;
     }
   };
 
@@ -151,9 +157,11 @@ export const useGameData = () => {
       // Add to local state
       setActivities(prev => [data, ...prev.slice(0, 9)]);
       return data;
-    } catch (err: any) {
-      console.error('Error adding activity:', err);
-      throw err;
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to add activity';
+      const errorToThrow = error instanceof Error ? error : new Error(fallbackMessage);
+      console.error('Error adding activity:', errorToThrow.message, error);
+      throw errorToThrow;
     }
   };
 
