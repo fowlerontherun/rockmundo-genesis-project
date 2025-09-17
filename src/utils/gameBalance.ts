@@ -99,8 +99,6 @@ const ATTRIBUTE_FOCUS_WEIGHTS: Record<AttributeFocus, Array<{ key: AttributeKey;
   ]
 };
 
-const clampNumber = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
 export const clampAttributeScore = (value: number | null | undefined): number => {
   if (value === null || value === undefined) {
     return 0;
