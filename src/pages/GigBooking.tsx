@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { applyAttributeToValue, type AttributeKey } from "@/utils/attributeProgression";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 import type { Database, Json } from "@/integrations/supabase/types";
@@ -77,6 +78,8 @@ const getShowTypeBadgeClass = (showType: ShowType) =>
 const getShowTypeDetails = (showType: ShowType) =>
   SHOW_TYPE_DETAILS[showType] ?? SHOW_TYPE_DETAILS[DEFAULT_SHOW_TYPE];
 
+const GIG_EXPERIENCE_ATTRIBUTES: AttributeKey[] = ["stage_presence", "musical_ability"];
+
 type JsonRequirementRecord = Extract<Json, Record<string, number | boolean | string | null>>;
 type VenueRequirements = JsonRequirementRecord & {
   min_popularity?: number | null;
@@ -140,7 +143,7 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, updateProfile, addActivity } = useGameData();
+  const { profile, skills, attributes, updateProfile, addActivity } = useGameData();
   
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
@@ -545,7 +548,9 @@ const GigBooking = () => {
       // Update player stats
       const newCash = (profile.cash || 0) + actualPayment;
       const newFame = (profile.fame || 0) + fanGain;
-      const expGain = Math.max(1, Math.round((attendance / 10) * showTypeDetails.experienceModifier));
+      const baseExperienceGain = Math.max(1, Math.round((attendance / 10) * showTypeDetails.experienceModifier));
+      const experienceResult = applyAttributeToValue(baseExperienceGain, attributes, GIG_EXPERIENCE_ATTRIBUTES);
+      const expGain = experienceResult.value;
 
       await updateProfile({
         cash: newCash,

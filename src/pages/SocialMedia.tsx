@@ -24,6 +24,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   Heart,
   MessageCircle,
@@ -447,7 +448,7 @@ const SocialMedia = () => {
         userId: data.user_id,
         username: data.username,
         displayName: data.display_name ?? data.username,
-        avatarUrl: data.avatar_url,
+        avatarUrl: getStoredAvatarPreviewUrl(data.avatar_url ?? null),
       };
 
       setProfileLookup((previous) => ({ ...previous, [userId]: profile }));
@@ -531,7 +532,7 @@ const SocialMedia = () => {
             userId: profile.user_id,
             username: profile.username,
             displayName: profile.display_name ?? profile.username,
-            avatarUrl: profile.avatar_url,
+            avatarUrl: getStoredAvatarPreviewUrl(profile.avatar_url ?? null),
           };
         });
 
@@ -599,7 +600,7 @@ const SocialMedia = () => {
               userId: data.user_id,
               username: data.username,
               displayName: data.display_name ?? data.username,
-              avatarUrl: data.avatar_url,
+              avatarUrl: getStoredAvatarPreviewUrl(data.avatar_url ?? null),
             },
           }));
         } else {

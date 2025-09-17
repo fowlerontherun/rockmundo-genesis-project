@@ -204,11 +204,12 @@ const BandManager = () => {
     setBandGenre((current) => (current && current.trim().length > 0 ? current : BAND_GENRES[0]));
 
     setBandLogoUrl((current) => {
-      if (current.trim().length > 0 || !profile.avatar_url) {
+      if (current.trim().length > 0) {
         return current;
       }
 
-      return profile.avatar_url ?? '';
+      const preview = getStoredAvatarPreviewUrl(profile.avatar_url ?? null);
+      return preview ?? "";
     });
   }, [profile]);
 
@@ -274,6 +275,8 @@ const BandManager = () => {
         const profile = profilesMap.get(member.user_id) ?? null;
         const memberSkills = skillsMap.get(member.user_id) ?? null;
 
+        const avatarPreview = getStoredAvatarPreviewUrl(profile?.avatar_url ?? null);
+
         return {
           id: member.id,
           band_id: member.band_id,
@@ -282,7 +285,7 @@ const BandManager = () => {
           salary: member.salary ?? null,
           joined_at: member.joined_at ?? null,
           name: member.user_id === currentUserId ? 'You' : profile?.display_name ?? 'Unknown',
-          avatar_url: profile?.avatar_url ?? '',
+          avatar_url: avatarPreview ?? '',
           is_player: member.user_id === currentUserId,
           skills: memberSkills ?? null,
         };
@@ -709,7 +712,7 @@ const BandManager = () => {
         : "New Band";
       setBandName(defaultName);
       setBandGenre(BAND_GENRES[0]);
-      setBandLogoUrl(profile.avatar_url ?? '');
+      setBandLogoUrl(getStoredAvatarPreviewUrl(profile.avatar_url ?? null) ?? '');
 
       toast({
         title: "Band Created!",

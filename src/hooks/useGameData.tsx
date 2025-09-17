@@ -14,11 +14,26 @@ export type PlayerAttributes = Tables<"player_attributes">;
 export type ActivityItem = Tables<"activity_feed">;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
-const isPostgrestError = (error: unknown): error is PostgrestError =>
-  typeof error === "object" &&
-  error !== null &&
-  "message" in error &&
-  "code" in error;
+
+const extractErrorMessage = (error: unknown) => {
+  if (isPostgrestError(error)) return error.message;
+  if (error instanceof Error) return error.message;
+  return "An unknown error occurred.";
+};
+
+const readStoredCharacterId = () => {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+};
+
+const persistCharacterId = (characterId: string | null) => {
+  if (typeof window === "undefined") return;
+  if (characterId) {
+    window.localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
+  } else {
+    window.localStorage.removeItem(CHARACTER_STORAGE_KEY);
+  }
+};
 
 export interface CreateCharacterInput {
   username: string;
@@ -38,6 +53,7 @@ interface GameDataContextValue {
   currentCity: Tables<"cities"> | null;
   loading: boolean;
   error: string | null;
+  currentCity: Tables<'cities'> | null;
   hasCharacters: boolean;
   setActiveCharacter: (characterId: string) => Promise<void>;
   clearSelectedCharacter: () => void;
@@ -52,15 +68,24 @@ interface GameDataContextValue {
   ) => Promise<ActivityItem | undefined>;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
+  resetCharacter: () => Promise<void>;
   refetch: () => Promise<void>;
+  resetCharacter: () => Promise<void>;
 }
 
 const GameDataContext = createContext<GameDataContextValue | undefined>(undefined);
+const getStoredCharacterId = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+};
 
-const extractErrorMessage = (error: unknown) => {
-  if (isPostgrestError(error)) return error.message;
-  if (error instanceof Error) return error.message;
-  return "An unknown error occurred.";
+const persistSelectedCharacterId = (characterId: string | null) => {
+  if (typeof window === "undefined") return;
+  if (!characterId) {
+    window.localStorage.removeItem(CHARACTER_STORAGE_KEY);
+  } else {
+    window.localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
+  }
 };
 
 const sortCharacters = (characters: PlayerProfile[]) =>
@@ -85,7 +110,6 @@ const useProvideGameData = (): GameDataContextValue => {
   const [error, setError] = useState<string | null>(null);
   const [charactersLoading, setCharactersLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
-
   const persistSelectedCharacterId = useCallback((characterId: string | null) => {
     if (typeof window === "undefined") return;
     if (characterId) {
@@ -144,13 +168,13 @@ const useProvideGameData = (): GameDataContextValue => {
 
   const fetchCharacters = useCallback(async () => {
     if (!user) {
-      setCharacters([]);
-      setCharactersLoading(false);
       clearSelectedCharacter();
+      setCharacters([]);
       return [] as PlayerProfile[];
     }
 
     setCharactersLoading(true);
+    setError(null);
 
     try {
       const { data, error: profilesError } = await supabase
@@ -168,7 +192,7 @@ const useProvideGameData = (): GameDataContextValue => {
         ? list.some(character => character.id === selectedCharacterId)
         : false;
       const activeCharacterId = list.find(character => character.is_active)?.id ?? null;
-      const fallbackId = hasStoredCharacter
+      const fallbackId = hasStoredSelection
         ? selectedCharacterId
         : activeCharacterId ?? list[0]?.id ?? null;
 
@@ -192,7 +216,7 @@ const useProvideGameData = (): GameDataContextValue => {
     } finally {
       setCharactersLoading(false);
     }
-  }, [user, selectedCharacterId, updateSelectedCharacterId, clearSelectedCharacter]);
+  }, [user, selectedCharacterId, clearSelectedCharacter, setSelectedCharacter]);
 
   const fetchGameData = useCallback(async () => {
     if (!user) {
@@ -206,7 +230,13 @@ const useProvideGameData = (): GameDataContextValue => {
       return;
     }
 
-    if (!selectedCharacterId) {
+    const cityData = data ?? null;
+    setCurrentCity(cityData);
+    return cityData;
+  }, []);
+
+  const fetchGameData = useCallback(async () => {
+    if (!user || !selectedCharacterId) {
       setProfile(null);
       setSkills(null);
       setAttributes(null);
@@ -227,6 +257,18 @@ const useProvideGameData = (): GameDataContextValue => {
         .maybeSingle();
 
       if (profileError) throw profileError;
+      if (!profileRow) throw new Error('The selected character could not be found.');
+
+      setProfile(profileRow);
+      void fetchCity(profileRow.current_city_id ?? null);
+
+      const { data: skillsRow, error: skillsError } = await supabase
+        .from('player_skills')
+        .select('*')
+        .eq('profile_id', selectedCharacterId)
+        .maybeSingle();
+
+      if (skillsError && !isNotFoundError(skillsError)) throw skillsError;
 
       if (!profileData) {
         setProfile(null);
@@ -293,7 +335,16 @@ const useProvideGameData = (): GameDataContextValue => {
 
   useEffect(() => {
     if (!user) {
+      clearSelectedCharacter();
       setCharacters([]);
+      return;
+    }
+
+    void fetchCharacters();
+  }, [user, clearSelectedCharacter, fetchCharacters]);
+
+  useEffect(() => {
+    if (!selectedCharacterId || !user) {
       setProfile(null);
       setSkills(null);
       setAttributes(null);
@@ -562,8 +613,11 @@ const useProvideGameData = (): GameDataContextValue => {
   );
 
   const refreshCharacters = useCallback(async () => fetchCharacters(), [fetchCharacters]);
-
   const refetch = useCallback(async () => {
+    await fetchGameData();
+  }, [fetchGameData]);
+
+  const resetCharacter = useCallback(async () => {
     await fetchGameData();
   }, [fetchGameData]);
 
@@ -589,7 +643,8 @@ const useProvideGameData = (): GameDataContextValue => {
     addActivity,
     createCharacter,
     refreshCharacters,
-    refetch
+    refetch,
+    resetCharacter,
   };
 };
 
@@ -598,6 +653,7 @@ export const GameDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return <GameDataContext.Provider value={value}>{children}</GameDataContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGameData = (): GameDataContextValue => {
   const context = useContext(GameDataContext);
   if (!context) {

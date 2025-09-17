@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
+import { applyAttributeToValue, type AttributeKey } from '@/utils/attributeProgression';
 import { toast } from '@/components/ui/sonner-toast';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { 
@@ -104,13 +105,15 @@ const TOUR_SHOW_BEHAVIOR: Record<ShowType, {
   acoustic: { attendance: 0.75, revenue: 0.85, fame: 1.35, experience: 1.2, ticket: 0.9 },
 };
 
+const TOUR_EXPERIENCE_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
+
 type TourRecord = TourRow & {
   tour_venues: (TourVenueRow & { venue: VenueRow | null })[] | null;
 };
 
 const TouringSystem: React.FC = () => {
   const { user } = useAuth();
-  const { profile, updateProfile, addActivity } = useGameData();
+  const { profile, attributes, updateProfile, addActivity } = useGameData();
   const [tours, setTours] = useState<Tour[]>([]);
   const [availableVenues, setAvailableVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -364,7 +367,9 @@ const TouringSystem: React.FC = () => {
       // Update profile
       const netEarnings = revenue - expenses;
       const fameGain = Math.max(1, Math.floor((ticketsSold / 100) * behavior.fame));
-      const experienceGain = Math.max(10, Math.floor(performanceScore * 100 * behavior.experience));
+      const baseExperienceGain = Math.max(10, Math.floor(performanceScore * 100 * behavior.experience));
+      const experienceResult = applyAttributeToValue(baseExperienceGain, attributes, TOUR_EXPERIENCE_ATTRIBUTES);
+      const experienceGain = experienceResult.value;
 
       await updateProfile({
         cash: profile.cash + netEarnings,

@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CharacterSelect from "@/components/CharacterSelect";
-import { 
-  User, 
-  Camera, 
+import AvatarWithClothing from "@/components/avatar/AvatarWithClothing";
+import {
+  User,
+  Camera,
   Save,
   Star,
   Trophy,
@@ -23,7 +23,8 @@ import {
   Edit3,
   TrendingUp,
   Heart,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -207,6 +209,11 @@ const Profile = () => {
     );
   }, [profile?.gender]);
 
+  const profileAvatarPreview = useMemo(
+    () => getStoredAvatarPreviewUrl(profile?.avatar_url ?? null),
+    [profile?.avatar_url],
+  );
+
   useEffect(() => {
     if (!user) {
       setFanMetrics(null);
@@ -348,6 +355,33 @@ const Profile = () => {
     }
   };
 
+  const handleResetCharacter = async () => {
+    if (isResetting) return;
+
+    setIsResetting(true);
+    try {
+      await resetCharacter();
+      await refetch();
+      setIsResetDialogOpen(false);
+      toast({
+        title: "Character reset",
+        description: "Your performer has been restored to their starting stats.",
+      });
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to reset character";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error("Error resetting character:", errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Reset failed",
+        description:
+          errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const totalFansValue = fanMetrics?.total_fans ?? 0;
   const weeklyGrowthValue = fanMetrics?.weekly_growth ?? 0;
   const weeklyGrowthDisplay = `${weeklyGrowthValue >= 0 ? '+' : ''}${Math.abs(weeklyGrowthValue).toLocaleString()}`;
@@ -407,13 +441,12 @@ const Profile = () => {
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center space-y-4">
-                    <div className="relative">
-                      <Avatar className="h-32 w-32">
-                        <AvatarImage src={profile.avatar_url || ""} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
-                          {(profile.display_name || profile.username || 'U')[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                    <AvatarWithClothing
+                      avatarUrl={profile.avatar_url}
+                      fallbackText={profile.display_name || profile.username}
+                      items={equippedClothing}
+                      size={128}
+                    >
                       <div className="absolute bottom-0 right-0">
                         <label htmlFor="avatar-upload" className="cursor-pointer">
                           <div className="bg-primary hover:bg-primary/80 rounded-full p-2 border-2 border-background">
@@ -433,7 +466,7 @@ const Profile = () => {
                           />
                         </label>
                       </div>
-                    </div>
+                    </AvatarWithClothing>
                     <div className="text-center space-y-1">
                       <h2 className="text-2xl font-bold">{profile.display_name || profile.username}</h2>
                       <p className="text-muted-foreground">@{profile.username}</p>
@@ -458,6 +491,56 @@ const Profile = () => {
                             : "Birth city not set"}
                         </Badge>
                       </div>
+                      <AlertDialog
+                        open={isResetDialogOpen}
+                        onOpenChange={(open) => {
+                          if (!isResetting) {
+                            setIsResetDialogOpen(open);
+                          }
+                        }}
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="mt-4 w-full"
+                            disabled={isResetting}
+                          >
+                            {isResetting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Resetting...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Reset Character
+                              </>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Reset your character?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will restore your current performer to their initial stats and remove
+                              progress. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetCharacter} disabled={isResetting}>
+                              {isResetting ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Resetting...
+                                </>
+                              ) : (
+                                "Confirm Reset"
+                              )}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </CardContent>

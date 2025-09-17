@@ -3,6 +3,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { calculateAttributeMultiplier, type AttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import {
 type BuskingLocation = Tables<"busking_locations">;
 type BuskingModifier = Tables<"busking_modifiers">;
 type BuskingSession = Tables<"busking_sessions">;
+type PlayerAttributes = Tables<"player_attributes">;
 
 type BuskingSessionWithRelations = BuskingSession & {
   busking_locations: BuskingLocation | null;
@@ -529,11 +531,16 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
   }
 };
 
+const BUSKING_ATTRIBUTE_KEYS: AttributeKey[] = [
+  "stage_presence",
+  "musical_ability",
+  "vocal_talent"
+];
+
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, skills, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
+  const { profile, skills, attributes, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
   const { toast } = useToast();
-
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
   const [modifiers, setModifiers] = useState<BuskingModifier[]>([]);
   const [history, setHistory] = useState<BuskingSessionWithRelations[]>([]);
@@ -547,7 +554,7 @@ const Busking = () => {
   const [weatherConditions, setWeatherConditions] = useState<WeatherCondition[]>([]);
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
-
+  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
     const numericValue = Number(currentCity.busking_value ?? 1);
@@ -664,6 +671,41 @@ const Busking = () => {
     fetchBuskingData();
   }, [fetchBuskingData]);
 
+  useEffect(() => {
+    if (!user || !selectedCharacterId) {
+      setAttributes(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadAttributes = async () => {
+      const { data, error } = await supabase
+        .from("player_attributes")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load player attributes:", error);
+        setAttributes(null);
+        return;
+      }
+
+      setAttributes(data ?? null);
+    };
+
+    void loadAttributes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCharacterId, user]);
+
   const selectedLocation = useMemo(
     () => locations.find((location) => location.id === selectedLocationId) ?? null,
     [locations, selectedLocationId]
@@ -678,9 +720,9 @@ const Busking = () => {
     const performance = skills?.performance ?? 55;
     const vocals = skills?.vocals ?? 50;
     const guitar = skills?.guitar ?? 45;
-    const creativity = skills?.creativity ?? 50;
+    const creativity = (attributes?.creativity ?? 500) / 10;
     return Math.round((performance * 0.4 + vocals * 0.25 + guitar * 0.2 + creativity * 0.15) || 0);
-  }, [skills]);
+  }, [attributes, skills]);
 
   const riskLevel = toRiskLevel(selectedLocation?.risk_level);
   const riskPercent = riskPercentMap[riskLevel];
@@ -889,9 +931,12 @@ const Busking = () => {
       const baseExperience =
         (selectedLocation.experience_reward + (modifier?.experience_bonus ?? 0)) *
         environmentDetails.combined.experienceMultiplier;
+      const attributeMultiplier = calculateAttributeMultiplier(attributes, BUSKING_ATTRIBUTE_KEYS).multiplier;
+      const successVariance = 0.9 + Math.random() * 0.5;
+      const failureVariance = 0.7 + Math.random() * 0.3;
       const experienceGained = success
-        ? Math.round(baseExperience * cityMultiplier * (0.9 + Math.random() * 0.5))
-        : Math.round(baseExperience * 0.5 * cityMultiplier * (0.7 + Math.random() * 0.3));
+        ? Math.round(baseExperience * cityMultiplier * successVariance * attributeMultiplier)
+        : Math.round(baseExperience * 0.5 * cityMultiplier * failureVariance * attributeMultiplier);
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
