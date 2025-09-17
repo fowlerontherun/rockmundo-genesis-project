@@ -515,7 +515,7 @@ const PlayerStatistics = () => {
               <Card>
                 <CardContent className="p-4 text-center">
                   <Users className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-                  <div className="text-2xl font-bold">{profile.fans?.toLocaleString() || 0}</div>
+                  <div className="text-2xl font-bold">0</div>
                   <div className="text-sm text-muted-foreground">Total Fans</div>
                 </CardContent>
               </Card>

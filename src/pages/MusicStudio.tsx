@@ -42,19 +42,16 @@ interface Song {
   id: string;
   title: string;
   genre: string;
-  duration: number;
   quality_score: number;
-  recording_cost: number;
-  mix_quality?: number | null;
-  master_quality?: number | null;
-  production_cost?: number;
   lyrics: string;
   created_at: string;
-  popularity: number;
-  plays: number;
+  updated_at: string;
   status: 'draft' | 'recorded' | 'released';
-  artist_id: string;
-  band_id?: string;
+  user_id: string;
+  streams: number;
+  revenue: number;
+  chart_position: number | null;
+  release_date: string | null;
 }
 
 const MusicStudio = () => {
@@ -93,16 +90,13 @@ const MusicStudio = () => {
       const { data, error } = await supabase
         .from('songs')
         .select('*')
-        .eq('artist_id', user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setSongs((data || []).map(item => ({
         ...item,
-        status: item.status as 'draft' | 'recorded' | 'released',
-        mix_quality: item.mix_quality ?? null,
-        master_quality: item.master_quality ?? null,
-        production_cost: item.production_cost ?? 0
+        status: item.status as 'draft' | 'recorded' | 'released'
       })));
     } catch (error) {
       console.error('Error loading songs:', error);
@@ -211,11 +205,8 @@ const MusicStudio = () => {
           title: newSong.title,
           genre: newSong.genre,
           lyrics: newSong.lyrics,
-          duration: Math.round(duration),
           quality_score: quality,
-          recording_cost: cost,
-          production_cost: 0,
-          artist_id: user.id,
+          user_id: user.id,
           status: 'draft'
         })
         .select()

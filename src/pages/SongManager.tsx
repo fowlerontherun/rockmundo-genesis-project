@@ -545,7 +545,7 @@ const SongManager = () => {
     }
   };
 
-  const createStreamingStatsRecord = async (
+  const createStreamingStatsRecord = useCallback(async (
     songId: string,
     totalStreams: number
   ): Promise<StreamingStatsBreakdownEntry[]> => {
@@ -1505,11 +1505,11 @@ const SongManager = () => {
               <Card key={song.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">{song.title}</CardTitle>
-                      <CardDescription>{song.genre}</CardDescription>
-
-                  </div>
+                     <div className="space-y-1">
+                       <CardTitle className="text-lg">{song.title}</CardTitle>
+                       <CardDescription>{song.genre}</CardDescription>
+                     </div>
+                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -1554,13 +1554,12 @@ const SongManager = () => {
                           <span>${marketingBudget.toLocaleString()}</span>
                         </div>
                       )}
-                      <div className="flex justify-between">
-                        <span>Revenue:</span>
-                        <span>${song.revenue.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                       <div className="flex justify-between">
+                         <span>Revenue:</span>
+                         <span>${song.revenue.toFixed(2)}</span>
+                       </div>
+                     </div>
+                   )}
 
                 <div className="space-y-3">
                   <div className="rounded-md border bg-muted/40 p-3 space-y-2">
@@ -1602,21 +1601,20 @@ const SongManager = () => {
                   </Button>
                 </div>
 
-                <div className="flex gap-2">
-                  {song.status === 'draft' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedSong(song);
-                        setIsRecordDialogOpen(true);
-                      }}
-                    >
-                      Record ($500)
-                    </Button>
-                  )}
-
                   <div className="flex gap-2">
+                    {song.status === 'draft' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedSong(song);
+                          setIsRecordDialogOpen(true);
+                        }}
+                      >
+                        Record ($500)
+                      </Button>
+                    )}
+
                     {song.status === 'draft' && (
                       <Button
                         size="sm"
@@ -1639,22 +1637,13 @@ const SongManager = () => {
                       </Button>
                     )}
 
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => deleteSong(song.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                  
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => deleteSong(song.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                   <Button
+                     size="sm"
+                     variant="destructive"
+                     onClick={() => deleteSong(song.id)}
+                   >
+                     <Trash2 className="h-4 w-4" />
+                   </Button>
                 </div>
               </CardContent>
               </Card>

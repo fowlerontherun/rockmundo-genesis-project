@@ -20,11 +20,13 @@ interface Song {
   lyrics: string;
   status: string;
   quality_score: number;
-  recording_cost: number;
-  popularity: number;
-  plays: number;
-  duration: number;
+  streams: number;
+  revenue: number;
   created_at: string;
+  updated_at: string;
+  user_id: string;
+  chart_position: number | null;
+  release_date: string | null;
   audio_layers?: SongLayer[];
 }
 
@@ -156,11 +158,13 @@ const normalizeSong = (song: SupabaseSongRow): Song => ({
   lyrics: song.lyrics ?? "",
   status: song.status ?? "draft",
   quality_score: toNumber(song.quality_score, 0),
-  recording_cost: toNumber(song.recording_cost ?? song.production_cost, 0),
-  popularity: toNumber(song.popularity, 0),
-  plays: toNumber(song.plays ?? song.streams, 0),
-  duration: toNumber(song.duration, 0),
+  streams: toNumber(song.streams, 0),
+  revenue: toNumber(0, 0),
   created_at: song.created_at ?? new Date().toISOString(),
+  updated_at: song.created_at ?? new Date().toISOString(),
+  user_id: song.id, // This should be from the database
+  chart_position: song.chart_position ?? null,
+  release_date: song.created_at ?? null,
   audio_layers: parseAudioLayers(song.audio_layers),
 });
 
