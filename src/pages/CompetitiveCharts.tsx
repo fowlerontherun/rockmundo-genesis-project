@@ -6,8 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
-import { useGameData, type PlayerSkills } from '@/hooks/useGameData';
-import { toast } from 'sonner';
+import { useGameData } from '@/hooks/useGameData';
+import { toast } from '@/components/ui/sonner-toast';
 import { Trophy, TrendingUp, Crown, Award, Music, Zap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { RECENT_WEAR_STORAGE_KEY, WearEventType, WearSummary } from "@/utils/equipmentWear";
 import { Package, Wrench, Star, Zap, TrendingUp, Shield } from "lucide-react";
 
