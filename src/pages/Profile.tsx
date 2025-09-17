@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Database } from "@/integrations/supabase/types";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -47,6 +55,31 @@ interface FanMetrics {
   updated_at: string | null;
 }
 
+type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+
+type CityOption = {
+  id: string;
+  name: string | null;
+  country: string | null;
+};
+
+type ProfileFormState = {
+  display_name: string;
+  username: string;
+  bio: string;
+  gender: ProfileGender;
+  age: string;
+  city_of_birth: string | null;
+};
+
+const genderOptions: { value: ProfileGender; label: string }[] = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "non_binary", label: "Non-binary" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -59,11 +92,17 @@ const Profile = () => {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [fanMetrics, setFanMetrics] = useState<FanMetrics | null>(null);
-  const [formData, setFormData] = useState({
-    display_name: '',
-    username: '',
-    bio: ''
+  const [formData, setFormData] = useState<ProfileFormState>({
+    display_name: "",
+    username: "",
+    bio: "",
+    gender: "prefer_not_to_say",
+    age: "16",
+    city_of_birth: null,
   });
+  const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
+  const [cityLoading, setCityLoading] = useState(false);
+  const [cityError, setCityError] = useState<string | null>(null);
 
   const fetchFanMetrics = useCallback(async () => {
     if (!user) return;
@@ -92,12 +131,56 @@ const Profile = () => {
   useEffect(() => {
     if (profile) {
       setFormData({
-        display_name: profile.display_name || '',
-        username: profile.username || '',
-        bio: profile.bio || ''
+        display_name: profile.display_name || "",
+        username: profile.username || "",
+        bio: profile.bio || "",
+        gender: (profile.gender as ProfileGender) || "prefer_not_to_say",
+        age: typeof profile.age === "number" ? String(profile.age) : "16",
+        city_of_birth: profile.city_of_birth ?? null,
       });
     }
   }, [profile]);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        setCityLoading(true);
+        setCityError(null);
+
+        const { data, error } = await supabase
+          .from("cities")
+          .select("id, name, country")
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        setCityOptions((data as CityOption[] | null) ?? []);
+      } catch (error) {
+        console.error("Error loading cities:", error);
+        setCityError("We couldn't load cities right now. You can try again later.");
+      } finally {
+        setCityLoading(false);
+      }
+    };
+
+    void fetchCities();
+  }, []);
+
+  const birthCityLabel = useMemo(() => {
+    if (!profile?.city_of_birth) return null;
+    const match = cityOptions.find((city) => city.id === profile.city_of_birth);
+    if (!match) return null;
+    const cityName = match.name ?? "Unnamed City";
+    return match.country ? `${cityName}, ${match.country}` : cityName;
+  }, [profile?.city_of_birth, cityOptions]);
+
+  const profileGenderLabel = useMemo(() => {
+    if (!profile?.gender) return "Prefer not to say";
+    return (
+      genderOptions.find((option) => option.value === (profile.gender as ProfileGender))?.label ??
+      "Prefer not to say"
+    );
+  }, [profile?.gender]);
 
   useEffect(() => {
     if (!user) {
@@ -162,9 +245,26 @@ const Profile = () => {
   const handleSave = async () => {
     if (!user) return;
 
+    const parsedAge = Number.parseInt(formData.age, 10);
+    if (!Number.isFinite(parsedAge) || parsedAge < 13 || parsedAge > 120) {
+      toast({
+        variant: "destructive",
+        title: "Invalid age",
+        description: "Age must be between 13 and 120 to keep your persona grounded.",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      await updateProfile(formData);
+      await updateProfile({
+        display_name: formData.display_name,
+        username: formData.username,
+        bio: formData.bio,
+        gender: formData.gender,
+        age: parsedAge,
+        city_of_birth: formData.city_of_birth,
+      });
       setIsEditing(false);
       toast({
         title: "Profile Updated!",
@@ -375,6 +475,19 @@ const Profile = () => {
                           {profile.fame || 0} Fame
                         </Badge>
                       </div>
+                      <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="border-border text-foreground/80">
+                          Age {profile.age ?? 16}
+                        </Badge>
+                        <Badge variant="outline" className="border-border text-foreground/80">
+                          {profileGenderLabel}
+                        </Badge>
+                        <Badge variant="outline" className="border-border text-foreground/80">
+                          {profile.city_of_birth
+                            ? birthCityLabel ?? "Loading birth city..."
+                            : "Birth city not set"}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -422,6 +535,74 @@ const Profile = () => {
                         placeholder="Tell the world about your musical journey..."
                         rows={4}
                       />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select
+                          value={formData.gender}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({ ...prev, gender: value as ProfileGender }))
+                          }
+                          disabled={!isEditing}
+                        >
+                          <SelectTrigger id="gender" className={!isEditing ? "bg-secondary/50" : ""}>
+                            <SelectValue placeholder="Select a gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {genderOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="age">Age</Label>
+                        <Input
+                          id="age"
+                          type="number"
+                          min={13}
+                          max={120}
+                          value={formData.age}
+                          onChange={(event) =>
+                            setFormData((prev) => ({ ...prev, age: event.target.value }))
+                          }
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-secondary/50" : ""}
+                        />
+                        <p className="text-xs text-muted-foreground">Age helps us tailor narrative beats.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="city-of-birth">City of Birth</Label>
+                        <Select
+                          value={formData.city_of_birth ?? ""}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({ ...prev, city_of_birth: value || null }))
+                          }
+                          disabled={!isEditing || cityLoading}
+                        >
+                          <SelectTrigger
+                            id="city-of-birth"
+                            className={!isEditing ? "bg-secondary/50" : ""}
+                          >
+                            <SelectValue
+                              placeholder={cityLoading ? "Loading cities..." : "Select a city"}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">No listed city</SelectItem>
+                            {cityOptions.map((city) => (
+                              <SelectItem key={city.id} value={city.id}>
+                                {city.name ?? "Unnamed City"}
+                                {city.country ? `, ${city.country}` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {cityError && <p className="text-xs text-destructive">{cityError}</p>}
+                      </div>
                     </div>
                     {isEditing && (
                       <div className="flex gap-2 pt-4">
