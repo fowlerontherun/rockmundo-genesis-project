@@ -90,7 +90,7 @@ const sanitizeHandle = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-const CharacterCreation = () => {
+const CharacterCreationPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -597,4 +597,4 @@ const CharacterCreation = () => {
   );
 };
 
-export default CharacterCreation;
+export default CharacterCreationPage;
