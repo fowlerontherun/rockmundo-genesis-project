@@ -1516,6 +1516,44 @@ export type Database = {
           },
         ]
       }
+      player_attributes: {
+        Row: {
+          charisma: number
+          created_at: string | null
+          id: string
+          looks: number
+          musicality: number
+          profile_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          charisma?: number
+          created_at?: string | null
+          id?: string
+          looks?: number
+          musicality?: number
+          profile_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          charisma?: number
+          created_at?: string | null
+          id?: string
+          looks?: number
+          musicality?: number
+          profile_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_attributes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       player_equipment: {
         Row: {
           condition: number | null
@@ -1570,15 +1608,13 @@ export type Database = {
       player_skills: {
         Row: {
           bass: number
-          business: number
           composition: number
           created_at: string | null
-          creativity: number
           drums: number
           guitar: number
           id: string
-          marketing: number
           performance: number
+          profile_id: string
           songwriting: number
           technical: number
           updated_at: string | null
@@ -1587,15 +1623,13 @@ export type Database = {
         }
         Insert: {
           bass?: number
-          business?: number
           composition?: number
           created_at?: string | null
-          creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
+          profile_id: string
           songwriting?: number
           technical?: number
           updated_at?: string | null
@@ -1604,22 +1638,28 @@ export type Database = {
         }
         Update: {
           bass?: number
-          business?: number
           composition?: number
           created_at?: string | null
-          creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
+          profile_id?: string
           songwriting?: number
           technical?: number
           updated_at?: string | null
           user_id?: string
           vocals?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_skills_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       profile_attributes: {
         Row: {
@@ -2859,6 +2899,7 @@ export type Database = {
         Returns: {
           profile: Database["public"]["Tables"]["profiles"]["Row"]
           skills: Database["public"]["Tables"]["player_skills"]["Row"]
+          attributes: Database["public"]["Tables"]["player_attributes"]["Row"]
         }[]
       }
     }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { SparklesIcon, Wand2, CheckCircle2, AlertCircle, Palette, Gauge, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,9 +82,6 @@ const defaultSkills = {
   performance: 1,
   songwriting: 1,
   composition: 1,
-  creativity: 1,
-  business: 1,
-  marketing: 1,
   technical: 1,
 };
 
@@ -101,6 +98,10 @@ type CityOption = {
   id: string;
   name: string | null;
   country: string | null;
+};
+
+type CharacterCreationLocationState = {
+  fromProfile?: boolean;
 };
 
 const genderOptions: { value: ProfileGender; label: string }[] = [
@@ -120,7 +121,11 @@ const sanitizeHandle = (value: string) =>
 const CharacterCreation = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  const locationState = location.state as CharacterCreationLocationState | null;
+  const fromProfileFlow = Boolean(locationState?.fromProfile);
 
   const [nameSuggestion, setNameSuggestion] = useState<string>(() => generateRandomName());
   const [displayName, setDisplayName] = useState<string>(nameSuggestion);
@@ -168,7 +173,7 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_skills")
-            .select("id, guitar, vocals, drums, bass, performance, songwriting, composition, creativity, business, marketing, technical")
+            .select("id, profile_id, guitar, vocals, drums, bass, performance, songwriting, composition, technical")
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
@@ -239,6 +244,12 @@ const CharacterCreation = () => {
       void fetchExistingData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
+      navigate("/profile", { replace: true });
+    }
+  }, [loading, isLoading, existingProfile, fromProfileFlow, navigate]);
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -414,36 +425,48 @@ const CharacterCreation = () => {
       city_of_birth: cityOfBirth,
     };
 
-    const skillPayload: PlayerSkillsInsert = {
-      user_id: user.id,
-      guitar: skills.guitar,
-      vocals: skills.vocals,
-      drums: skills.drums,
-      bass: skills.bass,
-      performance: skills.performance,
-      songwriting: skills.songwriting,
-      composition: skills.composition,
-      creativity: skills.creativity,
-      business: skills.business,
-      marketing: skills.marketing,
-      technical: skills.technical,
-    };
-
     try {
-      const { error: profileError } = await supabase
+      const { data: upsertedProfile, error: profileError } = await supabase
         .from("profiles")
-        .upsert(profilePayload, { onConflict: "user_id" });
+        .upsert(profilePayload, { onConflict: "user_id" })
+        .select()
+        .single();
 
       if (profileError) {
         throw profileError;
       }
 
+      if (!upsertedProfile) {
+        throw new Error("Profile save did not return any data.");
+      }
+
+      const skillPayload: PlayerSkillsInsert = {
+        user_id: user.id,
+        profile_id: upsertedProfile.id,
+        guitar: skills.guitar,
+        vocals: skills.vocals,
+        drums: skills.drums,
+        bass: skills.bass,
+        performance: skills.performance,
+        songwriting: skills.songwriting,
+        composition: skills.composition,
+        technical: skills.technical,
+      };
+
       const { error: skillsError } = await supabase
         .from("player_skills")
-        .upsert(skillPayload, { onConflict: "user_id" });
+        .upsert(skillPayload, { onConflict: "profile_id" });
 
       if (skillsError) {
         throw skillsError;
+      }
+
+      const { error: attributesError } = await supabase
+        .from("player_attributes")
+        .upsert({ profile_id: upsertedProfile.id }, { onConflict: "profile_id" });
+
+      if (attributesError) {
+        throw attributesError;
       }
 
       toast({
