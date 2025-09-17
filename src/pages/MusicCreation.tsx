@@ -194,6 +194,7 @@ const MusicCreation = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [previewSongId, setPreviewSongId] = useState<string | null>(null);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editSongForm, setEditSongForm] = useState({
@@ -469,6 +470,10 @@ const MusicCreation = () => {
     } finally {
       setUpdatingSong(false);
     }
+  };
+
+  const stopPreview = () => {
+    setPreviewSongId(null);
   };
 
   const deleteSong = async (songId: string) => {
