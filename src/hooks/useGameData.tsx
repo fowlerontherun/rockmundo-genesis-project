@@ -194,7 +194,6 @@ const useProvideGameData = (): GameDataContextValue => {
         return;
       }
 
-      setProfile(character);
       setCharacters(prev => {
         const others = prev.filter(existing => existing.id !== character.id);
         return sortCharacters([...others, character]);
@@ -207,7 +206,7 @@ const useProvideGameData = (): GameDataContextValue => {
 
       if (skillsError) throw skillsError;
 
-      setSkills(skillsRows?.[0] ?? null);
+      const skillsData = skillsRows?.[0] ?? null;
 
       const { data: activityRows, error: activityError } = await supabase
         .from('activity_feed')
@@ -218,10 +217,12 @@ const useProvideGameData = (): GameDataContextValue => {
 
       if (activityError) throw activityError;
 
-      setProfile(profileData);
+      const activitiesData = activityRows ?? [];
+
+      setProfile(character);
       setSkills(skillsData);
-      setActivities(activitiesData ?? []);
-      await resolveCurrentCity(profileData?.current_city_id ?? null);
+      setActivities(activitiesData);
+      await resolveCurrentCity(character.current_city_id ?? null);
     } catch (err: unknown) {
       console.error('Error fetching game data:', err);
       setError(extractErrorMessage(err));
@@ -392,15 +393,24 @@ const useProvideGameData = (): GameDataContextValue => {
       throw updateError;
     }
 
-      setProfile(resetData.profile);
-      setSkills(resetData.skills);
-      setActivities([]);
-      await resolveCurrentCity(resetData.profile.current_city_id ?? null);
+    if (!data) {
+      throw new Error('No profile data returned from Supabase.');
+    }
 
     setProfile(data);
-    setCharacters(prev => sortCharacters(prev.map(character => character.id === data.id ? data : character)));
+    setCharacters(prev =>
+      sortCharacters(prev.map(character => (character.id === data.id ? data : character)))
+    );
+
+    const nextCityId = data.current_city_id ?? null;
+    const currentCityId = currentCity?.id ?? null;
+
+    if (nextCityId !== currentCityId) {
+      await resolveCurrentCity(nextCityId);
+    }
+
     return data;
-  }, [user, selectedCharacterId]);
+  }, [user, selectedCharacterId, currentCity?.id, resolveCurrentCity]);
 
   const updateSkills = useCallback(async (updates: Partial<PlayerSkills>) => {
     if (!user || !selectedCharacterId) {
