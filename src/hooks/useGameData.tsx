@@ -627,14 +627,16 @@ const useProvideGameData = (): GameDataContextValue => {
           setSkillUnlocks([]);
         }
 
-        const { error: attributesInsertError } = await supabase
-          .from("player_attributes")
-          .insert({
-            user_id: user.id,
-            profile_id: newProfile.id
-          });
+        if (attributeDefinitions.length > 0) {
+          const { error: attributeInsertError } = await supabase
+            .from("player_attributes")
+            .insert({
+              user_id: user.id,
+              profile_id: newProfile.id
+            });
 
-        if (attributesInsertError) throw attributesInsertError;
+          if (attributeInsertError) throw attributeInsertError;
+        }
 
         setCharacters(prev => [...prev, newProfile]);
 
