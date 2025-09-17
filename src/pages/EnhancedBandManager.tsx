@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Users, Crown, Heart, UserPlus, UserMinus, Star, TrendingUp, Calendar, Music, Coins, Settings } from "lucide-react";
 
@@ -56,6 +57,26 @@ interface BandStats {
   gigsPerformed: number;
 }
 
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
+type MemberSkillSet = Pick<
+  PlayerSkillsRow,
+  "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting"
+>;
+
+interface AvailableMember extends ProfileRow {
+  player_skills: MemberSkillSet;
+}
+
+const defaultPlayerSkills: MemberSkillSet = {
+  guitar: 20,
+  vocals: 20,
+  drums: 20,
+  bass: 20,
+  performance: 20,
+  songwriting: 20
+};
+
 const EnhancedBandManager = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -63,7 +84,7 @@ const EnhancedBandManager = () => {
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
   const [bandMembers, setBandMembers] = useState<BandMember[]>([]);
   const [bandStats, setBandStats] = useState<BandStats | null>(null);
-  const [availableMembers, setAvailableMembers] = useState<any[]>([]);
+  const [availableMembers, setAvailableMembers] = useState<AvailableMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -153,7 +174,7 @@ const EnhancedBandManager = () => {
       if (profilesError) throw profilesError;
 
       // Fetch skills for each profile
-      const profilesWithSkills = await Promise.all(
+      const profilesWithSkills: AvailableMember[] = await Promise.all(
         (profiles || []).map(async (profile) => {
           const { data: skills } = await supabase
             .from("player_skills")
@@ -163,12 +184,19 @@ const EnhancedBandManager = () => {
 
           return {
             ...profile,
-            player_skills: skills || { guitar: 20, vocals: 20, drums: 20, bass: 20, performance: 20, songwriting: 20 }
+            player_skills: {
+              guitar: skills?.guitar ?? defaultPlayerSkills.guitar,
+              vocals: skills?.vocals ?? defaultPlayerSkills.vocals,
+              drums: skills?.drums ?? defaultPlayerSkills.drums,
+              bass: skills?.bass ?? defaultPlayerSkills.bass,
+              performance: skills?.performance ?? defaultPlayerSkills.performance,
+              songwriting: skills?.songwriting ?? defaultPlayerSkills.songwriting
+            }
           };
         })
       );
 
-      const available = profilesWithSkills?.filter(p => !currentMemberIds.includes(p.user_id)) || [];
+      const available = profilesWithSkills.filter(p => !currentMemberIds.includes(p.user_id));
 
       setAvailableMembers(available);
     } catch (error) {
