@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +21,139 @@ import {
 const RealtimeCommunication: React.FC = () => {
   const { user } = useAuth();
   const { profile } = useGameData();
-  const [messages, setMessages] = useState<any[]>([]);
+
+  type ChatMessage = {
+    id: string;
+    message: string;
+    user_id: string;
+    channel?: string | null;
+    created_at?: string | null;
+    username?: string | null;
+  };
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let isMounted = true;
+    const channel = supabase.channel('realtime-communication');
+
+    const refreshPresence = async () => {
+      const { count, error } = await supabase
+        .from('chat_participants')
+        .select('id', { count: 'exact', head: true })
+        .eq('channel', 'general');
+
+      if (error) {
+        console.error('Error refreshing presence:', error);
+        return;
+      }
+
+      if (isMounted) {
+        setOnlineCount(count ?? 0);
+      }
+    };
+
+    const loadInitialMessages = async () => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('channel', 'general')
+        .order('created_at', { ascending: true })
+        .limit(100);
+
+      if (error) {
+        console.error('Error loading messages:', error);
+        toast.error('Failed to load chat history.');
+        return;
+      }
+
+      if (data && isMounted) {
+        setMessages(data as ChatMessage[]);
+      }
+    };
+
+    const registerPresence = async () => {
+      const { error } = await supabase
+        .from('chat_participants')
+        .upsert(
+          {
+            user_id: user.id,
+            channel: 'general',
+            status: 'online'
+          },
+          { onConflict: 'user_id' }
+        );
+
+      if (error) {
+        console.error('Error registering presence:', error);
+      }
+    };
+
+    void (async () => {
+      await Promise.all([loadInitialMessages(), registerPresence()]);
+      await refreshPresence();
+    })();
+
+    channel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'channel=eq.general' },
+      payload => {
+        if (!isMounted) {
+          return;
+        }
+
+        const newMessage = payload.new as ChatMessage;
+        setMessages(previous => [...previous, newMessage]);
+      }
+    );
+
+    channel.on(
+      'postgres_changes',
+      { schema: 'public', table: 'chat_participants', filter: 'channel=eq.general' },
+      () => {
+        if (!isMounted) {
+          return;
+        }
+
+        void refreshPresence();
+      }
+    );
+
+    void channel.subscribe(status => {
+      if (!isMounted) {
+        return;
+      }
+
+      if (status === 'SUBSCRIBED') {
+        setIsConnected(true);
+      }
+
+      if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        setIsConnected(false);
+      }
+    });
+
+    return () => {
+      if (isMounted) {
+        setIsConnected(false);
+      }
+      isMounted = false;
+      void channel.unsubscribe();
+
+      void supabase
+        .from('chat_participants')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('channel', 'general');
+    };
+  }, [user]);
 
   const sendMessage = useCallback(async () => {
     if (!currentMessage.trim() || !user) {
@@ -100,7 +229,11 @@ const RealtimeCommunication: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-sm">
-                            {message.username || 'User'}
+                            {message.username && message.username.trim().length > 0
+                              ? message.username
+                              : message.user_id === user?.id
+                              ? profile?.display_name || profile?.username || 'You'
+                              : 'User'}
                           </span>
                         </div>
                         <p className="text-sm">{message.message}</p>
