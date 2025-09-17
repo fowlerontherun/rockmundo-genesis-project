@@ -2,7 +2,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
-import type { PostgrestError, PostgrestMaybeSingleResponse, PostgrestResponse } from "@supabase/supabase-js";
+import type {
+  PostgrestError,
+  PostgrestMaybeSingleResponse,
+  PostgrestSingleResponse
+} from "@supabase/supabase-js";
 
 export type PlayerProfile = Tables<"profiles">;
 export type SkillDefinition = Tables<"skill_definitions">;
@@ -22,7 +26,6 @@ interface AttributeEntry {
 export type AttributesMap = Record<string, AttributeEntry>;
 export type PlayerSkills = Record<string, number> & { updated_at?: string | null };
 export type UnlockedSkillsMap = Record<string, boolean>;
-
 export interface CreateCharacterInput {
   username: string;
   displayName?: string;
@@ -65,6 +68,10 @@ interface GameDataContextValue {
 }
 
 const GameDataContext = createContext<GameDataContextValue | undefined>(undefined);
+const getStoredCharacterId = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+};
 
 const isPostgrestError = (error: unknown): error is PostgrestError =>
   typeof error === "object" &&
@@ -116,7 +123,9 @@ const matchProgressToDefinition = (
 const useProvideGameData = (): GameDataContextValue => {
   const { user } = useAuth();
   const [characters, setCharacters] = useState<PlayerProfile[]>([]);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(() => readStoredCharacterId());
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
+    () => loadStoredCharacterId()
+  );
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
@@ -138,6 +147,7 @@ const useProvideGameData = (): GameDataContextValue => {
   const clearSelectedCharacter = useCallback(() => {
     persistCharacterId(null);
     setSelectedCharacterId(null);
+    persistSelectedCharacterId(null);
     setProfile(null);
     setSkillDefinitions([]);
     setSkillProgress([]);
@@ -166,7 +176,7 @@ const useProvideGameData = (): GameDataContextValue => {
         .eq("id", cityId)
         .maybeSingle();
 
-      if (cityError && status !== 406) {
+      if (cityError && cityStatus !== 406) {
         console.error("Error fetching current city:", cityError);
         return null;
       }
@@ -210,7 +220,7 @@ const useProvideGameData = (): GameDataContextValue => {
         : activeCharacterId ?? list[0]?.id ?? null;
 
       if (fallbackId !== selectedCharacterId) {
-        updateSelectedCharacterId(fallbackId);
+        updateSelectedCharacterId(fallbackId ?? null);
       }
 
       if (!fallbackId) {
@@ -368,6 +378,7 @@ const useProvideGameData = (): GameDataContextValue => {
       setCharactersLoading(false);
       setDataLoading(false);
       setError(null);
+      setDataLoading(false);
       return;
     }
 
@@ -607,7 +618,6 @@ const useProvideGameData = (): GameDataContextValue => {
         .from("profile_attributes")
         .upsert(payload, { onConflict: "profile_id,attribute_id" })
         .select();
-
       if (upsertError) {
         console.error("Error updating attributes:", upsertError);
         throw upsertError;
@@ -719,7 +729,6 @@ const useProvideGameData = (): GameDataContextValue => {
       }
 
       setCharactersLoading(true);
-      setError(null);
 
       try {
         if (unlockCost > 0) {
@@ -745,7 +754,6 @@ const useProvideGameData = (): GameDataContextValue => {
 
         if (profileInsertError) throw profileInsertError;
         if (!newProfile) throw new Error("Failed to create character profile.");
-
         if (attributeDefinitions.length > 0) {
           const attributePayload = attributeDefinitions.map(definition => ({
             profile_id: newProfile.id,
@@ -757,8 +765,7 @@ const useProvideGameData = (): GameDataContextValue => {
             .from("profile_attributes")
             .upsert(attributePayload, { onConflict: "profile_id,attribute_id" });
 
-          if (attributeInsertError) throw attributeInsertError;
-        }
+        if (attributesInsertError) throw attributesInsertError;
 
         setCharacters(prev => [...prev, newProfile].sort((a, b) => a.slot_number - b.slot_number));
 

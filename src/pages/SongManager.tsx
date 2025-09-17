@@ -706,7 +706,7 @@ const SongManager = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   const fetchGrowthHistory = useCallback(async () => {
     if (!user?.id) {
@@ -1114,7 +1114,7 @@ const SongManager = () => {
     } finally {
       releasingSongsRef.current.delete(song.id);
     }
-  }, [createStreamingStatsRecord, enqueueStreamingSimulation, toast, updateProfile, user]);
+  }, [createStreamingStatsRecord, enqueueStreamingSimulation, ownerDisplayName, toast, updateProfile, user]);
 
   const openReleaseDialog = (song: Song) => {
     setSelectedSong(song);

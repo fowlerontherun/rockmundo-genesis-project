@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP, type AttributeKey } from "@/utils/attributeProgression";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Music,
@@ -75,10 +76,12 @@ const stageDescriptions: Record<Stage, string> = {
 
 const getStageKey = (songId: string, stage: Stage) => `${songId}:${stage}`;
 
+const STUDIO_ATTRIBUTE_KEYS: AttributeKey[] = ["technical_mastery", "creative_insight"];
+
 const MusicStudio = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, updateProfile, updateSkills, addActivity } = useGameData();
+  const { profile, skills, attributes, updateProfile, updateSkills, addActivity } = useGameData();
 
   const [songs, setSongs] = useState<SupabaseSong[]>([]);
   const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
@@ -397,23 +400,29 @@ const MusicStudio = () => {
 
       if (profile) {
         const cashDelta = stage === "recording" ? session.total_cost : totalCost - session.total_cost;
+        const experienceResult = applyAttributeToValue(qualityGain * 4, attributes, STUDIO_ATTRIBUTE_KEYS);
         await updateProfile({
           cash: Math.max(0, (profile.cash ?? 0) - cashDelta),
-          experience: (profile.experience ?? 0) + qualityGain * 4
+          experience: (profile.experience ?? 0) + experienceResult.value
         });
       }
 
       if (skills) {
         if (stage === "mixing") {
+          const guitarGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.guitar).value;
+          const bassGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.bass).value;
+          const drumsGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.drums).value;
           await updateSkills({
-            guitar: Math.min(100, skills.guitar + 1),
-            bass: Math.min(100, skills.bass + 1),
-            drums: Math.min(100, skills.drums + 1)
+            guitar: Math.min(100, skills.guitar + guitarGain),
+            bass: Math.min(100, skills.bass + bassGain),
+            drums: Math.min(100, skills.drums + drumsGain)
           });
         } else if (stage === "mastering") {
+          const performanceGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.performance).value;
+          const songwritingGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.songwriting).value;
           await updateSkills({
-            performance: Math.min(100, skills.performance + 1),
-            songwriting: Math.min(100, skills.songwriting + 1)
+            performance: Math.min(100, skills.performance + performanceGain),
+            songwriting: Math.min(100, skills.songwriting + songwritingGain)
           });
         }
       }
