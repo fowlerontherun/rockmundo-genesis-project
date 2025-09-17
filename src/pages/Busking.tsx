@@ -3,7 +3,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { calculateAttributeMultiplier, type AttributeKey } from "@/utils/attributeProgression";
+import { calculateAttributeMultiplier, type AttributeKey as ProgressionAttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -542,7 +542,7 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
   }
 };
 
-const BUSKING_ATTRIBUTE_KEYS: AttributeKey[] = [
+const BUSKING_ATTRIBUTE_KEYS: ProgressionAttributeKey[] = [
   "stage_presence",
   "musical_ability",
   "vocal_talent"
@@ -558,7 +558,8 @@ const Busking = () => {
     updateAttributes,
     addActivity,
     loading: gameLoading,
-    currentCity
+    currentCity,
+    selectedCharacterId
   } = useGameData();
   const { toast } = useToast();
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -574,15 +575,15 @@ const Busking = () => {
   const [weatherConditions, setWeatherConditions] = useState<WeatherCondition[]>([]);
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
-  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
+  const [cachedAttributes, setCachedAttributes] = useState<PlayerAttributes | null>(null);
   const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
-    const source = attributes as unknown as Record<string, unknown> | null;
+    const source = cachedAttributes as unknown as Record<string, unknown> | null;
     return {
       stagePresence: resolveAttributeValue(source, "stage_presence", 1),
       crowdEngagement: resolveAttributeValue(source, "crowd_engagement", 1),
       socialReach: resolveAttributeValue(source, "social_reach", 1),
     };
-  }, [attributes]);
+  }, [cachedAttributes]);
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -702,7 +703,7 @@ const Busking = () => {
 
   useEffect(() => {
     if (!user || !selectedCharacterId) {
-      setAttributes(null);
+      setCachedAttributes(null);
       return;
     }
 
@@ -721,11 +722,11 @@ const Busking = () => {
 
       if (error) {
         console.error("Failed to load player attributes:", error);
-        setAttributes(null);
+        setCachedAttributes(null);
         return;
       }
 
-      setAttributes(data ?? null);
+      setCachedAttributes(data ?? null);
     };
 
     void loadAttributes();

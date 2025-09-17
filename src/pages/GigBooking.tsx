@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Calendar, MapPin, Users, DollarSign, Clock, Star, Music, Volume2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,6 +97,17 @@ type VenueRequirements = JsonRequirementRecord & {
   min_popularity?: number | null;
 };
 
+const formatDateForInput = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 interface Venue {
   id: string;
   name: string;
@@ -174,6 +186,12 @@ const GigBooking = () => {
   );
   const handleShowTypeSelection = (venueId: string, value: ShowType) => {
     setShowTypeSelections((prev) => ({
+      ...prev,
+      [venueId]: value,
+    }));
+  };
+  const handleDateSelection = (venueId: string, value: string) => {
+    setVenueDateSelections((prev) => ({
       ...prev,
       [venueId]: value,
     }));
@@ -374,13 +392,40 @@ const GigBooking = () => {
       return;
     }
 
+    const selectedDateValue = venueDateSelections[venue.id];
+
+    if (!selectedDateValue) {
+      toast({
+        variant: "destructive",
+        title: "Select a date",
+        description: "Choose when you'd like to perform before booking this gig.",
+      });
+      return;
+    }
+
+    const selectedDate = new Date(selectedDateValue);
+
+    if (Number.isNaN(selectedDate.getTime())) {
+      toast({
+        variant: "destructive",
+        title: "Invalid date",
+        description: "Please pick a valid date and time for your performance.",
+      });
+      return;
+    }
+
+    if (selectedDate.getTime() <= Date.now()) {
+      toast({
+        variant: "destructive",
+        title: "Date must be in the future",
+        description: "Select a performance time that hasn't already passed.",
+      });
+      return;
+    }
+
     setBooking(true);
 
     try {
-      // Generate a future date (1-14 days from now)
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 14) + 1);
-      
       const showType = showTypeSelections[venue.id] ?? DEFAULT_SHOW_TYPE;
       const showTypeDetails = getShowTypeDetails(showType);
       const showTypeLabel = getShowTypeLabel(showType);
@@ -388,7 +433,7 @@ const GigBooking = () => {
 
       let environmentSummary: EnvironmentModifierSummary | null = null;
       try {
-        environmentSummary = await fetchEnvironmentModifiers(venue.location, futureDate.toISOString());
+        environmentSummary = await fetchEnvironmentModifiers(venue.location, selectedDate.toISOString());
       } catch (envError) {
         console.error('Error fetching environment modifiers for gig:', envError);
       }
@@ -403,7 +448,7 @@ const GigBooking = () => {
       const gigInsertPayload: GigInsertPayload = {
         venue_id: venue.id,
         band_id: user.id,
-        scheduled_date: futureDate.toISOString(),
+        scheduled_date: selectedDate.toISOString(),
         payment,
         show_type: showType,
         status: 'scheduled',
@@ -465,7 +510,7 @@ const GigBooking = () => {
         environment_modifiers: mergedEnvironment,
       };
 
-      const eventEndTime = new Date(futureDate);
+      const eventEndTime = new Date(selectedDate);
       eventEndTime.setHours(eventEndTime.getHours() + 2);
 
       const environmentNotes = mergedEnvironment?.applied?.length
@@ -510,7 +555,7 @@ const GigBooking = () => {
           event_type: 'gig',
           title: `${showTypeLabel} gig at ${venue.name}`,
           description: scheduleDescription,
-          start_time: futureDate.toISOString(),
+          start_time: selectedDate.toISOString(),
           end_time: eventEndTime.toISOString(),
           location: venue.location,
           status: 'scheduled',
@@ -527,11 +572,15 @@ const GigBooking = () => {
       }
 
       setPlayerGigs(prev => [...prev, newGig]);
-      
+
       await addActivity('gig', `Booked a ${showTypeLabel.toLowerCase()} gig at ${venue.name}`, 0);
 
+      const formattedDate = selectedDate.toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
       const toastParts = [
-        `You're performing at ${venue.name} on ${futureDate.toLocaleDateString()}.`,
+        `You're performing at ${venue.name} on ${formattedDate}.`,
         `Projected attendance: ${projectedAttendance.toLocaleString()}.`,
       ];
 
@@ -770,6 +819,8 @@ const GigBooking = () => {
     );
   }
 
+  const minimumDateTime = formatDateForInput(new Date());
+
   const upcomingGigs = playerGigs.filter(gig => gig.status === 'scheduled');
   const pastGigs = playerGigs.filter(gig => gig.status === 'completed');
 
@@ -906,6 +957,23 @@ const GigBooking = () => {
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
                           {showTypeDescription}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Performance Date &amp; Time</span>
+                        </div>
+                        <div onClick={(event) => event.stopPropagation()}>
+                          <Input
+                            type="datetime-local"
+                            value={venueDateSelections[venue.id] ?? ""}
+                            min={minimumDateTime}
+                            onChange={(event) => handleDateSelection(venue.id, event.target.value)}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Choose when you want to take the stage at this venue.
                         </p>
                       </div>
 

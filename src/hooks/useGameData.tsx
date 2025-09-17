@@ -2,11 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
-import type {
-  PostgrestError,
-  PostgrestMaybeSingleResponse,
-  PostgrestSingleResponse
-} from "@supabase/supabase-js";
+import type { PostgrestError, PostgrestMaybeSingleResponse, PostgrestResponse } from "@supabase/supabase-js";
 
 export type PlayerProfile = Tables<"profiles">;
 export type SkillDefinition = Tables<"skill_definitions">;
@@ -26,6 +22,10 @@ interface AttributeEntry {
 export type AttributesMap = Record<string, AttributeEntry>;
 export type PlayerSkills = Record<string, number> & { updated_at?: string | null };
 export type UnlockedSkillsMap = Record<string, boolean>;
+
+const sortCharacters = (characters: PlayerProfile[]) =>
+  [...characters].sort((a, b) => a.slot_number - b.slot_number);
+
 export interface CreateCharacterInput {
   username: string;
   displayName?: string;
@@ -68,10 +68,6 @@ interface GameDataContextValue {
 }
 
 const GameDataContext = createContext<GameDataContextValue | undefined>(undefined);
-const getStoredCharacterId = (): string | null => {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(CHARACTER_STORAGE_KEY);
-};
 
 const isPostgrestError = (error: unknown): error is PostgrestError =>
   typeof error === "object" &&
@@ -123,9 +119,7 @@ const matchProgressToDefinition = (
 const useProvideGameData = (): GameDataContextValue => {
   const { user } = useAuth();
   const [characters, setCharacters] = useState<PlayerProfile[]>([]);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
-    () => loadStoredCharacterId()
-  );
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(() => readStoredCharacterId());
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
@@ -147,7 +141,7 @@ const useProvideGameData = (): GameDataContextValue => {
   const clearSelectedCharacter = useCallback(() => {
     persistCharacterId(null);
     setSelectedCharacterId(null);
-    persistSelectedCharacterId(null);
+    persistCharacterId(null);
     setProfile(null);
     setSkillDefinitions([]);
     setSkillProgress([]);
@@ -160,7 +154,7 @@ const useProvideGameData = (): GameDataContextValue => {
   }, []);
 
   const resolveCurrentCity = useCallback(
-    async (cityId: string | null) => {
+    async (cityId: Nullable<string>) => {
       if (!cityId) {
         setCurrentCity(null);
         return null;
@@ -218,10 +212,6 @@ const useProvideGameData = (): GameDataContextValue => {
       const fallbackId = hasStoredCharacter
         ? storedId
         : activeCharacterId ?? list[0]?.id ?? null;
-
-      if (fallbackId !== selectedCharacterId) {
-        updateSelectedCharacterId(fallbackId ?? null);
-      }
 
       if (!fallbackId) {
         clearSelectedCharacter();
@@ -378,7 +368,6 @@ const useProvideGameData = (): GameDataContextValue => {
       setCharactersLoading(false);
       setDataLoading(false);
       setError(null);
-      setDataLoading(false);
       return;
     }
 
@@ -541,6 +530,7 @@ const useProvideGameData = (): GameDataContextValue => {
         }
 
         setSkillUnlockRows(prev => prev.filter(row => !(row.profile_id === activeProfileId && row.skill_id === definition.id)));
+
       }
     },
     [selectedCharacterId, skillDefinitions, user]
@@ -618,6 +608,7 @@ const useProvideGameData = (): GameDataContextValue => {
         .from("profile_attributes")
         .upsert(payload, { onConflict: "profile_id,attribute_id" })
         .select();
+
       if (upsertError) {
         console.error("Error updating attributes:", upsertError);
         throw upsertError;
@@ -637,8 +628,12 @@ const useProvideGameData = (): GameDataContextValue => {
         };
       });
 
-      setAttributes(nextAttributes);
-      return nextAttributes;
+        setAttributes(data);
+        return data;
+      } catch (updateError) {
+        console.error("Error updating attributes:", updateError);
+        throw updateError;
+      }
     },
     [attributeDefinitions, attributes, selectedCharacterId, user]
   );
@@ -857,7 +852,10 @@ const useProvideGameData = (): GameDataContextValue => {
   }, [skillDefinitions, skillProgress, skillsUpdatedAt]);
 
   const hasCharacters = useMemo(() => characters.length > 0, [characters]);
-  const loading = useMemo(() => charactersLoading || dataLoading, [charactersLoading, dataLoading]);
+  const loading = useMemo(
+    () => charactersLoading || dataLoading,
+    [charactersLoading, dataLoading]
+  );
 
   return {
     characters,

@@ -1114,7 +1114,7 @@ const SongManager = () => {
     } finally {
       releasingSongsRef.current.delete(song.id);
     }
-  }, [createStreamingStatsRecord, enqueueStreamingSimulation, ownerDisplayName, toast, updateProfile, user]);
+  }, [ownerDisplayName, updateProfile, user]);
 
   const openReleaseDialog = (song: Song) => {
     setSelectedSong(song);
