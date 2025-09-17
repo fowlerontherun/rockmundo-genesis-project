@@ -157,7 +157,7 @@ const AdvancedGigSystem: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [gigId, supabase, toast]);
+  }, [gigId]);
 
   useEffect(() => {
     if (user) {

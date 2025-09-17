@@ -20,8 +20,12 @@ interface Song {
   lyrics: string;
   status: string;
   quality_score: number;
+  duration: number;
   streams: number;
   revenue: number;
+  recording_cost: number;
+  plays: number;
+  popularity: number;
   created_at: string;
   updated_at: string;
   user_id: string;
@@ -59,6 +63,12 @@ type SupabaseSongRow = {
   streams?: number | null;
   duration?: number | null;
   created_at?: string | null;
+  updated_at?: string | null;
+  release_date?: string | null;
+  chart_position?: number | null;
+  revenue?: number | null;
+  artist_id?: string | null;
+  user_id?: string | null;
   audio_layers?: unknown;
 };
 
@@ -158,8 +168,12 @@ const normalizeSong = (song: SupabaseSongRow): Song => ({
   lyrics: song.lyrics ?? "",
   status: song.status ?? "draft",
   quality_score: toNumber(song.quality_score, 0),
+  duration: toNumber(song.duration, 180),
   streams: toNumber(song.streams, 0),
   revenue: toNumber(0, 0),
+  recording_cost: toNumber(song.recording_cost, 500),
+  plays: toNumber(song.plays, 0),
+  popularity: toNumber(song.popularity, 0),
   created_at: song.created_at ?? new Date().toISOString(),
   updated_at: song.created_at ?? new Date().toISOString(),
   user_id: song.id, // This should be from the database
@@ -194,6 +208,7 @@ const MusicCreation = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [localRecordings, setLocalRecordings] = useState<Record<string, LocalRecording[]>>({});
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editSongForm, setEditSongForm] = useState({
@@ -204,6 +219,7 @@ const MusicCreation = () => {
   });
   const [updatingSong, setUpdatingSong] = useState(false);
   const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
+  const [audioRecordingSongId, setAudioRecordingSongId] = useState<string | null>(null);
 
   const [newSong, setNewSong] = useState({
     title: "",
@@ -469,6 +485,10 @@ const MusicCreation = () => {
     } finally {
       setUpdatingSong(false);
     }
+  };
+
+  const stopPreview = () => {
+    setPreviewSongId(null);
   };
 
   const deleteSong = async (songId: string) => {

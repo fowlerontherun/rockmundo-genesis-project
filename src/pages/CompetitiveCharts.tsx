@@ -74,6 +74,15 @@ const CompetitiveCharts: React.FC = () => {
 
   const previousRankingsRef = useRef<Map<string, number>>(new Map());
 
+  const userId = user?.id;
+  const hasProfile = Boolean(profile);
+  const profileId = profile?.id;
+  const profileUsername = profile?.username;
+  const profileDisplayName = profile?.display_name;
+  const profileLevel = profile?.level;
+  const profileFame = profile?.fame;
+  const profileAvatarUrl = profile?.avatar_url;
+
   const fetchAchievements = useCallback(async () => {
     const { data, error } = await supabase
       .from('achievements')
@@ -85,7 +94,7 @@ const CompetitiveCharts: React.FC = () => {
   }, []);
 
   const fetchRankings = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setPlayerRankings([]);
       setUserRank(null);
       previousRankingsRef.current = new Map();
@@ -148,16 +157,16 @@ const CompetitiveCharts: React.FC = () => {
       });
 
       let computedUserRank =
-        updatedRankings.find((entry) => entry.id === user.id || entry.id === profile?.id) ?? null;
+        updatedRankings.find((entry) => entry.id === userId || entry.id === profileId) ?? null;
 
-      if (!computedUserRank && profile?.id) {
+      if (!computedUserRank && profileId) {
         const { data: userRankingData, error: userRankingError } = await supabase
           .from('player_rankings')
           .select(
             'id, rank, trend, total_plays, hit_songs, score, profile:profiles!inner(id, user_id, username, display_name, level, fame, avatar_url)'
           )
           .eq('ranking_type', 'global')
-          .eq('profile_id', profile.id)
+          .eq('profile_id', profileId)
           .maybeSingle();
 
         if (userRankingError) {
@@ -188,19 +197,19 @@ const CompetitiveCharts: React.FC = () => {
             nextPreviousRanks.set(computedUserRank.id, computedUserRank.rank);
           }
           updatedRankings.push(computedUserRank);
-        } else if (profile) {
+        } else if (hasProfile && userId) {
           computedUserRank = {
-            id: user.id,
-            username: profile.username,
-            display_name: profile.display_name,
-            level: profile.level,
-            fame: profile.fame,
-            score: profile.fame,
+            id: userId,
+            username: profileUsername ?? 'player',
+            display_name: profileDisplayName ?? profileUsername ?? 'Unknown Artist',
+            level: profileLevel ?? 1,
+            fame: profileFame ?? 0,
+            score: profileFame ?? 0,
             total_plays: 0,
             hit_songs: 0,
             rank: 0,
             trend: 'same',
-            avatar_url: profile.avatar_url ?? undefined,
+            avatar_url: profileAvatarUrl ?? undefined,
           };
         }
       }
@@ -217,13 +226,14 @@ const CompetitiveCharts: React.FC = () => {
       previousRankingsRef.current = new Map();
     }
   }, [
-    user?.id,
-    profile?.id,
-    profile?.username,
-    profile?.display_name,
-    profile?.level,
-    profile?.fame,
-    profile?.avatar_url,
+    userId,
+    profileId,
+    profileUsername,
+    profileDisplayName,
+    profileLevel,
+    profileFame,
+    profileAvatarUrl,
+    hasProfile,
   ]);
 
   const finalizeCompetition = useCallback(async (competition: CompetitionWithParticipants) => {
@@ -465,7 +475,7 @@ const CompetitiveCharts: React.FC = () => {
   }, [fetchCompetitions]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const rankingChannel = supabase
       .channel('global-rankings-channel')
