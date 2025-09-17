@@ -10,6 +10,7 @@ import { Mail, Lock, User, AlertCircle, Guitar, Star, Shield } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
+import { cn } from "@/lib/utils";
 
 type AuthTab = "login" | "signup" | "forgot";
 
@@ -369,12 +370,12 @@ const Auth = () => {
               className="h-32 w-auto sm:h-40 md:h-48 object-contain drop-shadow-2xl" 
             />
           </div>
-          <p className="text-sm text-white/80 font-oswald max-w-md mx-auto">
+          <p className="text-sm text-foreground/80 font-oswald max-w-md mx-auto">
             The Ultimate Music Career Simulation - Build your band, rock the world
           </p>
         </div>
 
-        <Card className="bg-white/95 backdrop-blur-sm border-white/30 shadow-2xl">
+        <Card className="bg-card/90 backdrop-blur-sm border-border/40 shadow-2xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-center text-xl sm:text-2xl font-bebas tracking-wide">
               JOIN THE REVOLUTION
@@ -388,11 +389,11 @@ const Auth = () => {
               {status && (
                 <Alert
                   variant={status.variant === "error" ? "destructive" : "default"}
-                  className={
-                    status.variant === "success"
-                      ? "border-green-500/30 bg-green-500/10 text-green-900 dark:text-green-100"
-                      : undefined
-                  }
+                  className={cn(
+                    status.variant === "info" && "border-border/50 bg-muted/60 text-foreground",
+                    status.variant === "success" &&
+                      "border-success/50 bg-success/15 text-success-foreground",
+                  )}
                 >
                   <Mail className="h-4 w-4" />
                   <AlertDescription className="space-y-2 text-left">
@@ -402,7 +403,7 @@ const Auth = () => {
                         onClick={handleResendVerification}
                         disabled={resendingVerification}
                         size="sm"
-                        className="w-full"
+                        className="w-full border-border/60 bg-muted/60 text-foreground hover:bg-muted/80 hover:text-foreground"
                         variant="outline"
                       >
                         {resendingVerification ? "Resending..." : "Resend verification email"}
@@ -643,7 +644,7 @@ const Auth = () => {
         </Card>
 
         <div className="text-center mt-6 space-y-4">
-          <Alert className="bg-primary/10 border-primary/20">
+          <Alert className="bg-primary/15 border-primary/40 text-foreground">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="text-left space-y-2">
               <div>
@@ -651,11 +652,11 @@ const Auth = () => {
                 Email: <code>j.fowler1986@gmail.com</code><br/>
                 Password: <code>admin123</code>
               </div>
-              <Button 
-                onClick={createAdminUser} 
+              <Button
+                onClick={createAdminUser}
                 disabled={creatingAdmin}
                 size="sm"
-                className="w-full mt-2"
+                className="w-full mt-2 border-border/60 bg-muted/60 text-foreground hover:bg-muted/80 hover:text-foreground"
                 variant="outline"
               >
                 <Shield className="h-4 w-4 mr-2" />
