@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,13 +112,7 @@ const AdvancedGigSystem: React.FC = () => {
   const [fameChange, setFameChange] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
 
-  useEffect(() => {
-    if (gigId && user) {
-      loadGig();
-    }
-  }, [gigId, user]);
-
-  const loadGig = async () => {
+  const loadGig = useCallback(async () => {
     if (!gigId) return;
 
     try {
@@ -139,13 +133,8 @@ const AdvancedGigSystem: React.FC = () => {
         .single();
 
       if (venueError) throw venueError;
-      if (!venueData) throw new Error('Venue not found');
-
-      const gigRow: GigRow = gigData;
-      const venueRow: VenueRow = venueData;
-
-      const transformedGig: Gig = {
-        id: gigRow.id,
+      const transformedGig = {
+        ...gigData,
         venue: {
           id: venueRow.id,
           name: venueRow.name,
@@ -166,7 +155,13 @@ const AdvancedGigSystem: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [gigId, supabase, toast]);
+
+  useEffect(() => {
+    if (gigId && user) {
+      loadGig();
+    }
+  }, [gigId, user, loadGig]);
 
   const startPerformance = () => {
     setIsPerforming(true);
