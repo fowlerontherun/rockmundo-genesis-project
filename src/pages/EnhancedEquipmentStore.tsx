@@ -70,7 +70,7 @@ const EquipmentStore = () => {
       const [equipmentResponse, playerEquipmentResponse, profileResponse] = await Promise.all([
         supabase.from("equipment_items").select("*").order("price", { ascending: true }),
         supabase.from("player_equipment").select("*").eq("user_id", user?.id),
-        supabase.from("profiles").select("*").eq("user_id", user?.id).single()
+        supabase.from("profiles").select("*").eq("user_id", user?.id).eq("is_active", true).maybeSingle()
       ]);
 
       if (equipmentResponse.data) {

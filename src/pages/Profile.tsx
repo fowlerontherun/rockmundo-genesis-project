@@ -9,9 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  User,
-  Camera,
+import CharacterSelect from "@/components/CharacterSelect";
+import { 
+  User, 
+  Camera, 
   Save,
   Star,
   Trophy,
@@ -64,6 +65,14 @@ const Profile = () => {
     username: '',
     bio: ''
   });
+
+  const showProfileDetails = Boolean(profile && skills);
+
+  useEffect(() => {
+    if (!showProfileDetails) {
+      setIsEditing(false);
+    }
+  }, [showProfileDetails]);
 
   const fetchFanMetrics = useCallback(async () => {
     if (!user) return;
@@ -233,44 +242,6 @@ const Profile = () => {
     : '0';
   const lastUpdatedLabel = fanMetrics?.updated_at ? new Date(fanMetrics.updated_at).toLocaleString() : null;
 
-  const handleResetConfirm = async () => {
-    setIsResetting(true);
-
-    try {
-      await resetCharacter();
-
-      toast({
-        title: "Character reset",
-        description: "Your profile has been cleared. Let's build a new legacy!",
-      });
-
-      navigate("/character/create", { replace: true });
-    } catch (error: unknown) {
-      const fallbackMessage = "Failed to reset character";
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error('Error resetting character:', errorMessage, error);
-      toast({
-        variant: "destructive",
-        title: "Reset failed",
-        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
-      });
-    } finally {
-      setIsResetting(false);
-      setIsResetDialogOpen(false);
-    }
-  };
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg font-oswald">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -281,7 +252,7 @@ const Profile = () => {
             </h1>
             <p className="text-muted-foreground">Manage your musical identity</p>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          {showProfileDetails && (
             <Button
               onClick={() => setIsEditing(!isEditing)}
               variant={isEditing ? "outline" : "default"}
@@ -290,43 +261,26 @@ const Profile = () => {
               <Edit3 className="h-4 w-4 mr-2" />
               {isEditing ? "Cancel" : "Edit Profile"}
             </Button>
-            <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={isResetting}>
-                  {isResetting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                      Resetting
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <RotateCcw className="h-4 w-4" />
-                      Start Over
-                    </span>
-                  )}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Reset your character?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently remove your profile, skills, songs, tours, social activity, and other progress tied to
-                    this character. We'll recreate the default character so you can go through the creation experience again.
-                    This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResetConfirm} disabled={isResetting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    {isResetting ? "Resetting..." : "Yes, reset everything"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          )}
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Character Management
+            </CardTitle>
+            <CardDescription>
+              Switch between unlocked performers or purchase additional character slots.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CharacterSelect />
+          </CardContent>
+        </Card>
+
+        {showProfileDetails ? (
+          <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="profile">Profile Info</TabsTrigger>
             <TabsTrigger value="stats">Statistics</TabsTrigger>
@@ -549,7 +503,7 @@ const Profile = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {skills && Object.entries(skills)
-                    .filter(([key]) => !['id', 'user_id', 'created_at', 'updated_at'].includes(key))
+                    .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
                     .map(([skill, value]) => (
                       <div key={skill} className="space-y-2">
                         <div className="flex justify-between">
@@ -568,7 +522,17 @@ const Profile = () => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        ) : (
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bebas tracking-wide">No Active Character Selected</CardTitle>
+              <CardDescription>
+                Use the manager above to create or activate a performer to unlock detailed profile controls and statistics.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -58,6 +58,7 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          profile_id: string
           user_id: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          profile_id: string
           user_id: string
         }
         Update: {
@@ -76,6 +78,7 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          profile_id?: string
           user_id?: string
         }
         Relationships: []
@@ -1040,10 +1043,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at: string
+          digital_sales: number
           id: string
+          physical_sales: number
           rank: number
           song_id: string
           total_streams: number
+          total_sales: number
           trend: string
           trend_change: number
           updated_at: string
@@ -1053,10 +1059,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank: number
           song_id: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -1066,10 +1075,13 @@ export type Database = {
           chart_date?: string
           chart_type?: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank?: number
           song_id?: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -1139,6 +1151,7 @@ export type Database = {
           id: string
           payment: number | null
           scheduled_date: string
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           updated_at: string | null
           venue_id: string
@@ -1151,6 +1164,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id: string
@@ -1163,6 +1177,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date?: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id?: string
@@ -1426,6 +1441,7 @@ export type Database = {
           guitar: number | null
           id: string
           marketing: number | null
+          profile_id: string
           performance: number | null
           songwriting: number | null
           technical: number | null
@@ -1443,6 +1459,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id: string
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -1460,6 +1477,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id?: string
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -1611,8 +1629,11 @@ export type Database = {
           health: number | null
           followers: number | null
           id: string
+          is_active: boolean
           level: number | null
+          slot_number: number
           updated_at: string | null
+          unlock_cost: number
           user_id: string
           username: string
         }
@@ -1631,8 +1652,11 @@ export type Database = {
           health?: number | null
           followers?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
+          slot_number?: number
           updated_at?: string | null
+          unlock_cost?: number
           user_id: string
           username: string
         }
@@ -1651,8 +1675,11 @@ export type Database = {
           health?: number | null
           followers?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
+          slot_number?: number
           updated_at?: string | null
+          unlock_cost?: number
           user_id?: string
           username?: string
         }
@@ -2023,6 +2050,7 @@ export type Database = {
           date: string
           id: string
           revenue: number | null
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           ticket_price: number | null
           tickets_sold: number | null
@@ -2040,6 +2068,7 @@ export type Database = {
           date: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -2057,6 +2086,7 @@ export type Database = {
           date?: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -2416,6 +2446,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "typing" | "muted"
+      show_type: "standard" | "acoustic"
     }
     CompositeTypes: {
       [_ in never]: never
