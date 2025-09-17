@@ -25,7 +25,7 @@ import {
   MapPin,
   Calendar,
   AlertTriangle,
-  Sparkles,
+  SparklesIcon,
   Globe,
   Mountain,
   Building,
@@ -140,7 +140,7 @@ const WorldEnvironment: React.FC = () => {
       case 'competition': return <TrendingUp className="w-5 h-5 text-blue-500" />;
       case 'economic': return <DollarSign className="w-5 h-5 text-green-500" />;
       case 'disaster': return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'celebration': return <Sparkles className="w-5 h-5 text-yellow-500" />;
+      case 'celebration': return <SparklesIcon className="w-5 h-5 text-yellow-500" />;
       default: return <Globe className="w-5 h-5" />;
     }
   };

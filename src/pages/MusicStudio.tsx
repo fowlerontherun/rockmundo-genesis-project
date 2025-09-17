@@ -25,7 +25,7 @@ import {
   Upload,
   AlertCircle,
   SlidersHorizontal,
-  Sparkles
+  SparklesIcon
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -908,7 +908,7 @@ const MusicStudio = () => {
                               <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border ${masteringComplete ? 'border-amber-500/40 bg-amber-500/10' : 'border-border/50 bg-muted/30'}`}>
                                 <div className="flex items-center gap-3">
                                   <div className={`rounded-full p-2 ${masteringComplete ? 'bg-amber-500/20 text-amber-600' : 'bg-muted text-muted-foreground'}`}>
-                                    <Sparkles className="h-5 w-5" />
+                                    <SparklesIcon className="h-5 w-5" />
                                   </div>
                                   <div>
                                     <p className="text-sm font-semibold">Mastering</p>
@@ -933,7 +933,7 @@ const MusicStudio = () => {
                                         size="sm"
                                         className="gap-2"
                                       >
-                                        <Sparkles className="h-4 w-4" />
+                                        <SparklesIcon className="h-4 w-4" />
                                         Master
                                       </Button>
                                     </>
@@ -1045,7 +1045,7 @@ const MusicStudio = () => {
                       <div className="animate-pulse">
                         {activeProcess === 'recording' && <Mic className="h-12 w-12 text-primary" />}
                         {activeProcess === 'mixing' && <SlidersHorizontal className="h-12 w-12 text-primary" />}
-                        {activeProcess === 'mastering' && <Sparkles className="h-12 w-12 text-primary" />}
+                        {activeProcess === 'mastering' && <SparklesIcon className="h-12 w-12 text-primary" />}
                       </div>
                     </div>
                   </div>

@@ -23,7 +23,7 @@ import {
   MapPin,
   Mic,
   ShieldAlert,
-  Sparkles,
+  SparklesIcon,
   TrendingUp,
 } from "lucide-react";
 
@@ -654,7 +654,7 @@ const Busking = () => {
           <Card className="bg-card/80 backdrop-blur border-primary/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Fame</CardTitle>
-              <Sparkles className="h-4 w-4 text-warning" />
+              <SparklesIcon className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-warning">{profile.fame ?? 0}</div>
@@ -802,7 +802,7 @@ const Busking = () => {
                 <div className="p-4 bg-muted/30 rounded-lg">
                   <p className="text-xs uppercase text-muted-foreground tracking-wide">Projected Fame</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Sparkles className="h-5 w-5 text-warning" />
+                    <SparklesIcon className="h-5 w-5 text-warning" />
                     <span className="text-xl font-semibold">+{expectedFame}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">More eyes on you mean more followers.</p>

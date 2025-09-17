@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Wand2, CheckCircle2, AlertCircle, Palette, Gauge } from "lucide-react";
+import { SparklesIcon, Wand2, CheckCircle2, AlertCircle, Palette, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -509,7 +509,7 @@ const CharacterCreationPage = () => {
         <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Sparkles className="h-5 w-5 text-primary" />
+              <SparklesIcon className="h-5 w-5 text-primary" />
               Backstory & Motivation
             </CardTitle>
             <CardDescription>
