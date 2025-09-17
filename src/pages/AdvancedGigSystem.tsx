@@ -129,6 +129,8 @@ const SHOW_TYPE_BEHAVIOR: Record<ShowType, {
   acoustic: { earnings: 1, fan: 1.25, experience: 1.2, audienceEase: 1.15, stageTolerance: 5 },
 };
 
+const ADVANCED_GIG_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
+
 const getPerformanceStages = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
 
 const AdvancedGigSystem: React.FC = () => {

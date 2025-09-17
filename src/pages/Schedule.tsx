@@ -21,9 +21,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
-import type { Tables } from "@/integrations/supabase/types";
+import { useGameData, type PlayerAttributes, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP, type AttributeKey } from "@/utils/attributeProgression";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -161,17 +161,16 @@ type SkillGainKey =
   | "bass";
 
 type SkillGains = Partial<Record<SkillGainKey, number>>;
-
-type PlayerAttributes = Tables<'player_attributes'>;
-
-const ATTRIBUTE_SCALE = 100;
-const ATTRIBUTE_GAIN_KEYS = new Set<SkillGainKey>([
-  "technical",
-  "composition",
+type AttributeGainKey = "business" | "marketing" | "creativity" | "technical";
+const ATTRIBUTE_GAIN_KEYS: AttributeGainKey[] = [
   "business",
   "marketing",
   "creativity",
-]);
+  "technical"
+];
+const isAttributeGainKey = (key: SkillGainKey): key is AttributeGainKey =>
+  ATTRIBUTE_GAIN_KEYS.includes(key as AttributeGainKey);
+const MAX_ATTRIBUTE_VALUE = 1000;
 
 const EVENT_REWARD_CONFIG: Record<
   EventType,
@@ -218,6 +217,14 @@ const EVENT_REWARD_CONFIG: Record<
     fame: 60,
     skillGains: { performance: 3, marketing: 2, vocals: 2 },
   },
+};
+
+const EVENT_ATTRIBUTE_MULTIPLIERS: Record<EventType, AttributeKey[]> = {
+  gig: ["stage_presence", "musical_ability"],
+  recording: ["technical_mastery", "creative_insight"],
+  rehearsal: ["musical_ability", "rhythm_sense"],
+  meeting: ["business_acumen", "marketing_savvy"],
+  tour: ["stage_presence", "vocal_talent"],
 };
 
 const formatSkillLabel = (skill: string) => skill.charAt(0).toUpperCase() + skill.slice(1);
@@ -737,15 +744,7 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const {
-    profile,
-    skills,
-    selectedCharacterId,
-    updateProfile,
-    updateSkills,
-    addActivity,
-    refetch,
-  } = useGameData();
+  const { profile, skills, attributes, updateProfile, updateSkills, updateAttributes, addActivity, refetch } = useGameData();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -764,8 +763,7 @@ const Schedule = () => {
   const notifiedEventsRef = useRef<Set<string>>(new Set());
   const profileRef = useRef<PlayerProfile | null>(profile);
   const skillsRef = useRef<PlayerSkills | null>(skills);
-  const attributesRef = useRef<PlayerAttributes | null>(null);
-  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
+  const attributesRef = useRef<PlayerAttributes | null>(attributes);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -774,48 +772,9 @@ const Schedule = () => {
   useEffect(() => {
     skillsRef.current = skills;
   }, [skills]);
-
   useEffect(() => {
     attributesRef.current = attributes;
   }, [attributes]);
-
-  useEffect(() => {
-    if (!user || !selectedCharacterId) {
-      setAttributes(null);
-      attributesRef.current = null;
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadAttributes = async () => {
-      const { data, error } = await supabase
-        .from("player_attributes")
-        .select("*")
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        console.error("Failed to load player attributes:", error);
-        setAttributes(null);
-        attributesRef.current = null;
-        return;
-      }
-
-      setAttributes(data ?? null);
-      attributesRef.current = data ?? null;
-    };
-
-    void loadAttributes();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedCharacterId, user]);
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -1039,8 +998,10 @@ const Schedule = () => {
           ? applyCostReduction(baseEnergyCost, activeAttributes?.physical_endurance)
           : 0;
 
+      const attributeKeys = EVENT_ATTRIBUTE_MULTIPLIERS[event.type] ?? [];
+      const experienceResult = applyAttributeToValue(reward.experience, attributesRef.current, attributeKeys);
       const newCash = currentCash + reward.cash;
-      const newExperience = currentExperience + reward.experience;
+      const newExperience = currentExperience + experienceResult.value;
       const newFame = Math.max(0, currentFame + reward.fame);
 
       profileUpdates.cash = newCash;
@@ -1084,31 +1045,19 @@ const Schedule = () => {
           }
 
           const skillKey = key as SkillGainKey;
-          if (ATTRIBUTE_GAIN_KEYS.has(skillKey)) {
-            if (!activeAttributes || !selectedCharacterId) {
-              continue;
-            }
-            const currentValue = Number(
-              activeAttributes[skillKey as keyof PlayerAttributes] ?? 0
-            );
-            const nextValue = Math.min(
-              1000,
-              currentValue + numericDelta * ATTRIBUTE_SCALE
-            );
+          if (isAttributeGainKey(skillKey)) {
+            if (!activeAttributes) continue;
+            const currentValue = Number(activeAttributes[skillKey] ?? 0);
+            const nextValue = Math.min(MAX_ATTRIBUTE_VALUE, currentValue + numericDelta);
             const actualGain = nextValue - currentValue;
-
             if (actualGain > 0) {
-              attributeUpdates[skillKey as keyof PlayerAttributes] = nextValue;
-              const displayGain = actualGain / ATTRIBUTE_SCALE;
-              skillSummaries.push(`+${displayGain} ${formatSkillLabel(skillKey)}`);
+              attributeUpdates[skillKey] = nextValue;
+              skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
             }
           } else if (activeSkills) {
-            const currentValue = Number(
-              activeSkills[skillKey as keyof PlayerSkills] ?? 0
-            );
+            const currentValue = Number(activeSkills[skillKey as keyof PlayerSkills] ?? 0);
             const nextValue = Math.min(100, currentValue + numericDelta);
             const actualGain = nextValue - currentValue;
-
             if (actualGain > 0) {
               skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
               skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
@@ -1123,28 +1072,16 @@ const Schedule = () => {
           }
         }
 
-        if (Object.keys(attributeUpdates).length > 0 && selectedCharacterId) {
-          const { data: updatedAttributes, error: attributeError } = await supabase
-            .from("player_attributes")
-            .update(attributeUpdates)
-            .eq("profile_id", selectedCharacterId)
-            .select("*")
-            .single();
-
-          if (attributeError) {
-            console.error("Error updating attributes:", attributeError);
-            throw attributeError;
-          }
-
+        if (Object.keys(attributeUpdates).length > 0) {
+          const updatedAttributes = await updateAttributes(attributeUpdates);
           if (updatedAttributes) {
             attributesRef.current = updatedAttributes;
-            setAttributes(updatedAttributes);
           }
         }
       }
 
       const summarySegments = [
-        `+${reward.experience} XP`,
+        `+${experienceResult.value} XP`,
         `+${reward.fame} fame`,
         `+$${reward.cash.toLocaleString()} cash`,
       ];
@@ -1173,7 +1110,7 @@ const Schedule = () => {
         rewardLabel: reward.label,
       };
     },
-    [addActivity, refetch, selectedCharacterId, updateProfile, updateSkills, user]
+    [addActivity, refetch, updateProfile, updateSkills, updateAttributes, user]
   );
 
   const handleFormChange = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {

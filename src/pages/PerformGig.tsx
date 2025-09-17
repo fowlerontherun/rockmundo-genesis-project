@@ -59,6 +59,8 @@ const SHOW_TYPE_RESULT_MODIFIERS: Record<ShowType, { payment: number; fan: numbe
 
 const getStagePreset = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
 
+const PERFORMANCE_ATTRIBUTE_KEYS: AttributeKey[] = ["stage_presence", "musical_ability"];
+
 interface Gig {
   id: string;
   venue: Venue;

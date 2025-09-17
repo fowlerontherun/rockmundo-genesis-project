@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CharacterSelect from "@/components/CharacterSelect";
-import { 
-  User, 
-  Camera, 
+import AvatarWithClothing from "@/components/avatar/AvatarWithClothing";
+import {
+  User,
+  Camera,
   Save,
   Star,
   Trophy,
@@ -29,7 +29,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import {
   Select,
   SelectContent,
@@ -87,7 +87,23 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, updateProfile, resetCharacter, refetch } = useGameData();
+  const { profile, skills, attributes, updateProfile } = useGameData();
+
+  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+    "vocals",
+    "guitar",
+    "drums",
+    "bass",
+    "performance",
+    "songwriting",
+    "composition"
+  ];
+  const attributeKeys: (keyof PlayerAttributes)[] = [
+    "creativity",
+    "business",
+    "marketing",
+    "technical"
+  ];
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -107,7 +123,7 @@ const Profile = () => {
   const [cityLoading, setCityLoading] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
 
-  const showProfileDetails = Boolean(profile && skills);
+  const showProfileDetails = Boolean(profile && skills && attributes);
 
   useEffect(() => {
     if (!showProfileDetails) {
@@ -425,13 +441,12 @@ const Profile = () => {
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center space-y-4">
-                    <div className="relative">
-                      <Avatar className="h-32 w-32">
-                        <AvatarImage src={profileAvatarPreview ?? undefined} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
-                          {(profile.display_name || profile.username || 'U')[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                    <AvatarWithClothing
+                      avatarUrl={profile.avatar_url}
+                      fallbackText={profile.display_name || profile.username}
+                      items={equippedClothing}
+                      size={128}
+                    >
                       <div className="absolute bottom-0 right-0">
                         <label htmlFor="avatar-upload" className="cursor-pointer">
                           <div className="bg-primary hover:bg-primary/80 rounded-full p-2 border-2 border-background">
@@ -451,7 +466,7 @@ const Profile = () => {
                           />
                         </label>
                       </div>
-                    </div>
+                    </AvatarWithClothing>
                     <div className="text-center space-y-1">
                       <h2 className="text-2xl font-bold">{profile.display_name || profile.username}</h2>
                       <p className="text-muted-foreground">@{profile.username}</p>
@@ -767,22 +782,56 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {skills && Object.entries(skills)
-                    .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
-                    .map(([skill, value]) => (
-                      <div key={skill} className="space-y-2">
+                  {instrumentSkillKeys.map(skillKey => {
+                    const value = Number(skills?.[skillKey] ?? 0);
+                    return (
+                      <div key={skillKey} className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium capitalize">{skill}</span>
+                          <span className="text-sm font-medium capitalize">{skillKey}</span>
                           <span className="text-sm font-bold text-primary">{value}/100</span>
                         </div>
-                        <Progress value={value as number} className="h-2" />
+                        <Progress value={value} className="h-2" />
                         <div className="text-xs text-muted-foreground">
-                          {(value as number) >= 80 ? 'Expert' : 
-                           (value as number) >= 60 ? 'Advanced' : 
-                           (value as number) >= 40 ? 'Intermediate' : 'Beginner'}
+                          {value >= 80
+                            ? "Expert"
+                            : value >= 60
+                              ? "Advanced"
+                              : value >= 40
+                                ? "Intermediate"
+                                : "Beginner"}
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Professional Attributes
+                </CardTitle>
+                <CardDescription>Business, creative, and technical strengths</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {attributeKeys.map(attributeKey => {
+                    const value = Number(attributes?.[attributeKey] ?? 0);
+                    const percent = Math.min(100, (value / 1000) * 100);
+                    return (
+                      <div key={attributeKey} className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium capitalize">{attributeKey}</span>
+                          <span className="text-sm font-bold text-primary">{value}/1000</span>
+                        </div>
+                        <Progress value={percent} className="h-2" />
+                        <div className="text-xs text-muted-foreground">
+                          High values unlock greater opportunities and campaign performance.
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
