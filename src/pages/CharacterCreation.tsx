@@ -63,18 +63,22 @@ const backgrounds = [
   },
 ];
 
+const TOTAL_SKILL_POINTS = 13;
+const MIN_SKILL_VALUE = 1;
+const MAX_SKILL_VALUE = 10;
+
 const defaultSkills = {
-  guitar: 5,
-  vocals: 5,
-  drums: 5,
-  bass: 5,
-  performance: 5,
-  songwriting: 5,
-  composition: 5,
-  creativity: 5,
-  business: 5,
-  marketing: 5,
-  technical: 5,
+  guitar: 1,
+  vocals: 1,
+  drums: 1,
+  bass: 1,
+  performance: 1,
+  songwriting: 1,
+  composition: 1,
+  creativity: 1,
+  business: 1,
+  marketing: 1,
+  technical: 1,
 };
 
 type SkillKey = keyof typeof defaultSkills;
@@ -237,16 +241,56 @@ const CharacterCreationPage = () => {
   };
 
   const handleSkillChange = (key: SkillKey, value: number) => {
-    setSkills((prev) => ({
-      ...prev,
-      [key]: Math.max(1, Math.min(10, value)),
-    }));
+    setSkills((prev) => {
+      const currentValue = prev[key];
+      const clampedValue = Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+
+      if (clampedValue === currentValue) {
+        return prev;
+      }
+
+      const currentTotal = Object.values(prev).reduce((acc, val) => acc + val, 0);
+      let nextValue = clampedValue;
+
+      if (clampedValue > currentValue) {
+        const availablePoints = TOTAL_SKILL_POINTS - currentTotal;
+
+        if (availablePoints <= 0) {
+          nextValue = currentValue;
+        } else {
+          const allowedIncrease = Math.min(clampedValue - currentValue, availablePoints);
+          nextValue = currentValue + allowedIncrease;
+        }
+      }
+
+      if (nextValue === currentValue) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [key]: nextValue,
+      };
+    });
   };
 
   const totalSkillPoints = useMemo(
     () => Object.values(skills).reduce((acc, val) => acc + val, 0),
     [skills]
   );
+
+  const remainingSkillPoints = useMemo(
+    () => Math.max(0, TOTAL_SKILL_POINTS - totalSkillPoints),
+    [totalSkillPoints]
+  );
+
+  const overallocatedSkillPoints = useMemo(
+    () => Math.max(0, totalSkillPoints - TOTAL_SKILL_POINTS),
+    [totalSkillPoints]
+  );
+
+  const allocationComplete = totalSkillPoints === TOTAL_SKILL_POINTS;
+  const allocationOver = overallocatedSkillPoints > 0;
 
   const handleSave = async () => {
     if (!user) return;
@@ -267,6 +311,17 @@ const CharacterCreationPage = () => {
       toast({
         title: "Artist handle required",
         description: "Create a handle so other players can find you.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!allocationComplete) {
+      toast({
+        title: allocationOver ? "Skill allocation exceeded" : "Allocate remaining skill points",
+        description: allocationOver
+          ? `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to hit exactly ${TOTAL_SKILL_POINTS}.`
+          : `You still have ${remainingSkillPoints} point${remainingSkillPoints === 1 ? "" : "s"} to assign before saving.`,
         variant: "destructive",
       });
       return;
@@ -561,8 +616,29 @@ const CharacterCreationPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary">
-              Total Skill Points: <span className="font-semibold">{totalSkillPoints}</span>
+            <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary space-y-1">
+              <div>
+                Total Skill Points:{" "}
+                <span className="font-semibold">
+                  {totalSkillPoints} / {TOTAL_SKILL_POINTS}
+                </span>
+              </div>
+              {allocationOver ? (
+                <div className="text-xs text-destructive">
+                  Overallocated by {overallocatedSkillPoints} point
+                  {overallocatedSkillPoints === 1 ? "" : "s"}. Adjust to continue.
+                </div>
+              ) : (
+                <div className="text-xs text-primary/80">
+                  Remaining Points:{" "}
+                  <span className="font-semibold">{remainingSkillPoints}</span>
+                </div>
+              )}
+              {!allocationComplete && !allocationOver && (
+                <div className="text-xs text-destructive">
+                  Spend all {TOTAL_SKILL_POINTS} points to continue.
+                </div>
+              )}
             </div>
             <div className="grid gap-5 md:grid-cols-2">
               {(Object.keys(defaultSkills) as SkillKey[]).map((key) => (

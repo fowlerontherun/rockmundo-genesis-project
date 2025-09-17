@@ -1417,55 +1417,55 @@ export type Database = {
       }
       player_skills: {
         Row: {
-          bass: number | null
-          business: number | null
-          composition: number | null
+          bass: number
+          business: number
+          composition: number
           created_at: string | null
-          creativity: number | null
-          drums: number | null
-          guitar: number | null
+          creativity: number
+          drums: number
+          guitar: number
           id: string
-          marketing: number | null
-          performance: number | null
-          songwriting: number | null
-          technical: number | null
+          marketing: number
+          performance: number
+          songwriting: number
+          technical: number
           updated_at: string | null
           user_id: string
-          vocals: number | null
+          vocals: number
         }
         Insert: {
-          bass?: number | null
-          business?: number | null
-          composition?: number | null
+          bass?: number
+          business?: number
+          composition?: number
           created_at?: string | null
-          creativity?: number | null
-          drums?: number | null
-          guitar?: number | null
+          creativity?: number
+          drums?: number
+          guitar?: number
           id?: string
-          marketing?: number | null
-          performance?: number | null
-          songwriting?: number | null
-          technical?: number | null
+          marketing?: number
+          performance?: number
+          songwriting?: number
+          technical?: number
           updated_at?: string | null
           user_id: string
-          vocals?: number | null
+          vocals?: number
         }
         Update: {
-          bass?: number | null
-          business?: number | null
-          composition?: number | null
+          bass?: number
+          business?: number
+          composition?: number
           created_at?: string | null
-          creativity?: number | null
-          drums?: number | null
-          guitar?: number | null
+          creativity?: number
+          drums?: number
+          guitar?: number
           id?: string
-          marketing?: number | null
-          performance?: number | null
-          songwriting?: number | null
-          technical?: number | null
+          marketing?: number
+          performance?: number
+          songwriting?: number
+          technical?: number
           updated_at?: string | null
           user_id?: string
-          vocals?: number | null
+          vocals?: number
         }
         Relationships: []
       }
