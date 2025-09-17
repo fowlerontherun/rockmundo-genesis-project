@@ -38,6 +38,8 @@ import {
   Trash2,
   Repeat,
   Download,
+  Timer,
+  Flame,
 } from "lucide-react";
 import { addMonths } from "date-fns";
 import { calculateLevel } from "@/utils/gameBalance";
@@ -58,6 +60,8 @@ interface ScheduleEvent {
   reminder_minutes: number | null;
   last_notified: string | null;
   recurrence_rule: string | null;
+  duration_minutes: number;
+  energy_cost: number | null;
   created_at?: string | null;
   updated_at?: string | null;
   isOccurrence?: boolean;
@@ -74,6 +78,8 @@ interface EventFormState {
   description: string;
   reminder_minutes: number | null;
   recurrence_rule: string | null;
+  duration_minutes: number;
+  energy_cost: number | null;
 }
 
 const eventTypes: { value: EventType; label: string }[] = [
@@ -249,6 +255,41 @@ const formatReminderLabel = (minutes: number | null) => {
   return `Reminder ${formatRelativeTime(minutes)} before`;
 };
 
+const formatDuration = (minutes: number) => {
+  if (minutes <= 0) {
+    return "0 minutes";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const parts: string[] = [];
+
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+  }
+
+  if (remainingMinutes > 0) {
+    parts.push(`${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"}`);
+  }
+
+  return parts.join(" ");
+};
+
+const calculateDayTotals = (dayEvents: ScheduleEvent[]) => {
+  const totalDuration = dayEvents.reduce((sum, event) => sum + event.duration_minutes, 0);
+  const energyValues = dayEvents
+    .map((event) => event.energy_cost)
+    .filter((value): value is number => value !== null);
+
+  const totalEnergy = energyValues.reduce((sum, value) => sum + value, 0);
+
+  return {
+    totalDuration,
+    totalEnergy,
+    hasEnergy: energyValues.length > 0,
+  };
+};
+
 const createEmptyFormState = (): EventFormState => ({
   title: "",
   type: "gig",
@@ -259,6 +300,8 @@ const createEmptyFormState = (): EventFormState => ({
   description: "",
   reminder_minutes: 30,
   recurrence_rule: null,
+  duration_minutes: 60,
+  energy_cost: null,
 });
 
 const normalizeTime = (value: string) => (value.length >= 5 ? value.slice(0, 5) : value);
@@ -351,6 +394,25 @@ const getEventStartDate = (date: string, time: string): Date | null => {
   }
 
   return startDate;
+};
+
+const getEventEndDate = (date: string, time: string, durationMinutes: number): Date | null => {
+  const start = getEventStartDate(date, time);
+
+  if (!start) {
+    return null;
+  }
+
+  if (durationMinutes <= 0) {
+    return start;
+  }
+
+  return new Date(start.getTime() + durationMinutes * 60000);
+};
+
+const formatTimeLabel = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 const formatDateParts = (date: Date) => {
@@ -524,13 +586,14 @@ const formatDateTimeForICS = (date: Date) => {
   return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
 };
 
-const getICSDateRange = (date: string, time: string) => {
+const getICSDateRange = (date: string, time: string, durationMinutes: number) => {
   const start = getEventStartDate(date, time);
   if (!start) {
     return null;
   }
 
-  const end = new Date(start.getTime() + 60 * 60000);
+  const duration = Math.max(1, Math.round(durationMinutes));
+  const end = new Date(start.getTime() + duration * 60000);
 
   return {
     start: formatDateTimeForICS(start),
@@ -549,7 +612,7 @@ const generateICS = (events: ScheduleEvent[]) => {
   ];
 
   for (const event of events) {
-    const dateRange = getICSDateRange(event.date, event.time);
+    const dateRange = getICSDateRange(event.date, event.time, event.duration_minutes);
     if (!dateRange) {
       continue;
     }
@@ -713,6 +776,14 @@ const Schedule = () => {
             : null,
         last_notified: event.last_notified ?? null,
         recurrence_rule: event.recurrence_rule ?? null,
+        duration_minutes:
+          event.duration_minutes !== null && event.duration_minutes !== undefined
+            ? Number(event.duration_minutes)
+            : 60,
+        energy_cost:
+          event.energy_cost !== null && event.energy_cost !== undefined
+            ? Number(event.energy_cost)
+            : null,
         created_at: event.created_at,
         updated_at: event.updated_at,
       }));
@@ -1069,6 +1140,8 @@ const Schedule = () => {
       description: event.description ?? "",
       reminder_minutes: event.reminder_minutes,
       recurrence_rule: event.recurrence_rule,
+      duration_minutes: event.duration_minutes,
+      energy_cost: event.energy_cost,
     });
     setRecurrenceSettings(parseRecurrenceRule(event.recurrence_rule));
     setIsEditDialogOpen(true);
@@ -1090,6 +1163,24 @@ const Schedule = () => {
       return;
     }
 
+    if (formData.duration_minutes <= 0) {
+      toast({
+        title: "Invalid duration",
+        description: "Event duration must be at least one minute.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.energy_cost !== null && formData.energy_cost < 0) {
+      toast({
+        title: "Invalid energy cost",
+        description: "Energy cost cannot be negative.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const { data, error } = await supabase
@@ -1102,14 +1193,16 @@ const Schedule = () => {
             date: formData.date,
             time: formData.time,
             location: formData.location,
-          status: formData.status,
-          description: formData.description ? formData.description : null,
-          reminder_minutes: formData.reminder_minutes,
-          last_notified: null,
-          recurrence_rule: formData.recurrence_rule,
-        },
-      ])
-      .select()
+            status: formData.status,
+            description: formData.description ? formData.description : null,
+            reminder_minutes: formData.reminder_minutes,
+            last_notified: null,
+            recurrence_rule: formData.recurrence_rule,
+            duration_minutes: formData.duration_minutes,
+            energy_cost: formData.energy_cost,
+          },
+        ])
+        .select()
       .single();
 
       if (error) throw error;
@@ -1130,6 +1223,14 @@ const Schedule = () => {
             : null,
         last_notified: data.last_notified ?? null,
         recurrence_rule: data.recurrence_rule ?? null,
+        duration_minutes:
+          data.duration_minutes !== null && data.duration_minutes !== undefined
+            ? Number(data.duration_minutes)
+            : formData.duration_minutes,
+        energy_cost:
+          data.energy_cost !== null && data.energy_cost !== undefined
+            ? Number(data.energy_cost)
+            : null,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -1166,6 +1267,24 @@ const Schedule = () => {
       return;
     }
 
+    if (formData.duration_minutes <= 0) {
+      toast({
+        title: "Invalid duration",
+        description: "Event duration must be at least one minute.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.energy_cost !== null && formData.energy_cost < 0) {
+      toast({
+        title: "Invalid energy cost",
+        description: "Energy cost cannot be negative.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const previousStatus = currentEvent.status;
@@ -1186,6 +1305,8 @@ const Schedule = () => {
           description: formData.description ? formData.description : null,
           reminder_minutes: formData.reminder_minutes,
           recurrence_rule: formData.recurrence_rule,
+          duration_minutes: formData.duration_minutes,
+          energy_cost: formData.energy_cost,
           ...(shouldResetNotification ? { last_notified: null } : {}),
         })
         .eq("id", currentEvent.id)
@@ -1211,6 +1332,14 @@ const Schedule = () => {
             : null,
         last_notified: data.last_notified ?? null,
         recurrence_rule: data.recurrence_rule ?? null,
+        duration_minutes:
+          data.duration_minutes !== null && data.duration_minutes !== undefined
+            ? Number(data.duration_minutes)
+            : formData.duration_minutes,
+        energy_cost:
+          data.energy_cost !== null && data.energy_cost !== undefined
+            ? Number(data.energy_cost)
+            : null,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -1354,6 +1483,50 @@ const Schedule = () => {
               value={formData.time}
               onChange={(event) => handleFormChange("time", event.target.value)}
             />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-2">
+            <Label htmlFor="duration_minutes">Duration (minutes)</Label>
+            <Input
+              id="duration_minutes"
+              type="number"
+              min={1}
+              step={15}
+              value={formData.duration_minutes}
+              onChange={(event) => {
+                const value = event.target.valueAsNumber;
+                handleFormChange(
+                  "duration_minutes",
+                  Number.isNaN(value) ? 0 : Math.max(0, Math.round(value))
+                );
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Blocks out the length of this activity for daily planning and exports.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="energy_cost">Energy cost (optional)</Label>
+            <Input
+              id="energy_cost"
+              type="number"
+              min={0}
+              step={5}
+              value={formData.energy_cost ?? ""}
+              onChange={(event) => {
+                const value = event.target.valueAsNumber;
+                handleFormChange(
+                  "energy_cost",
+                  Number.isNaN(value) ? null : Math.max(0, Math.round(value))
+                );
+              }}
+              placeholder="e.g. 25"
+            />
+            <p className="text-xs text-muted-foreground">
+              Track optional stamina or resource costs for this time block.
+            </p>
           </div>
         </div>
 
@@ -1505,6 +1678,9 @@ const Schedule = () => {
       baseEvent.date,
       baseEvent.time
     );
+    const endDate = getEventEndDate(event.date, event.time, event.duration_minutes);
+    const timeRange = endDate ? `${event.time} – ${formatTimeLabel(endDate)}` : event.time;
+    const durationLabel = formatDuration(event.duration_minutes);
     const cardClasses = `bg-card/80 backdrop-blur-sm border-primary/20 ${
       options.highlightToday ? "border-l-4 border-l-primary" : ""
     } ${event.status === "completed" ? "opacity-80" : ""}`;
@@ -1546,7 +1722,11 @@ const Schedule = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>{event.time}</span>
+                  <span>{timeRange}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Timer className="h-4 w-4 text-muted-foreground" />
+                  <span>{durationLabel}</span>
                 </span>
                 <span className="flex items-center gap-1">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -1562,6 +1742,12 @@ const Schedule = () => {
                   <span className="flex items-center gap-1">
                     <Repeat className="h-4 w-4 text-muted-foreground" />
                     <span>{recurrenceDescription}</span>
+                  </span>
+                ) : null}
+                {event.energy_cost !== null ? (
+                  <span className="flex items-center gap-1">
+                    <Flame className="h-4 w-4 text-muted-foreground" />
+                    <span>{event.energy_cost} energy</span>
                   </span>
                 ) : null}
               </div>
@@ -1609,6 +1795,8 @@ const Schedule = () => {
   );
   const todayEvents = expandedEvents.filter((event) => isSameDay(event.date, new Date()));
   const completedEvents = expandedEvents.filter((event) => event.status === "completed");
+  const selectedDayTotals = useMemo(() => calculateDayTotals(filteredEvents), [filteredEvents]);
+  const todayTotals = useMemo(() => calculateDayTotals(todayEvents), [todayEvents]);
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -1676,94 +1864,130 @@ const Schedule = () => {
                   {loading ? (
                     <p className="text-center text-muted-foreground py-8">Loading schedule...</p>
                   ) : filteredEvents.length > 0 ? (
-                    <div className="space-y-3">
-                      {filteredEvents.map((event) => {
-                        const statusBadgeClass = getStatusBadgeClass(event.status);
-                        const baseEvent =
-                          event.isOccurrence && event.originalEventId
-                            ? events.find((item) => item.id === event.originalEventId) ?? event
-                            : event;
-                        const recurrenceDescription = getRecurrenceDescription(
-                          baseEvent.recurrence_rule,
-                          baseEvent.date,
-                          baseEvent.time
-                        );
-                        return (
-                          <div
-                            key={event.id}
-                            className="space-y-3 p-4 rounded-lg bg-secondary/30"
-                          >
-                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                              <div className="flex items-start gap-3">
-                                <div className={`p-2 rounded-lg ${getTypeColor(event.type)} text-white`}>
-                                  {getEventIcon(event.type)}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <h3 className="font-semibold truncate">{event.title}</h3>
-                                    <Badge variant="outline" className="capitalize">
-                                      {event.type}
-                                    </Badge>
-                                    {baseEvent.recurrence_rule ? (
-                                      <Badge variant="outline" className="flex items-center gap-1 border-dashed">
-                                        <Repeat className="h-3 w-3" />
-                                        {event.isOccurrence ? "Series occurrence" : "Repeats"}
+                    <>
+                      <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Timer className="h-4 w-4" />
+                          <span>{formatDuration(selectedDayTotals.totalDuration)} scheduled</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {filteredEvents.length} event
+                            {filteredEvents.length === 1 ? "" : "s"}
+                          </span>
+                        </span>
+                        {selectedDayTotals.hasEnergy ? (
+                          <span className="flex items-center gap-1">
+                            <Flame className="h-4 w-4" />
+                            <span>{selectedDayTotals.totalEnergy} energy planned</span>
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="space-y-3">
+                        {filteredEvents.map((event) => {
+                          const statusBadgeClass = getStatusBadgeClass(event.status);
+                          const baseEvent =
+                            event.isOccurrence && event.originalEventId
+                              ? events.find((item) => item.id === event.originalEventId) ?? event
+                              : event;
+                          const recurrenceDescription = getRecurrenceDescription(
+                            baseEvent.recurrence_rule,
+                            baseEvent.date,
+                            baseEvent.time
+                          );
+                          const endDate = getEventEndDate(event.date, event.time, event.duration_minutes);
+                          const timeRange = endDate
+                            ? `${event.time} – ${formatTimeLabel(endDate)}`
+                            : event.time;
+                          const durationLabel = formatDuration(event.duration_minutes);
+                          return (
+                            <div
+                              key={event.id}
+                              className="space-y-3 p-4 rounded-lg bg-secondary/30"
+                            >
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded-lg ${getTypeColor(event.type)} text-white`}>
+                                    {getEventIcon(event.type)}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <h3 className="font-semibold truncate">{event.title}</h3>
+                                      <Badge variant="outline" className="capitalize">
+                                        {event.type}
                                       </Badge>
-                                    ) : null}
-                                    <Badge
-                                      variant="outline"
-                                      className={`capitalize ${statusBadgeClass}`}
-                                    >
-                                      {event.status.replace("_", " ")}
-                                    </Badge>
-                                  </div>
-                                  <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {event.time}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <MapPin className="h-3 w-3" />
-                                      {event.location}
-                                    </span>
-                                    {event.reminder_minutes !== null ? (
+                                      {baseEvent.recurrence_rule ? (
+                                        <Badge variant="outline" className="flex items-center gap-1 border-dashed">
+                                          <Repeat className="h-3 w-3" />
+                                          {event.isOccurrence ? "Series occurrence" : "Repeats"}
+                                        </Badge>
+                                      ) : null}
+                                      <Badge
+                                        variant="outline"
+                                        className={`capitalize ${statusBadgeClass}`}
+                                      >
+                                        {event.status.replace("_", " ")}
+                                      </Badge>
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
                                       <span className="flex items-center gap-1">
-                                        <Bell className="h-3 w-3" />
-                                        {formatReminderLabel(event.reminder_minutes)}
+                                        <Clock className="h-3 w-3" />
+                                        {timeRange}
                                       </span>
-                                    ) : null}
-                                    {recurrenceDescription ? (
                                       <span className="flex items-center gap-1">
-                                        <Repeat className="h-3 w-3" />
-                                        {recurrenceDescription}
+                                        <Timer className="h-3 w-3" />
+                                        {durationLabel}
                                       </span>
-                                    ) : null}
+                                      <span className="flex items-center gap-1">
+                                        <MapPin className="h-3 w-3" />
+                                        {event.location}
+                                      </span>
+                                      {event.reminder_minutes !== null ? (
+                                        <span className="flex items-center gap-1">
+                                          <Bell className="h-3 w-3" />
+                                          {formatReminderLabel(event.reminder_minutes)}
+                                        </span>
+                                      ) : null}
+                                      {recurrenceDescription ? (
+                                        <span className="flex items-center gap-1">
+                                          <Repeat className="h-3 w-3" />
+                                          {recurrenceDescription}
+                                        </span>
+                                      ) : null}
+                                      {event.energy_cost !== null ? (
+                                        <span className="flex items-center gap-1">
+                                          <Flame className="h-3 w-3" />
+                                          {event.energy_cost} energy
+                                        </span>
+                                      ) : null}
+                                    </div>
                                   </div>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="sm" onClick={() => openEditDialog(baseEvent)}>
+                                    <Edit3 className="h-4 w-4 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(baseEvent)}
+                                    disabled={isDeleting && deleteTarget?.id === baseEvent.id}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => openEditDialog(baseEvent)}>
-                                  <Edit3 className="h-4 w-4 mr-1" />
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => openDeleteDialog(baseEvent)}
-                                  disabled={isDeleting && deleteTarget?.id === baseEvent.id}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  Delete
-                                </Button>
-                              </div>
+                              {event.description ? (
+                                <p className="text-sm text-muted-foreground">{event.description}</p>
+                              ) : null}
                             </div>
-                            {event.description ? (
-                              <p className="text-sm text-muted-foreground">{event.description}</p>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   ) : (
                     <p className="text-center text-muted-foreground py-8">
                       No events scheduled for this date
@@ -1828,7 +2052,31 @@ const Schedule = () => {
                     </CardContent>
                   </Card>
                 ) : todayEvents.length > 0 ? (
-                  todayEvents.map((event) => renderEventCard(event, { highlightToday: true, extraBadge: "Today" }))
+                  <>
+                    <Card className="bg-card/60 border-dashed border-primary/30">
+                      <CardContent className="p-4 text-sm text-muted-foreground flex flex-wrap items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Timer className="h-4 w-4" />
+                          <span>{formatDuration(todayTotals.totalDuration)} scheduled today</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {todayEvents.length} event{todayEvents.length === 1 ? "" : "s"}
+                          </span>
+                        </span>
+                        {todayTotals.hasEnergy ? (
+                          <span className="flex items-center gap-1">
+                            <Flame className="h-4 w-4" />
+                            <span>{todayTotals.totalEnergy} energy planned</span>
+                          </span>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                    {todayEvents.map((event) =>
+                      renderEventCard(event, { highlightToday: true, extraBadge: "Today" })
+                    )}
+                  </>
                 ) : (
                   <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                     <CardContent className="p-12 text-center">
