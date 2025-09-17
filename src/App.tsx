@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
+import { GameDataProvider } from "./hooks/useGameData";
 import Index from "./pages/Index";
 import PerformGig from "./pages/PerformGig";
 import Auth from "./pages/Auth";
@@ -89,7 +90,10 @@ function App() {
                 <Route path="songs" element={<SongManager />} />
                 <Route path="inventory" element={<InventoryManager />} />
                 <Route path="statistics" element={<PlayerStatistics />} />
-                <Route path="character/create" element={<CharacterCreationPage />} />
+                <Route
+                  path="character/create"
+                  element={<Navigate to="/character-create" replace />}
+                />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
