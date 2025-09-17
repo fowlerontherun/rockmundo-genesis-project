@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   Users, 
   Heart, 
@@ -33,6 +34,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 
@@ -50,6 +52,22 @@ interface SocialPost {
   media_path?: string | null;
   media_type?: "image" | "video" | null;
   scheduled_for?: string | null;
+}
+
+interface SocialPostInsert {
+  user_id: string;
+  platform: string;
+  content: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  fan_growth: number;
+  media_url?: string | null;
+  media_path?: string | null;
+  media_type?: "image" | "video" | null;
+  scheduled_for?: string | null;
+  created_at?: string;
+  timestamp?: string | null;
 }
 
 interface FanDemographics {
@@ -449,27 +467,23 @@ const FanManagement = () => {
       // Create posts for multiple platforms
       const platforms = ['instagram', 'twitter', 'youtube'];
       const postPromises = platforms.map(platform => {
-        const payload: Record<string, any> = {
+        const payload: SocialPostInsert = {
           user_id: user.id,
           platform,
           content: postContent,
           likes: Math.round(baseLikes * (0.8 + Math.random() * 0.4)),
           comments: Math.round(baseComments * (0.8 + Math.random() * 0.4)),
           shares: Math.round(baseShares * (0.8 + Math.random() * 0.4)),
-          fan_growth: Math.round(fanGrowth * (0.8 + Math.random() * 0.4))
+          fan_growth: Math.round(fanGrowth * (0.8 + Math.random() * 0.4)),
+          media_url: mediaUrl ?? null,
+          media_path: mediaUrl ? uploadedMediaPath ?? null : null,
+          media_type: mediaTypeValue,
+          scheduled_for: scheduledIso ?? undefined,
+          created_at: scheduledIso ?? undefined,
+          timestamp: scheduledIso ?? undefined,
+          reposts: null,
+          views: null
         };
-
-        if (mediaUrl) {
-          payload.media_url = mediaUrl;
-          payload.media_path = uploadedMediaPath;
-          payload.media_type = mediaTypeValue;
-        }
-
-        if (scheduledIso) {
-          payload.scheduled_for = scheduledIso;
-          payload.created_at = scheduledIso;
-          payload.timestamp = scheduledIso;
-        }
 
         return supabase.from('social_posts').insert(payload);
       });
