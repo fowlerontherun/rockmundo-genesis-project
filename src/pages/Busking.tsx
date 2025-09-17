@@ -252,7 +252,7 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
 
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, skills, updateProfile, addActivity, loading: gameLoading } = useGameData();
+  const { profile, skills, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
   const { toast } = useToast();
 
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -265,6 +265,24 @@ const Busking = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BuskingResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  const cityBuskingValue = useMemo(() => {
+    if (!currentCity) return 1;
+    const numericValue = Number(currentCity.busking_value ?? 1);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      return 1;
+    }
+    return numericValue;
+  }, [currentCity]);
+
+  const buskingBoostLabel = useMemo(
+    () =>
+      cityBuskingValue.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    [cityBuskingValue]
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -359,30 +377,42 @@ const Busking = () => {
     const baseChance = 58 + (skillScore - selectedLocation.recommended_skill) * 0.7;
     const riskPenalty = riskPenaltyWeights[toRiskLevel(selectedLocation.risk_level)];
     const modifierRisk = selectedModifier ? selectedModifier.risk_modifier * 100 : 0;
-    const calculated = baseChance - riskPenalty - modifierRisk;
+    const cityInfluence = (cityBuskingValue - 1) * 20;
+    const calculated = baseChance - riskPenalty - modifierRisk + cityInfluence;
     return Math.min(95, Math.max(10, Math.round(calculated)));
-  }, [selectedLocation, selectedModifier, skillScore]);
+  }, [selectedLocation, selectedModifier, skillScore, cityBuskingValue]);
 
   const expectedCash = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierMultiplier = selectedModifier?.payout_multiplier ?? 1;
     const expectancy = successChance / 100;
-    return Math.max(0, Math.round(selectedLocation.base_payout * modifierMultiplier * (0.4 + expectancy)));
-  }, [selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      Math.round(selectedLocation.base_payout * modifierMultiplier * cityBuskingValue * (0.4 + expectancy))
+    );
+  }, [selectedLocation, selectedModifier, successChance, cityBuskingValue]);
 
   const expectedFame = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierMultiplier = selectedModifier?.fame_multiplier ?? 1;
     const expectancy = successChance / 100;
-    return Math.max(0, Math.round(selectedLocation.fame_reward * modifierMultiplier * (0.5 + expectancy * 0.5)));
-  }, [selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      Math.round(selectedLocation.fame_reward * modifierMultiplier * cityBuskingValue * (0.5 + expectancy * 0.5))
+    );
+  }, [selectedLocation, selectedModifier, successChance, cityBuskingValue]);
 
   const expectedExperience = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierBonus = selectedModifier?.experience_bonus ?? 0;
     const expectancy = successChance / 100;
-    return Math.max(0, Math.round((selectedLocation.experience_reward + modifierBonus) * (0.6 + expectancy * 0.4)));
-  }, [selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      Math.round(
+        (selectedLocation.experience_reward + modifierBonus) * cityBuskingValue * (0.6 + expectancy * 0.4)
+      )
+    );
+  }, [selectedLocation, selectedModifier, successChance, cityBuskingValue]);
 
   const maxBasePayout = useMemo(() => Math.max(1, ...locations.map((location) => location.base_payout ?? 0)), [locations]);
 
@@ -443,6 +473,8 @@ const Busking = () => {
 
       const modifier = selectedModifier;
       const modifierName = modifier ? modifier.name : "No Modifier";
+      const cityName = currentCity?.name;
+      const cityMultiplier = cityBuskingValue;
       const performanceVariance = Math.random() * 12 - 6;
       const performanceScore = Math.min(100, Math.max(15, successChance + performanceVariance));
       const roll = Math.random() * 100;
@@ -451,19 +483,19 @@ const Busking = () => {
       const baseCash = selectedLocation.base_payout;
       const payoutMultiplier = modifier?.payout_multiplier ?? 1;
       const cashEarned = success
-        ? Math.round(baseCash * payoutMultiplier * (0.85 + Math.random() * 0.6))
-        : Math.round(baseCash * 0.25 * (0.7 + Math.random() * 0.4));
+        ? Math.round(baseCash * payoutMultiplier * cityMultiplier * (0.85 + Math.random() * 0.6))
+        : Math.round(baseCash * 0.25 * cityMultiplier * (0.7 + Math.random() * 0.4));
 
       const baseFame = selectedLocation.fame_reward;
       const fameMultiplier = modifier?.fame_multiplier ?? 1;
       const fameGained = success
-        ? Math.round(baseFame * fameMultiplier * (0.9 + Math.random() * 0.4))
-        : Math.round(baseFame * 0.4 * (0.6 + Math.random() * 0.3));
+        ? Math.round(baseFame * fameMultiplier * cityMultiplier * (0.9 + Math.random() * 0.4))
+        : Math.round(baseFame * 0.4 * cityMultiplier * (0.6 + Math.random() * 0.3));
 
       const baseExperience = selectedLocation.experience_reward + (modifier?.experience_bonus ?? 0);
       const experienceGained = success
-        ? Math.round(baseExperience * (0.9 + Math.random() * 0.5))
-        : Math.round(baseExperience * 0.5 * (0.7 + Math.random() * 0.3));
+        ? Math.round(baseExperience * cityMultiplier * (0.9 + Math.random() * 0.5))
+        : Math.round(baseExperience * 0.5 * cityMultiplier * (0.7 + Math.random() * 0.3));
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
@@ -487,9 +519,10 @@ const Busking = () => {
       ];
 
       const durationMinutes = Math.max(20, Math.round((selectedLocation.cooldown_minutes ?? 60) * 0.45));
+      const locationTag = cityName ? `${selectedLocation.name} in ${cityName}` : selectedLocation.name;
       const summaryMessage = success
-        ? `Crushed it at ${selectedLocation.name}! Earned $${cashEarned.toLocaleString()} with ${modifierName}.`
-        : `Tough break at ${selectedLocation.name}. Still brought home $${cashEarned.toLocaleString()}.`;
+        ? `Crushed it at ${locationTag}! Earned $${cashEarned.toLocaleString()} with ${modifierName}.`
+        : `Tough break at ${locationTag}. Still brought home $${cashEarned.toLocaleString()}.`;
 
         const insertPayload: TablesInsert<"busking_sessions"> = {
           user_id: user.id,
@@ -533,8 +566,8 @@ const Busking = () => {
       });
 
       const activityMessage = success
-        ? `Street performance success at ${selectedLocation.name}!`
-        : `Busking setback at ${selectedLocation.name}. Time to regroup.`;
+        ? `Street performance success at ${selectedLocation.name}${cityName ? ` (${cityName})` : ""}!`
+        : `Busking setback at ${selectedLocation.name}${cityName ? ` (${cityName})` : ""}. Time to regroup.`;
 
       await addActivity("busking", activityMessage, cashEarned);
 
@@ -548,7 +581,7 @@ const Busking = () => {
         performanceScore: Math.round(performanceScore),
         message: summaryMessage,
         crowdReaction,
-        locationName: selectedLocation.name,
+        locationName: locationTag,
         modifierName,
       });
 
@@ -558,8 +591,8 @@ const Busking = () => {
         variant: success ? "default" : "destructive",
         title: success ? "Busking success!" : "Busking attempt finished",
         description: success
-          ? `You earned $${cashEarned.toLocaleString()} and gained ${fameGained} fame.`
-          : `You still pocketed $${cashEarned.toLocaleString()} despite the hurdles.`,
+          ? `You earned $${cashEarned.toLocaleString()} and gained ${fameGained} fame (${currentCity ? `${currentCity.name}` : "Neutral city"} boost ×${buskingBoostLabel}).`
+          : `You still pocketed $${cashEarned.toLocaleString()} despite the hurdles (${currentCity ? `${currentCity.name}` : "Neutral city"} boost ×${buskingBoostLabel}).`,
       });
     } catch (err) {
       console.error("Failed to complete busking session", err);
@@ -621,6 +654,12 @@ const Busking = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <Badge variant="outline" className="gap-2 bg-muted/30 border-muted/50 text-muted-foreground">
+              <MapPin className="h-4 w-4 text-primary" />
+              {currentCity
+                ? `${currentCity.name} • Busking Boost ×${buskingBoostLabel}`
+                : `No active city • Busking Boost ×${buskingBoostLabel}`}
+            </Badge>
             <Badge variant="outline" className="gap-2 bg-primary/10 border-primary/30 text-primary">
               <Activity className="h-4 w-4" />
               Skill Readiness: {skillScore}
@@ -758,7 +797,11 @@ const Busking = () => {
                 Performance Outlook
               </CardTitle>
               <CardDescription>
-                We crunch your skills, location difficulty, and modifiers to predict the vibe of your next set.
+                We crunch your skills, location difficulty, modifiers, and
+                {" "}
+                {currentCity ? `${currentCity.name}'s street energy` : "neutral city conditions"}
+                {" "}
+                to predict the vibe of your next set.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -797,7 +840,14 @@ const Busking = () => {
                     <Coins className="h-5 w-5 text-success" />
                     <span className="text-xl font-semibold">${expectedCash}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Based on success odds and modifiers.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Based on success odds, modifiers, and
+                    {" "}
+                    {currentCity
+                      ? `${currentCity.name}'s busking climate (×${buskingBoostLabel})`
+                      : `a neutral city boost (×${buskingBoostLabel})`}
+                    .
+                  </p>
                 </div>
                 <div className="p-4 bg-muted/30 rounded-lg">
                   <p className="text-xs uppercase text-muted-foreground tracking-wide">Projected Fame</p>
@@ -967,6 +1017,12 @@ const Busking = () => {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Gauge className="h-4 w-4 text-accent" />
                     Performance score: {result.performanceScore}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    {currentCity
+                      ? `${currentCity.name} boost ×${buskingBoostLabel}`
+                      : `Neutral city boost ×${buskingBoostLabel}`}
                   </div>
                 </div>
               ) : (

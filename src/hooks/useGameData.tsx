@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
 import type {
   PostgrestError,
+  PostgrestMaybeSingleResponse,
   PostgrestResponse,
   PostgrestSingleResponse
 } from "@supabase/supabase-js";
@@ -32,6 +33,36 @@ export const useGameData = () => {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentCity, setCurrentCity] = useState<Tables<'cities'> | null>(null);
+
+  const resolveCurrentCity = useCallback(
+    async (cityId: string | null) => {
+      if (!cityId) {
+        setCurrentCity(null);
+        return null;
+      }
+
+      const {
+        data,
+        error: cityError,
+        status: cityStatus,
+      }: PostgrestMaybeSingleResponse<Tables<'cities'>> = await supabase
+        .from('cities')
+        .select('*')
+        .eq('id', cityId)
+        .maybeSingle();
+
+      if (cityError && cityStatus !== 406) {
+        console.error('Error fetching current city:', cityError);
+        return null;
+      }
+
+      const cityData = data ?? null;
+      setCurrentCity(cityData);
+      return cityData;
+    },
+    []
+  );
 
   const fetchGameData = useCallback(async () => {
     if (!user) return;
@@ -80,6 +111,7 @@ export const useGameData = () => {
       setProfile(profileData);
       setSkills(skillsData);
       setActivities(activitiesData ?? []);
+      await resolveCurrentCity(profileData?.current_city_id ?? null);
     } catch (err: unknown) {
       console.error('Error fetching game data:', err);
       if (isPostgrestError(err)) {
@@ -92,7 +124,7 @@ export const useGameData = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, resolveCurrentCity]);
 
   useEffect(() => {
     fetchGameData();
@@ -115,6 +147,11 @@ export const useGameData = () => {
           throw new Error('No profile data returned from Supabase.');
         }
         setProfile(data);
+        const nextCityId = data.current_city_id ?? null;
+        const currentCityId = currentCity?.id ?? null;
+        if (nextCityId !== currentCityId) {
+          await resolveCurrentCity(nextCityId);
+        }
         return data;
       } catch (err: unknown) {
         console.error('Error updating profile:', err);
@@ -127,7 +164,7 @@ export const useGameData = () => {
         throw new Error('An unknown error occurred while updating the profile.');
       }
     },
-    [profile, user]
+    [profile, user, currentCity?.id, resolveCurrentCity]
   );
 
   const updateSkills = useCallback(
@@ -246,6 +283,7 @@ export const useGameData = () => {
       setProfile(resetData.profile);
       setSkills(resetData.skills);
       setActivities([]);
+      await resolveCurrentCity(resetData.profile.current_city_id ?? null);
 
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('rockmundo:needsOnboarding', 'true');
@@ -266,7 +304,7 @@ export const useGameData = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, fetchGameData]);
+  }, [user, fetchGameData, resolveCurrentCity]);
 
   return {
     profile,
@@ -274,6 +312,7 @@ export const useGameData = () => {
     activities,
     loading,
     error,
+    currentCity,
     updateProfile,
     updateSkills,
     updateLocation,

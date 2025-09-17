@@ -532,6 +532,7 @@ export type Database = {
       cities: {
         Row: {
           bonuses: string | null
+          busking_value: number
           cost_of_living: number | null
           country: string
           created_at: string | null
@@ -552,6 +553,7 @@ export type Database = {
         }
         Insert: {
           bonuses?: string | null
+          busking_value?: number
           cost_of_living?: number | null
           country: string
           created_at?: string | null
@@ -572,6 +574,7 @@ export type Database = {
         }
         Update: {
           bonuses?: string | null
+          busking_value?: number
           cost_of_living?: number | null
           country?: string
           created_at?: string | null
