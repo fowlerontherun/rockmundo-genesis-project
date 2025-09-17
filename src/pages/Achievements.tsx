@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,14 +123,7 @@ const Achievements = () => {
   const [playerAchievements, setPlayerAchievements] = useState<PlayerAchievement[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadAchievements();
-      loadPlayerAchievements();
-    }
-  }, [user]);
-
-  const loadAchievements = async () => {
+  const loadAchievements = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('achievements')
@@ -154,9 +147,9 @@ const Achievements = () => {
         console.error('Error loading achievements:', String(error));
       }
     }
-  };
+  }, []);
 
-  const loadPlayerAchievements = async () => {
+  const loadPlayerAchievements = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -203,7 +196,14 @@ const Achievements = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadAchievements();
+      loadPlayerAchievements();
+    }
+  }, [user, loadAchievements, loadPlayerAchievements]);
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
