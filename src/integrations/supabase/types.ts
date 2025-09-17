@@ -415,6 +415,104 @@ export type Database = {
         }
         Relationships: []
       }
+      city_metadata: {
+        Row: {
+          aliases: string[] | null
+          city_id: string
+          created_at: string | null
+          famous_resident: string | null
+          id: string
+          intra_locations: Json | null
+          metro_area: string | null
+          signature_sound: string | null
+          summary: string | null
+          timezone: string | null
+          travel_modes: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          aliases?: string[] | null
+          city_id: string
+          created_at?: string | null
+          famous_resident?: string | null
+          id?: string
+          intra_locations?: Json | null
+          metro_area?: string | null
+          signature_sound?: string | null
+          summary?: string | null
+          timezone?: string | null
+          travel_modes?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          aliases?: string[] | null
+          city_id?: string
+          created_at?: string | null
+          famous_resident?: string | null
+          id?: string
+          intra_locations?: Json | null
+          metro_area?: string | null
+          signature_sound?: string | null
+          summary?: string | null
+          timezone?: string | null
+          travel_modes?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_metadata_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      cities: {
+        Row: {
+          cost_of_living: number | null
+          country: string | null
+          created_at: string | null
+          cultural_events: string[] | null
+          dominant_genre: string | null
+          id: string
+          local_bonus: number | null
+          music_scene: number | null
+          name: string
+          population: number | null
+          updated_at: string | null
+          venues: number | null
+        }
+        Insert: {
+          cost_of_living?: number | null
+          country?: string | null
+          created_at?: string | null
+          cultural_events?: string[] | null
+          dominant_genre?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name: string
+          population?: number | null
+          updated_at?: string | null
+          venues?: number | null
+        }
+        Update: {
+          cost_of_living?: number | null
+          country?: string | null
+          created_at?: string | null
+          cultural_events?: string[] | null
+          dominant_genre?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name?: string
+          population?: number | null
+          updated_at?: string | null
+          venues?: number | null
+        }
+        Relationships: []
+      }
       competition_participants: {
         Row: {
           awarded_at: string | null
@@ -1384,6 +1482,8 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          current_activity: string | null
+          current_city_id: string | null
           created_at: string | null
           display_name: string | null
           engagement_rate: number | null
@@ -1393,6 +1493,10 @@ export type Database = {
           followers: number | null
           id: string
           level: number | null
+          primary_instrument: string | null
+          travel_eta: string | null
+          travel_mode: string | null
+          travel_started_at: string | null
           updated_at: string | null
           user_id: string
           username: string
@@ -1401,6 +1505,8 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          current_activity?: string | null
+          current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
           engagement_rate?: number | null
@@ -1410,6 +1516,10 @@ export type Database = {
           followers?: number | null
           id?: string
           level?: number | null
+          primary_instrument?: string | null
+          travel_eta?: string | null
+          travel_mode?: string | null
+          travel_started_at?: string | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -1418,6 +1528,8 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          current_activity?: string | null
+          current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
           engagement_rate?: number | null
@@ -1427,6 +1539,10 @@ export type Database = {
           followers?: number | null
           id?: string
           level?: number | null
+          primary_instrument?: string | null
+          travel_eta?: string | null
+          travel_mode?: string | null
+          travel_started_at?: string | null
           updated_at?: string | null
           user_id?: string
           username?: string
