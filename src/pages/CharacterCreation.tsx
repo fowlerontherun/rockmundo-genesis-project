@@ -361,7 +361,6 @@ const CharacterCreation = () => {
       </div>
     );
   }
-
   if (!user) {
     return null;
   }

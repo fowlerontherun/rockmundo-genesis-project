@@ -2093,6 +2093,17 @@ export type Database = {
         }
         Relationships: []
       },
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          display_name: string | null
+          id: string
+          user_id: string
+          username: string
+        }
+        Relationships: []
+      },
       player_achievement_summary: {
         Row: {
           earned_count: number
@@ -2154,6 +2165,13 @@ export type Database = {
           restock_amount?: number | null
         }
         Returns: number
+      }
+      reset_player_character: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          profile: Database["public"]["Tables"]["profiles"]["Row"]
+          skills: Database["public"]["Tables"]["player_skills"]["Row"]
+        }[]
       }
     }
     Enums: {

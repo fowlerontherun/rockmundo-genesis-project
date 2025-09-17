@@ -86,7 +86,7 @@ type GigRow = Database['public']['Tables']['gigs']['Row'] & {
   venue?: { name?: string | null; location?: string | null } | null;
 };
 type ScheduleEventRow = Database['public']['Tables']['schedule_events']['Row'];
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type PublicProfileRow = Database['public']['Views']['public_profiles']['Row'];
 
 interface BandScheduleEvent {
   id: string;
@@ -155,13 +155,13 @@ const BandManager = () => {
         .map((member) => member.user_id)
         .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
-      let profilesMap = new Map<string, Pick<ProfileRow, 'display_name' | 'avatar_url'>>();
+      let profilesMap = new Map<string, Pick<PublicProfileRow, 'display_name' | 'avatar_url'>>();
       let skillsMap = new Map<string, PlayerSkillsRow | null>();
 
       if (memberIds.length > 0) {
         const [profilesResponse, skillsResponse] = await Promise.all([
           supabase
-            .from('profiles')
+            .from('public_profiles')
             .select('user_id, display_name, avatar_url')
             .in('user_id', memberIds),
           supabase
@@ -174,7 +174,7 @@ const BandManager = () => {
         if (skillsResponse.error) throw skillsResponse.error;
 
         profilesMap = new Map(
-          ((profilesResponse.data as ProfileRow[]) ?? []).map((profile) => [profile.user_id, profile])
+          ((profilesResponse.data as PublicProfileRow[]) ?? []).map((profile) => [profile.user_id, profile])
         );
 
         skillsMap = new Map(

@@ -310,8 +310,8 @@ const BandChemistry = () => {
           { data: skillsData, error: skillsError },
         ] = await Promise.all([
           supabase
-            .from("profiles")
-            .select("display_name, username, avatar_url, level")
+            .from("public_profiles")
+            .select("display_name, username, avatar_url")
             .eq("user_id", member.user_id)
             .maybeSingle(),
           supabase
@@ -336,7 +336,7 @@ const BandChemistry = () => {
           morale,
           chemistry,
           skill: calculateSkillAverage(skillsData),
-          loyalty: clampStat(40 + (profileData?.level ?? 1) * 10),
+          loyalty: clampStat(40 + Math.round(calculateSkillAverage(skillsData) / 5)),
           energy: clampStat(
             60 + Math.round(((skillsData?.performance ?? 50) + (skillsData?.songwriting ?? 50)) / 4)
           ),
