@@ -403,21 +403,18 @@ const SkillTraining = () => {
 
         <TabsContent value="skills" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {skills && Object.entries(skills)
-              .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
-              .map(([skill, value]) => {
-              const session = trainingSessions.find(s => s.skill === skill);
-              const Icon = session?.icon || Music;
-              const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+            {trainingSessions.map(session => {
+              const Icon = session.icon;
+              const numericValue = Number(skills?.[session.skill] ?? 0);
               const progressValue = skillCap > 0 ? Math.min(100, (numericValue / skillCap) * 100) : 0;
 
               return (
-                <Card key={skill} className="relative overflow-hidden">
+                <Card key={session.skill} className="relative overflow-hidden">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Icon className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-lg font-oswald capitalize">{skill}</CardTitle>
+                        <CardTitle className="text-lg font-oswald capitalize">{session.skill}</CardTitle>
                       </div>
                       <Badge variant="outline" className={getSkillColor(numericValue)}>
                         {getSkillLevel(numericValue)}

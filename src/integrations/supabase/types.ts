@@ -1666,6 +1666,7 @@ export type Database = {
       player_skills: {
         Row: {
           bass: number
+          composition: number
           created_at: string | null
           drums: number
           guitar: number
@@ -1679,6 +1680,7 @@ export type Database = {
         }
         Insert: {
           bass?: number
+          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
@@ -1692,6 +1694,7 @@ export type Database = {
         }
         Update: {
           bass?: number
+          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
@@ -1759,6 +1762,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_attributes: {
+        Row: {
+          business: number
+          creativity: number
+          created_at: string | null
+          id: string
+          marketing: number
+          profile_id: string | null
+          technical: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business?: number
+          creativity?: number
+          created_at?: string | null
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business?: number
+          creativity?: number
+          created_at?: string | null
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       player_streaming_accounts: {
         Row: {

@@ -29,8 +29,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
-import { useEquippedClothing } from "@/hooks/useEquippedClothing";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import {
   Select,
   SelectContent,
@@ -88,8 +87,24 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, updateProfile, resetCharacter } = useGameData();
-  const { items: equippedClothing } = useEquippedClothing();
+  const { profile, skills, attributes, updateProfile } = useGameData();
+
+  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+    "vocals",
+    "guitar",
+    "drums",
+    "bass",
+    "performance",
+    "songwriting",
+    "composition"
+  ];
+  const attributeKeys: (keyof PlayerAttributes)[] = [
+    "creativity",
+    "business",
+    "marketing",
+    "technical"
+  ];
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -108,7 +123,7 @@ const Profile = () => {
   const [cityLoading, setCityLoading] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
 
-  const showProfileDetails = Boolean(profile && skills);
+  const showProfileDetails = Boolean(profile && skills && attributes);
 
   useEffect(() => {
     if (!showProfileDetails) {
@@ -767,22 +782,56 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {skills && Object.entries(skills)
-                    .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
-                    .map(([skill, value]) => (
-                      <div key={skill} className="space-y-2">
+                  {instrumentSkillKeys.map(skillKey => {
+                    const value = Number(skills?.[skillKey] ?? 0);
+                    return (
+                      <div key={skillKey} className="space-y-2">
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium capitalize">{skill}</span>
+                          <span className="text-sm font-medium capitalize">{skillKey}</span>
                           <span className="text-sm font-bold text-primary">{value}/100</span>
                         </div>
-                        <Progress value={value as number} className="h-2" />
+                        <Progress value={value} className="h-2" />
                         <div className="text-xs text-muted-foreground">
-                          {(value as number) >= 80 ? 'Expert' : 
-                           (value as number) >= 60 ? 'Advanced' : 
-                           (value as number) >= 40 ? 'Intermediate' : 'Beginner'}
+                          {value >= 80
+                            ? "Expert"
+                            : value >= 60
+                              ? "Advanced"
+                              : value >= 40
+                                ? "Intermediate"
+                                : "Beginner"}
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Professional Attributes
+                </CardTitle>
+                <CardDescription>Business, creative, and technical strengths</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {attributeKeys.map(attributeKey => {
+                    const value = Number(attributes?.[attributeKey] ?? 0);
+                    const percent = Math.min(100, (value / 1000) * 100);
+                    return (
+                      <div key={attributeKey} className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium capitalize">{attributeKey}</span>
+                          <span className="text-sm font-bold text-primary">{value}/1000</span>
+                        </div>
+                        <Progress value={percent} className="h-2" />
+                        <div className="text-xs text-muted-foreground">
+                          High values unlock greater opportunities and campaign performance.
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
