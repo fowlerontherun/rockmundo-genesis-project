@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -39,13 +39,7 @@ export const useGameData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchGameData();
-    }
-  }, [user]);
-
-  const fetchGameData = async () => {
+  const fetchGameData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -89,7 +83,13 @@ export const useGameData = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchGameData();
+    }
+  }, [user, fetchGameData]);
 
   const updateProfile = async (updates: Partial<PlayerProfile>) => {
     if (!user || !profile) return;
