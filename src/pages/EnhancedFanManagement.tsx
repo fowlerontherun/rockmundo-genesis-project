@@ -129,6 +129,8 @@ interface FanCampaignRecord {
   created_at?: string | null;
 }
 
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
 const FAN_VALUE_PER_FAN = 5;
 
 const parseNumericValue = (value: unknown): number => {
@@ -380,7 +382,11 @@ const EnhancedFanManagement = () => {
 
       if (fanResponse.data) setFanData(fanResponse.data);
       if (postsResponse.data) setSocialPosts(postsResponse.data);
-      if (profileResponse.data) setProfile(profileResponse.data);
+      if (profileResponse.data) {
+        setProfile(profileResponse.data as ProfileRow);
+      } else {
+        setProfile(null);
+      }
       if (campaignsResponse.data) {
         setCampaignHistory(campaignsResponse.data.map(normalizeCampaignRecord));
       }
@@ -591,7 +597,7 @@ const EnhancedFanManagement = () => {
           earnings: estimatedRevenue - campaign.cost
         });
 
-      setProfile(prev => (prev ? { ...prev, cash: newCash } : prev));
+      setProfile(prev => (prev ? { ...prev, cash: newCash } : null));
 
       if (insertedCampaign) {
         setCampaignHistory(prev => [normalizeCampaignRecord(insertedCampaign), ...prev]);
