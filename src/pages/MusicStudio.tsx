@@ -1,110 +1,145 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Music,
-  Mic,
-  Guitar,
-  Headphones,
-  Play,
-  Pause,
-  Plus,
-  Clock,
-  TrendingUp,
-  Star,
-  Save,
-  Upload,
-  AlertCircle,
-  SlidersHorizontal,
-  SparklesIcon
-} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { 
-  calculateTrainingCost, 
-  getSkillCap, 
-  isOnCooldown, 
-  getRemainingCooldown,
-  COOLDOWNS 
-} from "@/utils/gameBalance";
+import type { Tables } from "@/integrations/supabase/types";
+import {
+  Music,
+  Mic,
+  SlidersHorizontal,
+  Sparkles,
+  CheckCircle2,
+  Play,
+  Clock,
+  DollarSign,
+  Settings2,
+  Loader2,
+  Waves,
+  Trophy
+} from "lucide-react";
 
-interface Song {
+const stageOrder = ["recording", "mixing", "mastering"] as const;
+type Stage = (typeof stageOrder)[number];
+
+type RecordingSession = Tables<"recording_sessions">;
+type ProductionTrack = Tables<"production_tracks">;
+
+interface SupabaseSong {
   id: string;
   title: string;
   genre: string;
+  status: string;
   quality_score: number;
-  lyrics: string | null;
-  created_at: string;
-  updated_at: string;
-  status: 'draft' | 'recorded' | 'released';
-  user_id: string;
-  streams: number;
-  revenue: number;
-  chart_position: number | null;
-  release_date: string | null;
-  recording_cost: number | null;
-  production_cost: number | null;
   mix_quality: number | null;
   master_quality: number | null;
-  duration: number | null;
-  plays: number | null;
+  recording_cost: number | null;
+  production_cost: number | null;
   popularity: number | null;
+  streams: number | null;
+  release_date: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
+interface StageFormState {
+  engineer: string;
+  scheduledStart: string;
+  notes: string;
+}
+
+const stageLabels: Record<Stage, string> = {
+  recording: "Recording",
+  mixing: "Mixing",
+  mastering: "Mastering"
+};
+
+const stageIcons: Record<Stage, JSX.Element> = {
+  recording: <Mic className="h-4 w-4" />,
+  mixing: <SlidersHorizontal className="h-4 w-4" />,
+  mastering: <Sparkles className="h-4 w-4" />
+};
+
+const stageDescriptions: Record<Stage, string> = {
+  recording: "Capture the best performances and build your session takes.",
+  mixing: "Balance and sculpt the track for clarity and punch.",
+  mastering: "Finalize loudness, polish, and prepare for release."
+};
+
+const getStageKey = (songId: string, stage: Stage) => `${songId}:${stage}`;
+
 const MusicStudio = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, updateProfile, addActivity } = useGameData();
-  
-  const [songs, setSongs] = useState<Song[]>([]);
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
-  const [activeProcess, setActiveProcess] = useState<'recording' | 'mixing' | 'mastering' | null>(null);
-  const [processProgress, setProcessProgress] = useState(0);
+  const { toast } = useToast();
+  const { profile, skills, updateProfile, updateSkills, addActivity } = useGameData();
+
+  const [songs, setSongs] = useState<SupabaseSong[]>([]);
+  const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
+  const [tracksBySession, setTracksBySession] = useState<Record<string, ProductionTrack[]>>({});
+  const [sessionForms, setSessionForms] = useState<Record<string, StageFormState>>({});
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  
-  const [newSong, setNewSong] = useState({
-    title: "",
-    genre: "rock",
-    lyrics: ""
-  });
+  const [savingSessionKey, setSavingSessionKey] = useState<string | null>(null);
+  const [processingStageKey, setProcessingStageKey] = useState<string | null>(null);
 
-  const genres = [
-    "rock", "pop", "jazz", "blues", "electronic", "folk", "hip-hop", 
-    "classical", "reggae", "country", "metal", "alternative", "indie"
-  ];
-
-  const loadSongs = useCallback(async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
 
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('songs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const [songsResponse, sessionsResponse] = await Promise.all([
+        supabase
+          .from("songs")
+          .select("id, title, genre, status, quality_score, mix_quality, master_quality, recording_cost, production_cost, popularity, streams, release_date, created_at, updated_at")
+          .eq("artist_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("recording_sessions")
+          .select("*, production_tracks(*)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+      ]);
 
-      if (error) throw error;
-      setSongs((data || []).map(item => ({
-        ...item,
-        status: item.status as 'draft' | 'recorded' | 'released'
-      })));
+      if (songsResponse.error) throw songsResponse.error;
+      if (sessionsResponse.error) throw sessionsResponse.error;
+
+      setSongs((songsResponse.data as SupabaseSong[] | null) ?? []);
+
+      const sessionMap: Record<string, RecordingSession[]> = {};
+      const tracksMap: Record<string, ProductionTrack[]> = {};
+      const forms: Record<string, StageFormState> = {};
+
+      (sessionsResponse.data as (RecordingSession & { production_tracks?: ProductionTrack[] | null })[] | null)?.forEach(
+        (session) => {
+          sessionMap[session.song_id] = [...(sessionMap[session.song_id] ?? []), session];
+          if (Array.isArray(session.production_tracks)) {
+            tracksMap[session.id] = session.production_tracks;
+          }
+
+          const key = getStageKey(session.song_id, session.stage as Stage);
+          forms[key] = {
+            engineer: session.engineer_name ?? "",
+            scheduledStart: session.scheduled_start ? session.scheduled_start.slice(0, 16) : "",
+            notes: session.notes ?? ""
+          };
+        }
+      );
+
+      setSessionsBySong(sessionMap);
+      setTracksBySession(tracksMap);
+      setSessionForms(forms);
     } catch (error) {
-      console.error('Error loading songs:', error);
+      console.error("Error loading studio data:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to load your songs",
+        title: "Failed to load studio",
+        description: "We couldn't load your production data."
       });
     } finally {
       setLoading(false);
@@ -113,956 +148,618 @@ const MusicStudio = () => {
 
   useEffect(() => {
     if (user) {
-      loadSongs();
+      loadData();
     }
-  }, [loadSongs, user]);
+  }, [loadData, user]);
 
-  const calculateSongQuality = () => {
-    if (!skills) return 50;
-    
-    const relevantSkills = [
-      skills.songwriting,
-      skills.vocals,
-      skills.guitar,
-      skills.performance
-    ];
-    
-    const averageSkill = relevantSkills.reduce((sum, skill) => sum + skill, 0) / relevantSkills.length;
-    const randomFactor = Math.random() * 20 - 10; // -10 to +10
-    
-    return Math.max(10, Math.min(100, Math.round(averageSkill + randomFactor)));
-  };
+  const getStageSessions = useCallback(
+    (songId: string, stage: Stage) => (sessionsBySong[songId] ?? []).filter((session) => session.stage === stage),
+    [sessionsBySong]
+  );
 
-  const calculateRecordingCost = (genre: string, duration: number) => {
-    const baseCost = 500;
-    const genreMultiplier = genre === 'classical' ? 1.5 : genre === 'electronic' ? 1.2 : 1.0;
-    const durationMultiplier = duration / 180; // base 3 minutes
+  const getActiveSession = useCallback(
+    (songId: string, stage: Stage) => getStageSessions(songId, stage).find((session) => session.status !== "completed"),
+    [getStageSessions]
+  );
 
-    return Math.round(baseCost * genreMultiplier * durationMultiplier);
-  };
-
-  const calculateMixingCost = (song: Song) => {
+  const calculateMixingCost = useCallback((song: SupabaseSong) => {
     const recordingCost = song.recording_cost ?? 0;
-    return Math.max(200, Math.round(recordingCost * 0.6));
-  };
+    return Math.max(200, Math.round(recordingCost * 0.6) || 300);
+  }, []);
 
-  const calculateMasteringCost = (song: Song) => {
+  const calculateMasteringCost = useCallback((song: SupabaseSong) => {
     const recordingCost = song.recording_cost ?? 0;
-    return Math.max(150, Math.round(recordingCost * 0.4));
-  };
+    return Math.max(150, Math.round(recordingCost * 0.4) || 200);
+  }, []);
 
-  const calculateMixQualityBoost = () => {
+  const calculateMixQualityBoost = useCallback(() => {
     if (!skills) return 4;
+    const average = (skills.guitar + skills.bass + skills.drums) / 3;
+    return Math.max(1, Math.round(average / 10 + Math.random() * 4));
+  }, [skills]);
 
-    const relevantSkills = [
-      skills.guitar,
-      skills.bass,
-      skills.drums
-    ];
+  const calculateMasterQualityBoost = useCallback(() => {
+    if (!skills) return 5;
+    const average = (skills.performance + skills.vocals + skills.songwriting) / 3;
+    return Math.max(2, Math.round(average / 8 + Math.random() * 5));
+  }, [skills]);
 
-    const averageSkill = relevantSkills.reduce((sum, skill) => sum + skill, 0) / relevantSkills.length;
-    const randomFactor = Math.random() * 6 - 3;
-
-    return Math.max(1, Math.round(averageSkill / 10 + randomFactor));
+  const handleFormChange = (songId: string, stage: Stage, field: keyof StageFormState, value: string) => {
+    const key = getStageKey(songId, stage);
+    setSessionForms((prev) => ({
+      ...prev,
+      [key]: {
+        engineer: field === "engineer" ? value : prev[key]?.engineer ?? "",
+        scheduledStart: field === "scheduledStart" ? value : prev[key]?.scheduledStart ?? "",
+        notes: field === "notes" ? value : prev[key]?.notes ?? ""
+      }
+    }));
   };
 
-  const calculateMasterQualityBoost = () => {
-    if (!skills) return 3;
+  const saveSessionDetails = async (song: SupabaseSong, stage: Stage) => {
+    if (!user) return;
+    const key = getStageKey(song.id, stage);
+    const form = sessionForms[key] ?? { engineer: "", scheduledStart: "", notes: "" };
 
-    const relevantSkills = [
-      skills.performance,
-      skills.vocals,
-      skills.songwriting
-    ];
+    setSavingSessionKey(key);
+    try {
+      const isoSchedule = form.scheduledStart ? new Date(form.scheduledStart).toISOString() : null;
+      const existingSessions = getStageSessions(song.id, stage);
+      const activeSession = existingSessions[0];
 
-    const averageSkill = relevantSkills.reduce((sum, skill) => sum + skill, 0) / relevantSkills.length;
-    const randomFactor = Math.random() * 6 - 2;
+      if (activeSession) {
+        const { data, error } = await supabase
+          .from("recording_sessions")
+          .update({
+            engineer_name: form.engineer || null,
+            scheduled_start: isoSchedule,
+            notes: form.notes || null,
+            stage
+          })
+          .eq("id", activeSession.id)
+          .select()
+          .single();
 
-    return Math.max(1, Math.round(averageSkill / 8 + randomFactor));
-  };
+        if (error) throw error;
 
-  const getFinalQuality = (song: Song) => song.master_quality ?? song.mix_quality ?? song.quality_score;
+        setSessionsBySong((prev) => ({
+          ...prev,
+          [song.id]: (prev[song.id] ?? []).map((session) =>
+            session.id === activeSession.id ? (data as RecordingSession) : session
+          )
+        }));
+      } else {
+        const { data, error } = await supabase
+          .from("recording_sessions")
+          .insert({
+            song_id: song.id,
+            user_id: user.id,
+            stage,
+            status: "scheduled",
+            engineer_name: form.engineer || null,
+            scheduled_start: isoSchedule,
+            notes: form.notes || null
+          })
+          .select()
+          .single();
 
-  const getProductionStage = (song: Song): 'draft' | 'recorded' | 'mixed' | 'mastered' | 'released' => {
-    if (song.status === 'released') return 'released';
-    if (song.status === 'draft') return 'draft';
-    if (song.master_quality) return 'mastered';
-    if (song.mix_quality) return 'mixed';
-    return 'recorded';
-  };
+        if (error) throw error;
 
-  const createSong = async () => {
-    if (!user || !newSong.title.trim()) {
+        const newSession = data as RecordingSession;
+        setSessionsBySong((prev) => ({
+          ...prev,
+          [song.id]: [newSession, ...(prev[song.id] ?? [])]
+        }));
+      }
+
+      toast({
+        title: `${stageLabels[stage]} session saved`,
+        description: `Updated scheduling details for "${song.title}".`
+      });
+    } catch (error) {
+      console.error("Error saving session details:", error);
       toast({
         variant: "destructive",
-        title: "Missing information",
-        description: "Please enter a song title",
+        title: "Unable to save session",
+        description: "Please try again later."
       });
-      return;
+    } finally {
+      setSavingSessionKey(null);
     }
+  };
 
-    setCreating(true);
+  const startStage = async (song: SupabaseSong, stage: Stage) => {
+    const key = getStageKey(song.id, stage);
+    setProcessingStageKey(key);
 
     try {
-      const duration = 120 + Math.random() * 180; // 2-5 minutes
-      const quality = calculateSongQuality();
-      const cost = calculateRecordingCost(newSong.genre, duration);
+      const activeSession = getActiveSession(song.id, stage);
+      if (!activeSession) {
+        await saveSessionDetails(song, stage);
+      }
+
+      const session = getActiveSession(song.id, stage);
+      if (!session) throw new Error("Unable to create session");
 
       const { data, error } = await supabase
-        .from('songs')
-        .insert({
-          title: newSong.title,
-          genre: newSong.genre,
-          lyrics: newSong.lyrics,
-          quality_score: quality,
-          user_id: user.id,
-          status: 'draft'
+        .from("recording_sessions")
+        .update({
+          status: "in_progress",
+          started_at: new Date().toISOString(),
+          engineer_name: sessionForms[key]?.engineer || session.engineer_name || null
         })
+        .eq("id", session.id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setSongs(prev => [{
-        ...data,
-        status: data.status as 'draft' | 'recorded' | 'released',
-        mix_quality: data.mix_quality ?? null,
-        master_quality: data.master_quality ?? null,
-        production_cost: data.production_cost ?? 0
-      }, ...prev]);
-      setNewSong({ title: "", genre: "rock", lyrics: "" });
-      
-      // Add experience for songwriting
-      const expGain = Math.round(quality / 2);
-      await supabase
-        .from('profiles')
-        .update({ 
-          experience: (profile?.experience || 0) + expGain 
-        })
-        .eq('user_id', user.id);
-
-      await addActivity('creative', `Created new song: ${data.title}`, 0);
+      setSessionsBySong((prev) => ({
+        ...prev,
+        [song.id]: (prev[song.id] ?? []).map((item) =>
+          item.id === session.id ? (data as RecordingSession) : item
+        )
+      }));
 
       toast({
-        title: "Song created!",
-        description: `"${data.title}" has been added to your catalog (+${expGain} XP)`,
+        title: `${stageLabels[stage]} session started`,
+        description: `Kicked off ${stageLabels[stage].toLowerCase()} for "${song.title}".`
       });
     } catch (error) {
-      console.error('Error creating song:', error);
+      console.error("Error starting stage:", error);
       toast({
         variant: "destructive",
-        title: "Creation failed",
-        description: "Failed to create song",
+        title: "Unable to start stage",
+        description: "Please check your session details and try again."
       });
     } finally {
-      setCreating(false);
+      setProcessingStageKey(null);
     }
   };
 
-  const startStudioProcess = (
-    song: Song,
-    stage: 'recording' | 'mixing' | 'mastering',
-    onComplete: () => void
-  ) => {
-    setActiveProcess(stage);
-    setProcessProgress(0);
-    setSelectedSong(song);
-
-    const interval = setInterval(() => {
-      setProcessProgress(prev => {
-        const next = prev + 2;
-        if (next >= 100) {
-          clearInterval(interval);
-          onComplete();
-          return 100;
-        }
-        return next;
-      });
-    }, 100);
-  };
-
-  const recordSong = async (song: Song) => {
-    if (!user || !profile) return;
-
-    const recordingCost = song.recording_cost ?? 0;
-
-    if (profile.cash < recordingCost) {
-      toast({
-        variant: "destructive",
-        title: "Insufficient funds",
-        description: `Recording costs $${recordingCost} but you only have $${profile.cash}`,
-      });
-      return;
-    }
-
-    if (song.status !== 'draft') {
-      toast({
-        variant: "destructive",
-        title: "Already recorded",
-        description: "This song has already been recorded",
-      });
-      return;
-    }
-
-    if (activeProcess) {
-      toast({
-        variant: "destructive",
-        title: "Studio busy",
-        description: "Please wait for the current session to finish"
-      });
-      return;
-    }
-
-    startStudioProcess(song, 'recording', () => {
-      void finishRecording(song);
-    });
-  };
-
-  const finishRecording = async (song: Song) => {
-    if (!user || !profile) return;
-
-    const recordingCost = song.recording_cost ?? 0;
-
-    try {
-      // Deduct recording cost
-      await updateProfile({ cash: profile.cash - recordingCost });
-
-      // Update song status and potentially improve quality based on skills
-      const skillBonus = Math.round((skills?.performance || 0) / 10);
-      const newQuality = Math.min(100, song.quality_score + skillBonus);
-      const newProductionCost = (song.production_cost ?? 0) + recordingCost;
-
-      const { error } = await supabase
-        .from('songs')
-        .update({
-          status: 'recorded',
-          quality_score: newQuality,
-          production_cost: newProductionCost,
-          mix_quality: null,
-          master_quality: null
-        })
-        .eq('id', song.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setSongs(prev => prev.map(s =>
-        s.id === song.id
-          ? {
-              ...s,
-              status: 'recorded' as const,
-              quality_score: newQuality,
-              production_cost: newProductionCost,
-              mix_quality: null,
-              master_quality: null
-            }
-          : s
-      ));
-
-      await addActivity('creative', `Recorded "${song.title}"`, -recordingCost);
-
-      toast({
-        title: "Recording complete!",
-        description: `"${song.title}" has been professionally recorded`,
-      });
-    } catch (error) {
-      console.error('Error recording song:', error);
-      toast({
-        variant: "destructive",
-        title: "Recording failed",
-        description: "Failed to complete recording",
-      });
-    } finally {
-      setActiveProcess(null);
-      setProcessProgress(0);
-      setSelectedSong(null);
-    }
-  };
-
-  const finishMixing = async (song: Song, mixCost: number) => {
-    if (!user || !profile) return;
-
-    try {
-      await updateProfile({ cash: profile.cash - mixCost });
-
-      const baseQuality = song.mix_quality ?? song.quality_score;
-      const mixBoost = calculateMixQualityBoost();
-      const newMixQuality = Math.min(100, baseQuality + mixBoost);
-      const newProductionCost = (song.production_cost ?? 0) + mixCost;
-
-      const { error } = await supabase
-        .from('songs')
-        .update({
-          mix_quality: newMixQuality,
-          production_cost: newProductionCost
-        })
-        .eq('id', song.id);
-
-      if (error) throw error;
-
-      setSongs(prev => prev.map(s =>
-        s.id === song.id
-          ? { ...s, mix_quality: newMixQuality, production_cost: newProductionCost }
-          : s
-      ));
-
-      await addActivity('creative', `Mixed "${song.title}"`, -mixCost);
-
-      toast({
-        title: "Mixing complete!",
-        description: `"${song.title}" is polished and ready for mastering`,
-      });
-    } catch (error) {
-      console.error('Error mixing song:', error);
-      toast({
-        variant: "destructive",
-        title: "Mixing failed",
-        description: "Failed to complete mixing session",
-      });
-    } finally {
-      setActiveProcess(null);
-      setProcessProgress(0);
-      setSelectedSong(null);
-    }
-  };
-
-  const mixSong = async (song: Song) => {
-    if (!user || !profile) return;
-
-    if (song.status === 'draft') {
-      toast({
-        variant: "destructive",
-        title: "Recording required",
-        description: "Record the song before moving to mixing",
-      });
-      return;
-    }
-
-    if (song.mix_quality) {
-      toast({
-        variant: "destructive",
-        title: "Already mixed",
-        description: "This song has already been mixed",
-      });
-      return;
-    }
-
-    const mixCost = calculateMixingCost(song);
-
-    if (profile.cash < mixCost) {
-      toast({
-        variant: "destructive",
-        title: "Insufficient funds",
-        description: `Mixing costs $${mixCost} but you only have $${profile.cash}`,
-      });
-      return;
-    }
-
-    if (activeProcess) {
-      toast({
-        variant: "destructive",
-        title: "Studio busy",
-        description: "Please wait for the current session to finish",
-      });
-      return;
-    }
-
-    startStudioProcess(song, 'mixing', () => {
-      void finishMixing(song, mixCost);
-    });
-  };
-
-  const finishMastering = async (song: Song, masterCost: number) => {
-    if (!user || !profile) return;
-
-    try {
-      await updateProfile({ cash: profile.cash - masterCost });
-
-      const baseQuality = song.master_quality ?? song.mix_quality ?? song.quality_score;
-      const masterBoost = calculateMasterQualityBoost();
-      const newMasterQuality = Math.min(100, baseQuality + masterBoost);
-      const newProductionCost = (song.production_cost ?? 0) + masterCost;
-
-      const { error } = await supabase
-        .from('songs')
-        .update({
-          master_quality: newMasterQuality,
-          production_cost: newProductionCost
-        })
-        .eq('id', song.id);
-
-      if (error) throw error;
-
-      setSongs(prev => prev.map(s =>
-        s.id === song.id
-          ? { ...s, master_quality: newMasterQuality, production_cost: newProductionCost }
-          : s
-      ));
-
-      await addActivity('creative', `Mastered "${song.title}"`, -masterCost);
-
-      toast({
-        title: "Mastering complete!",
-        description: `"${song.title}" is ready for release`,
-      });
-    } catch (error) {
-      console.error('Error mastering song:', error);
-      toast({
-        variant: "destructive",
-        title: "Mastering failed",
-        description: "Failed to complete mastering session",
-      });
-    } finally {
-      setActiveProcess(null);
-      setProcessProgress(0);
-      setSelectedSong(null);
-    }
-  };
-
-  const masterSong = async (song: Song) => {
-    if (!user || !profile) return;
-
-    if (!song.mix_quality) {
-      toast({
-        variant: "destructive",
-        title: "Mixing required",
-        description: "Complete mixing before mastering",
-      });
-      return;
-    }
-
-    if (song.master_quality) {
-      toast({
-        variant: "destructive",
-        title: "Already mastered",
-        description: "This song has already been mastered",
-      });
-      return;
-    }
-
-    const masterCost = calculateMasteringCost(song);
-
-    if (profile.cash < masterCost) {
-      toast({
-        variant: "destructive",
-        title: "Insufficient funds",
-        description: `Mastering costs $${masterCost} but you only have $${profile.cash}`,
-      });
-      return;
-    }
-
-    if (activeProcess) {
-      toast({
-        variant: "destructive",
-        title: "Studio busy",
-        description: "Please wait for the current session to finish",
-      });
-      return;
-    }
-
-    startStudioProcess(song, 'mastering', () => {
-      void finishMastering(song, masterCost);
-    });
-  };
-
-  const releaseSong = async (song: Song) => {
+  const completeStage = async (song: SupabaseSong, stage: Stage) => {
     if (!user) return;
-
-    if (song.status !== 'recorded') {
+    const key = getStageKey(song.id, stage);
+    const session = getActiveSession(song.id, stage);
+    if (!session) {
       toast({
         variant: "destructive",
-        title: "Not recorded",
-        description: "Song must be recorded before release",
+        title: "No active session",
+        description: "Schedule or start this stage before completing it."
       });
       return;
     }
 
-    if (!song.master_quality) {
-      toast({
-        variant: "destructive",
-        title: "Mastering required",
-        description: "Complete mastering before releasing the song",
-      });
-      return;
-    }
+    setProcessingStageKey(key);
 
     try {
-      const { error } = await supabase
-        .from('songs')
-        .update({ status: 'released' })
-        .eq('id', song.id);
+      const completionTime = new Date().toISOString();
+      let totalCost = session.total_cost;
+      let qualityGain = session.quality_gain;
+      let songUpdates: Partial<SupabaseSong> = {};
+      let activityMessage = "";
 
-      if (error) throw error;
+      if (stage === "recording") {
+        qualityGain = Math.max(qualityGain, 0);
+        totalCost = session.total_cost;
+        songUpdates = {
+          status: "recorded",
+          quality_score: song.quality_score + qualityGain,
+          recording_cost: totalCost
+        };
+        activityMessage = `Finished recording "${song.title}" (${qualityGain} quality)`;
+      } else if (stage === "mixing") {
+        const cost = calculateMixingCost(song);
+        const boost = calculateMixQualityBoost();
+        totalCost += cost;
+        qualityGain += boost;
+        const newMixQuality = (song.mix_quality ?? song.quality_score) + boost;
+        songUpdates = {
+          mix_quality: newMixQuality,
+          production_cost: (song.production_cost ?? 0) + cost
+        };
+        activityMessage = `Mixed "${song.title}" (+${boost} mix quality)`;
+      } else {
+        const cost = calculateMasteringCost(song);
+        const boost = calculateMasterQualityBoost();
+        totalCost += cost;
+        qualityGain += boost;
+        const newMasterQuality = (song.master_quality ?? song.mix_quality ?? song.quality_score) + boost;
+        songUpdates = {
+          master_quality: newMasterQuality,
+          status: "released",
+          release_date: completionTime,
+          production_cost: (song.production_cost ?? 0) + cost
+        };
+        activityMessage = `Mastered "${song.title}" and prepared release (+${boost} master quality)`;
+      }
 
-      // Update local state
-      setSongs(prev => prev.map(s =>
-        s.id === song.id ? { ...s, status: 'released' as const } : s
-      ));
+      const { data: updatedSession, error: sessionError } = await supabase
+        .from("recording_sessions")
+        .update({
+          status: "completed",
+          completed_at: completionTime,
+          total_cost: totalCost,
+          quality_gain: qualityGain
+        })
+        .eq("id", session.id)
+        .select()
+        .single();
 
-      // Gain fame based on song quality
-      const finalQuality = getFinalQuality(song);
-      const fameGain = Math.round(finalQuality / 5);
-      await updateProfile({ fame: (profile?.fame || 0) + fameGain });
+      if (sessionError) throw sessionError;
 
-      await addActivity('release', `Released "${song.title}" to the world`, 0);
+      const { error: songError } = await supabase
+        .from("songs")
+        .update({ ...songUpdates, updated_at: completionTime })
+        .eq("id", song.id);
+
+      if (songError) throw songError;
+
+      if (profile) {
+        const cashDelta = stage === "recording" ? session.total_cost : totalCost - session.total_cost;
+        await updateProfile({
+          cash: Math.max(0, (profile.cash ?? 0) - cashDelta),
+          experience: (profile.experience ?? 0) + qualityGain * 4
+        });
+      }
+
+      if (skills) {
+        if (stage === "mixing") {
+          await updateSkills({
+            guitar: Math.min(100, skills.guitar + 1),
+            bass: Math.min(100, skills.bass + 1),
+            drums: Math.min(100, skills.drums + 1)
+          });
+        } else if (stage === "mastering") {
+          await updateSkills({
+            performance: Math.min(100, skills.performance + 1),
+            songwriting: Math.min(100, skills.songwriting + 1)
+          });
+        }
+      }
+
+      await addActivity(stage, activityMessage, -totalCost);
+
+      setSessionsBySong((prev) => ({
+        ...prev,
+        [song.id]: (prev[song.id] ?? []).map((item) =>
+          item.id === session.id ? (updatedSession as RecordingSession) : item
+        )
+      }));
+
+      setSongs((prev) =>
+        prev.map((item) => (item.id === song.id ? { ...item, ...songUpdates } : item))
+      );
 
       toast({
-        title: "Song released!",
-        description: `"${song.title}" is now available to fans (+${fameGain} fame)`,
+        title: `${stageLabels[stage]} completed`,
+        description: activityMessage
       });
     } catch (error) {
-      console.error('Error releasing song:', error);
+      console.error("Error completing stage:", error);
       toast({
         variant: "destructive",
-        title: "Release failed",
-        description: "Failed to release song",
+        title: "Unable to complete stage",
+        description: "Please try again."
       });
+    } finally {
+      setProcessingStageKey(null);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-secondary text-secondary-foreground';
-      case 'recorded': return 'bg-primary text-primary-foreground';
-      case 'mixed': return 'bg-indigo-500 text-white';
-      case 'mastered': return 'bg-amber-500 text-white';
-      case 'released': return 'bg-success text-success-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
+  const getSongProgress = useMemo(
+    () =>
+      songs.reduce<Record<string, number>>((acc, song) => {
+        const sessions = sessionsBySong[song.id] ?? [];
+        const completedStages = new Set(
+          sessions.filter((session) => session.status === "completed").map((session) => session.stage as Stage)
+        );
+        const progress = (completedStages.size / stageOrder.length) * 100;
+        acc[song.id] = progress;
+        return acc;
+      }, {}),
+    [sessionsBySong, songs]
+  );
+
+  const totalProductionProgress = useMemo(() => {
+    if (songs.length === 0) return 0;
+    const total = songs.reduce((acc, song) => acc + (getSongProgress[song.id] ?? 0), 0);
+    return Math.round(total / songs.length);
+  }, [getSongProgress, songs]);
+
+  const isStageUnlocked = (song: SupabaseSong, stage: Stage) => {
+    if (stage === "recording") return true;
+    if (stage === "mixing") {
+      return (sessionsBySong[song.id] ?? []).some(
+        (session) => session.stage === "recording" && session.status === "completed"
+      );
     }
-  };
-
-  const getQualityColor = (quality: number) => {
-    if (quality >= 80) return 'text-success';
-    if (quality >= 60) return 'text-warning';
-    return 'text-destructive';
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return (sessionsBySong[song.id] ?? []).some(
+      (session) => session.stage === "mixing" && session.status === "completed"
+    );
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg font-oswald">Loading music studio...</p>
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <p className="font-oswald text-lg">Preparing your studio...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-stage p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Music Studio
-            </h1>
-            <p className="text-muted-foreground">Create, record, and release your musical masterpieces</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-primary/20 rounded-lg px-4 py-2">
-              <Music className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold">{songs.length} Songs</span>
-            </div>
-          </div>
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="space-y-4 text-center">
+        <h1 className="text-4xl font-bebas tracking-wider">PRODUCTION CONTROL ROOM</h1>
+        <p className="text-lg text-muted-foreground font-oswald">
+          Track every stage from the first take to a mastered release.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Total Pipeline Progress</CardDescription>
+              <CardTitle className="font-oswald text-2xl">{totalProductionProgress}%</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Progress value={totalProductionProgress} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Songs in Production</CardDescription>
+              <CardTitle className="font-oswald text-2xl">{songs.length}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Music className="h-4 w-4 text-primary" /> Manage each track's journey
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Available Budget</CardDescription>
+              <CardTitle className="font-oswald text-2xl">
+                ${profile?.cash?.toLocaleString() ?? 0}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+              <DollarSign className="h-4 w-4 text-green-500" /> Invest strategically in each stage
+            </CardContent>
+          </Card>
         </div>
+      </div>
 
-        <Tabs defaultValue="create" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="create">Create New Song</TabsTrigger>
-            <TabsTrigger value="catalog">Song Catalog</TabsTrigger>
-            <TabsTrigger value="studio">Recording Studio</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="sessions" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="sessions">Production Sessions</TabsTrigger>
+          <TabsTrigger value="overview">Stage Overview</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="create">
-            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-primary" />
-                  Create New Song
-                </CardTitle>
-                <CardDescription>
-                  Write a new song to add to your catalog
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="song-title">Song Title</Label>
-                      <Input
-                        id="song-title"
-                        placeholder="Enter song title"
-                        value={newSong.title}
-                        onChange={(e) => setNewSong(prev => ({ ...prev, title: e.target.value }))}
-                      />
+        <TabsContent value="overview">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-oswald text-xl">Stage Summary</CardTitle>
+              <CardDescription>Monitor how your catalog is progressing across each phase.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-3">
+              {stageOrder.map((stage) => {
+                const completed = songs.filter((song) =>
+                  (sessionsBySong[song.id] ?? []).some(
+                    (session) => session.stage === stage && session.status === "completed"
+                  )
+                ).length;
+                const inProgress = songs.filter((song) =>
+                  (sessionsBySong[song.id] ?? []).some(
+                    (session) => session.stage === stage && session.status === "in_progress"
+                  )
+                ).length;
+
+                return (
+                  <div key={stage} className="rounded-lg border border-border/60 p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      {stageIcons[stage]}
+                      <span>{stageLabels[stage]}</span>
                     </div>
-                    
-                    <div>
-                      <Label htmlFor="song-genre">Genre</Label>
-                      <Select
-                        value={newSong.genre}
-                        onValueChange={(value) => setNewSong(prev => ({ ...prev, genre: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {genres.map(genre => (
-                            <SelectItem key={genre} value={genre}>
-                              {genre.charAt(0).toUpperCase() + genre.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <p className="text-xs text-muted-foreground">{stageDescriptions[stage]}</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Completed</span>
+                      <span>{completed}</span>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label>Your Skills Impact</Label>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>Songwriting:</span>
-                          <span className="font-mono">{skills?.songwriting || 0}/100</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Vocals:</span>
-                          <span className="font-mono">{skills?.vocals || 0}/100</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Performance:</span>
-                          <span className="font-mono">{skills?.performance || 0}/100</span>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">In progress</span>
+                      <span>{inProgress}</span>
                     </div>
                   </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                  <div>
-                    <Label htmlFor="song-lyrics">Lyrics</Label>
-                    <Textarea
-                      id="song-lyrics"
-                      placeholder="Write your lyrics here..."
-                      className="min-h-[200px]"
-                      value={newSong.lyrics}
-                      onChange={(e) => setNewSong(prev => ({ ...prev, lyrics: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={createSong}
-                  disabled={!newSong.title.trim() || creating}
-                  className="w-full bg-gradient-primary hover:shadow-electric"
-                >
-                  {creating ? (
-                    "Creating Song..."
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Create Song
-                    </>
-                  )}
-                </Button>
+        <TabsContent value="sessions" className="space-y-4">
+          {songs.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Music className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-medium">No songs in production</h3>
+                <p className="text-muted-foreground">Create a song in the music studio to start production.</p>
               </CardContent>
             </Card>
-          </TabsContent>
+          ) : (
+            <div className="space-y-6">
+              {songs.map((song) => (
+                <Card key={song.id} className="space-y-4">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="font-oswald text-xl">{song.title}</CardTitle>
+                        <CardDescription>
+                          {song.genre} • {song.status.toUpperCase()} • {getSongProgress[song.id] ?? 0}% complete
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className="uppercase">
+                        {song.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <Progress value={getSongProgress[song.id] ?? 0} />
 
-          <TabsContent value="catalog">
-            <div className="space-y-4">
-              {songs.length === 0 ? (
-                <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-                  <CardContent className="text-center py-12">
-                    <Music className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No Songs Yet</h3>
-                    <p className="text-muted-foreground">Create your first song to get started!</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {songs.map((song) => {
-                    const stageStatus = getProductionStage(song);
-                    const finalQuality = getFinalQuality(song);
-                    const mixCost = calculateMixingCost(song);
-                    const masterCost = calculateMasteringCost(song);
-                    const productionCost = song.production_cost ?? 0;
-                    const recordingCost = song.recording_cost ?? 0;
-                    const duration = song.duration ?? 0;
-                    const plays = song.plays ?? 0;
-                    const popularity = song.popularity ?? 0;
-                    const isProcessingSong = activeProcess && selectedSong?.id === song.id;
-                    const isRecordingInProgress = Boolean(isProcessingSong && activeProcess === 'recording');
-                    const isMixingInProgress = Boolean(isProcessingSong && activeProcess === 'mixing');
-                    const isMasteringInProgress = Boolean(isProcessingSong && activeProcess === 'mastering');
-                    const recordingComplete = song.status !== 'draft';
-                    const mixingComplete = Boolean(song.mix_quality) || song.status === 'released';
-                    const masteringComplete = Boolean(song.master_quality) || song.status === 'released';
-                    const releaseComplete = song.status === 'released';
-                    const releaseReady = song.status === 'recorded' && Boolean(song.master_quality);
+                    <div className="grid gap-4 md:grid-cols-3">
+                      {stageOrder.map((stage) => {
+                        const key = getStageKey(song.id, stage);
+                        const form = sessionForms[key] ?? { engineer: "", scheduledStart: "", notes: "" };
+                        const stageSessions = getStageSessions(song.id, stage);
+                        const activeSession = getActiveSession(song.id, stage);
+                        const latestSession = stageSessions[0];
+                        const locked = !isStageUnlocked(song, stage);
+                        const tracks = latestSession ? tracksBySession[latestSession.id] ?? [] : [];
+                        const isCompleted = stageSessions.some((session) => session.status === "completed");
 
-                    return (
-                      <Card key={song.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-lg">{song.title}</CardTitle>
-                              <CardDescription>{song.genre} • {formatDuration(duration)}</CardDescription>
+                        return (
+                          <div
+                            key={stage}
+                            className={`space-y-3 rounded-lg border border-border/60 p-4 ${locked ? "opacity-60" : ""}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-sm font-semibold">
+                                {stageIcons[stage]}
+                                <span>{stageLabels[stage]}</span>
+                              </div>
+                              <Badge variant={isCompleted ? "default" : activeSession ? "secondary" : "outline"}>
+                                {locked ? "Locked" : activeSession?.status ?? (isCompleted ? "completed" : "ready")}
+                              </Badge>
                             </div>
-                            <Badge className={getStatusColor(stageStatus)} variant="outline">
-                              {stageStatus.charAt(0).toUpperCase() + stageStatus.slice(1)}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Final Quality</span>
-                            <span className={`font-bold ${getQualityColor(finalQuality)}`}>
-                              {finalQuality}/100
-                            </span>
-                          </div>
+                            <p className="text-xs text-muted-foreground min-h-[2.5rem]">{stageDescriptions[stage]}</p>
 
-                          <div className="flex justify-between text-sm">
-                            <span>Total Production Cost</span>
-                            <span className="font-bold">${productionCost.toLocaleString()}</span>
-                          </div>
+                            <div className="space-y-2 text-xs text-muted-foreground">
+                              {latestSession?.scheduled_start && (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>
+                                    Scheduled {new Date(latestSession.scheduled_start).toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
+                              {latestSession?.engineer_name && (
+                                <div className="flex items-center gap-2">
+                                  <Settings2 className="h-3 w-3" />
+                                  <span>Engineer: {latestSession.engineer_name}</span>
+                                </div>
+                              )}
+                              {latestSession && (
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="h-3 w-3" />
+                                  <span>Cost so far: ${latestSession.total_cost.toLocaleString()}</span>
+                                </div>
+                              )}
+                              {latestSession && (
+                                <div className="flex items-center gap-2">
+                                  <Trophy className="h-3 w-3" />
+                                  <span>Quality gain: +{latestSession.quality_gain}</span>
+                                </div>
+                              )}
+                            </div>
 
-                          <div className="space-y-2">
-                            <div className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                              Production Pipeline
+                            {stage === "recording" && tracks.length > 0 && (
+                              <div className="space-y-2 rounded bg-muted/60 p-2">
+                                <div className="flex items-center gap-2 text-xs font-semibold">
+                                  <Waves className="h-3 w-3" />
+                                  <span>Takes</span>
+                                </div>
+                                <ul className="space-y-1 text-xs">
+                                  {tracks.map((track) => (
+                                    <li key={track.id} className="flex justify-between">
+                                      <span>{track.name}</span>
+                                      <span className="text-muted-foreground">
+                                        +{track.quality_rating ?? 0} quality • ${track.cost}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium">Engineer</label>
+                              <Input
+                                value={form.engineer}
+                                onChange={(event) => handleFormChange(song.id, stage, "engineer", event.target.value)}
+                                disabled={locked}
+                              />
                             </div>
                             <div className="space-y-2">
-                              <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border ${recordingComplete ? 'border-primary/40 bg-primary/5' : 'border-border/50 bg-muted/30'}`}>
-                                <div className="flex items-center gap-3">
-                                  <div className={`rounded-full p-2 ${recordingComplete ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                                    <Mic className="h-5 w-5" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold">Recording Session</p>
-                                    <p className="text-xs text-muted-foreground">Capture the best take in the studio</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 justify-end">
-                                  {isRecordingInProgress ? (
-                                    <Badge className="bg-primary text-primary-foreground text-xs">In progress</Badge>
-                                  ) : recordingComplete ? (
-                                    <Badge variant="outline" className="text-xs font-semibold">
-                                      Quality: {song.quality_score}/100
-                                    </Badge>
-                                  ) : (
-                                    <>
-                                      <span className="text-sm text-muted-foreground">Cost: ${recordingCost.toLocaleString()}</span>
-                                      <Button
-                                        onClick={() => recordSong(song)}
-                                        disabled={Boolean(activeProcess) || (profile?.cash || 0) < recordingCost}
-                                        size="sm"
-                                        className="gap-2"
-                                      >
-                                        <Mic className="h-4 w-4" />
-                                        Record
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
+                              <label className="text-xs font-medium">Scheduled start</label>
+                              <Input
+                                type="datetime-local"
+                                value={form.scheduledStart}
+                                onChange={(event) => handleFormChange(song.id, stage, "scheduledStart", event.target.value)}
+                                disabled={locked}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium">Notes</label>
+                              <Textarea
+                                rows={3}
+                                value={form.notes}
+                                onChange={(event) => handleFormChange(song.id, stage, "notes", event.target.value)}
+                                disabled={locked}
+                              />
+                            </div>
 
-                              <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border ${mixingComplete ? 'border-indigo-500/40 bg-indigo-500/10' : 'border-border/50 bg-muted/30'}`}>
-                                <div className="flex items-center gap-3">
-                                  <div className={`rounded-full p-2 ${mixingComplete ? 'bg-indigo-500/20 text-indigo-500' : 'bg-muted text-muted-foreground'}`}>
-                                    <SlidersHorizontal className="h-5 w-5" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold">Mixing</p>
-                                    <p className="text-xs text-muted-foreground">Balance every element for clarity</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 justify-end">
-                                  {isMixingInProgress ? (
-                                    <Badge className="bg-indigo-500 text-white text-xs">In progress</Badge>
-                                  ) : mixingComplete ? (
-                                    <Badge variant="outline" className="text-xs font-semibold">
-                                      Mix Quality: {(song.mix_quality ?? song.quality_score)}/100
-                                    </Badge>
-                                  ) : song.status === 'draft' ? (
-                                    <span className="text-xs text-muted-foreground">Record the song to unlock mixing</span>
-                                  ) : (
-                                    <>
-                                      <span className="text-sm text-muted-foreground">Cost: ${mixCost.toLocaleString()}</span>
-                                      <Button
-                                        onClick={() => mixSong(song)}
-                                        disabled={Boolean(activeProcess) || (profile?.cash || 0) < mixCost}
-                                        size="sm"
-                                        className="gap-2"
-                                      >
-                                        <SlidersHorizontal className="h-4 w-4" />
-                                        Mix
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border ${masteringComplete ? 'border-amber-500/40 bg-amber-500/10' : 'border-border/50 bg-muted/30'}`}>
-                                <div className="flex items-center gap-3">
-                                  <div className={`rounded-full p-2 ${masteringComplete ? 'bg-amber-500/20 text-amber-600' : 'bg-muted text-muted-foreground'}`}>
-                                    <SparklesIcon className="h-5 w-5" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold">Mastering</p>
-                                    <p className="text-xs text-muted-foreground">Give the track its final shine</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 justify-end">
-                                  {isMasteringInProgress ? (
-                                    <Badge className="bg-amber-500 text-white text-xs">In progress</Badge>
-                                  ) : masteringComplete ? (
-                                    <Badge variant="outline" className="text-xs font-semibold">
-                                      Master Quality: {(song.master_quality ?? song.mix_quality ?? song.quality_score)}/100
-                                    </Badge>
-                                  ) : !song.mix_quality ? (
-                                    <span className="text-xs text-muted-foreground">Mix the song to unlock mastering</span>
-                                  ) : (
-                                    <>
-                                      <span className="text-sm text-muted-foreground">Cost: ${masterCost.toLocaleString()}</span>
-                                      <Button
-                                        onClick={() => masterSong(song)}
-                                        disabled={Boolean(activeProcess) || (profile?.cash || 0) < masterCost}
-                                        size="sm"
-                                        className="gap-2"
-                                      >
-                                        <SparklesIcon className="h-4 w-4" />
-                                        Master
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border ${releaseComplete ? 'border-success/40 bg-success/10' : 'border-border/50 bg-muted/30'}`}>
-                                <div className="flex items-center gap-3">
-                                  <div className={`rounded-full p-2 ${releaseComplete ? 'bg-success/20 text-success-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                    <Upload className="h-5 w-5" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold">Release</p>
-                                    <p className="text-xs text-muted-foreground">Share your finished track with the world</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 justify-end">
-                                  {releaseComplete ? (
-                                    <Badge className="bg-success text-success-foreground text-xs">Live</Badge>
-                                  ) : releaseReady ? (
-                                    <Button
-                                      onClick={() => releaseSong(song)}
-                                      disabled={Boolean(activeProcess)}
-                                      size="sm"
-                                      className="gap-2 bg-gradient-primary text-primary-foreground"
-                                    >
-                                      <Upload className="h-4 w-4" />
-                                      Release
-                                    </Button>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground">Master the track to enable release</span>
-                                  )}
-                                </div>
-                              </div>
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => saveSessionDetails(song, stage)}
+                                disabled={locked || savingSessionKey === key}
+                              >
+                                {savingSessionKey === key ? (
+                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Clock className="mr-2 h-3.5 w-3.5" />
+                                )}
+                                Save Schedule
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => startStage(song, stage)}
+                                disabled={locked || processingStageKey === key}
+                              >
+                                {processingStageKey === key ? (
+                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Play className="mr-2 h-3.5 w-3.5" />
+                                )}
+                                Start Stage
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => completeStage(song, stage)}
+                                disabled={locked || processingStageKey === key || !activeSession}
+                              >
+                                {processingStageKey === key ? (
+                                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+                                )}
+                                Complete Stage
+                              </Button>
                             </div>
                           </div>
-
-                          {song.status === 'released' && (
-                            <div className="space-y-2 rounded-lg bg-secondary/20 p-3">
-                              <div className="flex justify-between text-sm">
-                                <span>Plays:</span>
-                                <span className="font-bold">{plays.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span>Popularity:</span>
-                                <span className="font-bold">{popularity}/100</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {song.lyrics && (
-                            <details className="mt-4">
-                              <summary className="text-sm font-medium cursor-pointer">Lyrics</summary>
-                              <div className="mt-2 p-3 bg-secondary/30 rounded text-sm whitespace-pre-wrap">
-                                {song.lyrics}
-                              </div>
-                            </details>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </TabsContent>
-
-          <TabsContent value="studio">
-            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Headphones className="h-5 w-5 text-primary" />
-                  Recording Studio
-                </CardTitle>
-                <CardDescription>
-                  Professional recording equipment for your songs
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {activeProcess && selectedSong ? (
-                  <div className="space-y-4">
-                    <div className="text-center space-y-2">
-                      <h3 className="text-xl font-bold">
-                        {activeProcess === 'recording'
-                          ? 'Recording'
-                          : activeProcess === 'mixing'
-                          ? 'Mixing'
-                          : 'Mastering'}: {selectedSong.title}
-                      </h3>
-                      <p className="text-muted-foreground">
-                        {activeProcess === 'recording'
-                          ? 'Capturing your performance in the booth...'
-                          : activeProcess === 'mixing'
-                          ? 'Balancing levels and adding polish...'
-                          : 'Giving the track its final shine...'}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Progress</span>
-                        <span>{processProgress}%</span>
-                      </div>
-                      <Progress value={processProgress} className="h-3" />
-                    </div>
-
-                    <div className="flex justify-center">
-                      <div className="animate-pulse">
-                        {activeProcess === 'recording' && <Mic className="h-12 w-12 text-primary" />}
-                        {activeProcess === 'mixing' && <SlidersHorizontal className="h-12 w-12 text-primary" />}
-                        {activeProcess === 'mastering' && <SparklesIcon className="h-12 w-12 text-primary" />}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center space-y-3">
-                    <Headphones className="h-16 w-16 text-muted-foreground mx-auto" />
-                    <h3 className="text-xl font-semibold">Studio Ready</h3>
-                    <p className="text-muted-foreground">
-                      Choose a song to record, mix, or master in the production pipeline
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
