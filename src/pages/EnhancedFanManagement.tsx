@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData } from "@/hooks/useGameData";
 import { 
   Users, 
   TrendingUp, 
@@ -273,6 +274,7 @@ const sentimentDisplay: Record<string, { label: string; className: string }> = {
 
 const EnhancedFanManagement = () => {
   const { user } = useAuth();
+  const { addActivity } = useGameData();
   const { toast } = useToast();
   const [fanData, setFanData] = useState<FanDemographics | null>(null);
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
@@ -375,7 +377,7 @@ const EnhancedFanManagement = () => {
       const [fanResponse, postsResponse, profileResponse, messagesResponse, campaignsResponse] = await Promise.all([
         supabase.from("fan_demographics").select("*").eq("user_id", user?.id).single(),
         supabase.from("social_posts").select("*").eq("user_id", user?.id).order("created_at", { ascending: false }).limit(10),
-        supabase.from("profiles").select("*").eq("user_id", user?.id).single(),
+        supabase.from("profiles").select("*").eq("user_id", user?.id).eq("is_active", true).maybeSingle(),
         supabase.from("fan_messages").select("*").eq("user_id", user?.id).order("timestamp", { ascending: false }),
         supabase.from("fan_campaigns").select("*").eq("user_id", user?.id).order("created_at", { ascending: false })
       ]);
@@ -469,15 +471,11 @@ const EnhancedFanManagement = () => {
         setFanData(newFanData);
       }
 
-      // Add activity
-      await supabase
-        .from("activity_feed")
-        .insert({
-          user_id: user?.id,
-          activity_type: "social",
-          message: `Posted on ${newPost.platform}: "${newPost.content.substring(0, 50)}..." (+${fanGrowth} fans)`,
-          earnings: 0
-        });
+      await addActivity(
+        "social",
+        `Posted on ${newPost.platform}: "${newPost.content.substring(0, 50)}..." (+${fanGrowth} fans)`,
+        0
+      );
 
       setSocialPosts(prev => [data, ...prev]);
       setNewPost({ platform: "", content: "" });
@@ -588,14 +586,11 @@ const EnhancedFanManagement = () => {
 
       if (campaignError) throw campaignError;
 
-      await supabase
-        .from("activity_feed")
-        .insert({
-          user_id: user?.id,
-          activity_type: "campaign",
-          message: `"${campaign.title}" campaign gained ${actualGrowth} fans (${roiValue.toFixed(1)}% ROI)`,
-          earnings: estimatedRevenue - campaign.cost
-        });
+      await addActivity(
+        "campaign",
+        `"${campaign.title}" campaign gained ${actualGrowth} fans (${roiValue.toFixed(1)}% ROI)`,
+        estimatedRevenue - campaign.cost
+      );
 
       setProfile(prev => (prev ? { ...prev, cash: newCash } : null));
 

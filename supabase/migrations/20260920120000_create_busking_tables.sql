@@ -67,6 +67,9 @@ create index if not exists busking_sessions_location_idx on public.busking_sessi
 -- Seed data to match the reference experience
 insert into public.busking_locations (name, description, neighborhood, recommended_skill, base_payout, fame_reward, experience_reward, risk_level, ambiance, cooldown_minutes)
 values
+    ('Near Local Offices', 'Weekday lunch crowd of office workers eager for quick hits and covers.', 'Financial Commons', 50, 180, 10, 48, 'medium', 'Clockwork foot traffic surges at noon while security keeps an eye out.', 50),
+    ('Town Center', 'Central plaza with families, tourists, and street food all afternoon.', 'Civic Plaza', 65, 260, 16, 68, 'medium', 'Community events keep energy steady with occasional festival spikes.', 70),
+    ('High Street', 'Premier shopping strip packed with trendsetters and impulse tippers.', 'Retail Row', 75, 360, 22, 85, 'high', 'Boutique launches and brand pop-ups make for fierce competition.', 85),
     ('Subway Center Stage', 'A bustling underground transit hub with great acoustics.', 'Downtown Transit Plaza', 45, 140, 8, 40, 'low', 'Echoing tunnels amplify your sound, commuters pass by quickly.', 45),
     ('Riverside Boardwalk', 'Open-air walkway beside the river, popular during sunsets.', 'Harbor District', 60, 220, 12, 55, 'medium', 'Tourists stroll slowly, perfect for ballads and duets.', 60),
     ('Night Market Spotlight', 'Energetic evening market with vibrant crowds.', 'Old Town Bazaar', 70, 320, 18, 75, 'high', 'Vendors cheer you on but noise levels spike unpredictably.', 75),

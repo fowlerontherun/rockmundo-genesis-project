@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SparklesIcon, Wand2, CheckCircle2, AlertCircle, Palette, Gauge } from "lucide-react";
+import { SparklesIcon, Wand2, CheckCircle2, AlertCircle, Palette, Gauge, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
 
@@ -88,13 +95,29 @@ type ProfileRow = Tables<"profiles">;
 type ProfileInsert = TablesInsert<"profiles">;
 type PlayerSkillsInsert = TablesInsert<"player_skills">;
 
+type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+
+type CityOption = {
+  id: string;
+  name: string | null;
+  country: string | null;
+};
+
+const genderOptions: { value: ProfileGender; label: string }[] = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "non_binary", label: "Non-binary" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
 const sanitizeHandle = (value: string) =>
   value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-const CharacterCreationPage = () => {
+const CharacterCreation = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -114,6 +137,12 @@ const CharacterCreationPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
+  const [age, setAge] = useState<string>("16");
+  const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
+  const [cities, setCities] = useState<CityOption[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState<boolean>(false);
+  const [citiesError, setCitiesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -132,7 +161,9 @@ const CharacterCreationPage = () => {
         const [profileResponse, skillsResponse] = await Promise.all([
           supabase
             .from("profiles")
-            .select("id, username, display_name, bio, avatar_url, level, experience, cash, fans, followers, fame, engagement_rate")
+            .select(
+              "id, username, display_name, bio, avatar_url, level, experience, cash, fans, followers, fame, engagement_rate, gender, city_of_birth, age"
+            )
             .eq("user_id", user.id)
             .maybeSingle(),
           supabase
@@ -161,6 +192,13 @@ const CharacterCreationPage = () => {
             setUsernameEdited(true);
           }
           setBio(profileResponse.data.bio ?? backgrounds[0].description);
+          if (profileResponse.data.gender) {
+            setGender(profileResponse.data.gender as ProfileGender);
+          }
+          if (typeof profileResponse.data.age === "number") {
+            setAge(String(profileResponse.data.age));
+          }
+          setCityOfBirth(profileResponse.data.city_of_birth ?? null);
 
           if (profileResponse.data.avatar_url) {
             const match = avatarStyles.find((style) =>
@@ -201,6 +239,31 @@ const CharacterCreationPage = () => {
       void fetchExistingData();
     }
   }, [user]);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        setCitiesLoading(true);
+        setCitiesError(null);
+
+        const { data, error } = await supabase
+          .from("cities")
+          .select("id, name, country")
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        setCities((data as CityOption[] | null) ?? []);
+      } catch (error) {
+        console.error("Failed to load cities:", error);
+        setCitiesError("We couldn't load cities right now. You can update this later in your profile.");
+      } finally {
+        setCitiesLoading(false);
+      }
+    };
+
+    void fetchCities();
+  }, []);
 
   const avatarPreviewUrl = (styleId: string) => {
     const seed = encodeURIComponent(
@@ -346,6 +409,9 @@ const CharacterCreationPage = () => {
       followers: existingProfile?.followers ?? 0,
       fame: existingProfile?.fame ?? 0,
       engagement_rate: existingProfile?.engagement_rate ?? 0,
+      gender,
+      age: parsedAge,
+      city_of_birth: cityOfBirth,
     };
 
     const skillPayload: PlayerSkillsInsert = {
@@ -608,6 +674,81 @@ const CharacterCreationPage = () => {
         <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
+              <User className="h-5 w-5 text-primary" />
+              Identity Details
+            </CardTitle>
+            <CardDescription>
+              A few personal touches to give your artist a grounded origin story.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground" htmlFor="gender">
+                  Gender
+                </label>
+                <Select value={gender} onValueChange={(value) => setGender(value as ProfileGender)}>
+                  <SelectTrigger id="gender">
+                    <SelectValue placeholder="Select a gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {genderOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground" htmlFor="age">
+                  Age
+                </label>
+                <Input
+                  id="age"
+                  type="number"
+                  min={13}
+                  max={120}
+                  value={age}
+                  onChange={(event) => setAge(event.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Default starting age is 16.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground" htmlFor="city-of-birth">
+                  City of Birth
+                </label>
+                <Select
+                  value={cityOfBirth ?? ""}
+                  onValueChange={(value) => setCityOfBirth(value || null)}
+                  disabled={citiesLoading}
+                >
+                  <SelectTrigger id="city-of-birth">
+                    <SelectValue
+                      placeholder={citiesLoading ? "Loading cities..." : "Select a city"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No listed city</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name ?? "Unnamed City"}
+                        {city.country ? `, ${city.country}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {citiesError && (
+                  <p className="text-xs text-destructive">{citiesError}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Gauge className="h-5 w-5 text-primary" />
               Skill Distribution
             </CardTitle>
@@ -673,4 +814,4 @@ const CharacterCreationPage = () => {
   );
 };
 
-export default CharacterCreationPage;
+export default CharacterCreation;
