@@ -182,7 +182,7 @@ const EnhancedBandManager = () => {
             .eq("user_id", profile.user_id)
             .single();
 
-          const defaultSkills: PlayerSkillFields = {
+          const defaultSkills: MemberSkillSet = {
             guitar: 20,
             vocals: 20,
             drums: 20,
