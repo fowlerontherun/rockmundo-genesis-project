@@ -429,7 +429,7 @@ const SocialMedia = () => {
       }
 
       const { data, error } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("user_id, username, display_name, avatar_url")
         .eq("user_id", userId)
         .maybeSingle();
@@ -518,7 +518,7 @@ const SocialMedia = () => {
       const profileMap: Record<string, SocialProfile> = {};
       if (userIds.size > 0) {
         const { data: profileRows, error: profileError } = await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("user_id, username, display_name, avatar_url")
           .in("user_id", Array.from(userIds));
 
