@@ -219,6 +219,7 @@ const MusicCreation = () => {
   });
   const [updatingSong, setUpdatingSong] = useState(false);
   const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
+  const [audioRecordingSongId, setAudioRecordingSongId] = useState<string | null>(null);
 
   const [newSong, setNewSong] = useState({
     title: "",
