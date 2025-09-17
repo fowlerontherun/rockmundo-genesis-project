@@ -68,7 +68,7 @@ const SkillTraining = () => {
   const { profile, skills, attributes, updateSkills, updateProfile, updateAttributes, addActivity, loading } = useGameData();
   const [training, setTraining] = useState(false);
   const [activeTrainingKey, setActiveTrainingKey] = useState<string | null>(null);
-  const trainingCooldown = COOLDOWNS.skillTraining;
+  const baseTrainingCooldown = COOLDOWNS.skillTraining;
 
   const attributeSummaries = useMemo(() =>
     ATTRIBUTE_KEYS.map(key => {
