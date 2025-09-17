@@ -6,107 +6,107 @@
 
 @layer base {
   :root {
-    /* RockMundo Brand Colors - Updated for #22546e background */
-    --background: 200 47% 28%;        /* #22546e converted to HSL */
-    --foreground: 45 30% 92%;         /* Cream white */
-    
-    --card: 200 35% 35%;              /* Lighter version of background */
-    --card-foreground: 45 25% 90%;    /* Cream text on cards */
-    
-    --popover: 200 45% 25%;           /* Darker popover */
-    --popover-foreground: 45 30% 92%; /* Cream text */
-    
-    --primary: 195 85% 65%;           /* Brighter teal for contrast */
-    --primary-foreground: 200 47% 20%; /* Dark text on primary */
-    
-    --secondary: 200 35% 40%;         /* Lighter secondary */
-    --secondary-foreground: 45 20% 85%; /* Lighter cream */
-    
-    --muted: 200 40% 32%;             /* Muted variant */
-    --muted-foreground: 45 15% 70%;    /* Muted cream */
-    
-    --accent: 195 75% 70%;            /* Even brighter accent for visibility */
-    --accent-foreground: 200 47% 15%; /* Dark text on accent */
-    
-    --destructive: 0 65% 55%;         /* Red for destructive actions */
-    --destructive-foreground: 0 0% 98%; /* White text */
-    
-    --success: 120 60% 50%;           /* Green for success */
-    --success-foreground: 0 0% 98%;   /* White text */
-    
-    --warning: 45 85% 60%;            /* Gold/yellow for warnings */
-    --warning-foreground: 200 47% 15%; /* Dark text */
-    
-    --border: 200 30% 45%;            /* Lighter border for visibility */
-    --input: 200 40% 35%;             /* Input background */
-    --ring: 195 85% 65%;              /* Focus ring - bright primary */
-    
-    --radius: 0.75rem;                /* Border radius */
-    
+    /* RockMundo Nightfall Palette */
+    --background: 220 62% 8%;
+    --foreground: 210 20% 92%;
+
+    --card: 217 45% 14%;
+    --card-foreground: 210 25% 90%;
+
+    --popover: 225 60% 10%;
+    --popover-foreground: 210 20% 94%;
+
+    --primary: 197 88% 60%;
+    --primary-foreground: 222 90% 12%;
+
+    --secondary: 227 36% 22%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 220 32% 18%;
+    --muted-foreground: 214 18% 72%;
+
+    --accent: 195 95% 68%;
+    --accent-foreground: 226 90% 10%;
+
+    --destructive: 348 79% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 152 64% 48%;
+    --success-foreground: 222 90% 12%;
+
+    --warning: 43 96% 62%;
+    --warning-foreground: 228 90% 14%;
+
+    --border: 221 32% 20%;
+    --input: 221 28% 22%;
+    --ring: 197 88% 60%;
+
+    --radius: 0.75rem;
+
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(195 85% 65%), hsl(195 75% 75%));
-    --gradient-stage: linear-gradient(180deg, hsl(200 47% 28%) 0%, hsl(200 35% 35%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(195 85% 65%) 0%, hsl(200 47% 28%) 100%);
-    
+    --gradient-primary: linear-gradient(135deg, hsl(197 88% 60%), hsl(225 90% 18%));
+    --gradient-stage: linear-gradient(180deg, hsl(220 62% 8%) 0%, hsl(217 45% 14%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(195 95% 68%) 0%, hsl(220 62% 8%) 100%);
+
     /* Shadows */
-    --shadow-electric: 0 0 20px hsl(195 85% 65% / 0.3);
-    --shadow-glow: 0 0 40px hsl(195 75% 75% / 0.2);
-    
+    --shadow-electric: 0 0 24px hsl(197 88% 60% / 0.35);
+    --shadow-glow: 0 0 48px hsl(195 95% 68% / 0.25);
+
     /* Sidebar colors */
-    --sidebar-background: 200 47% 28%;
-    --sidebar-foreground: 45 25% 85%;
-    --sidebar-primary: 195 85% 65%;
-    --sidebar-primary-foreground: 200 47% 15%;
-    --sidebar-accent: 200 35% 35%;
-    --sidebar-accent-foreground: 45 25% 90%;
-    --sidebar-border: 200 30% 40%;
-    --sidebar-ring: 195 85% 65%;
+    --sidebar-background: 222 62% 7%;
+    --sidebar-foreground: 210 22% 88%;
+    --sidebar-primary: 197 88% 60%;
+    --sidebar-primary-foreground: 222 90% 12%;
+    --sidebar-accent: 224 45% 16%;
+    --sidebar-accent-foreground: 210 24% 90%;
+    --sidebar-border: 221 32% 20%;
+    --sidebar-ring: 197 88% 60%;
   }
 
   .dark {
-    /* Dark mode uses same colors as light mode for consistency */
-    --background: 200 47% 28%;
-    --foreground: 45 30% 92%;
-    
-    --card: 200 35% 35%;
-    --card-foreground: 45 25% 90%;
-    
-    --popover: 200 45% 25%;
-    --popover-foreground: 45 30% 92%;
-    
-    --primary: 195 85% 65%;
-    --primary-foreground: 200 47% 20%;
-    
-    --secondary: 200 35% 40%;
-    --secondary-foreground: 45 20% 85%;
-    
-    --muted: 200 40% 32%;
-    --muted-foreground: 45 15% 70%;
-    
-    --accent: 195 75% 70%;
-    --accent-foreground: 200 47% 15%;
-    
-    --destructive: 0 65% 55%;
+    /* Dark mode mirrors the nightfall palette for consistent surfaces */
+    --background: 220 62% 8%;
+    --foreground: 210 20% 92%;
+
+    --card: 217 45% 14%;
+    --card-foreground: 210 25% 90%;
+
+    --popover: 225 60% 10%;
+    --popover-foreground: 210 20% 94%;
+
+    --primary: 197 88% 60%;
+    --primary-foreground: 222 90% 12%;
+
+    --secondary: 227 36% 22%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 220 32% 18%;
+    --muted-foreground: 214 18% 72%;
+
+    --accent: 195 95% 68%;
+    --accent-foreground: 226 90% 10%;
+
+    --destructive: 348 79% 52%;
     --destructive-foreground: 0 0% 98%;
-    
-    --success: 120 60% 50%;
-    --success-foreground: 0 0% 98%;
-    
-    --warning: 45 85% 60%;
-    --warning-foreground: 200 47% 15%;
-    
-    --border: 200 30% 45%;
-    --input: 200 40% 35%;
-    --ring: 195 85% 65%;
-    
-    --sidebar-background: 200 47% 28%;
-    --sidebar-foreground: 45 25% 85%;
-    --sidebar-primary: 195 85% 65%;
-    --sidebar-primary-foreground: 200 47% 15%;
-    --sidebar-accent: 200 35% 35%;
-    --sidebar-accent-foreground: 45 25% 90%;
-    --sidebar-border: 200 30% 40%;
-    --sidebar-ring: 195 85% 65%;
+
+    --success: 152 64% 48%;
+    --success-foreground: 222 90% 12%;
+
+    --warning: 43 96% 62%;
+    --warning-foreground: 228 90% 14%;
+
+    --border: 221 32% 20%;
+    --input: 221 28% 22%;
+    --ring: 197 88% 60%;
+
+    --sidebar-background: 222 62% 7%;
+    --sidebar-foreground: 210 22% 88%;
+    --sidebar-primary: 197 88% 60%;
+    --sidebar-primary-foreground: 222 90% 12%;
+    --sidebar-accent: 224 45% 16%;
+    --sidebar-accent-foreground: 210 24% 90%;
+    --sidebar-border: 221 32% 20%;
+    --sidebar-ring: 197 88% 60%;
   }
 }
 
@@ -163,9 +163,9 @@
 
 @keyframes glow {
   from {
-    box-shadow: 0 0 5px hsl(195 85% 65% / 0.3);
+    box-shadow: 0 0 6px hsl(197 88% 60% / 0.35);
   }
   to {
-    box-shadow: 0 0 25px hsl(195 85% 65% / 0.6);
+    box-shadow: 0 0 28px hsl(197 88% 60% / 0.65);
   }
 }
