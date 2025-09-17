@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { Music, Play, Trash2, Star, Coins, Volume2, Pencil } from "lucide-react";
 
 interface Song {

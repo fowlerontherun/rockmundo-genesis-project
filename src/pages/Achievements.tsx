@@ -15,7 +15,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 
 interface Achievement {
   id: string;
