@@ -1155,7 +1155,6 @@ const TourManager = () => {
       const environmentModifiers = tourVenue.environment_modifiers;
       const attendanceMultiplier = environmentModifiers?.attendanceMultiplier ?? 1;
       const moraleMultiplier = environmentModifiers?.moraleModifier ?? 1;
-
       const attendanceBase = Math.floor(capacity * (0.4 + successRate * 0.5));
       const attendance = Math.max(1, Math.round(attendanceBase * attendanceMultiplier));
       const ticketPrice = tourVenue.ticket_price ?? 25;
