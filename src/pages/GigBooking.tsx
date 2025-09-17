@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Calendar, MapPin, Users, DollarSign, Clock, Star, Music, Volume2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +25,7 @@ import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type Applie
 import type { Database, Json } from "@/integrations/supabase/types";
 
 type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
+type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type GigRow = Database["public"]["Tables"]["gigs"]["Row"];
 type GigInsertPayload = Database["public"]["Tables"]["gigs"]["Insert"] & {
   environment_modifiers?: EnvironmentModifierSummary | null;
@@ -87,15 +90,29 @@ const getShowTypeDetails = (showType: ShowType) =>
 
 const GIG_EXPERIENCE_ATTRIBUTES: AttributeKey[] = ["stage_presence", "musical_ability"];
 
+const ALL_CITIES_VALUE = "all";
+
 type JsonRequirementRecord = Extract<Json, Record<string, number | boolean | string | null>>;
 type VenueRequirements = JsonRequirementRecord & {
   min_popularity?: number | null;
+};
+
+const formatDateForInput = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 interface Venue {
   id: string;
   name: string;
   location: string;
+  city_id?: string | null;
   capacity: number;
   venue_type: string;
   base_payment: number;
@@ -150,7 +167,7 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, attributes, updateProfile, updateAttributes, addActivity } = useGameData();
+  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
@@ -158,19 +175,72 @@ const GigBooking = () => {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [showTypeSelections, setShowTypeSelections] = useState<Record<string, ShowType>>({});
+  const [cities, setCities] = useState<CityRow[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [venuesLoading, setVenuesLoading] = useState(false);
+  const [selectedCityId, setSelectedCityId] = useState<string>(currentCity?.id ?? ALL_CITIES_VALUE);
+  const [citySelectionTouched, setCitySelectionTouched] = useState(false);
+  const selectedCity = useMemo(
+    () => cities.find((city) => city.id === selectedCityId),
+    [cities, selectedCityId]
+  );
   const handleShowTypeSelection = (venueId: string, value: ShowType) => {
     setShowTypeSelections((prev) => ({
       ...prev,
       [venueId]: value,
     }));
   };
+  const handleDateSelection = (venueId: string, value: string) => {
+    setVenueDateSelections((prev) => ({
+      ...prev,
+      [venueId]: value,
+    }));
+  };
 
-  const loadVenues = useCallback(async () => {
+  useEffect(() => {
+    if (currentCity?.id && !citySelectionTouched && selectedCityId === ALL_CITIES_VALUE) {
+      setSelectedCityId(currentCity.id);
+    }
+  }, [citySelectionTouched, currentCity?.id, selectedCityId]);
+
+  const loadCities = useCallback(async () => {
+    setCitiesLoading(true);
     try {
       const { data, error } = await supabase
-        .from('venues')
+        .from('cities')
         .select('*')
-        .order('prestige_level, capacity');
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setCities((data ?? []) as CityRow[]);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load cities";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading cities:', errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
+    } finally {
+      setCitiesLoading(false);
+    }
+  }, [toast]);
+
+  const loadVenues = useCallback(async () => {
+    setVenuesLoading(true);
+    try {
+      let query = supabase
+        .from('venues')
+        .select('*');
+
+      if (selectedCityId !== ALL_CITIES_VALUE) {
+        query = query.eq('city_id', selectedCityId);
+      }
+
+      const { data, error } = await query
+        .order('prestige_level', { ascending: true })
+        .order('capacity', { ascending: true });
 
       if (error) throw error;
       const venueRows = (data ?? []) as VenueRow[];
@@ -178,6 +248,7 @@ const GigBooking = () => {
         id: venue.id,
         name: venue.name,
         location: venue.location ?? 'Unknown',
+        city_id: venue.city_id ?? null,
         capacity: venue.capacity ?? 0,
         venue_type: venue.venue_type ?? 'general',
         base_payment: venue.base_payment ?? 0,
@@ -193,8 +264,10 @@ const GigBooking = () => {
         title: "Error",
         description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
+    } finally {
+      setVenuesLoading(false);
     }
-  }, [toast]);
+  }, [selectedCityId, toast]);
 
   const loadPlayerGigs = useCallback(async () => {
     if (!user) return;
@@ -217,6 +290,7 @@ const GigBooking = () => {
           id: venueDetails?.id ?? gig.venue_id,
           name: venueDetails?.name ?? 'Unknown Venue',
           location: venueDetails?.location ?? 'Unknown',
+          city_id: venueDetails?.city_id ?? null,
           capacity: venueDetails?.capacity ?? 0,
           venue_type: venueDetails?.venue_type ?? 'general',
           base_payment: venueDetails?.base_payment ?? 0,
@@ -248,11 +322,20 @@ const GigBooking = () => {
   }, [user]);
 
   useEffect(() => {
+    loadCities();
+  }, [loadCities]);
+
+  useEffect(() => {
     if (user) {
-      loadVenues();
       loadPlayerGigs();
     }
-  }, [user, loadVenues, loadPlayerGigs]);
+  }, [user, loadPlayerGigs]);
+
+  useEffect(() => {
+    if (user) {
+      loadVenues();
+    }
+  }, [user, loadVenues]);
 
   const calculateGigPayment = (venue: Venue, showType: ShowType = DEFAULT_SHOW_TYPE) => {
     const details = getShowTypeDetails(showType);
@@ -309,13 +392,40 @@ const GigBooking = () => {
       return;
     }
 
+    const selectedDateValue = venueDateSelections[venue.id];
+
+    if (!selectedDateValue) {
+      toast({
+        variant: "destructive",
+        title: "Select a date",
+        description: "Choose when you'd like to perform before booking this gig.",
+      });
+      return;
+    }
+
+    const selectedDate = new Date(selectedDateValue);
+
+    if (Number.isNaN(selectedDate.getTime())) {
+      toast({
+        variant: "destructive",
+        title: "Invalid date",
+        description: "Please pick a valid date and time for your performance.",
+      });
+      return;
+    }
+
+    if (selectedDate.getTime() <= Date.now()) {
+      toast({
+        variant: "destructive",
+        title: "Date must be in the future",
+        description: "Select a performance time that hasn't already passed.",
+      });
+      return;
+    }
+
     setBooking(true);
 
     try {
-      // Generate a future date (1-14 days from now)
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 14) + 1);
-      
       const showType = showTypeSelections[venue.id] ?? DEFAULT_SHOW_TYPE;
       const showTypeDetails = getShowTypeDetails(showType);
       const showTypeLabel = getShowTypeLabel(showType);
@@ -323,7 +433,7 @@ const GigBooking = () => {
 
       let environmentSummary: EnvironmentModifierSummary | null = null;
       try {
-        environmentSummary = await fetchEnvironmentModifiers(venue.location, futureDate.toISOString());
+        environmentSummary = await fetchEnvironmentModifiers(venue.location, selectedDate.toISOString());
       } catch (envError) {
         console.error('Error fetching environment modifiers for gig:', envError);
       }
@@ -338,7 +448,7 @@ const GigBooking = () => {
       const gigInsertPayload: GigInsertPayload = {
         venue_id: venue.id,
         band_id: user.id,
-        scheduled_date: futureDate.toISOString(),
+        scheduled_date: selectedDate.toISOString(),
         payment,
         show_type: showType,
         status: 'scheduled',
@@ -400,7 +510,7 @@ const GigBooking = () => {
         environment_modifiers: mergedEnvironment,
       };
 
-      const eventEndTime = new Date(futureDate);
+      const eventEndTime = new Date(selectedDate);
       eventEndTime.setHours(eventEndTime.getHours() + 2);
 
       const environmentNotes = mergedEnvironment?.applied?.length
@@ -445,7 +555,7 @@ const GigBooking = () => {
           event_type: 'gig',
           title: `${showTypeLabel} gig at ${venue.name}`,
           description: scheduleDescription,
-          start_time: futureDate.toISOString(),
+          start_time: selectedDate.toISOString(),
           end_time: eventEndTime.toISOString(),
           location: venue.location,
           status: 'scheduled',
@@ -462,11 +572,15 @@ const GigBooking = () => {
       }
 
       setPlayerGigs(prev => [...prev, newGig]);
-      
+
       await addActivity('gig', `Booked a ${showTypeLabel.toLowerCase()} gig at ${venue.name}`, 0);
 
+      const formattedDate = selectedDate.toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
       const toastParts = [
-        `You're performing at ${venue.name} on ${futureDate.toLocaleDateString()}.`,
+        `You're performing at ${venue.name} on ${formattedDate}.`,
         `Projected attendance: ${projectedAttendance.toLocaleString()}.`,
       ];
 
@@ -705,6 +819,8 @@ const GigBooking = () => {
     );
   }
 
+  const minimumDateTime = formatDateForInput(new Date());
+
   const upcomingGigs = playerGigs.filter(gig => gig.status === 'scheduled');
   const pastGigs = playerGigs.filter(gig => gig.status === 'completed');
 
@@ -735,8 +851,45 @@ const GigBooking = () => {
           </TabsList>
 
           <TabsContent value="venues">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {venues.map((venue) => {
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Choose your stage</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Explore venues by city to plan your next performance.
+                  </p>
+                </div>
+                <Select
+                  value={selectedCityId}
+                  onValueChange={(value) => {
+                    setCitySelectionTouched(true);
+                    setSelectedCityId(value);
+                  }}
+                  disabled={citiesLoading || (cities.length === 0 && selectedCityId !== ALL_CITIES_VALUE)}
+                >
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Select a city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_CITIES_VALUE}>All Cities</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name}
+                        {city.id === currentCity?.id ? " (Current)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {venuesLoading ? (
+                <div className="py-16 flex flex-col items-center justify-center gap-4">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+                  <p className="text-sm text-muted-foreground">Loading venues...</p>
+                </div>
+              ) : venues.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {venues.map((venue) => {
                 const showType = showTypeSelections[venue.id] ?? DEFAULT_SHOW_TYPE;
                 const showTypeLabel = getShowTypeLabel(showType);
                 const showTypeDescription = getShowTypeDetails(showType).description;
@@ -809,6 +962,23 @@ const GigBooking = () => {
 
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Performance Date &amp; Time</span>
+                        </div>
+                        <div onClick={(event) => event.stopPropagation()}>
+                          <Input
+                            type="datetime-local"
+                            value={venueDateSelections[venue.id] ?? ""}
+                            min={minimumDateTime}
+                            onChange={(event) => handleDateSelection(venue.id, event.target.value)}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Choose when you want to take the stage at this venue.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-sm text-muted-foreground">Payment:</span>
                           <span className="font-bold text-success">${payment.toLocaleString()}</span>
                         </div>
@@ -842,7 +1012,19 @@ const GigBooking = () => {
                     </CardContent>
                   </Card>
                 );
-              })}
+                  })}
+                </div>
+              ) : (
+                <Alert className="bg-card/70 backdrop-blur-sm border-primary/20">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>No venues available</AlertTitle>
+                  <AlertDescription>
+                    {selectedCityId === ALL_CITIES_VALUE
+                      ? "There aren't any venues available right now. Check back later as new opportunities open up."
+                      : `No venues are currently booking in ${selectedCity?.name ?? "this city"}. Try another city or come back soon.`}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           </TabsContent>
 

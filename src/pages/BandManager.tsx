@@ -35,6 +35,16 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type SkillDefinitionRow = Database['public']['Tables']['skill_definitions']['Row'];
+type SkillProgressRow = Database['public']['Tables']['profile_skill_progress']['Row'];
+
+type MemberSkillMap = Record<string, number>;
+
+type SkillProgressWithDefinition = Pick<SkillProgressRow, 'profile_id' | 'current_level' | 'skill_slug'> & {
+  skill_definitions?: Pick<SkillDefinitionRow, 'slug'> | null;
+};
+
 interface BandMember {
   id: string;
   user_id: string;
@@ -43,7 +53,7 @@ interface BandMember {
   salary: number | null;
   joined_at: string | null;
   name?: string;
-  skills?: PlayerSkillsRow | null;
+  skills: MemberSkillMap;
   avatar_url?: string;
   is_player?: boolean;
 }
@@ -85,8 +95,6 @@ const BAND_GENRES = [
   "R&B",
   "Classical"
 ];
-
-type PlayerSkillsRow = Database['public']['Tables']['player_skills']['Row'];
 
 type BandMemberRow = Database['public']['Tables']['band_members']['Row'];
 type GlobalChartRow = Database['public']['Tables']['global_charts']['Row'];
@@ -231,7 +239,7 @@ const BandManager = () => {
         .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
       let profilesMap = new Map<string, ProfileRow>();
-      let skillsMap = new Map<string, PlayerSkillsRow | null>();
+      const skillLevelsByUser = new Map<string, MemberSkillMap>();
 
       if (memberIds.length > 0) {
         const { data: profileRows, error: profilesError } = await supabase
@@ -247,33 +255,43 @@ const BandManager = () => {
 
         const activeProfileIds = activeProfiles.map((profile) => profile.id);
 
-        let skillsRows: PlayerSkillsRow[] | null = [];
+        const profileIdToUserId = new Map(activeProfiles.map((profile) => [profile.id, profile.user_id]));
 
         if (activeProfileIds.length > 0) {
           const { data, error: skillsError } = await supabase
-            .from('player_skills')
-            .select('*')
+            .from('profile_skill_progress')
+            .select('profile_id, current_level, skill_slug, skill_definitions!inner(slug)')
             .in('profile_id', activeProfileIds);
 
           if (skillsError) throw skillsError;
-          skillsRows = data as PlayerSkillsRow[] | null;
+
+          const progressRows = (data as SkillProgressWithDefinition[] | null) ?? [];
+
+          progressRows.forEach((progress) => {
+            const slug = progress.skill_slug ?? progress.skill_definitions?.slug ?? null;
+            if (!slug) {
+              return;
+            }
+
+            const userId = profileIdToUserId.get(progress.profile_id);
+            if (!userId) {
+              return;
+            }
+
+            const numericLevel = Number(progress.current_level ?? 0);
+            const sanitizedLevel = Number.isFinite(numericLevel) ? Math.max(0, numericLevel) : 0;
+            const existingLevels = skillLevelsByUser.get(userId) ?? {};
+            existingLevels[slug] = sanitizedLevel;
+            skillLevelsByUser.set(userId, existingLevels);
+          });
         }
-
-        const profileIdToUserId = new Map(activeProfiles.map((profile) => [profile.id, profile.user_id]));
-
-        skillsMap = new Map(
-          (skillsRows ?? []).map((skill) => {
-            const mappedUserId = profileIdToUserId.get(skill.profile_id) ?? skill.user_id;
-            return [mappedUserId, skill];
-          })
-        );
       }
 
       const currentUserId = user.id;
 
       const membersWithData: BandMember[] = memberRows.map((member) => {
         const profile = profilesMap.get(member.user_id) ?? null;
-        const memberSkills = skillsMap.get(member.user_id) ?? null;
+        const memberSkills = { ...(skillLevelsByUser.get(member.user_id) ?? {}) };
 
         const avatarPreview = getStoredAvatarPreviewUrl(profile?.avatar_url ?? null);
 
@@ -287,7 +305,7 @@ const BandManager = () => {
           name: member.user_id === currentUserId ? 'You' : profile?.display_name ?? 'Unknown',
           avatar_url: avatarPreview ?? '',
           is_player: member.user_id === currentUserId,
-          skills: memberSkills ?? null,
+          skills: memberSkills,
         };
       });
 
@@ -1260,96 +1278,138 @@ const BandManager = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {members.map((member) => (
-                <div key={member.id} className="p-4 rounded-lg bg-secondary/30 border border-primary/10">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={member.avatar_url} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                          {member.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold flex items-center gap-2">
-                          {member.name}
-                          {member.is_player && (
-                            <Badge variant="outline" className="text-xs border-primary text-primary">
-                              You
-                            </Badge>
-                          )}
-                        </h3>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          {getRoleIcon(member.role)}
-                          {member.role}
-                        </p>
-                      </div>
-                    </div>
-                    {member.salary > 0 && (
-                      <Badge variant="outline" className="text-xs border-success text-success">
-                        ${member.salary}/week
-                      </Badge>
-                    )}
-                  </div>
+              {members.map((member) => {
+                const resolvedSkillMap: Record<string, number> = { ...(member.skills ?? {}) };
 
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium">Skills</h4>
-                    {member.is_player && skills ? (
+                if (member.is_player && skills) {
+                  Object.entries(skills).forEach(([slug, level]) => {
+                    if (typeof level === 'number' && Number.isFinite(level)) {
+                      resolvedSkillMap[slug] = level;
+                    }
+                  });
+                }
+
+                const unlockedSkillCount = instrumentSkillKeys.reduce((count, skillKey) => {
+                  const skillSlug = String(skillKey);
+                  const rawValue = resolvedSkillMap[skillSlug];
+                  return rawValue === undefined || rawValue === null ? count : count + 1;
+                }, 0);
+
+                return (
+                  <div key={member.id} className="p-4 rounded-lg bg-secondary/30 border border-primary/10">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={member.avatar_url} />
+                          <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                            {member.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold flex items-center gap-2">
+                            {member.name}
+                            {member.is_player && (
+                              <Badge variant="outline" className="text-xs border-primary text-primary">
+                                You
+                              </Badge>
+                            )}
+                          </h3>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            {getRoleIcon(member.role)}
+                            {member.role}
+                          </p>
+                        </div>
+                      </div>
+                      {member.salary > 0 && (
+                        <Badge variant="outline" className="text-xs border-success text-success">
+                          ${member.salary}/week
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium">Skills</h4>
                       <div className="space-y-3">
                         <div className="space-y-1">
                           {instrumentSkillKeys.map(skillKey => {
-                            const value = Number(skills?.[skillKey] ?? 0);
+                            const skillSlug = String(skillKey);
+                            const rawValue = resolvedSkillMap[skillSlug];
+                            const isLocked = rawValue === undefined || rawValue === null;
+                            const numericValue = Number(rawValue ?? 0);
+                            const sanitizedValue = Number.isFinite(numericValue) ? numericValue : 0;
+                            const clampedValue = Math.max(0, Math.min(100, sanitizedValue));
+                            const ariaLabel = isLocked
+                              ? `${skillSlug} skill locked`
+                              : `${skillSlug} skill level ${clampedValue} out of 100`;
+
                             return (
-                              <div key={skillKey} className="space-y-1">
-                                <span className="text-sm capitalize">{skillKey}</span>
-                                <Progress
-                                  value={value}
-                                  className="h-1.5"
-                                  aria-label={`${skillKey} skill level ${value} out of 100`}
-                                />
+                              <div key={skillSlug} className="space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm capitalize">{skillSlug}</span>
+                                  {isLocked ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] uppercase tracking-wide border-destructive/30 text-destructive"
+                                    >
+                                      Locked
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">Lv. {Math.round(clampedValue)}</span>
+                                  )}
+                                </div>
+                                <Progress value={clampedValue} className="h-1.5" aria-label={ariaLabel} />
                               </div>
                             );
                           })}
                         </div>
-                        <div className="space-y-1">
-                          <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Attributes</h5>
-                          {attributeKeys.map(attributeKey => {
-                            const value = Number(attributes?.[attributeKey] ?? 0);
-                            const percent = Math.min(100, (value / 1000) * 100);
-                            return (
-                              <div key={attributeKey} className="space-y-1">
-                                <span className="text-sm capitalize">{attributeKey}</span>
-                                <Progress
-                                  value={percent}
-                                  className="h-1.5"
-                                  aria-label={`${attributeKey} attribute score ${value} out of 1000`}
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
+                        {unlockedSkillCount === 0 && (
+                          <p className="text-xs italic text-muted-foreground">
+                            No skills unlocked yet.
+                          </p>
+                        )}
+                        {member.is_player && (
+                          <div className="space-y-1">
+                            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                              Attributes
+                            </h5>
+                            {attributeKeys.map(attributeKey => {
+                              const value = Number(attributes?.[attributeKey] ?? 0);
+                              const percent = Math.min(100, (value / 1000) * 100);
+                              return (
+                                <div key={attributeKey} className="space-y-1">
+                                  <span className="text-sm capitalize">{attributeKey}</span>
+                                  <Progress
+                                    value={percent}
+                                    className="h-1.5"
+                                    aria-label={`${attributeKey} attribute score ${value} out of 1000`}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">
-                        Skills unavailable for other members
+                    </div>
+
+                    {!member.is_player && (
+                      <div className="mt-4 pt-3 border-t border-primary/10">
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="text-xs">
+                            View Profile
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs text-destructive border-destructive/20"
+                          >
+                            Replace
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {!member.is_player && (
-                    <div className="mt-4 pt-3 border-t border-primary/10">
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-xs">
-                          View Profile
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-xs text-destructive border-destructive/20">
-                          Replace
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

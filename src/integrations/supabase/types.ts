@@ -1734,215 +1734,71 @@ export type Database = {
           },
         ]
       }
-      attribute_definitions: {
-        Row: {
-          category: string | null
-          created_at: string | null
-          default_value: number
-          description: string | null
-          id: string
-          metadata: Json | null
-          name: string
-          slug: string
-          updated_at: string | null
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string | null
-          default_value?: number
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name: string
-          slug: string
-          updated_at?: string | null
-        }
-        Update: {
-          category?: string | null
-          created_at?: string | null
-          default_value?: number
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name?: string
-          slug?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      profile_attributes: {
-        Row: {
-          attribute_id: string
-          created_at: string | null
-          id: string
-          profile_id: string
-          updated_at: string | null
-          value: number
-        }
-        Insert: {
-          attribute_id: string
-          created_at?: string | null
-          id?: string
-          profile_id: string
-          updated_at?: string | null
-          value?: number
-        }
-        Update: {
-          attribute_id?: string
-          created_at?: string | null
-          id?: string
-          profile_id?: string
-          updated_at?: string | null
-          value?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_attributes_attribute_id_fkey",
-            columns: ["attribute_id"],
-            isOneToOne: false,
-            referencedRelation: "attribute_definitions",
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_attributes_profile_id_fkey",
-            columns: ["profile_id"],
-            isOneToOne: false,
-            referencedRelation: "profiles",
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      skill_definitions: {
-        Row: {
-          category: string | null
-          created_at: string | null
-          description: string | null
-          display_order: number | null
-          experience_curve: Json | null
-          id: string
-          max_level: number
-          metadata: Json | null
-          name: string
-          slug: string
-          updated_at: string | null
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          display_order?: number | null
-          experience_curve?: Json | null
-          id?: string
-          max_level?: number
-          metadata?: Json | null
-          name: string
-          slug: string
-          updated_at?: string | null
-        }
-        Update: {
-          category?: string | null
-          created_at?: string | null
-          description?: string | null
-          display_order?: number | null
-          experience_curve?: Json | null
-          id?: string
-          max_level?: number
-          metadata?: Json | null
-          name?: string
-          slug?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       profile_skill_progress: {
         Row: {
           created_at: string | null
-          current_experience: number
           current_level: number
+          current_xp: number
           id: string
           profile_id: string
           skill_id: string
-          skill_slug: string | null
           updated_at: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
-          current_experience?: number
           current_level?: number
+          current_xp?: number
           id?: string
           profile_id: string
           skill_id: string
-          skill_slug?: string | null
           updated_at?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
-          current_experience?: number
           current_level?: number
+          current_xp?: number
           id?: string
           profile_id?: string
           skill_id?: string
-          skill_slug?: string | null
           updated_at?: string | null
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profile_skill_progress_profile_id_fkey",
-            columns: ["profile_id"],
-            isOneToOne: false,
-            referencedRelation: "profiles",
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_skill_progress_skill_id_fkey",
-            columns: ["skill_id"],
-            isOneToOne: false,
-            referencedRelation: "skill_definitions",
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       profile_skill_unlocks: {
         Row: {
           created_at: string | null
           id: string
+          is_unlocked: boolean
           profile_id: string
           skill_id: string
-          skill_slug: string | null
           unlocked_at: string | null
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          is_unlocked?: boolean
           profile_id: string
           skill_id: string
-          skill_slug?: string | null
           unlocked_at?: string | null
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          is_unlocked?: boolean
           profile_id?: string
           skill_id?: string
-          skill_slug?: string | null
           unlocked_at?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profile_skill_unlocks_profile_id_fkey",
-            columns: ["profile_id"],
-            isOneToOne: false,
-            referencedRelation: "profiles",
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_skill_unlocks_skill_id_fkey",
-            columns: ["skill_id"],
-            isOneToOne: false,
-            referencedRelation: "skill_definitions",
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       player_attributes: {
         Row: {
@@ -2408,6 +2264,54 @@ export type Database = {
           status?: "active" | "completed"
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      skill_definitions: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_default_unlocked: boolean | null
+          label: string
+          max_level: number | null
+          slug: string
+          sort_order: number | null
+          starting_experience: number | null
+          starting_level: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default_unlocked?: boolean | null
+          label: string
+          max_level?: number | null
+          slug: string
+          sort_order?: number | null
+          starting_experience?: number | null
+          starting_level?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default_unlocked?: boolean | null
+          label?: string
+          max_level?: number | null
+          slug?: string
+          sort_order?: number | null
+          starting_experience?: number | null
+          starting_level?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3107,6 +3011,7 @@ export type Database = {
       }
       venues: {
         Row: {
+          city_id: string | null
           base_payment: number | null
           capacity: number | null
           created_at: string | null
@@ -3118,6 +3023,7 @@ export type Database = {
           venue_type: string | null
         }
         Insert: {
+          city_id?: string | null
           base_payment?: number | null
           capacity?: number | null
           created_at?: string | null
@@ -3129,6 +3035,7 @@ export type Database = {
           venue_type?: string | null
         }
         Update: {
+          city_id?: string | null
           base_payment?: number | null
           capacity?: number | null
           created_at?: string | null
@@ -3139,7 +3046,15 @@ export type Database = {
           requirements?: Json | null
           venue_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "venues_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

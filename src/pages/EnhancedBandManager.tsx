@@ -14,6 +14,16 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
+import {
+  buildSkillLevelMap,
+  collectSkillSlugs,
+  estimateSkillTier,
+  getSkillLabel,
+  getSkillLevel,
+  type SkillDefinitionRow,
+  type SkillLevelMap,
+  type SkillProgressWithDefinition
+} from "@/utils/skillLevels";
 import { Users, Crown, Heart, UserPlus, UserMinus, Star, TrendingUp, Calendar, Music, Coins, Settings } from "lucide-react";
 
 interface Band {
@@ -243,13 +253,16 @@ const estimateSkillLevel = (skills?: SkillMap | null) => {
 
 const EnhancedBandManager = () => {
   const { user } = useAuth();
-  const { addActivity } = useGameData();
+  const { addActivity, skillDefinitions: contextSkillDefinitions } = useGameData();
   const { toast } = useToast();
   const [myBands, setMyBands] = useState<Band[]>([]);
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
   const [bandMembers, setBandMembers] = useState<BandMember[]>([]);
   const [bandStats, setBandStats] = useState<BandStats | null>(null);
   const [availableMembers, setAvailableMembers] = useState<AvailableMember[]>([]);
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinitionRow[]>(
+    contextSkillDefinitions
+  );
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [inviting, setInviting] = useState(false);
@@ -272,9 +285,80 @@ const EnhancedBandManager = () => {
   ];
 
   const roles = [
-    "Lead Guitarist", "Rhythm Guitarist", "Bassist", "Drummer", 
+    "Lead Guitarist", "Rhythm Guitarist", "Bassist", "Drummer",
     "Lead Vocalist", "Backing Vocalist", "Keyboardist", "Producer"
   ];
+
+  useEffect(() => {
+    if (contextSkillDefinitions.length > 0) {
+      setSkillDefinitions(contextSkillDefinitions);
+    }
+  }, [contextSkillDefinitions]);
+
+  useEffect(() => {
+    if (contextSkillDefinitions.length > 0 || skillDefinitions.length > 0) {
+      return;
+    }
+
+    let isMounted = true;
+    const loadDefinitions = async () => {
+      const { data, error } = await supabase
+        .from("skill_definitions")
+        .select("id, slug, name, display_order")
+        .order("display_order", { ascending: true });
+
+      if (!error && isMounted) {
+        setSkillDefinitions(data ?? []);
+      }
+    };
+
+    void loadDefinitions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [contextSkillDefinitions, skillDefinitions.length]);
+
+  useEffect(() => {
+    if (skillDefinitions.length === 0) {
+      return;
+    }
+
+    setBandMembers(previousMembers =>
+      previousMembers.map(member => {
+        const levelEstimate = estimateSkillTier(member.skillLevels, skillDefinitions);
+        if (member.profiles.levelEstimate === levelEstimate) {
+          return member;
+        }
+
+        return {
+          ...member,
+          profiles: {
+            ...member.profiles,
+            levelEstimate
+          }
+        };
+      })
+    );
+
+    setAvailableMembers(previousMembers =>
+      previousMembers.map(member => {
+        const levelEstimate = estimateSkillTier(member.skillLevels, skillDefinitions);
+        return member.levelEstimate === levelEstimate
+          ? member
+          : { ...member, levelEstimate };
+      })
+    );
+  }, [skillDefinitions]);
+
+  useEffect(() => {
+    if (bandMembers.length === 0) {
+      setBandStats(null);
+      return;
+    }
+
+    setBandStats(calculateBandStats(bandMembers));
+  }, [bandMembers, calculateBandStats]);
 
   const getUserBandIds = useCallback(async (): Promise<string> => {
     const { data } = await supabase
@@ -362,19 +446,45 @@ const EnhancedBandManager = () => {
         };
       });
 
-      const available = profilesWithSkills.filter(p => !currentMemberIds.includes(p.user_id));
+  const fetchAvailableMembers = useCallback(
+    async (currentMemberIds: string[]) => {
+      try {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("public_profiles")
+          .select("*")
+          .neq("user_id", user?.id)
+          .eq("is_active", true)
+          .limit(20);
 
-      setAvailableMembers(available);
-    } catch (error) {
-      console.error("Error fetching available members:", error);
-    }
-  }, [user?.id]);
+        if (profilesError) throw profilesError;
+
+        const profilesWithSkills: AvailableMember[] = await Promise.all(
+          (profiles ?? []).map(async profile => {
+            const skillLevels = await fetchProfileSkillMap(profile.id ?? null);
+            return {
+              ...profile,
+              skillLevels,
+              levelEstimate: estimateSkillTier(skillLevels, skillDefinitions)
+            };
+          })
+        );
+
+        const available = profilesWithSkills.filter(
+          profile => !currentMemberIds.includes(profile.user_id)
+        );
+
+        setAvailableMembers(available);
+      } catch (error) {
+        console.error("Error fetching available members:", error);
+      }
+    },
+    [fetchProfileSkillMap, skillDefinitions, user?.id]
+  );
 
   const fetchBandDetails = useCallback(async () => {
     if (!selectedBand) return null;
 
     try {
-      // Fetch band members with their profiles and skills separately due to relation constraints
       const { data: members, error: membersError } = await supabase
         .from("band_members")
         .select("*")
@@ -453,7 +563,13 @@ const EnhancedBandManager = () => {
       console.error("Error fetching band details:", error);
       return null;
     }
-  }, [calculateBandStats, fetchAvailableMembers, selectedBand]);
+  }, [
+    calculateBandStats,
+    fetchAvailableMembers,
+    fetchProfileSkillMap,
+    selectedBand,
+    skillDefinitions
+  ]);
 
   useEffect(() => {
     if (user) {
