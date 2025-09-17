@@ -12,7 +12,25 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
+
+type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
+type GigRow = Database["public"]["Tables"]["gigs"]["Row"];
+type GigInsertPayload = Database["public"]["Tables"]["gigs"]["Insert"] & {
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
+type GigUpdatePayload = Database["public"]["Tables"]["gigs"]["Update"] & {
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
+type GigRecord = GigRow & {
+  venues: VenueRow | null;
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
+
+type JsonRequirementRecord = Extract<Json, Record<string, number | boolean | string | null>>;
+type VenueRequirements = JsonRequirementRecord & {
+  min_popularity?: number | null;
+};
 
 interface Venue {
   id: string;
@@ -22,7 +40,7 @@ interface Venue {
   venue_type: string;
   base_payment: number;
   prestige_level: number;
-  requirements: Record<string, any>;
+  requirements: VenueRequirements;
 }
 
 interface Gig {
@@ -38,17 +56,34 @@ interface Gig {
   environment_modifiers?: EnvironmentModifierSummary | null;
 }
 
-type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
-type GigRow = Database["public"]["Tables"]["gigs"]["Row"];
-type GigInsertPayload = Database["public"]["Tables"]["gigs"]["Insert"] & {
-  environment_modifiers?: EnvironmentModifierSummary | null;
-};
-type GigUpdatePayload = Database["public"]["Tables"]["gigs"]["Update"] & {
-  environment_modifiers?: EnvironmentModifierSummary | null;
-};
-type GigRecord = GigRow & {
-  venues: VenueRow | null;
-  environment_modifiers?: EnvironmentModifierSummary | null;
+const normalizeVenueRequirements = (
+  requirements: VenueRow["requirements"] | VenueRequirements | null | undefined,
+): VenueRequirements => {
+  if (!requirements || typeof requirements !== "object" || Array.isArray(requirements)) {
+    return {};
+  }
+
+  const normalized: VenueRequirements = {};
+
+  for (const [key, value] of Object.entries(requirements)) {
+    if (key === "min_popularity") {
+      if (typeof value === "number") {
+        normalized.min_popularity = value;
+      } else if (typeof value === "string") {
+        const parsedValue = Number(value);
+        if (!Number.isNaN(parsedValue)) {
+          normalized.min_popularity = parsedValue;
+        }
+      }
+      continue;
+    }
+
+    if (value === null || typeof value === "number" || typeof value === "boolean" || typeof value === "string") {
+      normalized[key] = value;
+    }
+  }
+
+  return normalized;
 };
 
 const GigBooking = () => {
@@ -79,7 +114,7 @@ const GigBooking = () => {
         venue_type: venue.venue_type ?? 'general',
         base_payment: venue.base_payment ?? 0,
         prestige_level: venue.prestige_level ?? 1,
-        requirements: (venue.requirements as Record<string, any> | null) ?? {}
+        requirements: normalizeVenueRequirements(venue.requirements)
       })));
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load venues";
@@ -118,7 +153,7 @@ const GigBooking = () => {
           venue_type: venueDetails?.venue_type ?? 'general',
           base_payment: venueDetails?.base_payment ?? 0,
           prestige_level: venueDetails?.prestige_level ?? 1,
-          requirements: (venueDetails?.requirements as Record<string, any> | null) ?? {}
+          requirements: normalizeVenueRequirements(venueDetails?.requirements)
         };
 
         return {
@@ -165,12 +200,12 @@ const GigBooking = () => {
   };
 
   const meetsRequirements = (venue: Venue) => {
-    const reqs = venue.requirements || {};
-    
-    if (reqs.min_popularity && (profile?.fame || 0) < reqs.min_popularity) {
+    const minPopularity = venue.requirements.min_popularity;
+
+    if (typeof minPopularity === "number" && (profile?.fame || 0) < minPopularity) {
       return false;
     }
-    
+
     return true;
   };
 
@@ -264,7 +299,9 @@ const GigBooking = () => {
           venue_type: venueDetails?.venue_type ?? venue.venue_type,
           base_payment: venueDetails?.base_payment ?? venue.base_payment,
           prestige_level: venueDetails?.prestige_level ?? venue.prestige_level,
-          requirements: (venueDetails?.requirements as Record<string, any> | null) ?? venue.requirements,
+          requirements: venueDetails?.requirements
+            ? normalizeVenueRequirements(venueDetails.requirements)
+            : venue.requirements,
         },
         environment_modifiers: mergedEnvironment,
       };
