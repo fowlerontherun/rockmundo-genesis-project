@@ -12,7 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
 import GigBooking from "./pages/GigBooking";
 import Profile from "./pages/Profile";
-import CharacterCreationPage from "./pages/CharacterCreation";
+import CharacterCreation from "./pages/CharacterCreation";
 import MusicStudio from "./pages/MusicStudio";
 import WorldPulse from "./pages/WorldPulse";
 import Schedule from "./pages/Schedule";
@@ -63,7 +63,7 @@ function App() {
                 <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                 <Route path="busking" element={<Busking />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="character-create" element={<CharacterCreationPage />} />
+                <Route path="character-create" element={<CharacterCreation />} />
                 <Route path="music" element={<MusicStudio />} />
                 <Route path="charts" element={<WorldPulse />} />
                 <Route path="schedule" element={<Schedule />} />
@@ -90,10 +90,7 @@ function App() {
                 <Route path="songs" element={<SongManager />} />
                 <Route path="inventory" element={<InventoryManager />} />
                 <Route path="statistics" element={<PlayerStatistics />} />
-                <Route
-                  path="character/create"
-                  element={<Navigate to="/character-create" replace />}
-                />
+                <Route path="character/create" element={<CharacterCreation />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
