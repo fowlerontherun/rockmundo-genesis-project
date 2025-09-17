@@ -136,12 +136,6 @@ const AdminDashboard: React.FC = () => {
     active: false
   });
 
-  useEffect(() => {
-    if (user) {
-      loadAdminData();
-    }
-  }, [user, loadAdminData]);
-
   const fetchFeatureFlags = useCallback(async () => {
     const { data, error } = await supabase
       .from('feature_flags')
@@ -277,6 +271,12 @@ const AdminDashboard: React.FC = () => {
       setLoading(false);
     }
   }, [fetchFeatureFlags, fetchSeasons, fetchUserActions]);
+
+  useEffect(() => {
+    if (user) {
+      loadAdminData();
+    }
+  }, [user, loadAdminData]);
 
   const toggleFeatureFlag = async (flagId: string, newValue: boolean) => {
     const previousFlags = featureFlags.map(flag => ({ ...flag }));
