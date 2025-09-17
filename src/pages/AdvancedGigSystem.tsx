@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,12 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
-import { useGameData, type PlayerSkills } from '@/hooks/useGameData';
+import { useGameData, type PlayerSkills, type SkillDefinition, type SkillProgressRow } from '@/hooks/useGameData';
 import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from '@/utils/gameBalance';
 import { resolveAttributeValue } from '@/utils/attributeModifiers';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from '@/components/ui/sonner-toast';
-import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle } from 'lucide-react';
+import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle, Lock } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -56,6 +56,14 @@ interface StageResult {
   audienceReaction: AudienceReaction;
   feedback: string[];
   bonuses: string[];
+}
+
+interface StageSkillRequirementDetail {
+  slug: string;
+  skillName: string;
+  requiredLevel: number;
+  currentLevel: number;
+  locked: boolean;
 }
 
 const STAGE_FAILURE_THRESHOLD = 50;
@@ -136,7 +144,16 @@ const getPerformanceStages = (showType: ShowType) => STAGE_PRESETS[showType] ?? 
 const AdvancedGigSystem: React.FC = () => {
   const { gigId } = useParams<{ gigId: string }>();
   const { user } = useAuth();
-  const { profile, skills, attributes, updateProfile, addActivity } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    unlockedSkills,
+    skillProgress,
+    skillDefinitions,
+    updateProfile,
+    addActivity,
+  } = useGameData();
   const navigate = useNavigate();
 
   const [gig, setGig] = useState<Gig | null>(null);
@@ -161,6 +178,177 @@ const AdvancedGigSystem: React.FC = () => {
   const [failedStage, setFailedStage] = useState<string | null>(null);
   const [fameChange, setFameChange] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
+  const lockedFailureRef = useRef<string | null>(null);
+
+  const humanizeSkillSlug = useCallback((slug: string) => {
+    return slug
+      .split('_')
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }, []);
+
+  const skillDefinitionMap = useMemo(() => {
+    return skillDefinitions.reduce<Map<string, SkillDefinition>>((accumulator, definition) => {
+      accumulator.set(definition.slug.toLowerCase(), definition);
+      return accumulator;
+    }, new Map());
+  }, [skillDefinitions]);
+
+  const skillProgressMap = useMemo(() => {
+    return skillProgress.reduce<Map<string, SkillProgressRow>>((accumulator, row) => {
+      if (row.skill_slug) {
+        accumulator.set(row.skill_slug.toLowerCase(), row);
+      }
+      return accumulator;
+    }, new Map());
+  }, [skillProgress]);
+
+  const getSkillLabel = useCallback(
+    (slug: string) => {
+      const normalizedSlug = slug.toLowerCase();
+      const definition = skillDefinitionMap.get(normalizedSlug);
+      if (definition?.name) {
+        return definition.name;
+      }
+      return humanizeSkillSlug(normalizedSlug);
+    },
+    [humanizeSkillSlug, skillDefinitionMap]
+  );
+
+  const getCurrentSkillLevel = useCallback(
+    (slug: string) => {
+      const normalizedSlug = slug.toLowerCase();
+      const value = skills?.[normalizedSlug as keyof PlayerSkills];
+      return typeof value === 'number' ? value : 0;
+    },
+    [skills]
+  );
+
+  const isSkillUnlocked = useCallback(
+    (slug: string) => {
+      const normalizedSlug = slug.toLowerCase();
+
+      if (!skillDefinitionMap.has(normalizedSlug)) {
+        return true;
+      }
+
+      if (unlockedSkills?.[normalizedSlug]) {
+        return true;
+      }
+
+      if (skillProgressMap.has(normalizedSlug)) {
+        return true;
+      }
+
+      return false;
+    },
+    [skillDefinitionMap, skillProgressMap, unlockedSkills]
+  );
+
+  const stageRequirementDetails = useMemo(() => {
+    return performanceStages.map(stage => ({
+      stage,
+      requirements: Object.entries(stage.skillRequirements).map(([skillSlug, requiredLevel]) => {
+        const normalizedSlug = skillSlug.toLowerCase();
+        return {
+          slug: normalizedSlug,
+          skillName: getSkillLabel(normalizedSlug),
+          requiredLevel,
+          currentLevel: getCurrentSkillLevel(normalizedSlug),
+          locked: !isSkillUnlocked(normalizedSlug),
+        } satisfies StageSkillRequirementDetail;
+      }),
+    }));
+  }, [getCurrentSkillLevel, getSkillLabel, isSkillUnlocked, performanceStages]);
+
+  const handleLockedSkillFailure = useCallback(
+    (stage: PerformanceStage, skillSlug: string) => {
+      const normalizedSlug = skillSlug.toLowerCase();
+      const failureKey = `${stage.name}:${normalizedSlug}`;
+      if (lockedFailureRef.current === failureKey) {
+        return;
+      }
+
+      lockedFailureRef.current = failureKey;
+      const skillLabel = getSkillLabel(normalizedSlug);
+      const message = `Unlock the ${skillLabel} skill to perform the ${stage.name} stage.`;
+
+      setPerformanceFailed(true);
+      setFailureReason(message);
+      setFailedStage(stage.name);
+      setIsPerforming(false);
+      setShowResults(true);
+      setTotalEarnings(0);
+      setFameChange(0);
+      setPenaltyAmount(0);
+
+      const failureFeedback = `The ${skillLabel} skill is currently locked. Unlock it to progress.`;
+      const failureResult: StageResult = {
+        stageName: stage.name,
+        score: 0,
+        audienceReaction: { ...audienceReaction },
+        feedback: [failureFeedback],
+        bonuses: [],
+      };
+
+      const existingIndex = stageResults.findIndex(result => result.stageName === stage.name);
+      const nextResults = existingIndex >= 0
+        ? stageResults.map((result, index) => (index === existingIndex ? failureResult : result))
+        : [...stageResults, failureResult];
+
+      setStageResults(nextResults);
+      const totalScore = nextResults.reduce((sum, result) => sum + result.score, 0);
+      const averageScore = nextResults.length > 0 ? totalScore / nextResults.length : 0;
+      setFinalScore(averageScore);
+    },
+    [audienceReaction, getSkillLabel, stageResults]
+  );
+
+  const ensureStageRequirementsUnlocked = useCallback(
+    (stage: PerformanceStage) => {
+      const lockedEntry = Object.keys(stage.skillRequirements).find(skillSlug => !isSkillUnlocked(skillSlug));
+
+      if (lockedEntry) {
+        handleLockedSkillFailure(stage, lockedEntry);
+        return false;
+      }
+
+      return true;
+    },
+    [handleLockedSkillFailure, isSkillUnlocked]
+  );
+
+  const resolvePlayerSkillValue = useCallback(
+    (stage: PerformanceStage, skillSlug: string) => {
+      const normalizedSlug = skillSlug.toLowerCase();
+
+      if (!isSkillUnlocked(normalizedSlug)) {
+        handleLockedSkillFailure(stage, normalizedSlug);
+        return 0;
+      }
+
+      const value = skills?.[normalizedSlug as keyof PlayerSkills];
+      if (typeof value === 'number') {
+        return value;
+      }
+
+      handleLockedSkillFailure(stage, normalizedSlug);
+      return 0;
+    },
+    [handleLockedSkillFailure, isSkillUnlocked, skills]
+  );
+
+  const lockedStageWarnings = useMemo(() => {
+    return stageRequirementDetails.flatMap(detail =>
+      detail.requirements
+        .filter(requirement => requirement.locked)
+        .map(requirement => ({
+          stageName: detail.stage.name,
+          skillName: requirement.skillName,
+        }))
+    );
+  }, [stageRequirementDetails]);
   const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
     const source = attributes as unknown as Record<string, unknown> | null;
     return {
@@ -228,6 +416,7 @@ const AdvancedGigSystem: React.FC = () => {
   }, [user, loadGig]);
 
   const startPerformance = () => {
+    lockedFailureRef.current = null;
     setIsPerforming(true);
     setCurrentStage(0);
     setStageProgress(0);
@@ -250,6 +439,9 @@ const AdvancedGigSystem: React.FC = () => {
   const performStage = async (stageIndex: number) => {
     const stage = performanceStages[stageIndex];
     if (!stage) return;
+    if (!ensureStageRequirementsUnlocked(stage)) {
+      return;
+    }
     const stageDuration = stage.duration;
     const interval = stageDuration / 100;
 
@@ -275,11 +467,18 @@ const AdvancedGigSystem: React.FC = () => {
 
     const stage = performanceStages[stageIndex];
     if (!stage) return;
+    if (!ensureStageRequirementsUnlocked(stage)) {
+      return;
+    }
     const behavior = SHOW_TYPE_BEHAVIOR[currentShowType] ?? SHOW_TYPE_BEHAVIOR[DEFAULT_SHOW_TYPE];
-    const skillLevel = Object.entries(stage.skillRequirements).reduce((avg, [skill, req]) => {
-      const playerSkill = skills?.[skill as keyof PlayerSkills] ?? 0;
-      return avg + (playerSkill / req);
-    }, 0) / Object.keys(stage.skillRequirements).length;
+    const skillEntries = Object.entries(stage.skillRequirements);
+    const skillLevel = skillEntries.reduce((avg, [skill, req]) => {
+      const playerSkill = resolvePlayerSkillValue(stage, skill);
+      if (req <= 0) {
+        return avg;
+      }
+      return avg + playerSkill / req;
+    }, 0) / Math.max(skillEntries.length, 1);
 
     const venuePrestige = gig.venue.prestige_level;
     const baseReaction = Math.min(100, skillLevel * 80 * behavior.audienceEase + Math.random() * 20);
@@ -297,6 +496,9 @@ const AdvancedGigSystem: React.FC = () => {
 
     const stage = performanceStages[stageIndex];
     if (!stage) return;
+    if (!ensureStageRequirementsUnlocked(stage)) {
+      return;
+    }
     const behavior = SHOW_TYPE_BEHAVIOR[currentShowType] ?? SHOW_TYPE_BEHAVIOR[DEFAULT_SHOW_TYPE];
 
     // Calculate stage score based on skills vs requirements
@@ -305,20 +507,22 @@ const AdvancedGigSystem: React.FC = () => {
     const bonuses: string[] = [];
 
     Object.entries(stage.skillRequirements).forEach(([skill, requirement]) => {
-      const playerSkill = skills?.[skill as keyof PlayerSkills] ?? 0;
-      const skillRatio = playerSkill / requirement;
-      const weight = currentShowType === 'acoustic' && (skill === 'vocals' || skill === 'songwriting') ? 30 : 25;
+      const normalizedSkill = skill.toLowerCase();
+      const playerSkill = resolvePlayerSkillValue(stage, normalizedSkill);
+      const skillLabel = getSkillLabel(normalizedSkill);
+      const skillRatio = requirement > 0 ? playerSkill / requirement : 0;
+      const weight = currentShowType === 'acoustic' && (normalizedSkill === 'vocals' || normalizedSkill === 'songwriting') ? 30 : 25;
       stageScore += skillRatio * weight;
 
       if (skillRatio >= 1.5) {
-        feedback.push(`Exceptional ${skill} performance!`);
-        bonuses.push(`+20% ${skill} bonus`);
+        feedback.push(`Exceptional ${skillLabel} performance!`);
+        bonuses.push(`+20% ${skillLabel} bonus`);
       } else if (skillRatio >= 1.0) {
-        feedback.push(`Great ${skill} work!`);
+        feedback.push(`Great ${skillLabel} work!`);
       } else if (skillRatio >= 0.7) {
-        feedback.push(`Decent ${skill} performance`);
+        feedback.push(`Decent ${skillLabel} performance`);
       } else {
-        feedback.push(`${skill} needs improvement`);
+        feedback.push(`${skillLabel} needs improvement`);
       }
     });
 
@@ -645,6 +849,7 @@ const AdvancedGigSystem: React.FC = () => {
     const totalStages = Math.max(1, performanceStages.length);
     const currentStageData = performanceStages[currentStage] ?? performanceStages[0];
     const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
+    const currentStageRequirements = stageRequirementDetails[currentStage]?.requirements ?? [];
 
     return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -661,6 +866,22 @@ const AdvancedGigSystem: React.FC = () => {
             >
               {showTypeLabel}
             </Badge>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {currentStageRequirements.map(requirement => (
+                <Badge
+                  key={requirement.slug}
+                  variant={requirement.locked ? 'destructive' : 'outline'}
+                  className={`text-xs flex items-center gap-1 ${requirement.locked ? 'bg-destructive/10 text-destructive border-destructive/40' : ''}`}
+                  title={requirement.locked
+                    ? `Unlock ${requirement.skillName} to continue to this stage.`
+                    : `Required level ${requirement.requiredLevel}. Current level ${requirement.currentLevel}.`
+                  }
+                >
+                  {requirement.locked && <Lock className="w-3 h-3" />}
+                  {requirement.skillName}: {requirement.currentLevel}/{requirement.requiredLevel}
+                </Badge>
+              ))}
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
@@ -784,26 +1005,50 @@ const AdvancedGigSystem: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-3">Performance Stages</h3>
             <div className="space-y-2">
-                {stagePlan.map((stage, index) => (
-                  <div key={index} className="p-3 bg-muted rounded-lg">
-                    <div className="font-medium">{stage.name}</div>
-                    <div className="text-sm text-muted-foreground">{stage.description}</div>
-                    <div className="flex gap-2 mt-1">
-                      {Object.entries(stage.skillRequirements).map(([skill, level]) => (
-                        <Badge key={skill} variant="outline" className="text-xs">
-                          {skill}: {level}
-                        </Badge>
-                      ))}
+                {stagePlan.map((stage, index) => {
+                  const requirementDetails = stageRequirementDetails[index]?.requirements ?? [];
+                  return (
+                    <div key={index} className="p-3 bg-muted rounded-lg">
+                      <div className="font-medium">{stage.name}</div>
+                      <div className="text-sm text-muted-foreground">{stage.description}</div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {requirementDetails.map(requirement => (
+                          <Badge
+                            key={requirement.slug}
+                            variant={requirement.locked ? 'destructive' : 'outline'}
+                            className={`text-xs flex items-center gap-1 ${requirement.locked ? 'bg-destructive/10 text-destructive border-destructive/40' : ''}`}
+                            title={requirement.locked
+                              ? `Unlock ${requirement.skillName} to attempt the ${stage.name} stage.`
+                              : `Required level ${requirement.requiredLevel}. Current level ${requirement.currentLevel}.`
+                            }
+                          >
+                            {requirement.locked && <Lock className="w-3 h-3" />}
+                            {requirement.skillName}: {requirement.currentLevel}/{requirement.requiredLevel}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
 
           <div className="text-center">
-            <Button 
-              onClick={startPerformance} 
+            {lockedStageWarnings.length > 0 && (
+              <div className="mb-4 text-sm text-destructive bg-destructive/10 border border-destructive/40 rounded-md p-3 text-left">
+                <div className="font-medium">Locked skill requirements detected:</div>
+                <ul className="mt-1 space-y-1">
+                  {lockedStageWarnings.map((warning, index) => (
+                    <li key={`${warning.stageName}-${warning.skillName}-${index}`}>
+                      • {warning.stageName}: Unlock {warning.skillName}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <Button
+              onClick={startPerformance}
               size="lg"
               className="w-full md:w-auto"
             >
