@@ -75,6 +75,7 @@ interface GameDataContextValue {
   ) => Promise<ActivityItem | undefined>;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
+  resetCharacter: () => Promise<void>;
   refetch: () => Promise<void>;
   resetCharacter: () => Promise<void>;
 }
@@ -639,6 +640,27 @@ const useProvideGameData = (): GameDataContextValue => {
     return fetchCharacters();
   }, [fetchCharacters]);
 
+  const resetCharacter = useCallback(async () => {
+    if (!user || !selectedCharacterId) {
+      throw new Error('No active character selected.');
+    }
+
+    try {
+      const { error: resetError } = await supabase.rpc('reset_player_character');
+
+      if (resetError) {
+        throw resetError;
+      }
+
+      await refreshCharacters();
+      await fetchGameData();
+    } catch (err) {
+      console.error('Error resetting character:', err);
+      setError(extractErrorMessage(err));
+      throw err;
+    }
+  }, [user, selectedCharacterId, refreshCharacters, fetchGameData]);
+
   const refetch = useCallback(async () => {
     await fetchGameData();
   }, [fetchGameData]);
@@ -691,8 +713,8 @@ const useProvideGameData = (): GameDataContextValue => {
     addActivity,
     createCharacter,
     refreshCharacters,
-    refetch,
-    resetCharacter
+    resetCharacter,
+    refetch
   };
 };
 
