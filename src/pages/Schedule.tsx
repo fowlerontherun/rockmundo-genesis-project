@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData, type PlayerProfile, type PlayerSkills, type PlayerAttributes } from "@/hooks/useGameData";
+import { useGameData, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
+import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar as CalendarIcon,
@@ -160,6 +161,17 @@ type SkillGainKey =
   | "bass";
 
 type SkillGains = Partial<Record<SkillGainKey, number>>;
+
+type PlayerAttributes = Tables<'player_attributes'>;
+
+const ATTRIBUTE_SCALE = 100;
+const ATTRIBUTE_GAIN_KEYS = new Set<SkillGainKey>([
+  "technical",
+  "composition",
+  "business",
+  "marketing",
+  "creativity",
+]);
 
 const EVENT_REWARD_CONFIG: Record<
   EventType,
@@ -725,7 +737,15 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, attributes, updateProfile, updateSkills, addActivity, refetch } = useGameData();
+  const {
+    profile,
+    skills,
+    selectedCharacterId,
+    updateProfile,
+    updateSkills,
+    addActivity,
+    refetch,
+  } = useGameData();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -744,7 +764,8 @@ const Schedule = () => {
   const notifiedEventsRef = useRef<Set<string>>(new Set());
   const profileRef = useRef<PlayerProfile | null>(profile);
   const skillsRef = useRef<PlayerSkills | null>(skills);
-  const attributesRef = useRef<PlayerAttributes | null>(attributes);
+  const attributesRef = useRef<PlayerAttributes | null>(null);
+  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -753,9 +774,48 @@ const Schedule = () => {
   useEffect(() => {
     skillsRef.current = skills;
   }, [skills]);
+
   useEffect(() => {
     attributesRef.current = attributes;
   }, [attributes]);
+
+  useEffect(() => {
+    if (!user || !selectedCharacterId) {
+      setAttributes(null);
+      attributesRef.current = null;
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadAttributes = async () => {
+      const { data, error } = await supabase
+        .from("player_attributes")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load player attributes:", error);
+        setAttributes(null);
+        attributesRef.current = null;
+        return;
+      }
+
+      setAttributes(data ?? null);
+      attributesRef.current = data ?? null;
+    };
+
+    void loadAttributes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCharacterId, user]);
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -1011,9 +1071,11 @@ const Schedule = () => {
       profileRef.current = updatedProfile;
 
       const activeSkills = skillsRef.current;
+      const activeAttributes = attributesRef.current;
       const skillSummaries: string[] = [];
-      if (reward.skillGains && activeSkills) {
+      if (reward.skillGains) {
         const skillUpdates: Partial<PlayerSkills> = {};
+        const attributeUpdates: Partial<PlayerAttributes> = {};
 
         for (const [key, delta] of Object.entries(reward.skillGains)) {
           const numericDelta = Number(delta ?? 0);
@@ -1022,15 +1084,35 @@ const Schedule = () => {
           }
 
           const skillKey = key as SkillGainKey;
-          const currentValue = Number(
-            activeSkills[skillKey as keyof PlayerSkills] ?? 0
-          );
-          const nextValue = Math.min(100, currentValue + numericDelta);
-          const actualGain = nextValue - currentValue;
+          if (ATTRIBUTE_GAIN_KEYS.has(skillKey)) {
+            if (!activeAttributes || !selectedCharacterId) {
+              continue;
+            }
+            const currentValue = Number(
+              activeAttributes[skillKey as keyof PlayerAttributes] ?? 0
+            );
+            const nextValue = Math.min(
+              1000,
+              currentValue + numericDelta * ATTRIBUTE_SCALE
+            );
+            const actualGain = nextValue - currentValue;
 
-          if (actualGain > 0) {
-            skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
-            skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
+            if (actualGain > 0) {
+              attributeUpdates[skillKey as keyof PlayerAttributes] = nextValue;
+              const displayGain = actualGain / ATTRIBUTE_SCALE;
+              skillSummaries.push(`+${displayGain} ${formatSkillLabel(skillKey)}`);
+            }
+          } else if (activeSkills) {
+            const currentValue = Number(
+              activeSkills[skillKey as keyof PlayerSkills] ?? 0
+            );
+            const nextValue = Math.min(100, currentValue + numericDelta);
+            const actualGain = nextValue - currentValue;
+
+            if (actualGain > 0) {
+              skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
+              skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
+            }
           }
         }
 
@@ -1038,6 +1120,25 @@ const Schedule = () => {
           const updatedSkills = await updateSkills(skillUpdates);
           if (updatedSkills) {
             skillsRef.current = updatedSkills;
+          }
+        }
+
+        if (Object.keys(attributeUpdates).length > 0 && selectedCharacterId) {
+          const { data: updatedAttributes, error: attributeError } = await supabase
+            .from("player_attributes")
+            .update(attributeUpdates)
+            .eq("profile_id", selectedCharacterId)
+            .select("*")
+            .single();
+
+          if (attributeError) {
+            console.error("Error updating attributes:", attributeError);
+            throw attributeError;
+          }
+
+          if (updatedAttributes) {
+            attributesRef.current = updatedAttributes;
+            setAttributes(updatedAttributes);
           }
         }
       }
@@ -1072,7 +1173,7 @@ const Schedule = () => {
         rewardLabel: reward.label,
       };
     },
-    [addActivity, refetch, updateProfile, updateSkills, user]
+    [addActivity, refetch, selectedCharacterId, updateProfile, updateSkills, user]
   );
 
   const handleFormChange = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {

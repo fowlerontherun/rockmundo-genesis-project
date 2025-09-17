@@ -87,10 +87,42 @@ const defaultSkills = {
 
 type SkillKey = keyof typeof defaultSkills;
 
+const SKILL_SCALE_FACTORS: Record<SkillKey, number> = {
+  guitar: 10,
+  vocals: 10,
+  drums: 10,
+  bass: 10,
+  performance: 10,
+  songwriting: 10,
+  composition: 100,
+  creativity: 100,
+  business: 100,
+  marketing: 100,
+  technical: 100,
+};
+
+const INSTRUMENT_KEYS: SkillKey[] = [
+  "guitar",
+  "vocals",
+  "drums",
+  "bass",
+  "performance",
+  "songwriting",
+];
+
+const ATTRIBUTE_KEYS: SkillKey[] = [
+  "composition",
+  "creativity",
+  "business",
+  "marketing",
+  "technical",
+];
+
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
 type PlayerSkillsInsert = TablesInsert<"player_skills">;
+type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
@@ -163,7 +195,7 @@ const CharacterCreation = () => {
       setLoadError(null);
 
       try {
-        const [profileResponse, skillsResponse] = await Promise.all([
+        const [profileResponse, skillsResponse, attributesResponse] = await Promise.all([
           supabase
             .from("profiles")
             .select(
@@ -173,7 +205,12 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_skills")
-            .select("id, profile_id, guitar, vocals, drums, bass, performance, songwriting, composition, technical")
+            .select("id, profile_id, guitar, vocals, drums, bass, performance, songwriting")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("player_attributes")
+            .select("id, profile_id, composition, creativity, business, marketing, technical")
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
@@ -184,6 +221,10 @@ const CharacterCreation = () => {
 
         if (skillsResponse.error) {
           throw skillsResponse.error;
+        }
+
+        if (attributesResponse.error) {
+          throw attributesResponse.error;
         }
 
         if (profileResponse.data) {
@@ -218,19 +259,35 @@ const CharacterCreation = () => {
           setUsernameEdited(false);
         }
 
+        const mergedSkills: Record<SkillKey, number> = { ...defaultSkills };
+
         if (skillsResponse.data) {
-          setSkills((prev) => {
-            const updated = { ...prev };
-            (Object.entries(skillsResponse.data) as [string, number | null][]).forEach(
-              ([key, value]) => {
-                if (key in prev && typeof value === "number") {
-                  updated[key as SkillKey] = value;
-                }
-              }
-            );
-            return updated;
+          INSTRUMENT_KEYS.forEach((key) => {
+            const dbValue = skillsResponse.data?.[key];
+            if (typeof dbValue === "number") {
+              const factor = SKILL_SCALE_FACTORS[key];
+              mergedSkills[key] = Math.max(
+                MIN_SKILL_VALUE,
+                Math.round(dbValue / factor)
+              );
+            }
           });
         }
+
+        if (attributesResponse.data) {
+          ATTRIBUTE_KEYS.forEach((key) => {
+            const dbValue = attributesResponse.data?.[key];
+            if (typeof dbValue === "number") {
+              const factor = SKILL_SCALE_FACTORS[key];
+              mergedSkills[key] = Math.max(
+                MIN_SKILL_VALUE,
+                Math.round(dbValue / factor)
+              );
+            }
+          });
+        }
+
+        setSkills(mergedSkills);
       } catch (error) {
         console.error("Failed to load character data:", error);
         setLoadError("We couldn't load your character data. You can still create a new persona.");
@@ -425,6 +482,60 @@ const CharacterCreation = () => {
       city_of_birth: cityOfBirth,
     };
 
+    const skillPayload: PlayerSkillsInsert = {
+      user_id: user.id,
+      profile_id: existingProfile?.id,
+      guitar: Math.min(
+        SKILL_SCALE_FACTORS.guitar * skills.guitar,
+        SKILL_SCALE_FACTORS.guitar * MAX_SKILL_VALUE
+      ),
+      vocals: Math.min(
+        SKILL_SCALE_FACTORS.vocals * skills.vocals,
+        SKILL_SCALE_FACTORS.vocals * MAX_SKILL_VALUE
+      ),
+      drums: Math.min(
+        SKILL_SCALE_FACTORS.drums * skills.drums,
+        SKILL_SCALE_FACTORS.drums * MAX_SKILL_VALUE
+      ),
+      bass: Math.min(
+        SKILL_SCALE_FACTORS.bass * skills.bass,
+        SKILL_SCALE_FACTORS.bass * MAX_SKILL_VALUE
+      ),
+      performance: Math.min(
+        SKILL_SCALE_FACTORS.performance * skills.performance,
+        SKILL_SCALE_FACTORS.performance * MAX_SKILL_VALUE
+      ),
+      songwriting: Math.min(
+        SKILL_SCALE_FACTORS.songwriting * skills.songwriting,
+        SKILL_SCALE_FACTORS.songwriting * MAX_SKILL_VALUE
+      ),
+    };
+
+    const attributesPayload: PlayerAttributesInsert = {
+      user_id: user.id,
+      profile_id: existingProfile?.id,
+      composition: Math.min(
+        SKILL_SCALE_FACTORS.composition * skills.composition,
+        SKILL_SCALE_FACTORS.composition * MAX_SKILL_VALUE
+      ),
+      creativity: Math.min(
+        SKILL_SCALE_FACTORS.creativity * skills.creativity,
+        SKILL_SCALE_FACTORS.creativity * MAX_SKILL_VALUE
+      ),
+      business: Math.min(
+        SKILL_SCALE_FACTORS.business * skills.business,
+        SKILL_SCALE_FACTORS.business * MAX_SKILL_VALUE
+      ),
+      marketing: Math.min(
+        SKILL_SCALE_FACTORS.marketing * skills.marketing,
+        SKILL_SCALE_FACTORS.marketing * MAX_SKILL_VALUE
+      ),
+      technical: Math.min(
+        SKILL_SCALE_FACTORS.technical * skills.technical,
+        SKILL_SCALE_FACTORS.technical * MAX_SKILL_VALUE
+      ),
+    };
+
     try {
       const { data: upsertedProfile, error: profileError } = await supabase
         .from("profiles")
@@ -463,7 +574,7 @@ const CharacterCreation = () => {
 
       const { error: attributesError } = await supabase
         .from("player_attributes")
-        .upsert({ profile_id: upsertedProfile.id }, { onConflict: "profile_id" });
+        .upsert(attributesPayload, { onConflict: "user_id" });
 
       if (attributesError) {
         throw attributesError;

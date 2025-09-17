@@ -1618,45 +1618,39 @@ export type Database = {
       player_skills: {
         Row: {
           bass: number
-          composition: number
           created_at: string | null
           drums: number
           guitar: number
           id: string
           performance: number
-          profile_id: string
+          profile_id: string | null
           songwriting: number
-          technical: number
           updated_at: string | null
           user_id: string
           vocals: number
         }
         Insert: {
           bass?: number
-          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
           id?: string
           performance?: number
-          profile_id: string
+          profile_id?: string | null
           songwriting?: number
-          technical?: number
           updated_at?: string | null
           user_id: string
           vocals?: number
         }
         Update: {
           bass?: number
-          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
           id?: string
           performance?: number
-          profile_id?: string
+          profile_id?: string | null
           songwriting?: number
-          technical?: number
           updated_at?: string | null
           user_id?: string
           vocals?: number
@@ -1668,46 +1662,54 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
-      profile_attributes: {
+      player_attributes: {
         Row: {
-          attribute_id: string
-          created_at: string
-          profile_id: string
-          updated_at: string
-          value: number
+          business: number
+          composition: number
+          created_at: string | null
+          creativity: number
+          id: string
+          marketing: number
+          profile_id: string | null
+          technical: number
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
-          attribute_id: string
-          created_at?: string
-          profile_id: string
-          updated_at?: string
-          value: number
+          business?: number
+          composition?: number
+          created_at?: string | null
+          creativity?: number
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
-          attribute_id?: string
-          created_at?: string
-          profile_id?: string
-          updated_at?: string
-          value?: number
+          business?: number
+          composition?: number
+          created_at?: string | null
+          creativity?: number
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "profile_attributes_attribute_id_fkey"
-            columns: ["attribute_id"]
-            isOneToOne: false
-            referencedRelation: "attribute_definitions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_attributes_profile_id_fkey"
+            foreignKeyName: "player_attributes_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       player_streaming_accounts: {
