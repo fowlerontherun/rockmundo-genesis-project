@@ -1665,6 +1665,72 @@ export type Database = {
           },
         ]
       }
+      profile_skill_progress: {
+        Row: {
+          created_at: string | null
+          current_level: number
+          current_xp: number
+          id: string
+          profile_id: string
+          skill_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_level?: number
+          current_xp?: number
+          id?: string
+          profile_id: string
+          skill_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_level?: number
+          current_xp?: number
+          id?: string
+          profile_id?: string
+          skill_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profile_skill_unlocks: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_unlocked: boolean
+          profile_id: string
+          skill_id: string
+          unlocked_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_unlocked?: boolean
+          profile_id: string
+          skill_id: string
+          unlocked_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_unlocked?: boolean
+          profile_id?: string
+          skill_id?: string
+          unlocked_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_attributes: {
         Row: {
           business: number
@@ -2024,6 +2090,54 @@ export type Database = {
           status?: "active" | "completed"
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      skill_definitions: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_default_unlocked: boolean | null
+          label: string
+          max_level: number | null
+          slug: string
+          sort_order: number | null
+          starting_experience: number | null
+          starting_level: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default_unlocked?: boolean | null
+          label: string
+          max_level?: number | null
+          slug: string
+          sort_order?: number | null
+          starting_experience?: number | null
+          starting_level?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default_unlocked?: boolean | null
+          label?: string
+          max_level?: number | null
+          slug?: string
+          sort_order?: number | null
+          starting_experience?: number | null
+          starting_level?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }

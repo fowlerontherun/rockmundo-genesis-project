@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   SparklesIcon,
   Wand2,
@@ -34,6 +34,12 @@ import {
 } from "@/data/avatarPresets";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth-context";
+import {
+  useGameData,
+  type SkillDefinition,
+  type SkillProgressUpsertInput,
+  type SkillUnlockUpsertInput,
+} from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
@@ -118,7 +124,6 @@ const ATTRIBUTE_KEYS: SkillKey[] = [
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
-type PlayerSkillsInsert = TablesInsert<"player_skills">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
@@ -152,6 +157,14 @@ const CharacterCreation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const {
+    skillDefinitions: contextSkillDefinitions,
+    upsertSkillProgress,
+    upsertSkillUnlocks,
+  } = useGameData();
+
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
+  const [hasRequestedSkillDefinitions, setHasRequestedSkillDefinitions] = useState(false);
 
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
@@ -204,6 +217,38 @@ const CharacterCreation = () => {
       navigate("/auth");
     }
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (contextSkillDefinitions.length > 0) {
+      setSkillDefinitions(contextSkillDefinitions);
+      return;
+    }
+
+    if (hasRequestedSkillDefinitions) {
+      return;
+    }
+
+    setHasRequestedSkillDefinitions(true);
+
+    const fetchSkillDefinitions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("skill_definitions")
+          .select("*")
+          .order("sort_order", { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        setSkillDefinitions((data as SkillDefinition[] | null) ?? []);
+      } catch (error) {
+        console.error("Failed to load skill definitions:", error);
+      }
+    };
+
+    void fetchSkillDefinitions();
+  }, [contextSkillDefinitions, hasRequestedSkillDefinitions]);
 
   useEffect(() => {
     const fetchExistingData = async () => {
@@ -565,31 +610,6 @@ const CharacterCreation = () => {
       ),
     };
 
-    const attributesPayload: PlayerAttributesInsert = {
-      user_id: user.id,
-      profile_id: existingProfile?.id,
-      composition: Math.min(
-        SKILL_SCALE_FACTORS.composition * skills.composition,
-        SKILL_SCALE_FACTORS.composition * MAX_SKILL_VALUE
-      ),
-      creativity: Math.min(
-        SKILL_SCALE_FACTORS.creativity * skills.creativity,
-        SKILL_SCALE_FACTORS.creativity * MAX_SKILL_VALUE
-      ),
-      business: Math.min(
-        SKILL_SCALE_FACTORS.business * skills.business,
-        SKILL_SCALE_FACTORS.business * MAX_SKILL_VALUE
-      ),
-      marketing: Math.min(
-        SKILL_SCALE_FACTORS.marketing * skills.marketing,
-        SKILL_SCALE_FACTORS.marketing * MAX_SKILL_VALUE
-      ),
-      technical: Math.min(
-        SKILL_SCALE_FACTORS.technical * skills.technical,
-        SKILL_SCALE_FACTORS.technical * MAX_SKILL_VALUE
-      ),
-    };
-
     try {
       const { data: upsertedProfile, error: profileError } = await supabase
         .from("profiles")
@@ -605,25 +625,73 @@ const CharacterCreation = () => {
         throw new Error("Profile save did not return any data.");
       }
 
-      const skillPayload: PlayerSkillsInsert = {
+      const attributesPayload: PlayerAttributesInsert = {
         user_id: user.id,
         profile_id: upsertedProfile.id,
-        guitar: skills.guitar,
-        vocals: skills.vocals,
-        drums: skills.drums,
-        bass: skills.bass,
-        performance: skills.performance,
-        songwriting: skills.songwriting,
-        composition: skills.composition,
-        technical: skills.technical,
+        composition: Math.min(
+          SKILL_SCALE_FACTORS.composition * skills.composition,
+          SKILL_SCALE_FACTORS.composition * MAX_SKILL_VALUE
+        ),
+        creativity: Math.min(
+          SKILL_SCALE_FACTORS.creativity * skills.creativity,
+          SKILL_SCALE_FACTORS.creativity * MAX_SKILL_VALUE
+        ),
+        business: Math.min(
+          SKILL_SCALE_FACTORS.business * skills.business,
+          SKILL_SCALE_FACTORS.business * MAX_SKILL_VALUE
+        ),
+        marketing: Math.min(
+          SKILL_SCALE_FACTORS.marketing * skills.marketing,
+          SKILL_SCALE_FACTORS.marketing * MAX_SKILL_VALUE
+        ),
+        technical: Math.min(
+          SKILL_SCALE_FACTORS.technical * skills.technical,
+          SKILL_SCALE_FACTORS.technical * MAX_SKILL_VALUE
+        ),
       };
 
-      const { error: skillsError } = await supabase
-        .from("player_skills")
-        .upsert(skillPayload, { onConflict: "profile_id" });
+      if (skillDefinitions.length > 0) {
+        const progressEntries: SkillProgressUpsertInput[] = [];
+        const unlockEntries: SkillUnlockUpsertInput[] = [];
 
-      if (skillsError) {
-        throw skillsError;
+        skillDefinitions.forEach((definition) => {
+          if (!definition?.id) {
+            return;
+          }
+
+          const slug = definition.slug as SkillKey;
+          const assignedValue = slug in skills ? skills[slug as SkillKey] : undefined;
+          const defaultLevel = Number.isFinite(definition.starting_level)
+            ? Number(definition.starting_level)
+            : MIN_SKILL_VALUE;
+          const normalizedLevel = Math.max(
+            MIN_SKILL_VALUE,
+            Math.min(MAX_SKILL_VALUE, assignedValue ?? defaultLevel),
+          );
+
+          progressEntries.push({
+            skill_id: definition.id,
+            current_level: normalizedLevel,
+            current_xp: Number.isFinite(definition.starting_experience)
+              ? Number(definition.starting_experience)
+              : 0,
+          });
+
+          const unlockedByDefault = Boolean(definition.is_default_unlocked);
+          unlockEntries.push({
+            skill_id: definition.id,
+            is_unlocked: unlockedByDefault,
+            unlocked_at: unlockedByDefault ? new Date().toISOString() : null,
+          });
+        });
+
+        if (progressEntries.length > 0) {
+          await upsertSkillProgress(upsertedProfile.id, progressEntries);
+        }
+
+        if (unlockEntries.length > 0) {
+          await upsertSkillUnlocks(upsertedProfile.id, unlockEntries);
+        }
       }
 
       const { error: attributesError } = await supabase
