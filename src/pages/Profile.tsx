@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -191,6 +192,11 @@ const Profile = () => {
       "Prefer not to say"
     );
   }, [profile?.gender]);
+
+  const profileAvatarPreview = useMemo(
+    () => getStoredAvatarPreviewUrl(profile?.avatar_url ?? null),
+    [profile?.avatar_url],
+  );
 
   useEffect(() => {
     if (!user) {
@@ -421,7 +427,7 @@ const Profile = () => {
                   <div className="flex flex-col items-center space-y-4">
                     <div className="relative">
                       <Avatar className="h-32 w-32">
-                        <AvatarImage src={profile.avatar_url || ""} />
+                        <AvatarImage src={profileAvatarPreview ?? undefined} />
                         <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
                           {(profile.display_name || profile.username || 'U')[0].toUpperCase()}
                         </AvatarFallback>
