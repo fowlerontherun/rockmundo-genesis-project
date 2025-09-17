@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP, type AttributeKey } from "@/utils/attributeProgression";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -218,6 +219,14 @@ const EVENT_REWARD_CONFIG: Record<
     fame: 60,
     skillGains: { performance: 3, marketing: 2, vocals: 2 },
   },
+};
+
+const EVENT_ATTRIBUTE_MULTIPLIERS: Record<EventType, AttributeKey[]> = {
+  gig: ["stage_presence", "musical_ability"],
+  recording: ["technical_mastery", "creative_insight"],
+  rehearsal: ["musical_ability", "rhythm_sense"],
+  meeting: ["business_acumen", "marketing_savvy"],
+  tour: ["stage_presence", "vocal_talent"],
 };
 
 const formatSkillLabel = (skill: string) => skill.charAt(0).toUpperCase() + skill.slice(1);
@@ -737,15 +746,7 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const {
-    profile,
-    skills,
-    selectedCharacterId,
-    updateProfile,
-    updateSkills,
-    addActivity,
-    refetch,
-  } = useGameData();
+  const { profile, skills, attributes, updateProfile, updateSkills, addActivity, refetch } = useGameData();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -764,8 +765,7 @@ const Schedule = () => {
   const notifiedEventsRef = useRef<Set<string>>(new Set());
   const profileRef = useRef<PlayerProfile | null>(profile);
   const skillsRef = useRef<PlayerSkills | null>(skills);
-  const attributesRef = useRef<PlayerAttributes | null>(null);
-  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
+  const attributesRef = useRef(attributes);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -778,44 +778,6 @@ const Schedule = () => {
   useEffect(() => {
     attributesRef.current = attributes;
   }, [attributes]);
-
-  useEffect(() => {
-    if (!user || !selectedCharacterId) {
-      setAttributes(null);
-      attributesRef.current = null;
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadAttributes = async () => {
-      const { data, error } = await supabase
-        .from("player_attributes")
-        .select("*")
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        console.error("Failed to load player attributes:", error);
-        setAttributes(null);
-        attributesRef.current = null;
-        return;
-      }
-
-      setAttributes(data ?? null);
-      attributesRef.current = data ?? null;
-    };
-
-    void loadAttributes();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedCharacterId, user]);
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -1039,8 +1001,10 @@ const Schedule = () => {
           ? applyCostReduction(baseEnergyCost, activeAttributes?.physical_endurance)
           : 0;
 
+      const attributeKeys = EVENT_ATTRIBUTE_MULTIPLIERS[event.type] ?? [];
+      const experienceResult = applyAttributeToValue(reward.experience, attributesRef.current, attributeKeys);
       const newCash = currentCash + reward.cash;
-      const newExperience = currentExperience + reward.experience;
+      const newExperience = currentExperience + experienceResult.value;
       const newFame = Math.max(0, currentFame + reward.fame);
 
       profileUpdates.cash = newCash;
@@ -1084,35 +1048,17 @@ const Schedule = () => {
           }
 
           const skillKey = key as SkillGainKey;
-          if (ATTRIBUTE_GAIN_KEYS.has(skillKey)) {
-            if (!activeAttributes || !selectedCharacterId) {
-              continue;
-            }
-            const currentValue = Number(
-              activeAttributes[skillKey as keyof PlayerAttributes] ?? 0
-            );
-            const nextValue = Math.min(
-              1000,
-              currentValue + numericDelta * ATTRIBUTE_SCALE
-            );
-            const actualGain = nextValue - currentValue;
+          const currentValue = Number(
+            activeSkills[skillKey as keyof PlayerSkills] ?? 0
+          );
+          const attributeForSkill = SKILL_ATTRIBUTE_MAP[skillKey as string];
+          const skillResult = applyAttributeToValue(numericDelta, attributesRef.current, attributeForSkill);
+          const nextValue = Math.min(100, currentValue + skillResult.value);
+          const actualGain = nextValue - currentValue;
 
-            if (actualGain > 0) {
-              attributeUpdates[skillKey as keyof PlayerAttributes] = nextValue;
-              const displayGain = actualGain / ATTRIBUTE_SCALE;
-              skillSummaries.push(`+${displayGain} ${formatSkillLabel(skillKey)}`);
-            }
-          } else if (activeSkills) {
-            const currentValue = Number(
-              activeSkills[skillKey as keyof PlayerSkills] ?? 0
-            );
-            const nextValue = Math.min(100, currentValue + numericDelta);
-            const actualGain = nextValue - currentValue;
-
-            if (actualGain > 0) {
-              skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
-              skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
-            }
+          if (actualGain > 0) {
+            skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
+            skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
           }
         }
 
@@ -1144,7 +1090,7 @@ const Schedule = () => {
       }
 
       const summarySegments = [
-        `+${reward.experience} XP`,
+        `+${experienceResult.value} XP`,
         `+${reward.fame} fame`,
         `+$${reward.cash.toLocaleString()} cash`,
       ];

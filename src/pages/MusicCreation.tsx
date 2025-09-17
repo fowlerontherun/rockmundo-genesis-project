@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP, type AttributeKey } from "@/utils/attributeProgression";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Music,
@@ -240,11 +241,12 @@ const slugifyName = (value: string): string =>
     .replace(/(^-|-$)+/g, "");
 
 const defaultEngineerName = "Self-produced";
+const RECORDING_ATTRIBUTE_KEYS: AttributeKey[] = ["technical_mastery", "creative_insight"];
 
 const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, updateProfile, updateSkills, addActivity } = useGameData();
+  const { profile, skills, attributes, updateProfile, updateSkills, addActivity } = useGameData();
 
   const [songs, setSongs] = useState<Song[]>([]);
   const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
@@ -897,16 +899,19 @@ const MusicCreation = () => {
       if (songError) throw songError;
 
       if (profile) {
+        const xpResult = applyAttributeToValue(session.quality_gain * 5, attributes, RECORDING_ATTRIBUTE_KEYS);
         await updateProfile({
           cash: Math.max(0, (profile.cash ?? 0) - session.total_cost),
-          experience: (profile.experience ?? 0) + session.quality_gain * 5
+          experience: (profile.experience ?? 0) + xpResult.value
         });
       }
 
       if (skills) {
+        const performanceGain = applyAttributeToValue(Math.round(session.quality_gain / 4), attributes, SKILL_ATTRIBUTE_MAP.performance).value;
+        const vocalGain = applyAttributeToValue(Math.round(session.total_takes / 2), attributes, SKILL_ATTRIBUTE_MAP.vocals).value;
         await updateSkills({
-          performance: Math.min(100, skills.performance + Math.round(session.quality_gain / 4)),
-          vocals: Math.min(100, skills.vocals + Math.round(session.total_takes / 2))
+          performance: Math.min(100, skills.performance + performanceGain),
+          vocals: Math.min(100, skills.vocals + vocalGain)
         });
       }
 

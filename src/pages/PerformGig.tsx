@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
+import { applyAttributeToValue, type AttributeKey } from '@/utils/attributeProgression';
 import {
   Music,
   Users,
@@ -57,6 +58,8 @@ const SHOW_TYPE_RESULT_MODIFIERS: Record<ShowType, { payment: number; fan: numbe
 
 const getStagePreset = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
 
+const PERFORMANCE_ATTRIBUTE_KEYS: AttributeKey[] = ["stage_presence", "musical_ability"];
+
 interface Gig {
   id: string;
   venue: Venue;
@@ -81,7 +84,7 @@ const PerformGig = () => {
   const { gigId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, addActivity } = useGameData();
+  const { profile, attributes, addActivity } = useGameData();
   const { toast } = useToast();
   const toastRef = useRef(toast);
 
@@ -205,7 +208,9 @@ const PerformGig = () => {
     const finalEarnings = Math.floor(basePayment * performanceMultiplier);
 
     const baseFanGain = Math.floor(attendanceResult * 0.1 * modifiers.fan);
-    const expGain = Math.max(1, Math.floor((50 + (finalScore * 2) + (gig.venue.prestige_level * 10)) * modifiers.experience));
+    const baseExperienceGain = Math.max(1, Math.floor((50 + (finalScore * 2) + (gig.venue.prestige_level * 10)) * modifiers.experience));
+    const experienceResult = applyAttributeToValue(baseExperienceGain, attributes, PERFORMANCE_ATTRIBUTE_KEYS);
+    const expGain = experienceResult.value;
 
     setPerformance(prev => ({ ...prev, overall_score: finalScore }));
     setEarnings(finalEarnings);
