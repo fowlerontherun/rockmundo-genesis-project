@@ -43,7 +43,7 @@ interface Song {
   title: string;
   genre: string;
   quality_score: number;
-  lyrics: string;
+  lyrics: string | null;
   created_at: string;
   updated_at: string;
   status: 'draft' | 'recorded' | 'released';
@@ -52,6 +52,13 @@ interface Song {
   revenue: number;
   chart_position: number | null;
   release_date: string | null;
+  recording_cost: number | null;
+  production_cost: number | null;
+  mix_quality: number | null;
+  master_quality: number | null;
+  duration: number | null;
+  plays: number | null;
+  popularity: number | null;
 }
 
 const MusicStudio = () => {
@@ -135,11 +142,13 @@ const MusicStudio = () => {
   };
 
   const calculateMixingCost = (song: Song) => {
-    return Math.max(200, Math.round(song.recording_cost * 0.6));
+    const recordingCost = song.recording_cost ?? 0;
+    return Math.max(200, Math.round(recordingCost * 0.6));
   };
 
   const calculateMasteringCost = (song: Song) => {
-    return Math.max(150, Math.round(song.recording_cost * 0.4));
+    const recordingCost = song.recording_cost ?? 0;
+    return Math.max(150, Math.round(recordingCost * 0.4));
   };
 
   const calculateMixQualityBoost = () => {
@@ -275,11 +284,13 @@ const MusicStudio = () => {
   const recordSong = async (song: Song) => {
     if (!user || !profile) return;
 
-    if (profile.cash < song.recording_cost) {
+    const recordingCost = song.recording_cost ?? 0;
+
+    if (profile.cash < recordingCost) {
       toast({
         variant: "destructive",
         title: "Insufficient funds",
-        description: `Recording costs $${song.recording_cost} but you only have $${profile.cash}`,
+        description: `Recording costs $${recordingCost} but you only have $${profile.cash}`,
       });
       return;
     }
@@ -310,14 +321,16 @@ const MusicStudio = () => {
   const finishRecording = async (song: Song) => {
     if (!user || !profile) return;
 
+    const recordingCost = song.recording_cost ?? 0;
+
     try {
       // Deduct recording cost
-      await updateProfile({ cash: profile.cash - song.recording_cost });
+      await updateProfile({ cash: profile.cash - recordingCost });
 
       // Update song status and potentially improve quality based on skills
       const skillBonus = Math.round((skills?.performance || 0) / 10);
       const newQuality = Math.min(100, song.quality_score + skillBonus);
-      const newProductionCost = (song.production_cost ?? 0) + song.recording_cost;
+      const newProductionCost = (song.production_cost ?? 0) + recordingCost;
 
       const { error } = await supabase
         .from('songs')
@@ -346,7 +359,7 @@ const MusicStudio = () => {
           : s
       ));
 
-      await addActivity('creative', `Recorded "${song.title}"`, -song.recording_cost);
+      await addActivity('creative', `Recorded "${song.title}"`, -recordingCost);
 
       toast({
         title: "Recording complete!",
@@ -777,6 +790,10 @@ const MusicStudio = () => {
                     const mixCost = calculateMixingCost(song);
                     const masterCost = calculateMasteringCost(song);
                     const productionCost = song.production_cost ?? 0;
+                    const recordingCost = song.recording_cost ?? 0;
+                    const duration = song.duration ?? 0;
+                    const plays = song.plays ?? 0;
+                    const popularity = song.popularity ?? 0;
                     const isProcessingSong = activeProcess && selectedSong?.id === song.id;
                     const isRecordingInProgress = Boolean(isProcessingSong && activeProcess === 'recording');
                     const isMixingInProgress = Boolean(isProcessingSong && activeProcess === 'mixing');
@@ -793,7 +810,7 @@ const MusicStudio = () => {
                           <div className="flex items-start justify-between">
                             <div>
                               <CardTitle className="text-lg">{song.title}</CardTitle>
-                              <CardDescription>{song.genre} • {formatDuration(song.duration)}</CardDescription>
+                              <CardDescription>{song.genre} • {formatDuration(duration)}</CardDescription>
                             </div>
                             <Badge className={getStatusColor(stageStatus)} variant="outline">
                               {stageStatus.charAt(0).toUpperCase() + stageStatus.slice(1)}
@@ -837,10 +854,10 @@ const MusicStudio = () => {
                                     </Badge>
                                   ) : (
                                     <>
-                                      <span className="text-sm text-muted-foreground">Cost: ${song.recording_cost.toLocaleString()}</span>
+                                      <span className="text-sm text-muted-foreground">Cost: ${recordingCost.toLocaleString()}</span>
                                       <Button
                                         onClick={() => recordSong(song)}
-                                        disabled={Boolean(activeProcess) || (profile?.cash || 0) < song.recording_cost}
+                                        disabled={Boolean(activeProcess) || (profile?.cash || 0) < recordingCost}
                                         size="sm"
                                         className="gap-2"
                                       >
@@ -959,11 +976,11 @@ const MusicStudio = () => {
                             <div className="space-y-2 rounded-lg bg-secondary/20 p-3">
                               <div className="flex justify-between text-sm">
                                 <span>Plays:</span>
-                                <span className="font-bold">{song.plays.toLocaleString()}</span>
+                                <span className="font-bold">{plays.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span>Popularity:</span>
-                                <span className="font-bold">{song.popularity}/100</span>
+                                <span className="font-bold">{popularity}/100</span>
                               </div>
                             </div>
                           )}
