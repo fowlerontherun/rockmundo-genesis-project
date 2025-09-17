@@ -138,7 +138,6 @@ const BandManager = () => {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<BandInvitation[]>([]);
   const [acceptingInviteId, setAcceptingInviteId] = useState<string | null>(null);
-
   const loadBandMembers = useCallback(async (bandId: string) => {
     if (!user?.id) return;
 
