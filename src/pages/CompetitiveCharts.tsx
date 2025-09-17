@@ -494,7 +494,7 @@ const CompetitiveCharts: React.FC = () => {
       supabase.removeChannel(rankingChannel);
       supabase.removeChannel(competitionsChannel);
     };
-  }, [userId, handleRankingRealtime, handleCompetitionRealtime]);
+  }, [user, handleRankingRealtime, handleCompetitionRealtime]);
 
   const registerForCompetition = async (competitionId: string) => {
     if (!profile || !user) return;
