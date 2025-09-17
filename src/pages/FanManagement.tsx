@@ -81,6 +81,10 @@ type MessageFormState = {
   message: string;
 };
 
+declare const applyScheduledPostEffects:
+  | ((posts: SocialPost[], activityDescription: string) => Promise<void> | void)
+  | undefined;
+
 const PLATFORM_OPTIONS = [
   { value: "instagram", label: "Instagram" },
   { value: "twitter", label: "Twitter / X" },
