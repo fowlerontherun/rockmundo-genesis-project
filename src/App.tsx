@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import Index from "./pages/Index";
@@ -49,52 +49,56 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <GameDataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<Layout />}>
-                  <Route index element={<Index />} />
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="band" element={<BandManager />} />
-                  <Route path="gigs" element={<GigBooking />} />
-                  <Route path="gigs/perform/:gigId" element={<PerformGig />} />
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="music" element={<MusicStudio />} />
-                  <Route path="charts" element={<WorldPulse />} />
-                  <Route path="schedule" element={<Schedule />} />
-                  <Route path="equipment" element={<EquipmentStore />} />
-                  <Route path="fans" element={<FanManagement />} />
-                  <Route path="achievements" element={<Achievements />} />
-                  <Route path="tours" element={<TourManager />} />
-                  <Route path="labels" element={<RecordLabel />} />
-                  <Route path="social" element={<SocialMedia />} />
-                  <Route path="venues" element={<VenueManagement />} />
-                  <Route path="chemistry" element={<BandChemistry />} />
-                  <Route path="streaming" element={<StreamingPlatforms />} />
-                  <Route path="training" element={<SkillTraining />} />
-                  <Route path="create" element={<MusicCreation />} />
-                  <Route path="band-enhanced" element={<EnhancedBandManager />} />
-                  <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
-                  <Route path="fans-enhanced" element={<EnhancedFanManagement />} />
-                  <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
-                  <Route path="charts-competitive" element={<CompetitiveCharts />} />
-                  <Route path="tours-system" element={<TouringSystem />} />
-                  <Route path="admin" element={<AdminDashboard />} />
-                  <Route path="communication" element={<RealtimeCommunication />} />
-                  <Route path="world" element={<WorldEnvironment />} />
-                  <Route path="songs" element={<SongManager />} />
-                  <Route path="inventory" element={<InventoryManager />} />
-                  <Route path="statistics" element={<PlayerStatistics />} />
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </GameDataProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Index />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="band" element={<BandManager />} />
+                <Route path="gigs" element={<GigBooking />} />
+                <Route path="gigs/perform/:gigId" element={<PerformGig />} />
+                <Route path="busking" element={<Busking />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="character-create" element={<CharacterCreationPage />} />
+                <Route path="music" element={<MusicStudio />} />
+                <Route path="charts" element={<WorldPulse />} />
+                <Route path="schedule" element={<Schedule />} />
+                <Route path="equipment" element={<EquipmentStore />} />
+                <Route path="fans" element={<FanManagement />} />
+                <Route path="achievements" element={<Achievements />} />
+                <Route path="tours" element={<TourManager />} />
+                <Route path="labels" element={<RecordLabel />} />
+                <Route path="social" element={<SocialMedia />} />
+                <Route path="venues" element={<VenueManagement />} />
+                <Route path="chemistry" element={<BandChemistry />} />
+                <Route path="streaming" element={<StreamingPlatforms />} />
+                <Route path="training" element={<SkillTraining />} />
+                <Route path="create" element={<MusicCreation />} />
+                <Route path="band-enhanced" element={<EnhancedBandManager />} />
+                <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
+                <Route path="fans-enhanced" element={<EnhancedFanManagement />} />
+                <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
+                <Route path="charts-competitive" element={<CompetitiveCharts />} />
+                <Route path="tours-system" element={<TouringSystem />} />
+                <Route path="admin" element={<AdminDashboard />} />
+                <Route path="communication" element={<RealtimeCommunication />} />
+                <Route path="world" element={<WorldEnvironment />} />
+                <Route path="songs" element={<SongManager />} />
+                <Route path="inventory" element={<InventoryManager />} />
+                <Route path="statistics" element={<PlayerStatistics />} />
+                <Route
+                  path="character/create"
+                  element={<Navigate to="/character-create" replace />}
+                />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
