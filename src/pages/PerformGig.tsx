@@ -64,7 +64,7 @@ const PerformGig = () => {
   const [fanGain, setFanGain] = useState(0);
   const [experienceGain, setExperienceGain] = useState(0);
 
-  const loadGig = useCallback(async () => {
+  const loadGig = useCallback(async (): Promise<void> => {
     if (!gigId) return;
 
     try {
@@ -111,10 +111,8 @@ const PerformGig = () => {
   }, [gigId, supabase, toast]);
 
   useEffect(() => {
-    if (gigId) {
-      loadGig();
-    }
-  }, [gigId, loadGig]);
+    loadGig();
+  }, [loadGig]);
 
   const startPerformance = async () => {
     setIsPerforming(true);
