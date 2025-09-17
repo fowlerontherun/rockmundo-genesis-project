@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { meetsRequirements } from "@/utils/gameBalance";
+import { checkTourRequirements } from "@/pages/tourRequirementValidation";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 import {
   calculateTravelEstimates,
@@ -420,7 +420,7 @@ const createEmptySchedule = (): VenueScheduleForm => ({
 });
 const TourManager = () => {
   const { user } = useAuth();
-  const { profile, skills, unlockedSkills, updateProfile } = useGameData();
+  const { profile, skills, unlockedSkills, skillProgress, currentCity, updateProfile } = useGameData();
   const { toast } = useToast();
   const [tours, setTours] = useState<Tour[]>([]);
   const [venues, setVenues] = useState<VenueRow[]>([]);
@@ -651,60 +651,19 @@ const TourManager = () => {
 
       // Check if player meets tour requirements
       const tourRequirements = { fame: 1000, performance: 50 };
-
-      const formatRequirementLabel = (slug: string) =>
-        slug
-          .split("_")
-          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(" ");
-
-      const lockedRequirements: string[] = [];
-      const numericRequirements: Record<string, number> = {};
-
-      Object.entries(tourRequirements).forEach(([slug, requiredValue]) => {
-        const isSkillRequirement = slug in skills;
-        if (isSkillRequirement && unlockedSkills[slug] !== true) {
-          lockedRequirements.push(`${formatRequirementLabel(slug)} (locked)`);
-          return;
-        }
-
-        numericRequirements[slug] = requiredValue;
+      const requirementCheck = checkTourRequirements(tourRequirements, {
+        fame: profile.fame ?? 0,
+        skills,
+        unlockedSkills,
+        skillProgress
       });
 
-      const playerStats = Object.keys(numericRequirements).reduce<Record<string, number>>((acc, slug) => {
-        if (slug === "fame") {
-          acc[slug] = profile.fame;
-        } else {
-          const value = skills[slug as keyof typeof skills];
-          acc[slug] = typeof value === "number" ? value : 0;
-        }
-        return acc;
-      }, {});
-
-      const { meets, missing } = meetsRequirements(numericRequirements, playerStats);
-
-      const formattedMissing = missing.map(entry => {
-        const [rawSlug] = entry.split(":");
-        const slug = rawSlug?.trim() ?? "";
-        const requiredValue = numericRequirements[slug];
-        const playerValue = playerStats[slug];
-        if (!slug || requiredValue === undefined) {
-          return entry;
-        }
-
-        const requirementLabel = formatRequirementLabel(slug);
-        const displayPlayerValue = typeof playerValue === "number" ? playerValue : 0;
-        return `${requirementLabel} (need ${requiredValue}, you have ${displayPlayerValue})`;
-      });
-
-      const allMissing = [...lockedRequirements, ...formattedMissing];
-      const meetsAllRequirements = lockedRequirements.length === 0 && meets;
-
-      if (!meetsAllRequirements) {
+      if (!requirementCheck.meets) {
+        const requirementMessages = requirementCheck.missing;
         toast({
           variant: "destructive",
           title: "Requirements Not Met",
-          description: `You need: ${allMissing.join(', ')}`
+          description: `You need: ${requirementMessages.join(', ')}`
         });
         return;
       }
@@ -1196,7 +1155,6 @@ const TourManager = () => {
       const environmentModifiers = tourVenue.environment_modifiers;
       const attendanceMultiplier = environmentModifiers?.attendanceMultiplier ?? 1;
       const moraleMultiplier = environmentModifiers?.moraleModifier ?? 1;
-
       const attendanceBase = Math.floor(capacity * (0.4 + successRate * 0.5));
       const attendance = Math.max(1, Math.round(attendanceBase * attendanceMultiplier));
       const ticketPrice = tourVenue.ticket_price ?? 25;
