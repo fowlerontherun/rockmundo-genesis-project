@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +76,156 @@ interface FanMessage {
   replied_at: string | null;
 }
 
+interface CampaignResults {
+  summary?: string | null;
+  actual_growth?: number | null;
+  expected_growth?: number | null;
+  estimated_revenue?: number | null;
+  roi?: number | null;
+  notes?: string | null;
+}
+
+interface FanCampaignRecord {
+  id: string;
+  user_id: string;
+  title: string;
+  cost: number;
+  duration: number;
+  expected_growth: number;
+  target_demo: string;
+  actual_growth: number | null;
+  roi: number | null;
+  results: CampaignResults | null;
+  launched_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string | null;
+}
+
+const FAN_VALUE_PER_FAN = 5;
+
+const parseNumericValue = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = parseFloat(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
+const normalizeCampaignRecord = (campaign: any): FanCampaignRecord => {
+  const normalizedResults: CampaignResults | null = campaign?.results
+    ? {
+        ...campaign.results,
+        actual_growth:
+          campaign.results.actual_growth !== undefined && campaign.results.actual_growth !== null
+            ? parseNumericValue(campaign.results.actual_growth)
+            : null,
+        expected_growth:
+          campaign.results.expected_growth !== undefined && campaign.results.expected_growth !== null
+            ? parseNumericValue(campaign.results.expected_growth)
+            : null,
+        estimated_revenue:
+          campaign.results.estimated_revenue !== undefined && campaign.results.estimated_revenue !== null
+            ? parseNumericValue(campaign.results.estimated_revenue)
+            : null,
+        roi:
+          campaign.results.roi !== undefined && campaign.results.roi !== null
+            ? parseNumericValue(campaign.results.roi)
+            : null,
+      }
+    : null;
+
+  const actualGrowthValue =
+    campaign.actual_growth !== undefined && campaign.actual_growth !== null
+      ? parseNumericValue(campaign.actual_growth)
+      : normalizedResults?.actual_growth ?? null;
+
+  const roiValue =
+    campaign.roi !== undefined && campaign.roi !== null
+      ? parseNumericValue(campaign.roi)
+      : normalizedResults?.roi ?? null;
+
+  return {
+    id: campaign.id,
+    user_id: campaign.user_id,
+    title: campaign.title,
+    cost: parseNumericValue(campaign.cost),
+    duration: parseNumericValue(campaign.duration),
+    expected_growth: parseNumericValue(campaign.expected_growth),
+    target_demo: campaign.target_demo,
+    actual_growth: actualGrowthValue,
+    roi: roiValue,
+    results: normalizedResults,
+    launched_at: campaign.launched_at ?? null,
+    completed_at: campaign.completed_at ?? null,
+    created_at: campaign.created_at ?? null,
+  };
+};
+
+const formatCurrency = (value: number): string => {
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
+  });
+
+  return formatter.format(Number.isFinite(value) ? value : 0);
+};
+
+const formatPercentage = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return "0%";
+  }
+
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded}%`;
+};
+
+const formatTargetDemo = (targetDemo: string): string => {
+  switch (targetDemo) {
+    case "age_18_25":
+      return "Ages 18-25";
+    case "age_26_35":
+      return "Ages 26-35";
+    case "age_36_45":
+      return "Ages 36-45";
+    case "age_45_plus":
+      return "Ages 45+";
+    case "platform_instagram":
+      return "Instagram Audience";
+    case "platform_twitter":
+      return "Twitter Audience";
+    case "platform_youtube":
+      return "YouTube Audience";
+    case "platform_tiktok":
+      return "TikTok Audience";
+    case "all_platforms":
+      return "All Platforms";
+    default:
+      return "General Audience";
+  }
+};
+
+const getActualGrowth = (campaign: FanCampaignRecord): number => {
+  const directGrowth = campaign.actual_growth;
+  if (directGrowth !== null && directGrowth !== undefined) {
+    return directGrowth;
+  }
+  const resultGrowth = campaign.results?.actual_growth;
+  return resultGrowth ?? 0;
+};
+
+const getCampaignRoi = (campaign: FanCampaignRecord): number => {
+  const directRoi = campaign.roi;
+  if (directRoi !== null && directRoi !== undefined) {
+    return directRoi;
+  }
+  const resultRoi = campaign.results?.roi;
+  return resultRoi ?? 0;
+};
+
 const sentimentDisplay: Record<string, { label: string; className: string }> = {
   positive: {
     label: "Positive",
@@ -100,6 +250,7 @@ const EnhancedFanManagement = () => {
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [campaigning, setCampaigning] = useState(false);
+  const [campaignHistory, setCampaignHistory] = useState<FanCampaignRecord[]>([]);
   const [fanMessages, setFanMessages] = useState<FanMessage[]>([]);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [replyLoadingId, setReplyLoadingId] = useState<string | null>(null);
@@ -108,6 +259,40 @@ const EnhancedFanManagement = () => {
     platform: "",
     content: ""
   });
+
+  const totalCampaignGrowth = useMemo(() => {
+    return campaignHistory.reduce((sum, campaign) => sum + getActualGrowth(campaign), 0);
+  }, [campaignHistory]);
+
+  const totalCampaignSpend = useMemo(() => {
+    return campaignHistory.reduce((sum, campaign) => sum + campaign.cost, 0);
+  }, [campaignHistory]);
+
+  const averageCampaignRoi = useMemo(() => {
+    if (campaignHistory.length === 0) return 0;
+    const roiValues = campaignHistory.map(getCampaignRoi).filter(value => Number.isFinite(value));
+    if (roiValues.length === 0) return 0;
+    const roiSum = roiValues.reduce((sum, value) => sum + value, 0);
+    return roiSum / roiValues.length;
+  }, [campaignHistory]);
+
+  const bestCampaign = useMemo(() => {
+    if (campaignHistory.length === 0) return null;
+    return campaignHistory.reduce<FanCampaignRecord | null>((best, current) => {
+      if (!best) return current;
+      const currentRoi = getCampaignRoi(current);
+      const bestRoi = getCampaignRoi(best);
+      if (currentRoi > bestRoi) return current;
+      if (currentRoi === bestRoi && getActualGrowth(current) > getActualGrowth(best)) {
+        return current;
+      }
+      return best;
+    }, null);
+  }, [campaignHistory]);
+
+  const bestCampaignGrowth = bestCampaign ? getActualGrowth(bestCampaign) : 0;
+  const bestCampaignSpend = bestCampaign ? bestCampaign.cost : 0;
+  const bestCampaignRoi = bestCampaign ? getCampaignRoi(bestCampaign) : 0;
 
   const platforms = [
     { id: "instagram", name: "Instagram", icon: Instagram, color: "text-pink-500" },
@@ -157,16 +342,20 @@ const EnhancedFanManagement = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const [fanResponse, postsResponse, profileResponse, messagesResponse] = await Promise.all([
+      const [fanResponse, postsResponse, profileResponse, messagesResponse, campaignsResponse] = await Promise.all([
         supabase.from("fan_demographics").select("*").eq("user_id", user?.id).single(),
         supabase.from("social_posts").select("*").eq("user_id", user?.id).order("created_at", { ascending: false }).limit(10),
         supabase.from("profiles").select("*").eq("user_id", user?.id).single(),
-        supabase.from("fan_messages").select("*").eq("user_id", user?.id).order("timestamp", { ascending: false })
+        supabase.from("fan_messages").select("*").eq("user_id", user?.id).order("timestamp", { ascending: false }),
+        supabase.from("fan_campaigns").select("*").eq("user_id", user?.id).order("created_at", { ascending: false })
       ]);
 
       if (fanResponse.data) setFanData(fanResponse.data);
       if (postsResponse.data) setSocialPosts(postsResponse.data);
       if (profileResponse.data) setProfile(profileResponse.data);
+      if (campaignsResponse.data) {
+        setCampaignHistory(campaignsResponse.data.map(normalizeCampaignRecord));
+      }
       if (messagesResponse.error) {
         console.error("Error fetching fan messages:", messagesResponse.error);
       } else if (messagesResponse.data) {
@@ -377,18 +566,7 @@ const EnhancedFanManagement = () => {
       setProfile(prev => (prev ? { ...prev, cash: newCash } : prev));
 
       if (insertedCampaign) {
-        const normalizedCampaign: FanCampaignRecord = {
-          ...insertedCampaign,
-          cost: typeof insertedCampaign.cost === "string" ? parseFloat(insertedCampaign.cost) : insertedCampaign.cost,
-          roi:
-            insertedCampaign.roi !== null
-              ? typeof insertedCampaign.roi === "string"
-                ? parseFloat(insertedCampaign.roi)
-                : insertedCampaign.roi
-              : null,
-          results: insertedCampaign.results as CampaignResults | null
-        };
-        setCampaignHistory(prev => [normalizedCampaign, ...prev]);
+        setCampaignHistory(prev => [normalizeCampaignRecord(insertedCampaign), ...prev]);
       }
 
       toast({
