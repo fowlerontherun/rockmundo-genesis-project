@@ -1099,7 +1099,7 @@ const Schedule = () => {
       profileRef.current = updatedProfile;
 
       const activeSkills = skillsRef.current;
-      const activeAttributes = attributesRef.current;
+      const latestAttributes = attributesRef.current;
       const skillSummaries: string[] = [];
       if (reward.skillGains) {
         const skillUpdates: Partial<PlayerSkills> = {};
@@ -1113,8 +1113,8 @@ const Schedule = () => {
 
           const skillKey = key as SkillGainKey;
           if (isAttributeGainKey(skillKey)) {
-            if (!activeAttributes) continue;
-            const currentValue = Number(activeAttributes[skillKey] ?? 0);
+            if (!latestAttributes) continue;
+            const currentValue = Number(latestAttributes[skillKey] ?? 0);
             const nextValue = Math.min(MAX_ATTRIBUTE_VALUE, currentValue + numericDelta);
             const actualGain = nextValue - currentValue;
             if (actualGain > 0) {
