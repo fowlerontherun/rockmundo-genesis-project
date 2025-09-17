@@ -14,6 +14,8 @@ import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 import type { Database } from "@/integrations/supabase/types";
 
+type VenueRequirements = Record<string, number>;
+
 interface Venue {
   id: string;
   name: string;
@@ -22,7 +24,7 @@ interface Venue {
   venue_type: string;
   base_payment: number;
   prestige_level: number;
-  requirements: Record<string, any>;
+  requirements: VenueRequirements;
 }
 
 interface Gig {
@@ -79,7 +81,7 @@ const GigBooking = () => {
         venue_type: venue.venue_type ?? 'general',
         base_payment: venue.base_payment ?? 0,
         prestige_level: venue.prestige_level ?? 1,
-        requirements: (venue.requirements as Record<string, any> | null) ?? {}
+        requirements: (venue.requirements as VenueRequirements | null) ?? ({} as VenueRequirements)
       })));
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load venues";
@@ -118,7 +120,7 @@ const GigBooking = () => {
           venue_type: venueDetails?.venue_type ?? 'general',
           base_payment: venueDetails?.base_payment ?? 0,
           prestige_level: venueDetails?.prestige_level ?? 1,
-          requirements: (venueDetails?.requirements as Record<string, any> | null) ?? {}
+          requirements: (venueDetails?.requirements as VenueRequirements | null) ?? ({} as VenueRequirements)
         };
 
         return {
@@ -165,7 +167,7 @@ const GigBooking = () => {
   };
 
   const meetsRequirements = (venue: Venue) => {
-    const reqs = venue.requirements || {};
+    const reqs = venue.requirements;
     
     if (reqs.min_popularity && (profile?.fame || 0) < reqs.min_popularity) {
       return false;
@@ -264,7 +266,7 @@ const GigBooking = () => {
           venue_type: venueDetails?.venue_type ?? venue.venue_type,
           base_payment: venueDetails?.base_payment ?? venue.base_payment,
           prestige_level: venueDetails?.prestige_level ?? venue.prestige_level,
-          requirements: (venueDetails?.requirements as Record<string, any> | null) ?? venue.requirements,
+          requirements: (venueDetails?.requirements as VenueRequirements | null) ?? venue.requirements,
         },
         environment_modifiers: mergedEnvironment,
       };
