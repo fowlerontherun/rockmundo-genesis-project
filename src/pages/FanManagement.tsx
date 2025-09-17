@@ -88,6 +88,10 @@ type MessageFormState = {
   message: string;
 };
 
+declare const applyScheduledPostEffects:
+  | ((posts: SocialPost[], activityDescription: string) => Promise<void> | void)
+  | undefined;
+
 const PLATFORM_OPTIONS = [
   { value: "instagram", label: "Instagram" },
   { value: "twitter", label: "Twitter / X" },
@@ -131,6 +135,7 @@ const FanManagement = () => {
   });
   const [sentimentFilter, setSentimentFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadFanData = useCallback(async () => {
     try {
@@ -324,6 +329,7 @@ const FanManagement = () => {
       return sentimentMatch && platformMatch;
     });
   }, [fanMessages, sentimentFilter, platformFilter]);
+  const isScheduling = scheduledTime.trim().length > 0;
 
   const updateMessageForm = (field: keyof MessageFormState, value: string) => {
     setMessageForm((prev) => ({

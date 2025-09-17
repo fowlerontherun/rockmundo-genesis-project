@@ -76,6 +76,8 @@ interface FanMessage {
   replied_at: string | null;
 }
 
+const FAN_VALUE_PER_FAN = 50;
+
 const sentimentDisplay: Record<string, { label: string; className: string }> = {
   positive: {
     label: "Positive",
