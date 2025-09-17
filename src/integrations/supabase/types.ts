@@ -2072,6 +2072,63 @@ export type Database = {
         }
         Relationships: []
       }
+      skill_definitions: {
+        Row: {
+          id: string
+          slug: string
+          display_name: string
+          description: string | null
+          tier_caps: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          slug: string
+          display_name: string
+          description?: string | null
+          tier_caps?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          slug?: string
+          display_name?: string
+          description?: string | null
+          tier_caps?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      skill_parent_links: {
+        Row: {
+          id: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          skill_id?: string
+          parent_skill_id?: string
+          unlock_threshold?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       social_campaigns: {
         Row: {
           budget: number
