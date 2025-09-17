@@ -4,13 +4,13 @@ import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth-context";
-import { 
-  Home, 
-  Users, 
-  Calendar, 
-  Music, 
-  TrendingUp, 
-  Settings, 
+import {
+  Home,
+  Users,
+  Calendar,
+  Music,
+  TrendingUp,
+  Settings,
   LogOut,
   Guitar,
   ShoppingCart,
@@ -24,7 +24,9 @@ import {
   Menu,
   X,
   MessageSquare,
-  Globe
+  Globe,
+  Mic,
+  Sparkles
 } from "lucide-react";
 
 const Navigation = () => {
@@ -41,6 +43,7 @@ const Navigation = () => {
         { icon: User, label: "Profile", path: "/profile" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
         { icon: Trophy, label: "Achievements", path: "/achievements" },
+        { icon: Sparkles, label: "Character Creator", path: "/character-create" },
       ]
     },
     {
@@ -58,6 +61,7 @@ const Navigation = () => {
         { icon: Calendar, label: "Gig Booking", path: "/gigs" },
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
         { icon: MapPin, label: "Venue Management", path: "/venues" },
+        { icon: Mic, label: "Street Busking", path: "/busking" },
       ]
     },
     {
@@ -103,6 +107,13 @@ const Navigation = () => {
         { icon: Settings, label: "Admin Panel", path: "/admin" },
       ]
     }
+  ];
+
+  const mobileShortcuts = [
+    { icon: Home, label: "Dashboard", path: "/dashboard" },
+    { icon: Calendar, label: "Gigs", path: "/gigs" },
+    { icon: Mic, label: "Busking", path: "/busking" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
 
   const handleLogout = async () => {
@@ -210,7 +221,7 @@ const Navigation = () => {
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-sidebar-border">
         <div className="flex justify-around items-center py-2">
-          {navSections[0].items.slice(0, 4).map((item) => {
+          {mobileShortcuts.map((item) => {
             const Icon = item.icon;
             return (
               <Button

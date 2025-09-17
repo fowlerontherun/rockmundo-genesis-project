@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
 import GigBooking from "./pages/GigBooking";
 import Profile from "./pages/Profile";
+import CharacterCreationPage from "./pages/CharacterCreation";
 import MusicStudio from "./pages/MusicStudio";
 import WorldPulse from "./pages/WorldPulse";
 import Schedule from "./pages/Schedule";
@@ -39,7 +40,7 @@ import WorldEnvironment from "./pages/WorldEnvironment";
 import SongManager from "./pages/SongManager";
 import InventoryManager from "./pages/InventoryManager";
 import PlayerStatistics from "./pages/PlayerStatistics";
-import CharacterCreation from "./pages/CharacterCreation";
+import Busking from "./pages/Busking";
 
 const queryClient = new QueryClient();
 
@@ -59,7 +60,9 @@ function App() {
                 <Route path="band" element={<BandManager />} />
                 <Route path="gigs" element={<GigBooking />} />
                 <Route path="gigs/perform/:gigId" element={<PerformGig />} />
+                <Route path="busking" element={<Busking />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="character-create" element={<CharacterCreationPage />} />
                 <Route path="music" element={<MusicStudio />} />
                 <Route path="charts" element={<WorldPulse />} />
                 <Route path="schedule" element={<Schedule />} />
@@ -86,7 +89,7 @@ function App() {
                 <Route path="songs" element={<SongManager />} />
                 <Route path="inventory" element={<InventoryManager />} />
                 <Route path="statistics" element={<PlayerStatistics />} />
-                <Route path="character/create" element={<CharacterCreation />} />
+                <Route path="character/create" element={<CharacterCreationPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
