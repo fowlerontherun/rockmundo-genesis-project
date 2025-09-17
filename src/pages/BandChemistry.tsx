@@ -7,10 +7,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 import { Heart, AlertTriangle, MessageSquare, Star, Coffee, Loader2 } from "lucide-react";
 
-type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
+import {
+  buildSkillLevelMap,
+  collectSkillSlugs,
+  getSkillLabel,
+  getSkillLevel,
+  type SkillDefinitionRow,
+  type SkillLevelMap,
+  type SkillProgressWithDefinition
+} from "@/utils/skillLevels";
 
 type BandMemberCard = {
   id: string;
@@ -27,6 +34,7 @@ type BandMemberCard = {
   personality: string;
   issues: string[];
   strengths: string[];
+  skills: SkillLevelMap;
 };
 
 type TeamEvent = {
@@ -84,58 +92,20 @@ const getRolePersonality = (role: string) => {
   return "Collaborative";
 };
 
-const getRoleStrengths = (role: string, skills?: PlayerSkillsRow | null) => {
-  const strengths: string[] = [];
-
-  if (skills) {
-    const skillEntries = [
-      { label: "Guitar", value: skills.guitar },
-      { label: "Vocals", value: skills.vocals },
-      { label: "Drums", value: skills.drums },
-      { label: "Bass", value: skills.bass },
-      { label: "Performance", value: skills.performance },
-      { label: "Songwriting", value: skills.songwriting },
-    ].filter((entry) => typeof entry.value === "number");
-
-    skillEntries.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
-    skillEntries.slice(0, 2).forEach((entry) => {
-      strengths.push(`${entry.label} expertise`);
-    });
-  }
-
-  if (strengths.length === 0) {
-    const normalized = role.toLowerCase();
-    if (normalized.includes("drum")) return ["Powerful beats", "Precise timing"];
-    if (normalized.includes("bass")) return ["Solid groove", "Reliable foundation"];
-    if (normalized.includes("keyboard")) return ["Arrangement skills", "Melodic layers"];
-    if (normalized.includes("vocal")) return ["Stage charisma", "Audience connection"];
-    if (normalized.includes("guitar")) return ["Creative riffs", "Showmanship"];
-    return ["Team-focused", "Adaptable performer"];
-  }
-
-  return strengths;
+const getDefaultStrengths = (role: string) => {
+  const normalized = role.toLowerCase();
+  if (normalized.includes("drum")) return ["Powerful beats", "Precise timing"];
+  if (normalized.includes("bass")) return ["Solid groove", "Reliable foundation"];
+  if (normalized.includes("keyboard")) return ["Arrangement skills", "Melodic layers"];
+  if (normalized.includes("vocal")) return ["Stage charisma", "Audience connection"];
+  if (normalized.includes("guitar")) return ["Creative riffs", "Showmanship"];
+  return ["Team-focused", "Adaptable performer"];
 };
 
 const deriveIssues = (morale: number) => {
   if (morale < 45) return ["Needs support", "Seeking clearer communication"];
   if (morale < 60) return ["Wants more creative input"];
   return [];
-};
-
-const calculateSkillAverage = (skills?: PlayerSkillsRow | null) => {
-  if (!skills) return 60;
-  const values = [
-    skills.guitar,
-    skills.vocals,
-    skills.drums,
-    skills.bass,
-    skills.performance,
-    skills.songwriting,
-  ].filter((value): value is number => typeof value === "number");
-
-  if (values.length === 0) return 60;
-  const total = values.reduce((sum, value) => sum + value, 0);
-  return Math.round(total / values.length);
 };
 
 const getMoodColor = (mood: string) => {
@@ -237,6 +207,7 @@ const initialConflicts: BandConflict[] = [
 const BandChemistry = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinitionRow[]>([]);
   const [bandId, setBandId] = useState<string | null>(null);
   const [bandMembers, setBandMembers] = useState<BandMemberCard[]>([]);
   const [bandMorale, setBandMorale] = useState(0);
@@ -245,6 +216,69 @@ const BandChemistry = () => {
   const [loading, setLoading] = useState(true);
   const [processingEventId, setProcessingEventId] = useState<number | null>(null);
   const [resolvingConflictId, setResolvingConflictId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDefinitions = async () => {
+      const { data, error } = await supabase
+        .from("skill_definitions")
+        .select("id, slug, name, display_order")
+        .order("display_order", { ascending: true });
+
+      if (!error && isMounted) {
+        setSkillDefinitions(data ?? []);
+      }
+    };
+
+    void loadDefinitions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (skillDefinitions.length === 0) {
+      return;
+    }
+
+    setBandMembers(previousMembers =>
+      previousMembers.map(member => {
+        const skillAverage = calculateSkillAverage(member.skills);
+        const loyalty = clampStat(40 + Math.round(skillAverage / 5));
+        const performanceScore = (() => {
+          const value = getSkillLevel(member.skills, "performance", 0);
+          return typeof value === "number" ? value : 0;
+        })();
+        const songwritingScore = (() => {
+          const value = getSkillLevel(member.skills, "songwriting", 0);
+          return typeof value === "number" ? value : 0;
+        })();
+        const energy = clampStat(
+          60 + Math.round((performanceScore + songwritingScore) / 4)
+        );
+        const strengths = getRoleStrengths(member.instrument, member.skills);
+
+        if (
+          member.skill === skillAverage &&
+          member.loyalty === loyalty &&
+          member.energy === energy &&
+          member.strengths.join("|") === strengths.join("|")
+        ) {
+          return member;
+        }
+
+        return {
+          ...member,
+          skill: skillAverage,
+          loyalty,
+          energy,
+          strengths
+        };
+      })
+    );
+  }, [calculateSkillAverage, getRoleStrengths, skillDefinitions]);
 
   const averageChemistry = useMemo(() => {
     if (bandMembers.length === 0) return 0;
@@ -255,6 +289,92 @@ const BandChemistry = () => {
   const activeConflicts = useMemo(
     () => recentConflicts.filter((conflict) => !conflict.resolved).length,
     [recentConflicts]
+  );
+
+  const calculateSkillAverage = useCallback(
+    (skills?: SkillLevelMap | null) => {
+      if (!skills) return 0;
+
+      const slugs = collectSkillSlugs(skillDefinitions, skills);
+      const values = slugs
+        .map(slug => getSkillLevel(skills, slug, 0))
+        .filter((value): value is number => typeof value === "number");
+
+      if (values.length === 0) {
+        return 0;
+      }
+
+      const total = values.reduce((sum, value) => sum + value, 0);
+      return Math.round(total / values.length);
+    },
+    [skillDefinitions]
+  );
+
+  const getRoleStrengths = useCallback(
+    (role: string, skills?: SkillLevelMap | null) => {
+      if (!skills) {
+        return getDefaultStrengths(role);
+      }
+
+      const slugs = collectSkillSlugs(skillDefinitions, skills);
+      if (slugs.length === 0) {
+        return getDefaultStrengths(role);
+      }
+
+      const entries = slugs.map(slug => {
+        const value = getSkillLevel(skills, slug, 0);
+        return {
+          slug,
+          value: typeof value === "number" ? value : 0,
+          label: getSkillLabel(slug, skillDefinitions)
+        };
+      });
+
+      entries.sort((a, b) => b.value - a.value);
+
+      const strengths: string[] = [];
+      entries.forEach(entry => {
+        if (entry.value > 0 && strengths.length < 2) {
+          strengths.push(`${entry.label} expertise`);
+        }
+      });
+
+      if (strengths.length < 2) {
+        entries
+          .filter(entry => entry.value <= 0)
+          .slice(0, 2 - strengths.length)
+          .forEach(entry => {
+            strengths.push(`${entry.label} (Locked)`);
+          });
+      }
+
+      return strengths.length > 0 ? strengths : getDefaultStrengths(role);
+    },
+    [skillDefinitions]
+  );
+
+  const fetchProfileSkillMap = useCallback(
+    async (profileId: string | null): Promise<SkillLevelMap> => {
+      if (!profileId) {
+        return {};
+      }
+
+      const { data, error } = await supabase
+        .from("profile_skill_progress")
+        .select("skill_id, skill_slug, current_level, skill_definitions ( slug, name )")
+        .eq("profile_id", profileId);
+
+      if (error) {
+        console.error("Error loading skills data:", error);
+        return {};
+      }
+
+      return buildSkillLevelMap(
+        (data as SkillProgressWithDefinition[] | null | undefined) ?? [],
+        skillDefinitions
+      );
+    },
+    [skillDefinitions]
   );
 
   const fetchPrimaryBandId = useCallback(async (): Promise<string | null> => {
@@ -316,21 +436,21 @@ const BandChemistry = () => {
           console.error("Error loading profile data:", profileError);
         }
 
-        let skillsData: Partial<PlayerSkillsRow> | null = null;
-
-        if (profileData?.id) {
-          const { data, error: skillsError } = await supabase
-            .from("player_skills")
-            .select("guitar, vocals, drums, bass, performance, songwriting")
-            .eq("profile_id", profileData.id)
-            .maybeSingle();
-
-          if (skillsError) {
-            console.error("Error loading skills data:", skillsError);
-          } else {
-            skillsData = data as Partial<PlayerSkillsRow> | null;
-          }
-        }
+        const skillLevels = await fetchProfileSkillMap(profileData?.id ?? null);
+        const skillAverage = calculateSkillAverage(skillLevels);
+        const loyalty = clampStat(40 + Math.round(skillAverage / 5));
+        const performanceScore = (() => {
+          const value = getSkillLevel(skillLevels, "performance", 0);
+          return typeof value === "number" ? value : 0;
+        })();
+        const songwritingScore = (() => {
+          const value = getSkillLevel(skillLevels, "songwriting", 0);
+          return typeof value === "number" ? value : 0;
+        })();
+        const energy = clampStat(
+          60 + Math.round((performanceScore + songwritingScore) / 4)
+        );
+        const strengths = getRoleStrengths(member.role || "Band Member", skillLevels);
 
         const morale = member.morale ?? 60;
         const chemistry = member.chemistry ?? 60;
@@ -343,15 +463,14 @@ const BandChemistry = () => {
           mood: getMoodFromMorale(morale),
           morale,
           chemistry,
-          skill: calculateSkillAverage(skillsData),
-          loyalty: clampStat(40 + Math.round(calculateSkillAverage(skillsData) / 5)),
-          energy: clampStat(
-            60 + Math.round(((skillsData?.performance ?? 50) + (skillsData?.songwriting ?? 50)) / 4)
-          ),
+          skill: skillAverage,
+          loyalty,
+          energy,
           avatar: getRoleAvatar(member.role || ""),
           personality: getRolePersonality(member.role || "Band Member"),
           issues: deriveIssues(morale),
-          strengths: getRoleStrengths(member.role || "Band Member", skillsData),
+          strengths,
+          skills: skillLevels,
         };
       })
     );
@@ -363,7 +482,7 @@ const BandChemistry = () => {
         ? Math.round(members.reduce((sum, member) => sum + member.morale, 0) / members.length)
         : 0;
     setBandMorale(moraleAverage);
-  }, []);
+  }, [calculateSkillAverage, fetchProfileSkillMap, getRoleStrengths]);
 
   const initializeBandData = useCallback(async () => {
     if (!user) {
