@@ -36,6 +36,7 @@ interface GameDataContextValue {
   activities: ActivityItem[];
   loading: boolean;
   error: string | null;
+  currentCity: Tables<'cities'> | null;
   hasCharacters: boolean;
   setActiveCharacter: (characterId: string) => Promise<void>;
   clearSelectedCharacter: () => void;
@@ -183,6 +184,10 @@ const useProvideGameData = (): GameDataContextValue => {
       setCharactersLoading(false);
     }
   }, [user, selectedCharacterId, updateSelectedCharacterId, clearSelectedCharacter]);
+
+  const refreshCharacters = useCallback(async () => {
+    return fetchCharacters();
+  }, [fetchCharacters]);
 
   const fetchGameData = useCallback(async () => {
     if (!user) {
@@ -582,11 +587,11 @@ const useProvideGameData = (): GameDataContextValue => {
     loading,
     error,
     currentCity,
+    hasCharacters,
+    setActiveCharacter,
+    clearSelectedCharacter,
     updateProfile,
     updateSkills,
-    updateLocation,
-    updateHealth,
-    updateCurrentCity,
     addActivity,
     createCharacter,
     refreshCharacters,
