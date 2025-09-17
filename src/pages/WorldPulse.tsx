@@ -348,7 +348,7 @@ const WorldPulse = () => {
     loadWeeklyChart(selectedWeek);
   }, [availableWeeks, currentWeekIndex, loadWeeklyChart]);
 
-  const handleRefreshCharts = async () => {
+  const handleRefreshCharts = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const { error } = await supabase.rpc("refresh_global_charts");
@@ -362,17 +362,7 @@ const WorldPulse = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
-
-  const loadGenreStatistics = useCallback(async (week: string) => {
-    setIsGenreLoading(true);
-    try {
-      const { data, error: genreError } = await supabase
-        .from("genre_statistics")
-        .select("*")
-        .eq("chart_type", "weekly")
-        .eq("chart_date", week)
-        .order("total_plays", { ascending: false });
+  }, [loadDailyChart, loadAvailableWeeks, loadGenreStats]);
 
   const handlePrevWeek = () => {
     setCurrentWeekIndex((prev) => {

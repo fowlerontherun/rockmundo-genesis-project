@@ -703,7 +703,7 @@ const BandChemistry = () => {
               {recentConflicts.map((conflict) => (
                 <Card key={conflict.id} className="border-accent bg-card/80">
                   <CardContent className="pt-6">
-                    <div className="mb-4 flex items-start justify-between">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <h3 className="text-lg font-semibold text-cream">{conflict.type}</h3>
@@ -721,9 +721,9 @@ const BandChemistry = () => {
                           <span>Members: {conflict.members.join(", ")}</span>
                           <span>{conflict.timeAgo}</span>
                         </div>
-                      )}
+                      </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 md:self-end">
                         <Button
                           onClick={() => handleResolveConflict(conflict.id)}
                           size="sm"
@@ -751,12 +751,11 @@ const BandChemistry = () => {
                           Hang Out
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
             {recentConflicts.length === 0 && (
               <Card className="border-accent bg-card/80">
