@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,16 +9,7 @@ export const useUserRole = () => {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      loadUserRole();
-    } else {
-      setUserRole(null);
-      setLoading(false);
-    }
-  }, [user]);
-
-  const loadUserRole = async () => {
+  const loadUserRole = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -34,7 +25,16 @@ export const useUserRole = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadUserRole();
+    } else {
+      setUserRole(null);
+      setLoading(false);
+    }
+  }, [loadUserRole, user]);
 
   const hasRole = (role: UserRole): boolean => {
     if (!userRole) return false;
