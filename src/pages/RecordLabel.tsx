@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,15 +94,7 @@ const RecordLabel = () => {
   const [bestChartPosition, setBestChartPosition] = useState<number | null>(null);
   const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadLabels();
-      loadPlayerContracts();
-      loadPlayerCareerStats();
-    }
-  }, [user]);
-
-  const loadLabels = async () => {
+  const loadLabels = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('record_labels')
@@ -161,9 +153,9 @@ const RecordLabel = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const loadPlayerContracts = async () => {
+  const loadPlayerContracts = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -199,9 +191,9 @@ const RecordLabel = () => {
       console.error('Error loading contracts:', error);
       setPlayerContracts([]);
     }
-  };
+  }, [user]);
 
-  const loadPlayerCareerStats = async () => {
+  const loadPlayerCareerStats = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -248,7 +240,15 @@ const RecordLabel = () => {
     } catch (error) {
       console.error('Error loading player career stats:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadLabels();
+      loadPlayerContracts();
+      loadPlayerCareerStats();
+    }
+  }, [user, loadLabels, loadPlayerContracts, loadPlayerCareerStats]);
 
   const resetLabelForm = () => {
     setLabelForm({
