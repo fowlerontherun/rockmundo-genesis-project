@@ -272,12 +272,6 @@ const AdminDashboard: React.FC = () => {
     }
   }, [fetchFeatureFlags, fetchSeasons, fetchUserActions]);
 
-  useEffect(() => {
-    if (user) {
-      loadAdminData();
-    }
-  }, [user, loadAdminData]);
-
   const toggleFeatureFlag = async (flagId: string, newValue: boolean) => {
     const previousFlags = featureFlags.map(flag => ({ ...flag }));
 
@@ -499,6 +493,12 @@ const AdminDashboard: React.FC = () => {
       default: return 'text-blue-600 bg-blue-100';
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      loadAdminData();
+    }
+  }, [user, loadAdminData]);
 
   if (loading) {
     return (
