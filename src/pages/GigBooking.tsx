@@ -8,10 +8,11 @@ import { Progress } from "@/components/ui/progress";
 import { Calendar, MapPin, Users, DollarSign, Clock, Star, Music, Volume2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
+import type { Database } from "@/integrations/supabase/types";
 
 interface Venue {
   id: string;
@@ -36,6 +37,19 @@ interface Gig {
   venue: Venue;
   environment_modifiers?: EnvironmentModifierSummary | null;
 }
+
+type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
+type GigRow = Database["public"]["Tables"]["gigs"]["Row"];
+type GigInsertPayload = Database["public"]["Tables"]["gigs"]["Insert"] & {
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
+type GigUpdatePayload = Database["public"]["Tables"]["gigs"]["Update"] & {
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
+type GigRecord = GigRow & {
+  venues: VenueRow | null;
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
 
 const GigBooking = () => {
   const { toast } = useToast();
@@ -63,16 +77,25 @@ const GigBooking = () => {
         .order('prestige_level, capacity');
 
       if (error) throw error;
-      setVenues((data || []).map(venue => ({
-        ...venue,
-        requirements: venue.requirements as Record<string, any>
+      const venueRows = (data ?? []) as VenueRow[];
+      setVenues(venueRows.map(venue => ({
+        id: venue.id,
+        name: venue.name,
+        location: venue.location ?? 'Unknown',
+        capacity: venue.capacity ?? 0,
+        venue_type: venue.venue_type ?? 'general',
+        base_payment: venue.base_payment ?? 0,
+        prestige_level: venue.prestige_level ?? 1,
+        requirements: (venue.requirements as Record<string, any> | null) ?? {}
       })));
-    } catch (error: any) {
-      console.error('Error loading venues:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load venues";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading venues:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load venues",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
   };
@@ -91,16 +114,37 @@ const GigBooking = () => {
         .order('scheduled_date', { ascending: true });
 
       if (error) throw error;
-      setPlayerGigs((data || []).map(gig => ({
-        ...gig,
-        venue: {
-          ...gig.venues,
-          requirements: gig.venues?.requirements as Record<string, any>
-        },
-        environment_modifiers: (gig as { environment_modifiers?: EnvironmentModifierSummary | null }).environment_modifiers ?? null
-      })));
-    } catch (error: any) {
-      console.error('Error loading player gigs:', error);
+      const gigRows = (data ?? []) as GigRecord[];
+      setPlayerGigs(gigRows.map(gig => {
+        const venueDetails = gig.venues;
+        const venue: Venue = {
+          id: venueDetails?.id ?? gig.venue_id,
+          name: venueDetails?.name ?? 'Unknown Venue',
+          location: venueDetails?.location ?? 'Unknown',
+          capacity: venueDetails?.capacity ?? 0,
+          venue_type: venueDetails?.venue_type ?? 'general',
+          base_payment: venueDetails?.base_payment ?? 0,
+          prestige_level: venueDetails?.prestige_level ?? 1,
+          requirements: (venueDetails?.requirements as Record<string, any> | null) ?? {}
+        };
+
+        return {
+          id: gig.id,
+          venue_id: gig.venue_id,
+          band_id: gig.band_id ?? undefined,
+          scheduled_date: gig.scheduled_date,
+          payment: gig.payment ?? 0,
+          status: gig.status ?? 'scheduled',
+          attendance: gig.attendance ?? 0,
+          fan_gain: gig.fan_gain ?? 0,
+          venue,
+          environment_modifiers: gig.environment_modifiers ?? null
+        };
+      }));
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load player gigs';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading player gigs:', errorMessage, error);
     } finally {
       setLoading(false);
     }
@@ -162,27 +206,26 @@ const GigBooking = () => {
       const attendanceMultiplier = environmentSummary?.attendanceMultiplier ?? 1;
       const projectedAttendance = Math.max(1, Math.round(baseAttendance * attendanceMultiplier));
 
-      const gigInsertPayload: Record<string, unknown> = {
+      const gigInsertPayload: GigInsertPayload = {
         venue_id: venue.id,
-        band_id: user.id, // For solo artists
+        band_id: user.id,
         scheduled_date: futureDate.toISOString(),
-        payment: payment,
+        payment,
         status: 'scheduled',
         attendance: projectedAttendance,
+        environment_modifiers: environmentSummary
+          ? {
+              ...environmentSummary,
+              projections: {
+                attendance: projectedAttendance,
+              },
+            }
+          : null,
       };
-
-      if (environmentSummary) {
-        gigInsertPayload.environment_modifiers = {
-          ...environmentSummary,
-          projections: {
-            attendance: projectedAttendance,
-          },
-        } as EnvironmentModifierSummary;
-      }
 
       const { data, error } = await supabase
         .from('gigs')
-        .insert(gigInsertPayload as any)
+        .insert(gigInsertPayload)
         .select(`
           *,
           venues!gigs_venue_id_fkey(*)
@@ -190,8 +233,10 @@ const GigBooking = () => {
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Failed to create gig');
 
-      const environmentFromDb = (data as { environment_modifiers?: EnvironmentModifierSummary | null }).environment_modifiers ?? null;
+      const insertedGig: GigRecord = data as GigRecord;
+      const environmentFromDb = insertedGig.environment_modifiers ?? null;
       const mergedEnvironment = environmentFromDb ?? (environmentSummary
         ? {
             ...environmentSummary,
@@ -201,11 +246,25 @@ const GigBooking = () => {
           }
         : null);
 
-      const newGig = {
-        ...data,
+      const venueDetails = insertedGig.venues;
+      const newGig: Gig = {
+        id: insertedGig.id,
+        venue_id: insertedGig.venue_id,
+        band_id: insertedGig.band_id ?? undefined,
+        scheduled_date: insertedGig.scheduled_date,
+        payment: insertedGig.payment ?? payment,
+        status: insertedGig.status ?? 'scheduled',
+        attendance: insertedGig.attendance ?? projectedAttendance,
+        fan_gain: insertedGig.fan_gain ?? 0,
         venue: {
-          ...data.venues,
-          requirements: data.venues?.requirements as Record<string, any>
+          id: venueDetails?.id ?? venue.id,
+          name: venueDetails?.name ?? venue.name,
+          location: venueDetails?.location ?? venue.location,
+          capacity: venueDetails?.capacity ?? venue.capacity,
+          venue_type: venueDetails?.venue_type ?? venue.venue_type,
+          base_payment: venueDetails?.base_payment ?? venue.base_payment,
+          prestige_level: venueDetails?.prestige_level ?? venue.prestige_level,
+          requirements: (venueDetails?.requirements as Record<string, any> | null) ?? venue.requirements,
         },
         environment_modifiers: mergedEnvironment,
       };
@@ -288,12 +347,14 @@ const GigBooking = () => {
         title: "Gig booked!",
         description: toastParts.join(' '),
       });
-    } catch (error: any) {
-      console.error('Error booking gig:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to book the gig";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error booking gig:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Booking failed",
-        description: "Failed to book the gig",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     } finally {
       setBooking(false);
@@ -337,20 +398,17 @@ const GigBooking = () => {
           }
         : null;
 
-      const gigUpdatePayload: Record<string, unknown> = {
+      const gigUpdatePayload: GigUpdatePayload = {
         status: 'completed',
-        attendance: attendance,
+        attendance,
         fan_gain: fanGain,
         payment: actualPayment,
+        environment_modifiers: updatedEnvironment,
       };
-
-      if (updatedEnvironment) {
-        gigUpdatePayload.environment_modifiers = updatedEnvironment;
-      }
 
       const { error } = await supabase
         .from('gigs')
-        .update(gigUpdatePayload as any)
+        .update(gigUpdatePayload)
         .eq('id', gig.id);
 
       if (error) throw error;
@@ -401,12 +459,14 @@ const GigBooking = () => {
         title: isSuccess ? "Great performance!" : "Performance complete",
         description: `Earned $${actualPayment}, +${fanGain} fans, +${expGain} XP.${wearNotice}`,
       });
-    } catch (error: any) {
-      console.error('Error performing gig:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to complete the gig";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error performing gig:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Performance failed",
-        description: "Failed to complete the gig",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
   };

@@ -23,7 +23,7 @@ import {
   Plus,
   Settings
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -298,12 +298,14 @@ const TourManager = () => {
       setTicketPriceUpdates({});
       setMarketingSpendUpdates({});
       return mappedTours;
-    } catch (error: any) {
-      console.error('Error loading tours:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load tours";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading tours:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load tours"
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
       return [];
     }

@@ -25,7 +25,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -962,13 +962,15 @@ const StreamingPlatforms = () => {
         title: "Playlist Submission Sent!",
         description: data.message,
       });
-    } catch (error: any) {
-      const message = error?.message ?? "Failed to submit playlist request.";
-      setServerMessage({ type: "error", text: message });
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to submit playlist request.";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error submitting playlist request:', errorMessage, error);
+      setServerMessage({ type: "error", text: errorMessage });
       toast({
         variant: "destructive",
         title: "Submission failed",
-        description: message,
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     } finally {
       setPlaylistSubmitting(prev => ({ ...prev, [playlistName]: false }));
