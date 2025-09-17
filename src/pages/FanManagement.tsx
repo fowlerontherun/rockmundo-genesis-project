@@ -1,4 +1,11 @@
-import { useState, useEffect, useMemo, useCallback, useRef, FormEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  FormEvent,
+  ChangeEvent
+} from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
