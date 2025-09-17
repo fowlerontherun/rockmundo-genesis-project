@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,13 +57,7 @@ const EquipmentStore = () => {
     legendary: "bg-yellow-500"
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [equipmentResponse, playerEquipmentResponse, profileResponse] = await Promise.all([
         supabase.from("equipment_items").select("*").order("price", { ascending: true }),
@@ -110,7 +104,13 @@ const EquipmentStore = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user, fetchData]);
 
   const purchaseEquipment = async (item: EquipmentItem) => {
     if (purchasingItemId) return;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,14 +62,7 @@ const GigBooking = () => {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadVenues();
-      loadPlayerGigs();
-    }
-  }, [user]);
-
-  const loadVenues = async () => {
+  const loadVenues = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('venues')
@@ -98,9 +91,9 @@ const GigBooking = () => {
         description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
-  };
+  }, [toast]);
 
-  const loadPlayerGigs = async () => {
+  const loadPlayerGigs = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -148,7 +141,14 @@ const GigBooking = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadVenues();
+      loadPlayerGigs();
+    }
+  }, [user, loadVenues, loadPlayerGigs]);
 
   const calculateGigPayment = (venue: Venue) => {
     const popularityBonus = Math.round(venue.base_payment * ((profile?.fame || 0) / 1000));
