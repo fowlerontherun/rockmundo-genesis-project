@@ -28,6 +28,21 @@ interface Band {
   created_at: string;
 }
 
+type SkillSlug =
+  | "guitar"
+  | "vocals"
+  | "drums"
+  | "bass"
+  | "performance"
+  | "songwriting";
+
+interface SkillMapEntry {
+  level: number;
+  unlocked: boolean;
+}
+
+type SkillMap = Record<string, SkillMapEntry>;
+
 interface BandMember {
   id: string;
   user_id: string;
@@ -41,14 +56,7 @@ interface BandMember {
     avatar_url: string | null;
     levelEstimate: number;
   };
-  player_skills: {
-    guitar: number;
-    vocals: number;
-    drums: number;
-    bass: number;
-    performance: number;
-    songwriting: number;
-  };
+  player_skills: SkillMap;
 }
 
 interface BandStats {
@@ -60,39 +68,170 @@ interface BandStats {
 }
 
 type PublicProfileRow = Database["public"]["Views"]["public_profiles"]["Row"];
-type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
-type MemberSkillSet = Pick<
-  PlayerSkillsRow,
-  "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting"
+type ProfileRow = Pick<
+  Database["public"]["Tables"]["profiles"]["Row"],
+  "id" | "user_id" | "username" | "display_name" | "level" | "avatar_url"
 >;
-
 interface AvailableMember extends PublicProfileRow {
-  player_skills: MemberSkillSet;
+  player_skills: SkillMap;
   levelEstimate: number;
 }
 
-const defaultPlayerSkills: MemberSkillSet = {
-  guitar: 20,
-  vocals: 20,
-  drums: 20,
-  bass: 20,
-  performance: 20,
-  songwriting: 20
+const BAND_SKILL_SLUGS: SkillSlug[] = [
+  "guitar",
+  "vocals",
+  "drums",
+  "bass",
+  "performance",
+  "songwriting"
+];
+
+const SKILL_DISPLAY_LABELS: Record<SkillSlug, string> = {
+  guitar: "Guitar",
+  vocals: "Vocals",
+  drums: "Drums",
+  bass: "Bass",
+  performance: "Performance",
+  songwriting: "Writing"
 };
 
-const estimateSkillLevel = (skills?: MemberSkillSet | PlayerSkillsRow | null) => {
+type SkillDefinitionSlug = Pick<Database["public"]["Tables"]["skill_definitions"]["Row"], "slug">;
+
+type SkillProgressWithDefinition = Database["public"]["Tables"]["profile_skill_progress"]["Row"] & {
+  skill_definitions?: SkillDefinitionSlug | null;
+};
+
+type SkillUnlockWithDefinition = Database["public"]["Tables"]["profile_skill_unlocks"]["Row"] & {
+  skill_definitions?: SkillDefinitionSlug | null;
+  is_unlocked?: boolean | null;
+};
+
+const createDefaultSkillMap = (): SkillMap => {
+  return BAND_SKILL_SLUGS.reduce<SkillMap>((acc, slug) => {
+    acc[slug] = { level: 0, unlocked: false };
+    return acc;
+  }, {});
+};
+
+const buildSkillMap = (
+  progressRows: SkillProgressWithDefinition[],
+  unlockRows: SkillUnlockWithDefinition[]
+): SkillMap => {
+  const skillMap = createDefaultSkillMap();
+
+  progressRows.forEach((row) => {
+    const slug = row.skill_slug ?? row.skill_definitions?.slug ?? null;
+    if (!slug) {
+      return;
+    }
+
+    if (!skillMap[slug]) {
+      skillMap[slug] = { level: 0, unlocked: false };
+    }
+
+    skillMap[slug].level = row.current_level ?? 0;
+  });
+
+  unlockRows.forEach((row) => {
+    const slug = row.skill_slug ?? row.skill_definitions?.slug ?? null;
+    if (!slug) {
+      return;
+    }
+
+    if (!skillMap[slug]) {
+      skillMap[slug] = { level: 0, unlocked: false };
+    }
+
+    const unlockFlag =
+      typeof (row as { is_unlocked?: boolean }).is_unlocked === "boolean"
+        ? (row as { is_unlocked?: boolean }).is_unlocked ?? false
+        : !!row.unlocked_at;
+
+    skillMap[slug].unlocked = unlockFlag;
+  });
+
+  return skillMap;
+};
+
+const fetchSkillMapsForProfiles = async (profileIds: string[]): Promise<Record<string, SkillMap>> => {
+  if (profileIds.length === 0) {
+    return {};
+  }
+
+  const [progressResponse, unlockResponse] = await Promise.all([
+    supabase
+      .from("profile_skill_progress")
+      .select("profile_id, current_level, skill_slug, skill_definitions(slug)")
+      .in("profile_id", profileIds),
+    supabase
+      .from("profile_skill_unlocks")
+      .select("profile_id, unlocked_at, skill_slug, skill_definitions(slug), is_unlocked")
+      .in("profile_id", profileIds)
+  ]);
+
+  if (progressResponse.error) throw progressResponse.error;
+  if (unlockResponse.error) throw unlockResponse.error;
+
+  const progressByProfile = new Map<string, SkillProgressWithDefinition[]>();
+  (progressResponse.data ?? []).forEach((row) => {
+    const profileId = row.profile_id;
+    if (!profileId) {
+      return;
+    }
+
+    const existing = progressByProfile.get(profileId) ?? [];
+    existing.push(row as SkillProgressWithDefinition);
+    progressByProfile.set(profileId, existing);
+  });
+
+  const unlocksByProfile = new Map<string, SkillUnlockWithDefinition[]>();
+  (unlockResponse.data ?? []).forEach((row) => {
+    const profileId = row.profile_id;
+    if (!profileId) {
+      return;
+    }
+
+    const existing = unlocksByProfile.get(profileId) ?? [];
+    existing.push(row as SkillUnlockWithDefinition);
+    unlocksByProfile.set(profileId, existing);
+  });
+
+  return profileIds.reduce<Record<string, SkillMap>>((acc, profileId) => {
+    const progressRows = progressByProfile.get(profileId) ?? [];
+    const unlockRows = unlocksByProfile.get(profileId) ?? [];
+    acc[profileId] = buildSkillMap(progressRows, unlockRows);
+    return acc;
+  }, {});
+};
+
+const getSkillLevel = (skillMap: SkillMap, slug: SkillSlug): number => {
+  const entry = skillMap[slug];
+  if (!entry) {
+    return 0;
+  }
+
+  return entry.unlocked ? entry.level ?? 0 : 0;
+};
+
+const getSkillDisplayValue = (skillMap: SkillMap, slug: SkillSlug): string => {
+  const entry = skillMap[slug];
+  if (!entry) {
+    return "0";
+  }
+
+  if (!entry.unlocked) {
+    return "Locked";
+  }
+
+  return (entry.level ?? 0).toString();
+};
+
+const estimateSkillLevel = (skills?: SkillMap | null) => {
   if (!skills) {
     return 1;
   }
 
-  const values = [
-    skills.guitar,
-    skills.vocals,
-    skills.drums,
-    skills.bass,
-    skills.performance,
-    skills.songwriting
-  ].filter((value): value is number => typeof value === "number");
+  const values = BAND_SKILL_SLUGS.map((slug) => getSkillLevel(skills, slug));
 
   if (values.length === 0) {
     return 1;
@@ -169,11 +308,16 @@ const EnhancedBandManager = () => {
 
   const calculateBandStats = useCallback((members: BandMember[]): BandStats => {
     const totalSkills = members.reduce((acc, member) => {
-      const skills = member.player_skills;
-      return acc + skills.guitar + skills.vocals + skills.drums + skills.bass + skills.performance + skills.songwriting;
+      return (
+        acc +
+        BAND_SKILL_SLUGS.reduce((skillSum, slug) => {
+          return skillSum + getSkillLevel(member.player_skills, slug);
+        }, 0)
+      );
     }, 0);
 
-    const avgSkill = members.length > 0 ? totalSkills / (members.length * 6) : 0;
+    const avgSkill =
+      members.length > 0 ? totalSkills / (members.length * BAND_SKILL_SLUGS.length) : 0;
 
     // Chemistry calculation based on skill balance and member count
     const chemistry = Math.min(100, Math.max(0, avgSkill * (members.length / 4) * 1.2));
@@ -200,37 +344,23 @@ const EnhancedBandManager = () => {
 
       if (profilesError) throw profilesError;
 
-      // Fetch skills for each profile
-      const profilesWithSkills: AvailableMember[] = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          let skills: MemberSkillSet | null = null;
+      const profileIds = (profiles ?? [])
+        .map((profile) => profile.id)
+        .filter((id): id is string => Boolean(id));
 
-          if (profile.id) {
-            const { data } = await supabase
-              .from("player_skills")
-              .select("guitar, vocals, drums, bass, performance, songwriting")
-              .eq("profile_id", profile.id)
-              .maybeSingle();
+      const skillMaps = await fetchSkillMapsForProfiles(profileIds);
 
-            skills = data as MemberSkillSet | null;
-          }
+      const profilesWithSkills: AvailableMember[] = (profiles || []).map((profile) => {
+        const skillMap = profile.id
+          ? skillMaps[profile.id] ?? createDefaultSkillMap()
+          : createDefaultSkillMap();
 
-          const normalizedSkills: MemberSkillSet = {
-            guitar: skills?.guitar ?? defaultPlayerSkills.guitar,
-            vocals: skills?.vocals ?? defaultPlayerSkills.vocals,
-            drums: skills?.drums ?? defaultPlayerSkills.drums,
-            bass: skills?.bass ?? defaultPlayerSkills.bass,
-            performance: skills?.performance ?? defaultPlayerSkills.performance,
-            songwriting: skills?.songwriting ?? defaultPlayerSkills.songwriting
-          };
-
-          return {
-            ...profile,
-            player_skills: normalizedSkills,
-            levelEstimate: estimateSkillLevel(normalizedSkills)
-          };
-        })
-      );
+        return {
+          ...profile,
+          player_skills: skillMap,
+          levelEstimate: estimateSkillLevel(skillMap)
+        };
+      });
 
       const available = profilesWithSkills.filter(p => !currentMemberIds.includes(p.user_id));
 
@@ -252,59 +382,71 @@ const EnhancedBandManager = () => {
 
       if (membersError) throw membersError;
 
-      // Fetch profiles and skills for each member
-      const membersWithDetails = await Promise.all(
-        (members || []).map(async (member) => {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("id, username, display_name, level, avatar_url")
-            .eq("user_id", member.user_id)
-            .eq("is_active", true)
-            .maybeSingle();
+      if (!members || members.length === 0) {
+        setBandMembers([]);
+        setBandStats(calculateBandStats([]));
+        await fetchAvailableMembers([]);
+        return [];
+      }
 
-          let skillsData: MemberSkillSet | null = null;
+      const userIds = members.map(member => member.user_id);
 
-          if (profileData?.id) {
-            const { data } = await supabase
-              .from("player_skills")
-              .select("guitar, vocals, drums, bass, performance, songwriting")
-              .eq("profile_id", profileData.id)
-              .maybeSingle();
+      const { data: profileRows, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, user_id, username, display_name, level, avatar_url")
+        .in("user_id", userIds)
+        .eq("is_active", true);
 
-            skillsData = data as MemberSkillSet | null;
-          }
+      if (profileError) throw profileError;
 
-          const publicProfile = profileRes.data as PublicProfileRow | null;
-          const normalizedSkills: MemberSkillSet = {
-            guitar: skillsRes.data?.guitar ?? defaultPlayerSkills.guitar,
-            vocals: skillsRes.data?.vocals ?? defaultPlayerSkills.vocals,
-            drums: skillsRes.data?.drums ?? defaultPlayerSkills.drums,
-            bass: skillsRes.data?.bass ?? defaultPlayerSkills.bass,
-            performance: skillsRes.data?.performance ?? defaultPlayerSkills.performance,
-            songwriting: skillsRes.data?.songwriting ?? defaultPlayerSkills.songwriting
-          };
+      const profileRecords = (profileRows ?? []) as ProfileRow[];
+      const profileMap = new Map<string, ProfileRow>();
+      const profileIds: string[] = [];
 
-          const avatarPreview = getStoredAvatarPreviewUrl(profileData?.avatar_url ?? null);
-          const normalizedProfile = profileData
-            ? { ...profileData, avatar_url: avatarPreview ?? null }
-            : { username: "", display_name: "", level: 1, avatar_url: avatarPreview ?? "" };
+      profileRecords.forEach((profile) => {
+        profileMap.set(profile.user_id, profile);
+        if (profile.id) {
+          profileIds.push(profile.id);
+        }
+      });
 
-          return {
-            ...member,
-            profiles: normalizedProfile,
-            player_skills: skillsData || { guitar: 20, vocals: 20, drums: 20, bass: 20, performance: 20, songwriting: 20 }
-          };
-        })
-      );
+      const skillMaps = await fetchSkillMapsForProfiles(profileIds);
+
+      const membersWithDetails: BandMember[] = members.map((member) => {
+        const profileData = profileMap.get(member.user_id) ?? null;
+        const skillMap = profileData?.id
+          ? skillMaps[profileData.id] ?? createDefaultSkillMap()
+          : createDefaultSkillMap();
+        const levelEstimate = estimateSkillLevel(skillMap);
+        const avatarPreview = getStoredAvatarPreviewUrl(profileData?.avatar_url ?? null);
+
+        const normalizedProfile = profileData
+          ? {
+              ...profileData,
+              avatar_url: avatarPreview ?? null,
+              levelEstimate
+            }
+          : {
+              username: "",
+              display_name: "",
+              level: 1,
+              avatar_url: avatarPreview ?? "",
+              levelEstimate
+            };
+
+        return {
+          ...member,
+          profiles: normalizedProfile,
+          player_skills: skillMap
+        };
+      });
 
       setBandMembers(membersWithDetails);
 
-      if (membersWithDetails) {
-        const stats = calculateBandStats(membersWithDetails);
-        setBandStats(stats);
-        const currentMemberIds = membersWithDetails.map(member => member.user_id);
-        await fetchAvailableMembers(currentMemberIds);
-      }
+      const stats = calculateBandStats(membersWithDetails);
+      setBandStats(stats);
+      const currentMemberIds = membersWithDetails.map(member => member.user_id);
+      await fetchAvailableMembers(currentMemberIds);
 
       return membersWithDetails;
     } catch (error) {
@@ -630,30 +772,14 @@ const EnhancedBandManager = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="font-mono">{member.player_skills.guitar}</div>
-                        <div className="text-muted-foreground">Guitar</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-mono">{member.player_skills.vocals}</div>
-                        <div className="text-muted-foreground">Vocals</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-mono">{member.player_skills.drums}</div>
-                        <div className="text-muted-foreground">Drums</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-mono">{member.player_skills.bass}</div>
-                        <div className="text-muted-foreground">Bass</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-mono">{member.player_skills.performance}</div>
-                        <div className="text-muted-foreground">Performance</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-mono">{member.player_skills.songwriting}</div>
-                        <div className="text-muted-foreground">Writing</div>
-                      </div>
+                      {BAND_SKILL_SLUGS.map((slug) => (
+                        <div key={slug} className="text-center">
+                          <div className="font-mono">
+                            {getSkillDisplayValue(member.player_skills, slug)}
+                          </div>
+                          <div className="text-muted-foreground">{SKILL_DISPLAY_LABELS[slug]}</div>
+                        </div>
+                      ))}
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
@@ -744,30 +870,14 @@ const EnhancedBandManager = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="text-center">
-                          <div className="font-mono">{member.player_skills.guitar}</div>
-                          <div className="text-muted-foreground">Guitar</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-mono">{member.player_skills.vocals}</div>
-                          <div className="text-muted-foreground">Vocals</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-mono">{member.player_skills.drums}</div>
-                          <div className="text-muted-foreground">Drums</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-mono">{member.player_skills.bass}</div>
-                          <div className="text-muted-foreground">Bass</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-mono">{member.player_skills.performance}</div>
-                          <div className="text-muted-foreground">Performance</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-mono">{member.player_skills.songwriting}</div>
-                          <div className="text-muted-foreground">Writing</div>
-                        </div>
+                        {BAND_SKILL_SLUGS.map((slug) => (
+                          <div key={slug} className="text-center">
+                            <div className="font-mono">
+                              {getSkillDisplayValue(member.player_skills, slug)}
+                            </div>
+                            <div className="text-muted-foreground">{SKILL_DISPLAY_LABELS[slug]}</div>
+                          </div>
+                        ))}
                       </div>
 
                       <Button
