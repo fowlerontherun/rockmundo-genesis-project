@@ -119,19 +119,6 @@ const BandManager = () => {
   const [pendingInvites, setPendingInvites] = useState<BandInvitation[]>([]);
   const [acceptingInviteId, setAcceptingInviteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (user) {
-      loadBandData();
-    } else {
-      setBand(null);
-      setMembers([]);
-      setPendingInvites([]);
-      setLoading(false);
-    }
-  }, [authLoading, user, loadBandData]);
-
   const loadBandData = useCallback(async () => {
     if (!user?.id) {
       setBand(null);
@@ -189,6 +176,19 @@ const BandManager = () => {
     loadScheduleEvents,
     user?.id
   ]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (user) {
+      loadBandData();
+    } else {
+      setBand(null);
+      setMembers([]);
+      setPendingInvites([]);
+      setLoading(false);
+    }
+  }, [authLoading, user, loadBandData]);
 
   const loadBandMembers = useCallback(async (bandId: string) => {
     if (!user?.id) return;
