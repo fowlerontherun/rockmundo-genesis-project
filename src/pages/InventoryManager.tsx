@@ -30,7 +30,6 @@ interface InventoryItem {
     category: string;
     rarity: string;
     price: number;
-    stat_boosts: EquipmentStatBoosts | null;
     description: string;
   };
 }
@@ -73,7 +72,24 @@ const InventoryManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setInventory(data || []);
+
+      const normalizedInventory = (data || []).reduce<InventoryItem[]>((acc, item) => {
+        if (!item.equipment) {
+          return acc;
+        }
+
+        acc.push({
+          ...item,
+          equipment: {
+            ...item.equipment,
+            stat_boosts: normalizeStatBoosts(item.equipment.stat_boosts)
+          }
+        });
+
+        return acc;
+      }, []);
+
+      setInventory(normalizedInventory);
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load inventory";
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
@@ -468,7 +484,6 @@ const InventoryManager = () => {
                         </div>
                       </div>
                     </CardHeader>
-
                     <CardContent className="space-y-4">
                       <p className="text-sm text-muted-foreground">{item.equipment.description}</p>
 
@@ -482,7 +497,6 @@ const InventoryManager = () => {
                         </div>
                         <Progress value={item.condition} className="h-2" />
                       </div>
-
                       {/* Stat Boosts */}
                       {statBoosts && Object.keys(statBoosts).length > 0 && (
                         <div>

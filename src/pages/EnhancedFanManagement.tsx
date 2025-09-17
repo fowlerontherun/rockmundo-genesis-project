@@ -102,6 +102,8 @@ interface FanCampaignRecord {
   created_at?: string | null;
 }
 
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
 const FAN_VALUE_PER_FAN = 5;
 
 const parseNumericValue = (value: unknown): number => {
@@ -247,7 +249,7 @@ const EnhancedFanManagement = () => {
   const { toast } = useToast();
   const [fanData, setFanData] = useState<FanDemographics | null>(null);
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [campaigning, setCampaigning] = useState(false);
@@ -353,7 +355,11 @@ const EnhancedFanManagement = () => {
 
       if (fanResponse.data) setFanData(fanResponse.data);
       if (postsResponse.data) setSocialPosts(postsResponse.data);
-      if (profileResponse.data) setProfile(profileResponse.data);
+      if (profileResponse.data) {
+        setProfile(profileResponse.data as ProfileRow);
+      } else {
+        setProfile(null);
+      }
       if (campaignsResponse.data) {
         setCampaignHistory(campaignsResponse.data.map(normalizeCampaignRecord));
       }
@@ -564,7 +570,7 @@ const EnhancedFanManagement = () => {
           earnings: estimatedRevenue - campaign.cost
         });
 
-      setProfile(prev => (prev ? { ...prev, cash: newCash } : prev));
+      setProfile(prev => (prev ? { ...prev, cash: newCash } : null));
 
       if (insertedCampaign) {
         setCampaignHistory(prev => [normalizeCampaignRecord(insertedCampaign), ...prev]);
