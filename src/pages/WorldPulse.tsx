@@ -46,7 +46,7 @@ interface GenreStats {
 
 type GlobalChartRow = Database["public"]["Tables"]["global_charts"]["Row"];
 type SongRow = Database["public"]["Tables"]["songs"]["Row"];
-type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type PublicProfileRow = Database["public"]["Views"]["public_profiles"]["Row"];
 
 const formatDailyValue = (dateString: string) => {
   const parsed = new Date(dateString);
@@ -109,10 +109,10 @@ const WorldPulse = () => {
       )
     );
 
-    const profilesByUserId = new Map<string, ProfileRow>();
+    const profilesByUserId = new Map<string, PublicProfileRow>();
     if (userIds.length > 0) {
       const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("user_id, display_name, username")
         .in("user_id", userIds);
 
@@ -121,7 +121,7 @@ const WorldPulse = () => {
       }
 
       (profilesData ?? []).forEach((profile) => {
-        profilesByUserId.set(profile.user_id, profile as ProfileRow);
+        profilesByUserId.set(profile.user_id, profile as PublicProfileRow);
       });
     }
 

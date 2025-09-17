@@ -31,35 +31,22 @@ interface UserWithRole {
   last_sign_in_at: string | null;
 }
 
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type PublicProfileRow = Database['public']['Views']['public_profiles']['Row'];
 type UserRoleRow = Database['public']['Tables']['user_roles']['Row'];
 
-type ProfileWithRole = Pick<
-  ProfileRow,
-  'user_id' | 'username' | 'display_name' | 'created_at' | 'updated_at'
-> & {
-  user_roles: Array<Pick<UserRoleRow, 'role'> | null> | null;
+type AuthUserInfo = {
+  email: string | null;
+  createdAt: string | null;
+  lastSignInAt: string | null;
 };
 
 const DEFAULT_ROLE: AppRole = 'user';
 
-const resolveRole = (roles: ProfileWithRole['user_roles']): AppRole => {
-  if (Array.isArray(roles)) {
-    for (const entry of roles) {
-      if (entry && entry.role) {
-        return entry.role;
-      }
-    }
-  }
-
-  return DEFAULT_ROLE;
-};
-
-const fetchAuthEmailMap = async (userIds: string[]): Promise<Map<string, string | null>> => {
-  const emailMap = new Map<string, string | null>();
+const fetchAuthUserInfoMap = async (userIds: string[]): Promise<Map<string, AuthUserInfo>> => {
+  const infoMap = new Map<string, AuthUserInfo>();
 
   if (userIds.length === 0) {
-    return emailMap;
+    return infoMap;
   }
 
   const uniqueIds = Array.from(new Set(userIds));
@@ -79,14 +66,18 @@ const fetchAuthEmailMap = async (userIds: string[]): Promise<Map<string, string 
 
     for (const authUser of data?.users ?? []) {
       if (idSet.has(authUser.id)) {
-        emailMap.set(authUser.id, authUser.email ?? null);
+        infoMap.set(authUser.id, {
+          email: authUser.email ?? null,
+          createdAt: authUser.created_at ?? null,
+          lastSignInAt: authUser.last_sign_in_at ?? null,
+        });
       }
     }
   } catch (error) {
     console.error('Error fetching user emails:', error);
   }
 
-  return emailMap;
+  return infoMap;
 };
 
 const Admin = () => {
@@ -98,38 +89,57 @@ const Admin = () => {
   const loadUsers = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          user_id,
-          username,
-          display_name,
-          created_at,
-          updated_at,
-          user_roles(role)
-        `)
-        .order('created_at', { ascending: false })
-        .returns<ProfileWithRole[]>();
+      const { data: profileRows, error: profilesError } = await supabase
+        .from('public_profiles')
+        .select('user_id, username, display_name')
+        .returns<PublicProfileRow[]>();
 
-      if (error) {
-        throw error;
+      if (profilesError) {
+        throw profilesError;
       }
 
-      const profiles = data ?? [];
-      const emailMap = await fetchAuthEmailMap(profiles.map((profile) => profile.user_id));
+      const profiles = profileRows ?? [];
+
+      const { data: roleRows, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .returns<Array<Pick<UserRoleRow, 'user_id' | 'role'>> | null>();
+
+      if (rolesError) {
+        throw rolesError;
+      }
+
+      const roleMap = new Map<string, AppRole>();
+      (roleRows ?? []).forEach((entry) => {
+        if (entry.user_id) {
+          roleMap.set(entry.user_id, entry.role ?? DEFAULT_ROLE);
+        }
+      });
+
+      const authInfoMap = await fetchAuthUserInfoMap(profiles.map((profile) => profile.user_id));
 
       const formattedUsers: UserWithRole[] = profiles.map((profile) => {
-        const role = resolveRole(profile.user_roles);
+        const authInfo = authInfoMap.get(profile.user_id) ?? {
+          email: null,
+          createdAt: null,
+          lastSignInAt: null,
+        };
 
         return {
           id: profile.user_id,
-          email: emailMap.get(profile.user_id) ?? null,
+          email: authInfo.email,
           username: profile.username,
           display_name: profile.display_name ?? profile.username,
-          role,
-          created_at: profile.created_at,
-          last_sign_in_at: profile.updated_at ?? profile.created_at ?? null,
+          role: roleMap.get(profile.user_id) ?? DEFAULT_ROLE,
+          created_at: authInfo.createdAt,
+          last_sign_in_at: authInfo.lastSignInAt,
         };
+      });
+
+      formattedUsers.sort((a, b) => {
+        const aTime = a.created_at ? Date.parse(a.created_at) : 0;
+        const bTime = b.created_at ? Date.parse(b.created_at) : 0;
+        return bTime - aTime;
       });
 
       setUsers(formattedUsers);

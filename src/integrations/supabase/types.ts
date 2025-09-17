@@ -2093,6 +2093,17 @@ export type Database = {
         }
         Relationships: []
       },
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          display_name: string | null
+          id: string
+          user_id: string
+          username: string
+        }
+        Relationships: []
+      },
       player_achievement_summary: {
         Row: {
           earned_count: number
