@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { addMonths } from "date-fns";
 import { calculateLevel } from "@/utils/gameBalance";
+import { applyCostReduction } from "@/utils/attributeModifiers";
 
 type EventType = "gig" | "recording" | "rehearsal" | "meeting" | "tour";
 type EventStatus = "upcoming" | "in_progress" | "completed" | "cancelled";
@@ -287,10 +288,16 @@ const formatDuration = (minutes: number) => {
   return parts.join(" ");
 };
 
-const calculateDayTotals = (dayEvents: ScheduleEvent[]) => {
+const calculateDayTotals = (dayEvents: ScheduleEvent[], transform?: (cost: number) => number) => {
   const totalDuration = dayEvents.reduce((sum, event) => sum + event.duration_minutes, 0);
   const energyValues = dayEvents
-    .map((event) => event.energy_cost)
+    .map((event) => {
+      if (event.energy_cost === null || event.energy_cost === undefined) {
+        return null;
+      }
+      const numericCost = Number(event.energy_cost);
+      return transform ? transform(numericCost) : numericCost;
+    })
     .filter((value): value is number => value !== null);
 
   const totalEnergy = energyValues.reduce((sum, value) => sum + value, 0);
@@ -1022,6 +1029,15 @@ const Schedule = () => {
       const currentCash = Number(activeProfile.cash ?? 0);
       const currentExperience = Number(activeProfile.experience ?? 0);
       const currentFame = Number(activeProfile.fame ?? 0);
+      const activeAttributes = attributesRef.current;
+      const baseEnergyCost =
+        event.energy_cost !== null && event.energy_cost !== undefined
+          ? Number(event.energy_cost)
+          : null;
+      const effectiveEnergyCost =
+        baseEnergyCost !== null
+          ? applyCostReduction(baseEnergyCost, activeAttributes?.physical_endurance)
+          : 0;
 
       const newCash = currentCash + reward.cash;
       const newExperience = currentExperience + reward.experience;
@@ -1030,6 +1046,14 @@ const Schedule = () => {
       profileUpdates.cash = newCash;
       profileUpdates.experience = newExperience;
       profileUpdates.fame = newFame;
+
+      if (effectiveEnergyCost > 0) {
+        const currentHealth = typeof activeProfile.health === "number" ? activeProfile.health : 100;
+        const nextHealth = Math.max(0, currentHealth - effectiveEnergyCost);
+        if (nextHealth !== currentHealth) {
+          profileUpdates.health = nextHealth;
+        }
+      }
 
       const currentLevel =
         typeof activeProfile.level === "number"
@@ -1124,6 +1148,14 @@ const Schedule = () => {
         `+${reward.fame} fame`,
         `+$${reward.cash.toLocaleString()} cash`,
       ];
+
+      if (effectiveEnergyCost > 0) {
+        const energySummary =
+          baseEnergyCost !== null && effectiveEnergyCost !== baseEnergyCost
+            ? `Energy spent: ${effectiveEnergyCost} (reduced from ${baseEnergyCost})`
+            : `Energy spent: ${effectiveEnergyCost}`;
+        summarySegments.push(energySummary);
+      }
 
       if (skillSummaries.length > 0) {
         summarySegments.push(`Skill gains: ${skillSummaries.join(", ")}`);
@@ -1789,6 +1821,10 @@ const Schedule = () => {
     const cardClasses = `bg-card/80 backdrop-blur-sm border-primary/20 ${
       options.highlightToday ? "border-l-4 border-l-primary" : ""
     } ${event.status === "completed" ? "opacity-80" : ""}`;
+    const effectiveEnergyCost =
+      event.energy_cost !== null && event.energy_cost !== undefined
+        ? applyCostReduction(Number(event.energy_cost), enduranceValue)
+        : null;
 
     return (
       <Card key={event.id} className={cardClasses}>
@@ -1849,10 +1885,15 @@ const Schedule = () => {
                     <span>{recurrenceDescription}</span>
                   </span>
                 ) : null}
-                {event.energy_cost !== null ? (
+                {effectiveEnergyCost !== null ? (
                   <span className="flex items-center gap-1">
                     <Flame className="h-4 w-4 text-muted-foreground" />
-                    <span>{event.energy_cost} energy</span>
+                    <span>
+                      {effectiveEnergyCost} energy
+                      {effectiveEnergyCost !== Number(event.energy_cost)
+                        ? ` (base ${Number(event.energy_cost)} energy)`
+                        : ""}
+                    </span>
                   </span>
                 ) : null}
               </div>
@@ -1900,8 +1941,15 @@ const Schedule = () => {
   );
   const todayEvents = expandedEvents.filter((event) => isSameDay(event.date, new Date()));
   const completedEvents = expandedEvents.filter((event) => event.status === "completed");
-  const selectedDayTotals = useMemo(() => calculateDayTotals(filteredEvents), [filteredEvents]);
-  const todayTotals = useMemo(() => calculateDayTotals(todayEvents), [todayEvents]);
+  const enduranceValue = attributes?.physical_endurance;
+  const selectedDayTotals = useMemo(
+    () => calculateDayTotals(filteredEvents, (cost) => applyCostReduction(cost, enduranceValue)),
+    [filteredEvents, enduranceValue]
+  );
+  const todayTotals = useMemo(
+    () => calculateDayTotals(todayEvents, (cost) => applyCostReduction(cost, enduranceValue)),
+    [todayEvents, enduranceValue]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -1985,7 +2033,7 @@ const Schedule = () => {
                         {selectedDayTotals.hasEnergy ? (
                           <span className="flex items-center gap-1">
                             <Flame className="h-4 w-4" />
-                            <span>{selectedDayTotals.totalEnergy} energy planned</span>
+                            <span>{selectedDayTotals.totalEnergy} energy planned (after endurance)</span>
                           </span>
                         ) : null}
                       </div>
@@ -2060,10 +2108,15 @@ const Schedule = () => {
                                           {recurrenceDescription}
                                         </span>
                                       ) : null}
-                                      {event.energy_cost !== null ? (
+                                      {effectiveEnergyCost !== null ? (
                                         <span className="flex items-center gap-1">
                                           <Flame className="h-3 w-3" />
-                                          {event.energy_cost} energy
+                                          <span>
+                                            {effectiveEnergyCost} energy
+                                            {effectiveEnergyCost !== Number(event.energy_cost)
+                                              ? ` (base ${Number(event.energy_cost)} energy)`
+                                              : ""}
+                                          </span>
                                         </span>
                                       ) : null}
                                     </div>
@@ -2173,7 +2226,7 @@ const Schedule = () => {
                         {todayTotals.hasEnergy ? (
                           <span className="flex items-center gap-1">
                             <Flame className="h-4 w-4" />
-                            <span>{todayTotals.totalEnergy} energy planned</span>
+                            <span>{todayTotals.totalEnergy} energy planned (after endurance)</span>
                           </span>
                         ) : null}
                       </CardContent>
