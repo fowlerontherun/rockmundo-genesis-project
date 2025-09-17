@@ -10,6 +10,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import {
+  buildSkillLevelRecord,
+  calculateAverageSkillLevel,
+  hasSkillData,
+  toSkillProgressMap,
+  type SkillKey,
+  type SkillLevelRecord,
+  type SkillProgressSource
+} from "@/utils/skillProgress";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Music,
@@ -75,10 +84,45 @@ const stageDescriptions: Record<Stage, string> = {
 
 const getStageKey = (songId: string, stage: Stage) => `${songId}:${stage}`;
 
+const MIXING_SKILL_KEYS: SkillKey[] = ["guitar", "bass", "drums"];
+const MASTERING_SKILL_KEYS: SkillKey[] = ["performance", "vocals", "songwriting"];
+
 const MusicStudio = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, updateProfile, updateSkills, addActivity } = useGameData();
+  const gameData = useGameData();
+  const { profile, skills, updateProfile, updateSkills, addActivity } = gameData;
+
+  const skillProgressSource = useMemo<SkillProgressSource>(() => {
+    const withProgress = gameData as unknown as {
+      skillProgressMap?: SkillProgressSource;
+      skillProgressCollection?: SkillProgressSource;
+      skillProgress?: SkillProgressSource;
+    };
+
+    return (
+      withProgress.skillProgressMap ??
+      withProgress.skillProgressCollection ??
+      withProgress.skillProgress ??
+      null
+    );
+  }, [gameData]);
+
+  const skillProgressMap = useMemo(
+    () => toSkillProgressMap(skillProgressSource, skills),
+    [skillProgressSource, skills]
+  );
+
+  const skillLevels: SkillLevelRecord = useMemo(
+    () => buildSkillLevelRecord(skillProgressMap, skills),
+    [skillProgressMap, skills]
+  );
+
+  const hasSkillLevels = useMemo(
+    () => hasSkillData(skillProgressMap, skills),
+    [skillProgressMap, skills]
+  );
+
 
   const [songs, setSongs] = useState<SupabaseSong[]>([]);
   const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
@@ -173,16 +217,26 @@ const MusicStudio = () => {
   }, []);
 
   const calculateMixQualityBoost = useCallback(() => {
-    if (!skills) return 4;
-    const average = (skills.guitar + skills.bass + skills.drums) / 3;
+    if (!hasSkillLevels) return 4;
+    const average = calculateAverageSkillLevel(
+      skillProgressMap,
+      MIXING_SKILL_KEYS,
+      skills
+    );
+    if (average <= 0) return 4;
     return Math.max(1, Math.round(average / 10 + Math.random() * 4));
-  }, [skills]);
+  }, [hasSkillLevels, skillProgressMap, skills]);
 
   const calculateMasterQualityBoost = useCallback(() => {
-    if (!skills) return 5;
-    const average = (skills.performance + skills.vocals + skills.songwriting) / 3;
+    if (!hasSkillLevels) return 5;
+    const average = calculateAverageSkillLevel(
+      skillProgressMap,
+      MASTERING_SKILL_KEYS,
+      skills
+    );
+    if (average <= 0) return 5;
     return Math.max(2, Math.round(average / 8 + Math.random() * 5));
-  }, [skills]);
+  }, [hasSkillLevels, skillProgressMap, skills]);
 
   const handleFormChange = (songId: string, stage: Stage, field: keyof StageFormState, value: string) => {
     const key = getStageKey(songId, stage);
@@ -403,17 +457,17 @@ const MusicStudio = () => {
         });
       }
 
-      if (skills) {
+      if (hasSkillLevels) {
         if (stage === "mixing") {
           await updateSkills({
-            guitar: Math.min(100, skills.guitar + 1),
-            bass: Math.min(100, skills.bass + 1),
-            drums: Math.min(100, skills.drums + 1)
+            guitar: Math.min(100, skillLevels.guitar + 1),
+            bass: Math.min(100, skillLevels.bass + 1),
+            drums: Math.min(100, skillLevels.drums + 1)
           });
         } else if (stage === "mastering") {
           await updateSkills({
-            performance: Math.min(100, skills.performance + 1),
-            songwriting: Math.min(100, skills.songwriting + 1)
+            performance: Math.min(100, skillLevels.performance + 1),
+            songwriting: Math.min(100, skillLevels.songwriting + 1)
           });
         }
       }

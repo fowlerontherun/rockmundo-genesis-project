@@ -405,23 +405,6 @@ const useProvideGameData = (): GameDataContextValue => {
     void fetchCharacters();
   }, [clearSelectedCharacter, fetchCharacters, user]);
 
-      const valueByAttributeId = new Map((data ?? []).map(entry => [entry.attribute_id, entry.value]));
-
-      const nextAttributes: AttributesMap = { ...attributes };
-      payload.forEach(item => {
-        const latestValue = valueByAttributeId.get(item.definition.id) ?? item.row.value;
-        nextAttributes[item.definition.slug] = {
-          definition: item.definition,
-          value: latestValue
-        };
-      });
-
-      setAttributes(nextAttributes);
-      return nextAttributes;
-    },
-    [user, selectedCharacterId, attributes, attributeDefinitions]
-  );
-
   const addActivity = useCallback(
     async (
       activityType: string,
