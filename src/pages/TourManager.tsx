@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -133,6 +133,7 @@ interface EditTourForm {
 }
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
+type CityRow = Database['public']['Tables']['cities']['Row'];
 type TourRow = Database['public']['Tables']['tours']['Row'];
 type TourVenueRow = Database['public']['Tables']['tour_venues']['Row'];
 type TourVenueInsert = Database['public']['Tables']['tour_venues']['Insert'] & {
@@ -172,6 +173,7 @@ const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 const EARTH_RADIUS_KM = 6371;
 const DEFAULT_TRAVEL_MODE: TravelMode = 'coach';
 const TRAVEL_MODE_VALUES: TravelMode[] = ['coach', 'taxi', 'air', 'ferry'];
+const ALL_CITIES_VALUE = 'all';
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 
@@ -418,7 +420,7 @@ const createEmptySchedule = (): VenueScheduleForm => ({
 });
 const TourManager = () => {
   const { user } = useAuth();
-  const { profile, skills, updateProfile } = useGameData();
+  const { profile, skills, currentCity, updateProfile } = useGameData();
   const { toast } = useToast();
   const [tours, setTours] = useState<Tour[]>([]);
   const [venues, setVenues] = useState<VenueRow[]>([]);
@@ -438,8 +440,23 @@ const TourManager = () => {
     end_date: ""
   });
   const [venueSchedules, setVenueSchedules] = useState<Record<string, VenueScheduleForm>>({});
+  const [cities, setCities] = useState<CityRow[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [venuesLoading, setVenuesLoading] = useState(false);
+  const [selectedCityId, setSelectedCityId] = useState<string>(currentCity?.id ?? ALL_CITIES_VALUE);
+  const [citySelectionTouched, setCitySelectionTouched] = useState(false);
+  const selectedCity = useMemo(
+    () => cities.find((city) => city.id === selectedCityId),
+    [cities, selectedCityId]
+  );
 
   const supabaseClient = useMemo(() => supabase, []);
+
+  useEffect(() => {
+    if (currentCity?.id && !citySelectionTouched && selectedCityId === ALL_CITIES_VALUE) {
+      setSelectedCityId(currentCity.id);
+    }
+  }, [citySelectionTouched, currentCity?.id, selectedCityId]);
 
   const normalizeDate = (date?: string | null) => (date ? date.split("T")[0] : "");
 
@@ -510,27 +527,110 @@ const TourManager = () => {
   }, [user, supabaseClient, setTours, setTicketPriceUpdates, setMarketingSpendUpdates, toast]);
 
   const loadVenues = useCallback(async () => {
+    setVenuesLoading(true);
     try {
-      const { data, error } = await supabaseClient
+      let query = supabaseClient
         .from('venues')
-        .select('*')
-        .order('prestige_level', { ascending: true });
+        .select('*');
+
+      if (selectedCityId !== ALL_CITIES_VALUE) {
+        query = query.eq('city_id', selectedCityId);
+      }
+
+      const { data, error } = await query
+        .order('prestige_level', { ascending: true })
+        .order('capacity', { ascending: true });
 
       if (error) throw error;
       setVenues(data || []);
     } catch (error: unknown) {
       console.error('Error loading venues:', error);
     } finally {
+      setVenuesLoading(false);
       setLoading(false);
     }
-  }, [supabaseClient, setVenues, setLoading]);
+  }, [selectedCityId, supabaseClient, setVenues, setLoading]);
+
+  const loadCities = useCallback(async () => {
+    setCitiesLoading(true);
+    try {
+      const { data, error } = await supabaseClient
+        .from('cities')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setCities((data ?? []) as CityRow[]);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load cities";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading cities:', errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
+    } finally {
+      setCitiesLoading(false);
+    }
+  }, [supabaseClient, toast]);
+
+  useEffect(() => {
+    loadCities();
+  }, [loadCities]);
 
   useEffect(() => {
     if (user) {
       loadTours();
+    }
+  }, [user, loadTours]);
+
+  useEffect(() => {
+    if (user) {
       loadVenues();
     }
-  }, [user, loadTours, loadVenues]);
+  }, [user, loadVenues]);
+
+  useEffect(() => {
+    const validVenueIds = new Set(venues.map((venue) => venue.id));
+
+    setVenueSchedules((prev) => {
+      let changed = false;
+      const entries = Object.entries(prev).map(([tourId, schedule]) => {
+        if (schedule.venueId && !validVenueIds.has(schedule.venueId)) {
+          changed = true;
+          return [tourId, { ...schedule, venueId: "" }];
+        }
+        return [tourId, schedule];
+      });
+      return changed ? Object.fromEntries(entries) as typeof prev : prev;
+    });
+
+    setEditForms((prev) => {
+      let changed = false;
+      const entries = Object.entries(prev).map(([tourId, form]) => {
+        if (!form) {
+          return [tourId, form];
+        }
+        const newVenueId = form.newVenue?.venue_id;
+        if (newVenueId && !validVenueIds.has(newVenueId)) {
+          changed = true;
+          return [
+            tourId,
+            {
+              ...form,
+              newVenue: {
+                ...form.newVenue,
+                venue_id: "",
+              },
+            },
+          ];
+        }
+        return [tourId, form];
+      });
+      return changed ? Object.fromEntries(entries) as typeof prev : prev;
+    });
+  }, [venues]);
 
   const optimalRoutes = useMemo(() => {
     const routes: Record<string, RouteSuggestion> = {};
@@ -1242,11 +1342,58 @@ const TourManager = () => {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              You need at least 1,000 fame and 50 performance skill to create tours. 
+              You need at least 1,000 fame and 50 performance skill to create tours.
               Current fame: {profile.fame}
             </AlertDescription>
           </Alert>
         )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold font-oswald">Plan by city</h2>
+            <p className="text-sm text-muted-foreground">
+              Filter venue availability to focus your routing strategy.
+            </p>
+          </div>
+          <Select
+            value={selectedCityId}
+            onValueChange={(value) => {
+              setCitySelectionTouched(true);
+              setSelectedCityId(value);
+            }}
+            disabled={citiesLoading || (cities.length === 0 && selectedCityId !== ALL_CITIES_VALUE)}
+          >
+            <SelectTrigger className="w-[260px]">
+              <SelectValue placeholder="Select a city" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CITIES_VALUE}>All Cities</SelectItem>
+              {cities.map((city) => (
+                <SelectItem key={city.id} value={city.id}>
+                  {city.name}
+                  {city.id === currentCity?.id ? " (Current)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {venuesLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
+            Loading venues...
+          </div>
+        ) : venues.length === 0 ? (
+          <Alert className="bg-card/70 backdrop-blur-sm border-primary/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No venues available</AlertTitle>
+            <AlertDescription>
+              {selectedCityId === ALL_CITIES_VALUE
+                ? "There are no venues available right now. Try again later or unlock more locations."
+                : `No venues are currently open for bookings in ${selectedCity?.name ?? "this city"}. Choose another city or check back soon.`}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         {/* Create Tour Form */}
         {creatingTour && (
@@ -1407,10 +1554,18 @@ const TourManager = () => {
                         <Select
                           value={schedule.venueId}
                           onValueChange={(value) => updateVenueSchedule(tour.id, "venueId", value === "no-venues" ? "" : value)}
-                          disabled={venues.length === 0}
+                          disabled={venuesLoading || venues.length === 0}
                         >
                           <SelectTrigger id={`venue-${tour.id}`}>
-                            <SelectValue placeholder={venues.length ? "Choose a venue" : "No venues available"} />
+                            <SelectValue
+                              placeholder={
+                                venuesLoading
+                                  ? "Loading venues..."
+                                  : venues.length
+                                    ? "Choose a venue"
+                                    : "No venues available"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {venues.length > 0 ? (
@@ -1519,7 +1674,7 @@ const TourManager = () => {
                       <Button
                         size="sm"
                         onClick={() => handleScheduleVenue(tour.id)}
-                        disabled={!schedule.venueId || !schedule.date || venues.length === 0}
+                        disabled={!schedule.venueId || !schedule.date || venuesLoading || venues.length === 0}
                       >
                         Schedule Show
                       </Button>

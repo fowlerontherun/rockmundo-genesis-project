@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Calendar, MapPin, Users, DollarSign, Clock, Star, Music, Volume2, AlertCircle } from "lucide-react";
@@ -24,6 +25,7 @@ import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type Applie
 import type { Database, Json } from "@/integrations/supabase/types";
 
 type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
+type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type GigRow = Database["public"]["Tables"]["gigs"]["Row"];
 type GigInsertPayload = Database["public"]["Tables"]["gigs"]["Insert"] & {
   environment_modifiers?: EnvironmentModifierSummary | null;
@@ -88,6 +90,8 @@ const getShowTypeDetails = (showType: ShowType) =>
 
 const GIG_EXPERIENCE_ATTRIBUTES: AttributeKey[] = ["stage_presence", "musical_ability"];
 
+const ALL_CITIES_VALUE = "all";
+
 type JsonRequirementRecord = Extract<Json, Record<string, number | boolean | string | null>>;
 type VenueRequirements = JsonRequirementRecord & {
   min_popularity?: number | null;
@@ -108,6 +112,7 @@ interface Venue {
   id: string;
   name: string;
   location: string;
+  city_id?: string | null;
   capacity: number;
   venue_type: string;
   base_payment: number;
@@ -162,7 +167,7 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, attributes, updateProfile, updateAttributes, addActivity } = useGameData();
+  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
@@ -170,7 +175,15 @@ const GigBooking = () => {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [showTypeSelections, setShowTypeSelections] = useState<Record<string, ShowType>>({});
-  const [venueDateSelections, setVenueDateSelections] = useState<Record<string, string>>({});
+  const [cities, setCities] = useState<CityRow[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [venuesLoading, setVenuesLoading] = useState(false);
+  const [selectedCityId, setSelectedCityId] = useState<string>(currentCity?.id ?? ALL_CITIES_VALUE);
+  const [citySelectionTouched, setCitySelectionTouched] = useState(false);
+  const selectedCity = useMemo(
+    () => cities.find((city) => city.id === selectedCityId),
+    [cities, selectedCityId]
+  );
   const handleShowTypeSelection = (venueId: string, value: ShowType) => {
     setShowTypeSelections((prev) => ({
       ...prev,
@@ -184,12 +197,50 @@ const GigBooking = () => {
     }));
   };
 
-  const loadVenues = useCallback(async () => {
+  useEffect(() => {
+    if (currentCity?.id && !citySelectionTouched && selectedCityId === ALL_CITIES_VALUE) {
+      setSelectedCityId(currentCity.id);
+    }
+  }, [citySelectionTouched, currentCity?.id, selectedCityId]);
+
+  const loadCities = useCallback(async () => {
+    setCitiesLoading(true);
     try {
       const { data, error } = await supabase
-        .from('venues')
+        .from('cities')
         .select('*')
-        .order('prestige_level, capacity');
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setCities((data ?? []) as CityRow[]);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load cities";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading cities:', errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
+    } finally {
+      setCitiesLoading(false);
+    }
+  }, [toast]);
+
+  const loadVenues = useCallback(async () => {
+    setVenuesLoading(true);
+    try {
+      let query = supabase
+        .from('venues')
+        .select('*');
+
+      if (selectedCityId !== ALL_CITIES_VALUE) {
+        query = query.eq('city_id', selectedCityId);
+      }
+
+      const { data, error } = await query
+        .order('prestige_level', { ascending: true })
+        .order('capacity', { ascending: true });
 
       if (error) throw error;
       const venueRows = (data ?? []) as VenueRow[];
@@ -197,6 +248,7 @@ const GigBooking = () => {
         id: venue.id,
         name: venue.name,
         location: venue.location ?? 'Unknown',
+        city_id: venue.city_id ?? null,
         capacity: venue.capacity ?? 0,
         venue_type: venue.venue_type ?? 'general',
         base_payment: venue.base_payment ?? 0,
@@ -212,8 +264,10 @@ const GigBooking = () => {
         title: "Error",
         description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
+    } finally {
+      setVenuesLoading(false);
     }
-  }, [toast]);
+  }, [selectedCityId, toast]);
 
   const loadPlayerGigs = useCallback(async () => {
     if (!user) return;
@@ -236,6 +290,7 @@ const GigBooking = () => {
           id: venueDetails?.id ?? gig.venue_id,
           name: venueDetails?.name ?? 'Unknown Venue',
           location: venueDetails?.location ?? 'Unknown',
+          city_id: venueDetails?.city_id ?? null,
           capacity: venueDetails?.capacity ?? 0,
           venue_type: venueDetails?.venue_type ?? 'general',
           base_payment: venueDetails?.base_payment ?? 0,
@@ -267,11 +322,20 @@ const GigBooking = () => {
   }, [user]);
 
   useEffect(() => {
+    loadCities();
+  }, [loadCities]);
+
+  useEffect(() => {
     if (user) {
-      loadVenues();
       loadPlayerGigs();
     }
-  }, [user, loadVenues, loadPlayerGigs]);
+  }, [user, loadPlayerGigs]);
+
+  useEffect(() => {
+    if (user) {
+      loadVenues();
+    }
+  }, [user, loadVenues]);
 
   const calculateGigPayment = (venue: Venue, showType: ShowType = DEFAULT_SHOW_TYPE) => {
     const details = getShowTypeDetails(showType);
@@ -787,8 +851,45 @@ const GigBooking = () => {
           </TabsList>
 
           <TabsContent value="venues">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {venues.map((venue) => {
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Choose your stage</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Explore venues by city to plan your next performance.
+                  </p>
+                </div>
+                <Select
+                  value={selectedCityId}
+                  onValueChange={(value) => {
+                    setCitySelectionTouched(true);
+                    setSelectedCityId(value);
+                  }}
+                  disabled={citiesLoading || (cities.length === 0 && selectedCityId !== ALL_CITIES_VALUE)}
+                >
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Select a city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_CITIES_VALUE}>All Cities</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name}
+                        {city.id === currentCity?.id ? " (Current)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {venuesLoading ? (
+                <div className="py-16 flex flex-col items-center justify-center gap-4">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+                  <p className="text-sm text-muted-foreground">Loading venues...</p>
+                </div>
+              ) : venues.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {venues.map((venue) => {
                 const showType = showTypeSelections[venue.id] ?? DEFAULT_SHOW_TYPE;
                 const showTypeLabel = getShowTypeLabel(showType);
                 const showTypeDescription = getShowTypeDetails(showType).description;
@@ -911,7 +1012,19 @@ const GigBooking = () => {
                     </CardContent>
                   </Card>
                 );
-              })}
+                  })}
+                </div>
+              ) : (
+                <Alert className="bg-card/70 backdrop-blur-sm border-primary/20">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>No venues available</AlertTitle>
+                  <AlertDescription>
+                    {selectedCityId === ALL_CITIES_VALUE
+                      ? "There aren't any venues available right now. Check back later as new opportunities open up."
+                      : `No venues are currently booking in ${selectedCity?.name ?? "this city"}. Try another city or come back soon.`}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           </TabsContent>
 
