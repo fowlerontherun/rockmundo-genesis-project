@@ -34,7 +34,6 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import type { Database } from "@/integrations/supabase/types";
 
 interface BandMember {
   id: string;
@@ -75,14 +74,29 @@ const BAND_ROLES = [
 
 type PlayerSkillsRow = Database['public']['Tables']['player_skills']['Row'];
 
-type BandMemberRow = Database['public']['Tables']['band_members']['Row'] & {
-  profile?: { display_name?: string | null; avatar_url?: string | null };
-  skills?: PlayerSkillsRow | null;
-};
+type BandMemberRow = Database['public']['Tables']['band_members']['Row'];
 
 type BandInvitation = Database['public']['Tables']['band_invitations']['Row'] & {
   band?: Band;
 };
+
+type SongRow = Database['public']['Tables']['songs']['Row'];
+type GigRow = Database['public']['Tables']['gigs']['Row'] & {
+  venue?: { name?: string | null; location?: string | null } | null;
+};
+type ScheduleEventRow = Database['public']['Tables']['schedule_events']['Row'];
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+
+interface BandScheduleEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  eventType: string | null;
+  scheduledAt: string | null;
+  timestamp: number | null;
+  status: string | null;
+}
 
 const BandManager = () => {
   const { toast } = useToast();
@@ -93,6 +107,9 @@ const BandManager = () => {
   const [members, setMembers] = useState<BandMember[]>([]);
   const [chartPosition, setChartPosition] = useState<number | null>(null);
   const [gigsPlayed, setGigsPlayed] = useState<number | null>(null);
+  const [songCount, setSongCount] = useState<number>(0);
+  const [albumCount, setAlbumCount] = useState<number>(0);
+  const [scheduleEvents, setScheduleEvents] = useState<BandScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [isRecruitDialogOpen, setIsRecruitDialogOpen] = useState(false);
@@ -120,6 +137,11 @@ const BandManager = () => {
       setBand(null);
       setMembers([]);
       setPendingInvites([]);
+      setScheduleEvents([]);
+      setSongCount(0);
+      setAlbumCount(0);
+      setChartPosition(null);
+      setGigsPlayed(null);
       setLoading(false);
       return;
     }
@@ -140,74 +162,302 @@ const BandManager = () => {
       if (memberData?.bands) {
         setBand(memberData.bands as Band);
         setPendingInvites([]);
-        await loadBandMembers(memberData.bands.id);
+        await Promise.all([
+          loadBandMembers(memberData.bands.id),
+          loadBandStats(memberData.bands.id),
+          loadScheduleEvents(memberData.bands.id)
+        ]);
       } else {
         setBand(null);
         setMembers([]);
         await loadPendingInvitations();
+        setScheduleEvents([]);
+        setSongCount(0);
+        setAlbumCount(0);
+        setChartPosition(null);
+        setGigsPlayed(null);
       }
     } catch (error: unknown) {
       console.error('Error loading band data:', error);
     } finally {
       setLoading(false);
     }
-  }, [loadBandMembers, loadPendingInvitations, user?.id]);
+  }, [
+    loadBandMembers,
+    loadBandStats,
+    loadPendingInvitations,
+    loadScheduleEvents,
+    user?.id
+  ]);
 
   const loadBandMembers = useCallback(async (bandId: string) => {
     if (!user?.id) return;
 
     try {
-      let topEntry: Record<string, unknown> | undefined;
+      const { data: memberData, error: memberError } = await supabase
+        .from('band_members')
+        .select('id, band_id, user_id, role, salary, joined_at')
+        .eq('band_id', bandId)
+        .order('joined_at', { ascending: true });
 
-      for (const column of chartColumns) {
-        const response = await supabase
-          .from(chartsTable)
-          .select(chartColumns.join(', '))
-          .eq('band_id', bandId)
-          .order(column, { ascending: true })
-          .limit(1);
+      if (memberError) throw memberError;
 
-        if (!response.error) {
-          topEntry = response.data?.[0] as Record<string, unknown> | undefined;
-          if (topEntry) {
-            break;
-          }
-        }
+      const memberRows = (memberData ?? []) as BandMemberRow[];
+      const memberIds = memberRows
+        .map((member) => member.user_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+      let profilesMap = new Map<string, Pick<ProfileRow, 'display_name' | 'avatar_url'>>();
+      let skillsMap = new Map<string, PlayerSkillsRow | null>();
+
+      if (memberIds.length > 0) {
+        const [profilesResponse, skillsResponse] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', memberIds),
+          supabase
+            .from('player_skills')
+            .select('*')
+            .in('user_id', memberIds)
+        ]);
+
+        if (profilesResponse.error) throw profilesResponse.error;
+        if (skillsResponse.error) throw skillsResponse.error;
+
+        profilesMap = new Map(
+          ((profilesResponse.data as ProfileRow[]) ?? []).map((profile) => [profile.user_id, profile])
+        );
+
+        skillsMap = new Map(
+          ((skillsResponse.data as PlayerSkillsRow[]) ?? []).map((skill) => [skill.user_id, skill])
+        );
       }
 
-      if (!topEntry) {
-        const fallbackResponse = await supabase
-          .from(chartsTable)
-          .select(chartColumns.join(', '))
-          .eq('band_id', bandId)
-          .limit(1);
-
-        if (!fallbackResponse.error) {
-          topEntry = fallbackResponse.data?.[0] as Record<string, unknown> | undefined;
-        } else {
-          console.error('Fallback chart query failed:', fallbackResponse.error);
-        }
-      }
-
-      const memberRows = (data ?? []) as BandMemberRow[];
       const currentUserId = user.id;
 
-      const membersWithData: BandMember[] = memberRows.map((member) => ({
-        id: member.id,
-        band_id: member.band_id,
-        user_id: member.user_id,
-        role: member.role,
-        salary: member.salary ?? null,
-        joined_at: member.joined_at ?? null,
-        name: member.user_id === currentUserId ? 'You' : member.profile?.display_name ?? 'Unknown',
-        avatar_url: member.profile?.avatar_url ?? '',
-        is_player: member.user_id === currentUserId,
-        skills: member.skills ?? null,
-      }));
+      const membersWithData: BandMember[] = memberRows.map((member) => {
+        const profile = profilesMap.get(member.user_id) ?? null;
+        const memberSkills = skillsMap.get(member.user_id) ?? null;
+
+        return {
+          id: member.id,
+          band_id: member.band_id,
+          user_id: member.user_id,
+          role: member.role,
+          salary: member.salary ?? null,
+          joined_at: member.joined_at ?? null,
+          name: member.user_id === currentUserId ? 'You' : profile?.display_name ?? 'Unknown',
+          avatar_url: profile?.avatar_url ?? '',
+          is_player: member.user_id === currentUserId,
+          skills: memberSkills ?? null,
+        };
+      });
 
       setMembers(membersWithData);
     } catch (error: unknown) {
       console.error('Error loading band members:', error);
+    }
+  }, [user?.id]);
+
+  const loadBandStats = useCallback(async (bandId: string) => {
+    if (!user?.id || !bandId) {
+      setChartPosition(null);
+      setGigsPlayed(null);
+      setSongCount(0);
+      setAlbumCount(0);
+      return;
+    }
+
+    try {
+      const [{ data: memberRows, error: memberError }, { data: gigRows, error: gigsError }] = await Promise.all([
+        supabase
+          .from('band_members')
+          .select('user_id')
+          .eq('band_id', bandId),
+        supabase
+          .from('gigs')
+          .select('id, status, scheduled_date, venue:venues(name, location)')
+          .eq('band_id', bandId)
+      ]);
+
+      if (memberError) throw memberError;
+      if (gigsError) throw gigsError;
+
+      const memberIds = (memberRows ?? [])
+        .map((row) => row.user_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+      const gigsPlayedCount = (gigRows as GigRow[] | null | undefined)?.filter((gig) => gig.status === 'completed').length ?? 0;
+      setGigsPlayed(gigsPlayedCount);
+
+      let songsData: SongRow[] = [];
+      let songsError: unknown = null;
+
+      const primarySongsResponse = await supabase
+        .from('songs')
+        .select('*')
+        .eq('band_id', bandId);
+
+      if (primarySongsResponse.error) {
+        songsError = primarySongsResponse.error;
+      } else {
+        songsData = (primarySongsResponse.data as SongRow[]) ?? [];
+      }
+
+      if ((songsError || songsData.length === 0) && memberIds.length > 0) {
+        const artistResponse = await supabase
+          .from('songs')
+          .select('*')
+          .in('artist_id', memberIds);
+
+        if (artistResponse.error) {
+          const message = artistResponse.error.message?.toLowerCase() ?? '';
+          if (message.includes('artist_id')) {
+            const userIdResponse = await supabase
+              .from('songs')
+              .select('*')
+              .in('user_id', memberIds);
+
+            if (!userIdResponse.error) {
+              songsData = (userIdResponse.data as SongRow[]) ?? [];
+            } else {
+              songsError = userIdResponse.error;
+            }
+          } else {
+            songsError = artistResponse.error;
+          }
+        } else {
+          songsData = (artistResponse.data as SongRow[]) ?? [];
+          songsError = null;
+        }
+      }
+
+      if (songsError) {
+        console.error('Error loading songs for band:', songsError);
+      }
+
+      const totalSongs = songsData.length;
+      setSongCount(totalSongs);
+
+      const albumNames = new Set<string>();
+      const chartPositions: number[] = [];
+
+      songsData.forEach((song) => {
+        const record = song as SongRow & {
+          album?: string | null;
+          album_name?: string | null;
+          albumTitle?: string | null;
+        };
+
+        const albumName = record.album ?? record.album_name ?? record.albumTitle ?? null;
+        if (typeof albumName === 'string' && albumName.trim().length > 0) {
+          albumNames.add(albumName.trim());
+        }
+
+        const rawPosition = (song as Record<string, unknown>).chart_position ?? (song as Record<string, unknown>).chartPosition;
+        if (typeof rawPosition === 'number' && Number.isFinite(rawPosition)) {
+          chartPositions.push(rawPosition);
+        } else if (typeof rawPosition === 'string') {
+          const parsed = Number(rawPosition);
+          if (!Number.isNaN(parsed)) {
+            chartPositions.push(parsed);
+          }
+        }
+      });
+
+      setAlbumCount(albumNames.size);
+      setChartPosition(chartPositions.length > 0 ? Math.min(...chartPositions) : null);
+    } catch (error: unknown) {
+      console.error('Error loading band stats:', error);
+    }
+  }, [user?.id]);
+
+  const loadScheduleEvents = useCallback(async (bandId: string) => {
+    if (!user?.id || !bandId) {
+      setScheduleEvents([]);
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const todayString = now.toISOString().split('T')[0];
+
+      const [gigsResponse, scheduleResponse] = await Promise.all([
+        supabase
+          .from('gigs')
+          .select('id, scheduled_date, status, venue:venues(name, location)')
+          .eq('band_id', bandId)
+          .gte('scheduled_date', now.toISOString())
+          .order('scheduled_date', { ascending: true }),
+        supabase
+          .from('schedule_events')
+          .select('id, title, type, date, time, status, location, description')
+          .eq('user_id', user.id)
+          .gte('date', todayString)
+          .order('date', { ascending: true })
+          .order('time', { ascending: true })
+      ]);
+
+      const gigEvents: BandScheduleEvent[] = ((gigsResponse.data as GigRow[]) ?? []).map((gig) => {
+        const scheduledAt = gig.scheduled_date ?? null;
+        const timestamp = scheduledAt ? new Date(scheduledAt).getTime() : null;
+
+        const venueName = gig.venue?.name ?? 'Live Performance';
+        const venueLocation = gig.venue?.location ?? null;
+        let description: string | null = null;
+        if (gig.status === 'completed') {
+          description = 'Completed performance';
+        } else if (gig.status === 'cancelled') {
+          description = 'Cancelled performance';
+        }
+
+        return {
+          id: gig.id,
+          title: `Gig at ${venueName}`,
+          description,
+          location: venueLocation,
+          eventType: 'gig',
+          scheduledAt,
+          timestamp,
+          status: gig.status ?? null,
+        };
+      });
+
+      const scheduleItems: BandScheduleEvent[] = ((scheduleResponse.data as ScheduleEventRow[]) ?? [])
+        .map((event) => {
+          const timeValue = typeof event.time === 'string' ? event.time : event.time?.toString?.() ?? null;
+          const normalizedTime = timeValue && timeValue.length === 5 ? `${timeValue}:00` : timeValue;
+          const scheduledAt = event.date
+            ? `${event.date}T${normalizedTime ?? '00:00:00'}`
+            : null;
+          const timestamp = scheduledAt ? new Date(scheduledAt).getTime() : null;
+
+          return {
+            id: event.id,
+            title: event.title,
+            description: event.description ?? null,
+            location: event.location ?? null,
+            eventType: event.type ?? null,
+            scheduledAt,
+            timestamp,
+            status: event.status ?? null,
+          };
+        })
+        .filter((event) => event.timestamp === null || event.timestamp >= now.getTime());
+
+      const combinedEvents = [...gigEvents, ...scheduleItems];
+      combinedEvents.sort((a, b) => {
+        if (a.timestamp === null && b.timestamp === null) return 0;
+        if (a.timestamp === null) return 1;
+        if (b.timestamp === null) return -1;
+        return a.timestamp - b.timestamp;
+      });
+
+      setScheduleEvents(combinedEvents);
+    } catch (error: unknown) {
+      console.error('Error loading band schedule:', error);
+      setScheduleEvents([]);
     }
   }, [user?.id]);
 
@@ -425,7 +675,11 @@ const BandManager = () => {
 
       if (bandData) {
         setBand(bandData as Band);
-        await loadBandMembers(bandData.id);
+        await Promise.all([
+          loadBandMembers(bandData.id),
+          loadBandStats(bandData.id),
+          loadScheduleEvents(bandData.id)
+        ]);
       }
 
       toast({
@@ -620,6 +874,7 @@ const BandManager = () => {
 
   const isBandAtCapacity = band.max_members ? members.length >= band.max_members : false;
   const memberCapacityLabel = band.max_members ? `${members.length}/${band.max_members}` : `${members.length}`;
+  const upcomingEvents = scheduleEvents.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
