@@ -44,6 +44,29 @@ const parseNumericRecord = (record: Record<string, unknown> | null | undefined) 
   }, {});
 };
 
+const parseStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      .map((item) => item.trim());
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>)
+      .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+      .map((entry) => entry.trim());
+  }
+
+  return [];
+};
+
 const toNumber = (value: unknown, defaultValue = 0) => {
   if (typeof value === "number") {
     return value;
@@ -312,12 +335,113 @@ export interface EnvironmentModifierSummary {
   projections?: EnvironmentProjections;
 }
 
+export interface CityLocation {
+  id: string;
+  name: string;
+  category?: string;
+  description?: string;
+  vibe?: string;
+}
+
+export interface CityTravelMode {
+  id: string;
+  name: string;
+  travelTimeHours: number;
+  cost: number;
+  comfort: number;
+  description?: string;
+}
+
+export interface CityMetadata {
+  id: string;
+  cityId: string;
+  summary?: string;
+  famousResident?: string | null;
+  signatureSound?: string | null;
+  metroArea?: string | null;
+  timezone?: string | null;
+  aliases: string[];
+  locations: CityLocation[];
+  travelModes: CityTravelMode[];
+  updatedAt?: string | null;
+}
+
+export interface CityPlayer {
+  profileId: string;
+  userId: string;
+  username: string;
+  displayName: string | null;
+  level: number | null;
+  fame: number | null;
+  avatarUrl: string | null;
+  primaryInstrument?: string | null;
+  currentActivity?: string | null;
+  travelMode?: string | null;
+}
+
+export interface CityGig {
+  id: string;
+  scheduledDate: string;
+  payment: number | null;
+  status: string;
+  venue: {
+    id: string;
+    name: string;
+    location: string | null;
+    capacity: number | null;
+    venueType?: string | null;
+  };
+}
+
+export interface CityEnvironmentDetails {
+  cityId: string;
+  cityName?: string;
+  country?: string;
+  metadata: CityMetadata | null;
+  locations: CityLocation[];
+  travelModes: CityTravelMode[];
+  players: CityPlayer[];
+  gigs: CityGig[];
+}
+
+export interface FetchCityEnvironmentOptions {
+  cityName?: string;
+  country?: string;
+}
+
 export interface WorldEnvironmentSnapshot {
   weather: WeatherCondition[];
   cities: City[];
   worldEvents: WorldEvent[];
   randomEvents: RandomEvent[];
 }
+
+export const DEFAULT_TRAVEL_MODES: CityTravelMode[] = [
+  {
+    id: "ground",
+    name: "Ground Transport",
+    travelTimeHours: 8,
+    cost: 180,
+    comfort: 2,
+    description: "Long-distance bus or car travel between major hubs.",
+  },
+  {
+    id: "rail",
+    name: "Express Rail",
+    travelTimeHours: 5,
+    cost: 260,
+    comfort: 3,
+    description: "High-speed rail connections ideal for touring between major metros.",
+  },
+  {
+    id: "air",
+    name: "Regional Flight",
+    travelTimeHours: 2.5,
+    cost: 540,
+    comfort: 4,
+    description: "Commercial flights for fast transfers between global hotspots.",
+  },
+];
 
 const normalizeWeatherRecord = (item: Record<string, unknown>): WeatherCondition => {
   const conditionRaw = typeof item.condition === "string" ? item.condition : "";
@@ -449,6 +573,204 @@ const normalizeRandomEventRecord = (item: Record<string, unknown>, index: number
   };
 };
 
+const toRecordArray = (value: unknown): Record<string, unknown>[] => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+      .map((entry) => entry as Record<string, unknown>);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+      if (entry && typeof entry === "object") {
+        return { id: key, ...(entry as Record<string, unknown>) };
+      }
+
+      return { id: key, name: typeof entry === "string" ? entry : String(entry) };
+    });
+  }
+
+  return [];
+};
+
+const normalizeCityLocationRecord = (item: Record<string, unknown>, index: number): CityLocation => {
+  const nameRaw = typeof item.name === "string" ? item.name : (
+    typeof item.title === "string" ? item.title : "City Location"
+  );
+  const categoryRaw = typeof item.category === "string" ? item.category : (
+    typeof item.type === "string" ? item.type : undefined
+  );
+  const descriptionRaw = typeof item.description === "string" ? item.description : (
+    typeof item.summary === "string" ? item.summary : undefined
+  );
+  const vibeRaw = typeof item.vibe === "string" ? item.vibe : undefined;
+
+  return {
+    id: String(item.id ?? `location-${index}`),
+    name: nameRaw,
+    category: categoryRaw,
+    description: descriptionRaw,
+    vibe: vibeRaw,
+  };
+};
+
+const normalizeCityTravelModeRecord = (item: Record<string, unknown>, index: number): CityTravelMode => {
+  const nameRaw = typeof item.name === "string" ? item.name : (
+    typeof item.mode === "string" ? item.mode : (
+      typeof item.type === "string" ? item.type : "Travel"
+    )
+  );
+
+  const timeValue = toNumber(
+    item.travel_time ?? item.travelTime ?? item.time_hours ?? item.duration_hours,
+    Number.NaN,
+  );
+  const costValue = toNumber(item.cost ?? item.price ?? item.travel_cost, Number.NaN);
+  const comfortValue = toNumber(item.comfort ?? item.comfort_rating ?? item.quality, Number.NaN);
+
+  return {
+    id: String(item.id ?? item.mode_id ?? `mode-${index}`),
+    name: nameRaw,
+    travelTimeHours: Number.isNaN(timeValue) ? 0 : timeValue,
+    cost: Number.isNaN(costValue) ? 0 : costValue,
+    comfort: Number.isNaN(comfortValue) ? 3 : Math.max(1, Math.min(5, comfortValue)),
+    description: typeof item.description === "string" ? item.description : undefined,
+  };
+};
+
+const normalizeCityMetadataRecord = (item: Record<string, unknown>): CityMetadata => {
+  const locationsRaw = toRecordArray(item.intra_locations ?? item.locations ?? item.landmarks);
+  const travelModesRaw = toRecordArray(item.travel_modes ?? item.travelModes ?? item.transport_options);
+  const aliasesRaw = parseStringArray(item.aliases ?? item.alternate_names ?? item.nicknames ?? item.short_names);
+
+  const cityIdValue = typeof item.city_id === "string" ? item.city_id : (
+    typeof item.cityId === "string" ? item.cityId : String(item.id ?? crypto.randomUUID())
+  );
+
+  const summaryRaw = typeof item.summary === "string" ? item.summary : (
+    typeof item.description === "string" ? item.description : undefined
+  );
+
+  const signatureSoundRaw = typeof item.signature_sound === "string" ? item.signature_sound : (
+    typeof item.signatureSound === "string" ? item.signatureSound : null
+  );
+
+  const famousResidentRaw = typeof item.famous_resident === "string" ? item.famous_resident : (
+    typeof item.famousResident === "string" ? item.famousResident : null
+  );
+
+  return {
+    id: String(item.id ?? cityIdValue),
+    cityId: cityIdValue,
+    summary: summaryRaw,
+    famousResident: famousResidentRaw,
+    signatureSound: signatureSoundRaw,
+    metroArea: typeof item.metro_area === "string" ? item.metro_area : undefined,
+    timezone: typeof item.timezone === "string" ? item.timezone : undefined,
+    aliases: aliasesRaw,
+    locations: locationsRaw.map((record, index) => normalizeCityLocationRecord(record, index)),
+    travelModes: travelModesRaw.map((record, index) => normalizeCityTravelModeRecord(record, index)),
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : undefined,
+  };
+};
+
+const normalizeCityPlayerRecord = (item: Record<string, unknown>): CityPlayer => {
+  const levelValue = toNumber(item.level, Number.NaN);
+  const fameValue = toNumber(item.fame, Number.NaN);
+
+  return {
+    profileId: String(item.id ?? crypto.randomUUID()),
+    userId: typeof item.user_id === "string" ? item.user_id : String(item.user_id ?? ""),
+    username: typeof item.username === "string" ? item.username : "Unknown artist",
+    displayName: typeof item.display_name === "string" ? item.display_name : null,
+    level: Number.isNaN(levelValue) ? null : levelValue,
+    fame: Number.isNaN(fameValue) ? null : fameValue,
+    avatarUrl: typeof item.avatar_url === "string" ? item.avatar_url : null,
+    primaryInstrument: typeof item.primary_instrument === "string" ? item.primary_instrument : (
+      typeof item.instrument === "string" ? item.instrument : undefined
+    ),
+    currentActivity: typeof item.current_activity === "string" ? item.current_activity : (
+      typeof item.activity === "string" ? item.activity : undefined
+    ),
+    travelMode: typeof item.travel_mode === "string" ? item.travel_mode : (
+      typeof item.travelMode === "string" ? item.travelMode : undefined
+    ),
+  };
+};
+
+const normalizeCityGigRecord = (item: Record<string, unknown>): CityGig => {
+  const venueRaw = (item.venues ?? item.venue) as Record<string, unknown> | null | undefined;
+  const scheduledRaw = typeof item.scheduled_date === "string" ? item.scheduled_date : (
+    typeof item.start_time === "string" ? item.start_time : new Date().toISOString()
+  );
+  const paymentValue = toNumber(item.payment, Number.NaN);
+  const capacityValue = venueRaw ? toNumber(venueRaw.capacity, Number.NaN) : Number.NaN;
+
+  return {
+    id: String(item.id ?? crypto.randomUUID()),
+    scheduledDate: scheduledRaw,
+    payment: Number.isNaN(paymentValue) ? null : paymentValue,
+    status: typeof item.status === "string" ? item.status : "scheduled",
+    venue: {
+      id: String(venueRaw?.id ?? crypto.randomUUID()),
+      name: typeof venueRaw?.name === "string" ? venueRaw.name : "Unknown Venue",
+      location: typeof venueRaw?.location === "string" ? venueRaw.location : null,
+      capacity: Number.isNaN(capacityValue) ? null : capacityValue,
+      venueType: typeof venueRaw?.venue_type === "string" ? venueRaw.venue_type : undefined,
+    },
+  };
+};
+
+const locationMatchesCityContext = (
+  location: string | null | undefined,
+  metadata: CityMetadata | null,
+  fallbackName?: string,
+  fallbackCountry?: string,
+) => {
+  if (!location) {
+    return !fallbackName;
+  }
+
+  const normalizedLocation = location.trim().toLowerCase();
+  if (!normalizedLocation) {
+    return !fallbackName;
+  }
+
+  const candidates = new Set<string>();
+
+  if (fallbackName) {
+    candidates.add(fallbackName.trim().toLowerCase());
+  }
+
+  if (metadata) {
+    candidates.add(metadata.cityId.trim().toLowerCase());
+    metadata.aliases.forEach((alias) => candidates.add(alias.trim().toLowerCase()));
+    if (metadata.metroArea) {
+      candidates.add(metadata.metroArea.trim().toLowerCase());
+    }
+    metadata.locations.forEach((entry) => {
+      if (entry.name) {
+        candidates.add(entry.name.trim().toLowerCase());
+      }
+    });
+  }
+
+  for (const candidate of candidates) {
+    if (candidate && normalizedLocation.includes(candidate)) {
+      return true;
+    }
+  }
+
+  if (fallbackCountry) {
+    const normalizedCountry = fallbackCountry.trim().toLowerCase();
+    if (normalizedCountry && normalizedLocation.includes(normalizedCountry)) {
+      return true;
+    }
+  }
+
+  return candidates.size === 0;
+};
+
 const locationMatches = (needle: string, haystack: string) => {
   if (!needle || !haystack) {
     return false;
@@ -528,6 +850,78 @@ export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentS
     cities,
     worldEvents,
     randomEvents,
+  };
+};
+
+export const fetchCityEnvironmentDetails = async (
+  cityId: string,
+  options: FetchCityEnvironmentOptions = {},
+): Promise<CityEnvironmentDetails> => {
+  const { cityName, country } = options;
+
+  const [playersResponse, gigsResponse, metadataResponse] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, user_id, username, display_name, level, fame, avatar_url, current_activity, primary_instrument, travel_mode, current_city_id",
+      )
+      .eq("current_city_id", cityId),
+    supabase
+      .from("gigs")
+      .select(
+        "id, scheduled_date, payment, status, venues:venues!gigs_venue_id_fkey(id, name, location, capacity, venue_type)"
+      )
+      .in("status", ["scheduled", "confirmed"])
+      .order("scheduled_date", { ascending: true }),
+    supabase
+      .from("city_metadata")
+      .select("*")
+      .eq("city_id", cityId)
+      .maybeSingle(),
+  ]);
+
+  if (playersResponse.error) throw playersResponse.error;
+  if (gigsResponse.error) throw gigsResponse.error;
+  if (metadataResponse.error) throw metadataResponse.error;
+
+  const metadataRecord = metadataResponse.data
+    ? normalizeCityMetadataRecord(metadataResponse.data as Record<string, unknown>)
+    : null;
+
+  const players = (playersResponse.data ?? [])
+    .map((item) => normalizeCityPlayerRecord(item as Record<string, unknown>))
+    .sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
+
+  const now = Date.now();
+  const gigs = (gigsResponse.data ?? [])
+    .map((item) => normalizeCityGigRecord(item as Record<string, unknown>))
+    .filter((gig) => {
+      const scheduledTime = Date.parse(gig.scheduledDate);
+      if (!Number.isNaN(scheduledTime) && scheduledTime < now) {
+        return false;
+      }
+
+      return locationMatchesCityContext(gig.venue.location, metadataRecord, cityName, country);
+    })
+    .slice(0, 6);
+
+  const travelModesSource = metadataRecord?.travelModes?.length ? metadataRecord.travelModes : DEFAULT_TRAVEL_MODES;
+  const travelModes = travelModesSource.map((mode, index) => ({
+    ...mode,
+    id: mode.id || `mode-${index}`,
+  }));
+
+  const locations = metadataRecord?.locations ?? [];
+
+  return {
+    cityId,
+    cityName,
+    country,
+    metadata: metadataRecord ? { ...metadataRecord, travelModes, locations } : null,
+    locations,
+    travelModes,
+    players,
+    gigs,
   };
 };
 
