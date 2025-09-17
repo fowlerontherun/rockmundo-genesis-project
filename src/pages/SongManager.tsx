@@ -706,7 +706,7 @@ const SongManager = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   const fetchGrowthHistory = useCallback(async () => {
     if (!user?.id) {
