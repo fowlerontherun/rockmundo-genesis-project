@@ -77,10 +77,8 @@ export const useGameData = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      fetchGameData();
-    }
-  }, [user, fetchGameData]);
+    fetchGameData();
+  }, [fetchGameData]);
 
   const updateProfile = async (updates: Partial<PlayerProfile>) => {
     if (!user || !profile) return;
