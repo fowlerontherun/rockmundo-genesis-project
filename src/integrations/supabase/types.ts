@@ -1390,6 +1390,7 @@ export type Database = {
           experience: number | null
           fame: number | null
           fans: number | null
+          health: number | null
           followers: number | null
           id: string
           level: number | null
@@ -1407,6 +1408,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number | null
           followers?: number | null
           id?: string
           level?: number | null
@@ -1424,6 +1426,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number | null
           followers?: number | null
           id?: string
           level?: number | null
@@ -1799,6 +1802,8 @@ export type Database = {
           misc_cost: number | null
           travel_time: number | null
           rest_days: number | null
+          travel_mode: string | null
+          travel_comfort: number | null
           venue_id: string
         }
         Insert: {
@@ -1814,6 +1819,8 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id: string
         }
         Update: {
@@ -1829,6 +1836,8 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id?: string
         }
         Relationships: [
