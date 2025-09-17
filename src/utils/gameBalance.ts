@@ -1,5 +1,26 @@
 // Game balance and progression logic for RockMundo
 
+import { getAttributeMultiplier } from "./attributeModifiers";
+
+export interface PerformanceAttributeBonuses {
+  stagePresence?: number | null;
+  crowdEngagement?: number | null;
+  socialReach?: number | null;
+}
+
+const clampNumber = (value: number, min: number, max: number) => {
+  if (Number.isNaN(value)) return min;
+  return Math.min(Math.max(value, min), max);
+};
+
+const resolveAttributeFactor = (
+  rawValue: number | null | undefined,
+  intensity: number
+) => {
+  const multiplier = getAttributeMultiplier(rawValue, { fallback: 1 });
+  return 1 + (multiplier - 1) * intensity;
+};
+
 export const SKILL_CAPS = {
   beginner: 30,    // 0-1000 exp
   amateur: 50,     // 1000-5000 exp  
@@ -85,25 +106,44 @@ export function calculateGigPayment(
   basePayment: number,
   performanceSkill: number,
   fameLevel: number,
-  successRate: number
+  successRate: number,
+  attributeBonuses: PerformanceAttributeBonuses = {}
 ): number {
-  const skillMultiplier = 1 + (performanceSkill / 100);
-  const fameMultiplier = 1 + (fameLevel / 10000);
-  const performanceMultiplier = 0.5 + (successRate * 0.5); // 50% to 100% based on success
-  
-  return Math.floor(basePayment * skillMultiplier * fameMultiplier * performanceMultiplier);
+  const baseSkillMultiplier = 1 + clampNumber(performanceSkill, 0, 150) / 100;
+  const stagePresenceFactor = attributeBonuses.stagePresence !== undefined
+    ? resolveAttributeFactor(attributeBonuses.stagePresence, 0.4)
+    : 1;
+  const fameMultiplier = 1 + clampNumber(fameLevel, 0, 100000) / 10000;
+  const successMultiplier = 0.5 + clampNumber(successRate, 0, 1) * 0.5;
+  const crowdFactor = attributeBonuses.crowdEngagement !== undefined
+    ? resolveAttributeFactor(attributeBonuses.crowdEngagement, 0.35)
+    : 1;
+
+  return Math.floor(
+    basePayment * baseSkillMultiplier * stagePresenceFactor * fameMultiplier * successMultiplier * crowdFactor
+  );
 }
 
 // Calculate fan gain from activities
 export function calculateFanGain(
   baseGain: number,
   performanceSkill: number,
-  charismaBonus: number = 0
+  charismaBonus: number = 0,
+  attributeBonuses: PerformanceAttributeBonuses = {}
 ): number {
-  const skillMultiplier = 1 + (performanceSkill / 200); // Max 50% bonus
-  const charismaMultiplier = 1 + (charismaBonus / 100);
-  
-  return Math.floor(baseGain * skillMultiplier * charismaMultiplier);
+  const skillMultiplier = 1 + clampNumber(performanceSkill, 0, 150) / 200;
+  const charismaMultiplier = 1 + clampNumber(charismaBonus, 0, 200) / 100;
+  const stagePresenceFactor = attributeBonuses.stagePresence !== undefined
+    ? resolveAttributeFactor(attributeBonuses.stagePresence, 0.35)
+    : 1;
+  const crowdFactor = attributeBonuses.crowdEngagement !== undefined
+    ? resolveAttributeFactor(attributeBonuses.crowdEngagement, 0.45)
+    : 1;
+  const socialFactor = attributeBonuses.socialReach !== undefined
+    ? resolveAttributeFactor(attributeBonuses.socialReach, 0.55)
+    : 1;
+
+  return Math.floor(baseGain * skillMultiplier * stagePresenceFactor * charismaMultiplier * crowdFactor * socialFactor);
 }
 
 // Check if player meets requirements for an activity

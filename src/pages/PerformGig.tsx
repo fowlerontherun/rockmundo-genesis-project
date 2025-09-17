@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
-import { applyAttributeToValue, type AttributeKey } from '@/utils/attributeProgression';
+import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from '@/utils/gameBalance';
+import { resolveAttributeValue } from '@/utils/attributeModifiers';
 import {
   Music,
   Users,
@@ -84,7 +85,7 @@ const PerformGig = () => {
   const { gigId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, attributes, addActivity } = useGameData();
+  const { profile, skills, attributes, addActivity } = useGameData();
   const { toast } = useToast();
   const toastRef = useRef(toast);
 
@@ -107,6 +108,14 @@ const PerformGig = () => {
   const [earnings, setEarnings] = useState(0);
   const [fanGain, setFanGain] = useState(0);
   const [experienceGain, setExperienceGain] = useState(0);
+  const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
+    const source = attributes as unknown as Record<string, unknown> | null;
+    return {
+      stagePresence: resolveAttributeValue(source, 'stage_presence', 1),
+      crowdEngagement: resolveAttributeValue(source, 'crowd_engagement', 1),
+      socialReach: resolveAttributeValue(source, 'social_reach', 1),
+    };
+  }, [attributes]);
 
   const loadGig = useCallback(async (): Promise<void> => {
     if (!gigId) return;
@@ -205,27 +214,54 @@ const PerformGig = () => {
       Math.floor(gig.venue.capacity * performanceMultiplier * (currentShowType === 'acoustic' ? 0.8 : 1)),
     );
     const basePayment = Math.max(1, Math.floor((gig.payment || 500) * modifiers.payment));
-    const finalEarnings = Math.floor(basePayment * performanceMultiplier);
+    const successRatio = Math.min(Math.max(finalScore / 100, 0), 1);
+    const baselinePayment = calculateGigPayment(
+      basePayment,
+      skills?.performance ?? finalScore,
+      profile?.fame ?? 0,
+      successRatio,
+    );
+    const adjustedPayment = calculateGigPayment(
+      basePayment,
+      skills?.performance ?? finalScore,
+      profile?.fame ?? 0,
+      successRatio,
+      attributeBonuses,
+    );
+    const payoutAdjustment = baselinePayment > 0 ? adjustedPayment / baselinePayment : 1;
+    const finalEarnings = Math.floor(basePayment * performanceMultiplier * payoutAdjustment);
 
     const baseFanGain = Math.floor(attendanceResult * 0.1 * modifiers.fan);
-    const baseExperienceGain = Math.max(1, Math.floor((50 + (finalScore * 2) + (gig.venue.prestige_level * 10)) * modifiers.experience));
-    const experienceResult = applyAttributeToValue(baseExperienceGain, attributes, PERFORMANCE_ATTRIBUTE_KEYS);
-    const expGain = experienceResult.value;
+    const stagePresenceMetric = performance.stage_presence || finalScore;
+    const baselineFanGain = calculateFanGain(
+      Math.max(1, baseFanGain),
+      skills?.performance ?? finalScore,
+      stagePresenceMetric,
+    );
+    const adjustedFanGain = calculateFanGain(
+      Math.max(1, baseFanGain),
+      skills?.performance ?? finalScore,
+      stagePresenceMetric,
+      attributeBonuses,
+    );
+    const fanAdjustment = baselineFanGain > 0 ? adjustedFanGain / baselineFanGain : 1;
+    const finalFanGain = Math.max(0, Math.round(baseFanGain * fanAdjustment));
+    const expGain = Math.max(1, Math.floor((50 + (finalScore * 2) + (gig.venue.prestige_level * 10)) * modifiers.experience));
 
     setPerformance(prev => ({ ...prev, overall_score: finalScore }));
     setEarnings(finalEarnings);
-    setFanGain(Math.max(0, baseFanGain));
+    setFanGain(finalFanGain);
     setExperienceGain(expGain);
 
     // Update database
     try {
       // Update gig status and results
-        await supabase
-          .from('gigs')
-          .update({
-            status: 'completed',
+      await supabase
+        .from('gigs')
+        .update({
+          status: 'completed',
           attendance: attendanceResult,
-          fan_gain: Math.max(0, baseFanGain)
+          fan_gain: Math.max(0, finalFanGain)
         })
         .eq('id', gigId);
 
@@ -242,7 +278,7 @@ const PerformGig = () => {
           .update({
             cash: profile.cash + finalEarnings,
             experience: profile.experience + expGain,
-            fame: profile.fame + baseFanGain
+            fame: profile.fame + finalFanGain
           })
           .eq('id', profile.id);
       }
@@ -255,7 +291,7 @@ const PerformGig = () => {
         {
           venue: gig.venue.name,
           score: finalScore,
-          fanGain: baseFanGain
+          fanGain: finalFanGain
         }
       );
 

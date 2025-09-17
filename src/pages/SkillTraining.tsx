@@ -13,38 +13,8 @@ import {
   getRemainingCooldown,
   COOLDOWNS
 } from "@/utils/gameBalance";
-import {
-  type LucideIcon,
-  Briefcase,
-  Coins,
-  Cpu,
-  Drum,
-  Guitar,
-  Megaphone,
-  Metronome,
-  Mic,
-  Mic2,
-  Music,
-  Palette,
-  PenTool,
-  PersonStanding,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Volume2,
-  Clock
-} from "lucide-react";
-import {
-  ATTRIBUTE_KEYS,
-  ATTRIBUTE_MAX_VALUE,
-  ATTRIBUTE_METADATA,
-  ATTRIBUTE_TRAINING_INCREMENT,
-  SKILL_ATTRIBUTE_MAP,
-  applyAttributeToValue,
-  clampAttributeValue,
-  getAttributeTrainingCost,
-  type AttributeKey
-} from "@/utils/attributeProgression";
+import { applyCooldownModifier, applyRewardBonus, resolveAttributeValue } from "@/utils/attributeModifiers";
+import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
 
 type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
 
@@ -88,6 +58,10 @@ const SkillTraining = () => {
       };
     }),
   [attributes]);
+
+  const attributeSource = attributes as unknown as Record<string, unknown> | null;
+  const physicalEndurance = resolveAttributeValue(attributeSource, "physical_endurance", 1);
+  const mentalFocus = resolveAttributeValue(attributeSource, "mental_focus", 1);
 
   const trainingSessions: TrainingSession[] = [
     {
@@ -140,7 +114,7 @@ const SkillTraining = () => {
     }
   ];
 
-  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
+  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, physicalEndurance);
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
@@ -199,7 +173,8 @@ const SkillTraining = () => {
     setActiveTrainingKey(session.skill);
 
     try {
-      const newSkillValue = Math.min(skillCap, currentSkill + attributeResult.value);
+      const focusedXp = applyRewardBonus(session.xpGain, mentalFocus);
+      const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
       const skillGain = newSkillValue - currentSkill;
       const newCash = playerCash - trainingCost;
       const experienceGain = attributeResult.value;

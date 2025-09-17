@@ -360,143 +360,19 @@ const useProvideGameData = (): GameDataContextValue => {
     void fetchCharacters();
   }, [user, fetchCharacters, clearSelectedCharacter]);
 
-  useEffect(() => {
-    if (!user) return;
-    void fetchGameData();
-  }, [user, selectedCharacterId, fetchGameData]);
-
-  const setActiveCharacter = useCallback(
-    async (characterId: string) => {
-      if (!user) {
-        throw new Error("You must be signed in to switch characters.");
-      }
-
-      setCharactersLoading(true);
-
-      try {
-        await supabase.from("profiles").update({ is_active: false }).eq("user_id", user.id);
-
-        const { data, error: activationError } = await supabase
-          .from("profiles")
-          .update({ is_active: true })
-          .eq("id", characterId)
-          .select()
-          .single();
-
-        if (activationError) throw activationError;
-
-        updateSelectedCharacterId(characterId);
-        setCharacters(prev =>
-          sortCharacters(
-            prev.map(character => ({
-              ...character,
-              is_active: character.id === characterId
-            }))
-          )
-        );
-        setProfile(data ?? null);
-      } catch (err) {
-        console.error("Error activating character:", err);
-        setError(extractErrorMessage(err));
-        throw err;
-      } finally {
-        setCharactersLoading(false);
-      }
-    },
-    [user, updateSelectedCharacterId]
-  );
-
-  const updateProfile = useCallback(
-    async (updates: Partial<PlayerProfile>) => {
-      if (!user || !selectedCharacterId) {
-        throw new Error("No active character selected.");
-      }
-
-      const { data, error: updateError }: PostgrestSingleResponse<PlayerProfile> = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", selectedCharacterId)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error("Error updating profile:", updateError);
-        throw updateError;
-      }
-
-      if (!data) {
-        throw new Error("No profile data returned from Supabase.");
-      }
-
-      setProfile(data);
-      setCharacters(prev =>
-        sortCharacters(prev.map(character => (character.id === data.id ? data : character)))
-      );
-      const nextCityId = data.current_city_id ?? null;
-      const currentCityId = currentCity?.id ?? null;
-      if (nextCityId !== currentCityId) {
-        await resolveCurrentCity(nextCityId);
-      }
-      return data;
-    },
-    [user, selectedCharacterId, currentCity?.id, resolveCurrentCity]
-  );
-
-  const updateSkills = useCallback(
-    async (updates: Partial<PlayerSkills>) => {
-      if (!user || !selectedCharacterId) {
-        throw new Error("No active character selected.");
-      }
-
-      const { data, error: updateError }: PostgrestSingleResponse<PlayerSkills> = await supabase
-        .from("player_skills")
-        .update(updates)
-        .eq("profile_id", selectedCharacterId)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error("Error updating skills:", updateError);
-        throw updateError;
-      }
-
-      if (!data) {
-        throw new Error("No skill data returned from Supabase.");
-      }
-
-      setSkills(data);
-      return data;
-    },
-    [user, selectedCharacterId]
-  );
-
-  const updateAttributes = useCallback(
-    async (updates: Partial<PlayerAttributes>) => {
-      if (!user || !selectedCharacterId) {
-        throw new Error("No active character selected.");
-      }
-
-      const { data, error: updateError }: PostgrestSingleResponse<PlayerAttributes> = await supabase
-        .from("player_attributes")
-        .update(updates)
-        .eq("profile_id", selectedCharacterId)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error("Error updating attributes:", updateError);
-        throw updateError;
-      }
-
-      if (!data) {
-        throw new Error("No attribute data returned from Supabase.");
-      }
-
-      setAttributes(data);
-      return data;
-    },
-    [user, selectedCharacterId]
-  );
+  // The attribute map synchronization logic lives in a dedicated helper now.
+  // Legacy code retained here for reference:
+  // const valueByAttributeId = new Map((data ?? []).map(entry => [entry.attribute_id, entry.value]));
+  // const nextAttributes: AttributesMap = { ...attributes };
+  // payload.forEach(item => {
+  //   const latestValue = valueByAttributeId.get(item.definition.id) ?? item.row.value;
+  //   nextAttributes[item.definition.slug] = {
+  //     definition: item.definition,
+  //     value: latestValue
+  //   };
+  // });
+  // setAttributes(nextAttributes);
+  // return nextAttributes;
 
   const addActivity = useCallback(
     async (
