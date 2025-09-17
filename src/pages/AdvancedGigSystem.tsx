@@ -505,6 +505,7 @@ const AdvancedGigSystem: React.FC = () => {
     let stageScore = 0;
     const feedback: string[] = [];
     const bonuses: string[] = [];
+    const strugglingRequirements: string[] = [];
 
     Object.entries(stage.skillRequirements).forEach(([skill, requirement]) => {
       const normalizedSkill = skill.toLowerCase();
@@ -546,10 +547,14 @@ const AdvancedGigSystem: React.FC = () => {
 
     const stageFailureThreshold = Math.max(35, STAGE_FAILURE_THRESHOLD - behavior.stageTolerance);
     if (result.score < stageFailureThreshold) {
+      const failureDetails = strugglingRequirements.length > 0
+        ? ` Key issues: ${strugglingRequirements.join('; ')}.`
+        : '';
+
       finishPerformance(updatedResults, {
         forcedFailure: true,
         failedStage: stage.name,
-        failureReason: `${stage.name} score fell below ${stageFailureThreshold}%. The promoter ended the show early.`
+        failureReason: `${stage.name} score fell below ${stageFailureThreshold}%. The promoter ended the show early.${failureDetails}`
       });
       return;
     }
@@ -669,8 +674,9 @@ const AdvancedGigSystem: React.FC = () => {
       });
 
       const showTypeLabel = currentShowType === 'acoustic' ? 'acoustic' : 'standard';
+      const failureSummary = derivedFailureReason ? ` ${derivedFailureReason}` : '';
       const activityMessage = isFailure
-        ? `Performance at ${gig.venue.name} fell flat (${averageScore.toFixed(1)}%). Lost ${Math.abs(fameDelta)} fame.`
+        ? `Performance at ${gig.venue.name} fell flat (${averageScore.toFixed(1)}%). Lost ${Math.abs(fameDelta)} fame.${failureSummary}`
         : `Performed a ${showTypeLabel} set at ${gig.venue.name} - Score: ${averageScore.toFixed(1)}%`;
 
       await addActivity('gig_performance', activityMessage, totalEarningsValue);
