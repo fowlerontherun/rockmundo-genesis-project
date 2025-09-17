@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Lock, User, AlertCircle, Guitar, Star, Shield } from "lucide-react";
+import { Mail, Lock, User, AlertCircle, Guitar, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
@@ -47,8 +47,6 @@ const Auth = () => {
     username: "",
     displayName: ""
   });
-  const [creatingAdmin, setCreatingAdmin] = useState(false);
-
   useEffect(() => {
     const hash = window.location.hash;
     const isRecovery = hash.includes("type=recovery");
@@ -277,84 +275,6 @@ const Auth = () => {
       setError(message);
     } finally {
       setResendingVerification(false);
-    }
-  };
-
-  const createAdminUser = async () => {
-    setCreatingAdmin(true);
-    setError("");
-
-    try {
-      // First, sign up the admin user
-      const { data, error } = await supabase.auth.signUp({
-        email: 'j.fowler1986@gmail.com',
-        password: 'admin123',
-        options: {
-          data: {
-            username: 'admin',
-            display_name: 'Admin User'
-          },
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Wait for the trigger to complete
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Update the user role to admin
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .update({ role: 'admin' })
-          .eq('user_id', data.user.id);
-
-        if (roleError) throw roleError;
-
-        // Update profile with admin stats
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            cash: 1000000,
-            fame: 10000,
-            level: 10,
-            experience: 5000
-          })
-          .eq('user_id', data.user.id);
-
-        if (profileError) throw profileError;
-
-        // Update skills
-        const { error: skillsError } = await supabase
-          .from('player_skills')
-          .update({
-            guitar: 95,
-            vocals: 95,
-            drums: 95,
-            bass: 95,
-            performance: 95,
-            songwriting: 95
-          })
-          .eq('user_id', data.user.id);
-
-        if (skillsError) throw skillsError;
-
-        toast({
-          title: "Admin User Created!",
-          description: "Admin user has been created successfully. You can now login with j.fowler1986@gmail.com / admin123"
-        });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create admin user";
-      console.error('Error creating admin user:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: message
-      });
-    } finally {
-      setCreatingAdmin(false);
     }
   };
 
@@ -644,27 +564,6 @@ const Auth = () => {
         </Card>
 
         <div className="text-center mt-6 space-y-4">
-          <Alert className="bg-primary/15 border-primary/40 text-foreground">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-left space-y-2">
-              <div>
-                <strong>Admin Access:</strong> For testing admin features, use:<br/>
-                Email: <code>j.fowler1986@gmail.com</code><br/>
-                Password: <code>admin123</code>
-              </div>
-              <Button
-                onClick={createAdminUser}
-                disabled={creatingAdmin}
-                size="sm"
-                className="w-full mt-2 border-border/60 bg-muted/60 text-foreground hover:bg-muted/80 hover:text-foreground"
-                variant="outline"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                {creatingAdmin ? "Creating Admin User..." : "Create Admin User"}
-              </Button>
-            </AlertDescription>
-          </Alert>
-          
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Guitar className="h-4 w-4" />
             <p className="text-sm font-oswald">Ready to rock the world?</p>
