@@ -83,39 +83,39 @@ export type Database = {
         }
         Relationships: []
       }
-      attribute_definitions: {
+      attribute_catalog: {
         Row: {
-          created_at: string
-          default_value: number
+          base_value: number
+          category: string
+          created_at: string | null
           description: string | null
           id: string
-          label: string
-          scale_max: number
-          slug: string
-          updated_at: string
-          weighting: Json
+          key: string
+          max_value: number
+          name: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          default_value?: number
+          base_value?: number
+          category?: string
+          created_at?: string | null
           description?: string | null
           id?: string
-          label: string
-          scale_max?: number
-          slug: string
-          updated_at?: string
-          weighting?: Json
+          key: string
+          max_value?: number
+          name: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          default_value?: number
+          base_value?: number
+          category?: string
+          created_at?: string | null
           description?: string | null
           id?: string
-          label?: string
-          scale_max?: number
-          slug?: string
-          updated_at?: string
-          weighting?: Json
+          key?: string
+          max_value?: number
+          name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1518,39 +1518,49 @@ export type Database = {
       }
       player_attributes: {
         Row: {
-          charisma: number
+          attribute_points: number
           created_at: string | null
           id: string
-          looks: number
-          musicality: number
+          mental_focus: number
+          physical_endurance: number
           profile_id: string
           updated_at: string | null
+          user_id: string
         }
         Insert: {
-          charisma?: number
+          attribute_points?: number
           created_at?: string | null
           id?: string
-          looks?: number
-          musicality?: number
+          mental_focus?: number
+          physical_endurance?: number
           profile_id: string
           updated_at?: string | null
+          user_id: string
         }
         Update: {
-          charisma?: number
+          attribute_points?: number
           created_at?: string | null
           id?: string
-          looks?: number
-          musicality?: number
+          mental_focus?: number
+          physical_endurance?: number
           profile_id?: string
           updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "player_attributes_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            foreignKeyName: "player_attributes_profile_id_fkey",
+            columns: ["profile_id"],
+            isOneToOne: false,
+            referencedRelation: "profiles",
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_attributes_user_id_fkey",
+            columns: ["user_id"],
+            isOneToOne: false,
+            referencedRelation: "profiles",
+            referencedColumns: ["user_id"]
           }
         ]
       }
