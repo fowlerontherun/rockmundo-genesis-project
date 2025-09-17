@@ -159,6 +159,14 @@ const BandManager = () => {
     try {
       let topEntry: Record<string, unknown> | undefined;
 
+      const chartsTable = "global_charts";
+      const chartColumns = [
+        "band_id",
+        "rank",
+        "trend_change",
+        "weeks_on_chart",
+      ];
+
       for (const column of chartColumns) {
         const response = await supabase
           .from(chartsTable)
@@ -187,6 +195,30 @@ const BandManager = () => {
         } else {
           console.error('Fallback chart query failed:', fallbackResponse.error);
         }
+      }
+
+      const { data, error } = await supabase
+        .from('band_members')
+        .select(`
+          *,
+          profile:profiles (
+            display_name,
+            avatar_url
+          ),
+          skills:player_skills (
+            vocals,
+            guitar,
+            bass,
+            drums,
+            songwriting,
+            performance
+          )
+        `)
+        .eq('band_id', bandId);
+
+      if (error) {
+        console.error('Error fetching band members:', error);
+        return;
       }
 
       const memberRows = (data ?? []) as BandMemberRow[];
