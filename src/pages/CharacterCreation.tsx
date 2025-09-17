@@ -82,9 +82,6 @@ const defaultSkills = {
   performance: 1,
   songwriting: 1,
   composition: 1,
-  creativity: 1,
-  business: 1,
-  marketing: 1,
   technical: 1,
 };
 
@@ -168,7 +165,7 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_skills")
-            .select("id, guitar, vocals, drums, bass, performance, songwriting, composition, creativity, business, marketing, technical")
+            .select("id, profile_id, guitar, vocals, drums, bass, performance, songwriting, composition, technical")
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
@@ -414,36 +411,48 @@ const CharacterCreation = () => {
       city_of_birth: cityOfBirth,
     };
 
-    const skillPayload: PlayerSkillsInsert = {
-      user_id: user.id,
-      guitar: skills.guitar,
-      vocals: skills.vocals,
-      drums: skills.drums,
-      bass: skills.bass,
-      performance: skills.performance,
-      songwriting: skills.songwriting,
-      composition: skills.composition,
-      creativity: skills.creativity,
-      business: skills.business,
-      marketing: skills.marketing,
-      technical: skills.technical,
-    };
-
     try {
-      const { error: profileError } = await supabase
+      const { data: upsertedProfile, error: profileError } = await supabase
         .from("profiles")
-        .upsert(profilePayload, { onConflict: "user_id" });
+        .upsert(profilePayload, { onConflict: "user_id" })
+        .select()
+        .single();
 
       if (profileError) {
         throw profileError;
       }
 
+      if (!upsertedProfile) {
+        throw new Error("Profile save did not return any data.");
+      }
+
+      const skillPayload: PlayerSkillsInsert = {
+        user_id: user.id,
+        profile_id: upsertedProfile.id,
+        guitar: skills.guitar,
+        vocals: skills.vocals,
+        drums: skills.drums,
+        bass: skills.bass,
+        performance: skills.performance,
+        songwriting: skills.songwriting,
+        composition: skills.composition,
+        technical: skills.technical,
+      };
+
       const { error: skillsError } = await supabase
         .from("player_skills")
-        .upsert(skillPayload, { onConflict: "user_id" });
+        .upsert(skillPayload, { onConflict: "profile_id" });
 
       if (skillsError) {
         throw skillsError;
+      }
+
+      const { error: attributesError } = await supabase
+        .from("player_attributes")
+        .upsert({ profile_id: upsertedProfile.id }, { onConflict: "profile_id" });
+
+      if (attributesError) {
+        throw attributesError;
       }
 
       toast({
