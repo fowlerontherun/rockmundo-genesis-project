@@ -590,29 +590,6 @@ const VenueManagement = () => {
     [user, toast, loadBookings]
   );
 
-    try {
-      const eventDate = new Date();
-      eventDate.setDate(eventDate.getDate() + 7);
-
-      const insertPayload: Record<string, unknown> = {
-        user_id: user.id,
-        venue_id: venue.id,
-        status: "upcoming",
-        event_date: eventDate.toISOString()
-      };
-
-      const { error } = await supabase
-        .from("venue_bookings")
-        .insert(insertPayload);
-      if (error) throw error;
-
-      await loadBookings();
-
-      toast({
-        title: "Show booked!",
-        description: `Your performance at ${venue.name} has been scheduled.`
-      });
-
   const getStatusColor = (status: string) => {
     const normalized = status.toLowerCase();
     switch (normalized) {
@@ -630,7 +607,7 @@ const VenueManagement = () => {
       default:
         return "bg-gray-500";
     }
-  }, [loadBookings, toast, user]);
+  };
 
   const isLoadingVenues = loadingVenues || loadingRelationships;
   const hasVenues = venuesWithDetails.length > 0;

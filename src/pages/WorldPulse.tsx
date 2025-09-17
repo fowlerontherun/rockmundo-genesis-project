@@ -362,7 +362,7 @@ const WorldPulse = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadDailyChart, loadAvailableWeeks, loadGenreStats]);
+  };
 
   const handlePrevWeek = () => {
     setCurrentWeekIndex((prev) => {

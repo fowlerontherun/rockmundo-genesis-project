@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
+import type { Database } from "@/integrations/supabase/types";
 
 interface Tour {
   id: string;
@@ -97,17 +98,19 @@ interface RouteSuggestion {
   totalDistance: number;
 }
 
+interface EditTourVenueForm {
+  id: string;
+  venue_id: string;
+  date: string;
+  status: string;
+  ticket_price: number | null;
+}
+
 interface EditTourForm {
   start_date: string;
   end_date: string;
   status: string;
-  venues: Array<{
-    id: string;
-    venue_id: string;
-    date: string;
-    status: string;
-    ticket_price: number | null;
-  }>;
+  venues: EditTourVenueForm[];
   newVenue: {
     venue_id: string;
     date: string;
@@ -261,6 +264,8 @@ const TourManager = () => {
     end_date: ""
   });
   const [venueSchedules, setVenueSchedules] = useState<Record<string, VenueScheduleForm>>({});
+  const [editingTourId, setEditingTourId] = useState<string | null>(null);
+  const [editForms, setEditForms] = useState<Record<string, EditTourForm>>({});
 
   const normalizeDate = (date?: string | null) => (date ? date.split("T")[0] : "");
 
@@ -567,21 +572,14 @@ const TourManager = () => {
     }
   };
 
-  const ensureIsoDate = (value: string) => {
-    if (!value) return value;
-    if (value.includes("T")) return value;
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
-  };
-
   const handleManageClick = (tour: Tour) => {
     if (editingTourId === tour.id) {
+      setEditingTourId(null);
       setEditForms((prev) => {
         const updated = { ...prev };
         delete updated[tour.id];
         return updated;
       });
-      setEditingTourId(null);
       return;
     }
 
@@ -594,64 +592,63 @@ const TourManager = () => {
 
   const handleAddVenue = async (tourId: string) => {
     const form = editForms[tourId];
-    if (!form) return;
+    if (!form) {
+      toast({
+        variant: "destructive",
+        title: "No tour selected",
+        description: "Open a tour for management before adding venues.",
+      });
+      return;
+    }
 
     const { venue_id, date, ticket_price } = form.newVenue;
-
     if (!venue_id || !date) {
       toast({
         variant: "destructive",
         title: "Missing Details",
-        description: "Select a venue and date to add a new tour stop.",
+        description: "Select a venue and date before adding a tour stop.",
       });
       return;
     }
 
-    const selectedVenue = venues.find((venue) => venue.id === venue_id);
-    if (!selectedVenue) {
-      toast({
-        variant: "destructive",
-        title: "Unknown Venue",
-        description: "The selected venue could not be found.",
-      });
-      return;
+    const ticketPriceValue = parseCurrencyInput(ticket_price);
+    let isoDate = date;
+    if (!isoDate.includes("T")) {
+      const parsed = new Date(date);
+      if (!Number.isNaN(parsed.getTime())) {
+        isoDate = parsed.toISOString();
+      }
     }
 
     const tour = tours.find((item) => item.id === tourId);
-    const sortedExistingStops = (tour?.venues ?? []).slice().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const previousStop = sortedExistingStops.length > 0 ? sortedExistingStops[sortedExistingStops.length - 1] : undefined;
-    const distance = calculateDistanceKm(previousStop?.venue?.location, selectedVenue.location);
-    const travelTime = estimateTravelTimeHours(distance);
-    const restDays = calculateRestDaysFromDistance(distance);
+    const orderedStops = [...(tour?.venues ?? [])].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    const lastStop = orderedStops[orderedStops.length - 1];
+    const selectedVenue = venues.find((venue) => venue.id === venue_id);
+    const distance = calculateDistanceKm(lastStop?.venue?.location, selectedVenue?.location);
     const travelCost = calculateTravelCostFromDistance(distance);
+    const restDays = calculateRestDaysFromDistance(distance);
     const lodgingCost = calculateLodgingCostFromRestDays(restDays);
-    const miscCost = Math.max(0, Math.round(travelCost * 0.15));
-
-    const ticketPriceValue = Number(ticket_price);
-    const parsedTicketPrice = Number.isFinite(ticketPriceValue) ? Math.max(0, Math.round(ticketPriceValue)) : 0;
+    const miscCost = Math.max(0, Math.round(distance * 0.2));
 
     const success = await addVenueToTour(tourId, {
       venueId: venue_id,
-      date: ensureIsoDate(date),
-      ticketPrice: parsedTicketPrice,
+      date: isoDate,
+      ticketPrice: ticketPriceValue,
       travelCost,
       lodgingCost,
       miscCost,
-      travelTime,
-      restDays,
     });
 
     if (success) {
       setEditForms((prev) => {
-        const existingForm = prev[tourId];
-        if (!existingForm) {
-          return prev;
-        }
-
+        const current = prev[tourId];
+        if (!current) return prev;
         return {
           ...prev,
           [tourId]: {
-            ...existingForm,
+            ...current,
             newVenue: {
               venue_id: "",
               date: "",
@@ -666,55 +663,68 @@ const TourManager = () => {
   const editTour = async (tourId: string) => {
     if (!user) return;
     const form = editForms[tourId];
-    if (!form) return;
+    if (!form) {
+      toast({
+        variant: "destructive",
+        title: "No changes detected",
+        description: "Open a tour for management before saving changes.",
+      });
+      return;
+    }
 
     try {
-      const updates: Partial<TourRow> = {
-        start_date: form.start_date ? ensureIsoDate(form.start_date) : null,
-        end_date: form.end_date ? ensureIsoDate(form.end_date) : null,
-        status: form.status,
-      };
-
       const { error } = await supabase
-        .from("tours")
-        .update(updates)
-        .eq("id", tourId)
-        .eq("user_id", user.id);
+        .from('tours')
+        .update({
+          start_date: form.start_date,
+          end_date: form.end_date,
+          status: form.status,
+        })
+        .eq('id', tourId)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
+      const updatedTours = await loadTours();
+      const refreshedTour = updatedTours.find((tour) => tour.id === tourId);
+      if (refreshedTour) {
+        setEditForms((prev) => ({
+          ...prev,
+          [tourId]: initializeEditForm(refreshedTour),
+        }));
+      }
+
       toast({
         title: "Tour Updated",
-        description: "Tour details were saved successfully.",
+        description: "Tour details saved successfully.",
       });
 
-      await loadTours();
-
-      setEditForms((prev) => {
-        const updated = { ...prev };
-        delete updated[tourId];
-        return updated;
-      });
       setEditingTourId(null);
     } catch (error: unknown) {
-      const fallbackMessage = "Failed to update tour";
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error("Error updating tour:", errorMessage, error);
+      console.error('Error updating tour:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+        description: "Failed to update tour",
       });
     }
   };
 
   const handleCancelEditing = (tourId: string) => {
-    setEditingTourId((current) => (current === tourId ? null : current));
-    setEditForms((prev) => {
-      const updated = { ...prev };
-      delete updated[tourId];
-      return updated;
-    });
+    const currentTour = tours.find((tour) => tour.id === tourId);
+    if (currentTour) {
+      setEditForms((prev) => ({
+        ...prev,
+        [tourId]: initializeEditForm(currentTour),
+      }));
+    } else {
+      setEditForms((prev) => {
+        const updated = { ...prev };
+        delete updated[tourId];
+        return updated;
+      });
+    }
+    setEditingTourId(null);
   };
 
   const cancelTour = async (tourId: string) => {
@@ -722,47 +732,38 @@ const TourManager = () => {
 
     try {
       const { error } = await supabase
-        .from("tours")
-        .update({ status: "cancelled" })
-        .eq("id", tourId)
-        .eq("user_id", user.id);
-
+        .from('tours')
+        .update({ status: 'cancelled' })
+        .eq('id', tourId)
+        .eq('user_id', user.id);
       if (error) throw error;
 
       const { error: venuesError } = await supabase
-        .from("tour_venues")
-        .update({ status: "cancelled" })
-        .eq("tour_id", tourId);
+        .from('tour_venues')
+        .update({ status: 'cancelled' })
+        .eq('tour_id', tourId);
 
       if (venuesError) throw venuesError;
 
-      const cancelledVenueIds = (tours.find((tour) => tour.id === tourId)?.venues ?? []).map((venue) => venue.id);
-      if (cancelledVenueIds.length > 0) {
-        const { error: scheduleError } = await supabase
-          .from("schedule_events")
-          .update({ status: "cancelled" })
-          .in("tour_venue_id", cancelledVenueIds);
-
-        if (scheduleError) {
-          console.error("Error cancelling related schedule events:", scheduleError);
-        }
-      }
-
       toast({
         title: "Tour Cancelled",
-        description: "The tour and related shows have been cancelled.",
+        description: "The tour and all of its shows have been cancelled.",
       });
 
+      setEditForms((prev) => {
+        const updated = { ...prev };
+        delete updated[tourId];
+        return updated;
+      });
+      setEditingTourId(null);
+
       await loadTours();
-      handleCancelEditing(tourId);
     } catch (error: unknown) {
-      const fallbackMessage = "Failed to cancel tour";
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error("Error cancelling tour:", errorMessage, error);
+      console.error('Error cancelling tour:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+        description: "Failed to cancel tour",
       });
     }
   };
@@ -1248,13 +1249,17 @@ const TourManager = () => {
                             type="date"
                             value={editForm.start_date}
                             onChange={(e) =>
-                              setEditForms((prev) => ({
-                                ...prev,
-                                [tour.id]: {
-                                  ...prev[tour.id],
-                                  start_date: e.target.value
-                                }
-                              }))
+                              setEditForms((prev) => {
+                                const current = prev[tour.id];
+                                if (!current) return prev;
+                                return {
+                                  ...prev,
+                                  [tour.id]: {
+                                    ...current,
+                                    start_date: e.target.value
+                                  }
+                                };
+                              })
                             }
                           />
                         </div>
@@ -1264,13 +1269,17 @@ const TourManager = () => {
                             type="date"
                             value={editForm.end_date}
                             onChange={(e) =>
-                              setEditForms((prev) => ({
-                                ...prev,
-                                [tour.id]: {
-                                  ...prev[tour.id],
-                                  end_date: e.target.value
-                                }
-                              }))
+                              setEditForms((prev) => {
+                                const current = prev[tour.id];
+                                if (!current) return prev;
+                                return {
+                                  ...prev,
+                                  [tour.id]: {
+                                    ...current,
+                                    end_date: e.target.value
+                                  }
+                                };
+                              })
                             }
                           />
                         </div>
@@ -1280,13 +1289,17 @@ const TourManager = () => {
                             className="mt-1 w-full rounded-md border border-border bg-background/80 px-3 py-2 text-sm capitalize focus:outline-none focus:ring-2 focus:ring-primary"
                             value={editForm.status}
                             onChange={(e) =>
-                              setEditForms((prev) => ({
-                                ...prev,
-                                [tour.id]: {
-                                  ...prev[tour.id],
-                                  status: e.target.value
-                                }
-                              }))
+                              setEditForms((prev) => {
+                                const current = prev[tour.id];
+                                if (!current) return prev;
+                                return {
+                                  ...prev,
+                                  [tour.id]: {
+                                    ...current,
+                                    status: e.target.value
+                                  }
+                                };
+                              })
                             }
                           >
                             {tourStatusOptions.map((status) => (
@@ -1307,16 +1320,20 @@ const TourManager = () => {
                               className="mt-1 w-full rounded-md border border-border bg-background/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                               value={editForm.newVenue.venue_id}
                               onChange={(e) =>
-                                setEditForms((prev) => ({
-                                  ...prev,
-                                  [tour.id]: {
-                                    ...prev[tour.id],
-                                    newVenue: {
-                                      ...prev[tour.id].newVenue,
-                                      venue_id: e.target.value
+                                setEditForms((prev) => {
+                                  const current = prev[tour.id];
+                                  if (!current) return prev;
+                                  return {
+                                    ...prev,
+                                    [tour.id]: {
+                                      ...current,
+                                      newVenue: {
+                                        ...current.newVenue,
+                                        venue_id: e.target.value
+                                      }
                                     }
-                                  }
-                                }))
+                                  };
+                                })
                               }
                             >
                               <option value="">Select venue</option>
@@ -1333,16 +1350,20 @@ const TourManager = () => {
                               type="date"
                               value={editForm.newVenue.date}
                               onChange={(e) =>
-                                setEditForms((prev) => ({
-                                  ...prev,
-                                  [tour.id]: {
-                                    ...prev[tour.id],
-                                    newVenue: {
-                                      ...prev[tour.id].newVenue,
-                                      date: e.target.value
+                                setEditForms((prev) => {
+                                  const current = prev[tour.id];
+                                  if (!current) return prev;
+                                  return {
+                                    ...prev,
+                                    [tour.id]: {
+                                      ...current,
+                                      newVenue: {
+                                        ...current.newVenue,
+                                        date: e.target.value
+                                      }
                                     }
-                                  }
-                                }))
+                                  };
+                                })
                               }
                             />
                           </div>
@@ -1353,16 +1374,20 @@ const TourManager = () => {
                               min="0"
                               value={editForm.newVenue.ticket_price}
                               onChange={(e) =>
-                                setEditForms((prev) => ({
-                                  ...prev,
-                                  [tour.id]: {
-                                    ...prev[tour.id],
-                                    newVenue: {
-                                      ...prev[tour.id].newVenue,
-                                      ticket_price: e.target.value
+                                setEditForms((prev) => {
+                                  const current = prev[tour.id];
+                                  if (!current) return prev;
+                                  return {
+                                    ...prev,
+                                    [tour.id]: {
+                                      ...current,
+                                      newVenue: {
+                                        ...current.newVenue,
+                                        ticket_price: e.target.value
+                                      }
                                     }
-                                  }
-                                }))
+                                  };
+                                })
                               }
                             />
                           </div>
