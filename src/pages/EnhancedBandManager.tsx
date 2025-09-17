@@ -38,6 +38,21 @@ interface Band {
   created_at: string;
 }
 
+type SkillSlug =
+  | "guitar"
+  | "vocals"
+  | "drums"
+  | "bass"
+  | "performance"
+  | "songwriting";
+
+interface SkillMapEntry {
+  level: number;
+  unlocked: boolean;
+}
+
+type SkillMap = Record<string, SkillMapEntry>;
+
 interface BandMember {
   id: string;
   user_id: string;
@@ -51,7 +66,7 @@ interface BandMember {
     avatar_url: string | null;
     levelEstimate: number;
   };
-  skillLevels: SkillLevelMap;
+  player_skills: SkillMap;
 }
 
 interface BandStats {
@@ -63,10 +78,178 @@ interface BandStats {
 }
 
 type PublicProfileRow = Database["public"]["Views"]["public_profiles"]["Row"];
+type ProfileRow = Pick<
+  Database["public"]["Tables"]["profiles"]["Row"],
+  "id" | "user_id" | "username" | "display_name" | "level" | "avatar_url"
+>;
 interface AvailableMember extends PublicProfileRow {
-  skillLevels: SkillLevelMap;
+  player_skills: SkillMap;
   levelEstimate: number;
 }
+
+const BAND_SKILL_SLUGS: SkillSlug[] = [
+  "guitar",
+  "vocals",
+  "drums",
+  "bass",
+  "performance",
+  "songwriting"
+];
+
+const SKILL_DISPLAY_LABELS: Record<SkillSlug, string> = {
+  guitar: "Guitar",
+  vocals: "Vocals",
+  drums: "Drums",
+  bass: "Bass",
+  performance: "Performance",
+  songwriting: "Writing"
+};
+
+type SkillDefinitionSlug = Pick<Database["public"]["Tables"]["skill_definitions"]["Row"], "slug">;
+
+type SkillProgressWithDefinition = Database["public"]["Tables"]["profile_skill_progress"]["Row"] & {
+  skill_definitions?: SkillDefinitionSlug | null;
+};
+
+type SkillUnlockWithDefinition = Database["public"]["Tables"]["profile_skill_unlocks"]["Row"] & {
+  skill_definitions?: SkillDefinitionSlug | null;
+  is_unlocked?: boolean | null;
+};
+
+const createDefaultSkillMap = (): SkillMap => {
+  return BAND_SKILL_SLUGS.reduce<SkillMap>((acc, slug) => {
+    acc[slug] = { level: 0, unlocked: false };
+    return acc;
+  }, {});
+};
+
+const buildSkillMap = (
+  progressRows: SkillProgressWithDefinition[],
+  unlockRows: SkillUnlockWithDefinition[]
+): SkillMap => {
+  const skillMap = createDefaultSkillMap();
+
+  progressRows.forEach((row) => {
+    const slug = row.skill_slug ?? row.skill_definitions?.slug ?? null;
+    if (!slug) {
+      return;
+    }
+
+    if (!skillMap[slug]) {
+      skillMap[slug] = { level: 0, unlocked: false };
+    }
+
+    skillMap[slug].level = row.current_level ?? 0;
+  });
+
+  unlockRows.forEach((row) => {
+    const slug = row.skill_slug ?? row.skill_definitions?.slug ?? null;
+    if (!slug) {
+      return;
+    }
+
+    if (!skillMap[slug]) {
+      skillMap[slug] = { level: 0, unlocked: false };
+    }
+
+    const unlockFlag =
+      typeof (row as { is_unlocked?: boolean }).is_unlocked === "boolean"
+        ? (row as { is_unlocked?: boolean }).is_unlocked ?? false
+        : !!row.unlocked_at;
+
+    skillMap[slug].unlocked = unlockFlag;
+  });
+
+  return skillMap;
+};
+
+const fetchSkillMapsForProfiles = async (profileIds: string[]): Promise<Record<string, SkillMap>> => {
+  if (profileIds.length === 0) {
+    return {};
+  }
+
+  const [progressResponse, unlockResponse] = await Promise.all([
+    supabase
+      .from("profile_skill_progress")
+      .select("profile_id, current_level, skill_slug, skill_definitions(slug)")
+      .in("profile_id", profileIds),
+    supabase
+      .from("profile_skill_unlocks")
+      .select("profile_id, unlocked_at, skill_slug, skill_definitions(slug), is_unlocked")
+      .in("profile_id", profileIds)
+  ]);
+
+  if (progressResponse.error) throw progressResponse.error;
+  if (unlockResponse.error) throw unlockResponse.error;
+
+  const progressByProfile = new Map<string, SkillProgressWithDefinition[]>();
+  (progressResponse.data ?? []).forEach((row) => {
+    const profileId = row.profile_id;
+    if (!profileId) {
+      return;
+    }
+
+    const existing = progressByProfile.get(profileId) ?? [];
+    existing.push(row as SkillProgressWithDefinition);
+    progressByProfile.set(profileId, existing);
+  });
+
+  const unlocksByProfile = new Map<string, SkillUnlockWithDefinition[]>();
+  (unlockResponse.data ?? []).forEach((row) => {
+    const profileId = row.profile_id;
+    if (!profileId) {
+      return;
+    }
+
+    const existing = unlocksByProfile.get(profileId) ?? [];
+    existing.push(row as SkillUnlockWithDefinition);
+    unlocksByProfile.set(profileId, existing);
+  });
+
+  return profileIds.reduce<Record<string, SkillMap>>((acc, profileId) => {
+    const progressRows = progressByProfile.get(profileId) ?? [];
+    const unlockRows = unlocksByProfile.get(profileId) ?? [];
+    acc[profileId] = buildSkillMap(progressRows, unlockRows);
+    return acc;
+  }, {});
+};
+
+const getSkillLevel = (skillMap: SkillMap, slug: SkillSlug): number => {
+  const entry = skillMap[slug];
+  if (!entry) {
+    return 0;
+  }
+
+  return entry.unlocked ? entry.level ?? 0 : 0;
+};
+
+const getSkillDisplayValue = (skillMap: SkillMap, slug: SkillSlug): string => {
+  const entry = skillMap[slug];
+  if (!entry) {
+    return "0";
+  }
+
+  if (!entry.unlocked) {
+    return "Locked";
+  }
+
+  return (entry.level ?? 0).toString();
+};
+
+const estimateSkillLevel = (skills?: SkillMap | null) => {
+  if (!skills) {
+    return 1;
+  }
+
+  const values = BAND_SKILL_SLUGS.map((slug) => getSkillLevel(skills, slug));
+
+  if (values.length === 0) {
+    return 1;
+  }
+
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Math.max(1, Math.round(average / 10));
+};
 
 const EnhancedBandManager = () => {
   const { user } = useAuth();
@@ -207,66 +390,61 @@ const EnhancedBandManager = () => {
     }
   }, [getUserBandIds, user?.id]);
 
-  const calculateBandStats = useCallback(
-    (members: BandMember[]): BandStats => {
-      const aggregatedSkillMap = members.reduce<SkillLevelMap>((accumulator, member) => {
-        Object.entries(member.skillLevels).forEach(([slug, value]) => {
-          if (typeof value === "number") {
-            accumulator[slug] = value;
-          }
-        });
-        return accumulator;
-      }, {});
-
-      const skillSlugs = collectSkillSlugs(skillDefinitions, aggregatedSkillMap);
-      const skillCount = members.length * (skillSlugs.length || 1);
-
-      const totalSkills = members.reduce((total, member) => {
-        const memberTotal = skillSlugs.reduce((sum, slug) => {
-          const value = getSkillLevel(member.skillLevels, slug, 0);
-          return sum + (typeof value === "number" ? value : 0);
-        }, 0);
-        return total + memberTotal;
-      }, 0);
-
-      const avgSkill = members.length > 0 ? totalSkills / skillCount : 0;
-      const chemistry = Math.min(100, Math.max(0, avgSkill * (members.length / 4) * 1.2));
-      const weeklyIncome = Math.round(chemistry * 10 + (selectedBand?.popularity ?? 0) * 5);
-
-      return {
-        totalSkill: Math.round(avgSkill),
-        chemistry: Math.round(chemistry),
-        weeklyIncome,
-        songsCreated: 0,
-        gigsPerformed: 0
-      };
-    },
-    [selectedBand?.popularity, skillDefinitions]
-  );
-
-  const fetchProfileSkillMap = useCallback(
-    async (profileId: string | null): Promise<SkillLevelMap> => {
-      if (!profileId) {
-        return {};
-      }
-
-      const { data, error } = await supabase
-        .from("profile_skill_progress")
-        .select("skill_id, skill_slug, current_level, skill_definitions ( slug, name )")
-        .eq("profile_id", profileId);
-
-      if (error) {
-        console.error("Error fetching skill progress:", error);
-        return {};
-      }
-
-      return buildSkillLevelMap(
-        (data as SkillProgressWithDefinition[] | null | undefined) ?? [],
-        skillDefinitions
+  const calculateBandStats = useCallback((members: BandMember[]): BandStats => {
+    const totalSkills = members.reduce((acc, member) => {
+      return (
+        acc +
+        BAND_SKILL_SLUGS.reduce((skillSum, slug) => {
+          return skillSum + getSkillLevel(member.player_skills, slug);
+        }, 0)
       );
-    },
-    [skillDefinitions]
-  );
+    }, 0);
+
+    const avgSkill =
+      members.length > 0 ? totalSkills / (members.length * BAND_SKILL_SLUGS.length) : 0;
+
+    // Chemistry calculation based on skill balance and member count
+    const chemistry = Math.min(100, Math.max(0, avgSkill * (members.length / 4) * 1.2));
+
+    const weeklyIncome = Math.round(chemistry * 10 + (selectedBand?.popularity ?? 0) * 5);
+
+    return {
+      totalSkill: Math.round(avgSkill),
+      chemistry: Math.round(chemistry),
+      weeklyIncome,
+      songsCreated: 0, // Would need to fetch from songs table
+      gigsPerformed: 0  // Would need to fetch from gigs table
+    };
+  }, [selectedBand?.popularity]);
+
+  const fetchAvailableMembers = useCallback(async (currentMemberIds: string[]) => {
+    try {
+      const { data: profiles, error: profilesError } = await supabase
+        .from("public_profiles")
+        .select("*")
+        .neq("user_id", user?.id)
+        .eq("is_active", true)
+        .limit(20);
+
+      if (profilesError) throw profilesError;
+
+      const profileIds = (profiles ?? [])
+        .map((profile) => profile.id)
+        .filter((id): id is string => Boolean(id));
+
+      const skillMaps = await fetchSkillMapsForProfiles(profileIds);
+
+      const profilesWithSkills: AvailableMember[] = (profiles || []).map((profile) => {
+        const skillMap = profile.id
+          ? skillMaps[profile.id] ?? createDefaultSkillMap()
+          : createDefaultSkillMap();
+
+        return {
+          ...profile,
+          player_skills: skillMap,
+          levelEstimate: estimateSkillLevel(skillMap)
+        };
+      });
 
   const fetchAvailableMembers = useCallback(
     async (currentMemberIds: string[]) => {
@@ -314,45 +492,71 @@ const EnhancedBandManager = () => {
 
       if (membersError) throw membersError;
 
-      const membersWithDetails = await Promise.all(
-        (members ?? []).map(async member => {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("id, username, display_name, level, avatar_url")
-            .eq("user_id", member.user_id)
-            .eq("is_active", true)
-            .maybeSingle();
+      if (!members || members.length === 0) {
+        setBandMembers([]);
+        setBandStats(calculateBandStats([]));
+        await fetchAvailableMembers([]);
+        return [];
+      }
 
-          const skillLevels = await fetchProfileSkillMap(profileData?.id ?? null);
-          const levelEstimate = estimateSkillTier(skillLevels, skillDefinitions);
-          const avatarPreview = getStoredAvatarPreviewUrl(profileData?.avatar_url ?? null);
+      const userIds = members.map(member => member.user_id);
 
-          const normalizedProfile = {
-            username: profileData?.username ?? member.user_id,
-            display_name:
-              profileData?.display_name ?? profileData?.username ?? "Band Member",
-            avatar_url: avatarPreview ?? null,
-            levelEstimate
-          };
+      const { data: profileRows, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, user_id, username, display_name, level, avatar_url")
+        .in("user_id", userIds)
+        .eq("is_active", true);
 
-          return {
-            ...member,
-            profiles: normalizedProfile,
-            skillLevels
-          };
-        })
-      );
+      if (profileError) throw profileError;
+
+      const profileRecords = (profileRows ?? []) as ProfileRow[];
+      const profileMap = new Map<string, ProfileRow>();
+      const profileIds: string[] = [];
+
+      profileRecords.forEach((profile) => {
+        profileMap.set(profile.user_id, profile);
+        if (profile.id) {
+          profileIds.push(profile.id);
+        }
+      });
+
+      const skillMaps = await fetchSkillMapsForProfiles(profileIds);
+
+      const membersWithDetails: BandMember[] = members.map((member) => {
+        const profileData = profileMap.get(member.user_id) ?? null;
+        const skillMap = profileData?.id
+          ? skillMaps[profileData.id] ?? createDefaultSkillMap()
+          : createDefaultSkillMap();
+        const levelEstimate = estimateSkillLevel(skillMap);
+        const avatarPreview = getStoredAvatarPreviewUrl(profileData?.avatar_url ?? null);
+
+        const normalizedProfile = profileData
+          ? {
+              ...profileData,
+              avatar_url: avatarPreview ?? null,
+              levelEstimate
+            }
+          : {
+              username: "",
+              display_name: "",
+              level: 1,
+              avatar_url: avatarPreview ?? "",
+              levelEstimate
+            };
+
+        return {
+          ...member,
+          profiles: normalizedProfile,
+          player_skills: skillMap
+        };
+      });
 
       setBandMembers(membersWithDetails);
 
-      if (membersWithDetails.length > 0) {
-        setBandStats(calculateBandStats(membersWithDetails));
-        const currentMemberIds = membersWithDetails.map(member => member.user_id);
-        await fetchAvailableMembers(currentMemberIds);
-      } else {
-        setBandStats(null);
-        await fetchAvailableMembers([]);
-      }
+      const stats = calculateBandStats(membersWithDetails);
+      setBandStats(stats);
+      const currentMemberIds = membersWithDetails.map(member => member.user_id);
+      await fetchAvailableMembers(currentMemberIds);
 
       return membersWithDetails;
     } catch (error) {
@@ -684,28 +888,14 @@ const EnhancedBandManager = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-3 gap-2 text-xs">
-                      {(() => {
-                        const slugs = collectSkillSlugs(skillDefinitions, member.skillLevels);
-
-                        if (slugs.length === 0) {
-                          return (
-                            <div className="col-span-3 text-center text-muted-foreground">
-                              No skill data
-                            </div>
-                          );
-                        }
-
-                        return slugs.map(slug => {
-                          const value = getSkillLevel(member.skillLevels, slug, "Locked");
-                          const label = getSkillLabel(slug, skillDefinitions);
-                          return (
-                            <div key={`${member.id}-${slug}`} className="text-center">
-                              <div className="font-mono">{String(value)}</div>
-                              <div className="text-muted-foreground">{label}</div>
-                            </div>
-                          );
-                        });
-                      })()}
+                      {BAND_SKILL_SLUGS.map((slug) => (
+                        <div key={slug} className="text-center">
+                          <div className="font-mono">
+                            {getSkillDisplayValue(member.player_skills, slug)}
+                          </div>
+                          <div className="text-muted-foreground">{SKILL_DISPLAY_LABELS[slug]}</div>
+                        </div>
+                      ))}
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
@@ -796,28 +986,14 @@ const EnhancedBandManager = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="grid grid-cols-3 gap-2 text-xs">
-                        {(() => {
-                          const slugs = collectSkillSlugs(skillDefinitions, member.skillLevels);
-
-                          if (slugs.length === 0) {
-                            return (
-                              <div className="col-span-3 text-center text-muted-foreground">
-                                No skill data
-                              </div>
-                            );
-                          }
-
-                          return slugs.map(slug => {
-                          const value = getSkillLevel(member.skillLevels, slug, "Locked");
-                          const label = getSkillLabel(slug, skillDefinitions);
-                          return (
-                            <div key={`${member.user_id}-${slug}`} className="text-center">
-                                <div className="font-mono">{String(value)}</div>
-                                <div className="text-muted-foreground">{label}</div>
-                              </div>
-                            );
-                          });
-                        })()}
+                        {BAND_SKILL_SLUGS.map((slug) => (
+                          <div key={slug} className="text-center">
+                            <div className="font-mono">
+                              {getSkillDisplayValue(member.player_skills, slug)}
+                            </div>
+                            <div className="text-muted-foreground">{SKILL_DISPLAY_LABELS[slug]}</div>
+                          </div>
+                        ))}
                       </div>
 
                       <Button
