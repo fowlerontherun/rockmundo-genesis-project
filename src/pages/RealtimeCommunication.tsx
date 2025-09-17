@@ -3,20 +3,18 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner-toast';
-import {
-  MessageSquare,
-  Users,
-  Send,
-  Music,
-  Loader2,
-  Play
-} from 'lucide-react';
+import { MessageSquare, Send, Music } from 'lucide-react';
+
+interface AudioMeterHandle {
+  analyser: AnalyserNode;
+  source: MediaStreamAudioSourceNode;
+  rafId: number;
+}
 
 const RealtimeCommunication: React.FC = () => {
   const { user } = useAuth();
@@ -25,6 +23,21 @@ const RealtimeCommunication: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
+  const audioMetersRef = useRef<Record<string, AudioMeterHandle>>({});
+
+  const destroyAudioMeter = useCallback((participantId: string) => {
+    const meter = audioMetersRef.current[participantId];
+    if (!meter) {
+      return;
+    }
+
+    cancelAnimationFrame(meter.rafId);
+    meter.source.disconnect();
+    meter.analyser.disconnect();
+    delete audioMetersRef.current[participantId];
+
+    return;
+  }, []);
 
   const sendMessage = useCallback(async () => {
     if (!currentMessage.trim() || !user) {
@@ -49,6 +62,14 @@ const RealtimeCommunication: React.FC = () => {
       toast.error('Failed to send message.');
     }
   }, [currentMessage, user]);
+
+  useEffect(() => {
+    return () => {
+      Object.keys(audioMetersRef.current).forEach((participantId) => {
+        destroyAudioMeter(participantId);
+      });
+    };
+  }, [destroyAudioMeter]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
