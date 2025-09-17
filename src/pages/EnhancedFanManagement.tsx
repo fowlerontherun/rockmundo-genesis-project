@@ -501,7 +501,7 @@ const EnhancedFanManagement = () => {
         .eq("user_id", user?.id);
 
       if (fanData) {
-        let updates: Partial<FanDemographics> = {
+        const updates: Partial<FanDemographics> = {
           total_fans: fanData.total_fans + actualGrowth,
           weekly_growth: fanData.weekly_growth + actualGrowth
         };
