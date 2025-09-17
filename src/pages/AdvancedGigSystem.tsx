@@ -117,31 +117,33 @@ const AdvancedGigSystem: React.FC = () => {
 
     try {
       setLoading(true);
-      const { data: gigData, error: gigError } = await supabase
+      const { data: gigRow, error: gigError } = await supabase
         .from('gigs')
         .select('*')
         .eq('id', gigId)
         .single();
 
       if (gigError) throw gigError;
-      if (!gigData) throw new Error('Gig not found');
+      if (!gigRow) throw new Error('Gig not found');
 
-      const { data: venueData, error: venueError } = await supabase
+      const { data: venueRow, error: venueError } = await supabase
         .from('venues')
         .select('*')
-        .eq('id', gigData.venue_id)
+        .eq('id', gigRow.venue_id)
         .single();
 
       if (venueError) throw venueError;
-      const transformedGig = {
-        ...gigData,
+      if (!venueRow) throw new Error('Venue not found');
+
+      const transformedGig: Gig = {
+        id: gigRow.id,
         venue: {
           id: venueRow.id,
-          name: venueRow.name,
+          name: venueRow.name ?? 'Unknown Venue',
           capacity: venueRow.capacity ?? 0,
           prestige_level: venueRow.prestige_level ?? 0
         },
-        scheduled_date: gigRow.scheduled_date,
+        scheduled_date: gigRow.scheduled_date ?? new Date().toISOString(),
         payment: gigRow.payment ?? 0,
         status: gigRow.status ?? 'scheduled'
       };
