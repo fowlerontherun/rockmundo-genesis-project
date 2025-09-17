@@ -1,7 +1,5 @@
 // Game balance and progression logic for RockMundo
 
-import { getAttributeMultiplier } from "./attributeModifiers";
-
 export interface PerformanceAttributeBonuses {
   stagePresence?: number | null;
   crowdEngagement?: number | null;
@@ -9,16 +7,15 @@ export interface PerformanceAttributeBonuses {
 }
 
 const clampNumber = (value: number, min: number, max: number) => {
-  if (Number.isNaN(value)) return min;
+  if (!Number.isFinite(value)) {
+    return min;
+  }
   return Math.min(Math.max(value, min), max);
 };
 
-const resolveAttributeFactor = (
-  rawValue: number | null | undefined,
-  intensity: number
-) => {
-  const multiplier = getAttributeMultiplier(rawValue, { fallback: 1 });
-  return 1 + (multiplier - 1) * intensity;
+const toFiniteNumber = (value: unknown, fallback = 0) => {
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
 };
 
 export const SKILL_CAPS = {
@@ -36,7 +33,7 @@ export const LEVEL_REQUIREMENTS = {
 export const TRAINING_COSTS = {
   skillTraining: (currentLevel: number) => Math.floor(100 * Math.pow(1.5, currentLevel / 10)),
   equipmentRepair: (itemValue: number) => Math.floor(itemValue * 0.1),
-  recordingSession: (quality: number) => Math.floor(500 + (quality * 10))
+  recordingSession: (quality: number) => Math.floor(500 + quality * 10)
 } as const;
 
 export const COOLDOWNS = {
@@ -99,6 +96,16 @@ const ATTRIBUTE_FOCUS_WEIGHTS: Record<AttributeFocus, Array<{ key: AttributeKey;
   ]
 };
 
+const FOCUS_MAX_BONUS: Record<AttributeFocus, number> = {
+  general: 0.35,
+  instrumental: 0.4,
+  performance: 0.45,
+  songwriting: 0.4,
+  vocals: 0.4
+};
+
+const STAMINA_FOCUSES: ReadonlySet<AttributeFocus> = new Set(["instrumental", "performance"]);
+
 export const clampAttributeScore = (value: number | null | undefined): number => {
   if (value === null || value === undefined) {
     return 0;
@@ -147,6 +154,7 @@ export const extractAttributeScores = (source: unknown): AttributeScores => {
   const record = source as Record<string, unknown>;
   return ATTRIBUTE_KEYS.reduce<AttributeScores>((accumulator, key) => {
     const raw = record[key];
+
     if (typeof raw === "number") {
       accumulator[key] = raw;
       return accumulator;
@@ -154,11 +162,17 @@ export const extractAttributeScores = (source: unknown): AttributeScores => {
 
     if (raw && typeof raw === "object" && "value" in raw) {
       const nested = (raw as { value?: unknown }).value;
-      if (typeof nested === "number") {
-        accumulator[key] = nested;
+      const numeric = typeof nested === "number" ? nested : Number(nested);
+      if (Number.isFinite(numeric)) {
+        accumulator[key] = numeric;
       }
+      return accumulator;
     }
 
+    const numeric = typeof raw === "string" ? Number(raw) : NaN;
+    if (Number.isFinite(numeric)) {
+      accumulator[key] = numeric;
+    }
     return accumulator;
   }, {});
 };
@@ -211,14 +225,18 @@ export const calculateExperienceReward = (
     return 0;
   }
 
-  const focusScore = getFocusAttributeScore(attributes, focus);
-  const focusMultiplier = attributeScoreToMultiplier(focusScore, focus === "performance" ? 0.45 : focus === "instrumental" ? 0.4 : 0.35);
-  const mentalFocusMultiplier = attributeScoreToMultiplier(attributes?.mental_focus ?? null, 0.3);
+  const focusScore = getFocusAttributeScore(attributes ?? null, focus);
+  const focusMaxBonus = FOCUS_MAX_BONUS[focus] ?? FOCUS_MAX_BONUS.general;
+  const focusMultiplier = attributeScoreToMultiplier(focusScore, focusMaxBonus);
+  const mentalMultiplier = attributeScoreToMultiplier(attributes?.mental_focus ?? null, 0.3);
+  const staminaMultiplier = STAMINA_FOCUSES.has(focus)
+    ? attributeScoreToMultiplier(attributes?.physical_endurance ?? null, 0.2)
+    : 1;
 
-  return Math.max(0, Math.round(normalizedBase * focusMultiplier * mentalFocusMultiplier));
+  const totalMultiplier = focusMultiplier * mentalMultiplier * staminaMultiplier;
+  return Math.max(0, Math.round(normalizedBase * totalMultiplier));
 };
 
-// Calculate player level from experience
 export function calculateLevel(experience: number): number {
   return Math.min(
     Math.floor(experience / LEVEL_REQUIREMENTS.experiencePerLevel) + 1,
@@ -226,24 +244,21 @@ export function calculateLevel(experience: number): number {
   );
 }
 
-// Calculate experience needed for next level
 export function experienceToNextLevel(experience: number): number {
   const currentLevel = calculateLevel(experience);
   if (currentLevel >= LEVEL_REQUIREMENTS.maxLevel) return 0;
-  
+
   const nextLevelExp = currentLevel * LEVEL_REQUIREMENTS.experiencePerLevel;
   return nextLevelExp - (experience % LEVEL_REQUIREMENTS.experiencePerLevel);
 }
 
-// Get skill cap based on player level/experience
 export function getSkillCap(playerLevel: number, totalExperience: number): number {
   if (totalExperience >= 20000) return SKILL_CAPS.master;
   if (totalExperience >= 5000) return SKILL_CAPS.professional;
   if (totalExperience >= 1000) return SKILL_CAPS.amateur;
-  return SKILL_CAPS.beginner;
+  return Math.max(SKILL_CAPS.beginner, Math.min(SKILL_CAPS.master, Math.round(playerLevel * 0.8)));
 }
 
-// Calculate training cost for a skill
 export function calculateTrainingCost(
   currentSkillLevel: number,
   attributes?: AttributeScores,
@@ -254,33 +269,45 @@ export function calculateTrainingCost(
     return 0;
   }
 
-  const focusScore = getFocusAttributeScore(attributes, focus);
-  const costReduction = clampNumber(focusScore / 1000, 0, 1) * 0.25; // Up to 25% reduction
-  const reductionMultiplier = 1 - costReduction;
+  const focusScore = getFocusAttributeScore(attributes ?? null, focus);
+  const mentalScore = clampAttributeScore(attributes?.mental_focus ?? null);
+  const staminaScore = clampAttributeScore(attributes?.physical_endurance ?? null);
 
-  const adjustedCost = Math.round(baseCost * reductionMultiplier);
+  const focusReduction = clampNumber(focusScore / 1000, 0, 1) * 0.2;
+  const mentalReduction = clampNumber(mentalScore / 1000, 0, 1) * 0.15;
+  const staminaReduction = STAMINA_FOCUSES.has(focus)
+    ? clampNumber(staminaScore / 1000, 0, 1) * 0.1
+    : 0;
+
+  const totalReduction = clampNumber(focusReduction + mentalReduction + staminaReduction, 0, 0.45);
+  const adjustedCost = Math.round(baseCost * (1 - totalReduction));
   return Math.max(25, adjustedCost);
 }
 
-// Calculate success rate for activities based on skills
 export function calculateSuccessRate(
   requiredSkills: Record<string, number>,
   playerSkills: Record<string, number>,
   attributes?: AttributeScores,
   focus: AttributeFocus = "general"
 ): number {
-  const skillChecks = Object.entries(requiredSkills).map(([skill, required]) => {
+  const entries = Object.entries(requiredSkills);
+  if (entries.length === 0) {
+    return 1;
+  }
+
+  const skillChecks = entries.map(([skill, required]) => {
     const playerLevel = playerSkills[skill] || 0;
+    if (required <= 0) {
+      return 1;
+    }
     return Math.min(playerLevel / required, 1.0);
   });
 
-  // Average of all skill checks, minimum 10% success
   const averageCheck = skillChecks.reduce((sum, check) => sum + check, 0) / skillChecks.length;
-  const attributeMultiplier = attributeScoreToMultiplier(getFocusAttributeScore(attributes, focus), 0.35);
+  const attributeMultiplier = attributeScoreToMultiplier(getFocusAttributeScore(attributes ?? null, focus), 0.35);
   return Math.min(1, Math.max(averageCheck, 0.1) * attributeMultiplier);
 }
 
-// Calculate gig payment based on venue and performance
 export function calculateGigPayment(
   basePayment: number,
   performanceSkill: number,
@@ -288,68 +315,80 @@ export function calculateGigPayment(
   successRate: number,
   attributes?: AttributeScores
 ): number {
-  const skillMultiplier = 1 + (performanceSkill / 100);
-  const fameMultiplier = 1 + (fameLevel / 10000);
-  const performanceMultiplier = 0.5 + (successRate * 0.5); // 50% to 100% based on success
+  const normalizedBase = Math.max(0, toFiniteNumber(basePayment, 0));
+  if (normalizedBase <= 0) {
+    return 0;
+  }
+
+  const skillMultiplier = 1 + performanceSkill / 100;
+  const fameMultiplier = 1 + fameLevel / 10000;
+  const performanceMultiplier = 0.5 + successRate * 0.5;
 
   const charismaMultiplier = attributeScoreToMultiplier(attributes?.charisma ?? null, 0.4);
   const looksMultiplier = attributeScoreToMultiplier(attributes?.looks ?? null, 0.25);
   const musicalityMultiplier = attributeScoreToMultiplier(attributes?.musicality ?? null, 0.2);
 
   return Math.floor(
-    basePayment * skillMultiplier * fameMultiplier * performanceMultiplier * charismaMultiplier * looksMultiplier * musicalityMultiplier
+    normalizedBase *
+      skillMultiplier *
+      fameMultiplier *
+      performanceMultiplier *
+      charismaMultiplier *
+      looksMultiplier *
+      musicalityMultiplier
   );
 }
 
-// Calculate fan gain from activities
 export function calculateFanGain(
   baseGain: number,
   performanceSkill: number,
   attributes?: AttributeScores
 ): number {
-  const skillMultiplier = 1 + (performanceSkill / 200); // Max 50% bonus
+  const normalizedBase = Math.max(0, toFiniteNumber(baseGain, 0));
+  if (normalizedBase <= 0) {
+    return 0;
+  }
+
+  const skillMultiplier = 1 + performanceSkill / 200;
   const charismaMultiplier = attributeScoreToMultiplier(attributes?.charisma ?? null, 0.5);
   const looksMultiplier = attributeScoreToMultiplier(attributes?.looks ?? null, 0.3);
 
-  return Math.floor(baseGain * skillMultiplier * charismaMultiplier * looksMultiplier);
+  return Math.floor(normalizedBase * skillMultiplier * charismaMultiplier * looksMultiplier);
 }
 
-// Check if player meets requirements for an activity
 export function meetsRequirements(
   requirements: Record<string, number>,
   playerStats: Record<string, number>
 ): { meets: boolean; missing: string[] } {
   const missing: string[] = [];
-  
+
   for (const [requirement, value] of Object.entries(requirements)) {
     const playerValue = playerStats[requirement] || 0;
     if (playerValue < value) {
       missing.push(`${requirement}: ${value} (you have ${playerValue})`);
     }
   }
-  
+
   return {
     meets: missing.length === 0,
     missing
   };
 }
 
-// Calculate equipment effectiveness bonus
 export function calculateEquipmentBonus(
   equippedItems: Array<{ stat_boosts: Record<string, number> }>
 ): Record<string, number> {
   const totalBonus: Record<string, number> = {};
-  
+
   equippedItems.forEach(item => {
     Object.entries(item.stat_boosts).forEach(([stat, boost]) => {
       totalBonus[stat] = (totalBonus[stat] || 0) + boost;
     });
   });
-  
+
   return totalBonus;
 }
 
-// Get fame level title
 export function getFameTitle(fame: number): string {
   if (fame >= FAME_THRESHOLDS.legend) return "Living Legend";
   if (fame >= FAME_THRESHOLDS.globalIcon) return "Global Icon";
@@ -361,17 +400,24 @@ export function getFameTitle(fame: number): string {
   return "Unknown Artist";
 }
 
-// Check cooldown status
-export function isOnCooldown(lastAction: string | Date, cooldownMs: number): boolean {
+export function isOnCooldown(lastAction: string | Date | null | undefined, cooldownMs: number): boolean {
   if (!lastAction) return false;
-  const lastTime = typeof lastAction === 'string' ? new Date(lastAction) : lastAction;
+  const lastTime = typeof lastAction === "string" ? new Date(lastAction) : lastAction;
+  if (Number.isNaN(lastTime.getTime())) {
+    return false;
+  }
   return Date.now() - lastTime.getTime() < cooldownMs;
 }
 
-// Get remaining cooldown time in minutes
-export function getRemainingCooldown(lastAction: string | Date, cooldownMs: number): number {
+export function getRemainingCooldown(
+  lastAction: string | Date | null | undefined,
+  cooldownMs: number
+): number {
   if (!lastAction) return 0;
-  const lastTime = typeof lastAction === 'string' ? new Date(lastAction) : lastAction;
+  const lastTime = typeof lastAction === "string" ? new Date(lastAction) : lastAction;
+  if (Number.isNaN(lastTime.getTime())) {
+    return 0;
+  }
   const remaining = cooldownMs - (Date.now() - lastTime.getTime());
-  return Math.max(0, Math.ceil(remaining / 60000)); // Convert to minutes
+  return Math.max(0, Math.ceil(remaining / 60000));
 }

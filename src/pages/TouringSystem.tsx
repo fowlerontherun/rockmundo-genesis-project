@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
-import { applyAttributeToValue, type AttributeKey } from '@/utils/attributeProgression';
+import { applyAttributeToValue } from '@/utils/attributeProgression';
 import { toast } from '@/components/ui/sonner-toast';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { 

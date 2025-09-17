@@ -19,8 +19,62 @@ import {
   attributeScoreToMultiplier,
   COOLDOWNS
 } from "@/utils/gameBalance";
-import { applyCooldownModifier } from "@/utils/attributeModifiers";
-import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
+import { type LucideIcon, Activity, Brain, Clock, Coins, Drum, Guitar, Mic, Music, PenTool, Sparkles, Star, TrendingUp, Volume2 } from "lucide-react";
+
+const ATTRIBUTE_MAX_VALUE = 1000;
+const ATTRIBUTE_TRAINING_INCREMENT = 10;
+
+const ATTRIBUTE_KEYS: AttributeKey[] = [
+  "musicality",
+  "charisma",
+  "looks",
+  "mental_focus",
+  "physical_endurance"
+];
+
+const ATTRIBUTE_METADATA: Record<AttributeKey, {
+  label: string;
+  description: string;
+  relatedSkills: string[];
+}> = {
+  musicality: {
+    label: "Musicality",
+    description: "Refines your ear, phrasing, and ability to express through instruments.",
+    relatedSkills: ["guitar", "bass", "drums", "songwriting"]
+  },
+  charisma: {
+    label: "Charisma",
+    description: "Determines how audiences connect with you on and off stage.",
+    relatedSkills: ["vocals", "performance", "busking"]
+  },
+  looks: {
+    label: "Presence",
+    description: "Enhances visual appeal, branding, and how memorable you appear.",
+    relatedSkills: ["performance", "promotion", "busking"]
+  },
+  mental_focus: {
+    label: "Mental Focus",
+    description: "Improves study efficiency and precision during long sessions.",
+    relatedSkills: ["songwriting", "studio", "training"]
+  },
+  physical_endurance: {
+    label: "Physical Endurance",
+    description: "Reduces downtime between intense rehearsals and demanding gigs.",
+    relatedSkills: ["performance", "touring", "training"]
+  }
+};
+
+const ATTRIBUTE_ICONS: Record<AttributeKey, LucideIcon> = {
+  musicality: Music,
+  charisma: Sparkles,
+  looks: Star,
+  mental_focus: Brain,
+  physical_endurance: Activity
+};
+
+const getAttributeTrainingCost = (currentValue: number) => Math.ceil(120 + currentValue * 0.85);
+
+const clampAttributeValue = (value: number) => Math.max(0, Math.min(ATTRIBUTE_MAX_VALUE, Math.round(value)));
 
 type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
 
@@ -63,94 +117,93 @@ const ATTRIBUTE_INVESTMENT_WEIGHTS: Record<AttributeFocus, Array<{ key: Attribut
   ]
 };
 
+const trainingSessions: TrainingSession[] = [
+  {
+    skill: "guitar",
+    name: "Guitar Practice",
+    icon: Guitar,
+    duration: 30,
+    xpGain: 5,
+    description: "Master guitar techniques and improve your playing skills"
+  },
+  {
+    skill: "vocals",
+    name: "Vocal Training",
+    icon: Mic,
+    duration: 45,
+    xpGain: 6,
+    description: "Develop your voice range, control, and stage presence"
+  },
+  {
+    skill: "drums",
+    name: "Drum Lessons",
+    icon: Drum,
+    duration: 40,
+    xpGain: 5,
+    description: "Learn rhythm patterns and improve your timing"
+  },
+  {
+    skill: "bass",
+    name: "Bass Workshop",
+    icon: Volume2,
+    duration: 35,
+    xpGain: 5,
+    description: "Strengthen your bass fundamentals and groove"
+  },
+  {
+    skill: "performance",
+    name: "Stage Performance",
+    icon: Star,
+    duration: 60,
+    xpGain: 8,
+    description: "Enhance your stage presence and crowd engagement"
+  },
+  {
+    skill: "songwriting",
+    name: "Songwriting Class",
+    icon: PenTool,
+    duration: 50,
+    xpGain: 7,
+    description: "Learn composition, lyrics, and musical arrangement"
+  }
+];
+
 const SkillTraining = () => {
   const { toast } = useToast();
   const { profile, skills, attributes, updateSkills, updateProfile, updateAttributes, addActivity, loading } = useGameData();
   const [training, setTraining] = useState(false);
   const [activeTrainingKey, setActiveTrainingKey] = useState<string | null>(null);
-  const baseTrainingCooldown = COOLDOWNS.skillTraining;
-
-  const attributeSummaries = useMemo(() =>
-    ATTRIBUTE_KEYS.map(key => {
-      const value = clampAttributeValue(Number(attributes?.[key] ?? 0));
-      return {
-        key,
-        value,
-        metadata: ATTRIBUTE_METADATA[key],
-        icon: ATTRIBUTE_ICONS[key],
-        cost: getAttributeTrainingCost(value),
-        percentage: ATTRIBUTE_MAX_VALUE > 0 ? (value / ATTRIBUTE_MAX_VALUE) * 100 : 0
-      };
-    }),
-  [attributes]);
-
-  const attributeSource = attributes as unknown as Record<string, unknown> | null;
-  const physicalEndurance = resolveAttributeValue(attributeSource, "physical_endurance", 1);
-  const mentalFocus = resolveAttributeValue(attributeSource, "mental_focus", 1);
 
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
 
-  const enduranceMultiplier = attributeScoreToMultiplier(attributeScores.physical_endurance ?? null, 0.3);
-  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, enduranceMultiplier);
+  const attributeSummaries = useMemo(
+    () =>
+      ATTRIBUTE_KEYS.map(key => {
+        const value = clampAttributeValue(Number(attributes?.[key] ?? 0));
+        const Icon = ATTRIBUTE_ICONS[key];
+        return {
+          key,
+          value,
+          metadata: ATTRIBUTE_METADATA[key],
+          icon: Icon,
+          cost: getAttributeTrainingCost(value),
+          percentage: ATTRIBUTE_MAX_VALUE > 0 ? (value / ATTRIBUTE_MAX_VALUE) * 100 : 0
+        };
+      }),
+    [attributes]
+  );
 
-  const trainingSessions: TrainingSession[] = [
-    {
-      skill: "guitar",
-      name: "Guitar Practice",
-      icon: Guitar,
-      duration: 30,
-      xpGain: 5,
-      description: "Master guitar techniques and improve your playing skills"
-    },
-    {
-      skill: "vocals",
-      name: "Vocal Training",
-      icon: Mic,
-      duration: 45,
-      xpGain: 6,
-      description: "Develop your voice range, control, and stage presence"
-    },
-    {
-      skill: "drums",
-      name: "Drum Lessons",
-      icon: Drum,
-      duration: 40,
-      xpGain: 5,
-      description: "Learn rhythm patterns and improve your timing"
-    },
-    {
-      skill: "bass",
-      name: "Bass Workshop",
-      icon: Volume2,
-      duration: 35,
-      xpGain: 5,
-      description: "Strengthen your bass fundamentals and groove"
-    },
-    {
-      skill: "performance",
-      name: "Stage Performance",
-      icon: Star,
-      duration: 60,
-      xpGain: 8,
-      description: "Enhance your stage presence and crowd engagement"
-    },
-    {
-      skill: "songwriting",
-      name: "Songwriting Class",
-      icon: PenTool,
-      duration: 50,
-      xpGain: 7,
-      description: "Learn composition, lyrics, and musical arrangement"
-    }
-  ];
+  const enduranceMultiplier = attributeScoreToMultiplier(attributeScores.physical_endurance ?? null, 0.25);
+  const baseTrainingCooldown = COOLDOWNS.skillTraining;
+  const trainingCooldownMs = Math.max(60_000, Math.round(baseTrainingCooldown / Math.max(enduranceMultiplier, 0.25)));
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
   const baseSkillCap = getSkillCap(playerLevel, totalExperience);
   const lastTrainingTime = skills?.updated_at ?? null;
-  const cooldownActive = lastTrainingTime ? isOnCooldown(lastTrainingTime, trainingCooldown) : false;
+  const cooldownActive = lastTrainingTime ? isOnCooldown(lastTrainingTime, trainingCooldownMs) : false;
   const remainingCooldown = cooldownActive && lastTrainingTime
-    ? getRemainingCooldown(lastTrainingTime, trainingCooldown)
+    ? getRemainingCooldown(lastTrainingTime, trainingCooldownMs)
     : 0;
 
   const getEffectiveSkillCap = (skill: string): number => {
@@ -182,7 +235,7 @@ const SkillTraining = () => {
         return accumulator;
       }
 
-      const nextValue = Math.min(1000, Math.max(0, Math.round(currentValue + distributedGain)));
+      const nextValue = clampAttributeValue(currentValue + distributedGain);
       accumulator[key] = nextValue;
       return accumulator;
     }, {});
@@ -193,16 +246,12 @@ const SkillTraining = () => {
 
     const currentSkill = Number(skills[session.skill] ?? 0);
     const playerCash = Number(profile.cash ?? 0);
-    const playerLevel = Number(profile.level ?? 1);
-    const totalExperience = Number(profile.experience ?? 0);
-    const baseCap = getSkillCap(playerLevel, totalExperience);
+    const totalExp = Number(profile.experience ?? 0);
     const focus = TRAINING_FOCUS[session.skill] ?? "general";
     const effectiveSkillCap = getEffectiveSkillCap(session.skill);
     const trainingCost = calculateTrainingCost(currentSkill, attributeScores, focus);
     const lastTraining = skills.updated_at;
-    const cooldownActive = lastTraining ? isOnCooldown(lastTraining, trainingCooldown) : false;
-    const attributeKey = SKILL_ATTRIBUTE_MAP[session.skill] as AttributeKey | undefined;
-    const attributeResult = applyAttributeToValue(session.xpGain, attributes, attributeKey);
+    const isCoolingDown = lastTraining ? isOnCooldown(lastTraining, trainingCooldownMs) : false;
 
     if (currentSkill >= effectiveSkillCap) {
       toast({
@@ -213,9 +262,9 @@ const SkillTraining = () => {
       return;
     }
 
-    if (cooldownActive) {
+    if (isCoolingDown) {
       const remainingMinutes = lastTraining
-        ? getRemainingCooldown(lastTraining, trainingCooldown)
+        ? getRemainingCooldown(lastTraining, trainingCooldownMs)
         : 0;
       toast({
         variant: "destructive",
@@ -242,7 +291,7 @@ const SkillTraining = () => {
       const newSkillValue = Math.min(effectiveSkillCap, currentSkill + xpGain);
       const skillGain = newSkillValue - currentSkill;
       const newCash = playerCash - trainingCost;
-      const newExperience = totalExperience + xpGain;
+      const newExperience = totalExp + xpGain;
       const timestamp = new Date().toISOString();
 
       const attributeInvestments = getAttributeInvestments(focus, xpGain);
@@ -259,19 +308,18 @@ const SkillTraining = () => {
       });
 
       if (Object.keys(attributeInvestments).length > 0) {
-        await updateAttributes(attributeInvestments);
+        await updateAttributes(attributeInvestments as Partial<PlayerAttributes>);
       }
 
       await addActivity(
         "training",
         `Completed ${session.name} training session (+${xpGain} XP)`,
         -trainingCost
-
       );
 
       toast({
         title: "Training Complete!",
-        description: `Your ${session.skill} skill increased by ${skillGain} points (+${experienceGain} XP).`
+        description: `Your ${session.skill} skill increased by ${skillGain} points (+${xpGain} XP).`
       });
     } catch (error) {
       console.error("Error during training:", error);
@@ -425,6 +473,12 @@ const SkillTraining = () => {
             <TrendingUp className="h-4 w-4 text-blue-400" />
             <span className="font-oswald">{profile?.experience || 0} XP</span>
           </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-purple-400" />
+            <span className="font-oswald">
+              {cooldownActive ? `Cooldown: ${remainingCooldown}m` : "Ready to train"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -476,7 +530,7 @@ const SkillTraining = () => {
 
         <TabsContent value="training" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {trainingSessions.map((session) => {
+            {trainingSessions.map(session => {
               const Icon = session.icon;
               const currentSkill = Number(skills?.[session.skill] ?? 0);
               const focus = TRAINING_FOCUS[session.skill] ?? "general";
@@ -486,6 +540,7 @@ const SkillTraining = () => {
               const isAtCap = currentSkill >= effectiveSkillCap;
               const buttonDisabled = training || !canAfford || isAtCap || cooldownActive;
               const projectedXp = Math.max(1, calculateExperienceReward(session.xpGain, attributeScores, focus));
+              const isActive = activeTrainingKey === session.skill;
 
               return (
                 <Card key={session.skill} className="relative">
