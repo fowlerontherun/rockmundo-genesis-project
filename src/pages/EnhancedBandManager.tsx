@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import { Users, Crown, Heart, UserPlus, UserMinus, Star, TrendingUp, Calendar, Music, Coins, Settings } from "lucide-react";
 
 interface Band {
@@ -283,9 +284,14 @@ const EnhancedBandManager = () => {
             songwriting: skillsRes.data?.songwriting ?? defaultPlayerSkills.songwriting
           };
 
+          const avatarPreview = getStoredAvatarPreviewUrl(profileData?.avatar_url ?? null);
+          const normalizedProfile = profileData
+            ? { ...profileData, avatar_url: avatarPreview ?? null }
+            : { username: "", display_name: "", level: 1, avatar_url: avatarPreview ?? "" };
+
           return {
             ...member,
-            profiles: profileData || { username: "", display_name: "", level: 1, avatar_url: "" },
+            profiles: normalizedProfile,
             player_skills: skillsData || { guitar: 20, vocals: 20, drums: 20, bass: 20, performance: 20, songwriting: 20 }
           };
         })

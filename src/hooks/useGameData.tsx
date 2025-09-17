@@ -17,6 +17,13 @@ type City = Tables<"cities">;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
 
+type AttributeEntry = {
+  definition: AttributeDefinition;
+  value: number;
+};
+
+export type AttributesMap = Record<string, AttributeEntry>;
+
 const isPostgrestError = (error: unknown): error is PostgrestError =>
   typeof error === "object" &&
   error !== null &&
@@ -58,7 +65,7 @@ interface GameDataContextValue {
   skills: PlayerSkills | null;
   attributes: PlayerAttributes | null;
   activities: ActivityItem[];
-  currentCity: City | null;
+  currentCity: Tables<'cities'> | null;
   loading: boolean;
   error: string | null;
   currentCity: Tables<'cities'> | null;
@@ -68,14 +75,10 @@ interface GameDataContextValue {
   updateProfile: (updates: Partial<PlayerProfile>) => Promise<PlayerProfile | undefined>;
   updateSkills: (updates: Partial<PlayerSkills>) => Promise<PlayerSkills | undefined>;
   updateAttributes: (updates: Partial<PlayerAttributes>) => Promise<PlayerAttributes | undefined>;
-  addActivity: (
-    activityType: string,
-    message: string,
-    earnings?: number,
-    metadata?: ActivityItem["metadata"]
-  ) => Promise<ActivityItem | undefined>;
+  addActivity: (activityType: string, message: string, earnings?: number) => Promise<ActivityItem | undefined>;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
+  resetCharacter: () => Promise<void>;
   refetch: () => Promise<void>;
   resetCharacter: () => Promise<void>;
 }
@@ -94,6 +97,22 @@ const getStoredSelectedCharacterId = () => {
   return storedValue ?? null;
 };
 
+const buildAttributeMap = (
+  definitions: AttributeDefinition[],
+  values: ProfileAttribute[]
+): AttributesMap => {
+  const valueByAttributeId = new Map(values.map(entry => [entry.attribute_id, entry.value]));
+  return definitions.reduce<AttributesMap>((accumulator, definition) => {
+    const fallback = Number.isFinite(definition.default_value) ? definition.default_value : 0;
+    const resolvedValue = valueByAttributeId.get(definition.id) ?? fallback;
+    accumulator[definition.slug] = {
+      definition,
+      value: Number.isFinite(resolvedValue) ? resolvedValue : fallback
+    };
+    return accumulator;
+  }, {});
+};
+
 const useProvideGameData = (): GameDataContextValue => {
   const { user } = useAuth();
   const [characters, setCharacters] = useState<PlayerProfile[]>([]);
@@ -102,19 +121,46 @@ const useProvideGameData = (): GameDataContextValue => {
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [currentCity, setCurrentCity] = useState<City | null>(null);
-  const [charactersLoading, setCharactersLoading] = useState(false);
-  const [dataLoading, setDataLoading] = useState(false);
+  const [currentCity, setCurrentCity] = useState<Tables<'cities'> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
+    () => getStoredSelectedCharacterId()
+  );
+  const [charactersLoading, setCharactersLoading] = useState<boolean>(false);
+  const [dataLoading, setDataLoading] = useState<boolean>(false);
 
-  const updateSelectedCharacterId = useCallback((characterId: string | null) => {
-    setSelectedCharacterId(characterId);
-    persistCharacterId(characterId);
+  const persistSelectedCharacterId = useCallback((characterId: string | null) => {
+    if (typeof window === "undefined") {
+      return characterId ?? null;
+    }
+
+    if (characterId) {
+      window.localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
+    } else {
+      window.localStorage.removeItem(CHARACTER_STORAGE_KEY);
+    }
+
+    const storedValue = window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+    return storedValue ?? null;
   }, []);
 
   const clearSelectedCharacter = useCallback(() => {
-    updateSelectedCharacterId(null);
-  }, [updateSelectedCharacterId]);
+    persistSelectedCharacterId(null);
+    setSelectedCharacterId(null);
+    setProfile(null);
+    setSkills(null);
+    setAttributes({});
+    setActivities([]);
+    setCurrentCity(null);
+  }, [persistSelectedCharacterId]);
+
+  const updateSelectedCharacterId = useCallback(
+    (characterId: string | null) => {
+      const storedValue = persistSelectedCharacterId(characterId);
+      setSelectedCharacterId(storedValue);
+    },
+    [persistSelectedCharacterId]
+  );
 
   const resolveCurrentCity = useCallback(
     async (cityId: string | null) => {
@@ -126,11 +172,11 @@ const useProvideGameData = (): GameDataContextValue => {
       const {
         data,
         error: cityError,
-        status
-      }: PostgrestMaybeSingleResponse<City> = await supabase
-        .from("cities")
-        .select("*")
-        .eq("id", cityId)
+        status: cityStatus
+      }: PostgrestMaybeSingleResponse<Tables<'cities'>> = await supabase
+        .from('cities')
+        .select('*')
+        .eq('id', cityId)
         .maybeSingle();
 
       if (cityError && status !== 406) {
@@ -145,85 +191,17 @@ const useProvideGameData = (): GameDataContextValue => {
     []
   );
 
-  const ensureSkillsRecord = useCallback(
-    async (profileId: string, userId: string): Promise<PlayerSkills> => {
-      const {
-        data,
-        error,
-        status
-      }: PostgrestMaybeSingleResponse<PlayerSkills> = await supabase
-        .from("player_skills")
-        .select("*")
-        .eq("profile_id", profileId)
-        .maybeSingle();
-
-      if (error && status !== 406) {
-        throw error;
-      }
-
-      if (data) {
-        return data;
-      }
-
-      const { data: inserted, error: insertError } = await supabase
-        .from("player_skills")
-        .insert({ profile_id: profileId, user_id: userId })
-        .select()
-        .single();
-
-      if (insertError || !inserted) {
-        throw insertError ?? new Error("Failed to create default skills record.");
-      }
-
-      return inserted;
-    },
-    []
-  );
-
-  const ensureAttributesRecord = useCallback(
-    async (profileId: string): Promise<PlayerAttributes> => {
-      const {
-        data,
-        error,
-        status
-      }: PostgrestMaybeSingleResponse<PlayerAttributes> = await supabase
-        .from("player_attributes")
-        .select("*")
-        .eq("profile_id", profileId)
-        .maybeSingle();
-
-      if (error && status !== 406) {
-        throw error;
-      }
-
-      if (data) {
-        return data;
-      }
-
-      const { data: inserted, error: insertError } = await supabase
-        .from("player_attributes")
-        .insert({ profile_id: profileId })
-        .select()
-        .single();
-
-      if (insertError || !inserted) {
-        throw insertError ?? new Error("Failed to create default attributes record.");
-      }
-
-      return inserted;
-    },
-    []
-  );
-
   const fetchCharacters = useCallback(async () => {
     if (!user) {
       setCharacters([]);
       setCharactersLoading(false);
       clearSelectedCharacter();
+      setError(null);
       return [] as PlayerProfile[];
     }
 
     setCharactersLoading(true);
+    setError(null);
 
     try {
       const { data, error: profilesError } = await supabase
@@ -300,17 +278,42 @@ const useProvideGameData = (): GameDataContextValue => {
     setError(null);
 
     try {
-      const {
-        data: profileRow,
-        error: profileError,
-        status: profileStatus
-      }: PostgrestMaybeSingleResponse<PlayerProfile> = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", selectedCharacterId)
-        .maybeSingle();
+      const [
+        profileResponse,
+        skillsResponse,
+        definitionsResponse,
+        profileAttributesResponse,
+        activityResponse
+      ] = (await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', selectedCharacterId)
+          .maybeSingle(),
+        supabase
+          .from('player_skills')
+          .select('*')
+          .eq('profile_id', selectedCharacterId)
+          .maybeSingle(),
+        supabase.from('attribute_definitions').select('*').order('slug', { ascending: true }),
+        supabase.from('profile_attributes').select('*').eq('profile_id', selectedCharacterId),
+        supabase
+          .from('activity_feed')
+          .select('*')
+          .eq('profile_id', selectedCharacterId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+      ])) as [
+        PostgrestMaybeSingleResponse<PlayerProfile>,
+        PostgrestMaybeSingleResponse<PlayerSkills>,
+        PostgrestResponse<AttributeDefinition>,
+        PostgrestResponse<ProfileAttribute>,
+        PostgrestResponse<ActivityItem>
+      ];
 
-      if (profileError && profileStatus !== 406) throw profileError;
+      if (profileResponse.error && profileResponse.status !== 406) {
+        throw profileResponse.error;
+      }
 
       let character = profileRow ?? null;
 
@@ -346,38 +349,62 @@ const useProvideGameData = (): GameDataContextValue => {
         return sortCharacters([...others, character]);
       });
 
-      await resolveCurrentCity(character.current_city_id ?? null);
+      const definitions = definitionsResponse.data ?? [];
+      setAttributeDefinitions(definitions);
 
-      const ensuredSkills = await ensureSkillsRecord(character.id, user.id);
-      setSkills(ensuredSkills);
-      const ensuredAttributes = await ensureAttributesRecord(character.id);
-      setAttributes(ensuredAttributes);
+      const profileAttributeRows = profileAttributesResponse.data ?? [];
+      setAttributes(buildAttributeMap(definitions, profileAttributeRows));
+
+      const { data: attributeRows, error: attributesError } = await supabase
+        .from('player_attributes')
+        .select('*')
+        .eq('profile_id', selectedCharacterId);
+
+      if (attributesError) throw attributesError;
+
+      let attributesData = attributeRows?.[0] ?? null;
+
+      if (!attributesData) {
+        const { data: insertedAttributes, error: insertAttributesError } = await supabase
+          .from('player_attributes')
+          .insert({
+            user_id: character.user_id,
+            profile_id: character.id,
+          })
+          .select()
+          .single();
+
+        if (insertAttributesError) throw insertAttributesError;
+
+        attributesData = insertedAttributes;
+      }
 
       const { data: activityRows, error: activityError } = await supabase
-        .from("activity_feed")
-        .select("*")
-        .eq("profile_id", character.id)
-        .order("created_at", { ascending: false })
+        .from('activity_feed')
+        .select('*')
+        .eq('profile_id', selectedCharacterId)
+        .order('created_at', { ascending: false })
         .limit(10);
 
-      if (activityError) throw activityError;
+      setSkills(skillsResponse.data ?? null);
 
-      setActivities(activityRows ?? []);
+      if (activityResponse.error && activityResponse.status !== 406) {
+        throw activityResponse.error;
+      }
+
+      setActivities(activityResponse.data ?? []);
+      setProfile(character);
+      setSkills(skillsData);
+      setAttributes(attributesData);
+      setActivities(activitiesData);
+      await resolveCurrentCity(character.current_city_id ?? null);
     } catch (err: unknown) {
       console.error("Error fetching game data:", err);
       setError(extractErrorMessage(err));
     } finally {
       setDataLoading(false);
     }
-  }, [
-    user,
-    selectedCharacterId,
-    ensureAttributesRecord,
-    ensureSkillsRecord,
-    fetchCharacters,
-    resolveCurrentCity,
-    updateSelectedCharacterId
-  ]);
+  }, [user, selectedCharacterId, resolveCurrentCity, updateSelectedCharacterId, fetchCharacters]);
 
   useEffect(() => {
     if (!user) {
@@ -395,143 +422,23 @@ const useProvideGameData = (): GameDataContextValue => {
     }
 
     void fetchCharacters();
-  }, [user, fetchCharacters, clearSelectedCharacter]);
+  }, [clearSelectedCharacter, fetchCharacters, user]);
 
-  useEffect(() => {
-    if (!user || !selectedCharacterId) return;
-    void fetchGameData();
-  }, [user, selectedCharacterId, fetchGameData]);
+      const valueByAttributeId = new Map((data ?? []).map(entry => [entry.attribute_id, entry.value]));
 
-  const setActiveCharacter = useCallback(
-    async (characterId: string) => {
-      if (!user) {
-        throw new Error("You must be signed in to switch characters.");
-      }
+      const nextAttributes: AttributesMap = { ...attributes };
+      payload.forEach(item => {
+        const latestValue = valueByAttributeId.get(item.definition.id) ?? item.row.value;
+        nextAttributes[item.definition.slug] = {
+          definition: item.definition,
+          value: latestValue
+        };
+      });
 
-      setCharactersLoading(true);
-
-      try {
-        await supabase
-          .from("profiles")
-          .update({ is_active: false })
-          .eq("user_id", user.id);
-
-        const { data, error: activationError } = await supabase
-          .from("profiles")
-          .update({ is_active: true })
-          .eq("id", characterId)
-          .select()
-          .single();
-
-        if (activationError) throw activationError;
-
-        updateSelectedCharacterId(characterId);
-        if (data) {
-          setCharacters(prev =>
-            sortCharacters(
-              prev.map(character =>
-                character.id === data.id ? { ...character, ...data } : { ...character, is_active: character.id === characterId }
-              )
-            )
-          );
-          setProfile(data);
-          await resolveCurrentCity(data.current_city_id ?? null);
-        }
-      } catch (err) {
-        console.error("Error activating character:", err);
-        setError(extractErrorMessage(err));
-        throw err;
-      } finally {
-        setCharactersLoading(false);
-      }
+      setAttributes(nextAttributes);
+      return nextAttributes;
     },
-    [user, updateSelectedCharacterId, resolveCurrentCity]
-  );
-
-  const updateProfile = useCallback(
-    async (updates: Partial<PlayerProfile>) => {
-      if (!user || !selectedCharacterId) {
-        throw new Error("No active character selected.");
-      }
-
-      const { data, error: updateError }: PostgrestSingleResponse<PlayerProfile> = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", selectedCharacterId)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error("Error updating profile:", updateError);
-        throw updateError;
-      }
-
-      if (!data) {
-        throw new Error("No profile data returned from Supabase.");
-      }
-
-      setProfile(data);
-      setCharacters(prev => sortCharacters(prev.map(character => (character.id === data.id ? data : character))));
-      await resolveCurrentCity(data.current_city_id ?? null);
-      return data;
-    },
-    [selectedCharacterId, user, resolveCurrentCity]
-  );
-
-  const updateSkills = useCallback(
-    async (updates: Partial<PlayerSkills>) => {
-      if (!user || !selectedCharacterId || !skills) {
-        throw new Error("No active character selected.");
-      }
-
-      const { data, error: updateError }: PostgrestSingleResponse<PlayerSkills> = await supabase
-        .from("player_skills")
-        .update(updates)
-        .eq("profile_id", selectedCharacterId)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error("Error updating skills:", updateError);
-        throw updateError;
-      }
-
-      if (!data) {
-        throw new Error("No skill data returned from Supabase.");
-      }
-
-      setSkills(data);
-      return data;
-    },
-    [skills, selectedCharacterId, user]
-  );
-
-  const updateAttributes = useCallback(
-    async (updates: Partial<PlayerAttributes>) => {
-      if (!user || !selectedCharacterId || !attributes) {
-        throw new Error("No active character selected.");
-      }
-
-      const { data, error: updateError }: PostgrestSingleResponse<PlayerAttributes> = await supabase
-        .from("player_attributes")
-        .update(updates)
-        .eq("profile_id", selectedCharacterId)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error("Error updating attributes:", updateError);
-        throw updateError;
-      }
-
-      if (!data) {
-        throw new Error("No attribute data returned from Supabase.");
-      }
-
-      setAttributes(data);
-      return data;
-    },
-    [attributes, selectedCharacterId, user]
+    [user, selectedCharacterId, attributes, attributeDefinitions]
   );
 
   const addActivity = useCallback(
@@ -539,14 +446,14 @@ const useProvideGameData = (): GameDataContextValue => {
       activityType: string,
       message: string,
       earnings: number = 0,
-      metadata?: ActivityItem["metadata"]
+      metadata?: ActivityItem['metadata']
     ) => {
       if (!user || !selectedCharacterId) {
-        throw new Error("No active character selected.");
+        throw new Error('No active character selected.');
       }
 
-      const { data, error: insertError }: PostgrestSingleResponse<ActivityItem> = await supabase
-        .from("activity_feed")
+      const { data, error: insertError } = await supabase
+        .from('activity_feed')
         .insert({
           user_id: user.id,
           profile_id: selectedCharacterId,
@@ -559,18 +466,18 @@ const useProvideGameData = (): GameDataContextValue => {
         .single();
 
       if (insertError) {
-        console.error("Error adding activity:", insertError);
+        console.error('Error adding activity:', insertError);
         throw insertError;
       }
 
       if (!data) {
-        throw new Error("No activity data returned from Supabase.");
+        throw new Error('No activity data returned from Supabase.');
       }
 
       setActivities(prev => [data, ...prev.slice(0, 9)]);
       return data;
     },
-    [selectedCharacterId, user]
+    [user, selectedCharacterId]
   );
 
   const createCharacter = useCallback(
@@ -582,22 +489,23 @@ const useProvideGameData = (): GameDataContextValue => {
       makeActive = false
     }: CreateCharacterInput) => {
       if (!user) {
-        throw new Error("You must be signed in to create a character.");
+        throw new Error('You must be signed in to create a character.');
       }
 
       setCharactersLoading(true);
+      setError(null);
 
       try {
         if (unlockCost > 0) {
           if (!profile || (profile.cash ?? 0) < unlockCost) {
-            throw new Error("You do not have enough cash to unlock this character slot.");
+            throw new Error('You do not have enough cash to unlock this character slot.');
           }
 
           await updateProfile({ cash: (profile.cash ?? 0) - unlockCost });
         }
 
         const { data: newProfile, error: profileInsertError } = await supabase
-          .from("profiles")
+          .from('profiles')
           .insert({
             user_id: user.id,
             username,
@@ -610,54 +518,88 @@ const useProvideGameData = (): GameDataContextValue => {
           .single();
 
         if (profileInsertError) throw profileInsertError;
-        if (!newProfile) throw new Error("Failed to create character profile.");
+        if (!newProfile) throw new Error('Failed to create character profile.');
 
-        const { data: newSkills, error: skillsInsertError } = await supabase
-          .from("player_skills")
+        const { error: skillsInsertError } = await supabase
+          .from('player_skills')
           .insert({
             user_id: user.id,
             profile_id: newProfile.id
-          })
-          .select()
-          .single();
+          });
 
         if (skillsInsertError) throw skillsInsertError;
 
-        const { data: newAttributes, error: attributesInsertError } = await supabase
-          .from("player_attributes")
-          .insert({ profile_id: newProfile.id })
-          .select()
-          .single();
+        if (attributeDefinitions.length > 0) {
+          const attributePayload = attributeDefinitions.map(definition => ({
+            profile_id: newProfile.id,
+            attribute_id: definition.id,
+            value: definition.default_value
+          }));
 
-        if (attributesInsertError) throw attributesInsertError;
+          const { error: attributeInsertError } = await supabase
+            .from('profile_attributes')
+            .upsert(attributePayload, { onConflict: 'profile_id,attribute_id' });
+
+          if (attributeInsertError) throw attributeInsertError;
+        }
 
         setCharacters(prev => sortCharacters([...prev, newProfile]));
 
         if (makeActive || !selectedCharacterId) {
           await setActiveCharacter(newProfile.id);
-          setSkills(newSkills ?? null);
-          setAttributes(newAttributes ?? null);
         }
 
         return newProfile;
       } catch (err) {
-        console.error("Error creating character:", err);
+        console.error('Error creating character:', err);
         setError(extractErrorMessage(err));
         throw err;
       } finally {
         setCharactersLoading(false);
       }
     },
-    [profile, selectedCharacterId, setActiveCharacter, updateProfile, user]
+    [
+      user,
+      profile,
+      attributeDefinitions,
+      updateProfile,
+      selectedCharacterId,
+      setActiveCharacter
+    ]
   );
 
-  const refreshCharacters = useCallback(async () => {
-    return fetchCharacters();
-  }, [fetchCharacters]);
+  const refreshCharacters = useCallback(() => fetchCharacters(), [fetchCharacters]);
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(() => fetchGameData(), [fetchGameData]);
+
+  const resetCharacter = useCallback(async () => {
+    if (!user) {
+      throw new Error('You must be signed in to reset your character.');
+    }
+
+    const { data, error: resetError } = await supabase.rpc('reset_player_character');
+
+      const { error: attributesInsertError } = await supabase
+        .from('player_attributes')
+        .insert({
+          user_id: user.id,
+          profile_id: newProfile.id
+        });
+
+      if (attributesInsertError) throw attributesInsertError;
+
+      setCharacters(prev => sortCharacters([...prev, newProfile]));
+
+    const nextProfileId = Array.isArray(data) && data.length > 0 ? data[0]?.profile?.id ?? null : null;
+    if (nextProfileId) {
+      updateSelectedCharacterId(nextProfileId);
+    } else {
+      clearSelectedCharacter();
+    }
+
+    await fetchCharacters();
     await fetchGameData();
-  }, [fetchGameData]);
+  }, [user, updateSelectedCharacterId, clearSelectedCharacter, fetchCharacters, fetchGameData]);
 
   const resetCharacter = useCallback(async () => {
     if (!user) {
@@ -676,14 +618,13 @@ const useProvideGameData = (): GameDataContextValue => {
       throw new Error("Reset did not return any character data.");
     }
 
-    setProfile(result.profile);
-    setSkills(result.skills);
-    setAttributes(result.attributes);
-    setActivities([]);
-    updateSelectedCharacterId(result.profile.id);
-    await resolveCurrentCity(result.profile.current_city_id ?? null);
-    await fetchCharacters();
-  }, [fetchCharacters, resolveCurrentCity, updateSelectedCharacterId, user]);
+  const refreshCharacters = useCallback(async () => {
+    return fetchCharacters();
+  }, [fetchCharacters]);
+
+  const refetch = useCallback(async () => {
+    await fetchGameData();
+  }, [fetchGameData]);
 
   const hasCharacters = useMemo(() => characters.length > 0, [characters]);
   const loading = useMemo(() => charactersLoading || dataLoading, [charactersLoading, dataLoading]);
@@ -699,6 +640,7 @@ const useProvideGameData = (): GameDataContextValue => {
     loading,
     error,
     hasCharacters,
+    currentCity,
     setActiveCharacter,
     clearSelectedCharacter,
     updateProfile,
@@ -717,6 +659,7 @@ export const GameDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return <GameDataContext.Provider value={value}>{children}</GameDataContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGameData = (): GameDataContextValue => {
   const context = useContext(GameDataContext);
   if (!context) {

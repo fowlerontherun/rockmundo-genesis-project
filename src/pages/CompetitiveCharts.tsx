@@ -10,6 +10,7 @@ import { useGameData } from '@/hooks/useGameData';
 import { toast } from '@/components/ui/sonner-toast';
 import { Trophy, TrendingUp, Crown, Award, Music, Zap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { getStoredAvatarPreviewUrl } from '@/utils/avatar';
 
 interface PlayerRanking {
   id: string;
@@ -81,7 +82,7 @@ const CompetitiveCharts: React.FC = () => {
   const profileDisplayName = profile?.display_name;
   const profileLevel = profile?.level;
   const profileFame = profile?.fame;
-  const profileAvatarUrl = profile?.avatar_url;
+  const profileAvatarUrl = getStoredAvatarPreviewUrl(profile?.avatar_url ?? null);
 
   const fetchAchievements = useCallback(async () => {
     const { data, error } = await supabase
@@ -136,7 +137,7 @@ const CompetitiveCharts: React.FC = () => {
           hit_songs: row.hit_songs ?? 0,
           rank: row.rank ?? 0,
           trend: baseTrend,
-          avatar_url: profileData?.avatar_url ?? undefined,
+          avatar_url: getStoredAvatarPreviewUrl(profileData?.avatar_url ?? null) ?? undefined,
         } satisfies PlayerRanking;
       });
 
@@ -191,7 +192,7 @@ const CompetitiveCharts: React.FC = () => {
             hit_songs: userRankingData.hit_songs ?? 0,
             rank: userRankingData.rank ?? 0,
             trend: fallbackTrend,
-            avatar_url: profileData.avatar_url ?? undefined,
+            avatar_url: getStoredAvatarPreviewUrl(profileData.avatar_url ?? null) ?? undefined,
           };
           if (computedUserRank.rank > 0) {
             nextPreviousRanks.set(computedUserRank.id, computedUserRank.rank);

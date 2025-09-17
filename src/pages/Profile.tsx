@@ -23,7 +23,8 @@ import {
   Edit3,
   TrendingUp,
   Heart,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,7 +90,6 @@ const Profile = () => {
   const navigate = useNavigate();
   const { profile, skills, updateProfile, resetCharacter } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
-
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -192,6 +193,11 @@ const Profile = () => {
       "Prefer not to say"
     );
   }, [profile?.gender]);
+
+  const profileAvatarPreview = useMemo(
+    () => getStoredAvatarPreviewUrl(profile?.avatar_url ?? null),
+    [profile?.avatar_url],
+  );
 
   useEffect(() => {
     if (!user) {
@@ -334,6 +340,33 @@ const Profile = () => {
     }
   };
 
+  const handleResetCharacter = async () => {
+    if (isResetting) return;
+
+    setIsResetting(true);
+    try {
+      await resetCharacter();
+      await refetch();
+      setIsResetDialogOpen(false);
+      toast({
+        title: "Character reset",
+        description: "Your performer has been restored to their starting stats.",
+      });
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to reset character";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error("Error resetting character:", errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Reset failed",
+        description:
+          errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const totalFansValue = fanMetrics?.total_fans ?? 0;
   const weeklyGrowthValue = fanMetrics?.weekly_growth ?? 0;
   const weeklyGrowthDisplay = `${weeklyGrowthValue >= 0 ? '+' : ''}${Math.abs(weeklyGrowthValue).toLocaleString()}`;
@@ -443,6 +476,56 @@ const Profile = () => {
                             : "Birth city not set"}
                         </Badge>
                       </div>
+                      <AlertDialog
+                        open={isResetDialogOpen}
+                        onOpenChange={(open) => {
+                          if (!isResetting) {
+                            setIsResetDialogOpen(open);
+                          }
+                        }}
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="mt-4 w-full"
+                            disabled={isResetting}
+                          >
+                            {isResetting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Resetting...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Reset Character
+                              </>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Reset your character?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will restore your current performer to their initial stats and remove
+                              progress. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetCharacter} disabled={isResetting}>
+                              {isResetting ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Resetting...
+                                </>
+                              ) : (
+                                "Confirm Reset"
+                              )}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </CardContent>
