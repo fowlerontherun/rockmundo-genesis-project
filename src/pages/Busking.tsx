@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
@@ -11,9 +11,14 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { fetchWorldEnvironmentSnapshot, type WeatherCondition } from "@/utils/worldEnvironment";
 import {
   Activity,
   Award,
+  Cloud,
+  CloudLightning,
+  CloudRain,
+  CloudSun,
   Clock,
   Coins,
   Flame,
@@ -22,7 +27,10 @@ import {
   Loader2,
   MapPin,
   Mic,
+  MoonStar,
   ShieldAlert,
+  Snowflake,
+  Sun,
   SparklesIcon,
   TrendingUp,
 } from "lucide-react";
@@ -49,6 +57,16 @@ interface BuskingResult {
   crowdReaction: string;
   locationName: string;
   modifierName: string;
+  environmentSummary: {
+    successAdjustment: number;
+    successMultiplier: number;
+    payoutMultiplier: number;
+    fameMultiplier: number;
+    experienceMultiplier: number;
+    timeOfDay: string;
+    daySegment: string;
+    weatherLabel?: string;
+  };
 }
 
 const fallbackTimestamp = "1970-01-01T00:00:00.000Z";
@@ -198,6 +216,204 @@ const riskPercentMap: Record<RiskLevel, number> = {
   extreme: 90,
 };
 
+type TimeOfDayKey = "morning" | "afternoon" | "evening" | "lateNight";
+type DaySegmentKey = "weekday" | "friday" | "weekend";
+
+interface TimeOfDayImpact {
+  label: string;
+  description: string;
+  success: number;
+  payout: number;
+  fame: number;
+  experience: number;
+  accent: string;
+}
+
+interface DaySegmentImpact {
+  label: string;
+  description: string;
+  success: number;
+  payout: number;
+  fame: number;
+  experience: number;
+  accent: string;
+}
+
+type WeatherMatchConfidence = "exact" | "partial" | "fallback" | "none";
+
+const TIME_OF_DAY_EFFECTS: Record<TimeOfDayKey, TimeOfDayImpact> = {
+  morning: {
+    label: "Morning Rush",
+    description: "Commuters hustle past before work, tips are lighter but practice is solid.",
+    success: -4,
+    payout: 0.92,
+    fame: 0.95,
+    experience: 1.05,
+    accent: "text-amber-500",
+  },
+  afternoon: {
+    label: "Midday Flow",
+    description: "Lunch crowds give a balanced vibe with steady attention.",
+    success: 0,
+    payout: 1,
+    fame: 1,
+    experience: 1,
+    accent: "text-primary",
+  },
+  evening: {
+    label: "Golden Hour",
+    description: "Tourists linger and date night energy boosts engagement.",
+    success: 6,
+    payout: 1.15,
+    fame: 1.1,
+    experience: 1.05,
+    accent: "text-orange-500",
+  },
+  lateNight: {
+    label: "Late Night Vibes",
+    description: "Night owls stay generous but the crowd thins out.",
+    success: -2,
+    payout: 1.05,
+    fame: 1.08,
+    experience: 1.02,
+    accent: "text-indigo-400",
+  },
+};
+
+const DAY_SEGMENT_EFFECTS: Record<DaySegmentKey, DaySegmentImpact> = {
+  weekday: {
+    label: "Weekday Flow",
+    description: "Locals provide consistent foot traffic and measured tips.",
+    success: 0,
+    payout: 1,
+    fame: 1,
+    experience: 1,
+    accent: "text-muted-foreground",
+  },
+  friday: {
+    label: "Friday Buzz",
+    description: "Weekend anticipation brings livelier, spend-happy listeners.",
+    success: 3,
+    payout: 1.1,
+    fame: 1.12,
+    experience: 1.05,
+    accent: "text-warning",
+  },
+  weekend: {
+    label: "Weekend Rush",
+    description: "Tourists and relaxed locals mean bigger crowds and payouts.",
+    success: 5,
+    payout: 1.2,
+    fame: 1.18,
+    experience: 1.1,
+    accent: "text-success",
+  },
+};
+
+const WEATHER_CONFIDENCE_TEXT: Record<Exclude<WeatherMatchConfidence, "none">, string> = {
+  exact: "Direct city match",
+  partial: "Nearby conditions",
+  fallback: "Closest available data",
+};
+
+const clampNumber = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const formatSignedNumber = (value: number, digits = 0) => `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
+
+const getTimeOfDayKey = (date: Date): TimeOfDayKey => {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 11) {
+    return "morning";
+  }
+  if (hour >= 11 && hour < 17) {
+    return "afternoon";
+  }
+  if (hour >= 17 && hour < 22) {
+    return "evening";
+  }
+  return "lateNight";
+};
+
+const getDaySegmentKey = (date: Date): DaySegmentKey => {
+  const day = date.getDay();
+  if (day === 5) {
+    return "friday";
+  }
+  if (day === 0 || day === 6) {
+    return "weekend";
+  }
+  return "weekday";
+};
+
+const findWeatherForLocation = (
+  weatherList: WeatherCondition[],
+  candidates: string[],
+): { weather: WeatherCondition | null; confidence: WeatherMatchConfidence } => {
+  if (!weatherList.length) {
+    return { weather: null, confidence: "none" };
+  }
+
+  const normalizedCandidates = candidates
+    .map((value) => (typeof value === "string" ? value.toLowerCase().trim() : ""))
+    .filter(Boolean);
+
+  if (!normalizedCandidates.length) {
+    return { weather: weatherList[0], confidence: "fallback" };
+  }
+
+  const exactMatch = weatherList.find((condition) => {
+    const city = condition.city.toLowerCase().trim();
+    return normalizedCandidates.some((candidate) => candidate === city);
+  });
+
+  if (exactMatch) {
+    return { weather: exactMatch, confidence: "exact" };
+  }
+
+  const partialMatch = weatherList.find((condition) => {
+    const city = condition.city.toLowerCase().trim();
+    return normalizedCandidates.some(
+      (candidate) => city.includes(candidate) || candidate.includes(city),
+    );
+  });
+
+  if (partialMatch) {
+    return { weather: partialMatch, confidence: "partial" };
+  }
+
+  return { weather: weatherList[0], confidence: "fallback" };
+};
+
+const capitalize = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : "");
+
+const getWeatherIcon = (condition: WeatherCondition["condition"]) => {
+  switch (condition) {
+    case "sunny":
+      return Sun;
+    case "cloudy":
+      return Cloud;
+    case "rainy":
+      return CloudRain;
+    case "stormy":
+      return CloudLightning;
+    case "snowy":
+      return Snowflake;
+    default:
+      return CloudSun;
+  }
+};
+
+const getTimeOfDayIcon = (key: TimeOfDayKey) => {
+  switch (key) {
+    case "evening":
+      return CloudSun;
+    case "lateNight":
+      return MoonStar;
+    default:
+      return Sun;
+  }
+};
+
 const riskDescriptionMap: Record<RiskLevel, string> = {
   low: "Gentle crowds with forgiving expectations.",
   medium: "Balanced foot traffic with moderate stakes.",
@@ -265,10 +481,45 @@ const Busking = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BuskingResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [weatherConditions, setWeatherConditions] = useState<WeatherCondition[]>([]);
+  const [environmentLoading, setEnvironmentLoading] = useState(true);
+  const [environmentError, setEnvironmentError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEnvironment = async () => {
+      try {
+        setEnvironmentLoading(true);
+        const snapshot = await fetchWorldEnvironmentSnapshot();
+        if (!isMounted) return;
+        setWeatherConditions(snapshot.weather ?? []);
+        setEnvironmentError(null);
+      } catch (err) {
+        console.error("Failed to load world environment", err);
+        if (isMounted) {
+          setEnvironmentError("Live environment data is temporarily unavailable. Using neutral modifiers.");
+          setWeatherConditions([]);
+        }
+      } finally {
+        if (isMounted) {
+          setEnvironmentLoading(false);
+        }
+      }
+    };
+
+    loadEnvironment();
+    const refreshInterval = setInterval(loadEnvironment, 5 * 60 * 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const fetchBuskingData = useCallback(async () => {
@@ -354,35 +605,125 @@ const Busking = () => {
   const riskPercent = riskPercentMap[riskLevel];
   const riskDescription = riskDescriptionMap[riskLevel];
 
+  const environmentDetails = useMemo(() => {
+    const currentDate = new Date(now);
+    const timeOfDayKey = getTimeOfDayKey(currentDate);
+    const daySegmentKey = getDaySegmentKey(currentDate);
+    const timeOfDay = TIME_OF_DAY_EFFECTS[timeOfDayKey];
+    const daySegment = DAY_SEGMENT_EFFECTS[daySegmentKey];
+
+    const candidates = [selectedLocation?.neighborhood ?? "", selectedLocation?.name ?? ""];
+    const { weather: matchedWeather, confidence } = findWeatherForLocation(weatherConditions, candidates);
+
+    const attendanceEffect = matchedWeather?.effects.gig_attendance ?? 1;
+    const moodEffect = matchedWeather?.effects.mood_modifier ?? 1;
+
+    const successMultiplier = clampNumber(1 + (attendanceEffect - 1) * 0.6, 0.7, 1.4);
+    const payoutMultiplier = clampNumber(attendanceEffect, 0.6, 1.6);
+    const fameMultiplier = clampNumber(moodEffect, 0.7, 1.5);
+    const experienceMultiplier = clampNumber(1 + (moodEffect - 1) * 0.5, 0.8, 1.3);
+
+    return {
+      contextDate: currentDate,
+      dayName: format(currentDate, "EEEE"),
+      timeLabel: format(currentDate, "h:mm a"),
+      timeOfDayKey,
+      daySegmentKey,
+      timeOfDay,
+      daySegment,
+      weather: matchedWeather,
+      weatherConfidence: matchedWeather ? confidence : ("none" as WeatherMatchConfidence),
+      weatherMultipliers: {
+        successMultiplier,
+        payoutMultiplier,
+        fameMultiplier,
+        experienceMultiplier,
+      },
+      combined: {
+        successAdjustment: timeOfDay.success + daySegment.success,
+        successMultiplier,
+        payoutMultiplier: timeOfDay.payout * daySegment.payout * payoutMultiplier,
+        fameMultiplier: timeOfDay.fame * daySegment.fame * fameMultiplier,
+        experienceMultiplier: timeOfDay.experience * daySegment.experience * experienceMultiplier,
+      },
+    };
+  }, [now, selectedLocation, weatherConditions]);
+
   const successChance = useMemo(() => {
     if (!selectedLocation) return 0;
     const baseChance = 58 + (skillScore - selectedLocation.recommended_skill) * 0.7;
     const riskPenalty = riskPenaltyWeights[toRiskLevel(selectedLocation.risk_level)];
     const modifierRisk = selectedModifier ? selectedModifier.risk_modifier * 100 : 0;
-    const calculated = baseChance - riskPenalty - modifierRisk;
-    return Math.min(95, Math.max(10, Math.round(calculated)));
-  }, [selectedLocation, selectedModifier, skillScore]);
+    const withEnvironment = baseChance - riskPenalty - modifierRisk + environmentDetails.combined.successAdjustment;
+    const normalized = Math.max(5, withEnvironment);
+    const adjusted = normalized * environmentDetails.combined.successMultiplier;
+    return Math.min(95, Math.max(10, Math.round(adjusted)));
+  }, [selectedLocation, selectedModifier, skillScore, environmentDetails]);
 
   const expectedCash = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierMultiplier = selectedModifier?.payout_multiplier ?? 1;
+    const environmentMultiplier = environmentDetails.combined.payoutMultiplier;
     const expectancy = successChance / 100;
-    return Math.max(0, Math.round(selectedLocation.base_payout * modifierMultiplier * (0.4 + expectancy)));
-  }, [selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      Math.round(
+        selectedLocation.base_payout * modifierMultiplier * environmentMultiplier * (0.4 + expectancy),
+      ),
+    );
+  }, [selectedLocation, selectedModifier, successChance, environmentDetails]);
 
   const expectedFame = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierMultiplier = selectedModifier?.fame_multiplier ?? 1;
+    const environmentMultiplier = environmentDetails.combined.fameMultiplier;
     const expectancy = successChance / 100;
-    return Math.max(0, Math.round(selectedLocation.fame_reward * modifierMultiplier * (0.5 + expectancy * 0.5)));
-  }, [selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      Math.round(
+        selectedLocation.fame_reward * modifierMultiplier * environmentMultiplier * (0.5 + expectancy * 0.5),
+      ),
+    );
+  }, [selectedLocation, selectedModifier, successChance, environmentDetails]);
 
   const expectedExperience = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierBonus = selectedModifier?.experience_bonus ?? 0;
+    const environmentMultiplier = environmentDetails.combined.experienceMultiplier;
     const expectancy = successChance / 100;
-    return Math.max(0, Math.round((selectedLocation.experience_reward + modifierBonus) * (0.6 + expectancy * 0.4)));
-  }, [selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      Math.round(
+        (selectedLocation.experience_reward + modifierBonus) * environmentMultiplier * (0.6 + expectancy * 0.4),
+      ),
+    );
+  }, [selectedLocation, selectedModifier, successChance, environmentDetails]);
+
+  const WeatherIcon = environmentDetails.weather
+    ? getWeatherIcon(environmentDetails.weather.condition)
+    : CloudSun;
+  const TimeOfDayIcon = getTimeOfDayIcon(environmentDetails.timeOfDayKey);
+  const weatherConfidenceLabel =
+    environmentDetails.weather && environmentDetails.weatherConfidence !== "none"
+      ? WEATHER_CONFIDENCE_TEXT[environmentDetails.weatherConfidence]
+      : null;
+  const dateLabel = format(environmentDetails.contextDate, "MMM d, yyyy");
+  const environmentWeatherLabel = environmentDetails.weather
+    ? `${capitalize(environmentDetails.weather.condition)} ${Math.round(environmentDetails.weather.temperature)}°C`
+    : "Neutral conditions";
+  const environmentWeatherLocation = environmentDetails.weather
+    ? `${environmentDetails.weather.city}${environmentDetails.weather.country ? `, ${environmentDetails.weather.country}` : ""}`
+    : null;
+  const locationSummary = selectedLocation
+    ? `${selectedLocation.name}${selectedLocation.neighborhood ? ` • ${selectedLocation.neighborhood}` : ""}`
+    : "your next performance";
+  const successAdditiveLabel = formatSignedNumber(environmentDetails.combined.successAdjustment);
+  const successMultiplierLabel = environmentDetails.combined.successMultiplier !== 1
+    ? `×${environmentDetails.combined.successMultiplier.toFixed(2)}`
+    : "×1.00";
+  const payoutMultiplierLabel = environmentDetails.combined.payoutMultiplier.toFixed(2);
+  const fameMultiplierLabel = environmentDetails.combined.fameMultiplier.toFixed(2);
+  const experienceMultiplierLabel = environmentDetails.combined.experienceMultiplier.toFixed(2);
 
   const maxBasePayout = useMemo(() => Math.max(1, ...locations.map((location) => location.base_payout ?? 0)), [locations]);
 
@@ -449,18 +790,22 @@ const Busking = () => {
       const success = roll <= successChance;
 
       const baseCash = selectedLocation.base_payout;
-      const payoutMultiplier = modifier?.payout_multiplier ?? 1;
+      const combinedPayoutMultiplier =
+        (modifier?.payout_multiplier ?? 1) * environmentDetails.combined.payoutMultiplier;
       const cashEarned = success
-        ? Math.round(baseCash * payoutMultiplier * (0.85 + Math.random() * 0.6))
-        : Math.round(baseCash * 0.25 * (0.7 + Math.random() * 0.4));
+        ? Math.round(baseCash * combinedPayoutMultiplier * (0.85 + Math.random() * 0.6))
+        : Math.round(baseCash * 0.25 * combinedPayoutMultiplier * (0.7 + Math.random() * 0.4));
 
       const baseFame = selectedLocation.fame_reward;
-      const fameMultiplier = modifier?.fame_multiplier ?? 1;
+      const combinedFameMultiplier =
+        (modifier?.fame_multiplier ?? 1) * environmentDetails.combined.fameMultiplier;
       const fameGained = success
-        ? Math.round(baseFame * fameMultiplier * (0.9 + Math.random() * 0.4))
-        : Math.round(baseFame * 0.4 * (0.6 + Math.random() * 0.3));
+        ? Math.round(baseFame * combinedFameMultiplier * (0.9 + Math.random() * 0.4))
+        : Math.round(baseFame * 0.4 * combinedFameMultiplier * (0.6 + Math.random() * 0.3));
 
-      const baseExperience = selectedLocation.experience_reward + (modifier?.experience_bonus ?? 0);
+      const baseExperience =
+        (selectedLocation.experience_reward + (modifier?.experience_bonus ?? 0)) *
+        environmentDetails.combined.experienceMultiplier;
       const experienceGained = success
         ? Math.round(baseExperience * (0.9 + Math.random() * 0.5))
         : Math.round(baseExperience * 0.5 * (0.7 + Math.random() * 0.3));
@@ -475,9 +820,33 @@ const Busking = () => {
         "Competing noise drowned out your solo.",
         "Security asked you to wrap it up early.",
       ];
-      const crowdReaction = success
+      const baseCrowdReaction = success
         ? crowdReactionsSuccess[Math.floor(Math.random() * crowdReactionsSuccess.length)]
         : crowdReactionsFailure[Math.floor(Math.random() * crowdReactionsFailure.length)];
+
+      const weatherData = environmentDetails.weather;
+      const weatherAttendanceEffect = weatherData?.effects.gig_attendance ?? 1;
+      const weatherConditionLabel = weatherData ? capitalize(weatherData.condition) : null;
+      const weatherTemperatureLabel = weatherData ? `${Math.round(weatherData.temperature)}°C` : null;
+      const weatherLabelCombined = [weatherConditionLabel ?? "", weatherTemperatureLabel ?? ""]
+        .map((piece) => piece.trim())
+        .filter((piece) => piece.length > 0)
+        .join(" ");
+      const environmentLabel = weatherData
+        ? weatherLabelCombined || weatherConditionLabel || "Weather boost"
+        : environmentDetails.timeOfDay.label;
+      const environmentCrowdNote = weatherData
+        ? weatherAttendanceEffect >= 1
+          ? success
+            ? `The ${weatherConditionLabel?.toLowerCase()} skies kept listeners hanging around.`
+            : `Even with ${weatherConditionLabel?.toLowerCase()} skies, the crowd drifted quicker than hoped.`
+          : success
+            ? `Despite the ${weatherConditionLabel?.toLowerCase()} weather you kept listeners engaged.`
+            : `The ${weatherConditionLabel?.toLowerCase()} weather made it harder to hold attention.`
+        : success
+          ? `The ${environmentDetails.timeOfDay.label.toLowerCase()} crowd was feeling it.`
+          : `The ${environmentDetails.timeOfDay.label.toLowerCase()} lull hit hard.`;
+      const crowdReaction = `${baseCrowdReaction} ${environmentCrowdNote}`.trim();
 
       const failureReasons = [
         "Crowd fatigue",
@@ -488,8 +857,8 @@ const Busking = () => {
 
       const durationMinutes = Math.max(20, Math.round((selectedLocation.cooldown_minutes ?? 60) * 0.45));
       const summaryMessage = success
-        ? `Crushed it at ${selectedLocation.name}! Earned $${cashEarned.toLocaleString()} with ${modifierName}.`
-        : `Tough break at ${selectedLocation.name}. Still brought home $${cashEarned.toLocaleString()}.`;
+        ? `Crushed it at ${selectedLocation.name} during ${environmentDetails.timeOfDay.label.toLowerCase()} — ${environmentLabel}. Earned $${cashEarned.toLocaleString()} with ${modifierName}.`
+        : `Tough break at ${selectedLocation.name} amid ${environmentLabel}. Still brought home $${cashEarned.toLocaleString()} with ${modifierName}.`;
 
         const insertPayload: TablesInsert<"busking_sessions"> = {
           user_id: user.id,
@@ -540,6 +909,17 @@ const Busking = () => {
 
       const detailedSession = sessionRecord as BuskingSessionWithRelations;
       setHistory((prev) => [detailedSession, ...prev].slice(0, 12));
+      const environmentSummaryForResult = {
+        successAdjustment: environmentDetails.combined.successAdjustment,
+        successMultiplier: environmentDetails.combined.successMultiplier,
+        payoutMultiplier: environmentDetails.combined.payoutMultiplier,
+        fameMultiplier: environmentDetails.combined.fameMultiplier,
+        experienceMultiplier: environmentDetails.combined.experienceMultiplier,
+        timeOfDay: environmentDetails.timeOfDay.label,
+        daySegment: environmentDetails.daySegment.label,
+        weatherLabel: weatherLabelCombined || undefined,
+      };
+
       setResult({
         success,
         cash: cashEarned,
@@ -550,6 +930,7 @@ const Busking = () => {
         crowdReaction,
         locationName: selectedLocation.name,
         modifierName,
+        environmentSummary: environmentSummaryForResult,
       });
 
       setNow(Date.now());
@@ -674,6 +1055,116 @@ const Busking = () => {
           </Card>
         </div>
 
+        <Card className="bg-card/80 backdrop-blur border-primary/20">
+          <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <WeatherIcon className="h-5 w-5 text-primary" />
+                Environment Pulse
+              </CardTitle>
+              <CardDescription>Live context for {locationSummary}.</CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs md:text-sm">
+              <Badge variant="outline" className="flex items-center gap-1 bg-secondary/20 border-secondary/40 text-secondary-foreground">
+                <Clock className="h-3 w-3" />
+                {environmentDetails.timeLabel}
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-1 bg-secondary/10 border-secondary/30 text-secondary-foreground">
+                {environmentDetails.dayName}
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-1 bg-primary/10 border-primary/30 text-primary">
+                {dateLabel}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {environmentLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span>Loading live environment data...</span>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-lg border border-secondary/30 bg-secondary/10 p-4 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Time Slot</p>
+                  <div className="flex items-center gap-2">
+                    <TimeOfDayIcon className="h-5 w-5 text-primary" />
+                    <span className={`text-sm font-semibold ${environmentDetails.timeOfDay.accent}`}>
+                      {environmentDetails.timeOfDay.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{environmentDetails.timeOfDay.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Success {formatSignedNumber(environmentDetails.timeOfDay.success)}% • Cash ×
+                    {environmentDetails.timeOfDay.payout.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Fame ×{environmentDetails.timeOfDay.fame.toFixed(2)} • XP ×
+                    {environmentDetails.timeOfDay.experience.toFixed(2)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-secondary/30 bg-secondary/10 p-4 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Day Rhythm</p>
+                  <div className="flex items-center gap-2">
+                    <History className="h-5 w-5 text-primary" />
+                    <span className={`text-sm font-semibold ${environmentDetails.daySegment.accent}`}>
+                      {environmentDetails.daySegment.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{environmentDetails.daySegment.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Success {formatSignedNumber(environmentDetails.daySegment.success)}% • Cash ×
+                    {environmentDetails.daySegment.payout.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Fame ×{environmentDetails.daySegment.fame.toFixed(2)} • XP ×
+                    {environmentDetails.daySegment.experience.toFixed(2)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-secondary/30 bg-secondary/10 p-4 space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Weather</p>
+                  <div className="flex items-center gap-2">
+                    <WeatherIcon className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-semibold">{environmentWeatherLabel}</span>
+                  </div>
+                  {environmentWeatherLocation && (
+                    <p className="text-xs text-muted-foreground">{environmentWeatherLocation}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Attendance ×{environmentDetails.weatherMultipliers.payoutMultiplier.toFixed(2)} • Mood ×
+                    {environmentDetails.weatherMultipliers.fameMultiplier.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Success ×{environmentDetails.weatherMultipliers.successMultiplier.toFixed(2)} • XP ×
+                    {environmentDetails.weatherMultipliers.experienceMultiplier.toFixed(2)}
+                  </p>
+                  {weatherConfidenceLabel && (
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{weatherConfidenceLabel}</p>
+                  )}
+                  {!environmentDetails.weather && (
+                    <p className="text-xs text-muted-foreground">
+                      No active weather data matched this spot. Using neutral modifiers.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground leading-relaxed">
+              <p>
+                Combined impact → Success {successAdditiveLabel}%
+                {successMultiplierLabel !== "×1.00" ? ` • Weather ${successMultiplierLabel}` : ""}
+                , Cash ×{payoutMultiplierLabel}, Fame ×{fameMultiplierLabel}, XP ×{experienceMultiplierLabel}.
+              </p>
+            </div>
+            {environmentError && (
+              <Alert className="bg-warning/10 border-warning/30 text-warning-foreground">
+                <AlertTitle>Using fallback environment data</AlertTitle>
+                <AlertDescription>{environmentError}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -797,7 +1288,7 @@ const Busking = () => {
                     <Coins className="h-5 w-5 text-success" />
                     <span className="text-xl font-semibold">${expectedCash}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Based on success odds and modifiers.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Based on success odds, modifiers, and live environment.</p>
                 </div>
                 <div className="p-4 bg-muted/30 rounded-lg">
                   <p className="text-xs uppercase text-muted-foreground tracking-wide">Projected Fame</p>
@@ -805,7 +1296,7 @@ const Busking = () => {
                     <SparklesIcon className="h-5 w-5 text-warning" />
                     <span className="text-xl font-semibold">+{expectedFame}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">More eyes on you mean more followers.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Modifiers and environment buzz amplify your reach.</p>
                 </div>
                 <div className="p-4 bg-muted/30 rounded-lg">
                   <p className="text-xs uppercase text-muted-foreground tracking-wide">Experience Gain</p>
@@ -813,7 +1304,7 @@ const Busking = () => {
                     <Award className="h-5 w-5 text-accent" />
                     <span className="text-xl font-semibold">+{expectedExperience}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Street practice feeds level ups.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Weather and timing adjust how much practice sticks.</p>
                 </div>
               </div>
 
@@ -824,6 +1315,11 @@ const Busking = () => {
                   </p>
                   <p>
                     Cooldown after play: {selectedLocation?.cooldown_minutes ?? 0} minutes
+                  </p>
+                  <p>
+                    Environment influence: Success {successAdditiveLabel}%
+                    {successMultiplierLabel !== "×1.00" ? ` • Weather ${successMultiplierLabel}` : ""} • Cash ×
+                    {payoutMultiplierLabel} • Fame ×{fameMultiplierLabel} • XP ×{experienceMultiplierLabel}
                   </p>
                 </div>
                 <Button
@@ -967,6 +1463,24 @@ const Busking = () => {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Gauge className="h-4 w-4 text-accent" />
                     Performance score: {result.performanceScore}
+                  </div>
+                  <div className="rounded-lg border border-secondary/30 bg-secondary/10 p-3 text-xs text-muted-foreground space-y-1">
+                    <p className="uppercase tracking-wide text-[10px] text-muted-foreground/80">Environment impact</p>
+                    <p>
+                      {result.environmentSummary.timeOfDay} • {result.environmentSummary.daySegment}
+                      {result.environmentSummary.weatherLabel ? ` • ${result.environmentSummary.weatherLabel}` : ""}
+                    </p>
+                    <p>
+                      Success {formatSignedNumber(result.environmentSummary.successAdjustment)}%
+                      {result.environmentSummary.successMultiplier !== 1
+                        ? ` • Weather ×${result.environmentSummary.successMultiplier.toFixed(2)}`
+                        : " • Weather ×1.00"}
+                    </p>
+                    <p>
+                      Cash ×{result.environmentSummary.payoutMultiplier.toFixed(2)} • Fame ×
+                      {result.environmentSummary.fameMultiplier.toFixed(2)} • XP ×
+                      {result.environmentSummary.experienceMultiplier.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               ) : (
