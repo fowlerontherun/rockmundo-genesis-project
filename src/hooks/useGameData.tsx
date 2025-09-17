@@ -58,6 +58,15 @@ const extractErrorMessage = (error: unknown) => {
 const sortCharacters = (characters: PlayerProfile[]) =>
   [...characters].sort((a, b) => a.slot_number - b.slot_number);
 
+const getStoredSelectedCharacterId = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedValue = window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+  return storedValue ?? null;
+};
+
 const useProvideGameData = (): GameDataContextValue => {
   const { user } = useAuth();
   const [characters, setCharacters] = useState<PlayerProfile[]>([]);
@@ -65,7 +74,29 @@ const useProvideGameData = (): GameDataContextValue => {
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
+    () => getStoredSelectedCharacterId()
+  );
+  const [charactersLoading, setCharactersLoading] = useState<boolean>(false);
+  const [dataLoading, setDataLoading] = useState<boolean>(false);
   const [currentCity, setCurrentCity] = useState<Tables<'cities'> | null>(null);
+  const persistSelectedCharacterId = useCallback(
+    (characterId: string | null) => {
+      if (typeof window === "undefined") {
+        return characterId ?? null;
+      }
+
+      if (characterId) {
+        window.localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
+      } else {
+        window.localStorage.removeItem(CHARACTER_STORAGE_KEY);
+      }
+
+      const storedValue = window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+      return storedValue ?? null;
+    },
+    []
+  );
   const resolveCurrentCity = useCallback(
     async (cityId: string | null) => {
       if (!cityId) {
@@ -96,13 +127,13 @@ const useProvideGameData = (): GameDataContextValue => {
   );
 
   const clearSelectedCharacter = useCallback(() => {
-    setSelectedCharacterId(null);
-    persistSelectedCharacterId(null);
+    const storedValue = persistSelectedCharacterId(null);
+    setSelectedCharacterId(storedValue);
   }, [persistSelectedCharacterId]);
 
   const updateSelectedCharacterId = useCallback((characterId: string | null) => {
-    setSelectedCharacterId(characterId);
-    persistSelectedCharacterId(characterId);
+    const storedValue = persistSelectedCharacterId(characterId);
+    setSelectedCharacterId(storedValue);
   }, [persistSelectedCharacterId]);
 
   const fetchCharacters = useCallback(async () => {
