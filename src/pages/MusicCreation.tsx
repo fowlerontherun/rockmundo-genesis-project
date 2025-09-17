@@ -20,8 +20,12 @@ interface Song {
   lyrics: string;
   status: string;
   quality_score: number;
+  duration: number;
   streams: number;
   revenue: number;
+  recording_cost: number;
+  plays: number;
+  popularity: number;
   created_at: string;
   updated_at: string;
   user_id: string;
@@ -164,8 +168,12 @@ const normalizeSong = (song: SupabaseSongRow): Song => ({
   lyrics: song.lyrics ?? "",
   status: song.status ?? "draft",
   quality_score: toNumber(song.quality_score, 0),
+  duration: toNumber(song.duration, 180),
   streams: toNumber(song.streams, 0),
   revenue: toNumber(0, 0),
+  recording_cost: toNumber(song.recording_cost, 500),
+  plays: toNumber(song.plays, 0),
+  popularity: toNumber(song.popularity, 0),
   created_at: song.created_at ?? new Date().toISOString(),
   updated_at: song.created_at ?? new Date().toISOString(),
   user_id: song.id, // This should be from the database
