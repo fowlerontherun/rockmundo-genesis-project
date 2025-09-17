@@ -13,6 +13,7 @@ import {
   getRemainingCooldown,
   COOLDOWNS
 } from "@/utils/gameBalance";
+import { applyCooldownModifier, applyRewardBonus } from "@/utils/attributeModifiers";
 import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
 
 type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
@@ -28,9 +29,9 @@ interface TrainingSession {
 
 const SkillTraining = () => {
   const { toast } = useToast();
-  const { profile, skills, updateSkills, updateProfile, addActivity, loading } = useGameData();
+  const { profile, skills, attributes, updateSkills, updateProfile, addActivity, loading } = useGameData();
   const [training, setTraining] = useState(false);
-  const trainingCooldown = COOLDOWNS.skillTraining;
+  const baseTrainingCooldown = COOLDOWNS.skillTraining;
 
   const trainingSessions: TrainingSession[] = [
     {
@@ -82,6 +83,8 @@ const SkillTraining = () => {
       description: "Learn composition, lyrics, and musical arrangement"
     }
   ];
+
+  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
@@ -137,10 +140,11 @@ const SkillTraining = () => {
     setTraining(true);
 
     try {
-      const newSkillValue = Math.min(skillCap, currentSkill + session.xpGain);
+      const focusedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
+      const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
       const skillGain = newSkillValue - currentSkill;
       const newCash = playerCash - trainingCost;
-      const newExperience = totalExperience + session.xpGain;
+      const newExperience = totalExperience + focusedXp;
       const timestamp = new Date().toISOString();
 
       await updateSkills({
@@ -156,7 +160,7 @@ const SkillTraining = () => {
 
       await addActivity(
         "training",
-        `Completed ${session.name} training session (+${session.xpGain} XP)`,
+        `Completed ${session.name} training session (+${focusedXp} XP)`,
         -trainingCost
       );
 
@@ -290,6 +294,7 @@ const SkillTraining = () => {
               const canAfford = (profile?.cash ?? 0) >= trainingCost;
               const isAtCap = currentSkill >= skillCap;
               const buttonDisabled = training || !canAfford || isAtCap || cooldownActive;
+              const adjustedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
 
               return (
                 <Card key={session.skill} className="relative">
@@ -314,7 +319,10 @@ const SkillTraining = () => {
                       </div>
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-purple-400" />
-                        <span>+{session.xpGain} XP</span>
+                        <span>
+                          +{adjustedXp} XP
+                          {adjustedXp !== session.xpGain ? " (focus bonus)" : ""}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <TrendingUp className="h-3 w-3 text-green-400" />
