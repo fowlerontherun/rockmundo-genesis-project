@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
 import GigBooking from "./pages/GigBooking";
 import Profile from "./pages/Profile";
+import CharacterCreation from "./pages/CharacterCreation";
 import MusicStudio from "./pages/MusicStudio";
 import WorldPulse from "./pages/WorldPulse";
 import Schedule from "./pages/Schedule";
@@ -59,6 +60,7 @@ function App() {
                 <Route path="gigs" element={<GigBooking />} />
                 <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="character-create" element={<CharacterCreation />} />
                 <Route path="music" element={<MusicStudio />} />
                 <Route path="charts" element={<WorldPulse />} />
                 <Route path="schedule" element={<Schedule />} />
