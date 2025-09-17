@@ -37,6 +37,7 @@ const Dashboard = () => {
       case "fan": return <Users className="h-4 w-4" />;
       case "song": return <Music className="h-4 w-4" />;
       case "join": return <Star className="h-4 w-4" />;
+      case "busking": return <Mic className="h-4 w-4" />;
       default: return <Star className="h-4 w-4" />;
     }
   };
@@ -88,20 +89,28 @@ const Dashboard = () => {
             <p className="text-muted-foreground font-oswald">Ready to rock the world?</p>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <Button
               onClick={() => navigate("/band")}
               className="bg-gradient-primary hover:shadow-electric"
             >
               <Users className="h-4 w-4 mr-2" />
               Band Manager
             </Button>
-            <Button 
+            <Button
               onClick={() => navigate("/gigs")}
-              variant="outline" 
+              variant="outline"
               className="border-primary/20 hover:bg-primary/10"
             >
               <Calendar className="h-4 w-4 mr-2" />
               Book Gigs
+            </Button>
+            <Button
+              onClick={() => navigate("/busking")}
+              variant="outline"
+              className="border-primary/20 hover:bg-primary/10"
+            >
+              <Mic className="h-4 w-4 mr-2" />
+              Street Busking
             </Button>
           </div>
         </div>

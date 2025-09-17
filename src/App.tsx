@@ -39,6 +39,7 @@ import WorldEnvironment from "./pages/WorldEnvironment";
 import SongManager from "./pages/SongManager";
 import InventoryManager from "./pages/InventoryManager";
 import PlayerStatistics from "./pages/PlayerStatistics";
+import Busking from "./pages/Busking";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ function App() {
                 <Route path="band" element={<BandManager />} />
                 <Route path="gigs" element={<GigBooking />} />
                 <Route path="gigs/perform/:gigId" element={<PerformGig />} />
+                <Route path="busking" element={<Busking />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="music" element={<MusicStudio />} />
                 <Route path="charts" element={<WorldPulse />} />
