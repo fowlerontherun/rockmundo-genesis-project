@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
@@ -87,11 +88,31 @@ interface NewTourVenueDetails {
   travelCost: number;
   lodgingCost: number;
   miscCost: number;
+  travelTime?: number;
+  restDays?: number;
 }
 
 interface RouteSuggestion {
   order: TourVenue[];
   totalDistance: number;
+}
+
+interface EditTourForm {
+  start_date: string;
+  end_date: string;
+  status: string;
+  venues: Array<{
+    id: string;
+    venue_id: string;
+    date: string;
+    status: string;
+    ticket_price: number | null;
+  }>;
+  newVenue: {
+    venue_id: string;
+    date: string;
+    ticket_price: string;
+  };
 }
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
@@ -230,6 +251,8 @@ const TourManager = () => {
   const [marketingSpendUpdates, setMarketingSpendUpdates] = useState<Record<string, string>>({});
   const [updatingVenue, setUpdatingVenue] = useState<string | null>(null);
   const [performingVenue, setPerformingVenue] = useState<string | null>(null);
+  const [editingTourId, setEditingTourId] = useState<string | null>(null);
+  const [editForms, setEditForms] = useState<Record<string, EditTourForm>>({});
 
   const [newTour, setNewTour] = useState({
     name: "",
@@ -431,6 +454,14 @@ const TourManager = () => {
         status: 'scheduled',
       };
 
+      if (typeof details.travelTime === 'number') {
+        insertPayload.travel_time = details.travelTime;
+      }
+
+      if (typeof details.restDays === 'number') {
+        insertPayload.rest_days = details.restDays;
+      }
+
       let environmentForInsert: EnvironmentModifierSummary | null = null;
       if (environmentSummary) {
         environmentForInsert = {
@@ -533,6 +564,206 @@ const TourManager = () => {
         description: "Failed to add venue to tour"
       });
       return false;
+    }
+  };
+
+  const ensureIsoDate = (value: string) => {
+    if (!value) return value;
+    if (value.includes("T")) return value;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
+  };
+
+  const handleManageClick = (tour: Tour) => {
+    if (editingTourId === tour.id) {
+      setEditForms((prev) => {
+        const updated = { ...prev };
+        delete updated[tour.id];
+        return updated;
+      });
+      setEditingTourId(null);
+      return;
+    }
+
+    setEditForms((prev) => ({
+      ...prev,
+      [tour.id]: initializeEditForm(tour),
+    }));
+    setEditingTourId(tour.id);
+  };
+
+  const handleAddVenue = async (tourId: string) => {
+    const form = editForms[tourId];
+    if (!form) return;
+
+    const { venue_id, date, ticket_price } = form.newVenue;
+
+    if (!venue_id || !date) {
+      toast({
+        variant: "destructive",
+        title: "Missing Details",
+        description: "Select a venue and date to add a new tour stop.",
+      });
+      return;
+    }
+
+    const selectedVenue = venues.find((venue) => venue.id === venue_id);
+    if (!selectedVenue) {
+      toast({
+        variant: "destructive",
+        title: "Unknown Venue",
+        description: "The selected venue could not be found.",
+      });
+      return;
+    }
+
+    const tour = tours.find((item) => item.id === tourId);
+    const sortedExistingStops = (tour?.venues ?? []).slice().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const previousStop = sortedExistingStops.length > 0 ? sortedExistingStops[sortedExistingStops.length - 1] : undefined;
+    const distance = calculateDistanceKm(previousStop?.venue?.location, selectedVenue.location);
+    const travelTime = estimateTravelTimeHours(distance);
+    const restDays = calculateRestDaysFromDistance(distance);
+    const travelCost = calculateTravelCostFromDistance(distance);
+    const lodgingCost = calculateLodgingCostFromRestDays(restDays);
+    const miscCost = Math.max(0, Math.round(travelCost * 0.15));
+
+    const ticketPriceValue = Number(ticket_price);
+    const parsedTicketPrice = Number.isFinite(ticketPriceValue) ? Math.max(0, Math.round(ticketPriceValue)) : 0;
+
+    const success = await addVenueToTour(tourId, {
+      venueId: venue_id,
+      date: ensureIsoDate(date),
+      ticketPrice: parsedTicketPrice,
+      travelCost,
+      lodgingCost,
+      miscCost,
+      travelTime,
+      restDays,
+    });
+
+    if (success) {
+      setEditForms((prev) => {
+        const existingForm = prev[tourId];
+        if (!existingForm) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [tourId]: {
+            ...existingForm,
+            newVenue: {
+              venue_id: "",
+              date: "",
+              ticket_price: "",
+            },
+          },
+        };
+      });
+    }
+  };
+
+  const editTour = async (tourId: string) => {
+    if (!user) return;
+    const form = editForms[tourId];
+    if (!form) return;
+
+    try {
+      const updates: Partial<TourRow> = {
+        start_date: form.start_date ? ensureIsoDate(form.start_date) : null,
+        end_date: form.end_date ? ensureIsoDate(form.end_date) : null,
+        status: form.status,
+      };
+
+      const { error } = await supabase
+        .from("tours")
+        .update(updates)
+        .eq("id", tourId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Tour Updated",
+        description: "Tour details were saved successfully.",
+      });
+
+      await loadTours();
+
+      setEditForms((prev) => {
+        const updated = { ...prev };
+        delete updated[tourId];
+        return updated;
+      });
+      setEditingTourId(null);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to update tour";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error("Error updating tour:", errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
+    }
+  };
+
+  const handleCancelEditing = (tourId: string) => {
+    setEditingTourId((current) => (current === tourId ? null : current));
+    setEditForms((prev) => {
+      const updated = { ...prev };
+      delete updated[tourId];
+      return updated;
+    });
+  };
+
+  const cancelTour = async (tourId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from("tours")
+        .update({ status: "cancelled" })
+        .eq("id", tourId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      const { error: venuesError } = await supabase
+        .from("tour_venues")
+        .update({ status: "cancelled" })
+        .eq("tour_id", tourId);
+
+      if (venuesError) throw venuesError;
+
+      const cancelledVenueIds = (tours.find((tour) => tour.id === tourId)?.venues ?? []).map((venue) => venue.id);
+      if (cancelledVenueIds.length > 0) {
+        const { error: scheduleError } = await supabase
+          .from("schedule_events")
+          .update({ status: "cancelled" })
+          .in("tour_venue_id", cancelledVenueIds);
+
+        if (scheduleError) {
+          console.error("Error cancelling related schedule events:", scheduleError);
+        }
+      }
+
+      toast({
+        title: "Tour Cancelled",
+        description: "The tour and related shows have been cancelled.",
+      });
+
+      await loadTours();
+      handleCancelEditing(tourId);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to cancel tour";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error("Error cancelling tour:", errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
     }
   };
 
@@ -845,6 +1076,7 @@ const TourManager = () => {
               ? `+$${stats.totalProfit.toLocaleString()}`
               : `-$${Math.abs(stats.totalProfit).toLocaleString()}`;
             const routeSuggestion = optimalRoutes[tour.id];
+            const editForm = editForms[tour.id];
             return (
               <Card key={tour.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardHeader>
