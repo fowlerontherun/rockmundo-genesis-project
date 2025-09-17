@@ -32,8 +32,6 @@ type VenueRequirements = JsonRequirementRecord & {
   min_popularity?: number | null;
 };
 
-type VenueRequirements = Record<string, number>;
-
 interface Venue {
   id: string;
   name: string;
