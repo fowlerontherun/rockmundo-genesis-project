@@ -1615,9 +1615,58 @@ export type Database = {
           },
         ]
       }
+      player_attributes: {
+        Row: {
+          business_acumen: number
+          created_at: string | null
+          creative_insight: number
+          id: string
+          marketing_savvy: number
+          musical_ability: number
+          profile_id: string
+          rhythm_sense: number
+          stage_presence: number
+          technical_mastery: number
+          updated_at: string | null
+          user_id: string
+          vocal_talent: number
+        }
+        Insert: {
+          business_acumen?: number
+          created_at?: string | null
+          creative_insight?: number
+          id?: string
+          marketing_savvy?: number
+          musical_ability?: number
+          profile_id: string
+          rhythm_sense?: number
+          stage_presence?: number
+          technical_mastery?: number
+          updated_at?: string | null
+          user_id: string
+          vocal_talent?: number
+        }
+        Update: {
+          business_acumen?: number
+          created_at?: string | null
+          creative_insight?: number
+          id?: string
+          marketing_savvy?: number
+          musical_ability?: number
+          profile_id?: string
+          rhythm_sense?: number
+          stage_presence?: number
+          technical_mastery?: number
+          updated_at?: string | null
+          user_id?: string
+          vocal_talent?: number
+        }
+        Relationships: []
+      }
       player_skills: {
         Row: {
           bass: number
+          composition: number
           created_at: string | null
           drums: number
           guitar: number
@@ -1631,6 +1680,7 @@ export type Database = {
         }
         Insert: {
           bass?: number
+          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
@@ -1644,6 +1694,7 @@ export type Database = {
         }
         Update: {
           bass?: number
+          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
@@ -1711,6 +1762,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_attributes: {
+        Row: {
+          business: number
+          creativity: number
+          created_at: string | null
+          id: string
+          marketing: number
+          profile_id: string | null
+          technical: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business?: number
+          creativity?: number
+          created_at?: string | null
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business?: number
+          creativity?: number
+          created_at?: string | null
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       player_streaming_accounts: {
         Row: {
@@ -1844,6 +1931,7 @@ export type Database = {
           bio: string | null
           current_city_id: string | null
           current_location: string
+          equipped_clothing: Json | null
           gender: Database["public"]["Enums"]["profile_gender"]
           city_of_birth: string | null
           age: number
@@ -1875,6 +1963,7 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          equipped_clothing?: Json | null
           gender?: Database["public"]["Enums"]["profile_gender"]
           city_of_birth?: string | null
           age?: number
@@ -1906,6 +1995,7 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          equipped_clothing?: Json | null
           gender?: Database["public"]["Enums"]["profile_gender"]
           city_of_birth?: string | null
           age?: number
@@ -1977,6 +2067,63 @@ export type Database = {
           end_date?: string
           multipliers?: Json | null
           active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      skill_definitions: {
+        Row: {
+          id: string
+          slug: string
+          display_name: string
+          description: string | null
+          tier_caps: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          slug: string
+          display_name: string
+          description?: string | null
+          tier_caps?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          slug?: string
+          display_name?: string
+          description?: string | null
+          tier_caps?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      skill_parent_links: {
+        Row: {
+          id: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          skill_id?: string
+          parent_skill_id?: string
+          unlock_threshold?: number | null
           created_at?: string | null
           updated_at?: string | null
         }

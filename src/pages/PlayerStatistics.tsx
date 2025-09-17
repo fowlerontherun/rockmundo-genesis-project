@@ -9,7 +9,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { calculateLevel, getFameTitle, calculateEquipmentBonus } from "@/utils/gameBalance";
@@ -358,7 +358,22 @@ const resolveSkillBadge = (value: number) => {
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
-  const { profile, skills } = useGameData();
+  const { profile, skills, attributes } = useGameData();
+  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+    "performance",
+    "songwriting",
+    "guitar",
+    "vocals",
+    "drums",
+    "bass",
+    "composition"
+  ];
+  const attributeKeys: (keyof PlayerAttributes)[] = [
+    "creativity",
+    "business",
+    "marketing",
+    "technical"
+  ];
   const [extendedStats, setExtendedStats] = useState<ExtendedStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
@@ -756,12 +771,7 @@ const PlayerStatistics = () => {
     return entry[metricConfig.field];
   }, [leaderboardEntries, metricConfig.field, user]);
 
-  const profileAvatarPreview = useMemo(
-    () => getStoredAvatarPreviewUrl(profile?.avatar_url ?? null),
-    [profile?.avatar_url],
-  );
-
-  if (loading || !profile || !skills) {
+  if (loading || !profile || !skills || !attributes) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
         <div className="text-center">

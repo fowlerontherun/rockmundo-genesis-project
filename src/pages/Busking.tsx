@@ -3,6 +3,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { calculateAttributeMultiplier, type AttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -530,19 +531,16 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
   }
 };
 
+const BUSKING_ATTRIBUTE_KEYS: AttributeKey[] = [
+  "stage_presence",
+  "musical_ability",
+  "vocal_talent"
+];
+
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
-  const {
-    profile,
-    skills,
-    selectedCharacterId,
-    updateProfile,
-    addActivity,
-    loading: gameLoading,
-    currentCity,
-  } = useGameData();
+  const { profile, skills, attributes, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
   const { toast } = useToast();
-
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
   const [modifiers, setModifiers] = useState<BuskingModifier[]>([]);
   const [history, setHistory] = useState<BuskingSessionWithRelations[]>([]);
@@ -557,7 +555,6 @@ const Busking = () => {
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
-
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
     const numericValue = Number(currentCity.busking_value ?? 1);
@@ -934,9 +931,12 @@ const Busking = () => {
       const baseExperience =
         (selectedLocation.experience_reward + (modifier?.experience_bonus ?? 0)) *
         environmentDetails.combined.experienceMultiplier;
+      const attributeMultiplier = calculateAttributeMultiplier(attributes, BUSKING_ATTRIBUTE_KEYS).multiplier;
+      const successVariance = 0.9 + Math.random() * 0.5;
+      const failureVariance = 0.7 + Math.random() * 0.3;
       const experienceGained = success
-        ? Math.round(baseExperience * cityMultiplier * (0.9 + Math.random() * 0.5))
-        : Math.round(baseExperience * 0.5 * cityMultiplier * (0.7 + Math.random() * 0.3));
+        ? Math.round(baseExperience * cityMultiplier * successVariance * attributeMultiplier)
+        : Math.round(baseExperience * 0.5 * cityMultiplier * failureVariance * attributeMultiplier);
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
