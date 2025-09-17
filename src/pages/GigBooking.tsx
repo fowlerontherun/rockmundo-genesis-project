@@ -32,6 +32,8 @@ type VenueRequirements = JsonRequirementRecord & {
   min_popularity?: number | null;
 };
 
+type VenueRequirements = Record<string, number>;
+
 interface Venue {
   id: string;
   name: string;
@@ -114,7 +116,7 @@ const GigBooking = () => {
         venue_type: venue.venue_type ?? 'general',
         base_payment: venue.base_payment ?? 0,
         prestige_level: venue.prestige_level ?? 1,
-        requirements: normalizeVenueRequirements(venue.requirements)
+        requirements: (venue.requirements as VenueRequirements | null) ?? ({} as VenueRequirements)
       })));
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load venues";
@@ -153,7 +155,7 @@ const GigBooking = () => {
           venue_type: venueDetails?.venue_type ?? 'general',
           base_payment: venueDetails?.base_payment ?? 0,
           prestige_level: venueDetails?.prestige_level ?? 1,
-          requirements: normalizeVenueRequirements(venueDetails?.requirements)
+          requirements: (venueDetails?.requirements as VenueRequirements | null) ?? ({} as VenueRequirements)
         };
 
         return {
@@ -200,9 +202,8 @@ const GigBooking = () => {
   };
 
   const meetsRequirements = (venue: Venue) => {
-    const minPopularity = venue.requirements.min_popularity;
-
-    if (typeof minPopularity === "number" && (profile?.fame || 0) < minPopularity) {
+    const reqs = venue.requirements;
+        if (reqs.min_popularity && (profile?.fame || 0) < reqs.min_popularity) {
       return false;
     }
 
@@ -299,9 +300,7 @@ const GigBooking = () => {
           venue_type: venueDetails?.venue_type ?? venue.venue_type,
           base_payment: venueDetails?.base_payment ?? venue.base_payment,
           prestige_level: venueDetails?.prestige_level ?? venue.prestige_level,
-          requirements: venueDetails?.requirements
-            ? normalizeVenueRequirements(venueDetails.requirements)
-            : venue.requirements,
+          requirements: (venueDetails?.requirements as VenueRequirements | null) ?? venue.requirements,
         },
         environment_modifiers: mergedEnvironment,
       };
