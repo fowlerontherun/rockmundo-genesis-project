@@ -700,75 +700,73 @@ const BandChemistry = () => {
 
           <TabsContent value="conflicts" className="space-y-6">
             <div className="space-y-4">
-              {recentConflicts.map((conflict) => (
-                <Card key={conflict.id} className="border-accent bg-card/80">
-                  <CardContent className="pt-6">
-                    <div className="mb-4 flex items-start justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold text-cream">{conflict.type}</h3>
-                          <Badge className={`${getSeverityColor(conflict.severity)} text-white`}>
-                            {conflict.severity}
-                          </Badge>
-                          {conflict.resolved && (
-                            <Badge variant="outline" className="border-green-500 text-green-300">
-                              Resolved
+              {recentConflicts.length > 0 ? (
+                recentConflicts.map((conflict) => (
+                  <Card key={conflict.id} className="border-accent bg-card/80">
+                    <CardContent className="pt-6">
+                      <div className="mb-4 flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-cream">{conflict.type}</h3>
+                            <Badge className={`${getSeverityColor(conflict.severity)} text-white`}>
+                              {conflict.severity}
                             </Badge>
-                          )}
+                            {conflict.resolved && (
+                              <Badge variant="outline" className="border-green-500 text-green-300">
+                                Resolved
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-cream/80">{conflict.description}</p>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-cream/60">
+                            <span>Members: {conflict.members.join(", ")}</span>
+                            <span>{conflict.timeAgo}</span>
+                          </div>
                         </div>
-                        <p className="text-cream/80">{conflict.description}</p>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-cream/60">
-                          <span>Members: {conflict.members.join(", ")}</span>
-                          <span>{conflict.timeAgo}</span>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleResolveConflict(conflict.id)}
+                            size="sm"
+                            className="bg-accent text-background hover:bg-accent/80"
+                            disabled={!bandId || conflict.resolved || resolvingConflictId === conflict.id}
+                          >
+                            {resolvingConflictId === conflict.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Mediating...
+                              </>
+                            ) : conflict.resolved ? (
+                              "Resolved"
+                            ) : (
+                              "Mediate"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-accent text-accent hover:bg-accent/10"
+                            disabled={!bandId}
+                          >
+                            <Coffee className="h-4 w-4 mr-1" />
+                            Hang Out
+                          </Button>
                         </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleResolveConflict(conflict.id)}
-                          size="sm"
-                          className="bg-accent text-background hover:bg-accent/80"
-                          disabled={!bandId || conflict.resolved || resolvingConflictId === conflict.id}
-                        >
-                          {resolvingConflictId === conflict.id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Mediating...
-                            </>
-                          ) : conflict.resolved ? (
-                            "Resolved"
-                          ) : (
-                            "Mediate"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-accent text-accent hover:bg-accent/10"
-                          disabled={!bandId}
-                        >
-                          <Coffee className="h-4 w-4 mr-1" />
-                          Hang Out
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-            {recentConflicts.length === 0 && (
-              <Card className="border-accent bg-card/80">
-                <CardContent className="pt-6 text-center">
-                  <Heart className="mx-auto mb-4 h-12 w-12 text-accent" />
-                  <h3 className="mb-2 text-xl font-semibold text-cream">All Good!</h3>
-                  <p className="text-cream/80">
-                    No current conflicts in the band. Keep up the great chemistry!
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+                ))
+              ) : (
+                <Card className="border-accent bg-card/80">
+                  <CardContent className="pt-6 text-center">
+                    <Heart className="mx-auto mb-4 h-12 w-12 text-accent" />
+                    <h3 className="mb-2 text-xl font-semibold text-cream">All Good!</h3>
+                    <p className="text-cream/80">
+                      No current conflicts in the band. Keep up the great chemistry!
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="events" className="space-y-6">
@@ -892,30 +890,26 @@ const BandChemistry = () => {
                           <span className="text-cream/60">Energy: </span>
                           <span className="text-accent">{member.energy}%</span>
                         </div>
-                        <div className="grid grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-cream/60">Skill: </span>
-                            <span className="text-accent">{member.skill_rating}%</span>
-                          </div>
-                          <div>
-                            <span className="text-cream/60">Loyalty: </span>
-                            <span className="text-accent">{member.loyalty}%</span>
-                          </div>
-                          <div>
-                            <span className="text-cream/60">Energy: </span>
-                            <span className="text-accent">{member.energy}%</span>
-                          </div>
-                          <div>
-                            <span className="text-cream/60">Issues: </span>
-                            <span className={member.issues.length > 0 ? "text-red-400" : "text-green-400"}>
-                              {member.issues.length}
-                            </span>
-                          </div>
+                        <div>
+                          <span className="text-cream/60">Morale: </span>
+                          <span className="text-accent">{member.morale}%</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-cream/60">
+                        <span>
+                          Issues:{" "}
+                          <span className={member.issues.length > 0 ? "text-red-400" : "text-green-400"}>
+                            {member.issues.length}
+                          </span>
+                        </span>
+                        <span>
+                          Strengths:{" "}
+                          {member.strengths.length > 0 ? member.strengths.slice(0, 2).join(", ") : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -362,17 +362,7 @@ const WorldPulse = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
-
-  const loadGenreStatistics = useCallback(async (week: string) => {
-    setIsGenreLoading(true);
-    try {
-      const { data, error: genreError } = await supabase
-        .from("genre_statistics")
-        .select("*")
-        .eq("chart_type", "weekly")
-        .eq("chart_date", week)
-        .order("total_plays", { ascending: false });
+  };
 
   const handlePrevWeek = () => {
     setCurrentWeekIndex((prev) => {
