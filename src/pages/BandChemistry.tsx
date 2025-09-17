@@ -453,6 +453,7 @@ const initialConflicts: BandConflict[] = [
 const BandChemistry = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinitionRow[]>([]);
   const [bandId, setBandId] = useState<string | null>(null);
   const [bandMembers, setBandMembers] = useState<BandMemberCard[]>([]);
   const [bandMorale, setBandMorale] = useState(0);
@@ -461,6 +462,69 @@ const BandChemistry = () => {
   const [loading, setLoading] = useState(true);
   const [processingEventId, setProcessingEventId] = useState<number | null>(null);
   const [resolvingConflictId, setResolvingConflictId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDefinitions = async () => {
+      const { data, error } = await supabase
+        .from("skill_definitions")
+        .select("id, slug, name, display_order")
+        .order("display_order", { ascending: true });
+
+      if (!error && isMounted) {
+        setSkillDefinitions(data ?? []);
+      }
+    };
+
+    void loadDefinitions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (skillDefinitions.length === 0) {
+      return;
+    }
+
+    setBandMembers(previousMembers =>
+      previousMembers.map(member => {
+        const skillAverage = calculateSkillAverage(member.skills);
+        const loyalty = clampStat(40 + Math.round(skillAverage / 5));
+        const performanceScore = (() => {
+          const value = getSkillLevel(member.skills, "performance", 0);
+          return typeof value === "number" ? value : 0;
+        })();
+        const songwritingScore = (() => {
+          const value = getSkillLevel(member.skills, "songwriting", 0);
+          return typeof value === "number" ? value : 0;
+        })();
+        const energy = clampStat(
+          60 + Math.round((performanceScore + songwritingScore) / 4)
+        );
+        const strengths = getRoleStrengths(member.instrument, member.skills);
+
+        if (
+          member.skill === skillAverage &&
+          member.loyalty === loyalty &&
+          member.energy === energy &&
+          member.strengths.join("|") === strengths.join("|")
+        ) {
+          return member;
+        }
+
+        return {
+          ...member,
+          skill: skillAverage,
+          loyalty,
+          energy,
+          strengths
+        };
+      })
+    );
+  }, [calculateSkillAverage, getRoleStrengths, skillDefinitions]);
 
   const averageChemistry = useMemo(() => {
     if (bandMembers.length === 0) return 0;
@@ -471,6 +535,92 @@ const BandChemistry = () => {
   const activeConflicts = useMemo(
     () => recentConflicts.filter((conflict) => !conflict.resolved).length,
     [recentConflicts]
+  );
+
+  const calculateSkillAverage = useCallback(
+    (skills?: SkillLevelMap | null) => {
+      if (!skills) return 0;
+
+      const slugs = collectSkillSlugs(skillDefinitions, skills);
+      const values = slugs
+        .map(slug => getSkillLevel(skills, slug, 0))
+        .filter((value): value is number => typeof value === "number");
+
+      if (values.length === 0) {
+        return 0;
+      }
+
+      const total = values.reduce((sum, value) => sum + value, 0);
+      return Math.round(total / values.length);
+    },
+    [skillDefinitions]
+  );
+
+  const getRoleStrengths = useCallback(
+    (role: string, skills?: SkillLevelMap | null) => {
+      if (!skills) {
+        return getDefaultStrengths(role);
+      }
+
+      const slugs = collectSkillSlugs(skillDefinitions, skills);
+      if (slugs.length === 0) {
+        return getDefaultStrengths(role);
+      }
+
+      const entries = slugs.map(slug => {
+        const value = getSkillLevel(skills, slug, 0);
+        return {
+          slug,
+          value: typeof value === "number" ? value : 0,
+          label: getSkillLabel(slug, skillDefinitions)
+        };
+      });
+
+      entries.sort((a, b) => b.value - a.value);
+
+      const strengths: string[] = [];
+      entries.forEach(entry => {
+        if (entry.value > 0 && strengths.length < 2) {
+          strengths.push(`${entry.label} expertise`);
+        }
+      });
+
+      if (strengths.length < 2) {
+        entries
+          .filter(entry => entry.value <= 0)
+          .slice(0, 2 - strengths.length)
+          .forEach(entry => {
+            strengths.push(`${entry.label} (Locked)`);
+          });
+      }
+
+      return strengths.length > 0 ? strengths : getDefaultStrengths(role);
+    },
+    [skillDefinitions]
+  );
+
+  const fetchProfileSkillMap = useCallback(
+    async (profileId: string | null): Promise<SkillLevelMap> => {
+      if (!profileId) {
+        return {};
+      }
+
+      const { data, error } = await supabase
+        .from("profile_skill_progress")
+        .select("skill_id, skill_slug, current_level, skill_definitions ( slug, name )")
+        .eq("profile_id", profileId);
+
+      if (error) {
+        console.error("Error loading skills data:", error);
+        return {};
+      }
+
+      return buildSkillLevelMap(
+        (data as SkillProgressWithDefinition[] | null | undefined) ?? [],
+        skillDefinitions
+      );
+    },
+    [skillDefinitions]
   );
 
   const fetchPrimaryBandId = useCallback(async (): Promise<string | null> => {
@@ -622,7 +772,7 @@ const BandChemistry = () => {
         ? Math.round(members.reduce((sum, member) => sum + member.morale, 0) / members.length)
         : 0;
     setBandMorale(moraleAverage);
-  }, []);
+  }, [calculateSkillAverage, fetchProfileSkillMap, getRoleStrengths]);
 
   const initializeBandData = useCallback(async () => {
     if (!user) {
