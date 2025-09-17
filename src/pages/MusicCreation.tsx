@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { AttributeFocus, AttributeKey, calculateExperienceReward, extractAttributeScores } from "@/utils/gameBalance";
+import {
+  buildSkillLevelRecord,
+  hasSkillData,
+  toSkillProgressMap,
+  type SkillLevelRecord,
+  type SkillProgressSource
+} from "@/utils/skillProgress";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Music,
@@ -246,7 +252,39 @@ const RECORDING_ATTRIBUTE_KEYS: AttributeKey[] = ["technical_mastery", "creative
 const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, attributes, updateProfile, updateSkills, updateAttributes, addActivity } = useGameData();
+  const gameData = useGameData();
+  const { profile, skills, updateProfile, updateSkills, addActivity } = gameData;
+
+  const skillProgressSource = useMemo<SkillProgressSource>(() => {
+    const withProgress = gameData as unknown as {
+      skillProgressMap?: SkillProgressSource;
+      skillProgressCollection?: SkillProgressSource;
+      skillProgress?: SkillProgressSource;
+    };
+
+    return (
+      withProgress.skillProgressMap ??
+      withProgress.skillProgressCollection ??
+      withProgress.skillProgress ??
+      null
+    );
+  }, [gameData]);
+
+  const skillProgressMap = useMemo(
+    () => toSkillProgressMap(skillProgressSource, skills),
+    [skillProgressSource, skills]
+  );
+
+  const skillLevels: SkillLevelRecord = useMemo(
+    () => buildSkillLevelRecord(skillProgressMap, skills),
+    [skillProgressMap, skills]
+  );
+
+  const hasSkillLevels = useMemo(
+    () => hasSkillData(skillProgressMap, skills),
+    [skillProgressMap, skills]
+  );
+
   const [songs, setSongs] = useState<Song[]>([]);
   const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
   const [tracksBySession, setTracksBySession] = useState<Record<string, ProductionTrack[]>>({});
@@ -383,19 +421,22 @@ const MusicCreation = () => {
   }, []);
 
   const calculateQuality = useCallback((): number => {
-    if (!skills) return 30;
+    const randomFactor = Math.random() * 20 - 10;
+
+    if (!hasSkillLevels) {
+      return Math.max(1, Math.min(100, Math.round(30 + randomFactor)));
+    }
 
     const baseQuality =
-      skills.songwriting * 0.4 +
-      skills.guitar * 0.2 +
-      skills.vocals * 0.2 +
-      skills.performance * 0.1 +
-      skills.drums * 0.05 +
-      skills.bass * 0.05;
+      skillLevels.songwriting * 0.4 +
+      skillLevels.guitar * 0.2 +
+      skillLevels.vocals * 0.2 +
+      skillLevels.performance * 0.1 +
+      skillLevels.drums * 0.05 +
+      skillLevels.bass * 0.05;
 
-    const randomFactor = Math.random() * 20 - 10;
     return Math.max(1, Math.min(100, Math.round(baseQuality + randomFactor)));
-  }, [skills]);
+  }, [hasSkillLevels, skillLevels]);
 
   const calculateRecordingCost = (quality: number): number => {
     const baseCost = 500;
@@ -761,7 +802,9 @@ const MusicCreation = () => {
     try {
       const takeCost = Math.round((song.recording_cost || 500) * 0.1);
       const baseQuality = song.quality_score;
-      const skillBonus = skills ? (skills.performance + skills.vocals) / 15 : 0;
+      const skillBonus = hasSkillLevels
+        ? (skillLevels.performance + skillLevels.vocals) / 15
+        : 0;
       const qualityBoost = Math.max(1, Math.round(baseQuality / 20 + skillBonus + Math.random() * 4));
       const fileExtension = recording.blob.type.includes("mpeg") ? "mp3" : "webm";
       const storagePath = `${user.id}/${song.id}/${sessionId}/${slugifyName(recording.name || "take")}-${Date.now()}.${fileExtension}`;
@@ -912,12 +955,16 @@ const MusicCreation = () => {
         });
       }
 
-      if (skills) {
-        const performanceGain = applyAttributeToValue(Math.round(session.quality_gain / 4), attributes, SKILL_ATTRIBUTE_MAP.performance).value;
-        const vocalGain = applyAttributeToValue(Math.round(session.total_takes / 2), attributes, SKILL_ATTRIBUTE_MAP.vocals).value;
+      if (hasSkillLevels) {
         await updateSkills({
-          performance: Math.min(100, skills.performance + performanceGain),
-          vocals: Math.min(100, skills.vocals + vocalGain)
+          performance: Math.min(
+            100,
+            skillLevels.performance + Math.round(session.quality_gain / 4)
+          ),
+          vocals: Math.min(
+            100,
+            skillLevels.vocals + Math.round(session.total_takes / 2)
+          )
         });
       }
 
@@ -1288,11 +1335,11 @@ const MusicCreation = () => {
                   }
                 />
               </div>
-              {skills && (
+              {hasSkillLevels && (
                 <div className="rounded-lg bg-muted p-4">
                   <h4 className="font-medium">Estimated Quality: {calculateQuality()}%</h4>
                   <p className="text-sm text-muted-foreground">
-                    Based on songwriting {skills.songwriting}/100 and overall performance skill.
+                    Based on songwriting {skillLevels.songwriting}/100 and overall performance skill.
                   </p>
                 </div>
               )}
