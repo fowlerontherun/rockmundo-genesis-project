@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Mail, Lock, User, AlertCircle, Guitar, Star, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
 
 type AuthTab = "login" | "signup" | "forgot";

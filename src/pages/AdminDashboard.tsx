@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import {
   Users,
   BarChart3, 

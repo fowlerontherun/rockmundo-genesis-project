@@ -6,10 +6,10 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData, type PlayerSkills } from '@/hooks/useGameData';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
