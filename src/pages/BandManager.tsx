@@ -59,6 +59,7 @@ interface Band {
   max_members: number;
   created_at: string;
   updated_at: string;
+  logo_url?: string | null;
 }
 
 const BAND_ROLES = [
@@ -70,6 +71,19 @@ const BAND_ROLES = [
   "Keyboardist",
   "Producer",
   "Manager"
+];
+
+const BAND_GENRES = [
+  "Rock",
+  "Pop",
+  "Jazz",
+  "Hip-Hop",
+  "Electronic",
+  "Metal",
+  "Country",
+  "Indie",
+  "R&B",
+  "Classical"
 ];
 
 type PlayerSkillsRow = Database['public']['Tables']['player_skills']['Row'];
@@ -118,6 +132,24 @@ const parseChartPositionValue = (value: unknown): number | null => {
   return null;
 };
 
+const getBandInitials = (name: string): string => {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return 'BN';
+  }
+
+  const parts = trimmed.split(/\s+/);
+  const first = parts[0]?.[0] ?? '';
+  const second = parts[1]?.[0] ?? '';
+  const initials = `${first}${second}`.toUpperCase();
+
+  if (initials.trim().length > 0) {
+    return initials;
+  }
+
+  return trimmed.slice(0, 2).toUpperCase();
+};
+
 const BandManager = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
@@ -132,12 +164,39 @@ const BandManager = () => {
   const [scheduleEvents, setScheduleEvents] = useState<BandScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [bandName, setBandName] = useState('');
+  const [bandGenre, setBandGenre] = useState<string>(BAND_GENRES[0]);
+  const [bandLogoUrl, setBandLogoUrl] = useState('');
   const [isRecruitDialogOpen, setIsRecruitDialogOpen] = useState(false);
   const [inviteRole, setInviteRole] = useState<string>(BAND_ROLES[0]);
   const [inviteSalary, setInviteSalary] = useState<number>(0);
   const [sendingInvite, setSendingInvite] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<BandInvitation[]>([]);
   const [acceptingInviteId, setAcceptingInviteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+
+    setBandName((current) => {
+      if (current.trim().length > 0) return current;
+      const displayName = profile.display_name?.trim();
+      const defaultName = displayName && displayName.length > 0
+        ? `${displayName}'s Band`
+        : "New Band";
+      return defaultName;
+    });
+
+    setBandGenre((current) => (current && current.trim().length > 0 ? current : BAND_GENRES[0]));
+
+    setBandLogoUrl((current) => {
+      if (current.trim().length > 0 || !profile.avatar_url) {
+        return current;
+      }
+
+      return profile.avatar_url ?? '';
+    });
+  }, [profile]);
+
   const loadBandMembers = useCallback(async (bandId: string) => {
     if (!user?.id) return;
 
@@ -463,7 +522,8 @@ const BandManager = () => {
             weekly_fans,
             max_members,
             created_at,
-            updated_at
+            updated_at,
+            logo_url
           )
         `)
         .eq('invitee_id', user.id)
@@ -545,15 +605,53 @@ const BandManager = () => {
   const createBand = async () => {
     if (!user || !profile) return;
 
+    const trimmedName = bandName.trim();
+    if (trimmedName.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Band Name Required",
+        description: "Please enter a name for your new band.",
+      });
+      return;
+    }
+
+    const trimmedGenre = bandGenre.trim();
+    if (trimmedGenre.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Genre Required",
+        description: "Please select a genre for your new band.",
+      });
+      return;
+    }
+
+    const trimmedLogo = bandLogoUrl.trim();
+    let logoUrlToSave: string | null = null;
+    if (trimmedLogo.length > 0) {
+      try {
+        const parsedUrl = new URL(trimmedLogo);
+        logoUrlToSave = parsedUrl.toString();
+      } catch (error) {
+        console.error('Invalid logo URL provided:', error);
+        toast({
+          variant: "destructive",
+          title: "Invalid Logo URL",
+          description: "Please provide a valid URL for your band logo.",
+        });
+        return;
+      }
+    }
+
     setCreating(true);
     try {
       const { data: bandData, error: bandError } = await supabase
         .from('bands')
         .insert({
-          name: `${profile.display_name || 'Player'}'s Band`,
-          genre: 'Rock',
+          name: trimmedName,
+          genre: trimmedGenre,
           description: 'A new band ready to rock the world!',
-          leader_id: user.id
+          leader_id: user.id,
+          logo_url: logoUrlToSave
         })
         .select()
         .single();
@@ -572,12 +670,19 @@ const BandManager = () => {
 
       if (memberError) throw memberError;
 
-      setBand(bandData);
+      setBand(bandData as Band);
       await Promise.all([
         loadBandMembers(bandData.id),
         loadBandStats(bandData.id),
         loadScheduleEvents(bandData.id)
       ]);
+
+      const defaultName = profile.display_name?.trim()
+        ? `${profile.display_name.trim()}'s Band`
+        : "New Band";
+      setBandName(defaultName);
+      setBandGenre(BAND_GENRES[0]);
+      setBandLogoUrl(profile.avatar_url ?? '');
 
       toast({
         title: "Band Created!",
@@ -880,7 +985,7 @@ const BandManager = () => {
 
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
-        <Card className="bg-card/80 backdrop-blur-sm border-primary/20 max-w-md">
+        <Card className="bg-card/80 backdrop-blur-sm border-primary/20 max-w-md w-full">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
               Start Your Band
@@ -889,17 +994,60 @@ const BandManager = () => {
               Create a band and recruit talented musicians to join your musical journey
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="text-center space-y-2">
               <Users className="h-16 w-16 text-primary mx-auto" />
               <p className="text-muted-foreground">
                 You're currently a solo artist. Create a band to collaborate with other musicians!
               </p>
             </div>
+            <div className="space-y-4 text-left">
+              <div className="space-y-2">
+                <Label htmlFor="band-name">Band Name</Label>
+                <Input
+                  id="band-name"
+                  value={bandName}
+                  onChange={(event) => setBandName(event.target.value)}
+                  placeholder="Enter your band name"
+                  disabled={creating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="band-genre">Genre</Label>
+                <Select
+                  value={bandGenre}
+                  onValueChange={setBandGenre}
+                  disabled={creating}
+                >
+                  <SelectTrigger id="band-genre">
+                    <SelectValue placeholder="Select a genre" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BAND_GENRES.map((genreOption) => (
+                      <SelectItem key={genreOption} value={genreOption}>
+                        {genreOption}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="band-logo">Logo URL</Label>
+                <Input
+                  id="band-logo"
+                  type="url"
+                  value={bandLogoUrl}
+                  onChange={(event) => setBandLogoUrl(event.target.value)}
+                  placeholder="https://example.com/logo.png"
+                  disabled={creating}
+                />
+              </div>
+            </div>
             <Button
               onClick={createBand}
               disabled={creating}
               className="w-full bg-gradient-primary"
+              type="button"
             >
               {creating ? "Creating..." : "Create Band"}
             </Button>
@@ -912,17 +1060,27 @@ const BandManager = () => {
   const isBandAtCapacity = band.max_members ? members.length >= band.max_members : false;
   const memberCapacityLabel = band.max_members ? `${members.length}/${band.max_members}` : `${members.length}`;
   const upcomingEvents = scheduleEvents.slice(0, 5);
+  const bandGenreLabel = band.genre && band.genre.trim().length > 0 ? band.genre : 'Unknown Genre';
+  const bandLogoSrc = typeof band.logo_url === 'string' && band.logo_url.trim().length > 0
+    ? band.logo_url
+    : undefined;
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              {band.name}
-            </h1>
-            <p className="text-muted-foreground">{band.genre} • {memberCapacityLabel} members</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-14 w-14 border border-primary/30 shadow-sm">
+              <AvatarImage src={bandLogoSrc} alt={`${band.name} logo`} />
+              <AvatarFallback>{getBandInitials(band.name)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                {band.name}
+              </h1>
+              <p className="text-muted-foreground">{bandGenreLabel} • {memberCapacityLabel} members</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Dialog open={isRecruitDialogOpen} onOpenChange={setIsRecruitDialogOpen}>
