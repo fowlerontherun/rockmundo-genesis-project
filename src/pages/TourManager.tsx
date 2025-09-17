@@ -27,9 +27,17 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
-import { applyEquipmentWear } from "@/utils/equipmentWear";
+import { meetsRequirements } from "@/utils/gameBalance";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
+import {
+  calculateTravelEstimates,
+  describeComfort,
+  getTravelModeConfig,
+  LOW_COMFORT_THRESHOLD,
+  TRAVEL_MODE_OPTIONS,
+  TRAVEL_MODES,
+  type TravelMode,
+} from "@/utils/worldTravel";
 import type { Database } from "@/integrations/supabase/types";
 
 interface Tour {
@@ -59,6 +67,8 @@ interface TourVenue {
   travel_time: number | null;
   rest_days: number | null;
   status: string | null;
+  travel_mode?: TravelMode | null;
+  travel_comfort?: number | null;
   venues?: {
     name: string;
     location: string;
@@ -70,7 +80,7 @@ interface TourVenue {
     capacity: number;
   };
   environment_modifiers?: EnvironmentModifierSummary | null;
-}
+  show_type?: ShowType;
 
 interface VenueScheduleForm {
   venueId: string;
@@ -79,17 +89,20 @@ interface VenueScheduleForm {
   travelCost: string;
   lodgingCost: string;
   miscCost: string;
+  travelMode: TravelMode;
 }
 
 interface NewTourVenueDetails {
   venueId: string;
   date: string;
   ticketPrice: number;
+  travelMode: TravelMode;
   travelCost: number;
   lodgingCost: number;
   miscCost: number;
   travelTime?: number;
   restDays?: number;
+  travelComfort: number;
 }
 
 interface RouteSuggestion {
@@ -114,6 +127,7 @@ interface EditTourForm {
     venue_id: string;
     date: string;
     ticket_price: string;
+    travel_mode: TravelMode;
   };
 }
 
@@ -126,6 +140,8 @@ type TourVenueInsert = Database['public']['Tables']['tour_venues']['Insert'] & {
 type TourVenueUpdate = Database['public']['Tables']['tour_venues']['Update'] & {
   environment_modifiers?: EnvironmentModifierSummary | null;
 };
+
+type ShowType = Database['public']['Enums']['show_type'];
 
 type SupabaseTour = TourRow & {
   tour_venues?: Array<
@@ -151,9 +167,10 @@ const LOCATION_COORDINATES: Record<string, { lat: number; lng: number }> = {
 };
 
 const DEFAULT_COORDINATE = { lat: 39.5, lng: -98.35 };
-const AVERAGE_TRAVEL_SPEED_KMH = 80;
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 const EARTH_RADIUS_KM = 6371;
+const DEFAULT_TRAVEL_MODE: TravelMode = 'coach';
+const TRAVEL_MODE_VALUES: TravelMode[] = ['coach', 'taxi', 'air', 'ferry'];
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 
@@ -189,13 +206,163 @@ const calculateDistanceKm = (fromLocation?: string | null, toLocation?: string |
   return Math.round(EARTH_RADIUS_KM * c * 100) / 100;
 };
 
-const estimateTravelTimeHours = (distanceKm: number) => Number(((distanceKm || 0) / AVERAGE_TRAVEL_SPEED_KMH).toFixed(2));
+const calculateRestDaysFromDistance = (distanceKm: number, comfort: number) => {
+  const distance = Math.max(0, distanceKm || 0);
+  const baseRest = Math.max(1, Math.ceil(distance / 600));
+  if (comfort >= 80 && baseRest > 1) {
+    return baseRest - 1;
+  }
+  if (comfort < LOW_COMFORT_THRESHOLD) {
+    return baseRest + 1;
+  }
+  return baseRest;
+};
 
-const calculateRestDaysFromDistance = (distanceKm: number) => Math.max(1, Math.ceil((distanceKm || 0) / 600));
-
-const calculateTravelCostFromDistance = (distanceKm: number) => Math.max(0, Math.round(distanceKm * 0.75 + 150));
+const calculateMiscCostFromDistance = (distanceKm: number, comfort: number) => {
+  const distance = Math.max(0, distanceKm || 0);
+  const comfortPenalty = Math.max(0, (60 - comfort) / 100);
+  return Math.max(0, Math.round(distance * 0.2 * (1 + comfortPenalty)));
+};
 
 const calculateLodgingCostFromRestDays = (restDays: number) => Math.max(0, restDays * 120);
+
+const normalizeTravelMode = (mode?: string | null): TravelMode | null =>
+  TRAVEL_MODE_VALUES.includes(mode as TravelMode) ? (mode as TravelMode) : null;
+
+const buildTravelPlanMetrics = (distanceKm: number, mode: TravelMode) => {
+  const estimates = calculateTravelEstimates(distanceKm, mode);
+  const restDays = calculateRestDaysFromDistance(distanceKm, estimates.comfort);
+  const lodgingCost = calculateLodgingCostFromRestDays(restDays);
+  const miscCost = calculateMiscCostFromDistance(distanceKm, estimates.comfort);
+  return {
+    distanceKm,
+    travelMode: estimates.mode,
+    travelCost: estimates.cost,
+    travelTime: estimates.timeHours,
+    travelComfort: estimates.comfort,
+    restDays,
+    lodgingCost,
+    miscCost,
+  };
+};
+
+const getVenueComfort = (venue: TourVenue) => {
+  if (typeof venue.travel_comfort === 'number') {
+    return venue.travel_comfort;
+  }
+  if (venue.travel_mode) {
+    return getTravelModeConfig(venue.travel_mode).comfort;
+  }
+  return TRAVEL_MODES[DEFAULT_TRAVEL_MODE].comfort;
+};
+
+const isLowComfortLeg = (comfort: number) => comfort < LOW_COMFORT_THRESHOLD;
+
+const computeHealthPenalty = (comfort: number, streak: number) => {
+  if (!isLowComfortLeg(comfort)) {
+    return 0;
+  }
+  const deficitRatio = (LOW_COMFORT_THRESHOLD - comfort) / 100;
+  const basePenalty = Math.max(1, Math.round(deficitRatio * 20));
+  return -basePenalty * Math.max(1, streak);
+};
+
+const computeTourHealthBreakdown = (tour: Tour) => {
+  const breakdown: Record<string, { comfort: number; penalty: number; streak: number }> = {};
+  const sortedStops = [...(tour.venues || [])].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  let streak = 0;
+  sortedStops.forEach((stop) => {
+    const comfort = getVenueComfort(stop);
+    if (isLowComfortLeg(comfort)) {
+      streak += 1;
+      breakdown[stop.id] = {
+        comfort,
+        penalty: computeHealthPenalty(comfort, streak),
+        streak,
+      };
+    } else {
+      streak = 0;
+      breakdown[stop.id] = {
+        comfort,
+        penalty: 0,
+        streak: 0,
+      };
+    }
+  });
+  return breakdown;
+};
+
+const summarizeHealthBreakdown = (breakdown: Record<string, { comfort: number; penalty: number; streak: number }>) => {
+  const entries = Object.values(breakdown);
+  if (entries.length === 0) {
+    return { projectedPenalty: 0, worstStreak: 0, lowComfortLegs: 0, averageComfort: 0 };
+  }
+  const projectedPenalty = entries.reduce((sum, entry) => sum + Math.abs(entry.penalty), 0);
+  const worstStreak = entries.reduce((max, entry) => Math.max(max, entry.streak), 0);
+  const lowComfortLegs = entries.filter((entry) => entry.penalty < 0).length;
+  const averageComfort = entries.reduce((sum, entry) => sum + entry.comfort, 0) / entries.length;
+  return { projectedPenalty, worstStreak, lowComfortLegs, averageComfort };
+};
+
+const getCompletedLowComfortStreak = (tour: Tour | undefined, targetVenue: TourVenue) => {
+  if (!tour) return 0;
+  const sortedStops = [...(tour.venues || [])].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  const targetTime = new Date(targetVenue.date).getTime();
+  let streak = 0;
+  for (const stop of sortedStops) {
+    const stopTime = new Date(stop.date).getTime();
+    if (stopTime >= targetTime) {
+      break;
+    }
+    if (stop.status !== 'completed') {
+      continue;
+    }
+    const comfort = getVenueComfort(stop);
+    if (isLowComfortLeg(comfort)) {
+      streak += 1;
+    } else {
+      streak = 0;
+    }
+  }
+  return streak;
+};
+
+const getPreviousLocationForTour = (tour: Tour | undefined, targetDate?: string) => {
+  if (!tour || !tour.venues?.length) {
+    return undefined;
+  }
+  const sortedStops = [...tour.venues].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+  const targetTime = targetDate ? new Date(targetDate).getTime() : null;
+  let previousLocation: string | undefined;
+  for (const stop of sortedStops) {
+    const stopTime = new Date(stop.date).getTime();
+    if (targetTime !== null && stopTime >= targetTime) {
+      break;
+    }
+    if (stop.venue?.location) {
+      previousLocation = stop.venue.location;
+    }
+  }
+  return previousLocation;
+};
+
+const computeDistanceForLeg = (
+  tour: Tour | undefined,
+  venueLocation?: string | null,
+  targetDate?: string
+) => {
+  if (!venueLocation) {
+    return 0;
+  }
+  const previousLocation = getPreviousLocationForTour(tour, targetDate);
+  return calculateDistanceKm(previousLocation, venueLocation);
+};
 
 const calculateOptimalRoute = (tourVenues: TourVenue[]): RouteSuggestion => {
   const stops = (tourVenues || []).filter(Boolean);
@@ -245,11 +412,12 @@ const createEmptySchedule = (): VenueScheduleForm => ({
   ticketPrice: "",
   travelCost: "",
   lodgingCost: "",
-  miscCost: ""
+  miscCost: "",
+  travelMode: DEFAULT_TRAVEL_MODE,
 });
 const TourManager = () => {
   const { user } = useAuth();
-  const { profile, skills } = useGameData();
+  const { profile, skills, updateProfile } = useGameData();
   const { toast } = useToast();
   const [tours, setTours] = useState<Tour[]>([]);
   const [venues, setVenues] = useState<VenueRow[]>([]);
@@ -288,7 +456,8 @@ const TourManager = () => {
     newVenue: {
       venue_id: "",
       date: "",
-      ticket_price: ""
+      ticket_price: "",
+      travel_mode: DEFAULT_TRAVEL_MODE,
     }
   });
 
@@ -316,6 +485,8 @@ const TourManager = () => {
         ...tour,
         venues: (tour.tour_venues || []).map((tv) => ({
           ...tv,
+          travel_mode: normalizeTravelMode((tv as { travel_mode?: string | null }).travel_mode ?? null),
+          travel_comfort: (tv as { travel_comfort?: number | null }).travel_comfort ?? null,
           venue: tv.venues,
           environment_modifiers: (tv as { environment_modifiers?: EnvironmentModifierSummary | null }).environment_modifiers ?? null,
         })),
@@ -444,6 +615,10 @@ const TourManager = () => {
       const adjustedTravelCost = Math.max(0, Math.round(details.travelCost * costMultiplier));
       const adjustedLodgingCost = Math.max(0, Math.round(details.lodgingCost * costMultiplier));
       const adjustedMiscCost = Math.max(0, Math.round(details.miscCost * costMultiplier));
+      const travelMode = details.travelMode ?? DEFAULT_TRAVEL_MODE;
+      const travelComfort = typeof details.travelComfort === 'number'
+        ? details.travelComfort
+        : getTravelModeConfig(travelMode).comfort;
 
       const baseCapacity = selectedVenue?.capacity ?? 0;
       const baseProjectedAttendance = baseCapacity ? Math.max(1, Math.round(baseCapacity * 0.6)) : null;
@@ -464,6 +639,8 @@ const TourManager = () => {
         status: 'scheduled',
         travel_time: typeof details.travelTime === 'number' ? details.travelTime : undefined,
         rest_days: typeof details.restDays === 'number' ? details.restDays : undefined,
+        travel_mode: travelMode,
+        travel_comfort: travelComfort,
       };
 
       let environmentForInsert: EnvironmentModifierSummary | null = null;
@@ -540,6 +717,7 @@ const TourManager = () => {
       const toastMessages = [
         selectedVenue ? `Added ${selectedVenue.name} to the tour.` : 'Tour venue scheduled.',
         projectedAttendance ? `Projected attendance ${projectedAttendance.toLocaleString()}.` : null,
+        `Travel via ${getTravelModeConfig(travelMode).label} • ${Math.round(travelComfort)}% comfort.`,
       ];
 
       if (environmentFromDb?.applied?.length) {
@@ -600,7 +778,7 @@ const TourManager = () => {
       return;
     }
 
-    const { venue_id, date, ticket_price } = form.newVenue;
+    const { venue_id, date, ticket_price, travel_mode } = form.newVenue;
     if (!venue_id || !date) {
       toast({
         variant: "destructive",
@@ -620,24 +798,22 @@ const TourManager = () => {
     }
 
     const tour = tours.find((item) => item.id === tourId);
-    const orderedStops = [...(tour?.venues ?? [])].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-    const lastStop = orderedStops[orderedStops.length - 1];
     const selectedVenue = venues.find((venue) => venue.id === venue_id);
-    const distance = calculateDistanceKm(lastStop?.venue?.location, selectedVenue?.location);
-    const travelCost = calculateTravelCostFromDistance(distance);
-    const restDays = calculateRestDaysFromDistance(distance);
-    const lodgingCost = calculateLodgingCostFromRestDays(restDays);
-    const miscCost = Math.max(0, Math.round(distance * 0.2));
+    const travelMode = travel_mode || DEFAULT_TRAVEL_MODE;
+    const distance = computeDistanceForLeg(tour, selectedVenue?.location, isoDate);
+    const travelPlan = buildTravelPlanMetrics(distance, travelMode);
 
     const success = await addVenueToTour(tourId, {
       venueId: venue_id,
       date: isoDate,
       ticketPrice: ticketPriceValue,
-      travelCost,
-      lodgingCost,
-      miscCost,
+      travelMode,
+      travelCost: travelPlan.travelCost,
+      lodgingCost: travelPlan.lodgingCost,
+      miscCost: travelPlan.miscCost,
+      travelTime: travelPlan.travelTime,
+      restDays: travelPlan.restDays,
+      travelComfort: travelPlan.travelComfort,
     });
 
     if (success) {
@@ -652,6 +828,7 @@ const TourManager = () => {
               venue_id: "",
               date: "",
               ticket_price: "",
+              travel_mode: DEFAULT_TRAVEL_MODE,
             },
           },
         };
@@ -799,10 +976,6 @@ const TourManager = () => {
     }
 
     const ticketPrice = parseCurrencyInput(schedule.ticketPrice);
-    const travelCost = parseCurrencyInput(schedule.travelCost);
-    const lodgingCost = parseCurrencyInput(schedule.lodgingCost);
-    const miscCost = parseCurrencyInput(schedule.miscCost);
-
     let isoDate = schedule.date;
     if (!schedule.date.includes('T')) {
       const parsedDate = new Date(schedule.date);
@@ -811,13 +984,43 @@ const TourManager = () => {
       }
     }
 
+    const tour = tours.find((item) => item.id === tourId);
+    const selectedVenue = venues.find((venue) => venue.id === schedule.venueId);
+    if (!selectedVenue) {
+      toast({
+        variant: "destructive",
+        title: "Venue unavailable",
+        description: "The selected venue could not be found.",
+      });
+      return;
+    }
+
+    const travelMode = schedule.travelMode || DEFAULT_TRAVEL_MODE;
+    const distanceKm = computeDistanceForLeg(tour, selectedVenue.location, isoDate);
+    const travelPlan = buildTravelPlanMetrics(distanceKm, travelMode);
+
+    setVenueSchedules((prev) => ({
+      ...prev,
+      [tourId]: {
+        ...schedule,
+        travelCost: travelPlan.travelCost.toString(),
+        lodgingCost: travelPlan.lodgingCost.toString(),
+        miscCost: travelPlan.miscCost.toString(),
+        travelMode,
+      },
+    }));
+
     const success = await addVenueToTour(tourId, {
       venueId: schedule.venueId,
       date: isoDate,
       ticketPrice,
-      travelCost,
-      lodgingCost,
-      miscCost
+      travelMode,
+      travelCost: travelPlan.travelCost,
+      lodgingCost: travelPlan.lodgingCost,
+      miscCost: travelPlan.miscCost,
+      travelTime: travelPlan.travelTime,
+      restDays: travelPlan.restDays,
+      travelComfort: travelPlan.travelComfort,
     });
 
     if (success) {
@@ -855,6 +1058,12 @@ const TourManager = () => {
       const revenue = attendance * ticketPrice;
       const totalCosts = (tourVenue.travel_cost || 0) + (tourVenue.lodging_cost || 0) + (tourVenue.misc_cost || 0);
       const profit = revenue - totalCosts;
+      const resolvedTour = tours.find((tourItem) => tourItem.id === tourVenue.tour_id) ?? tours.find((tourItem) => tourItem.venues?.some(v => v.id === tourVenue.id));
+      const comfortValue = getVenueComfort(tourVenue);
+      const previousLowComfortStreak = getCompletedLowComfortStreak(resolvedTour, tourVenue);
+      const healthChange = isLowComfortLeg(comfortValue) ? computeHealthPenalty(comfortValue, previousLowComfortStreak + 1) : 0;
+      const travelMode = normalizeTravelMode(tourVenue.travel_mode) ?? DEFAULT_TRAVEL_MODE;
+      const modeConfig = getTravelModeConfig(travelMode);
 
       const updatedEnvironment = environmentModifiers
         ? {
@@ -884,14 +1093,25 @@ const TourManager = () => {
       const fameGain = Math.max(0, Math.round((attendance / 10) * moraleMultiplier));
       const currentCash = profile.cash ?? 0;
       const currentFame = profile.fame ?? 0;
+      const currentHealth = profile.health ?? 100;
+      const nextHealth = Math.max(0, Math.min(100, currentHealth + healthChange));
 
-      await supabase
-        .from('profiles')
-        .update({
+      if (updateProfile) {
+        await updateProfile({
           cash: currentCash + profit,
-          fame: currentFame + fameGain
-        })
-        .eq('user_id', user.id);
+          fame: currentFame + fameGain,
+          health: nextHealth,
+        });
+      } else {
+        await supabase
+          .from('profiles')
+          .update({
+            cash: currentCash + profit,
+            fame: currentFame + fameGain,
+            health: nextHealth,
+          })
+          .eq('user_id', user.id);
+      }
 
       let profitDescription = "break-even result";
       if (profit > 0) {
@@ -900,9 +1120,13 @@ const TourManager = () => {
         profitDescription = `loss of $${Math.abs(profit).toLocaleString()}`;
       }
 
+      const healthMessage = healthChange < 0
+        ? ` Health decreased by ${Math.abs(healthChange)} due to the ${comfortValue.toFixed(0)}% comfort ${modeConfig.label.toLowerCase()} leg.`
+        : '';
+
       toast({
         title: "Show Complete!",
-        description: `Great performance! Earned $${revenue.toLocaleString()} revenue with $${totalCosts.toLocaleString()} costs, resulting in a ${profitDescription} and ${fameGain} fame.`
+        description: `Great performance! Earned $${revenue.toLocaleString()} revenue with $${totalCosts.toLocaleString()} costs, resulting in a ${profitDescription} and ${fameGain} fame.${healthMessage}`
 
       });
 
@@ -961,7 +1185,23 @@ const TourManager = () => {
     const totalShows = tour.venues?.length || 0;
     const totalTravelHours = tour.venues?.reduce((sum, v) => sum + (typeof v.travel_time === 'number' ? v.travel_time : Number(v.travel_time || 0)), 0) || 0;
     const totalRestDays = tour.venues?.reduce((sum, v) => sum + (typeof v.rest_days === 'number' ? v.rest_days : Number(v.rest_days || 0)), 0) || 0;
-    return { totalRevenue, totalCosts, totalProfit, totalTickets, completedShows, totalShows, totalTravelHours, totalRestDays };
+    const healthBreakdown = computeTourHealthBreakdown(tour);
+    const healthSummary = summarizeHealthBreakdown(healthBreakdown);
+    return {
+      totalRevenue,
+      totalCosts,
+      totalProfit,
+      totalTickets,
+      completedShows,
+      totalShows,
+      totalTravelHours,
+      totalRestDays,
+      averageComfort: healthSummary.averageComfort,
+      lowComfortLegs: healthSummary.lowComfortLegs,
+      projectedHealthPenalty: healthSummary.projectedPenalty,
+      worstLowComfortStreak: healthSummary.worstStreak,
+      healthBreakdown,
+    };
   };
 
   if (loading) {
@@ -1079,6 +1319,19 @@ const TourManager = () => {
               : `-$${Math.abs(stats.totalProfit).toLocaleString()}`;
             const routeSuggestion = optimalRoutes[tour.id];
             const editForm = editForms[tour.id];
+            const scheduleVenue = schedule.venueId ? venues.find((option) => option.id === schedule.venueId) : null;
+            const scheduleIsoDate = schedule.date ? (() => {
+              const parsed = new Date(schedule.date);
+              return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+            })() : undefined;
+            const scheduleMode = schedule.travelMode || DEFAULT_TRAVEL_MODE;
+            const schedulePlan = scheduleVenue
+              ? buildTravelPlanMetrics(
+                  computeDistanceForLeg(tour, scheduleVenue?.location, scheduleIsoDate),
+                  scheduleMode
+                )
+              : null;
+            const scheduleModeConfig = getTravelModeConfig(scheduleMode);
             return (
               <Card key={tour.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardHeader>
@@ -1097,7 +1350,7 @@ const TourManager = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Tour Stats */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-success">${stats.totalRevenue.toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">Total Revenue</p>
@@ -1123,6 +1376,22 @@ const TourManager = () => {
                       <p className="text-xs text-muted-foreground">Travel Time</p>
                       <p className="text-xs text-muted-foreground">{stats.totalRestDays} rest day{stats.totalRestDays === 1 ? '' : 's'}</p>
                     </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-sky-500">{Math.round(stats.averageComfort || 0)}%</p>
+                      <p className="text-xs text-muted-foreground">Avg Travel Comfort</p>
+                      <p className="text-xs text-muted-foreground">{stats.lowComfortLegs} low-comfort leg{stats.lowComfortLegs === 1 ? '' : 's'}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-2xl font-bold ${stats.projectedHealthPenalty > 0 ? 'text-destructive' : 'text-success'}`}>
+                        {stats.projectedHealthPenalty > 0 ? `-${stats.projectedHealthPenalty} HP` : 'Stable'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Projected Health Impact</p>
+                      <p className="text-xs text-muted-foreground">
+                        {stats.worstLowComfortStreak > 1
+                          ? `Streak risk x${stats.worstLowComfortStreak}`
+                          : describeComfort(stats.averageComfort || 0)}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Schedule Show */}
@@ -1131,7 +1400,7 @@ const TourManager = () => {
                       <Plus className="h-4 w-4 text-primary" />
                       Schedule New Show
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
                         <Label htmlFor={`venue-${tour.id}`}>Venue</Label>
                         <Select
@@ -1177,6 +1446,27 @@ const TourManager = () => {
                           placeholder="50"
                         />
                       </div>
+                      <div>
+                        <Label htmlFor={`mode-${tour.id}`}>Travel Mode</Label>
+                        <Select
+                          value={scheduleMode}
+                          onValueChange={(value) => updateVenueSchedule(tour.id, "travelMode", value as TravelMode)}
+                        >
+                          <SelectTrigger id={`mode-${tour.id}`}>
+                            <SelectValue placeholder="Select mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TRAVEL_MODE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label} • {Math.round(option.comfort)}% comfort
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {scheduleModeConfig.description}
+                        </p>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
@@ -1187,7 +1477,7 @@ const TourManager = () => {
                           min={0}
                           value={schedule.travelCost}
                           onChange={(e) => updateVenueSchedule(tour.id, "travelCost", e.target.value)}
-                          placeholder="0"
+                          placeholder={schedulePlan ? schedulePlan.travelCost.toString() : "0"}
                         />
                       </div>
                       <div>
@@ -1198,7 +1488,7 @@ const TourManager = () => {
                           min={0}
                           value={schedule.lodgingCost}
                           onChange={(e) => updateVenueSchedule(tour.id, "lodgingCost", e.target.value)}
-                          placeholder="0"
+                          placeholder={schedulePlan ? schedulePlan.lodgingCost.toString() : "0"}
                         />
                       </div>
                       <div>
@@ -1209,10 +1499,21 @@ const TourManager = () => {
                           min={0}
                           value={schedule.miscCost}
                           onChange={(e) => updateVenueSchedule(tour.id, "miscCost", e.target.value)}
-                          placeholder="0"
+                          placeholder={schedulePlan ? schedulePlan.miscCost.toString() : "0"}
                         />
                       </div>
                     </div>
+                    {schedulePlan && (
+                      <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+                        <span>Distance {Math.round(schedulePlan.distanceKm).toLocaleString()} km</span>
+                        <span>~{schedulePlan.travelTime.toFixed(1)}h travel</span>
+                        <span>Cost ${schedulePlan.travelCost.toLocaleString()}</span>
+                        <span>
+                          Comfort {Math.round(schedulePlan.travelComfort)}% ({describeComfort(schedulePlan.travelComfort)})
+                        </span>
+                        <span>{schedulePlan.restDays} rest day{schedulePlan.restDays === 1 ? '' : 's'}</span>
+                      </div>
+                    )}
                     <div className="flex justify-end">
                       <Button
                         size="sm"
@@ -1314,7 +1615,7 @@ const TourManager = () => {
 
                       <div className="space-y-2">
                         <h5 className="font-semibold text-sm">Add New Tour Stop</h5>
-                        <div className="grid gap-3 md:grid-cols-3">
+                        <div className="grid gap-3 md:grid-cols-4">
                           <div>
                             <Label className="text-xs uppercase text-muted-foreground">Venue</Label>
                             <select
@@ -1392,6 +1693,35 @@ const TourManager = () => {
                               }
                             />
                           </div>
+                          <div>
+                            <Label className="text-xs uppercase text-muted-foreground">Travel Mode</Label>
+                            <select
+                              className="mt-1 w-full rounded-md border border-border bg-background/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                              value={editForm.newVenue.travel_mode}
+                              onChange={(e) =>
+                                setEditForms((prev) => {
+                                  const current = prev[tour.id];
+                                  if (!current) return prev;
+                                  return {
+                                    ...prev,
+                                    [tour.id]: {
+                                      ...current,
+                                      newVenue: {
+                                        ...current.newVenue,
+                                        travel_mode: e.target.value as TravelMode
+                                      }
+                                    }
+                                  };
+                                })
+                              }
+                            >
+                              {TRAVEL_MODE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label} • {Math.round(option.comfort)}% comfort
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                         <Button size="sm" onClick={() => handleAddVenue(tour.id)}>
                           Add Venue
@@ -1431,6 +1761,15 @@ const TourManager = () => {
                           const travelTimeValue = typeof venue.travel_time === 'number' ? venue.travel_time : Number(venue.travel_time || 0);
                           const restDaysValue = typeof venue.rest_days === 'number' ? venue.rest_days : Number(venue.rest_days || 0);
                           const formattedTravelTime = Math.round(travelTimeValue * 10) / 10;
+                          const mode = venue.travel_mode || DEFAULT_TRAVEL_MODE;
+                          const normalizedMode = normalizeTravelMode(mode) ?? DEFAULT_TRAVEL_MODE;
+                          const modeConfig = getTravelModeConfig(normalizedMode);
+                          const healthInfo = stats.healthBreakdown?.[venue.id];
+                          const comfortValue = healthInfo?.comfort ?? getVenueComfort(venue);
+                          const comfortLabel = describeComfort(comfortValue);
+                          const healthPenalty = healthInfo?.penalty ?? 0;
+                          const healthText = healthPenalty < 0 ? `${healthPenalty} HP` : 'Stable';
+                          const healthClass = healthPenalty < 0 ? 'text-destructive' : 'text-muted-foreground';
 
                           return (
                             <div key={venue.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
@@ -1445,6 +1784,12 @@ const TourManager = () => {
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   Costs: ${showCosts.toLocaleString()} (Travel ${travelCost.toLocaleString()} • Lodging ${lodgingCost.toLocaleString()} • Misc ${miscCost.toLocaleString()})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Travel: {modeConfig.label} • {formattedTravelTime || 0}h • Comfort {Math.round(comfortValue)}% ({comfortLabel})
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Rest: {restDaysValue} day{restDaysValue === 1 ? '' : 's'}
                                 </p>
                                 {venue.environment_modifiers?.projections?.attendance && (
                                   <p className="text-xs text-muted-foreground">
@@ -1466,8 +1811,13 @@ const TourManager = () => {
                                 <p className={`text-xs font-semibold ${showProfitColor}`}>
                                   Profit: ${showProfit.toLocaleString()}
                                 </p>
+                                <p className={`text-xs font-semibold ${healthClass}`}>
+                                  Health impact: {healthText}
+                                  {healthInfo?.streak && healthInfo.streak > 1 ? ` (streak x${healthInfo.streak})` : ''}
+                                </p>
                               </div>
                               <div className="flex items-center gap-2">
+                                <Badge variant="outline">{modeConfig.label}</Badge>
                                 <Badge variant="outline" className={getStatusColor(venue.status)}>
                                   {venue.status}
                                 </Badge>

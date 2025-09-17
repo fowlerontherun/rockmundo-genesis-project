@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
+import { GameDataProvider } from "./hooks/useGameData";
 import Index from "./pages/Index";
 import PerformGig from "./pages/PerformGig";
 import Auth from "./pages/Auth";
@@ -11,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
 import GigBooking from "./pages/GigBooking";
 import Profile from "./pages/Profile";
+import CharacterCreation from "./pages/CharacterCreation";
 import MusicStudio from "./pages/MusicStudio";
 import WorldPulse from "./pages/WorldPulse";
 import Schedule from "./pages/Schedule";
@@ -39,7 +41,7 @@ import WorldEnvironment from "./pages/WorldEnvironment";
 import SongManager from "./pages/SongManager";
 import InventoryManager from "./pages/InventoryManager";
 import PlayerStatistics from "./pages/PlayerStatistics";
-import CharacterCreation from "./pages/CharacterCreation";
+import Busking from "./pages/Busking";
 
 const queryClient = new QueryClient();
 
@@ -59,7 +61,9 @@ function App() {
                 <Route path="band" element={<BandManager />} />
                 <Route path="gigs" element={<GigBooking />} />
                 <Route path="gigs/perform/:gigId" element={<PerformGig />} />
+                <Route path="busking" element={<Busking />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="character-create" element={<CharacterCreation />} />
                 <Route path="music" element={<MusicStudio />} />
                 <Route path="charts" element={<WorldPulse />} />
                 <Route path="schedule" element={<Schedule />} />

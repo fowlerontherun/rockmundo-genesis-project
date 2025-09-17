@@ -58,6 +58,7 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          profile_id: string
           user_id: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          profile_id: string
           user_id: string
         }
         Update: {
@@ -76,6 +78,7 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          profile_id?: string
           user_id?: string
         }
         Relationships: []
@@ -173,6 +176,156 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      busking_locations: {
+        Row: {
+          ambiance: string | null
+          base_payout: number
+          cooldown_minutes: number
+          created_at: string
+          description: string | null
+          experience_reward: number
+          fame_reward: number
+          id: string
+          name: string
+          neighborhood: string | null
+          recommended_skill: number
+          risk_level: string
+        }
+        Insert: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+        }
+        Update: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+        }
+        Relationships: []
+      }
+      busking_modifiers: {
+        Row: {
+          created_at: string
+          description: string | null
+          experience_bonus: number
+          fame_multiplier: number
+          id: string
+          name: string
+          payout_multiplier: number
+          rarity: string
+          risk_modifier: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name?: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Relationships: []
+      }
+      busking_sessions: {
+        Row: {
+          cash_earned: number
+          created_at: string
+          crowd_reaction: string | null
+          duration_minutes: number
+          experience_gained: number
+          failure_reason: string | null
+          fame_gained: number
+          id: string
+          location_id: string
+          modifier_id: string | null
+          notes: string | null
+          performance_score: number
+          risk_level: string | null
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          cash_earned?: number
+          created_at?: string
+          crowd_reaction?: string | null
+          duration_minutes?: number
+          experience_gained?: number
+          failure_reason?: string | null
+          fame_gained?: number
+          id?: string
+          location_id: string
+          modifier_id?: string | null
+          notes?: string | null
+          performance_score?: number
+          risk_level?: string | null
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          cash_earned?: number
+          created_at?: string
+          crowd_reaction?: string | null
+          duration_minutes?: number
+          experience_gained?: number
+          failure_reason?: string | null
+          fame_gained?: number
+          id?: string
+          location_id?: string
+          modifier_id?: string | null
+          notes?: string | null
+          performance_score?: number
+          risk_level?: string | null
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "busking_sessions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "busking_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_modifier_id_fkey"
+            columns: ["modifier_id"]
+            isOneToOne: false
+            referencedRelation: "busking_modifiers"
             referencedColumns: ["id"]
           }
         ]
@@ -345,6 +498,7 @@ export type Database = {
           id: string
           leader_id: string
           max_members: number | null
+          logo_url: string | null
           name: string
           popularity: number | null
           updated_at: string | null
@@ -357,6 +511,7 @@ export type Database = {
           id?: string
           leader_id: string
           max_members?: number | null
+          logo_url?: string | null
           name: string
           popularity?: number | null
           updated_at?: string | null
@@ -369,10 +524,77 @@ export type Database = {
           id?: string
           leader_id?: string
           max_members?: number | null
+          logo_url?: string | null
           name?: string
           popularity?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
+        }
+        Relationships: []
+      }
+      cities: {
+        Row: {
+          bonuses: string | null
+          busking_value: number
+          cost_of_living: number | null
+          country: string
+          created_at: string | null
+          cultural_events: string[]
+          description: string | null
+          districts: Json
+          dominant_genre: string | null
+          famous_resident: string | null
+          id: string
+          local_bonus: number | null
+          music_scene: number | null
+          name: string
+          population: number | null
+          travel_hub: string | null
+          travel_nodes: Json
+          unlocked: boolean | null
+          venues: number | null
+        }
+        Insert: {
+          bonuses?: string | null
+          busking_value?: number
+          cost_of_living?: number | null
+          country: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
+        }
+        Update: {
+          bonuses?: string | null
+          busking_value?: number
+          cost_of_living?: number | null
+          country?: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name?: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
         }
         Relationships: []
       }
@@ -922,10 +1144,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at: string
+          digital_sales: number
           id: string
+          physical_sales: number
           rank: number
           song_id: string
           total_streams: number
+          total_sales: number
           trend: string
           trend_change: number
           updated_at: string
@@ -935,10 +1160,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank: number
           song_id: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -948,10 +1176,13 @@ export type Database = {
           chart_date?: string
           chart_type?: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank?: number
           song_id?: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -1021,6 +1252,7 @@ export type Database = {
           id: string
           payment: number | null
           scheduled_date: string
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           updated_at: string | null
           venue_id: string
@@ -1033,6 +1265,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id: string
@@ -1045,6 +1278,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date?: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id?: string
@@ -1299,55 +1533,55 @@ export type Database = {
       }
       player_skills: {
         Row: {
-          bass: number | null
-          business: number | null
-          composition: number | null
+          bass: number
+          business: number
+          composition: number
           created_at: string | null
-          creativity: number | null
-          drums: number | null
-          guitar: number | null
+          creativity: number
+          drums: number
+          guitar: number
           id: string
-          marketing: number | null
-          performance: number | null
-          songwriting: number | null
-          technical: number | null
+          marketing: number
+          performance: number
+          songwriting: number
+          technical: number
           updated_at: string | null
           user_id: string
-          vocals: number | null
+          vocals: number
         }
         Insert: {
-          bass?: number | null
-          business?: number | null
-          composition?: number | null
+          bass?: number
+          business?: number
+          composition?: number
           created_at?: string | null
-          creativity?: number | null
-          drums?: number | null
-          guitar?: number | null
+          creativity?: number
+          drums?: number
+          guitar?: number
           id?: string
-          marketing?: number | null
-          performance?: number | null
-          songwriting?: number | null
-          technical?: number | null
+          marketing?: number
+          performance?: number
+          songwriting?: number
+          technical?: number
           updated_at?: string | null
           user_id: string
-          vocals?: number | null
+          vocals?: number
         }
         Update: {
-          bass?: number | null
-          business?: number | null
-          composition?: number | null
+          bass?: number
+          business?: number
+          composition?: number
           created_at?: string | null
-          creativity?: number | null
-          drums?: number | null
-          guitar?: number | null
+          creativity?: number
+          drums?: number
+          guitar?: number
           id?: string
-          marketing?: number | null
-          performance?: number | null
-          songwriting?: number | null
-          technical?: number | null
+          marketing?: number
+          performance?: number
+          songwriting?: number
+          technical?: number
           updated_at?: string | null
           user_id?: string
-          vocals?: number | null
+          vocals?: number
         }
         Relationships: []
       }
@@ -1481,6 +1715,11 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          current_city_id: string | null
+          current_location: string
+          gender: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth: string | null
+          age: number
           cash: number | null
           current_activity: string | null
           current_city_id: string | null
@@ -1490,20 +1729,28 @@ export type Database = {
           experience: number | null
           fame: number | null
           fans: number | null
+          health: number | null
           followers: number | null
           id: string
+          is_active: boolean
           level: number | null
           primary_instrument: string | null
           travel_eta: string | null
           travel_mode: string | null
           travel_started_at: string | null
           updated_at: string | null
+          unlock_cost: number
           user_id: string
           username: string
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          current_city_id?: string | null
+          current_location?: string
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth?: string | null
+          age?: number
           cash?: number | null
           current_activity?: string | null
           current_city_id?: string | null
@@ -1513,20 +1760,28 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number | null
           followers?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
           primary_instrument?: string | null
           travel_eta?: string | null
           travel_mode?: string | null
           travel_started_at?: string | null
           updated_at?: string | null
+          unlock_cost?: number
           user_id: string
           username: string
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          current_city_id?: string | null
+          current_location?: string
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth?: string | null
+          age?: number
           cash?: number | null
           current_activity?: string | null
           current_city_id?: string | null
@@ -1536,18 +1791,36 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number | null
           followers?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
           primary_instrument?: string | null
           travel_eta?: string | null
           travel_mode?: string | null
           travel_started_at?: string | null
           updated_at?: string | null
+          unlock_cost?: number
           user_id?: string
           username?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_city_of_birth_fkey"
+            columns: ["city_of_birth"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       seasons: {
         Row: {
@@ -1906,6 +2179,7 @@ export type Database = {
           date: string
           id: string
           revenue: number | null
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           ticket_price: number | null
           tickets_sold: number | null
@@ -1915,12 +2189,15 @@ export type Database = {
           misc_cost: number | null
           travel_time: number | null
           rest_days: number | null
+          travel_mode: string | null
+          travel_comfort: number | null
           venue_id: string
         }
         Insert: {
           date: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -1930,12 +2207,15 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id: string
         }
         Update: {
           date?: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -1945,6 +2225,8 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id?: string
         }
         Relationships: [
@@ -2214,6 +2496,9 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           display_name: string | null
+          gender: Database["public"]["Enums"]["profile_gender"] | null
+          city_of_birth: string | null
+          age: number | null
           id: string
           user_id: string
           username: string
@@ -2227,6 +2512,63 @@ export type Database = {
           remaining_count: number
           total_achievements: number
           user_id: string
+        }
+        Relationships: []
+      }
+      schedule_events: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          duration_minutes: number
+          energy_cost: number | null
+          id: string
+          last_notified: string | null
+          location: string
+          recurrence_rule: string | null
+          reminder_minutes: number | null
+          status: string
+          time: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description?: string | null
+          duration_minutes?: number
+          energy_cost?: number | null
+          id?: string
+          last_notified?: string | null
+          location: string
+          recurrence_rule?: string | null
+          reminder_minutes?: number | null
+          status?: string
+          time: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_minutes?: number
+          energy_cost?: number | null
+          id?: string
+          last_notified?: string | null
+          location?: string
+          recurrence_rule?: string | null
+          reminder_minutes?: number | null
+          status?: string
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2293,6 +2635,12 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "typing" | "muted"
+      profile_gender:
+        | "female"
+        | "male"
+        | "non_binary"
+        | "other"
+        | "prefer_not_to_say"
     }
     CompositeTypes: {
       [_ in never]: never

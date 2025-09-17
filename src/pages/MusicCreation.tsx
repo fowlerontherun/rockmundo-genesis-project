@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import type { Database } from "@/integrations/supabase/types";
 import { Music, Play, Trash2, Star, Coins, Volume2, Pencil } from "lucide-react";
 
 interface Song {
@@ -72,7 +73,7 @@ type SupabaseSongRow = {
   audio_layers?: unknown;
 };
 
-type ProfileInfo = { cash?: number | null } & Record<string, unknown>;
+type ProfileInfo = Database['public']['Tables']['profiles']['Row'];
 
 interface ToneRecorder {
   start?: () => Promise<void>;
@@ -118,6 +119,7 @@ interface PlayerSkills {
   bass: number;
   performance: number;
   songwriting: number;
+  profile_id?: string;
 }
 
 const toNumber = (value: unknown, fallback = 0): number => {
@@ -207,7 +209,7 @@ const MusicCreation = () => {
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [recording, setRecording] = useState(false);
+  const [recordingSession, setRecordingSession] = useState(false);
   const [localRecordings, setLocalRecordings] = useState<Record<string, LocalRecording[]>>({});
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -237,18 +239,47 @@ const MusicCreation = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const [songsResponse, skillsResponse, profileResponse] = await Promise.all([
-        supabase.from("songs").select("*").eq("artist_id", user?.id).order("created_at", { ascending: false }),
-        supabase.from("player_skills").select("*").eq("user_id", user?.id).single(),
-        supabase.from("profiles").select("*").eq("user_id", user?.id).single()
-      ]);
+      const { data: songsData, error: songsError } = await supabase
+        .from("songs")
+        .select("*")
+        .eq("artist_id", user?.id)
+        .order("created_at", { ascending: false });
 
-      if (songsResponse.data) {
-        const rawSongs = songsResponse.data as SupabaseSongRow[];
+      if (songsError) throw songsError;
+      if (songsData) {
+        const rawSongs = songsData as SupabaseSongRow[];
         setSongs(rawSongs.map(normalizeSong));
       }
-      if (skillsResponse.data) setSkills(skillsResponse.data as PlayerSkills);
-      if (profileResponse.data) setProfile(profileResponse.data as ProfileInfo);
+
+      const { data: profileRow, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user?.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        throw profileError;
+      }
+
+      const activeProfile = profileRow as ProfileInfo | null;
+      setProfile(activeProfile ?? null);
+
+      if (activeProfile?.id) {
+        const { data: skillsRow, error: skillsError } = await supabase
+          .from("player_skills")
+          .select("*")
+          .eq("profile_id", activeProfile.id)
+          .maybeSingle();
+
+        if (skillsError && skillsError.code !== "PGRST116") {
+          throw skillsError;
+        }
+
+        setSkills((skillsRow as PlayerSkills | null) ?? null);
+      } else {
+        setSkills(null);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -300,6 +331,15 @@ const MusicCreation = () => {
       return;
     }
 
+    if (!profile?.id || !skills) {
+      toast({
+        variant: "destructive",
+        title: "Character Required",
+        description: "Select or create an active character before composing songs."
+      });
+      return;
+    }
+
     setCreating(true);
 
     try {
@@ -331,13 +371,14 @@ const MusicCreation = () => {
         .update({
           songwriting: Math.min(100, (skills?.songwriting || 0) + xpGain)
         })
-        .eq("user_id", user?.id);
+        .eq("profile_id", profile.id);
 
       // Add activity
       await supabase
         .from("activity_feed")
         .insert({
           user_id: user?.id,
+          profile_id: profile.id,
           activity_type: "songwriting",
           message: `Created new song: "${newSong.title}" (Quality: ${quality}%)`,
           earnings: 0
@@ -369,7 +410,16 @@ const MusicCreation = () => {
   };
 
   const recordSong = async (song: Song) => {
-    if ((profile?.cash || 0) < song.recording_cost) {
+    if (!profile?.id || !skills) {
+      toast({
+        variant: "destructive",
+        title: "Character Required",
+        description: "Activate a character before recording songs."
+      });
+      return;
+    }
+
+    if ((profile.cash || 0) < song.recording_cost) {
       toast({
         variant: "destructive",
         title: "Insufficient Funds",
@@ -390,7 +440,7 @@ const MusicCreation = () => {
         supabase
           .from("profiles")
           .update({ cash: (profile?.cash || 0) - song.recording_cost })
-          .eq("user_id", user?.id)
+          .eq("id", profile.id)
       ]);
 
       if (songUpdate.error) throw songUpdate.error;
@@ -406,13 +456,14 @@ const MusicCreation = () => {
           performance: Math.min(100, (skills?.performance || 0) + performanceXP),
           vocals: Math.min(100, (skills?.vocals || 0) + vocalXP)
         })
-        .eq("user_id", user?.id);
+        .eq("profile_id", profile.id);
 
       // Add activity
       await supabase
         .from("activity_feed")
         .insert({
           user_id: user?.id,
+          profile_id: profile.id,
           activity_type: "recording",
           message: `Recorded "${song.title}" in the studio`,
           earnings: -song.recording_cost
