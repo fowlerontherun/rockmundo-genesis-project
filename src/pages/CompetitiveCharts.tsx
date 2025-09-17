@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { Trophy, TrendingUp, Crown, Award, Music, Zap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -208,8 +208,10 @@ const CompetitiveCharts: React.FC = () => {
       previousRankingsRef.current = nextPreviousRanks;
       setPlayerRankings(updatedRankings);
       setUserRank(computedUserRank);
-    } catch (error) {
-      console.error('Error fetching player rankings:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to fetch player rankings';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error(`${fallbackMessage}:`, errorMessage, error);
       setPlayerRankings([]);
       setUserRank(null);
       previousRankingsRef.current = new Map();
@@ -308,8 +310,10 @@ const CompetitiveCharts: React.FC = () => {
       if (updateCompetitionError) throw updateCompetitionError;
 
       return true;
-    } catch (error) {
-      console.error('Error finalizing competition:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to finalize competition';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error(`${fallbackMessage}:`, errorMessage, error);
       return false;
     }
   }, []);
@@ -413,9 +417,11 @@ const CompetitiveCharts: React.FC = () => {
 
       setCompetitions(competitionsData);
       setRegisteredCompetitions(registeredSet);
-    } catch (error) {
-      console.error('Error fetching competitions:', error);
-      toast.error('Failed to load competitions');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load competitions';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error fetching competitions:', errorMessage, error);
+      toast.error(errorMessage);
     }
   }, [user, profile?.id, finalizeCompetition]);
 
@@ -432,9 +438,11 @@ const CompetitiveCharts: React.FC = () => {
     try {
       setLoading(true);
       await Promise.all([fetchRankings(), fetchCompetitions(), fetchAchievements()]);
-    } catch (error) {
-      console.error('Error loading competitive data:', error);
-      toast.error('Failed to load competitive data');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load competitive data';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading competitive data:', errorMessage, error);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -512,7 +520,8 @@ const CompetitiveCharts: React.FC = () => {
       if (key === 'level') return profile.level >= requiredValue;
       if (key === 'fame') return profile.fame >= requiredValue;
       if (skills && key in skills) {
-        return (skills as Record<string, number>)[key] >= requiredValue;
+        const playerSkill = skills?.[key as keyof PlayerSkills] ?? 0;
+        return playerSkill >= requiredValue;
       }
       return true;
     });
@@ -662,9 +671,11 @@ const CompetitiveCharts: React.FC = () => {
       );
 
       toast.success(`Left ${competition.name}`);
-    } catch (error) {
-      console.error('Error leaving competition:', error);
-      toast.error('Failed to leave competition');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to leave competition';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error leaving competition:', errorMessage, error);
+      toast.error(errorMessage);
     }
   };
 

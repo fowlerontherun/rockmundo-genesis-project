@@ -348,7 +348,7 @@ const WorldPulse = () => {
     loadWeeklyChart(selectedWeek);
   }, [availableWeeks, currentWeekIndex, loadWeeklyChart]);
 
-  const handleRefreshCharts = async () => {
+  const handleRefreshCharts = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const { error } = await supabase.rpc("refresh_global_charts");

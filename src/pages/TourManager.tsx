@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
@@ -88,6 +89,8 @@ interface NewTourVenueDetails {
   travelCost: number;
   lodgingCost: number;
   miscCost: number;
+  travelTime?: number;
+  restDays?: number;
 }
 
 interface RouteSuggestion {
@@ -251,6 +254,8 @@ const TourManager = () => {
   const [marketingSpendUpdates, setMarketingSpendUpdates] = useState<Record<string, string>>({});
   const [updatingVenue, setUpdatingVenue] = useState<string | null>(null);
   const [performingVenue, setPerformingVenue] = useState<string | null>(null);
+  const [editingTourId, setEditingTourId] = useState<string | null>(null);
+  const [editForms, setEditForms] = useState<Record<string, EditTourForm>>({});
 
   const [newTour, setNewTour] = useState({
     name: "",
@@ -454,6 +459,14 @@ const TourManager = () => {
         status: 'scheduled',
       };
 
+      if (typeof details.travelTime === 'number') {
+        insertPayload.travel_time = details.travelTime;
+      }
+
+      if (typeof details.restDays === 'number') {
+        insertPayload.rest_days = details.restDays;
+      }
+
       let environmentForInsert: EnvironmentModifierSummary | null = null;
       if (environmentSummary) {
         environmentForInsert = {
@@ -649,7 +662,6 @@ const TourManager = () => {
 
   const editTour = async (tourId: string) => {
     if (!user) return;
-
     const form = editForms[tourId];
     if (!form) {
       toast({
@@ -724,7 +736,6 @@ const TourManager = () => {
         .update({ status: 'cancelled' })
         .eq('id', tourId)
         .eq('user_id', user.id);
-
       if (error) throw error;
 
       const { error: venuesError } = await supabase

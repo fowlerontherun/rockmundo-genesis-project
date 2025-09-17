@@ -12,7 +12,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables, Database } from '@/integrations/supabase/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import {
   MessageSquare,
   Users,
@@ -26,7 +26,6 @@ import {
   Radio,
   Headphones,
   Heart,
-  Loader2,
   Lock,
   Crown,
   Loader2,

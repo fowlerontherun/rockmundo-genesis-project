@@ -1,25 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Trophy, 
-  Star, 
-  Crown, 
+import {
+  Trophy,
+  Star,
+  Crown,
   Target,
   Clock,
   CheckCircle,
-  Lock,
-  AlertCircle
+  Lock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 
-type AchievementRequirements = Record<string, number | string>;
-type AchievementRewards = Record<string, number | string>;
-type AchievementProgress = Record<string, number | string>;
+type AchievementValue = number | string;
+
+type AchievementRequirements = Record<string, AchievementValue>;
+type AchievementRewards = Record<string, AchievementValue>;
+type AchievementProgress = Record<string, AchievementValue>;
 
 interface Achievement {
   id: string;
@@ -44,10 +43,22 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 };
 
+const isAchievementValue = (value: unknown): value is AchievementValue => {
+  return typeof value === "number" || typeof value === "string";
+};
+
 const toStringOrEmpty = (value: unknown): string => {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return "";
+};
+
+const formatCurrencyValue = (value: AchievementValue): string => {
+  return typeof value === "number" ? value.toLocaleString() : value;
+};
+
+const formatBasicValue = (value: AchievementValue): string => {
+  return typeof value === "string" ? value : value.toString();
 };
 
 const parseRequirements = (value: unknown): AchievementRequirements => {
@@ -56,7 +67,7 @@ const parseRequirements = (value: unknown): AchievementRequirements => {
   }
 
   return Object.entries(value).reduce<AchievementRequirements>((acc, [key, entryValue]) => {
-    if (typeof entryValue === "number" || typeof entryValue === "string") {
+    if (isAchievementValue(entryValue)) {
       acc[key] = entryValue;
     }
     return acc;
@@ -69,7 +80,7 @@ const parseRewards = (value: unknown): AchievementRewards => {
   }
 
   return Object.entries(value).reduce<AchievementRewards>((acc, [key, entryValue]) => {
-    if (typeof entryValue === "number" || typeof entryValue === "string") {
+    if (isAchievementValue(entryValue)) {
       acc[key] = entryValue;
     }
     return acc;
@@ -82,7 +93,7 @@ const parseProgress = (value: unknown): AchievementProgress => {
   }
 
   return Object.entries(value).reduce<AchievementProgress>((acc, [key, entryValue]) => {
-    if (typeof entryValue === "number" || typeof entryValue === "string") {
+    if (isAchievementValue(entryValue)) {
       acc[key] = entryValue;
     }
     return acc;
@@ -248,25 +259,21 @@ const Achievements = () => {
     return Object.entries(requirements).map(([key, value]) => {
       switch (key) {
         case "level":
-          return `Reach level ${value}`;
+          return `Reach level ${formatBasicValue(value)}`;
         case "guitar_skill":
-          return `Reach ${value} guitar skill`;
+          return `Reach ${formatBasicValue(value)} guitar skill`;
         case "vocals_skill":
-          return `Reach ${value} vocals skill`;
+          return `Reach ${formatBasicValue(value)} vocals skill`;
         case "total_spent":
-          return typeof value === "number"
-            ? `Spend $${value.toLocaleString()}`
-            : `Spend $${value}`;
+          return `Spend $${formatCurrencyValue(value)}`;
         case "total_cash":
-          return typeof value === "number"
-            ? `Accumulate $${value.toLocaleString()}`
-            : `Accumulate $${value}`;
+          return `Accumulate $${formatCurrencyValue(value)}`;
         case "chart_position":
-          return `Reach #${value} on charts`;
+          return `Reach #${formatBasicValue(value)} on charts`;
         case "join":
           return "Join RockMundo";
         default:
-          return `${key}: ${value}`;
+          return `${key}: ${formatBasicValue(value)}`;
       }
     }).join(", ");
   };
@@ -275,15 +282,13 @@ const Achievements = () => {
     return Object.entries(rewards).map(([key, value]) => {
       switch (key) {
         case "experience":
-          return `+${value} XP`;
+          return `+${formatBasicValue(value)} XP`;
         case "cash":
-          return typeof value === "number"
-            ? `+$${value.toLocaleString()}`
-            : `+$${value}`;
+          return `+$${formatCurrencyValue(value)}`;
         case "fame":
-          return `+${value} Fame`;
+          return `+${formatBasicValue(value)} Fame`;
         default:
-          return `${key}: ${value}`;
+          return `${key}: ${formatBasicValue(value)}`;
       }
     }).join(", ");
   };
