@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,13 +59,9 @@ const PerformGig = () => {
   const [fanGain, setFanGain] = useState(0);
   const [experienceGain, setExperienceGain] = useState(0);
 
-  useEffect(() => {
-    if (gigId) {
-      loadGig();
-    }
-  }, [gigId]);
+  const loadGig = useCallback(async () => {
+    if (!gigId) return;
 
-  const loadGig = async () => {
     try {
       const { data, error } = await supabase
         .from('gigs')
@@ -95,7 +91,13 @@ const PerformGig = () => {
         description: "Failed to load gig details"
       });
     }
-  };
+  }, [gigId, supabase, toast]);
+
+  useEffect(() => {
+    if (gigId) {
+      loadGig();
+    }
+  }, [gigId, loadGig]);
 
   const startPerformance = async () => {
     setIsPerforming(true);
