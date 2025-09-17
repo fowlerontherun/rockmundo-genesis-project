@@ -418,7 +418,7 @@ const createEmptySchedule = (): VenueScheduleForm => ({
 });
 const TourManager = () => {
   const { user } = useAuth();
-  const { profile, skills, updateProfile } = useGameData();
+  const { profile, skills, unlockedSkills, updateProfile } = useGameData();
   const { toast } = useToast();
   const [tours, setTours] = useState<Tour[]>([]);
   const [venues, setVenues] = useState<VenueRow[]>([]);
@@ -551,16 +551,60 @@ const TourManager = () => {
 
       // Check if player meets tour requirements
       const tourRequirements = { fame: 1000, performance: 50 };
-      const { meets, missing } = meetsRequirements(tourRequirements, {
-        fame: profile.fame,
-        performance: skills.performance
+
+      const formatRequirementLabel = (slug: string) =>
+        slug
+          .split("_")
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+
+      const lockedRequirements: string[] = [];
+      const numericRequirements: Record<string, number> = {};
+
+      Object.entries(tourRequirements).forEach(([slug, requiredValue]) => {
+        const isSkillRequirement = slug in skills;
+        if (isSkillRequirement && unlockedSkills[slug] !== true) {
+          lockedRequirements.push(`${formatRequirementLabel(slug)} (locked)`);
+          return;
+        }
+
+        numericRequirements[slug] = requiredValue;
       });
 
-      if (!meets) {
+      const playerStats = Object.keys(numericRequirements).reduce<Record<string, number>>((acc, slug) => {
+        if (slug === "fame") {
+          acc[slug] = profile.fame;
+        } else {
+          const value = skills[slug as keyof typeof skills];
+          acc[slug] = typeof value === "number" ? value : 0;
+        }
+        return acc;
+      }, {});
+
+      const { meets, missing } = meetsRequirements(numericRequirements, playerStats);
+
+      const formattedMissing = missing.map(entry => {
+        const [rawSlug] = entry.split(":");
+        const slug = rawSlug?.trim() ?? "";
+        const requiredValue = numericRequirements[slug];
+        const playerValue = playerStats[slug];
+        if (!slug || requiredValue === undefined) {
+          return entry;
+        }
+
+        const requirementLabel = formatRequirementLabel(slug);
+        const displayPlayerValue = typeof playerValue === "number" ? playerValue : 0;
+        return `${requirementLabel} (need ${requiredValue}, you have ${displayPlayerValue})`;
+      });
+
+      const allMissing = [...lockedRequirements, ...formattedMissing];
+      const meetsAllRequirements = lockedRequirements.length === 0 && meets;
+
+      if (!meetsAllRequirements) {
         toast({
           variant: "destructive",
           title: "Requirements Not Met",
-          description: `You need: ${missing.join(', ')}`
+          description: `You need: ${allMissing.join(', ')}`
         });
         return;
       }
