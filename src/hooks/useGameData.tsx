@@ -23,6 +23,9 @@ export type AttributesMap = Record<string, AttributeEntry>;
 export type PlayerSkills = Record<string, number> & { updated_at?: string | null };
 export type UnlockedSkillsMap = Record<string, boolean>;
 
+const sortCharacters = (characters: PlayerProfile[]) =>
+  [...characters].sort((a, b) => a.slot_number - b.slot_number);
+
 export interface CreateCharacterInput {
   username: string;
   displayName?: string;
@@ -138,6 +141,7 @@ const useProvideGameData = (): GameDataContextValue => {
   const clearSelectedCharacter = useCallback(() => {
     persistCharacterId(null);
     setSelectedCharacterId(null);
+    persistCharacterId(null);
     setProfile(null);
     setSkillDefinitions([]);
     setSkillProgress([]);
@@ -150,7 +154,7 @@ const useProvideGameData = (): GameDataContextValue => {
   }, []);
 
   const resolveCurrentCity = useCallback(
-    async (cityId: string | null) => {
+    async (cityId: Nullable<string>) => {
       if (!cityId) {
         setCurrentCity(null);
         return null;
@@ -166,7 +170,7 @@ const useProvideGameData = (): GameDataContextValue => {
         .eq("id", cityId)
         .maybeSingle();
 
-      if (cityError && status !== 406) {
+      if (cityError && cityStatus !== 406) {
         console.error("Error fetching current city:", cityError);
         return null;
       }
@@ -208,10 +212,6 @@ const useProvideGameData = (): GameDataContextValue => {
       const fallbackId = hasStoredCharacter
         ? storedId
         : activeCharacterId ?? list[0]?.id ?? null;
-
-      if (fallbackId !== selectedCharacterId) {
-        updateSelectedCharacterId(fallbackId);
-      }
 
       if (!fallbackId) {
         clearSelectedCharacter();
@@ -530,6 +530,7 @@ const useProvideGameData = (): GameDataContextValue => {
         }
 
         setSkillUnlockRows(prev => prev.filter(row => !(row.profile_id === activeProfileId && row.skill_id === definition.id)));
+
       }
     },
     [selectedCharacterId, skillDefinitions, user]
@@ -627,8 +628,12 @@ const useProvideGameData = (): GameDataContextValue => {
         };
       });
 
-      setAttributes(nextAttributes);
-      return nextAttributes;
+        setAttributes(data);
+        return data;
+      } catch (updateError) {
+        console.error("Error updating attributes:", updateError);
+        throw updateError;
+      }
     },
     [attributeDefinitions, attributes, selectedCharacterId, user]
   );
@@ -719,7 +724,6 @@ const useProvideGameData = (): GameDataContextValue => {
       }
 
       setCharactersLoading(true);
-      setError(null);
 
       try {
         if (unlockCost > 0) {
@@ -745,7 +749,6 @@ const useProvideGameData = (): GameDataContextValue => {
 
         if (profileInsertError) throw profileInsertError;
         if (!newProfile) throw new Error("Failed to create character profile.");
-
         if (attributeDefinitions.length > 0) {
           const attributePayload = attributeDefinitions.map(definition => ({
             profile_id: newProfile.id,
@@ -757,8 +760,7 @@ const useProvideGameData = (): GameDataContextValue => {
             .from("profile_attributes")
             .upsert(attributePayload, { onConflict: "profile_id,attribute_id" });
 
-          if (attributeInsertError) throw attributeInsertError;
-        }
+        if (attributesInsertError) throw attributesInsertError;
 
         setCharacters(prev => [...prev, newProfile].sort((a, b) => a.slot_number - b.slot_number));
 
@@ -850,7 +852,10 @@ const useProvideGameData = (): GameDataContextValue => {
   }, [skillDefinitions, skillProgress, skillsUpdatedAt]);
 
   const hasCharacters = useMemo(() => characters.length > 0, [characters]);
-  const loading = useMemo(() => charactersLoading || dataLoading, [charactersLoading, dataLoading]);
+  const loading = useMemo(
+    () => charactersLoading || dataLoading,
+    [charactersLoading, dataLoading]
+  );
 
   return {
     characters,

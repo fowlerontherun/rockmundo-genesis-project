@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { AttributeFocus, AttributeKey, calculateExperienceReward, extractAttributeScores } from "@/utils/gameBalance";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Music,
@@ -240,12 +241,12 @@ const slugifyName = (value: string): string =>
     .replace(/(^-|-$)+/g, "");
 
 const defaultEngineerName = "Self-produced";
+const RECORDING_ATTRIBUTE_KEYS: AttributeKey[] = ["technical_mastery", "creative_insight"];
 
 const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, updateProfile, updateSkills, addActivity } = useGameData();
-
+  const { profile, skills, attributes, updateProfile, updateSkills, updateAttributes, addActivity } = useGameData();
   const [songs, setSongs] = useState<Song[]>([]);
   const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
   const [tracksBySession, setTracksBySession] = useState<Record<string, ProductionTrack[]>>({});
@@ -896,18 +897,47 @@ const MusicCreation = () => {
 
       if (songError) throw songError;
 
+      const attributeScores = extractAttributeScores(attributes);
+      const recordingFocus: AttributeFocus = "songwriting";
+      const experienceGain = Math.max(
+        0,
+        calculateExperienceReward(session.quality_gain * 5, attributeScores, recordingFocus)
+      );
+
       if (profile) {
+        const xpResult = applyAttributeToValue(session.quality_gain * 5, attributes, RECORDING_ATTRIBUTE_KEYS);
         await updateProfile({
           cash: Math.max(0, (profile.cash ?? 0) - session.total_cost),
-          experience: (profile.experience ?? 0) + session.quality_gain * 5
+          experience: (profile.experience ?? 0) + experienceGain
         });
       }
 
       if (skills) {
+        const performanceGain = applyAttributeToValue(Math.round(session.quality_gain / 4), attributes, SKILL_ATTRIBUTE_MAP.performance).value;
+        const vocalGain = applyAttributeToValue(Math.round(session.total_takes / 2), attributes, SKILL_ATTRIBUTE_MAP.vocals).value;
         await updateSkills({
-          performance: Math.min(100, skills.performance + Math.round(session.quality_gain / 4)),
-          vocals: Math.min(100, skills.vocals + Math.round(session.total_takes / 2))
+          performance: Math.min(100, skills.performance + performanceGain),
+          vocals: Math.min(100, skills.vocals + vocalGain)
         });
+      }
+
+      const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
+      const currentMusicality = attributeScores.musicality ?? 0;
+      const currentCharisma = attributeScores.charisma ?? 0;
+
+      const musicalityGain = Math.round(experienceGain * 0.6);
+      const charismaGain = Math.round(experienceGain * 0.25);
+
+      if (musicalityGain > 0) {
+        attributeUpdates.musicality = Math.min(1000, Math.round(currentMusicality + musicalityGain));
+      }
+
+      if (charismaGain > 0) {
+        attributeUpdates.charisma = Math.min(1000, Math.round(currentCharisma + charismaGain));
+      }
+
+      if (Object.keys(attributeUpdates).length > 0) {
+        await updateAttributes(attributeUpdates);
       }
 
       await addActivity(

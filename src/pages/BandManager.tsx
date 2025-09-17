@@ -33,8 +33,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
-import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 
 interface BandMember {
   id: string;
@@ -154,7 +153,22 @@ const getBandInitials = (name: string): string => {
 const BandManager = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { profile, skills } = useGameData();
+  const { profile, skills, attributes } = useGameData();
+  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+    "guitar",
+    "vocals",
+    "drums",
+    "bass",
+    "performance",
+    "songwriting",
+    "composition"
+  ];
+  const attributeKeys: (keyof PlayerAttributes)[] = [
+    "creativity",
+    "business",
+    "marketing",
+    "technical"
+  ];
 
   const [band, setBand] = useState<Band | null>(null);
   const [members, setMembers] = useState<BandMember[]>([]);
@@ -863,12 +877,6 @@ const BandManager = () => {
     return <Music className="h-4 w-4" />;
   };
 
-  const getSkillColor = (value: number) => {
-    if (value >= 80) return "text-success";
-    if (value >= 60) return "text-warning";
-    return "text-muted-foreground";
-  };
-
   const getEventTypeIcon = (type?: string | null) => {
     const normalized = type?.toLowerCase() ?? '';
 
@@ -1287,15 +1295,40 @@ const BandManager = () => {
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium">Skills</h4>
                     {member.is_player && skills ? (
-                      Object.entries(skills).filter(([key]) => key !== 'id' && key !== 'user_id' && key !== 'created_at' && key !== 'updated_at').map(([skill, value]) => (
-                        <div key={skill} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="capitalize">{skill}</span>
-                            <span className={getSkillColor(value as number)}>{value}/100</span>
-                          </div>
-                          <Progress value={value as number} className="h-1.5" />
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          {instrumentSkillKeys.map(skillKey => {
+                            const value = Number(skills?.[skillKey] ?? 0);
+                            return (
+                              <div key={skillKey} className="space-y-1">
+                                <span className="text-sm capitalize">{skillKey}</span>
+                                <Progress
+                                  value={value}
+                                  className="h-1.5"
+                                  aria-label={`${skillKey} skill level ${value} out of 100`}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))
+                        <div className="space-y-1">
+                          <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Attributes</h5>
+                          {attributeKeys.map(attributeKey => {
+                            const value = Number(attributes?.[attributeKey] ?? 0);
+                            const percent = Math.min(100, (value / 1000) * 100);
+                            return (
+                              <div key={attributeKey} className="space-y-1">
+                                <span className="text-sm capitalize">{attributeKey}</span>
+                                <Progress
+                                  value={percent}
+                                  className="h-1.5"
+                                  aria-label={`${attributeKey} attribute score ${value} out of 1000`}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-sm text-muted-foreground">
                         Skills unavailable for other members

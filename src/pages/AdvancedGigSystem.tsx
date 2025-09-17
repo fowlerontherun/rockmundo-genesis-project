@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData, type PlayerSkills } from '@/hooks/useGameData';
+import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from '@/utils/gameBalance';
+import { resolveAttributeValue } from '@/utils/attributeModifiers';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from '@/components/ui/sonner-toast';
 import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle } from 'lucide-react';
@@ -127,12 +129,14 @@ const SHOW_TYPE_BEHAVIOR: Record<ShowType, {
   acoustic: { earnings: 1, fan: 1.25, experience: 1.2, audienceEase: 1.15, stageTolerance: 5 },
 };
 
+const ADVANCED_GIG_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
+
 const getPerformanceStages = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
 
 const AdvancedGigSystem: React.FC = () => {
   const { gigId } = useParams<{ gigId: string }>();
   const { user } = useAuth();
-  const { profile, skills, updateProfile, addActivity } = useGameData();
+  const { profile, skills, attributes, updateProfile, addActivity } = useGameData();
   const navigate = useNavigate();
 
   const [gig, setGig] = useState<Gig | null>(null);
@@ -157,6 +161,14 @@ const AdvancedGigSystem: React.FC = () => {
   const [failedStage, setFailedStage] = useState<string | null>(null);
   const [fameChange, setFameChange] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
+  const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
+    const source = attributes as unknown as Record<string, unknown> | null;
+    return {
+      stagePresence: resolveAttributeValue(source, 'stage_presence', 1),
+      crowdEngagement: resolveAttributeValue(source, 'crowd_engagement', 1),
+      socialReach: resolveAttributeValue(source, 'social_reach', 1),
+    };
+  }, [attributes]);
 
   const loadGig = useCallback(async (): Promise<void> => {
     if (!gigId) return;
@@ -370,15 +382,47 @@ const AdvancedGigSystem: React.FC = () => {
       derivedFailureReason = `Overall performance score fell below ${failureThreshold}%. The crowd left disappointed.`;
     }
 
-    const failureEarnings = Math.floor(baseEarnings * FAILURE_EARNINGS_MULTIPLIER);
+    const successRatio = Math.min(Math.max(averageScore / 100, 0), 1);
+    const baselineGigPayment = calculateGigPayment(
+      baseEarnings,
+      skills?.performance ?? 0,
+      profile.fame ?? 0,
+      successRatio,
+    );
+    const adjustedGigPayment = calculateGigPayment(
+      baseEarnings,
+      skills?.performance ?? 0,
+      profile.fame ?? 0,
+      successRatio,
+      attributeBonuses,
+    );
+    const payoutAdjustment = baselineGigPayment > 0 ? adjustedGigPayment / baselineGigPayment : 1;
+
+    const failureBase = Math.floor(baseEarnings * FAILURE_EARNINGS_MULTIPLIER);
+    const adjustedPotentialEarnings = Math.floor(potentialEarnings * payoutAdjustment);
+    const adjustedFailureEarnings = Math.floor(failureBase * payoutAdjustment);
     const totalEarningsValue = isFailure
-      ? Math.min(potentialEarnings, failureEarnings)
-      : potentialEarnings;
-    const fameDelta = isFailure
-      ? -FAILURE_FAME_PENALTY
-      : Math.floor(averageScore * 0.5 * behavior.fan);
+      ? Math.min(adjustedPotentialEarnings, adjustedFailureEarnings)
+      : adjustedPotentialEarnings;
+
+    const baseFanGain = Math.max(0, Math.floor(averageScore * 0.5 * behavior.fan));
+    const baselineFanGain = calculateFanGain(
+      baseFanGain,
+      skills?.performance ?? 0,
+      skills?.vocals ?? 0,
+    );
+    const adjustedFanGain = calculateFanGain(
+      baseFanGain,
+      skills?.performance ?? 0,
+      skills?.vocals ?? 0,
+      attributeBonuses,
+    );
+    const fanAdjustment = baselineFanGain > 0 ? adjustedFanGain / baselineFanGain : 1;
+    const successFanGain = Math.max(0, Math.round(baseFanGain * fanAdjustment));
+    const failurePenalty = Math.max(1, Math.round(FAILURE_FAME_PENALTY * fanAdjustment));
+    const fameDelta = isFailure ? -failurePenalty : successFanGain;
     const experienceGain = Math.floor((isFailure ? averageScore : averageScore * 2) * behavior.experience);
-    const penaltyValue = isFailure ? Math.max(0, potentialEarnings - totalEarningsValue) : 0;
+    const penaltyValue = isFailure ? Math.max(0, adjustedPotentialEarnings - totalEarningsValue) : 0;
 
     setFinalScore(averageScore);
     setTotalEarnings(totalEarningsValue);

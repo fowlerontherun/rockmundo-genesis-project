@@ -18,7 +18,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 
 const genderLabels: Record<string, string> = {
@@ -31,14 +31,24 @@ const genderLabels: Record<string, string> = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { profile, skills, activities, loading, error } = useGameData();
+  const { profile, skills, attributes, activities, loading, error } = useGameData();
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
 
-  const skillColor = (value: number) => {
-    if (value >= 80) return "text-success";
-    if (value >= 60) return "text-warning";
-    return "text-muted-foreground";
-  };
+  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+    "vocals",
+    "guitar",
+    "bass",
+    "drums",
+    "songwriting",
+    "performance",
+    "composition"
+  ];
+  const attributeKeys: (keyof PlayerAttributes)[] = [
+    "creativity",
+    "business",
+    "marketing",
+    "technical"
+  ];
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -250,22 +260,49 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Guitar className="h-5 w-5 text-primary" />
-                Skills
+                Musical Skills
               </CardTitle>
               <CardDescription>Your musical abilities</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(skills).filter(([key]) => 
-                ['vocals', 'guitar', 'bass', 'drums', 'songwriting', 'performance'].includes(key)
-              ).map(([skill, value]) => (
-                <div key={skill} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="capitalize font-medium">{skill}</span>
-                    <span className={skillColor(value as number)}>{value}/100</span>
+              {instrumentSkillKeys.map(skillKey => {
+                const value = Number(skills?.[skillKey] ?? 0);
+                return (
+                  <div key={skillKey} className="space-y-2">
+                    <span className="capitalize font-medium text-sm">{skillKey}</span>
+                    <Progress
+                      value={value}
+                      className="h-2"
+                      aria-label={`${skillKey} skill level ${value} out of 100`}
+                    />
                   </div>
-                  <Progress value={value as number} className="h-2" />
-                </div>
-              ))}
+                );
+              })}
+            </CardContent>
+          </Card>
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Professional Attributes
+              </CardTitle>
+              <CardDescription>Business and creative prowess</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {attributeKeys.map(attributeKey => {
+                const value = Number(attributes?.[attributeKey] ?? 0);
+                const percent = Math.min(100, (value / 1000) * 100);
+                return (
+                  <div key={attributeKey} className="space-y-2">
+                    <span className="capitalize font-medium text-sm">{attributeKey}</span>
+                    <Progress
+                      value={percent}
+                      className="h-2"
+                      aria-label={`${attributeKey} attribute score ${value} out of 1000`}
+                    />
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
 
