@@ -2,7 +2,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
-import type { PostgrestError } from "@supabase/supabase-js";
+import type {
+  PostgrestError,
+  PostgrestMaybeSingleResponse,
+  PostgrestResponse,
+  PostgrestSingleResponse
+} from "@supabase/supabase-js";
 
 export type PlayerProfile = Tables<'profiles'>;
 export type PlayerSkills = Tables<'player_skills'>;
@@ -60,22 +65,35 @@ const useProvideGameData = (): GameDataContextValue => {
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [charactersLoading, setCharactersLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return window.localStorage.getItem(CHARACTER_STORAGE_KEY);
-  });
+  const [currentCity, setCurrentCity] = useState<Tables<'cities'> | null>(null);
+  const resolveCurrentCity = useCallback(
+    async (cityId: string | null) => {
+      if (!cityId) {
+        setCurrentCity(null);
+        return null;
+      }
 
-  const persistSelectedCharacterId = useCallback((characterId: string | null) => {
-    if (typeof window === "undefined") return;
+      const {
+        data,
+        error: cityError,
+        status: cityStatus,
+      }: PostgrestMaybeSingleResponse<Tables<'cities'>> = await supabase
+        .from('cities')
+        .select('*')
+        .eq('id', cityId)
+        .maybeSingle();
 
-    if (characterId) {
-      window.localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
-    } else {
-      window.localStorage.removeItem(CHARACTER_STORAGE_KEY);
-    }
-  }, []);
+      if (cityError && cityStatus !== 406) {
+        console.error('Error fetching current city:', cityError);
+        return null;
+      }
+
+      const cityData = data ?? null;
+      setCurrentCity(cityData);
+      return cityData;
+    },
+    []
+  );
 
   const clearSelectedCharacter = useCallback(() => {
     setSelectedCharacterId(null);
@@ -200,14 +218,17 @@ const useProvideGameData = (): GameDataContextValue => {
 
       if (activityError) throw activityError;
 
-      setActivities(activityRows ?? []);
-    } catch (err) {
+      setProfile(profileData);
+      setSkills(skillsData);
+      setActivities(activitiesData ?? []);
+      await resolveCurrentCity(profileData?.current_city_id ?? null);
+    } catch (err: unknown) {
       console.error('Error fetching game data:', err);
       setError(extractErrorMessage(err));
     } finally {
       setDataLoading(false);
     }
-  }, [user, selectedCharacterId, updateSelectedCharacterId, fetchCharacters]);
+  }, [user, resolveCurrentCity]);
 
   useEffect(() => {
     if (!user) {
@@ -222,8 +243,95 @@ const useProvideGameData = (): GameDataContextValue => {
       return;
     }
 
-    fetchCharacters();
-  }, [user, fetchCharacters, clearSelectedCharacter]);
+  const updateProfile = useCallback(
+    async (updates: Partial<PlayerProfile>) => {
+      if (!user || !profile) return;
+
+      try {
+        const { data, error }: PostgrestSingleResponse<PlayerProfile> = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (!data) {
+          throw new Error('No profile data returned from Supabase.');
+        }
+        setProfile(data);
+        const nextCityId = data.current_city_id ?? null;
+        const currentCityId = currentCity?.id ?? null;
+        if (nextCityId !== currentCityId) {
+          await resolveCurrentCity(nextCityId);
+        }
+        return data;
+      } catch (err: unknown) {
+        console.error('Error updating profile:', err);
+        if (isPostgrestError(err)) {
+          throw err;
+        }
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error('An unknown error occurred while updating the profile.');
+      }
+    },
+    [profile, user, currentCity?.id, resolveCurrentCity]
+  );
+
+  const updateSkills = useCallback(
+    async (updates: Partial<PlayerSkills>) => {
+      if (!user || !skills) return;
+
+      try {
+        const { data, error }: PostgrestSingleResponse<PlayerSkills> = await supabase
+          .from('player_skills')
+          .update(updates)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (!data) {
+          throw new Error('No skill data returned from Supabase.');
+        }
+        setSkills(data);
+        return data;
+      } catch (err: unknown) {
+        console.error('Error updating skills:', err);
+        if (isPostgrestError(err)) {
+          throw err;
+        }
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error('An unknown error occurred while updating skills.');
+      }
+    },
+    [skills, user]
+  );
+
+  const addActivity = useCallback(
+    async (activityType: string, message: string, earnings: number = 0) => {
+      if (!user) return;
+
+      try {
+        const { data, error }: PostgrestSingleResponse<ActivityItem> = await supabase
+          .from('activity_feed')
+          .insert({
+            user_id: user.id,
+            activity_type: activityType,
+            message,
+            earnings
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (!data) {
+          throw new Error('No activity data returned from Supabase.');
+        }
 
   useEffect(() => {
     if (!user) return;
@@ -284,9 +392,10 @@ const useProvideGameData = (): GameDataContextValue => {
       throw updateError;
     }
 
-    if (!data) {
-      throw new Error('No profile data returned from Supabase.');
-    }
+      setProfile(resetData.profile);
+      setSkills(resetData.skills);
+      setActivities([]);
+      await resolveCurrentCity(resetData.profile.current_city_id ?? null);
 
     setProfile(data);
     setCharacters(prev => sortCharacters(prev.map(character => character.id === data.id ? data : character)));
@@ -415,9 +524,7 @@ const useProvideGameData = (): GameDataContextValue => {
     } finally {
       setCharactersLoading(false);
     }
-  }, [user, profile, selectedCharacterId, setActiveCharacter, updateProfile]);
-
-  const refreshCharacters = useCallback(async () => fetchCharacters(), [fetchCharacters]);
+  }, [user, fetchGameData, resolveCurrentCity]);
 
   const refetch = useCallback(async () => {
     await fetchGameData();
@@ -433,9 +540,7 @@ const useProvideGameData = (): GameDataContextValue => {
     activities,
     loading,
     error,
-    hasCharacters,
-    setActiveCharacter,
-    clearSelectedCharacter,
+    currentCity,
     updateProfile,
     updateSkills,
     updateLocation,
