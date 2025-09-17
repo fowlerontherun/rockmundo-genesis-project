@@ -26,7 +26,6 @@ import {
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { calculateGigPayment, meetsRequirements } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
