@@ -376,6 +376,69 @@ export type Database = {
         }
         Relationships: []
       }
+      cities: {
+        Row: {
+          bonuses: string | null
+          cost_of_living: number | null
+          country: string
+          created_at: string | null
+          cultural_events: string[]
+          description: string | null
+          districts: Json
+          dominant_genre: string | null
+          famous_resident: string | null
+          id: string
+          local_bonus: number | null
+          music_scene: number | null
+          name: string
+          population: number | null
+          travel_hub: string | null
+          travel_nodes: Json
+          unlocked: boolean | null
+          venues: number | null
+        }
+        Insert: {
+          bonuses?: string | null
+          cost_of_living?: number | null
+          country: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
+        }
+        Update: {
+          bonuses?: string | null
+          cost_of_living?: number | null
+          country?: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name?: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
+        }
+        Relationships: []
+      }
       chart_entries: {
         Row: {
           chart_date: string | null
