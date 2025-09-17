@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, FormEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -124,6 +124,7 @@ const FanManagement = () => {
   });
   const [sentimentFilter, setSentimentFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadFanData = useCallback(async () => {
     try {
