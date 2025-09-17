@@ -495,6 +495,7 @@ export type Database = {
           id: string
           leader_id: string
           max_members: number | null
+          logo_url: string | null
           name: string
           popularity: number | null
           updated_at: string | null
@@ -507,6 +508,7 @@ export type Database = {
           id?: string
           leader_id: string
           max_members?: number | null
+          logo_url?: string | null
           name: string
           popularity?: number | null
           updated_at?: string | null
@@ -519,6 +521,7 @@ export type Database = {
           id?: string
           leader_id?: string
           max_members?: number | null
+          logo_url?: string | null
           name?: string
           popularity?: number | null
           updated_at?: string | null
