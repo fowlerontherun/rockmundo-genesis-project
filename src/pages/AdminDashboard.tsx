@@ -28,7 +28,7 @@ import {
   Building2,
   MapPin,
   ShoppingBag,
-  Sparkles
+  SparklesIcon
 } from 'lucide-react';
 
 interface SystemMetrics {
@@ -2000,7 +2000,7 @@ const AdminDashboard: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-6 h-6" />
+                <SparklesIcon className="w-6 h-6" />
                 Special Items
               </CardTitle>
             </CardHeader>
