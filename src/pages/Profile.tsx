@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +9,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  User, 
-  Camera, 
+import {
+  User,
+  Camera,
   Save,
   Star,
   Trophy,
@@ -20,12 +21,24 @@ import {
   Upload,
   Edit3,
   TrendingUp,
-  Heart
+  Heart,
+  RotateCcw
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 
 interface FanMetrics {
   total_fans: number | null;
@@ -37,11 +50,14 @@ interface FanMetrics {
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, updateProfile } = useGameData();
+  const navigate = useNavigate();
+  const { profile, skills, updateProfile, resetCharacter } = useGameData();
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [fanMetrics, setFanMetrics] = useState<FanMetrics | null>(null);
   const [formData, setFormData] = useState({
     display_name: '',
@@ -217,6 +233,33 @@ const Profile = () => {
     : '0';
   const lastUpdatedLabel = fanMetrics?.updated_at ? new Date(fanMetrics.updated_at).toLocaleString() : null;
 
+  const handleResetConfirm = async () => {
+    setIsResetting(true);
+
+    try {
+      await resetCharacter();
+
+      toast({
+        title: "Character reset",
+        description: "Your profile has been cleared. Let's build a new legacy!",
+      });
+
+      navigate("/character/create", { replace: true });
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to reset character";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error resetting character:', errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Reset failed",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
+      });
+    } finally {
+      setIsResetting(false);
+      setIsResetDialogOpen(false);
+    }
+  };
+
   if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
@@ -231,21 +274,56 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Player Profile
             </h1>
             <p className="text-muted-foreground">Manage your musical identity</p>
           </div>
-          <Button
-            onClick={() => setIsEditing(!isEditing)}
-            variant={isEditing ? "outline" : "default"}
-            className={isEditing ? "" : "bg-gradient-primary"}
-          >
-            <Edit3 className="h-4 w-4 mr-2" />
-            {isEditing ? "Cancel" : "Edit Profile"}
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              onClick={() => setIsEditing(!isEditing)}
+              variant={isEditing ? "outline" : "default"}
+              className={isEditing ? "" : "bg-gradient-primary"}
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
+              {isEditing ? "Cancel" : "Edit Profile"}
+            </Button>
+            <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isResetting}>
+                  {isResetting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                      Resetting
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <RotateCcw className="h-4 w-4" />
+                      Start Over
+                    </span>
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset your character?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently remove your profile, skills, songs, tours, social activity, and other progress tied to
+                    this character. We'll recreate the default character so you can go through the creation experience again.
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetConfirm} disabled={isResetting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {isResetting ? "Resetting..." : "Yes, reset everything"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">

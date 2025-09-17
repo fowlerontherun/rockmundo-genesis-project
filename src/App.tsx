@@ -39,6 +39,7 @@ import WorldEnvironment from "./pages/WorldEnvironment";
 import SongManager from "./pages/SongManager";
 import InventoryManager from "./pages/InventoryManager";
 import PlayerStatistics from "./pages/PlayerStatistics";
+import CharacterCreation from "./pages/CharacterCreation";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ function App() {
                 <Route path="songs" element={<SongManager />} />
                 <Route path="inventory" element={<InventoryManager />} />
                 <Route path="statistics" element={<PlayerStatistics />} />
+                <Route path="character/create" element={<CharacterCreation />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -14,6 +14,11 @@ export type PlayerSkills = Tables<'player_skills'>;
 
 export type ActivityItem = Tables<'activity_feed'>;
 
+type ResetCharacterResult = {
+  profile: PlayerProfile;
+  skills: PlayerSkills;
+};
+
 const isPostgrestError = (error: unknown): error is PostgrestError =>
   typeof error === "object" &&
   error !== null &&
@@ -186,6 +191,49 @@ export const useGameData = () => {
     }
   };
 
+  const resetCharacter = useCallback(async () => {
+    if (!user) {
+      throw new Error('You must be signed in to reset your character.');
+    }
+
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase.rpc('reset_player_character');
+
+      if (error) throw error;
+
+      const resetData = (data as ResetCharacterResult[] | null)?.[0];
+
+      if (!resetData) {
+        throw new Error('No data returned from Supabase when resetting the character.');
+      }
+
+      setProfile(resetData.profile);
+      setSkills(resetData.skills);
+      setActivities([]);
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('rockmundo:needsOnboarding', 'true');
+      }
+
+      await fetchGameData();
+
+      return resetData;
+    } catch (err: unknown) {
+      console.error('Error resetting character:', err);
+      if (isPostgrestError(err)) {
+        throw err;
+      }
+      if (err instanceof Error) {
+        throw err;
+      }
+      throw new Error('An unknown error occurred while resetting the character.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, fetchGameData]);
+
   return {
     profile,
     skills,
@@ -195,6 +243,7 @@ export const useGameData = () => {
     updateProfile,
     updateSkills,
     addActivity,
+    resetCharacter,
     refetch: fetchGameData
   };
 };

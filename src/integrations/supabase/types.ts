@@ -2166,6 +2166,13 @@ export type Database = {
         }
         Returns: number
       }
+      reset_player_character: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          profile: Database["public"]["Tables"]["profiles"]["Row"]
+          skills: Database["public"]["Tables"]["player_skills"]["Row"]
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
