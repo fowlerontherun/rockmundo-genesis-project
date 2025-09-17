@@ -3,6 +3,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { calculateAttributeMultiplier, type AttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchWorldEnvironmentSnapshot, type WeatherCondition } from "@/utils/worldEnvironment";
+import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from "@/utils/gameBalance";
+import { resolveAttributeValue } from "@/utils/attributeModifiers";
 import {
   AttributeFocus,
   AttributeKey,
@@ -47,6 +50,7 @@ import {
 type BuskingLocation = Tables<"busking_locations">;
 type BuskingModifier = Tables<"busking_modifiers">;
 type BuskingSession = Tables<"busking_sessions">;
+type PlayerAttributes = Tables<"player_attributes">;
 
 type BuskingSessionWithRelations = BuskingSession & {
   busking_locations: BuskingLocation | null;
@@ -538,6 +542,12 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
   }
 };
 
+const BUSKING_ATTRIBUTE_KEYS: AttributeKey[] = [
+  "stage_presence",
+  "musical_ability",
+  "vocal_talent"
+];
+
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
   const {
@@ -551,7 +561,6 @@ const Busking = () => {
     currentCity
   } = useGameData();
   const { toast } = useToast();
-
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
   const [modifiers, setModifiers] = useState<BuskingModifier[]>([]);
   const [history, setHistory] = useState<BuskingSessionWithRelations[]>([]);
@@ -565,6 +574,15 @@ const Busking = () => {
   const [weatherConditions, setWeatherConditions] = useState<WeatherCondition[]>([]);
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
+  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
+  const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
+    const source = attributes as unknown as Record<string, unknown> | null;
+    return {
+      stagePresence: resolveAttributeValue(source, "stage_presence", 1),
+      crowdEngagement: resolveAttributeValue(source, "crowd_engagement", 1),
+      socialReach: resolveAttributeValue(source, "social_reach", 1),
+    };
+  }, [attributes]);
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -681,6 +699,41 @@ const Busking = () => {
   useEffect(() => {
     fetchBuskingData();
   }, [fetchBuskingData]);
+
+  useEffect(() => {
+    if (!user || !selectedCharacterId) {
+      setAttributes(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadAttributes = async () => {
+      const { data, error } = await supabase
+        .from("player_attributes")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load player attributes:", error);
+        setAttributes(null);
+        return;
+      }
+
+      setAttributes(data ?? null);
+    };
+
+    void loadAttributes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCharacterId, user]);
 
   const selectedLocation = useMemo(
     () => locations.find((location) => location.id === selectedLocationId) ?? null,
@@ -906,6 +959,7 @@ const Busking = () => {
       const success = roll <= successChance;
 
       const baseCash = selectedLocation.base_payout;
+      const successRatio = successChance / 100;
       const combinedPayoutMultiplier =
         (modifier?.payout_multiplier ?? 1) * environmentDetails.combined.payoutMultiplier;
       const charismaMultiplier = attributeScoreToMultiplier(attributeScores.charisma ?? null, 0.4);

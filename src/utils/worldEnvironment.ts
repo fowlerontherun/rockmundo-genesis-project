@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 
 const WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy", "stormy", "snowy"] as const;
 const WORLD_EVENT_TYPES = ["festival", "competition", "disaster", "celebration", "economic"] as const;
@@ -678,6 +679,13 @@ const normalizeCityPlayerRecord = (item: Record<string, unknown>): CityPlayer =>
   const levelValue = toNumber(item.level, Number.NaN);
   const fameValue = toNumber(item.fame, Number.NaN);
 
+  const avatarRaw =
+    typeof item.avatar_url === "string"
+      ? item.avatar_url
+      : typeof item.avatarUrl === "string"
+        ? (item.avatarUrl as string)
+        : null;
+
   return {
     profileId: String(item.id ?? crypto.randomUUID()),
     userId: typeof item.user_id === "string" ? item.user_id : String(item.user_id ?? ""),
@@ -685,7 +693,7 @@ const normalizeCityPlayerRecord = (item: Record<string, unknown>): CityPlayer =>
     displayName: typeof item.display_name === "string" ? item.display_name : null,
     level: Number.isNaN(levelValue) ? null : levelValue,
     fame: Number.isNaN(fameValue) ? null : fameValue,
-    avatarUrl: typeof item.avatar_url === "string" ? item.avatar_url : null,
+    avatarUrl: getStoredAvatarPreviewUrl(avatarRaw),
     primaryInstrument: typeof item.primary_instrument === "string" ? item.primary_instrument : (
       typeof item.instrument === "string" ? item.instrument : undefined
     ),

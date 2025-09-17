@@ -1,5 +1,26 @@
 // Game balance and progression logic for RockMundo
 
+import { getAttributeMultiplier } from "./attributeModifiers";
+
+export interface PerformanceAttributeBonuses {
+  stagePresence?: number | null;
+  crowdEngagement?: number | null;
+  socialReach?: number | null;
+}
+
+const clampNumber = (value: number, min: number, max: number) => {
+  if (Number.isNaN(value)) return min;
+  return Math.min(Math.max(value, min), max);
+};
+
+const resolveAttributeFactor = (
+  rawValue: number | null | undefined,
+  intensity: number
+) => {
+  const multiplier = getAttributeMultiplier(rawValue, { fallback: 1 });
+  return 1 + (multiplier - 1) * intensity;
+};
+
 export const SKILL_CAPS = {
   beginner: 30, // 0-1000 exp
   amateur: 50, // 1000-5000 exp

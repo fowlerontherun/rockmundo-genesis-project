@@ -193,8 +193,10 @@ const RealtimeCommunication: React.FC = () => {
   }, [currentMessage, user]);
 
   useEffect(() => {
+    const audioMeters = audioMetersRef.current;
+
     return () => {
-      Object.keys(audioMetersRef.current).forEach((participantId) => {
+      Object.keys(audioMeters).forEach((participantId) => {
         destroyAudioMeter(participantId);
       });
     };

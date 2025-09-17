@@ -85,6 +85,8 @@ const getShowTypeBadgeClass = (showType: ShowType) =>
 const getShowTypeDetails = (showType: ShowType) =>
   SHOW_TYPE_DETAILS[showType] ?? SHOW_TYPE_DETAILS[DEFAULT_SHOW_TYPE];
 
+const GIG_EXPERIENCE_ATTRIBUTES: AttributeKey[] = ["stage_presence", "musical_ability"];
+
 type JsonRequirementRecord = Extract<Json, Record<string, number | boolean | string | null>>;
 type VenueRequirements = JsonRequirementRecord & {
   min_popularity?: number | null;
@@ -149,16 +151,13 @@ const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile, skills, attributes, updateProfile, updateAttributes, addActivity } = useGameData();
-
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
-  
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
   const [selectedGig, setSelectedGig] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [showTypeSelections, setShowTypeSelections] = useState<Record<string, ShowType>>({});
-
   const handleShowTypeSelection = (venueId: string, value: ShowType) => {
     setShowTypeSelections((prev) => ({
       ...prev,

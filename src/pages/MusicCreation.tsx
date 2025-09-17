@@ -241,12 +241,12 @@ const slugifyName = (value: string): string =>
     .replace(/(^-|-$)+/g, "");
 
 const defaultEngineerName = "Self-produced";
+const RECORDING_ATTRIBUTE_KEYS: AttributeKey[] = ["technical_mastery", "creative_insight"];
 
 const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { profile, skills, attributes, updateProfile, updateSkills, updateAttributes, addActivity } = useGameData();
-
   const [songs, setSongs] = useState<Song[]>([]);
   const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
   const [tracksBySession, setTracksBySession] = useState<Record<string, ProductionTrack[]>>({});
@@ -905,6 +905,7 @@ const MusicCreation = () => {
       );
 
       if (profile) {
+        const xpResult = applyAttributeToValue(session.quality_gain * 5, attributes, RECORDING_ATTRIBUTE_KEYS);
         await updateProfile({
           cash: Math.max(0, (profile.cash ?? 0) - session.total_cost),
           experience: (profile.experience ?? 0) + experienceGain
@@ -912,9 +913,11 @@ const MusicCreation = () => {
       }
 
       if (skills) {
+        const performanceGain = applyAttributeToValue(Math.round(session.quality_gain / 4), attributes, SKILL_ATTRIBUTE_MAP.performance).value;
+        const vocalGain = applyAttributeToValue(Math.round(session.total_takes / 2), attributes, SKILL_ATTRIBUTE_MAP.vocals).value;
         await updateSkills({
-          performance: Math.min(100, skills.performance + Math.round(session.quality_gain / 4)),
-          vocals: Math.min(100, skills.vocals + Math.round(session.total_takes / 2))
+          performance: Math.min(100, skills.performance + performanceGain),
+          vocals: Math.min(100, skills.vocals + vocalGain)
         });
       }
 

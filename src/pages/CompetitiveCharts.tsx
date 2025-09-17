@@ -6,10 +6,11 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
-import { useGameData } from '@/hooks/useGameData';
+import { useGameData, type PlayerAttributes, type PlayerSkills } from '@/hooks/useGameData';
 import { toast } from '@/components/ui/sonner-toast';
 import { Trophy, TrendingUp, Crown, Award, Music, Zap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { getStoredAvatarPreviewUrl } from '@/utils/avatar';
 
 interface PlayerRanking {
   id: string;
@@ -64,7 +65,7 @@ type CompetitionWithParticipants = CompetitionRow & {
 
 const CompetitiveCharts: React.FC = () => {
   const { user } = useAuth();
-  const { profile, skills, refetch: refetchGameData } = useGameData();
+  const { profile, skills, attributes, refetch: refetchGameData } = useGameData();
   const [playerRankings, setPlayerRankings] = useState<PlayerRanking[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -81,7 +82,7 @@ const CompetitiveCharts: React.FC = () => {
   const profileDisplayName = profile?.display_name;
   const profileLevel = profile?.level;
   const profileFame = profile?.fame;
-  const profileAvatarUrl = profile?.avatar_url;
+  const profileAvatarUrl = getStoredAvatarPreviewUrl(profile?.avatar_url ?? null);
 
   const fetchAchievements = useCallback(async () => {
     const { data, error } = await supabase
@@ -136,7 +137,7 @@ const CompetitiveCharts: React.FC = () => {
           hit_songs: row.hit_songs ?? 0,
           rank: row.rank ?? 0,
           trend: baseTrend,
-          avatar_url: profileData?.avatar_url ?? undefined,
+          avatar_url: getStoredAvatarPreviewUrl(profileData?.avatar_url ?? null) ?? undefined,
         } satisfies PlayerRanking;
       });
 
@@ -191,7 +192,7 @@ const CompetitiveCharts: React.FC = () => {
             hit_songs: userRankingData.hit_songs ?? 0,
             rank: userRankingData.rank ?? 0,
             trend: fallbackTrend,
-            avatar_url: profileData.avatar_url ?? undefined,
+            avatar_url: getStoredAvatarPreviewUrl(profileData.avatar_url ?? null) ?? undefined,
           };
           if (computedUserRank.rank > 0) {
             nextPreviousRanks.set(computedUserRank.id, computedUserRank.rank);
@@ -494,7 +495,7 @@ const CompetitiveCharts: React.FC = () => {
       supabase.removeChannel(rankingChannel);
       supabase.removeChannel(competitionsChannel);
     };
-  }, [user, handleRankingRealtime, handleCompetitionRealtime]);
+  }, [userId, handleRankingRealtime, handleCompetitionRealtime]);
 
   const registerForCompetition = async (competitionId: string) => {
     if (!profile || !user) return;
@@ -532,6 +533,10 @@ const CompetitiveCharts: React.FC = () => {
       if (skills && key in skills) {
         const playerSkill = skills?.[key as keyof PlayerSkills] ?? 0;
         return playerSkill >= requiredValue;
+      }
+      if (attributes && key in attributes) {
+        const playerAttribute = attributes?.[key as keyof PlayerAttributes] ?? 0;
+        return playerAttribute >= requiredValue;
       }
       return true;
     });

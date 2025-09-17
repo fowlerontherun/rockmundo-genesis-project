@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +7,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { RECENT_WEAR_STORAGE_KEY, WearEventType, WearSummary } from "@/utils/equipmentWear";
 import { Package, Wrench, Star, Zap, TrendingUp, Shield } from "lucide-react";
+import { parseClothingLoadout, resolveClothingSlot, setClothingLoadoutValue } from "@/utils/wardrobe";
 
 type EquipmentStatBoosts = Record<string, number>;
 
@@ -28,13 +29,63 @@ interface InventoryItem {
     id: string;
     name: string;
     category: string;
+    subcategory: string | null;
     rarity: string;
     price: number;
     description: string;
+    stat_boosts: EquipmentStatBoosts;
   };
 }
 
+const normalizeStatBoosts = (boosts: unknown): EquipmentStatBoosts => {
+  if (!boosts || typeof boosts !== "object" || Array.isArray(boosts)) {
+    return {};
+  }
+
+  return Object.entries(boosts as Record<string, unknown>)
+    .map(([key, value]) => {
+      const numericValue = typeof value === "number" ? value : Number(value);
+      return Number.isFinite(numericValue) ? [key, numericValue] : null;
+    })
+    .filter((entry): entry is [string, number] => entry !== null)
+    .reduce<EquipmentStatBoosts>((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+};
+
 const WEAR_NOTICE_EXPIRATION_MS = 1000 * 60 * 60 * 24;
+
+const isClothingItem = (item: InventoryItem) =>
+  item.equipment.category?.toLowerCase() === "clothing";
+
+const getClothingSlotFromItem = (item: InventoryItem) =>
+  resolveClothingSlot(item.equipment.category, item.equipment.subcategory);
+
+const getFilterCategory = (item: InventoryItem) => {
+  const category = item.equipment.category?.toLowerCase();
+
+  switch (category) {
+    case "guitar":
+    case "microphone":
+      return "instruments";
+    case "amplifier":
+    case "amp":
+      return "amplifiers";
+    case "accessory":
+    case "accessories":
+      return "accessories";
+    case "audio":
+      return "recording";
+    case "clothing":
+      return "clothing";
+    default:
+      return category ?? "other";
+  }
+};
+
+const toProfileLoadout = (loadout: ReturnType<typeof parseClothingLoadout>): PlayerProfile["equipped_clothing"] =>
+  loadout as PlayerProfile["equipped_clothing"];
 
 const InventoryManager = () => {
   const { user } = useAuth();
@@ -44,12 +95,18 @@ const InventoryManager = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [wearSummary, setWearSummary] = useState<WearSummary | null>(null);
 
+  const clothingLoadout = useMemo(
+    () => parseClothingLoadout(profile?.equipped_clothing),
+    [profile?.equipped_clothing]
+  );
+
   const categories = [
     { value: 'all', label: 'All Items' },
     { value: 'instruments', label: 'Instruments' },
     { value: 'amplifiers', label: 'Amplifiers' },
     { value: 'accessories', label: 'Accessories' },
     { value: 'recording', label: 'Recording' },
+    { value: 'clothing', label: 'Clothing' },
   ];
 
   const fetchInventory = useCallback(async () => {
@@ -62,6 +119,7 @@ const InventoryManager = () => {
             id,
             name,
             category,
+            subcategory,
             rarity,
             price,
             stat_boosts,
@@ -78,12 +136,18 @@ const InventoryManager = () => {
           return acc;
         }
 
+        const slot = resolveClothingSlot(item.equipment.category, item.equipment.subcategory);
+        const clothingEquipped = clothingLoadout[slot] === item.equipment.id;
+
         acc.push({
           ...item,
           equipment: {
             ...item.equipment,
             stat_boosts: normalizeStatBoosts(item.equipment.stat_boosts)
-          }
+          },
+          equipped: isClothingItem(item as InventoryItem)
+            ? clothingEquipped
+            : Boolean(item.equipped ?? item.is_equipped)
         });
 
         return acc;
@@ -102,13 +166,28 @@ const InventoryManager = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [clothingLoadout, user?.id]);
 
   useEffect(() => {
     if (user) {
       fetchInventory();
     }
   }, [user, fetchInventory]);
+
+  useEffect(() => {
+    setInventory(prev => prev.map(item => {
+      if (!isClothingItem(item)) {
+        return item;
+      }
+
+      const slot = getClothingSlotFromItem(item);
+      const isEquipped = clothingLoadout[slot] === item.equipment.id;
+
+      return isEquipped === item.equipped
+        ? item
+        : { ...item, equipped: isEquipped };
+    }));
+  }, [clothingLoadout]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -147,6 +226,72 @@ const InventoryManager = () => {
   }, [user]);
 
   const equipItem = async (item: InventoryItem) => {
+    if (isClothingItem(item)) {
+      if (!profile) {
+        toast({
+          variant: "destructive",
+          title: "No active profile",
+          description: "Select a character to manage their wardrobe."
+        });
+        return;
+      }
+
+      const slot = getClothingSlotFromItem(item);
+      const updatedLoadout = setClothingLoadoutValue(clothingLoadout, slot, item.equipment.id);
+      const otherItems = inventory.filter(invItem =>
+        invItem.id !== item.id &&
+        isClothingItem(invItem) &&
+        getClothingSlotFromItem(invItem) === slot
+      );
+
+      try {
+        if (otherItems.length) {
+          await supabase
+            .from('player_equipment')
+            .update({ equipped: false })
+            .in('id', otherItems.map(invItem => invItem.id));
+        }
+
+        const { error: equipError } = await supabase
+          .from('player_equipment')
+          .update({ equipped: true })
+          .eq('id', item.id);
+
+        if (equipError) throw equipError;
+
+        await updateProfile({ equipped_clothing: toProfileLoadout(updatedLoadout) });
+
+        setInventory(prev => prev.map(invItem => {
+          if (!isClothingItem(invItem)) {
+            return invItem;
+          }
+
+          const invSlot = getClothingSlotFromItem(invItem);
+          if (invSlot !== slot) {
+            return invItem;
+          }
+
+          return { ...invItem, equipped: invItem.id === item.id };
+        }));
+
+        toast({
+          title: "Wardrobe Updated",
+          description: `${item.equipment.name} is now part of your look!`
+        });
+      } catch (error: unknown) {
+        const fallbackMessage = "Failed to equip clothing";
+        const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+        console.error('Error equipping clothing:', errorMessage, error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage
+        });
+      }
+
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('player_equipment')
@@ -155,12 +300,31 @@ const InventoryManager = () => {
 
       if (error) throw error;
 
-      setInventory(prev => prev.map(invItem => ({
-        ...invItem,
-        equipped: invItem.equipment.category === item.equipment.category 
-          ? invItem.id === item.id 
-          : false
-      })));
+      const comparableCategory = getFilterCategory(item);
+      const conflictingItems = inventory.filter(invItem =>
+        invItem.id !== item.id &&
+        !isClothingItem(invItem) &&
+        getFilterCategory(invItem) === comparableCategory
+      );
+
+      if (conflictingItems.length) {
+        await supabase
+          .from('player_equipment')
+          .update({ equipped: false })
+          .in('id', conflictingItems.map(invItem => invItem.id));
+      }
+
+      setInventory(prev => prev.map(invItem => {
+        if (isClothingItem(invItem)) {
+          return invItem;
+        }
+
+        if (getFilterCategory(invItem) !== comparableCategory) {
+          return invItem;
+        }
+
+        return { ...invItem, equipped: invItem.id === item.id };
+      }));
 
       toast({
         title: "Equipment Updated",
@@ -179,6 +343,66 @@ const InventoryManager = () => {
   };
 
   const unequipItem = async (item: InventoryItem) => {
+    if (isClothingItem(item)) {
+      if (!profile) {
+        toast({
+          variant: "destructive",
+          title: "No active profile",
+          description: "Select a character before updating their clothing."
+        });
+        return;
+      }
+
+      const slot = getClothingSlotFromItem(item);
+      const currentItemId = clothingLoadout[slot];
+      const updatedLoadout = setClothingLoadoutValue(clothingLoadout, slot, null);
+
+      try {
+        const { error } = await supabase
+          .from('player_equipment')
+          .update({ equipped: false })
+          .eq('id', item.id);
+
+        if (error) throw error;
+
+        if (currentItemId === item.equipment.id) {
+          await updateProfile({ equipped_clothing: toProfileLoadout(updatedLoadout) });
+        }
+
+        setInventory(prev => prev.map(invItem => {
+          if (!isClothingItem(invItem)) {
+            return invItem;
+          }
+
+          if (getClothingSlotFromItem(invItem) !== slot) {
+            return invItem;
+          }
+
+          if (invItem.id === item.id) {
+            return { ...invItem, equipped: false };
+          }
+
+          return invItem;
+        }));
+
+        toast({
+          title: "Wardrobe Updated",
+          description: `${item.equipment.name} has been removed from your outfit.`
+        });
+      } catch (error: unknown) {
+        const fallbackMessage = "Failed to unequip clothing";
+        const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+        console.error('Error unequipping clothing:', errorMessage, error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage
+        });
+      }
+
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('player_equipment')
@@ -187,11 +411,12 @@ const InventoryManager = () => {
 
       if (error) throw error;
 
-      setInventory(prev => prev.map(invItem => 
-        invItem.id === item.id 
-          ? { ...invItem, equipped: false }
-          : invItem
-      ));
+      setInventory(prev => prev.map(invItem => {
+        if (invItem.id === item.id) {
+          return { ...invItem, equipped: false };
+        }
+        return invItem;
+      }));
 
       toast({
         title: "Equipment Updated",
@@ -338,9 +563,20 @@ const InventoryManager = () => {
 
   const filteredInventory = selectedCategory === 'all'
     ? inventory
-    : inventory.filter(item => item.equipment.category === selectedCategory);
+    : inventory.filter(item => getFilterCategory(item) === selectedCategory);
 
-  const equippedItems = inventory.filter(item => item.equipped || item.is_equipped);
+  const equippedItems = inventory.filter(item => {
+    if (item.equipped || item.is_equipped) {
+      return true;
+    }
+
+    if (isClothingItem(item)) {
+      const slot = getClothingSlotFromItem(item);
+      return clothingLoadout[slot] === item.equipment.id;
+    }
+
+    return false;
+  });
   const wearUpdatesAvailable = Boolean(wearSummary && wearSummary.updates.length > 0);
   const totalValue = inventory.reduce((sum, item) =>
     sum + Math.floor(item.equipment.price * (item.condition / 100)), 0
@@ -451,7 +687,7 @@ const InventoryManager = () => {
 
         {/* Tabs */}
         <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
             {categories.map((category) => (
               <TabsTrigger key={category.value} value={category.value}>
                 {category.label}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -6,11 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { calculateLevel, getFameTitle, calculateEquipmentBonus } from "@/utils/gameBalance";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   User,
   TrendingUp,
@@ -26,7 +29,8 @@ import {
   Crown,
   ArrowUpRight,
   ArrowDownRight,
-  ArrowRight
+  ArrowRight,
+  Lock
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -136,15 +140,329 @@ const parseStageResults = (value: unknown): StagePerformanceDetail[] => {
     .filter((stage): stage is StagePerformanceDetail => stage !== null);
 };
 
+interface SkillProgressEntry {
+  id: string;
+  slug: string;
+  name: string;
+  currentValue: number;
+  maxValue: number;
+  progressPercent: number;
+  unlocked: boolean;
+  description?: string | null;
+  category?: string | null;
+  parentSkillName?: string | null;
+  parentSkillSlug?: string | null;
+  unlockDescription?: string | null;
+  requirementValue?: number | null;
+  order?: number | null;
+}
+
+type RawSkillProgressRow = Record<string, unknown>;
+
+const formatLabel = (value: string) =>
+  value
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+const readStringField = (row: RawSkillProgressRow, keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const readNumberField = (row: RawSkillProgressRow, keys: string[]): number | null => {
+  for (const key of keys) {
+    if (!(key in row)) continue;
+    const value = row[key];
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) continue;
+      const parsed = Number(trimmed);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+};
+
+const readBooleanField = (row: RawSkillProgressRow, keys: string[]): boolean | null => {
+  for (const key of keys) {
+    if (!(key in row)) continue;
+    const value = row[key];
+
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "number") {
+      return value !== 0;
+    }
+
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (!normalized) continue;
+      if (["true", "t", "1", "yes", "y"].includes(normalized)) return true;
+      if (["false", "f", "0", "no", "n"].includes(normalized)) return false;
+    }
+  }
+
+  return null;
+};
+
+const ensureSentence = (text: string) => {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+};
+
+const normalizeSkillProgressRow = (row: RawSkillProgressRow): SkillProgressEntry | null => {
+  const slug = readStringField(row, ["skill_slug", "slug", "skill", "skill_key", "id"]);
+  if (!slug) return null;
+
+  const id = readStringField(row, ["id", "skill_id", "definition_id"]) ?? slug;
+  const name = readStringField(row, ["skill_name", "name", "title"]) ?? formatLabel(slug);
+  const description = readStringField(row, ["skill_description", "description", "summary"]);
+  const category = readStringField(row, ["category", "skill_category", "type"]);
+  const parentSkillSlug = readStringField(row, ["parent_skill_slug", "parent_slug", "parent_skill_key"]);
+  const parentSkillNameRaw = readStringField(row, ["parent_skill_name", "parent_name", "parent_skill", "parent_title"]);
+  const parentSkillName = parentSkillNameRaw ?? (parentSkillSlug ? formatLabel(parentSkillSlug) : null);
+
+  const currentValueRaw =
+    readNumberField(row, ["current_value", "current_level", "value", "level", "progress_value", "skill_value", "current_points"]) ??
+    0;
+  const maxValueRaw = readNumberField(row, ["max_value", "max_level", "cap", "goal_value", "target_value", "max_points"]) ?? 100;
+  const sanitizedMaxValue = maxValueRaw > 0 ? maxValueRaw : 100;
+  const sanitizedCurrentValue = Math.max(0, Math.min(currentValueRaw, sanitizedMaxValue));
+
+  const progressPercentExplicit = readNumberField(row, [
+    "progress_percent",
+    "completion",
+    "progress",
+    "percent_complete",
+    "progress_percentage"
+  ]);
+  const derivedProgress = sanitizedMaxValue ? (sanitizedCurrentValue / sanitizedMaxValue) * 100 : 0;
+  const progressPercent = Math.max(0, Math.min(100, progressPercentExplicit ?? derivedProgress));
+
+  const unlockedDirect = readBooleanField(row, ["is_unlocked", "unlocked", "has_access"]);
+  const lockedDirect = readBooleanField(row, ["is_locked", "locked"]);
+  const unlocked =
+    unlockedDirect !== null ? unlockedDirect : lockedDirect !== null ? !lockedDirect : sanitizedCurrentValue > 0;
+
+  const parentRequirementDescription = readStringField(row, [
+    "parent_requirement_description",
+    "parent_requirement",
+    "parent_skill_requirement_description"
+  ]);
+  const parentRequirementValue = readNumberField(row, [
+    "parent_requirement_level",
+    "parent_skill_requirement_level",
+    "required_parent_level",
+    "parent_skill_required_value"
+  ]);
+
+  const unlockRequirementDescription = readStringField(row, [
+    "unlock_description",
+    "unlock_requirement_description",
+    "unlock_requirement",
+    "requirement_description",
+    "requirement"
+  ]);
+  const unlockRequirementValue = readNumberField(row, [
+    "unlock_value",
+    "unlock_level",
+    "required_value",
+    "requirement_value",
+    "unlock_requirement_value"
+  ]);
+
+  const order = readNumberField(row, ["display_order", "order_index", "sort_order", "position"]);
+
+  return {
+    id,
+    slug,
+    name,
+    currentValue: sanitizedCurrentValue,
+    maxValue: sanitizedMaxValue,
+    progressPercent,
+    unlocked,
+    description,
+    category,
+    parentSkillName,
+    parentSkillSlug,
+    unlockDescription: parentRequirementDescription ?? unlockRequirementDescription ?? null,
+    requirementValue: parentRequirementValue ?? unlockRequirementValue ?? null,
+    order: order ?? null
+  };
+};
+
+const buildRequirementMessage = (entry: SkillProgressEntry) => {
+  const requirementLevel =
+    typeof entry.requirementValue === "number" && Number.isFinite(entry.requirementValue)
+      ? Math.round(entry.requirementValue)
+      : null;
+
+  if (entry.unlockDescription && entry.parentSkillName) {
+    const requirementText = requirementLevel
+      ? `Requires ${entry.parentSkillName} level ${requirementLevel}.`
+      : `Requires ${entry.parentSkillName}.`;
+    const base = ensureSentence(entry.unlockDescription);
+    return `${base} ${requirementText}`.trim();
+  }
+
+  if (entry.unlockDescription) {
+    return entry.unlockDescription;
+  }
+
+  if (entry.parentSkillName) {
+    return requirementLevel
+      ? `Requires ${entry.parentSkillName} level ${requirementLevel} to unlock.`
+      : `Requires progress in ${entry.parentSkillName} to unlock.`;
+  }
+
+  return "Unlock this skill by progressing through related activities or story milestones.";
+};
+
+const resolveSkillBadge = (value: number) => {
+  if (value >= 80) {
+    return { label: "Expert", variant: "default" as const };
+  }
+
+  if (value >= 50) {
+    return { label: "Advanced", variant: "secondary" as const };
+  }
+
+  if (value > 0) {
+    return { label: "Beginner", variant: "outline" as const };
+  }
+
+  return { label: "Untrained", variant: "outline" as const };
+};
+
 const PlayerStatistics = () => {
   const { user } = useAuth();
-  const { profile, skills } = useGameData();
+  const { profile, skills, attributes } = useGameData();
+  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+    "performance",
+    "songwriting",
+    "guitar",
+    "vocals",
+    "drums",
+    "bass",
+    "composition"
+  ];
+  const attributeKeys: (keyof PlayerAttributes)[] = [
+    "creativity",
+    "business",
+    "marketing",
+    "technical"
+  ];
   const [extendedStats, setExtendedStats] = useState<ExtendedStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const [selectedLeaderboardMetric, setSelectedLeaderboardMetric] = useState<LeaderboardMetric>("fame");
+  const [skillProgress, setSkillProgress] = useState<SkillProgressEntry[]>([]);
+  const [skillProgressLoading, setSkillProgressLoading] = useState(false);
+  const [skillProgressError, setSkillProgressError] = useState<string | null>(null);
+
+  const fallbackSkillEntries = useMemo<SkillProgressEntry[]>(() => {
+    if (!skills) return [];
+
+    return Object.entries(skills)
+      .filter(([key]) => !["id", "user_id", "profile_id", "created_at", "updated_at"].includes(key))
+      .map(([key, value], index) => {
+        const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+        const clampedValue = Number.isFinite(numericValue)
+          ? Math.max(0, Math.min(numericValue, 100))
+          : 0;
+
+        return {
+          id: key,
+          slug: key,
+          name: formatLabel(key),
+          currentValue: clampedValue,
+          maxValue: 100,
+          progressPercent: Math.max(0, Math.min(clampedValue, 100)),
+          unlocked: true,
+          order: index
+        } satisfies SkillProgressEntry;
+      });
+  }, [skills]);
+
+  const baseSkillEntries = useMemo<SkillProgressEntry[]>(() => {
+    if (skillProgress.length > 0) {
+      return skillProgress;
+    }
+
+    return fallbackSkillEntries;
+  }, [skillProgress, fallbackSkillEntries]);
+
+  const sortedSkillEntries = useMemo(() => {
+    const entries = [...baseSkillEntries];
+
+    return entries.sort((a, b) => {
+      if (a.order !== null && b.order !== null && a.order !== undefined && b.order !== undefined && a.order !== b.order) {
+        return a.order - b.order;
+      }
+
+      if (a.category && b.category) {
+        const categoryCompare = a.category.localeCompare(b.category);
+        if (categoryCompare !== 0) {
+          return categoryCompare;
+        }
+      } else if (a.category) {
+        return -1;
+      } else if (b.category) {
+        return 1;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [baseSkillEntries]);
+
+  const unlockedSkillCount = useMemo(
+    () => baseSkillEntries.filter(entry => entry.unlocked).length,
+    [baseSkillEntries]
+  );
+  const totalSkillCount = baseSkillEntries.length;
+
+  const skillAverageSummary = useMemo(() => {
+    if (baseSkillEntries.length === 0) {
+      return { average: 0, count: 0, usesUnlockedOnly: false } as const;
+    }
+
+    const unlockedEntries = baseSkillEntries.filter(entry => entry.unlocked);
+    const usesUnlockedOnly = baseSkillEntries.some(entry => !entry.unlocked) && unlockedEntries.length > 0;
+    const pool = usesUnlockedOnly ? unlockedEntries : baseSkillEntries;
+    const total = pool.reduce((sum, entry) => sum + entry.currentValue, 0);
+    const average = pool.length > 0 ? Math.round(total / pool.length) : 0;
+
+    return { average, count: pool.length, usesUnlockedOnly } as const;
+  }, [baseSkillEntries]);
+
+  const skillAverage = skillAverageSummary.average;
+  const averageUsesUnlockedOnly = skillAverageSummary.usesUnlockedOnly;
+  const skillAverageCount = skillAverageSummary.count;
+  const lockedSkillCount = Math.max(0, totalSkillCount - unlockedSkillCount);
 
   const fetchExtendedStats = useCallback(async () => {
     if (!user) return;
@@ -332,6 +650,43 @@ const PlayerStatistics = () => {
     }
   }, [user]);
 
+  const fetchSkillProgress = useCallback(async () => {
+    if (!user?.id || !profile?.id) {
+      return;
+    }
+
+    try {
+      setSkillProgressLoading(true);
+      setSkillProgressError(null);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Accessing a view not yet represented in generated types
+      const { data, error } = await (supabase as any)
+        .from('profile_skill_progress')
+        .select('*')
+        .eq('profile_id', profile.id);
+
+      if (error) {
+        throw error;
+      }
+
+      const normalized = Array.isArray(data)
+        ? (data
+            .map(item => (isRecord(item) ? normalizeSkillProgressRow(item) : null))
+            .filter((entry): entry is SkillProgressEntry => entry !== null))
+        : [];
+
+      setSkillProgress(normalized);
+    } catch (error) {
+      console.error('Error fetching skill progress:', error);
+      setSkillProgress([]);
+      setSkillProgressError(
+        error instanceof Error ? error.message : 'Failed to load skill progress data.'
+      );
+    } finally {
+      setSkillProgressLoading(false);
+    }
+  }, [user?.id, profile?.id]);
+
   const fetchLeaderboard = useCallback(async () => {
     if (!user) return;
 
@@ -348,6 +703,7 @@ const PlayerStatistics = () => {
       const rows = ((data ?? []) as LeaderboardRow[]).map(row => ({
         ...row,
         total_revenue: Number(row.total_revenue ?? 0),
+        avatar_url: getStoredAvatarPreviewUrl(row.avatar_url ?? null),
       }));
 
       setLeaderboardEntries(rows);
@@ -367,8 +723,9 @@ const PlayerStatistics = () => {
     if (user) {
       fetchExtendedStats();
       fetchLeaderboard();
+      fetchSkillProgress();
     }
-  }, [user, fetchExtendedStats, fetchLeaderboard]);
+  }, [user, fetchExtendedStats, fetchLeaderboard, fetchSkillProgress]);
 
   useEffect(() => {
     if (!user) return;
@@ -386,6 +743,7 @@ const PlayerStatistics = () => {
         () => {
           fetchExtendedStats();
           fetchLeaderboard();
+          fetchSkillProgress();
         }
       )
       .subscribe();
@@ -393,7 +751,7 @@ const PlayerStatistics = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchExtendedStats, fetchLeaderboard]);
+  }, [user, fetchExtendedStats, fetchLeaderboard, fetchSkillProgress]);
 
   const metricConfig = leaderboardMetricConfig[selectedLeaderboardMetric];
   const sortedLeaderboard = useMemo(() => {
@@ -413,7 +771,7 @@ const PlayerStatistics = () => {
     return entry[metricConfig.field];
   }, [leaderboardEntries, metricConfig.field, user]);
 
-  if (loading || !profile || !skills) {
+  if (loading || !profile || !skills || !attributes) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
         <div className="text-center">
@@ -426,9 +784,6 @@ const PlayerStatistics = () => {
 
   const playerLevel = calculateLevel(profile.experience);
   const fameTitle = getFameTitle(profile.fame);
-  const skillAverage = Math.round(
-    (skills.performance + (skills.songwriting || 0) + (skills.guitar || 0) + (skills.vocals || 0) + (skills.drums || 0)) / 5
-  );
   const playerAvatarLabel = (profile.display_name || profile.username || 'P').slice(0, 2).toUpperCase();
   const MetricIcon = metricConfig.icon;
 
@@ -641,7 +996,7 @@ const PlayerStatistics = () => {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
-                          src={profile.avatar_url || undefined}
+                          src={profileAvatarPreview ?? undefined}
                           alt={profile.display_name || profile.username || 'Player avatar'}
                         />
                         <AvatarFallback>{playerAvatarLabel}</AvatarFallback>
@@ -694,7 +1049,7 @@ const PlayerStatistics = () => {
                           <div className="flex items-center gap-3">
                             <span className="text-lg font-bold text-muted-foreground">#{index + 1}</span>
                             <Avatar className="h-10 w-10">
-                              <AvatarImage src={entry.avatar_url || undefined} alt={displayName} />
+                              <AvatarImage src={entry.avatar_url ?? undefined} alt={displayName} />
                               <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -785,26 +1140,126 @@ const PlayerStatistics = () => {
                 <CardDescription>Your current skill levels and progress</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {Object.entries(skills).filter(([key]) => key !== 'id' && key !== 'user_id').map(([skill, value]) => (
-                    <div key={skill} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium capitalize">{skill.replace('_', ' ')}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{value}/100</span>
-                          <Badge variant={value >= 80 ? "default" : value >= 50 ? "secondary" : "outline"}>
-                            {value >= 80 ? "Expert" : value >= 50 ? "Advanced" : "Beginner"}
-                          </Badge>
+                {skillProgressError && (
+                  <Alert variant="destructive">
+                    <AlertTitle>Unable to load detailed skill data</AlertTitle>
+                    <AlertDescription>{skillProgressError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {skillProgressLoading && sortedSkillEntries.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Refreshing skill progress…
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {skillProgressLoading && sortedSkillEntries.length === 0 ? (
+                    Array.from({ length: 4 }).map((_, index) => (
+                      <Skeleton key={index} className="h-28 w-full rounded-lg" />
+                    ))
+                  ) : sortedSkillEntries.length > 0 ? (
+                    sortedSkillEntries.map(entry => {
+                      const isLocked = !entry.unlocked;
+                      const badgeInfo = resolveSkillBadge(entry.currentValue);
+                      const requirementMessage = buildRequirementMessage(entry);
+                      const categoryLabel = entry.category ? formatLabel(entry.category) : null;
+                      const requirementLevel =
+                        typeof entry.requirementValue === 'number' && Number.isFinite(entry.requirementValue)
+                          ? Math.round(entry.requirementValue)
+                          : null;
+
+                      return (
+                        <div
+                          key={entry.slug}
+                          className={`space-y-3 rounded-lg border p-4 shadow-sm transition-colors ${
+                            isLocked
+                              ? 'border-dashed border-muted-foreground/30 bg-muted/40 text-muted-foreground'
+                              : 'border-primary/20 bg-muted/30'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-col gap-2">
+                              <div className="flex flex-wrap items-center gap-2 text-sm">
+                                <span className="font-medium capitalize text-base">{entry.name}</span>
+                                {categoryLabel ? (
+                                  <Badge variant="outline" className="text-xs capitalize">
+                                    {categoryLabel}
+                                  </Badge>
+                                ) : null}
+                                {isLocked && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                                        <Lock className="h-3 w-3" />
+                                        Locked
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" align="start" className="max-w-xs text-sm">
+                                      <p>{requirementMessage}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                              {entry.description && entry.unlocked && (
+                                <p className="text-xs text-muted-foreground">{entry.description}</p>
+                              )}
+                              {isLocked && (
+                                <p className="text-xs text-muted-foreground">{requirementMessage}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold">
+                                {Math.round(entry.currentValue)}/{Math.round(entry.maxValue)}
+                              </span>
+                              <Badge variant={badgeInfo.variant}>{badgeInfo.label}</Badge>
+                            </div>
+                          </div>
+                          <Progress value={entry.progressPercent} className="h-3" />
+                          {entry.parentSkillName && isLocked && (
+                            <p className="text-xs text-muted-foreground">
+                              Parent skill: {entry.parentSkillName}
+                              {requirementLevel !== null ? ` (level ${requirementLevel})` : ''}
+                            </p>
+                          )}
                         </div>
-                      </div>
-                      <Progress value={value} className="h-3" />
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                      No skill data available yet. Unlock a skill to see it tracked here.
                     </div>
-                  ))}
+                  )}
                 </div>
 
-                <div className="text-center pt-4">
+                <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
+                  <span>
+                    {totalSkillCount} total skill{totalSkillCount === 1 ? '' : 's'}
+                  </span>
+                  <span>
+                    {unlockedSkillCount} unlocked
+                  </span>
+                  {lockedSkillCount > 0 && <span>{lockedSkillCount} locked</span>}
+                </div>
+
+                <div className="space-y-2 pt-4 text-center">
                   <div className="text-3xl font-bold text-primary">{skillAverage}/100</div>
                   <div className="text-muted-foreground">Overall Skill Average</div>
+                  {skillAverageCount > 0 ? (
+                    <div className="text-xs text-muted-foreground">
+                      Calculated from{' '}
+                      {averageUsesUnlockedOnly
+                        ? `${skillAverageCount} unlocked skill${skillAverageCount === 1 ? '' : 's'}`
+                        : `${skillAverageCount} skill${skillAverageCount === 1 ? '' : 's'}`}
+                      {averageUsesUnlockedOnly && lockedSkillCount > 0
+                        ? ` (excluding ${lockedSkillCount} locked).`
+                        : '.'}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">
+                      No skill data available yet. Unlock skills to begin tracking your average.
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
