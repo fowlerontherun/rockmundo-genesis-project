@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,6 +267,8 @@ const TourManager = () => {
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [editForms, setEditForms] = useState<Record<string, EditTourForm>>({});
 
+  const supabaseClient = useMemo(() => supabase, []);
+
   const normalizeDate = (date?: string | null) => (date ? date.split("T")[0] : "");
 
   const initializeEditForm = (tour: Tour): EditTourForm => ({
@@ -290,18 +292,11 @@ const TourManager = () => {
   const tourStatusOptions = ['planned', 'active', 'completed', 'cancelled'];
   const venueStatusOptions = ['scheduled', 'completed', 'cancelled'];
 
-  useEffect(() => {
-    if (user) {
-      loadTours();
-      loadVenues();
-    }
-  }, [user]);
-
-  const loadTours = async (): Promise<Tour[]> => {
+  const loadTours = useCallback(async (): Promise<Tour[]> => {
     if (!user) return [];
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tours')
         .select(`
           *,
@@ -337,11 +332,11 @@ const TourManager = () => {
       });
       return [];
     }
-  };
+  }, [user, supabaseClient, setTours, setTicketPriceUpdates, setMarketingSpendUpdates, toast]);
 
-  const loadVenues = async () => {
+  const loadVenues = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('venues')
         .select('*')
         .order('prestige_level', { ascending: true });
@@ -353,7 +348,14 @@ const TourManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabaseClient, setVenues, setLoading]);
+
+  useEffect(() => {
+    if (user) {
+      loadTours();
+      loadVenues();
+    }
+  }, [user, loadTours, loadVenues]);
 
   const optimalRoutes = useMemo(() => {
     const routes: Record<string, RouteSuggestion> = {};
