@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +49,11 @@ const PerformGig = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
   
   const [gig, setGig] = useState<Gig | null>(null);
   const [isPerforming, setIsPerforming] = useState(false);
@@ -102,13 +107,13 @@ const PerformGig = () => {
       const fallbackMessage = "Failed to load gig details";
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
       console.error('Error loading gig:', errorMessage, error);
-      toast({
+      toastRef.current?.({
         variant: "destructive",
         title: "Error",
         description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
     }
-  }, [gigId, supabase, toast]);
+  }, [gigId]);
 
   useEffect(() => {
     loadGig();
