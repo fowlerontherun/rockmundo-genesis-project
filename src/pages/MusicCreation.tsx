@@ -59,6 +59,12 @@ type SupabaseSongRow = {
   streams?: number | null;
   duration?: number | null;
   created_at?: string | null;
+  updated_at?: string | null;
+  release_date?: string | null;
+  chart_position?: number | null;
+  revenue?: number | null;
+  artist_id?: string | null;
+  user_id?: string | null;
   audio_layers?: unknown;
 };
 
