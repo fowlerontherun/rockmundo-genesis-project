@@ -1519,9 +1519,12 @@ export type Database = {
       player_attributes: {
         Row: {
           attribute_points: number
+          charisma: number
           created_at: string | null
           id: string
+          looks: number
           mental_focus: number
+          musicality: number
           physical_endurance: number
           profile_id: string
           updated_at: string | null
@@ -1529,9 +1532,12 @@ export type Database = {
         }
         Insert: {
           attribute_points?: number
+          charisma?: number
           created_at?: string | null
           id?: string
+          looks?: number
           mental_focus?: number
+          musicality?: number
           physical_endurance?: number
           profile_id: string
           updated_at?: string | null
@@ -1539,9 +1545,12 @@ export type Database = {
         }
         Update: {
           attribute_points?: number
+          charisma?: number
           created_at?: string | null
           id?: string
+          looks?: number
           mental_focus?: number
+          musicality?: number
           physical_endurance?: number
           profile_id?: string
           updated_at?: string | null

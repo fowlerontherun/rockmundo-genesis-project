@@ -495,6 +495,10 @@ const useProvideGameData = (): GameDataContextValue => {
         throw new Error('No active character selected.');
       }
 
+      if (!skills) {
+        throw new Error('Skill data is not available.');
+      }
+
       try {
         const { data, error }: PostgrestSingleResponse<PlayerSkills> = await supabase
           .from('player_skills')
@@ -504,17 +508,22 @@ const useProvideGameData = (): GameDataContextValue => {
           .select()
           .single();
 
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          throw new Error('No skill data returned from Supabase.');
+        }
+
+        setSkills(data);
+        return data;
+      } catch (updateError) {
         console.error('Error updating skills:', updateError);
         throw updateError;
       }
-
-      if (!data) {
-        throw new Error('No skill data returned from Supabase.');
-      }
-
-      setSkills(data);
-      return data;
-    [user, selectedCharacterId]
+    },
+    [selectedCharacterId, skills, user]
   );
 
   const updateAttributes = useCallback(

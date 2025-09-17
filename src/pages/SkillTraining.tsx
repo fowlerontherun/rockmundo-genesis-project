@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,13 +7,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
 import {
+  AttributeFocus,
+  AttributeKey,
+  calculateExperienceReward,
   calculateTrainingCost,
+  extractAttributeScores,
+  getFocusAttributeScore,
   getSkillCap,
   isOnCooldown,
   getRemainingCooldown,
+  attributeScoreToMultiplier,
   COOLDOWNS
 } from "@/utils/gameBalance";
-import { applyCooldownModifier, applyRewardBonus } from "@/utils/attributeModifiers";
+import { applyCooldownModifier } from "@/utils/attributeModifiers";
 import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
 
 type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
@@ -27,11 +33,46 @@ interface TrainingSession {
   description: string;
 }
 
+const TRAINING_FOCUS: Record<SkillName, AttributeFocus> = {
+  guitar: "instrumental",
+  vocals: "vocals",
+  drums: "instrumental",
+  bass: "instrumental",
+  performance: "performance",
+  songwriting: "songwriting"
+};
+
+const ATTRIBUTE_INVESTMENT_WEIGHTS: Record<AttributeFocus, Array<{ key: AttributeKey; weight: number }>> = {
+  general: [
+    { key: "musicality", weight: 0.4 },
+    { key: "charisma", weight: 0.35 },
+    { key: "looks", weight: 0.25 }
+  ],
+  instrumental: [{ key: "musicality", weight: 1 }],
+  vocals: [
+    { key: "charisma", weight: 0.6 },
+    { key: "musicality", weight: 0.4 }
+  ],
+  performance: [
+    { key: "charisma", weight: 0.55 },
+    { key: "looks", weight: 0.45 }
+  ],
+  songwriting: [
+    { key: "musicality", weight: 0.65 },
+    { key: "charisma", weight: 0.35 }
+  ]
+};
+
 const SkillTraining = () => {
   const { toast } = useToast();
-  const { profile, skills, attributes, updateSkills, updateProfile, addActivity, loading } = useGameData();
+  const { profile, skills, attributes, updateSkills, updateProfile, updateAttributes, addActivity, loading } = useGameData();
   const [training, setTraining] = useState(false);
   const baseTrainingCooldown = COOLDOWNS.skillTraining;
+
+  const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
+
+  const enduranceMultiplier = attributeScoreToMultiplier(attributeScores.physical_endurance ?? null, 0.3);
+  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, enduranceMultiplier);
 
   const trainingSessions: TrainingSession[] = [
     {
@@ -84,16 +125,49 @@ const SkillTraining = () => {
     }
   ];
 
-  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
-
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
-  const skillCap = getSkillCap(playerLevel, totalExperience);
+  const baseSkillCap = getSkillCap(playerLevel, totalExperience);
   const lastTrainingTime = skills?.updated_at ?? null;
   const cooldownActive = lastTrainingTime ? isOnCooldown(lastTrainingTime, trainingCooldown) : false;
   const remainingCooldown = cooldownActive && lastTrainingTime
     ? getRemainingCooldown(lastTrainingTime, trainingCooldown)
     : 0;
+
+  const getEffectiveSkillCap = (skill: string): number => {
+    const focus = TRAINING_FOCUS[skill as SkillName] ?? "general";
+    const focusScore = getFocusAttributeScore(attributeScores, focus);
+    const capBonus = Math.round((focusScore / 1000) * 10);
+    return Math.min(100, baseSkillCap + capBonus);
+  };
+
+  const getAttributeInvestments = (
+    focus: AttributeFocus,
+    xpGain: number
+  ): Partial<Record<AttributeKey, number>> => {
+    const weights = ATTRIBUTE_INVESTMENT_WEIGHTS[focus] ?? ATTRIBUTE_INVESTMENT_WEIGHTS.general;
+    const totalWeight = weights.reduce((sum, item) => sum + item.weight, 0);
+    if (totalWeight <= 0 || xpGain <= 0) {
+      return {};
+    }
+
+    const baseInvestment = Math.max(1, Math.round(xpGain * 4));
+    return weights.reduce<Partial<Record<AttributeKey, number>>>((accumulator, { key, weight }) => {
+      if (weight <= 0) {
+        return accumulator;
+      }
+
+      const currentValue = attributeScores[key] ?? 0;
+      const distributedGain = Math.round((baseInvestment * weight) / totalWeight);
+      if (distributedGain <= 0) {
+        return accumulator;
+      }
+
+      const nextValue = Math.min(1000, Math.max(0, Math.round(currentValue + distributedGain)));
+      accumulator[key] = nextValue;
+      return accumulator;
+    }, {});
+  };
 
   const handleTraining = async (session: TrainingSession) => {
     if (!skills || !profile) return;
@@ -102,12 +176,14 @@ const SkillTraining = () => {
     const playerCash = Number(profile.cash ?? 0);
     const playerLevel = Number(profile.level ?? 1);
     const totalExperience = Number(profile.experience ?? 0);
-    const skillCap = getSkillCap(playerLevel, totalExperience);
-    const trainingCost = calculateTrainingCost(currentSkill);
+    const baseCap = getSkillCap(playerLevel, totalExperience);
+    const focus = TRAINING_FOCUS[session.skill] ?? "general";
+    const effectiveSkillCap = getEffectiveSkillCap(session.skill);
+    const trainingCost = calculateTrainingCost(currentSkill, attributeScores, focus);
     const lastTraining = skills.updated_at;
     const cooldownActive = lastTraining ? isOnCooldown(lastTraining, trainingCooldown) : false;
 
-    if (currentSkill >= skillCap) {
+    if (currentSkill >= effectiveSkillCap) {
       toast({
         variant: "destructive",
         title: "Skill Cap Reached",
@@ -140,12 +216,14 @@ const SkillTraining = () => {
     setTraining(true);
 
     try {
-      const focusedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
-      const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
+      const xpGain = Math.max(1, calculateExperienceReward(session.xpGain, attributeScores, focus));
+      const newSkillValue = Math.min(effectiveSkillCap, currentSkill + xpGain);
       const skillGain = newSkillValue - currentSkill;
       const newCash = playerCash - trainingCost;
-      const newExperience = totalExperience + focusedXp;
+      const newExperience = totalExperience + xpGain;
       const timestamp = new Date().toISOString();
+
+      const attributeInvestments = getAttributeInvestments(focus, xpGain);
 
       await updateSkills({
         [session.skill]: newSkillValue,
@@ -158,9 +236,13 @@ const SkillTraining = () => {
         updated_at: timestamp
       });
 
+      if (Object.keys(attributeInvestments).length > 0) {
+        await updateAttributes(attributeInvestments);
+      }
+
       await addActivity(
         "training",
-        `Completed ${session.name} training session (+${focusedXp} XP)`,
+        `Completed ${session.name} training session (+${xpGain} XP)`,
         -trainingCost
       );
 
@@ -250,38 +332,39 @@ const SkillTraining = () => {
         <TabsContent value="skills" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {skills && Object.entries(skills)
-              .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
+              .filter(([key]) => !["id", "user_id", "profile_id", "created_at", "updated_at"].includes(key))
               .map(([skill, value]) => {
-              const session = trainingSessions.find(s => s.skill === skill);
-              const Icon = session?.icon || Music;
-              const numericValue = typeof value === "number" ? value : Number(value ?? 0);
-              const progressValue = skillCap > 0 ? Math.min(100, (numericValue / skillCap) * 100) : 0;
+                const session = trainingSessions.find(s => s.skill === skill);
+                const Icon = session?.icon || Music;
+                const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+                const effectiveSkillCap = getEffectiveSkillCap(skill);
+                const progressValue = effectiveSkillCap > 0 ? Math.min(100, (numericValue / effectiveSkillCap) * 100) : 0;
 
-              return (
-                <Card key={skill} className="relative overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-lg font-oswald capitalize">{skill}</CardTitle>
+                return (
+                  <Card key={skill} className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-5 w-5 text-primary" />
+                          <CardTitle className="text-lg font-oswald capitalize">{skill}</CardTitle>
+                        </div>
+                        <Badge variant="outline" className={getSkillColor(numericValue)}>
+                          {getSkillLevel(numericValue)}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={getSkillColor(numericValue)}>
-                        {getSkillLevel(numericValue)}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Progress</span>
-                        <span className="font-mono">{numericValue}/{skillCap}</span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progress</span>
+                          <span className="font-mono">{numericValue}/{effectiveSkillCap}</span>
+                        </div>
+                        <Progress value={progressValue} className="h-2" />
                       </div>
-                      <Progress value={progressValue} className="h-2" />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         </TabsContent>
 
@@ -290,11 +373,13 @@ const SkillTraining = () => {
             {trainingSessions.map((session) => {
               const Icon = session.icon;
               const currentSkill = Number(skills?.[session.skill] ?? 0);
-              const trainingCost = calculateTrainingCost(currentSkill);
+              const focus = TRAINING_FOCUS[session.skill] ?? "general";
+              const effectiveSkillCap = getEffectiveSkillCap(session.skill);
+              const trainingCost = calculateTrainingCost(currentSkill, attributeScores, focus);
               const canAfford = (profile?.cash ?? 0) >= trainingCost;
-              const isAtCap = currentSkill >= skillCap;
+              const isAtCap = currentSkill >= effectiveSkillCap;
               const buttonDisabled = training || !canAfford || isAtCap || cooldownActive;
-              const adjustedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
+              const projectedXp = Math.max(1, calculateExperienceReward(session.xpGain, attributeScores, focus));
 
               return (
                 <Card key={session.skill} className="relative">
@@ -320,13 +405,13 @@ const SkillTraining = () => {
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-purple-400" />
                         <span>
-                          +{adjustedXp} XP
-                          {adjustedXp !== session.xpGain ? " (focus bonus)" : ""}
+                          +{projectedXp} XP
+                          {projectedXp !== session.xpGain ? " (attribute bonus)" : ""}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <TrendingUp className="h-3 w-3 text-green-400" />
-                        <span>Skill: {currentSkill}/{skillCap}</span>
+                        <span>Skill: {currentSkill}/{effectiveSkillCap}</span>
                       </div>
                     </div>
 

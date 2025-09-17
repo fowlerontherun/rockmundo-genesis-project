@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import {
+  AttributeKey,
+  calculateExperienceReward,
+  calculateFanGain,
+  extractAttributeScores,
+  getFocusAttributeScore,
+  attributeScoreToMultiplier
+} from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 import type { Database, Json } from "@/integrations/supabase/types";
@@ -140,7 +148,9 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, updateProfile, addActivity } = useGameData();
+  const { profile, skills, attributes, updateProfile, updateAttributes, addActivity } = useGameData();
+
+  const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
   
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
@@ -252,7 +262,13 @@ const GigBooking = () => {
     const supplementalSkill = showType === "acoustic" ? skills?.songwriting || 0 : skills?.guitar || 0;
     const skillBonus = Math.round(venue.base_payment * ((performanceSkill + supplementalSkill) / 400));
     const baseTotal = venue.base_payment + popularityBonus + skillBonus;
-    return Math.round(baseTotal * details.paymentMultiplier);
+    const charismaMultiplier = attributeScoreToMultiplier(attributeScores.charisma ?? null, 0.4);
+    const looksMultiplier = attributeScoreToMultiplier(attributeScores.looks ?? null, 0.25);
+    const musicalityMultiplier = attributeScoreToMultiplier(attributeScores.musicality ?? null, 0.3);
+    const attributeMultiplier = showType === "acoustic"
+      ? charismaMultiplier * musicalityMultiplier
+      : charismaMultiplier * looksMultiplier * musicalityMultiplier;
+    return Math.round(baseTotal * details.paymentMultiplier * attributeMultiplier);
   };
 
   const calculateSuccessChance = (venue: Venue, showType: ShowType = DEFAULT_SHOW_TYPE) => {
@@ -266,8 +282,11 @@ const GigBooking = () => {
       : (performanceSkill + vocalsSkill + instrumentalSkill * 0.5) / 2.5;
     const popularityFactor = Math.min(profile?.fame || 0, 120);
     const baseChance = 48 + details.successModifier;
+    const performanceFocus = getFocusAttributeScore(attributeScores, "performance");
+    const attributeBonus = (performanceFocus / 1000) * 10;
+    const attributeMultiplier = attributeScoreToMultiplier(performanceFocus, 0.3);
 
-    return Math.min(97, Math.max(12, baseChance + (skillFactor / 2) + (popularityFactor / 6)));
+    return Math.min(97, Math.max(12, (baseChance + (skillFactor / 2) + (popularityFactor / 6) + attributeBonus) * attributeMultiplier));
   };
 
   const meetsRequirements = (venue: Venue) => {
@@ -507,12 +526,22 @@ const GigBooking = () => {
       const baseFanGain = isSuccess
         ? Math.round(attendance * 0.1 * (prestigeFactor / 5))
         : Math.round(attendance * 0.05);
-      const fanGain = Math.max(0, Math.round(baseFanGain * showTypeDetails.fanMultiplier * moraleMultiplier));
+      const rawFanGain = baseFanGain * showTypeDetails.fanMultiplier * moraleMultiplier;
+      const fanGain = Math.max(
+        0,
+        calculateFanGain(rawFanGain, skills?.performance ?? 0, attributeScores)
+      );
 
       const basePaymentMultiplier = isSuccess ? 1 : 0.5;
       const acousticPayoutModifier = showType === "acoustic" ? (isSuccess ? 0.95 : 0.75) : 1;
+      const charismaMultiplier = attributeScoreToMultiplier(attributeScores.charisma ?? null, 0.4);
+      const looksMultiplier = attributeScoreToMultiplier(attributeScores.looks ?? null, 0.25);
+      const musicalityMultiplier = attributeScoreToMultiplier(attributeScores.musicality ?? null, 0.3);
+      const attributePaymentMultiplier = showType === "acoustic"
+        ? charismaMultiplier * musicalityMultiplier
+        : charismaMultiplier * looksMultiplier * musicalityMultiplier;
       const actualPayment = Math.max(
-        Math.round(gig.payment * basePaymentMultiplier * acousticPayoutModifier),
+        Math.round(gig.payment * basePaymentMultiplier * acousticPayoutModifier * attributePaymentMultiplier),
         Math.round(gig.payment * 0.3),
       );
 
@@ -545,13 +574,38 @@ const GigBooking = () => {
       // Update player stats
       const newCash = (profile.cash || 0) + actualPayment;
       const newFame = (profile.fame || 0) + fanGain;
-      const expGain = Math.max(1, Math.round((attendance / 10) * showTypeDetails.experienceModifier));
+      const baseExperience = (attendance / 10) * showTypeDetails.experienceModifier;
+      const expGain = Math.max(1, calculateExperienceReward(baseExperience, attributeScores, "performance"));
 
       await updateProfile({
         cash: newCash,
         fame: newFame,
         experience: (profile.experience || 0) + expGain
       });
+
+      const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
+      const currentCharisma = attributeScores.charisma ?? 0;
+      const currentLooks = attributeScores.looks ?? 0;
+      const currentMusicality = attributeScores.musicality ?? 0;
+      const charismaGain = Math.round(fanGain * (isSuccess ? 0.45 : 0.25));
+      const looksGain = Math.round(fanGain * (showType === "acoustic" ? 0.2 : 0.35));
+      const musicalityGain = Math.round(expGain * 0.3);
+
+      if (charismaGain > 0) {
+        attributeUpdates.charisma = Math.min(1000, Math.round(currentCharisma + charismaGain));
+      }
+
+      if (looksGain > 0) {
+        attributeUpdates.looks = Math.min(1000, Math.round(currentLooks + looksGain));
+      }
+
+      if (musicalityGain > 0) {
+        attributeUpdates.musicality = Math.min(1000, Math.round(currentMusicality + musicalityGain));
+      }
+
+      if (Object.keys(attributeUpdates).length > 0) {
+        await updateAttributes(attributeUpdates);
+      }
 
       // Update local state
       setPlayerGigs(prev => prev.map(g =>
