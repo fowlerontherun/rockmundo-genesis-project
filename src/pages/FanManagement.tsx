@@ -257,9 +257,10 @@ const FanManagement = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setSocialPosts(data || []);
+      setSocialPosts((prevPosts) => prevPosts.filter((existingPost) => existingPost.id !== post.id));
+      setScheduledPosts((prevPosts) => prevPosts.filter((existingPost) => existingPost.id !== post.id));
     } catch (error) {
-      console.error('Error loading social posts:', error);
+      console.error('Error deleting scheduled post:', error);
     }
   };
 
