@@ -243,95 +243,8 @@ const useProvideGameData = (): GameDataContextValue => {
       return;
     }
 
-  const updateProfile = useCallback(
-    async (updates: Partial<PlayerProfile>) => {
-      if (!user || !profile) return;
-
-      try {
-        const { data, error }: PostgrestSingleResponse<PlayerProfile> = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('user_id', user.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        if (!data) {
-          throw new Error('No profile data returned from Supabase.');
-        }
-        setProfile(data);
-        const nextCityId = data.current_city_id ?? null;
-        const currentCityId = currentCity?.id ?? null;
-        if (nextCityId !== currentCityId) {
-          await resolveCurrentCity(nextCityId);
-        }
-        return data;
-      } catch (err: unknown) {
-        console.error('Error updating profile:', err);
-        if (isPostgrestError(err)) {
-          throw err;
-        }
-        if (err instanceof Error) {
-          throw err;
-        }
-        throw new Error('An unknown error occurred while updating the profile.');
-      }
-    },
-    [profile, user, currentCity?.id, resolveCurrentCity]
-  );
-
-  const updateSkills = useCallback(
-    async (updates: Partial<PlayerSkills>) => {
-      if (!user || !skills) return;
-
-      try {
-        const { data, error }: PostgrestSingleResponse<PlayerSkills> = await supabase
-          .from('player_skills')
-          .update(updates)
-          .eq('user_id', user.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        if (!data) {
-          throw new Error('No skill data returned from Supabase.');
-        }
-        setSkills(data);
-        return data;
-      } catch (err: unknown) {
-        console.error('Error updating skills:', err);
-        if (isPostgrestError(err)) {
-          throw err;
-        }
-        if (err instanceof Error) {
-          throw err;
-        }
-        throw new Error('An unknown error occurred while updating skills.');
-      }
-    },
-    [skills, user]
-  );
-
-  const addActivity = useCallback(
-    async (activityType: string, message: string, earnings: number = 0) => {
-      if (!user) return;
-
-      try {
-        const { data, error }: PostgrestSingleResponse<ActivityItem> = await supabase
-          .from('activity_feed')
-          .insert({
-            user_id: user.id,
-            activity_type: activityType,
-            message,
-            earnings
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        if (!data) {
-          throw new Error('No activity data returned from Supabase.');
-        }
+    void fetchCharacters();
+  }, [clearSelectedCharacter, fetchCharacters, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -509,6 +422,15 @@ const useProvideGameData = (): GameDataContextValue => {
         });
 
       if (skillsInsertError) throw skillsInsertError;
+
+      const { error: attributesInsertError } = await supabase
+        .from('player_attributes')
+        .insert({
+          user_id: user.id,
+          profile_id: newProfile.id
+        });
+
+      if (attributesInsertError) throw attributesInsertError;
 
       setCharacters(prev => sortCharacters([...prev, newProfile]));
 
