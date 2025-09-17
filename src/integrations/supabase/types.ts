@@ -3107,6 +3107,7 @@ export type Database = {
       }
       venues: {
         Row: {
+          city_id: string | null
           base_payment: number | null
           capacity: number | null
           created_at: string | null
@@ -3118,6 +3119,7 @@ export type Database = {
           venue_type: string | null
         }
         Insert: {
+          city_id?: string | null
           base_payment?: number | null
           capacity?: number | null
           created_at?: string | null
@@ -3129,6 +3131,7 @@ export type Database = {
           venue_type?: string | null
         }
         Update: {
+          city_id?: string | null
           base_payment?: number | null
           capacity?: number | null
           created_at?: string | null
@@ -3139,7 +3142,15 @@ export type Database = {
           requirements?: Json | null
           venue_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "venues_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
