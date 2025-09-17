@@ -112,7 +112,7 @@ const AdvancedGigSystem: React.FC = () => {
   const [fameChange, setFameChange] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
 
-  const loadGig = useCallback(async () => {
+  const loadGig = useCallback(async (): Promise<void> => {
     if (!gigId) return;
 
     try {
@@ -133,17 +133,19 @@ const AdvancedGigSystem: React.FC = () => {
         .single();
 
       if (venueError) throw venueError;
-      const transformedGig = {
-        ...gigData,
+      if (!venueData) throw new Error('Venue details not found');
+
+      const transformedGig: Gig = {
+        id: gigData.id,
         venue: {
-          id: venueRow.id,
-          name: venueRow.name,
-          capacity: venueRow.capacity ?? 0,
-          prestige_level: venueRow.prestige_level ?? 0
+          id: venueData.id,
+          name: venueData.name,
+          capacity: venueData.capacity ?? 0,
+          prestige_level: venueData.prestige_level ?? 0
         },
-        scheduled_date: gigRow.scheduled_date,
-        payment: gigRow.payment ?? 0,
-        status: gigRow.status ?? 'scheduled'
+        scheduled_date: gigData.scheduled_date,
+        payment: gigData.payment ?? 0,
+        status: gigData.status ?? 'scheduled'
       };
 
       setGig(transformedGig);
@@ -158,10 +160,10 @@ const AdvancedGigSystem: React.FC = () => {
   }, [gigId, supabase, toast]);
 
   useEffect(() => {
-    if (gigId && user) {
+    if (user) {
       loadGig();
     }
-  }, [gigId, user, loadGig]);
+  }, [user, loadGig]);
 
   const startPerformance = () => {
     setIsPerforming(true);
