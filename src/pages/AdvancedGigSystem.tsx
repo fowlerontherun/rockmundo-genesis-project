@@ -112,7 +112,7 @@ const AdvancedGigSystem: React.FC = () => {
   const [fameChange, setFameChange] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
 
-  const loadGig = useCallback(async () => {
+  const loadGig = useCallback(async (): Promise<void> => {
     if (!gigId) return;
 
     try {
@@ -160,10 +160,10 @@ const AdvancedGigSystem: React.FC = () => {
   }, [gigId, supabase, toast]);
 
   useEffect(() => {
-    if (gigId && user) {
+    if (user) {
       loadGig();
     }
-  }, [gigId, user, loadGig]);
+  }, [user, loadGig]);
 
   const startPerformance = () => {
     setIsPerforming(true);
