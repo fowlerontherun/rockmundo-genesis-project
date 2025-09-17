@@ -24,6 +24,8 @@ export type ActivityItem = Tables<"activity_feed">;
 export type AttributeDefinition = Tables<"attribute_definitions">;
 export type ProfileAttribute = Tables<"profile_attributes">;
 
+type Nullable<T> = T | null;
+
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
 
 export interface CreateCharacterInput {
@@ -183,7 +185,7 @@ const useProvideGameData = (): GameDataContextValue => {
   }, [user, selectedCharacterId, clearGameState]);
 
   const resolveCurrentCity = useCallback(
-    async (cityId: string | null) => {
+    async (cityId: Nullable<string>) => {
       if (!cityId) {
         setCurrentCity(null);
         return;
