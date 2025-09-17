@@ -52,6 +52,22 @@ interface SocialPost {
   scheduled_for?: string | null;
 }
 
+interface SocialPostInsert {
+  user_id: string;
+  platform: string;
+  content: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  fan_growth: number;
+  media_url?: string | null;
+  media_path?: string | null;
+  media_type?: "image" | "video" | null;
+  scheduled_for?: string | null;
+  created_at?: string;
+  timestamp?: string | null;
+}
+
 interface FanDemographics {
   id: string;
   user_id: string;
@@ -449,7 +465,7 @@ const FanManagement = () => {
       // Create posts for multiple platforms
       const platforms = ['instagram', 'twitter', 'youtube'];
       const postPromises = platforms.map(platform => {
-        const payload: Record<string, any> = {
+        const payload: SocialPostInsert = {
           user_id: user.id,
           platform,
           content: postContent,
