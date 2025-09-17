@@ -744,6 +744,36 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_flags: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          enabled: boolean
+          category: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          enabled?: boolean
+          category?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          enabled?: boolean
+          category?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       game_events: {
         Row: {
           created_at: string | null
@@ -1403,6 +1433,39 @@ export type Database = {
         }
         Relationships: []
       }
+      seasons: {
+        Row: {
+          id: string
+          name: string
+          start_date: string
+          end_date: string
+          multipliers: Json | null
+          active: boolean
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          start_date: string
+          end_date: string
+          multipliers?: Json | null
+          active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          start_date?: string
+          end_date?: string
+          multipliers?: Json | null
+          active?: boolean
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       social_campaigns: {
         Row: {
           budget: number
@@ -1845,6 +1908,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_actions: {
+        Row: {
+          id: string
+          user_id: string | null
+          username: string | null
+          action: string
+          details: string | null
+          timestamp: string | null
+          created_at: string | null
+          severity: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          username?: string | null
+          action: string
+          details?: string | null
+          timestamp?: string | null
+          created_at?: string | null
+          severity?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          username?: string | null
+          action?: string
+          details?: string | null
+          timestamp?: string | null
+          created_at?: string | null
+          severity?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
