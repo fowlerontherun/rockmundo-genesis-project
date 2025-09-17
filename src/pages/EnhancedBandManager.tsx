@@ -37,8 +37,8 @@ interface BandMember {
   profiles: {
     username: string;
     display_name: string;
-    level: number;
-    avatar_url: string;
+    avatar_url: string | null;
+    levelEstimate: number;
   };
   player_skills: {
     guitar: number;
@@ -58,15 +58,16 @@ interface BandStats {
   gigsPerformed: number;
 }
 
-type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type PublicProfileRow = Database["public"]["Views"]["public_profiles"]["Row"];
 type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
 type MemberSkillSet = Pick<
   PlayerSkillsRow,
   "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting"
 >;
 
-interface AvailableMember extends ProfileRow {
+interface AvailableMember extends PublicProfileRow {
   player_skills: MemberSkillSet;
+  levelEstimate: number;
 }
 
 const defaultPlayerSkills: MemberSkillSet = {
@@ -76,6 +77,28 @@ const defaultPlayerSkills: MemberSkillSet = {
   bass: 20,
   performance: 20,
   songwriting: 20
+};
+
+const estimateSkillLevel = (skills?: MemberSkillSet | PlayerSkillsRow | null) => {
+  if (!skills) {
+    return 1;
+  }
+
+  const values = [
+    skills.guitar,
+    skills.vocals,
+    skills.drums,
+    skills.bass,
+    skills.performance,
+    skills.songwriting
+  ].filter((value): value is number => typeof value === "number");
+
+  if (values.length === 0) {
+    return 1;
+  }
+
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Math.max(1, Math.round(average / 10));
 };
 
 const EnhancedBandManager = () => {
@@ -168,7 +191,7 @@ const EnhancedBandManager = () => {
   const fetchAvailableMembers = useCallback(async (currentMemberIds: string[]) => {
     try {
       const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("*")
         .neq("user_id", user?.id)
         .eq("is_active", true)
@@ -191,25 +214,19 @@ const EnhancedBandManager = () => {
             skills = data as MemberSkillSet | null;
           }
 
-          const defaultSkills: MemberSkillSet = {
-            guitar: 20,
-            vocals: 20,
-            drums: 20,
-            bass: 20,
-            performance: 20,
-            songwriting: 20
+          const normalizedSkills: MemberSkillSet = {
+            guitar: skills?.guitar ?? defaultPlayerSkills.guitar,
+            vocals: skills?.vocals ?? defaultPlayerSkills.vocals,
+            drums: skills?.drums ?? defaultPlayerSkills.drums,
+            bass: skills?.bass ?? defaultPlayerSkills.bass,
+            performance: skills?.performance ?? defaultPlayerSkills.performance,
+            songwriting: skills?.songwriting ?? defaultPlayerSkills.songwriting
           };
 
           return {
             ...profile,
-            player_skills: {
-              guitar: skills?.guitar ?? defaultPlayerSkills.guitar,
-              vocals: skills?.vocals ?? defaultPlayerSkills.vocals,
-              drums: skills?.drums ?? defaultPlayerSkills.drums,
-              bass: skills?.bass ?? defaultPlayerSkills.bass,
-              performance: skills?.performance ?? defaultPlayerSkills.performance,
-              songwriting: skills?.songwriting ?? defaultPlayerSkills.songwriting
-            }
+            player_skills: normalizedSkills,
+            levelEstimate: estimateSkillLevel(normalizedSkills)
           };
         })
       );
@@ -255,6 +272,16 @@ const EnhancedBandManager = () => {
 
             skillsData = data as MemberSkillSet | null;
           }
+
+          const publicProfile = profileRes.data as PublicProfileRow | null;
+          const normalizedSkills: MemberSkillSet = {
+            guitar: skillsRes.data?.guitar ?? defaultPlayerSkills.guitar,
+            vocals: skillsRes.data?.vocals ?? defaultPlayerSkills.vocals,
+            drums: skillsRes.data?.drums ?? defaultPlayerSkills.drums,
+            bass: skillsRes.data?.bass ?? defaultPlayerSkills.bass,
+            performance: skillsRes.data?.performance ?? defaultPlayerSkills.performance,
+            songwriting: skillsRes.data?.songwriting ?? defaultPlayerSkills.songwriting
+          };
 
           return {
             ...member,
@@ -588,7 +615,7 @@ const EnhancedBandManager = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">Level {member.profiles.level}</Badge>
+                        <Badge variant="outline">Level {member.profiles.levelEstimate}</Badge>
                         {member.user_id === selectedBand.leader_id && (
                           <Crown className="h-4 w-4 text-yellow-400" />
                         )}
@@ -704,8 +731,8 @@ const EnhancedBandManager = () => {
                           <Users className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg font-oswald">{member.display_name}</CardTitle>
-                          <CardDescription>@{member.username} • Level {member.level}</CardDescription>
+                          <CardTitle className="text-lg font-oswald">{member.display_name ?? member.username}</CardTitle>
+                          <CardDescription>@{member.username} • Level {member.levelEstimate}</CardDescription>
                         </div>
                       </div>
                     </CardHeader>

@@ -171,6 +171,28 @@ const safeNumber = (value: unknown, fallback = 0): number => {
   return fallback;
 };
 
+const isUnauthorizedPostgrestError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const { code, message, status } = error as {
+    code?: string;
+    message?: string;
+    status?: number;
+  };
+  const normalizedMessage = typeof message === "string" ? message.toLowerCase() : "";
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    code === "PGRST301" ||
+    code === "42501" ||
+    normalizedMessage.includes("permission denied") ||
+    normalizedMessage.includes("not authorized")
+  );
+};
+
 const buildPlatformBreakdown = (
   song: SongRecord,
   streamingPlatforms: StreamingPlatform[]
@@ -473,6 +495,7 @@ const StreamingPlatforms = () => {
   const [serverMessage, setServerMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const platformSnapshotsRef = useRef<Record<string, PlatformSnapshot>>({});
   const overviewSnapshotRef = useRef<OverviewSnapshot | null>(null);
+  const unauthorizedAccountsWarningShown = useRef(false);
 
   const loadData = useCallback(async (showLoading = false) => {
     if (!user) return;
@@ -492,8 +515,26 @@ const StreamingPlatforms = () => {
         .from('player_streaming_accounts')
         .select('*')
         .eq('user_id', user.id);
-      if (accountsError) throw accountsError;
-      setPlayerAccounts(accountsData ?? []);
+
+      if (accountsError) {
+        if (isUnauthorizedPostgrestError(accountsError)) {
+          console.warn('Unauthorized attempt to load streaming accounts:', accountsError);
+          setPlayerAccounts([]);
+
+          if (!unauthorizedAccountsWarningShown.current) {
+            unauthorizedAccountsWarningShown.current = true;
+            toast({
+              variant: "destructive",
+              title: "Access denied",
+              description: "You are not authorized to view streaming accounts.",
+            });
+          }
+        } else {
+          throw accountsError;
+        }
+      } else {
+        setPlayerAccounts(accountsData ?? []);
+      }
       const songsResponse = await supabase
         .from('songs')
         .select('*')

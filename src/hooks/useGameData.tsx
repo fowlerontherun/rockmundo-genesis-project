@@ -9,7 +9,6 @@ export type PlayerSkills = Tables<'player_skills'>;
 export type ActivityItem = Tables<'activity_feed'>;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
-
 const isPostgrestError = (error: unknown): error is PostgrestError =>
   typeof error === "object" &&
   error !== null &&
@@ -426,7 +425,6 @@ const useProvideGameData = (): GameDataContextValue => {
 
   const hasCharacters = useMemo(() => characters.length > 0, [characters]);
   const loading = useMemo(() => charactersLoading || dataLoading, [charactersLoading, dataLoading]);
-
   return {
     characters,
     selectedCharacterId,
@@ -440,6 +438,9 @@ const useProvideGameData = (): GameDataContextValue => {
     clearSelectedCharacter,
     updateProfile,
     updateSkills,
+    updateLocation,
+    updateHealth,
+    updateCurrentCity,
     addActivity,
     createCharacter,
     refreshCharacters,

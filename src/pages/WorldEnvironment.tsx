@@ -25,7 +25,7 @@ import {
   MapPin,
   Calendar,
   AlertTriangle,
-  Sparkles,
+  SparklesIcon,
   Globe,
   Mountain,
   Building,
@@ -140,7 +140,7 @@ const WorldEnvironment: React.FC = () => {
       case 'competition': return <TrendingUp className="w-5 h-5 text-blue-500" />;
       case 'economic': return <DollarSign className="w-5 h-5 text-green-500" />;
       case 'disaster': return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'celebration': return <Sparkles className="w-5 h-5 text-yellow-500" />;
+      case 'celebration': return <SparklesIcon className="w-5 h-5 text-yellow-500" />;
       default: return <Globe className="w-5 h-5" />;
     }
   };
@@ -372,60 +372,227 @@ const WorldEnvironment: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="cities" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {cities.map((city) => (
-              <Card key={city.id} className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setSelectedCity(city)}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold">{city.name}</h3>
-                      <p className="text-sm text-muted-foreground">{city.country}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium">Music Scene</div>
-                      <div className="text-2xl font-bold text-primary">{city.music_scene}%</div>
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 xl:grid-cols-[2fr,1fr] gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {cities.map((city) => {
+                const isSelected = selectedCity?.id === city.id;
+                const signatureDistricts = city.locations.slice(0, 2);
 
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Population</div>
-                      <div className="font-medium">{(city.population / 1000000).toFixed(1)}M</div>
+                return (
+                  <Card
+                    key={city.id}
+                    className={`cursor-pointer transition-shadow ${
+                      isSelected ? 'border-primary shadow-lg' : 'hover:shadow-lg'
+                    }`}
+                    onClick={() => setSelectedCity(city)}
+                  >
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-bold">{city.name}</h3>
+                          <p className="text-sm text-muted-foreground">{city.country}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium">Music Scene</div>
+                          <div className="text-2xl font-bold text-primary">{city.music_scene}%</div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Population</div>
+                          <div className="font-medium">{(city.population / 1_000_000).toFixed(1)}M</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Venues</div>
+                          <div className="font-medium">{city.venues}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Genre</div>
+                          <div className="font-medium">{city.dominant_genre}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-muted-foreground">Local Bonus</div>
+                          <div className="font-medium text-green-600">{city.local_bonus}x</div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-2">Cost of Living</div>
+                        <Progress value={city.cost_of_living} className="h-2" />
+                        <div className="text-xs text-muted-foreground mt-1">{city.cost_of_living}% of global average</div>
+                      </div>
+
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          <span>
+                            <span className="font-medium text-foreground">{city.famousResident}</span> is the resident icon
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          <span>
+                            Travel hub: <span className="font-medium text-foreground">{city.travelHub || 'Multiple hubs'}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm font-medium mb-2">Cultural Events</div>
+                        <div className="flex flex-wrap gap-1">
+                          {city.cultural_events.map((event, index) => (
+                            <Badge key={`${city.id}-event-${index}`} variant="outline" className="text-xs">
+                              {event}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      {signatureDistricts.length > 0 && (
+                        <div>
+                          <div className="text-sm font-medium mb-2">Signature Districts</div>
+                          <div className="space-y-2">
+                            {signatureDistricts.map((district) => (
+                              <div key={`${city.id}-${district.name}`} className="border rounded-lg p-3 space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-semibold">{district.name}</span>
+                                  {typeof district.averageTicketPrice === 'number' && (
+                                    <Badge variant="outline" className="text-xs">
+                                      ~${district.averageTicketPrice}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">{district.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {selectedCity && (
+              <Card className="sticky top-24">
+                <CardHeader>
+                  <CardTitle>Explore {selectedCity.name}</CardTitle>
+                  {selectedCity.description && (
+                    <p className="text-sm text-muted-foreground">{selectedCity.description}</p>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      <span>
+                        Famous resident: <span className="font-medium text-foreground">{selectedCity.famousResident}</span>
+                      </span>
                     </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Venues</div>
-                      <div className="font-medium">{city.venues}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Genre</div>
-                      <div className="font-medium">{city.dominant_genre}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Local Bonus</div>
-                      <div className="font-medium text-green-600">{city.local_bonus}x</div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      <span>
+                        Travel hub: <span className="font-medium text-foreground">{selectedCity.travelHub || 'Multiple hubs'}</span>
+                      </span>
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-sm text-muted-foreground mb-2">Cost of Living</div>
-                    <Progress value={city.cost_of_living} className="h-2" />
-                    <div className="text-xs text-muted-foreground mt-1">{city.cost_of_living}% of global average</div>
+                    <div className="text-sm font-medium mb-2">Cultural Events</div>
+                    {selectedCity.cultural_events.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedCity.cultural_events.map((event, index) => (
+                          <Badge key={`${selectedCity.id}-detail-event-${index}`} variant="secondary" className="text-xs">
+                            {event}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No cultural events recorded yet.</p>
+                    )}
                   </div>
 
-                  <div className="mt-4">
-                    <div className="text-sm font-medium mb-2">Cultural Events:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {city.cultural_events.map((event, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {event}
-                        </Badge>
-                      ))}
-                    </div>
+                  <div>
+                    <div className="text-sm font-medium mb-2">Intra-city Highlights</div>
+                    {selectedCity.locations.length ? (
+                      <div className="space-y-3">
+                        {selectedCity.locations.map((location) => (
+                          <div key={`${selectedCity.id}-${location.name}`} className="border rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium">{location.name}</span>
+                              {typeof location.averageTicketPrice === 'number' && (
+                                <Badge variant="outline" className="text-xs">
+                                  ~${location.averageTicketPrice}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{location.description}</p>
+                            {location.vibe && (
+                              <div className="text-xs text-muted-foreground italic">Vibe: {location.vibe}</div>
+                            )}
+                            {location.highlights.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {location.highlights.map((highlight, index) => (
+                                  <Badge key={`${location.name}-${index}`} variant="outline" className="text-xs">
+                                    {highlight}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {location.signatureVenue && (
+                              <div className="text-xs text-muted-foreground">
+                                Signature venue:{' '}
+                                <span className="font-medium text-foreground">{location.signatureVenue}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No district data available.</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium mb-2">Travel Options</div>
+                    {selectedCity.travelOptions.length ? (
+                      <div className="space-y-3">
+                        {selectedCity.travelOptions.map((option) => (
+                          <div key={`${selectedCity.id}-${option.mode}-${option.name}`} className="border rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs capitalize">{option.label}</Badge>
+                                <span className="font-medium">{option.name}</span>
+                              </div>
+                              {typeof option.averageCost === 'number' && (
+                                <span className="text-xs text-muted-foreground">Avg cost: ${option.averageCost}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{option.description}</p>
+                            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                              {typeof option.durationMinutes === 'number' && (
+                                <span>Duration: {option.durationMinutes} min</span>
+                              )}
+                              {option.frequency && <span>Frequency: {option.frequency}</span>}
+                              {option.connectsTo.length > 0 && (
+                                <span>Connects to: {option.connectsTo.join(', ')}</span>
+                              )}
+                            </div>
+                            {option.comfort && (
+                              <div className="text-[11px] text-muted-foreground">Comfort: {option.comfort}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Travel data coming soon.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         </TabsContent>
 

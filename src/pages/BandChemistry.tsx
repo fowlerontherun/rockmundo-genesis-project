@@ -344,7 +344,7 @@ const BandChemistry = () => {
           morale,
           chemistry,
           skill: calculateSkillAverage(skillsData),
-          loyalty: clampStat(40 + (profileData?.level ?? 1) * 10),
+          loyalty: clampStat(40 + Math.round(calculateSkillAverage(skillsData) / 5)),
           energy: clampStat(
             60 + Math.round(((skillsData?.performance ?? 50) + (skillsData?.songwriting ?? 50)) / 4)
           ),

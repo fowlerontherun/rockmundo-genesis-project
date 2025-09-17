@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,12 +22,24 @@ import {
   Upload,
   Edit3,
   TrendingUp,
-  Heart
+  Heart,
+  RotateCcw
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 
 interface FanMetrics {
   total_fans: number | null;
@@ -38,11 +51,14 @@ interface FanMetrics {
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, updateProfile } = useGameData();
+  const navigate = useNavigate();
+  const { profile, skills, updateProfile, resetCharacter } = useGameData();
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [fanMetrics, setFanMetrics] = useState<FanMetrics | null>(null);
   const [formData, setFormData] = useState({
     display_name: '',
@@ -229,7 +245,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Player Profile

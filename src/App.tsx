@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import BandManager from "./pages/BandManager";
 import GigBooking from "./pages/GigBooking";
 import Profile from "./pages/Profile";
+import CharacterCreationPage from "./pages/CharacterCreation";
 import MusicStudio from "./pages/MusicStudio";
 import WorldPulse from "./pages/WorldPulse";
 import Schedule from "./pages/Schedule";
@@ -40,6 +41,7 @@ import WorldEnvironment from "./pages/WorldEnvironment";
 import SongManager from "./pages/SongManager";
 import InventoryManager from "./pages/InventoryManager";
 import PlayerStatistics from "./pages/PlayerStatistics";
+import Busking from "./pages/Busking";
 
 const queryClient = new QueryClient();
 

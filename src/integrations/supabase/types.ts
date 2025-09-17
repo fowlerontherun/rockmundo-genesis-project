@@ -180,6 +180,156 @@ export type Database = {
           }
         ]
       }
+      busking_locations: {
+        Row: {
+          ambiance: string | null
+          base_payout: number
+          cooldown_minutes: number
+          created_at: string
+          description: string | null
+          experience_reward: number
+          fame_reward: number
+          id: string
+          name: string
+          neighborhood: string | null
+          recommended_skill: number
+          risk_level: string
+        }
+        Insert: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+        }
+        Update: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+        }
+        Relationships: []
+      }
+      busking_modifiers: {
+        Row: {
+          created_at: string
+          description: string | null
+          experience_bonus: number
+          fame_multiplier: number
+          id: string
+          name: string
+          payout_multiplier: number
+          rarity: string
+          risk_modifier: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name?: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Relationships: []
+      }
+      busking_sessions: {
+        Row: {
+          cash_earned: number
+          created_at: string
+          crowd_reaction: string | null
+          duration_minutes: number
+          experience_gained: number
+          failure_reason: string | null
+          fame_gained: number
+          id: string
+          location_id: string
+          modifier_id: string | null
+          notes: string | null
+          performance_score: number
+          risk_level: string | null
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          cash_earned?: number
+          created_at?: string
+          crowd_reaction?: string | null
+          duration_minutes?: number
+          experience_gained?: number
+          failure_reason?: string | null
+          fame_gained?: number
+          id?: string
+          location_id: string
+          modifier_id?: string | null
+          notes?: string | null
+          performance_score?: number
+          risk_level?: string | null
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          cash_earned?: number
+          created_at?: string
+          crowd_reaction?: string | null
+          duration_minutes?: number
+          experience_gained?: number
+          failure_reason?: string | null
+          fame_gained?: number
+          id?: string
+          location_id?: string
+          modifier_id?: string | null
+          notes?: string | null
+          performance_score?: number
+          risk_level?: string | null
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "busking_sessions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "busking_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_modifier_id_fkey"
+            columns: ["modifier_id"]
+            isOneToOne: false
+            referencedRelation: "busking_modifiers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       band_events: {
         Row: {
           band_id: string
@@ -348,6 +498,7 @@ export type Database = {
           id: string
           leader_id: string
           max_members: number | null
+          logo_url: string | null
           name: string
           popularity: number | null
           updated_at: string | null
@@ -360,6 +511,7 @@ export type Database = {
           id?: string
           leader_id: string
           max_members?: number | null
+          logo_url?: string | null
           name: string
           popularity?: number | null
           updated_at?: string | null
@@ -372,10 +524,74 @@ export type Database = {
           id?: string
           leader_id?: string
           max_members?: number | null
+          logo_url?: string | null
           name?: string
           popularity?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
+        }
+        Relationships: []
+      }
+      cities: {
+        Row: {
+          bonuses: string | null
+          cost_of_living: number | null
+          country: string
+          created_at: string | null
+          cultural_events: string[]
+          description: string | null
+          districts: Json
+          dominant_genre: string | null
+          famous_resident: string | null
+          id: string
+          local_bonus: number | null
+          music_scene: number | null
+          name: string
+          population: number | null
+          travel_hub: string | null
+          travel_nodes: Json
+          unlocked: boolean | null
+          venues: number | null
+        }
+        Insert: {
+          bonuses?: string | null
+          cost_of_living?: number | null
+          country: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
+        }
+        Update: {
+          bonuses?: string | null
+          cost_of_living?: number | null
+          country?: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name?: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
         }
         Relationships: []
       }
@@ -827,10 +1043,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at: string
+          digital_sales: number
           id: string
+          physical_sales: number
           rank: number
           song_id: string
           total_streams: number
+          total_sales: number
           trend: string
           trend_change: number
           updated_at: string
@@ -840,10 +1059,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank: number
           song_id: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -853,10 +1075,13 @@ export type Database = {
           chart_date?: string
           chart_type?: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank?: number
           song_id?: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -926,6 +1151,7 @@ export type Database = {
           id: string
           payment: number | null
           scheduled_date: string
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           updated_at: string | null
           venue_id: string
@@ -938,6 +1164,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id: string
@@ -950,6 +1177,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date?: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id?: string
@@ -1389,6 +1617,8 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          current_city_id: string | null
+          current_location: string
           cash: number | null
           created_at: string | null
           display_name: string | null
@@ -1396,6 +1626,7 @@ export type Database = {
           experience: number | null
           fame: number | null
           fans: number | null
+          health: number | null
           followers: number | null
           id: string
           is_active: boolean
@@ -1409,6 +1640,8 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          current_city_id?: string | null
+          current_location?: string
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
@@ -1416,6 +1649,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number | null
           followers?: number | null
           id?: string
           is_active?: boolean
@@ -1429,6 +1663,8 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          current_city_id?: string | null
+          current_location?: string
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
@@ -1436,6 +1672,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number | null
           followers?: number | null
           id?: string
           is_active?: boolean
@@ -1446,7 +1683,15 @@ export type Database = {
           user_id?: string
           username?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       seasons: {
         Row: {
@@ -1805,6 +2050,7 @@ export type Database = {
           date: string
           id: string
           revenue: number | null
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           ticket_price: number | null
           tickets_sold: number | null
@@ -1814,12 +2060,15 @@ export type Database = {
           misc_cost: number | null
           travel_time: number | null
           rest_days: number | null
+          travel_mode: string | null
+          travel_comfort: number | null
           venue_id: string
         }
         Insert: {
           date: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -1829,12 +2078,15 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id: string
         }
         Update: {
           date?: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -1844,6 +2096,8 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id?: string
         }
         Relationships: [
@@ -2108,6 +2362,17 @@ export type Database = {
         }
         Relationships: []
       },
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          display_name: string | null
+          id: string
+          user_id: string
+          username: string
+        }
+        Relationships: []
+      },
       player_achievement_summary: {
         Row: {
           earned_count: number
@@ -2170,10 +2435,18 @@ export type Database = {
         }
         Returns: number
       }
+      reset_player_character: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          profile: Database["public"]["Tables"]["profiles"]["Row"]
+          skills: Database["public"]["Tables"]["player_skills"]["Row"]
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "typing" | "muted"
+      show_type: "standard" | "acoustic"
     }
     CompositeTypes: {
       [_ in never]: never

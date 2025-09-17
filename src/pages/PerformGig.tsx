@@ -26,12 +26,44 @@ interface Venue {
   prestige_level: number;
 }
 
+type ShowType = Database['public']['Enums']['show_type'];
+const DEFAULT_SHOW_TYPE: ShowType = 'standard';
+
+interface PerformanceStageConfig {
+  name: string;
+  description: string;
+  duration: number;
+}
+
+const STAGE_PRESETS: Record<ShowType, PerformanceStageConfig[]> = {
+  standard: [
+    { name: 'Opening Song', description: 'Kick off the show with energy and amplification', duration: 2000 },
+    { name: 'Getting the Crowd Going', description: 'Build hype with the full band sound', duration: 3000 },
+    { name: 'Main Set', description: 'Full production and lighting cues', duration: 4000 },
+    { name: 'Encore', description: 'High-energy finale to leave an impression', duration: 2000 },
+  ],
+  acoustic: [
+    { name: 'Tuning & Warmth', description: 'Dial in the acoustic tones and connect with the room', duration: 1800 },
+    { name: 'Storytelling Interlude', description: 'Share intimate stories between stripped-down songs', duration: 2600 },
+    { name: 'Unplugged Spotlight', description: 'Showcase vocals and dynamics in a quieter setting', duration: 3200 },
+    { name: 'Singalong Finale', description: 'Invite the crowd into a gentle encore', duration: 2000 },
+  ],
+};
+
+const SHOW_TYPE_RESULT_MODIFIERS: Record<ShowType, { payment: number; fan: number; experience: number }> = {
+  standard: { payment: 1, fan: 1, experience: 1 },
+  acoustic: { payment: 1, fan: 1.3, experience: 1.15 },
+};
+
+const getStagePreset = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
+
 interface Gig {
   id: string;
   venue: Venue;
   scheduled_date: string;
   payment: number;
   status: string;
+  show_type: ShowType;
 }
 
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -59,6 +91,8 @@ const PerformGig = () => {
   
   const [gig, setGig] = useState<Gig | null>(null);
   const [isPerforming, setIsPerforming] = useState(false);
+  const [stageSequence, setStageSequence] = useState<PerformanceStageConfig[]>(getStagePreset(DEFAULT_SHOW_TYPE));
+  const [currentShowType, setCurrentShowType] = useState<ShowType>(DEFAULT_SHOW_TYPE);
   const [performance, setPerformance] = useState<PerformanceMetrics>({
     crowd_energy: 0,
     technical_skill: 0,
@@ -92,6 +126,7 @@ const PerformGig = () => {
 
       if (!venueData) throw new Error('Venue details not found');
 
+      const showType = (gigData.show_type ?? DEFAULT_SHOW_TYPE) as ShowType;
       const transformedGig: Gig = {
         id: gigData.id,
         venue: {
@@ -101,10 +136,13 @@ const PerformGig = () => {
         },
         scheduled_date: gigData.scheduled_date,
         payment: gigData.payment ?? 0,
-        status: gigData.status ?? 'scheduled'
+        status: gigData.status ?? 'scheduled',
+        show_type: showType
       };
 
       setGig(transformedGig);
+      setCurrentShowType(showType);
+      setStageSequence(getStagePreset(showType));
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load gig details";
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
@@ -122,35 +160,32 @@ const PerformGig = () => {
   }, [loadGig]);
 
   const startPerformance = async () => {
+    if (!stageSequence.length) return;
+
     setIsPerforming(true);
     setPerformanceStage(1);
-    
-    // Simulate performance stages
-    const stages = [
-      { name: "Opening Song", duration: 2000 },
-      { name: "Getting the Crowd Going", duration: 3000 },
-      { name: "Main Set", duration: 4000 },
-      { name: "Encore", duration: 2000 }
-    ];
 
-    for (let i = 0; i < stages.length; i++) {
+    const skillProfile = currentShowType === 'acoustic'
+      ? { baseSkill: [45, 70], crowd: [5, 18], presence: [18, 32] }
+      : { baseSkill: [40, 70], crowd: [0, 22], presence: [25, 45] };
+
+    for (let i = 0; i < stageSequence.length; i++) {
+      const stage = stageSequence[i];
       setPerformanceStage(i + 1);
-      await new Promise(resolve => setTimeout(resolve, stages[i].duration));
-      
-      // Calculate performance metrics based on skills and random factors
-      const baseSkill = Math.random() * 30 + 40; // 40-70 base range
-      const crowdBonus = Math.random() * 20; // 0-20 crowd response
-      const stagePresence = Math.random() * 25 + 25; // 25-50 range
-      
-      setPerformance(prev => ({
+      await new Promise(resolve => setTimeout(resolve, stage.duration));
+
+      const baseSkill = Math.random() * (skillProfile.baseSkill[1] - skillProfile.baseSkill[0]) + skillProfile.baseSkill[0];
+      const crowdBonus = Math.random() * (skillProfile.crowd[1] - skillProfile.crowd[0]) + skillProfile.crowd[0];
+      const stagePresence = Math.random() * (skillProfile.presence[1] - skillProfile.presence[0]) + skillProfile.presence[0];
+
+      setPerformance((prev) => ({
         crowd_energy: Math.min(100, prev.crowd_energy + crowdBonus),
         technical_skill: Math.min(100, prev.technical_skill + baseSkill / 4),
         stage_presence: Math.min(100, prev.stage_presence + stagePresence / 4),
-        overall_score: 0
+        overall_score: 0,
       }));
     }
 
-    // Calculate final results
     calculateResults();
   };
 
@@ -158,32 +193,34 @@ const PerformGig = () => {
     if (!gig || !user) return;
 
     const finalScore = (performance.crowd_energy + performance.technical_skill + performance.stage_presence) / 3;
-    
-    // Calculate earnings based on performance and venue
-    const basePayment = gig.payment || 500;
+
+    const modifiers = SHOW_TYPE_RESULT_MODIFIERS[currentShowType] ?? SHOW_TYPE_RESULT_MODIFIERS[DEFAULT_SHOW_TYPE];
+
     const performanceMultiplier = finalScore / 100;
+    const attendanceResult = Math.max(
+      1,
+      Math.floor(gig.venue.capacity * performanceMultiplier * (currentShowType === 'acoustic' ? 0.8 : 1)),
+    );
+    const basePayment = Math.max(1, Math.floor((gig.payment || 500) * modifiers.payment));
     const finalEarnings = Math.floor(basePayment * performanceMultiplier);
-    
-    // Calculate fan gain
-    const baseFanGain = Math.floor(gig.venue.capacity * 0.1 * performanceMultiplier);
-    
-    // Calculate experience gain
-    const expGain = Math.floor(50 + (finalScore * 2) + (gig.venue.prestige_level * 10));
+
+    const baseFanGain = Math.floor(attendanceResult * 0.1 * modifiers.fan);
+    const expGain = Math.max(1, Math.floor((50 + (finalScore * 2) + (gig.venue.prestige_level * 10)) * modifiers.experience));
 
     setPerformance(prev => ({ ...prev, overall_score: finalScore }));
     setEarnings(finalEarnings);
-    setFanGain(baseFanGain);
+    setFanGain(Math.max(0, baseFanGain));
     setExperienceGain(expGain);
 
     // Update database
     try {
       // Update gig status and results
-      await supabase
-        .from('gigs')
-        .update({
-          status: 'completed',
-          attendance: Math.floor(gig.venue.capacity * performanceMultiplier),
-          fan_gain: baseFanGain
+        await supabase
+          .from('gigs')
+          .update({
+            status: 'completed',
+          attendance: attendanceResult,
+          fan_gain: Math.max(0, baseFanGain)
         })
         .eq('id', gigId);
 
@@ -251,7 +288,8 @@ const PerformGig = () => {
 
   if (showResults) {
     const scoreBadge = getScoreBadge(performance.overall_score);
-    
+    const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
+
     return (
       <div className="min-h-screen bg-gradient-stage p-6">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -261,6 +299,12 @@ const PerformGig = () => {
             </h1>
             <Badge variant={scoreBadge.variant} className="text-lg px-4 py-2">
               {scoreBadge.label}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={`mx-auto border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs uppercase tracking-wide`}
+            >
+              {showTypeLabel}
             </Badge>
           </div>
 
@@ -359,8 +403,10 @@ const PerformGig = () => {
   }
 
   if (isPerforming) {
-    const stageNames = ["Opening Song", "Getting the Crowd Going", "Main Set", "Encore"];
-    const progress = (performanceStage / 4) * 100;
+    const totalStages = Math.max(1, stageSequence.length);
+    const progress = Math.min(100, (performanceStage / totalStages) * 100);
+    const currentStage = stageSequence[performanceStage - 1];
+    const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
 
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
@@ -369,13 +415,24 @@ const PerformGig = () => {
             <CardTitle className="text-2xl font-bebas tracking-wider">
               Live Performance at {gig.venue.name}
             </CardTitle>
+            <div className="flex justify-center">
+              <Badge
+                variant="outline"
+                className={`mt-2 border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs tracking-wide uppercase`}
+              >
+                {showTypeLabel}
+              </Badge>
+            </div>
             <CardDescription>
-              {stageNames[performanceStage - 1] || "Preparing..."}
+              {currentStage?.name ?? "Preparing..."}
             </CardDescription>
+            {currentStage?.description && (
+              <p className="text-xs text-muted-foreground mt-1">{currentStage.description}</p>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             <Progress value={progress} className="h-4" />
-            
+
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <Zap className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
@@ -399,6 +456,10 @@ const PerformGig = () => {
     );
   }
 
+  const stagePlan = stageSequence;
+  const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
+  const estimatedMinutes = Math.max(1, Math.round(stagePlan.reduce((sum, stage) => sum + stage.duration, 0) / 60000));
+
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -418,6 +479,12 @@ const PerformGig = () => {
             <CardDescription>
               {new Date(gig.scheduled_date).toLocaleDateString()} at {new Date(gig.scheduled_date).toLocaleTimeString()}
             </CardDescription>
+            <Badge
+              variant="outline"
+              className={`mt-2 w-fit border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs uppercase tracking-wide`}
+            >
+              {showTypeLabel}
+            </Badge>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -439,13 +506,25 @@ const PerformGig = () => {
               <div className="text-center">
                 <Clock className="h-8 w-8 mx-auto mb-2 text-purple-500" />
                 <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="text-xl font-bold">~45 min</p>
+                <p className="text-xl font-bold">~{estimatedMinutes} min</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Stage Plan</h3>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                {stagePlan.map((stage, index) => (
+                  <div key={`${stage.name}-${index}`} className="flex items-start gap-2">
+                    <span className="font-medium text-foreground">Stage {index + 1}:</span>
+                    <span className="text-left">{stage.name} — {stage.description}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="text-center">
-              <Button 
-                onClick={startPerformance} 
+              <Button
+                onClick={startPerformance}
                 size="lg"
                 className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
               >

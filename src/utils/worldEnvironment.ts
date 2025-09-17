@@ -53,6 +53,173 @@ const toNumber = (value: unknown, defaultValue = 0) => {
   return Number.isNaN(numericValue) ? defaultValue : numericValue;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const normalizeStringArray = (value: unknown): string[] => {
+  if (typeof value === "string") {
+    return value.trim() ? [value.trim()] : [];
+  }
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item): item is string => Boolean(item));
+};
+
+const formatTravelModeLabel = (mode: string) =>
+  mode
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+export interface CityLocation {
+  name: string;
+  description: string;
+  highlights: string[];
+  signatureVenue?: string;
+  vibe?: string;
+  averageTicketPrice?: number;
+  tags?: string[];
+}
+
+export interface TravelOption {
+  mode: string;
+  label: string;
+  name: string;
+  description: string;
+  frequency?: string;
+  averageCost?: number;
+  durationMinutes?: number;
+  connectsTo: string[];
+  coverage?: string[];
+  capacity?: string;
+  comfort?: string;
+  icon?: string;
+}
+
+const normalizeDistricts = (value: unknown): CityLocation[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.reduce<CityLocation[]>((acc, entry) => {
+    if (!isRecord(entry)) {
+      return acc;
+    }
+
+    const nameRaw = typeof entry.name === "string" ? entry.name.trim() : "";
+    const descriptionRaw = typeof entry.description === "string" ? entry.description.trim() : "";
+    const signatureVenue = typeof entry.signature_venue === "string" ? entry.signature_venue.trim() : undefined;
+    const vibe = typeof entry.vibe === "string" ? entry.vibe.trim() : undefined;
+    const tags = normalizeStringArray(entry.tags);
+    const highlights = normalizeStringArray(entry.highlights);
+    const additionalHighlights = normalizeStringArray(entry.additional_highlights);
+    const combinedHighlights = Array.from(new Set([...highlights, ...additionalHighlights]));
+    if (!combinedHighlights.length && signatureVenue) {
+      combinedHighlights.push(signatureVenue);
+    }
+
+    const averageTicketPriceRaw = entry.average_ticket_price ?? entry.avg_ticket_price;
+    const averageTicketPrice = toNumber(averageTicketPriceRaw, Number.NaN);
+
+    const location: CityLocation = {
+      name: nameRaw || "Featured District",
+      description: descriptionRaw || "A notable part of the city experience.",
+      highlights: combinedHighlights,
+    };
+
+    if (signatureVenue) {
+      location.signatureVenue = signatureVenue;
+    }
+
+    if (vibe) {
+      location.vibe = vibe;
+    }
+
+    if (tags.length) {
+      location.tags = tags;
+    }
+
+    if (!Number.isNaN(averageTicketPrice)) {
+      location.averageTicketPrice = averageTicketPrice;
+    }
+
+    acc.push(location);
+    return acc;
+  }, []);
+};
+
+const normalizeTravelNodes = (value: unknown): TravelOption[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.reduce<TravelOption[]>((acc, entry) => {
+    if (!isRecord(entry)) {
+      return acc;
+    }
+
+    const modeRaw = typeof entry.mode === "string" ? entry.mode.trim() : "";
+    const nameRaw = typeof entry.name === "string" ? entry.name.trim() : "";
+    const descriptionRaw = typeof entry.description === "string" ? entry.description.trim() : "";
+    const frequency = typeof entry.frequency === "string" ? entry.frequency.trim() : undefined;
+    const averageCostRaw = entry.average_cost ?? entry.cost;
+    const durationRaw = entry.duration_minutes ?? entry.duration;
+    const averageCost = toNumber(averageCostRaw, Number.NaN);
+    const durationMinutes = toNumber(durationRaw, Number.NaN);
+    const connectsTo = normalizeStringArray(entry.connects_to ?? entry.links ?? entry.serves);
+    const coverage = normalizeStringArray(entry.coverage);
+    const capacity = typeof entry.capacity === "string" ? entry.capacity.trim() : undefined;
+    const comfort = typeof entry.comfort === "string" ? entry.comfort.trim() : undefined;
+    const icon = typeof entry.icon === "string" ? entry.icon.trim() : undefined;
+
+    const mode = modeRaw || "custom";
+    const travelOption: TravelOption = {
+      mode,
+      label: formatTravelModeLabel(mode),
+      name: nameRaw || formatTravelModeLabel(mode),
+      description: descriptionRaw || formatTravelModeLabel(mode),
+      connectsTo,
+    };
+
+    if (frequency) {
+      travelOption.frequency = frequency;
+    }
+
+    if (!Number.isNaN(averageCost)) {
+      travelOption.averageCost = averageCost;
+    }
+
+    if (!Number.isNaN(durationMinutes)) {
+      travelOption.durationMinutes = durationMinutes;
+    }
+
+    if (coverage.length) {
+      travelOption.coverage = coverage;
+    }
+
+    if (capacity) {
+      travelOption.capacity = capacity;
+    }
+
+    if (comfort) {
+      travelOption.comfort = comfort;
+    }
+
+    if (icon) {
+      travelOption.icon = icon;
+    }
+
+    acc.push(travelOption);
+    return acc;
+  }, []);
+};
+
 export interface WeatherCondition {
   id: string;
   city: string;
@@ -73,6 +240,9 @@ export interface City {
   id: string;
   name: string;
   country: string;
+  description?: string;
+  bonuses?: string;
+  unlocked?: boolean;
   population: number;
   music_scene: number;
   cost_of_living: number;
@@ -80,6 +250,10 @@ export interface City {
   venues: number;
   local_bonus: number;
   cultural_events: string[];
+  locations: CityLocation[];
+  famousResident: string;
+  travelHub: string;
+  travelOptions: TravelOption[];
 }
 
 export interface WorldEvent {
@@ -171,20 +345,36 @@ const normalizeWeatherRecord = (item: Record<string, unknown>): WeatherCondition
   };
 };
 
-const normalizeCityRecord = (item: Record<string, unknown>): City => ({
-  id: String(item.id ?? crypto.randomUUID()),
-  name: typeof item.name === "string" ? item.name : "Unknown",
-  country: typeof item.country === "string" ? item.country : "",
-  population: toNumber(item.population),
-  music_scene: toNumber(item.music_scene),
-  cost_of_living: toNumber(item.cost_of_living),
-  dominant_genre: typeof item.dominant_genre === "string" ? item.dominant_genre : "",
-  venues: toNumber(item.venues),
-  local_bonus: toNumber(item.local_bonus, 1),
-  cultural_events: Array.isArray(item.cultural_events)
-    ? item.cultural_events.filter((event: unknown): event is string => typeof event === "string")
-    : [],
-});
+const normalizeCityRecord = (item: Record<string, unknown>): City => {
+  const culturalEvents = normalizeStringArray(item.cultural_events);
+  const locations = normalizeDistricts(item.districts);
+  const travelOptions = normalizeTravelNodes(item.travel_nodes);
+  const famousResidentRaw = typeof item.famous_resident === "string" ? item.famous_resident.trim() : "";
+  const travelHubRaw = typeof item.travel_hub === "string" ? item.travel_hub.trim() : "";
+  const description = typeof item.description === "string" ? item.description : undefined;
+  const bonuses = typeof item.bonuses === "string" ? item.bonuses : undefined;
+  const unlocked = typeof item.unlocked === "boolean" ? item.unlocked : undefined;
+
+  return {
+    id: String(item.id ?? crypto.randomUUID()),
+    name: typeof item.name === "string" ? item.name : "Unknown",
+    country: typeof item.country === "string" ? item.country : "",
+    description,
+    bonuses,
+    unlocked,
+    population: toNumber(item.population),
+    music_scene: toNumber(item.music_scene),
+    cost_of_living: toNumber(item.cost_of_living),
+    dominant_genre: typeof item.dominant_genre === "string" ? item.dominant_genre : "",
+    venues: toNumber(item.venues),
+    local_bonus: toNumber(item.local_bonus, 1),
+    cultural_events: culturalEvents,
+    locations,
+    famousResident: famousResidentRaw || "Local legend emerging",
+    travelHub: travelHubRaw || travelOptions[0]?.name || "",
+    travelOptions,
+  };
+};
 
 const normalizeWorldEventRecord = (item: Record<string, unknown>): WorldEvent => {
   const typeRaw = typeof item.type === "string" ? item.type : "";
