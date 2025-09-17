@@ -539,15 +539,8 @@ const BandManager = () => {
   useEffect(() => {
     if (authLoading) return;
 
-    if (user) {
-      loadBandData();
-    } else {
-      setBand(null);
-      setMembers([]);
-      setPendingInvites([]);
-      setLoading(false);
-    }
-  }, [authLoading, user, loadBandData]);
+    loadBandData();
+  }, [authLoading, loadBandData]);
 
   const createBand = async () => {
     if (!user || !profile) return;
