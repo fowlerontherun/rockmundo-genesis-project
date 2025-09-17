@@ -1944,6 +1944,161 @@ export type Database = {
         }
         Relationships: []
       }
+      recording_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          engineer_id: string | null
+          engineer_name: string | null
+          id: string
+          notes: string | null
+          quality_gain: number
+          scheduled_start: string | null
+          song_id: string
+          stage: string
+          started_at: string | null
+          status: string
+          total_cost: number
+          total_takes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          engineer_id?: string | null
+          engineer_name?: string | null
+          id?: string
+          notes?: string | null
+          quality_gain?: number
+          scheduled_start?: string | null
+          song_id: string
+          stage: string
+          started_at?: string | null
+          status?: string
+          total_cost?: number
+          total_takes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          engineer_id?: string | null
+          engineer_name?: string | null
+          id?: string
+          notes?: string | null
+          quality_gain?: number
+          scheduled_start?: string | null
+          song_id?: string
+          stage?: string
+          started_at?: string | null
+          status?: string
+          total_cost?: number
+          total_takes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_sessions_engineer_id_fkey"
+            columns: ["engineer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          }
+        ]
+      }
+      production_tracks: {
+        Row: {
+          cost: number
+          created_at: string
+          duration_seconds: number
+          id: string
+          name: string
+          notes: string | null
+          public_url: string
+          quality_rating: number | null
+          session_id: string
+          song_id: string
+          stage: string
+          storage_path: string
+          take_number: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          name: string
+          notes?: string | null
+          public_url: string
+          quality_rating?: number | null
+          session_id: string
+          song_id: string
+          stage: string
+          storage_path: string
+          take_number?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          public_url?: string
+          quality_rating?: number | null
+          session_id?: string
+          song_id?: string
+          stage?: string
+          storage_path?: string
+          take_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_tracks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_tracks_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_tracks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          }
+        ]
+      }
       streaming_platforms: {
         Row: {
           created_at: string | null
