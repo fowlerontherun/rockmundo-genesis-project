@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData } from "@/hooks/useGameData";
 import {
   calculateTrainingCost,
   getSkillCap,
@@ -15,22 +14,8 @@ import {
   COOLDOWNS
 } from "@/utils/gameBalance";
 import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
-import type { PlayerProfile } from "@/hooks/useGameData";
 
 type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
-
-interface PlayerSkills {
-  guitar: number;
-  vocals: number;
-  drums: number;
-  bass: number;
-  performance: number;
-  songwriting: number;
-  id?: string;
-  user_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
 
 interface TrainingSession {
   skill: SkillName;
@@ -42,11 +27,8 @@ interface TrainingSession {
 }
 
 const SkillTraining = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [skills, setSkills] = useState<PlayerSkills | null>(null);
-  const [profile, setProfile] = useState<PlayerProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { profile, skills, updateSkills, updateProfile, addActivity, loading } = useGameData();
   const [training, setTraining] = useState(false);
   const trainingCooldown = COOLDOWNS.skillTraining;
 
@@ -110,32 +92,6 @@ const SkillTraining = () => {
     ? getRemainingCooldown(lastTrainingTime, trainingCooldown)
     : 0;
 
-  const fetchPlayerData = useCallback(async () => {
-    if (!user?.id) {
-      return;
-    }
-
-    try {
-      const [skillsResponse, profileResponse] = await Promise.all([
-        supabase.from("player_skills").select("*").eq("user_id", user.id).single(),
-        supabase.from("profiles").select("*").eq("user_id", user.id).single()
-      ]);
-
-      if (skillsResponse.data) setSkills(skillsResponse.data as PlayerSkills);
-      if (profileResponse.data) setProfile(profileResponse.data as PlayerProfile);
-    } catch (error) {
-      console.error("Error fetching player data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      void fetchPlayerData();
-    }
-  }, [user, fetchPlayerData]);
-
   const handleTraining = async (session: TrainingSession) => {
     if (!skills || !profile) return;
 
@@ -187,48 +143,27 @@ const SkillTraining = () => {
       const newExperience = totalExperience + session.xpGain;
       const timestamp = new Date().toISOString();
 
-      // Update skills
-      const { error: skillsError } = await supabase
-        .from("player_skills")
-        .update({
-          [session.skill]: newSkillValue,
-          updated_at: timestamp
-        })
-        .eq("user_id", user?.id);
+      await updateSkills({
+        [session.skill]: newSkillValue,
+        updated_at: timestamp
+      });
 
-      if (skillsError) throw skillsError;
+      await updateProfile({
+        cash: newCash,
+        experience: newExperience,
+        updated_at: timestamp
+      });
 
-      // Update profile (cash and experience)
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          cash: newCash,
-          experience: newExperience,
-          updated_at: timestamp
-        })
-        .eq("user_id", user?.id);
-
-      if (profileError) throw profileError;
-
-      // Add activity feed entry
-      await supabase
-        .from("activity_feed")
-        .insert({
-          user_id: user?.id,
-          activity_type: "training",
-          message: `Completed ${session.name} training session (+${session.xpGain} XP)`,
-          earnings: -trainingCost
-        });
-
-      // Update local state
-      setSkills(prev => prev ? { ...prev, [session.skill]: newSkillValue, updated_at: timestamp } : null);
-      setProfile(prev => prev ? { ...prev, cash: newCash, experience: newExperience } : null);
+      await addActivity(
+        "training",
+        `Completed ${session.name} training session (+${session.xpGain} XP)`,
+        -trainingCost
+      );
 
       toast({
         title: "Training Complete!",
         description: `Your ${session.skill} skill increased by ${skillGain} points!`
       });
-
     } catch (error) {
       console.error("Error during training:", error);
       toast({
@@ -270,6 +205,19 @@ const SkillTraining = () => {
     );
   }
 
+  if (!skills || !profile) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bebas tracking-wide">Character data unavailable</h2>
+          <p className="text-muted-foreground">
+            Select or create a character from your profile before starting a training session.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <div className="text-center space-y-4">
@@ -297,7 +245,9 @@ const SkillTraining = () => {
 
         <TabsContent value="skills" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {skills && Object.entries(skills).filter(([key]) => key !== 'id' && key !== 'user_id' && key !== 'created_at' && key !== 'updated_at').map(([skill, value]) => {
+            {skills && Object.entries(skills)
+              .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
+              .map(([skill, value]) => {
               const session = trainingSessions.find(s => s.skill === skill);
               const Icon = session?.icon || Music;
               const numericValue = typeof value === "number" ? value : Number(value ?? 0);

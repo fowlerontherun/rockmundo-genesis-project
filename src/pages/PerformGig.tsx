@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
+import { useGameData } from '@/hooks/useGameData';
 import {
   Music,
   Users,
@@ -80,6 +81,7 @@ const PerformGig = () => {
   const { gigId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile, addActivity } = useGameData();
   const { toast } = useToast();
   const toastRef = useRef(toast);
 
@@ -229,7 +231,7 @@ const PerformGig = () => {
         .eq('user_id', user.id)
         .single();
 
-      if (profile) {
+      if (profile?.id) {
         await supabase
           .from('profiles')
           .update({
@@ -237,23 +239,20 @@ const PerformGig = () => {
             experience: profile.experience + expGain,
             fame: profile.fame + baseFanGain
           })
-          .eq('user_id', user.id);
+          .eq('id', profile.id);
       }
 
       // Add activity feed entry
-      await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          activity_type: 'gig_performed',
-          message: `Performed at ${gig.venue.name} and earned $${finalEarnings}!`,
-          earnings: finalEarnings,
-          metadata: {
-            venue: gig.venue.name,
-            score: finalScore,
-            fanGain: baseFanGain
-          }
-        });
+      await addActivity(
+        'gig_performed',
+        `Performed at ${gig.venue.name} and earned $${finalEarnings}!`,
+        finalEarnings,
+        {
+          venue: gig.venue.name,
+          score: finalScore,
+          fanGain: baseFanGain
+        }
+      );
 
     } catch (error: unknown) {
       const fallbackMessage = 'Failed to update performance results';

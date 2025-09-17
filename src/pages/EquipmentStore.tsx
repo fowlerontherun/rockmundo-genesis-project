@@ -109,7 +109,7 @@ const calculateTotalEquipmentBonus = (
 const EquipmentStore = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, updateProfile, skills, updateSkills } = useGameData();
+  const { profile, updateProfile, skills, updateSkills, addActivity } = useGameData();
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [playerEquipment, setPlayerEquipment] = useState<PlayerEquipment[]>([]);
   const [equipmentUpgrades, setEquipmentUpgrades] = useState<Record<string, EquipmentUpgrade[]>>({});
@@ -286,15 +286,7 @@ const EquipmentStore = () => {
       };
       setPlayerEquipment(prev => [...prev, normalizedEquipment]);
 
-      // Add activity
-      await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          activity_type: 'purchase',
-          message: `Purchased ${item.name}`,
-          earnings: -item.price
-        });
+      await addActivity('purchase', `Purchased ${item.name}`, -item.price);
 
       toast({
         title: 'Purchase successful!',
@@ -494,14 +486,11 @@ const EquipmentStore = () => {
         }
       }
 
-      await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          activity_type: 'upgrade',
-          message: `Upgraded ${item.name} to Tier ${nextUpgrade.tier}`,
-          earnings: -nextUpgrade.cost
-        });
+      await addActivity(
+        'upgrade',
+        `Upgraded ${item.name} to Tier ${nextUpgrade.tier}`,
+        -nextUpgrade.cost
+      );
 
       toast({
         title: "Upgrade successful!",
