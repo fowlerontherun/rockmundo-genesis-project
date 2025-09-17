@@ -17,6 +17,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+type AchievementRequirements = Record<string, number | string>;
+type AchievementRewards = Record<string, number | string>;
+type AchievementProgress = Record<string, number | string>;
+
 interface Achievement {
   id: string;
   name: string;
@@ -24,17 +28,94 @@ interface Achievement {
   category: string;
   icon: string;
   rarity: string;
-  requirements: Record<string, any>;
-  rewards: Record<string, any>;
+  requirements: AchievementRequirements;
+  rewards: AchievementRewards;
 }
 
 interface PlayerAchievement {
   id: string;
   achievement_id: string;
   unlocked_at: string;
-  progress: Record<string, any>;
+  progress: AchievementProgress;
   achievement: Achievement;
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const toStringOrEmpty = (value: unknown): string => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+};
+
+const parseRequirements = (value: unknown): AchievementRequirements => {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<AchievementRequirements>((acc, [key, entryValue]) => {
+    if (typeof entryValue === "number" || typeof entryValue === "string") {
+      acc[key] = entryValue;
+    }
+    return acc;
+  }, {});
+};
+
+const parseRewards = (value: unknown): AchievementRewards => {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<AchievementRewards>((acc, [key, entryValue]) => {
+    if (typeof entryValue === "number" || typeof entryValue === "string") {
+      acc[key] = entryValue;
+    }
+    return acc;
+  }, {});
+};
+
+const parseProgress = (value: unknown): AchievementProgress => {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<AchievementProgress>((acc, [key, entryValue]) => {
+    if (typeof entryValue === "number" || typeof entryValue === "string") {
+      acc[key] = entryValue;
+    }
+    return acc;
+  }, {});
+};
+
+const parseAchievementRow = (value: unknown): Achievement | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = toStringOrEmpty(value.id);
+  const name = toStringOrEmpty(value.name);
+  const description = toStringOrEmpty(value.description);
+  const category = toStringOrEmpty(value.category);
+  const icon = toStringOrEmpty(value.icon);
+  const rarity = toStringOrEmpty(value.rarity);
+
+  if (!id || !name || !category || !rarity) {
+    return null;
+  }
+
+  return {
+    id,
+    name,
+    description,
+    category,
+    icon,
+    rarity,
+    requirements: parseRequirements(value.requirements),
+    rewards: parseRewards(value.rewards)
+  };
+};
 
 const Achievements = () => {
   const { user } = useAuth();
@@ -57,13 +138,21 @@ const Achievements = () => {
         .order('category, rarity, name');
 
       if (error) throw error;
-      setAchievements((data || []).map(item => ({
-        ...item,
-        requirements: item.requirements as Record<string, any>,
-        rewards: item.rewards as Record<string, any>
-      })));
-    } catch (error: any) {
-      console.error('Error loading achievements:', error);
+      const rows: unknown[] = Array.isArray(data) ? data : [];
+      const parsedAchievements = rows.reduce<Achievement[]>((acc, item) => {
+        const achievement = parseAchievementRow(item);
+        if (achievement) {
+          acc.push(achievement);
+        }
+        return acc;
+      }, []);
+      setAchievements(parsedAchievements);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error loading achievements:', error);
+      } else {
+        console.error('Error loading achievements:', String(error));
+      }
     }
   };
 
@@ -80,17 +169,37 @@ const Achievements = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setPlayerAchievements((data || []).map(item => ({
-        ...item,
-        progress: item.progress as Record<string, any>,
-        achievement: {
-          ...item.achievements,
-          requirements: item.achievements?.requirements as Record<string, any>,
-          rewards: item.achievements?.rewards as Record<string, any>
+      const rows: unknown[] = Array.isArray(data) ? data : [];
+      const parsedPlayerAchievements = rows.reduce<PlayerAchievement[]>((acc, item) => {
+        if (!isRecord(item)) {
+          return acc;
         }
-      })));
-    } catch (error: any) {
-      console.error('Error loading player achievements:', error);
+
+        const achievement = parseAchievementRow(item.achievements);
+        const id = toStringOrEmpty(item.id);
+        const achievementId = toStringOrEmpty(item.achievement_id);
+        const unlockedAt = toStringOrEmpty(item.unlocked_at);
+
+        if (!achievement || !id || !achievementId) {
+          return acc;
+        }
+
+        acc.push({
+          id,
+          achievement_id: achievementId,
+          unlocked_at: unlockedAt,
+          progress: parseProgress(item.progress),
+          achievement
+        });
+        return acc;
+      }, []);
+      setPlayerAchievements(parsedPlayerAchievements);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error loading player achievements:', error);
+      } else {
+        console.error('Error loading player achievements:', String(error));
+      }
     } finally {
       setLoading(false);
     }
@@ -127,31 +236,54 @@ const Achievements = () => {
 
   const getUnlockedDate = (achievementId: string) => {
     const pa = playerAchievements.find(pa => pa.achievement_id === achievementId);
-    return pa ? new Date(pa.unlocked_at).toLocaleDateString() : null;
+    if (!pa) {
+      return null;
+    }
+
+    const unlockedAtDate = new Date(pa.unlocked_at);
+    return Number.isNaN(unlockedAtDate.getTime()) ? null : unlockedAtDate.toLocaleDateString();
   };
 
-  const formatRequirements = (requirements: Record<string, any>) => {
+  const formatRequirements = (requirements: AchievementRequirements) => {
     return Object.entries(requirements).map(([key, value]) => {
       switch (key) {
-        case "level": return `Reach level ${value}`;
-        case "guitar_skill": return `Reach ${value} guitar skill`;
-        case "vocals_skill": return `Reach ${value} vocals skill`;
-        case "total_spent": return `Spend $${value.toLocaleString()}`;
-        case "total_cash": return `Accumulate $${value.toLocaleString()}`;
-        case "chart_position": return `Reach #${value} on charts`;
-        case "join": return "Join RockMundo";
-        default: return `${key}: ${value}`;
+        case "level":
+          return `Reach level ${value}`;
+        case "guitar_skill":
+          return `Reach ${value} guitar skill`;
+        case "vocals_skill":
+          return `Reach ${value} vocals skill`;
+        case "total_spent":
+          return typeof value === "number"
+            ? `Spend $${value.toLocaleString()}`
+            : `Spend $${value}`;
+        case "total_cash":
+          return typeof value === "number"
+            ? `Accumulate $${value.toLocaleString()}`
+            : `Accumulate $${value}`;
+        case "chart_position":
+          return `Reach #${value} on charts`;
+        case "join":
+          return "Join RockMundo";
+        default:
+          return `${key}: ${value}`;
       }
     }).join(", ");
   };
 
-  const formatRewards = (rewards: Record<string, any>) => {
+  const formatRewards = (rewards: AchievementRewards) => {
     return Object.entries(rewards).map(([key, value]) => {
       switch (key) {
-        case "experience": return `+${value} XP`;
-        case "cash": return `+$${value.toLocaleString()}`;
-        case "fame": return `+${value} Fame`;
-        default: return `${key}: ${value}`;
+        case "experience":
+          return `+${value} XP`;
+        case "cash":
+          return typeof value === "number"
+            ? `+$${value.toLocaleString()}`
+            : `+$${value}`;
+        case "fame":
+          return `+${value} Fame`;
+        default:
+          return `${key}: ${value}`;
       }
     }).join(", ");
   };
