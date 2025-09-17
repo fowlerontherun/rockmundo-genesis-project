@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import SkillDefinitionsManager from '@/components/admin/SkillDefinitionsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { toast } from '@/components/ui/sonner-toast';
@@ -1596,7 +1597,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       <Tabs defaultValue="monitoring" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 xl:grid-cols-11">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 xl:grid-cols-12">
           <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="cities">Cities</TabsTrigger>
@@ -1606,6 +1607,7 @@ const AdminDashboard: React.FC = () => {
           <TabsTrigger value="moderation">Moderation</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="seasons">Seasons</TabsTrigger>
+          <TabsTrigger value="skills">Skills</TabsTrigger>
           <TabsTrigger value="attributes">Attributes</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
@@ -2674,6 +2676,10 @@ const AdminDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="skills" className="space-y-6">
+          <SkillDefinitionsManager />
         </TabsContent>
 
         <TabsContent value="attributes" className="space-y-6">
