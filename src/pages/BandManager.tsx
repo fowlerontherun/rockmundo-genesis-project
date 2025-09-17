@@ -188,122 +188,6 @@ const BandManager = () => {
       console.error('Error loading band members:', error);
     }
   }, [user?.id]);
-
-  const loadPendingInvitations = useCallback(async () => {
-    if (!user?.id) {
-      setPendingInvites([]);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('band_invitations')
-        .select(`
-          id,
-          band_id,
-          inviter_id,
-          invitee_id,
-          role,
-          salary,
-          status,
-          created_at,
-          responded_at,
-          band:bands (
-            id,
-            name,
-            genre,
-            description,
-            leader_id,
-            popularity,
-            weekly_fans,
-            max_members,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('invitee_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      setPendingInvites((data as BandInvitation[]) || []);
-    } catch (error: unknown) {
-      console.error('Error loading band invitations:', error);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (user) {
-      loadBandData();
-    } else {
-      setBand(null);
-      setMembers([]);
-      setPendingInvites([]);
-      setLoading(false);
-    }
-  }, [authLoading, user, loadBandData]);
-
-  const loadBandData = useCallback(async () => {
-    if (!user?.id) {
-      setBand(null);
-      setMembers([]);
-      setPendingInvites([]);
-      setScheduleEvents([]);
-      setSongCount(0);
-      setAlbumCount(0);
-      setChartPosition(null);
-      setGigsPlayed(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      const { data: memberData, error: memberError } = await supabase
-        .from('band_members')
-        .select(`
-          *,
-          bands!band_members_band_id_fkey(*)
-        `)
-        .eq('user_id', user.id)
-        .single();
-
-      if (memberError && memberError.code !== 'PGRST116') {
-        throw memberError;
-      }
-
-      if (memberData?.bands) {
-        setBand(memberData.bands as Band);
-        setPendingInvites([]);
-        await Promise.all([
-          loadBandMembers(memberData.bands.id),
-          loadBandStats(memberData.bands.id),
-          loadScheduleEvents(memberData.bands.id)
-        ]);
-      } else {
-        setBand(null);
-        setMembers([]);
-        await loadPendingInvitations();
-        setScheduleEvents([]);
-        setSongCount(0);
-        setAlbumCount(0);
-        setChartPosition(null);
-        setGigsPlayed(null);
-      }
-    } catch (error: unknown) {
-      console.error('Error loading band data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    loadBandMembers,
-    loadBandStats,
-    loadPendingInvitations,
-    loadScheduleEvents,
-    user?.id
-  ]);
-
   const loadBandStats = useCallback(async (bandId: string) => {
     if (!user?.id || !bandId) {
       setChartPosition(null);
@@ -504,6 +388,121 @@ const BandManager = () => {
       setScheduleEvents([]);
     }
   }, [user?.id]);
+
+  const loadPendingInvitations = useCallback(async () => {
+    if (!user?.id) {
+      setPendingInvites([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('band_invitations')
+        .select(`
+          id,
+          band_id,
+          inviter_id,
+          invitee_id,
+          role,
+          salary,
+          status,
+          created_at,
+          responded_at,
+          band:bands (
+            id,
+            name,
+            genre,
+            description,
+            leader_id,
+            popularity,
+            weekly_fans,
+            max_members,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('invitee_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setPendingInvites((data as BandInvitation[]) || []);
+    } catch (error: unknown) {
+      console.error('Error loading band invitations:', error);
+    }
+  }, [user?.id]);
+
+  const loadBandData = useCallback(async () => {
+    if (!user?.id) {
+      setBand(null);
+      setMembers([]);
+      setPendingInvites([]);
+      setScheduleEvents([]);
+      setSongCount(0);
+      setAlbumCount(0);
+      setChartPosition(null);
+      setGigsPlayed(null);
+      setLoading(false);
+      return;
+    }
+    try {
+      const { data: memberData, error: memberError } = await supabase
+        .from('band_members')
+        .select(`
+          *,
+          bands!band_members_band_id_fkey(*)
+        `)
+        .eq('user_id', user.id)
+        .single();
+
+      if (memberError && memberError.code !== 'PGRST116') {
+        throw memberError;
+      }
+
+      if (memberData?.bands) {
+        setBand(memberData.bands as Band);
+        setPendingInvites([]);
+        await Promise.all([
+          loadBandMembers(memberData.bands.id),
+          loadBandStats(memberData.bands.id),
+          loadScheduleEvents(memberData.bands.id)
+        ]);
+      } else {
+        setBand(null);
+        setMembers([]);
+        await loadPendingInvitations();
+        setScheduleEvents([]);
+        setSongCount(0);
+        setAlbumCount(0);
+        setChartPosition(null);
+        setGigsPlayed(null);
+      }
+    } catch (error: unknown) {
+      console.error('Error loading band data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    loadBandMembers,
+    loadBandStats,
+    loadPendingInvitations,
+    loadScheduleEvents,
+    user?.id
+  ]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (user) {
+      loadBandData();
+    } else {
+      setBand(null);
+      setMembers([]);
+      setPendingInvites([]);
+      setLoading(false);
+    }
+  }, [authLoading, user, loadBandData]);
 
   const createBand = async () => {
     if (!user || !profile) return;
