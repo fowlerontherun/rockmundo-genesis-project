@@ -1,17 +1,32 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import Navigation from "@/components/ui/navigation";
 import { useAuth } from "@/hooks/use-auth-context";
 
 const Layout = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (loading || !user) {
+      return;
+    }
+
+    const needsOnboarding = typeof window !== 'undefined'
+      ? window.localStorage.getItem('rockmundo:needsOnboarding') === 'true'
+      : false;
+
+    if (needsOnboarding && location.pathname !== '/character/create') {
+      navigate('/character/create', { replace: true });
+    }
+  }, [loading, user, location.pathname, navigate]);
 
   if (loading) {
     return (
