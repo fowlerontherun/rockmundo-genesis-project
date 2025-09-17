@@ -2,14 +2,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
-import type { PostgrestError, PostgrestMaybeSingleResponse, PostgrestResponse } from "@supabase/supabase-js";
+import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
+import type {
+  PostgrestError,
+  PostgrestMaybeSingleResponse,
+  PostgrestSingleResponse
+} from "@supabase/supabase-js";
 
-export type PlayerProfile = Tables<'profiles'>;
-export type PlayerSkills = Tables<'player_skills'>;
-export type PlayerAttributes = Tables<'player_attributes'>;
-export type ActivityItem = Tables<'activity_feed'>;
-export type AttributeDefinition = Tables<'attribute_definitions'>;
-export type ProfileAttribute = Tables<'profile_attributes'>;
+export type PlayerProfile = Tables<"profiles">;
+export type PlayerSkills = Tables<"player_skills">;
+export type PlayerAttributes = Tables<"player_attributes">;
+export type ActivityItem = Tables<"activity_feed">;
+type City = Tables<"cities">;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
 
@@ -311,7 +315,7 @@ const useProvideGameData = (): GameDataContextValue => {
         throw profileResponse.error;
       }
 
-      const character = profileResponse.data ?? null;
+      let character = profileRow ?? null;
 
       if (!character) {
         setProfile(null);
@@ -323,6 +327,21 @@ const useProvideGameData = (): GameDataContextValue => {
         updateSelectedCharacterId(null);
         await fetchCharacters();
         return;
+      }
+
+      try {
+        const loadout = parseClothingLoadout(character.equipped_clothing);
+        if (!Object.keys(loadout).length) {
+          const ensured = await ensureDefaultWardrobe(character.id, user.id, loadout);
+          if (ensured) {
+            character = {
+              ...character,
+              equipped_clothing: ensured as PlayerProfile["equipped_clothing"]
+            };
+          }
+        }
+      } catch (wardrobeError) {
+        console.error("Failed to ensure default wardrobe:", wardrobeError);
       }
 
       setCharacters(prev => {

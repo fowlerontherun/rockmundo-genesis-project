@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CharacterSelect from "@/components/CharacterSelect";
-import { 
-  User, 
-  Camera, 
+import AvatarWithClothing from "@/components/avatar/AvatarWithClothing";
+import {
+  User,
+  Camera,
   Save,
   Star,
   Trophy,
@@ -30,6 +30,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useEquippedClothing } from "@/hooks/useEquippedClothing";
 import {
   Select,
   SelectContent,
@@ -87,8 +88,8 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, updateProfile, resetCharacter, refetch } = useGameData();
-
+  const { profile, skills, updateProfile, resetCharacter } = useGameData();
+  const { items: equippedClothing } = useEquippedClothing();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -425,13 +426,12 @@ const Profile = () => {
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center space-y-4">
-                    <div className="relative">
-                      <Avatar className="h-32 w-32">
-                        <AvatarImage src={profileAvatarPreview ?? undefined} />
-                        <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
-                          {(profile.display_name || profile.username || 'U')[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                    <AvatarWithClothing
+                      avatarUrl={profile.avatar_url}
+                      fallbackText={profile.display_name || profile.username}
+                      items={equippedClothing}
+                      size={128}
+                    >
                       <div className="absolute bottom-0 right-0">
                         <label htmlFor="avatar-upload" className="cursor-pointer">
                           <div className="bg-primary hover:bg-primary/80 rounded-full p-2 border-2 border-background">
@@ -451,7 +451,7 @@ const Profile = () => {
                           />
                         </label>
                       </div>
-                    </div>
+                    </AvatarWithClothing>
                     <div className="text-center space-y-1">
                       <h2 className="text-2xl font-bold">{profile.display_name || profile.username}</h2>
                       <p className="text-muted-foreground">@{profile.username}</p>
