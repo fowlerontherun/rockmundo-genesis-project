@@ -13,6 +13,8 @@ import { toast } from "@/components/ui/use-toast";
 import { RECENT_WEAR_STORAGE_KEY, WearEventType, WearSummary } from "@/utils/equipmentWear";
 import { Package, Wrench, Star, Zap, TrendingUp, Shield } from "lucide-react";
 
+type EquipmentStatBoosts = Record<string, number>;
+
 interface InventoryItem {
   id: string;
   equipment_id: string;
@@ -28,7 +30,6 @@ interface InventoryItem {
     category: string;
     rarity: string;
     price: number;
-    stat_boosts: any; // Use any to handle JSON type from Supabase
     description: string;
   };
 }
@@ -71,7 +72,24 @@ const InventoryManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setInventory(data || []);
+
+      const normalizedInventory = (data || []).reduce<InventoryItem[]>((acc, item) => {
+        if (!item.equipment) {
+          return acc;
+        }
+
+        acc.push({
+          ...item,
+          equipment: {
+            ...item.equipment,
+            stat_boosts: normalizeStatBoosts(item.equipment.stat_boosts)
+          }
+        });
+
+        return acc;
+      }, []);
+
+      setInventory(normalizedInventory);
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load inventory";
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
@@ -443,106 +461,108 @@ const InventoryManager = () => {
 
           <TabsContent value={selectedCategory}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredInventory.map((item) => (
-                <Card key={item.id} className={`hover:shadow-lg transition-shadow ${(item.equipped || item.is_equipped) ? 'ring-2 ring-primary' : ''}`}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">{item.equipment.name}</CardTitle>
-                        <CardDescription className="capitalize">{item.equipment.category}</CardDescription>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Badge className={getRarityColor(item.equipment.rarity)}>
-                          {item.equipment.rarity}
-                        </Badge>
-                        {(item.equipped || item.is_equipped) && (
-                          <Badge variant="outline" className="text-primary border-primary">
-                            Equipped
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">{item.equipment.description}</p>
-                    
-                    {/* Condition */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Condition</span>
-                        <span className={getConditionColor(item.condition)}>
-                          {item.condition}%
-                        </span>
-                      </div>
-                      <Progress value={item.condition} className="h-2" />
-                    </div>
+              {filteredInventory.map((item) => {
+                const statBoosts = item.equipment.stat_boosts;
 
-                    {/* Stat Boosts */}
-                    {Object.keys(item.equipment.stat_boosts).length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2">Stat Boosts</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(item.equipment.stat_boosts || {}).map(([stat, boost]) => (
-                            <div key={stat} className="flex items-center gap-1 text-sm">
-                              {getStatIcon(stat)}
-                              <span className="capitalize">{stat}</span>
-                              <span className="text-green-600">+{String(boost)}</span>
-                            </div>
-                          ))}
+                return (
+                  <Card key={item.id} className={`hover:shadow-lg transition-shadow ${(item.equipped || item.is_equipped) ? 'ring-2 ring-primary' : ''}`}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg">{item.equipment.name}</CardTitle>
+                          <CardDescription className="capitalize">{item.equipment.category}</CardDescription>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Badge className={getRarityColor(item.equipment.rarity)}>
+                            {item.equipment.rarity}
+                          </Badge>
+                          {(item.equipped || item.is_equipped) && (
+                            <Badge variant="outline" className="text-primary border-primary">
+                              Equipped
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    )}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-muted-foreground">{item.equipment.description}</p>
 
-                    {/* Value */}
-                    <div className="text-sm">
-                      <div className="flex justify-between">
-                        <span>Value:</span>
-                        <span>${Math.floor(item.equipment.price * (item.condition / 100)).toLocaleString()}</span>
+                      {/* Condition */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Condition</span>
+                          <span className={getConditionColor(item.condition)}>
+                            {item.condition}%
+                          </span>
+                        </div>
+                        <Progress value={item.condition} className="h-2" />
                       </div>
-                    </div>
+                      {/* Stat Boosts */}
+                      {statBoosts && Object.keys(statBoosts).length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2">Stat Boosts</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(statBoosts).map(([stat, boost]) => (
+                              <div key={stat} className="flex items-center gap-1 text-sm">
+                                {getStatIcon(stat)}
+                                <span className="capitalize">{stat}</span>
+                                <span className="text-green-600">+{String(boost)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                    {/* Actions */}
-                    <div className="flex gap-2 flex-wrap">
-                      {!(item.equipped || item.is_equipped) ? (
+                      {/* Value */}
+                      <div className="text-sm">
+                        <div className="flex justify-between">
+                          <span>Value:</span>
+                          <span>${Math.floor(item.equipment.price * (item.condition / 100)).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 flex-wrap">
+                        {!(item.equipped || item.is_equipped) ? (
+                          <Button
+                            size="sm"
+                            onClick={() => equipItem(item)}
+                          >
+                            Equip
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => unequipItem(item)}
+                          >
+                            Unequip
+                          </Button>
+                        )}
+
+                        {item.condition < 100 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => repairItem(item)}
+                          >
+                            <Wrench className="h-4 w-4 mr-1" />
+                            Repair (${Math.floor(item.equipment.price * 0.1)})
+                          </Button>
+                        )}
+
                         <Button
                           size="sm"
-                          onClick={() => equipItem(item)}
+                          variant="destructive"
+                          onClick={() => sellItem(item)}
                         >
-                          Equip
+                          Sell
                         </Button>
-                      ) : (
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => unequipItem(item)}
-                        >
-                          Unequip
-                        </Button>
-                      )}
-                      
-                      {item.condition < 100 && (
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          onClick={() => repairItem(item)}
-                        >
-                          <Wrench className="h-4 w-4 mr-1" />
-                          Repair (${Math.floor(item.equipment.price * 0.1)})
-                        </Button>
-                      )}
-                      
-                      <Button 
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => sellItem(item)}
-                      >
-                        Sell
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
             {filteredInventory.length === 0 && (

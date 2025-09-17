@@ -6,43 +6,51 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { ShoppingCart, Guitar, Mic, Volume2, Star, TrendingUp, Coins, CheckCircle, Lock } from "lucide-react";
 
-interface EquipmentItem {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  subcategory: string;
-  price: number;
-  rarity: string;
-  stock: number;
-  stat_boosts: {
-    guitar?: number;
-    vocals?: number;
-    drums?: number;
-    bass?: number;
-    performance?: number;
-    songwriting?: number;
-  };
-  image_url?: string;
-}
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
-interface PlayerEquipment {
-  id: string;
-  equipment_id: string;
-  is_equipped: boolean;
-  purchased_at: string;
+const STAT_KEYS = ["guitar", "vocals", "drums", "bass", "performance", "songwriting"] as const;
+type StatKey = typeof STAT_KEYS[number];
+type StatBoosts = Partial<Record<StatKey, number>>;
+
+type EquipmentItemRow = Database["public"]["Tables"]["equipment_items"]["Row"];
+type PlayerEquipmentRow = Database["public"]["Tables"]["player_equipment"]["Row"];
+
+type EquipmentItem = Omit<EquipmentItemRow, "stat_boosts"> & {
+  stat_boosts: StatBoosts;
+};
+
+type PlayerEquipment = PlayerEquipmentRow & {
   equipment_items: EquipmentItem;
-}
+};
+
+const coerceStatBoosts = (value: unknown): StatBoosts => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const boosts: StatBoosts = {};
+  const record = value as Record<string, unknown>;
+
+  for (const key of STAT_KEYS) {
+    const statValue = record[key];
+    if (typeof statValue === "number") {
+      boosts[key] = statValue;
+    }
+  }
+
+  return boosts;
+};
 
 const EquipmentStore = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [playerEquipment, setPlayerEquipment] = useState<PlayerEquipment[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
@@ -67,14 +75,14 @@ const EquipmentStore = () => {
 
       if (equipmentResponse.data) {
         // Transform the data to ensure stat_boosts is properly typed
-        const transformedEquipment = equipmentResponse.data.map(item => ({
+        const transformedEquipment: EquipmentItem[] = equipmentResponse.data.map((item) => ({
           ...item,
-          stat_boosts: (item.stat_boosts as any) || {},
+          stat_boosts: coerceStatBoosts(item.stat_boosts),
           stock: typeof item.stock === "number" ? item.stock : 0
         }));
         setEquipment(transformedEquipment);
       }
-      
+
       if (playerEquipmentResponse.data) {
         // Fetch equipment details for player equipment
         const playerEquipmentWithDetails = await Promise.all(
@@ -85,20 +93,31 @@ const EquipmentStore = () => {
               .eq("id", playerItem.equipment_id)
               .single();
 
+            if (!equipmentItem) {
+              return null;
+            }
+
+            const equipmentWithBoosts: EquipmentItem = {
+              ...equipmentItem,
+              stat_boosts: coerceStatBoosts(equipmentItem.stat_boosts),
+              stock: typeof equipmentItem.stock === "number" ? equipmentItem.stock : 0
+            };
+
             return {
               ...playerItem,
-              equipment_items: equipmentItem ? {
-                ...equipmentItem,
-                stat_boosts: (equipmentItem.stat_boosts as any) || {}
-              } : null
-            };
+              equipment_items: equipmentWithBoosts
+            } satisfies PlayerEquipment;
           })
         );
-        
-        setPlayerEquipment(playerEquipmentWithDetails.filter(item => item.equipment_items) as PlayerEquipment[]);
+
+        setPlayerEquipment(
+          playerEquipmentWithDetails.filter((item): item is PlayerEquipment => item !== null)
+        );
       }
-      
-      if (profileResponse.data) setProfile(profileResponse.data);
+
+      if (profileResponse.data) {
+        setProfile(profileResponse.data);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -182,7 +201,7 @@ const EquipmentStore = () => {
       }
 
       if (data) {
-        setProfile(prev => prev ? { ...prev, cash: data.new_cash } : prev);
+        setProfile(prev => (prev ? { ...prev, cash: data.new_cash } : null));
         setEquipment(prev => prev.map(eq =>
           eq.id === item.id
             ? { ...eq, stock: data.remaining_stock }
@@ -517,7 +536,9 @@ const EquipmentStore = () => {
                       )}
 
                       <div className="text-xs text-muted-foreground">
-                        Purchased: {new Date(playerItem.purchased_at).toLocaleDateString()}
+                        Purchased: {playerItem.purchased_at
+                          ? new Date(playerItem.purchased_at).toLocaleDateString()
+                          : "Unknown"}
                       </div>
 
                       <Button
