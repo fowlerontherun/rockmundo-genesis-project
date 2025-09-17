@@ -25,7 +25,8 @@ import {
   X,
   MessageSquare,
   Globe,
-  Mic
+  Mic,
+  SparklesIcon
 } from "lucide-react";
 
 const Navigation = () => {
@@ -42,7 +43,7 @@ const Navigation = () => {
         { icon: User, label: "Profile", path: "/profile" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
         { icon: Trophy, label: "Achievements", path: "/achievements" },
-        { icon: Sparkles, label: "Character Creator", path: "/character-create" },
+        { icon: SparklesIcon, label: "Character Creator", path: "/character-create" },
       ]
     },
     {

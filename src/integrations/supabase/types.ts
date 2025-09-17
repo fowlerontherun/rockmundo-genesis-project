@@ -495,6 +495,7 @@ export type Database = {
           id: string
           leader_id: string
           max_members: number | null
+          logo_url: string | null
           name: string
           popularity: number | null
           updated_at: string | null
@@ -507,6 +508,7 @@ export type Database = {
           id?: string
           leader_id: string
           max_members?: number | null
+          logo_url?: string | null
           name: string
           popularity?: number | null
           updated_at?: string | null
@@ -519,10 +521,74 @@ export type Database = {
           id?: string
           leader_id?: string
           max_members?: number | null
+          logo_url?: string | null
           name?: string
           popularity?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
+        }
+        Relationships: []
+      }
+      cities: {
+        Row: {
+          bonuses: string | null
+          cost_of_living: number | null
+          country: string
+          created_at: string | null
+          cultural_events: string[]
+          description: string | null
+          districts: Json
+          dominant_genre: string | null
+          famous_resident: string | null
+          id: string
+          local_bonus: number | null
+          music_scene: number | null
+          name: string
+          population: number | null
+          travel_hub: string | null
+          travel_nodes: Json
+          unlocked: boolean | null
+          venues: number | null
+        }
+        Insert: {
+          bonuses?: string | null
+          cost_of_living?: number | null
+          country: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
+        }
+        Update: {
+          bonuses?: string | null
+          cost_of_living?: number | null
+          country?: string
+          created_at?: string | null
+          cultural_events?: string[]
+          description?: string | null
+          districts?: Json
+          dominant_genre?: string | null
+          famous_resident?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name?: string
+          population?: number | null
+          travel_hub?: string | null
+          travel_nodes?: Json
+          unlocked?: boolean | null
+          venues?: number | null
         }
         Relationships: []
       }
@@ -974,10 +1040,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at: string
+          digital_sales: number
           id: string
+          physical_sales: number
           rank: number
           song_id: string
           total_streams: number
+          total_sales: number
           trend: string
           trend_change: number
           updated_at: string
@@ -987,10 +1056,13 @@ export type Database = {
           chart_date: string
           chart_type: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank: number
           song_id: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -1000,10 +1072,13 @@ export type Database = {
           chart_date?: string
           chart_type?: string
           created_at?: string
+          digital_sales?: number
           id?: string
+          physical_sales?: number
           rank?: number
           song_id?: string
           total_streams?: number
+          total_sales?: number
           trend?: string
           trend_change?: number
           updated_at?: string
@@ -1545,7 +1620,7 @@ export type Database = {
           experience: number | null
           fame: number | null
           fans: number | null
-          health: number
+          health: number | null
           followers: number | null
           id: string
           level: number | null
@@ -1565,7 +1640,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
-          health?: number
+          health?: number | null
           followers?: number | null
           id?: string
           level?: number | null
@@ -1585,7 +1660,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
-          health?: number
+          health?: number | null
           followers?: number | null
           id?: string
           level?: number | null
@@ -1970,6 +2045,8 @@ export type Database = {
           misc_cost: number | null
           travel_time: number | null
           rest_days: number | null
+          travel_mode: string | null
+          travel_comfort: number | null
           venue_id: string
         }
         Insert: {
@@ -1986,6 +2063,8 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id: string
         }
         Update: {
@@ -2002,6 +2081,8 @@ export type Database = {
           misc_cost?: number | null
           travel_time?: number | null
           rest_days?: number | null
+          travel_mode?: string | null
+          travel_comfort?: number | null
           venue_id?: string
         }
         Relationships: [
