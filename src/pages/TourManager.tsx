@@ -27,7 +27,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { meetsRequirements } from "@/utils/gameBalance";
+import { checkTourRequirements } from "@/pages/tourRequirementValidation";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 import {
   calculateTravelEstimates,
@@ -420,7 +420,7 @@ const createEmptySchedule = (): VenueScheduleForm => ({
 });
 const TourManager = () => {
   const { user } = useAuth();
-  const { profile, skills, currentCity, updateProfile } = useGameData();
+  const { profile, skills, unlockedSkills, skillProgress, currentCity, updateProfile } = useGameData();
   const { toast } = useToast();
   const [tours, setTours] = useState<Tour[]>([]);
   const [venues, setVenues] = useState<VenueRow[]>([]);
@@ -651,16 +651,19 @@ const TourManager = () => {
 
       // Check if player meets tour requirements
       const tourRequirements = { fame: 1000, performance: 50 };
-      const { meets, missing } = meetsRequirements(tourRequirements, {
-        fame: profile.fame,
-        performance: skills.performance
+      const requirementCheck = checkTourRequirements(tourRequirements, {
+        fame: profile.fame ?? 0,
+        skills,
+        unlockedSkills,
+        skillProgress
       });
 
-      if (!meets) {
+      if (!requirementCheck.meets) {
+        const requirementMessages = requirementCheck.missing;
         toast({
           variant: "destructive",
           title: "Requirements Not Met",
-          description: `You need: ${missing.join(', ')}`
+          description: `You need: ${requirementMessages.join(', ')}`
         });
         return;
       }
