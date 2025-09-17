@@ -16,6 +16,15 @@ import { fetchWorldEnvironmentSnapshot, type WeatherCondition } from "@/utils/wo
 import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from "@/utils/gameBalance";
 import { resolveAttributeValue } from "@/utils/attributeModifiers";
 import {
+  AttributeFocus,
+  AttributeKey,
+  calculateExperienceReward,
+  calculateFanGain,
+  extractAttributeScores,
+  getFocusAttributeScore,
+  attributeScoreToMultiplier
+} from "@/utils/gameBalance";
+import {
   Activity,
   Award,
   Cloud,
@@ -541,7 +550,16 @@ const BUSKING_ATTRIBUTE_KEYS: AttributeKey[] = [
 
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, skills, attributes, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    updateProfile,
+    updateAttributes,
+    addActivity,
+    loading: gameLoading,
+    currentCity
+  } = useGameData();
   const { toast } = useToast();
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
   const [modifiers, setModifiers] = useState<BuskingModifier[]>([]);
@@ -727,13 +745,18 @@ const Busking = () => {
     return modifiers.find((modifier) => modifier.id === selectedModifierId) ?? null;
   }, [modifiers, selectedModifierId]);
 
+  const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
+
   const skillScore = useMemo(() => {
     const performance = skills?.performance ?? 55;
     const vocals = skills?.vocals ?? 50;
     const guitar = skills?.guitar ?? 45;
-    const creativity = (attributes?.creativity ?? 500) / 10;
-    return Math.round((performance * 0.4 + vocals * 0.25 + guitar * 0.2 + creativity * 0.15) || 0);
-  }, [attributes, skills]);
+    const baseScore = performance * 0.4 + vocals * 0.25 + guitar * 0.2;
+    const charismaBonus = (attributeScores.charisma ?? 0) * 0.012;
+    const looksBonus = (attributeScores.looks ?? 0) * 0.008;
+    const musicalityBonus = (attributeScores.musicality ?? 0) * 0.015;
+    return Math.round(baseScore + charismaBonus + looksBonus + musicalityBonus);
+  }, [attributeScores, skills]);
 
   const riskLevel = toRiskLevel(selectedLocation?.risk_level);
   const riskPercent = riskPercentMap[riskLevel];
@@ -788,98 +811,55 @@ const Busking = () => {
     const baseChance = 58 + (skillScore - selectedLocation.recommended_skill) * 0.7;
     const riskPenalty = riskPenaltyWeights[toRiskLevel(selectedLocation.risk_level)];
     const modifierRisk = selectedModifier ? selectedModifier.risk_modifier * 100 : 0;
+    const performanceFocus = getFocusAttributeScore(attributeScores, "performance");
+    const attributeBonus = (performanceFocus / 1000) * 12;
+    const attributeMultiplier = attributeScoreToMultiplier(performanceFocus, 0.35);
     const withEnvironment = baseChance - riskPenalty - modifierRisk + environmentDetails.combined.successAdjustment;
-    const normalized = Math.max(5, withEnvironment);
-    const adjusted = normalized * environmentDetails.combined.successMultiplier;
-    return Math.min(95, Math.max(10, Math.round(adjusted)));
-  }, [selectedLocation, selectedModifier, skillScore, environmentDetails]);
+    const normalized = Math.max(5, withEnvironment + attributeBonus);
+    const adjusted = normalized * environmentDetails.combined.successMultiplier * attributeMultiplier;
+    return Math.min(97, Math.max(12, Math.round(adjusted)));
+  }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, skillScore]);
 
   const expectedCash = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierMultiplier = selectedModifier?.payout_multiplier ?? 1;
     const environmentMultiplier = environmentDetails.combined.payoutMultiplier;
     const expectancy = successChance / 100;
-    const baseEstimate = Math.max(
+    const charismaMultiplier = attributeScoreToMultiplier(attributeScores.charisma ?? null, 0.4);
+    const looksMultiplier = attributeScoreToMultiplier(attributeScores.looks ?? null, 0.3);
+    const musicalityMultiplier = attributeScoreToMultiplier(attributeScores.musicality ?? null, 0.2);
+    return Math.max(
       0,
       Math.round(
-        selectedLocation.base_payout * modifierMultiplier * environmentMultiplier * (0.4 + expectancy),
+        selectedLocation.base_payout *
+          modifierMultiplier *
+          environmentMultiplier *
+          (0.4 + expectancy) *
+          charismaMultiplier *
+          looksMultiplier *
+          musicalityMultiplier,
       ),
     );
-
-    const baselinePayment = calculateGigPayment(
-      selectedLocation.base_payout,
-      skills?.performance ?? 0,
-      profile?.fame ?? 0,
-      expectancy,
-    );
-
-    const adjustedPayment = calculateGigPayment(
-      selectedLocation.base_payout,
-      skills?.performance ?? 0,
-      profile?.fame ?? 0,
-      expectancy,
-      attributeBonuses,
-    );
-
-    const payoutAdjustment = baselinePayment > 0 ? adjustedPayment / baselinePayment : 1;
-    return Math.max(0, Math.round(baseEstimate * payoutAdjustment));
-  }, [
-    selectedLocation,
-    selectedModifier,
-    successChance,
-    environmentDetails,
-    skills,
-    profile,
-    attributeBonuses,
-  ]);
+  }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, successChance]);
 
   const expectedFame = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierMultiplier = selectedModifier?.fame_multiplier ?? 1;
     const environmentMultiplier = environmentDetails.combined.fameMultiplier;
     const expectancy = successChance / 100;
-    const baseEstimate = Math.max(
-      0,
-      Math.round(
-        selectedLocation.fame_reward * modifierMultiplier * environmentMultiplier * (0.5 + expectancy * 0.5),
-      ),
-    );
-
-    const baselineFanGain = calculateFanGain(
-      selectedLocation.fame_reward,
-      skills?.performance ?? 0,
-      skills?.vocals ?? 0,
-    );
-    const adjustedFanGain = calculateFanGain(
-      selectedLocation.fame_reward,
-      skills?.performance ?? 0,
-      skills?.vocals ?? 0,
-      attributeBonuses,
-    );
-    const fameAdjustment = baselineFanGain > 0 ? adjustedFanGain / baselineFanGain : 1;
-
-    return Math.max(0, Math.round(baseEstimate * fameAdjustment));
-  }, [
-    selectedLocation,
-    selectedModifier,
-    successChance,
-    environmentDetails,
-    skills,
-    attributeBonuses,
-  ]);
+    const baseFans = selectedLocation.fame_reward * modifierMultiplier * environmentMultiplier * (0.5 + expectancy * 0.5);
+    return Math.max(0, calculateFanGain(baseFans, skillScore, attributeScores));
+  }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, skillScore, successChance]);
 
   const expectedExperience = useMemo(() => {
     if (!selectedLocation) return 0;
     const modifierBonus = selectedModifier?.experience_bonus ?? 0;
     const environmentMultiplier = environmentDetails.combined.experienceMultiplier;
     const expectancy = successChance / 100;
-    return Math.max(
-      0,
-      Math.round(
-        (selectedLocation.experience_reward + modifierBonus) * environmentMultiplier * (0.6 + expectancy * 0.4),
-      ),
-    );
-  }, [selectedLocation, selectedModifier, successChance, environmentDetails]);
+    const baseExperience =
+      (selectedLocation.experience_reward + modifierBonus) * environmentMultiplier * (0.6 + expectancy * 0.4);
+    return Math.max(0, calculateExperienceReward(baseExperience, attributeScores, "performance"));
+  }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, successChance]);
 
   const WeatherIcon = environmentDetails.weather
     ? getWeatherIcon(environmentDetails.weather.condition)
@@ -969,7 +949,12 @@ const Busking = () => {
       const cityName = currentCity?.name;
       const cityMultiplier = cityBuskingValue;
       const performanceVariance = Math.random() * 12 - 6;
-      const performanceScore = Math.min(100, Math.max(15, successChance + performanceVariance));
+      const performanceFocus = getFocusAttributeScore(attributeScores, "performance");
+      const performanceAttributeBonus = (performanceFocus / 1000) * 12;
+      const performanceScore = Math.min(
+        100,
+        Math.max(15, successChance + performanceVariance + performanceAttributeBonus)
+      );
       const roll = Math.random() * 100;
       const success = roll <= successChance;
 
@@ -977,64 +962,43 @@ const Busking = () => {
       const successRatio = successChance / 100;
       const combinedPayoutMultiplier =
         (modifier?.payout_multiplier ?? 1) * environmentDetails.combined.payoutMultiplier;
-
-      const baselineGigPayment = calculateGigPayment(
-        baseCash,
-        skills?.performance ?? 0,
-        profile.fame ?? 0,
-        successRatio,
-      );
-      const adjustedGigPayment = calculateGigPayment(
-        baseCash,
-        skills?.performance ?? 0,
-        profile.fame ?? 0,
-        successRatio,
-        attributeBonuses,
-      );
-      const payoutAdjustment = baselineGigPayment > 0 ? adjustedGigPayment / baselineGigPayment : 1;
-
+      const charismaMultiplier = attributeScoreToMultiplier(attributeScores.charisma ?? null, 0.4);
+      const looksMultiplier = attributeScoreToMultiplier(attributeScores.looks ?? null, 0.3);
+      const musicalityMultiplier = attributeScoreToMultiplier(attributeScores.musicality ?? null, 0.2);
       const cashEarned = success
         ? Math.round(
-          baseCash * combinedPayoutMultiplier * (0.85 + Math.random() * 0.6) * payoutAdjustment,
-        )
+            baseCash *
+              combinedPayoutMultiplier *
+              (0.85 + Math.random() * 0.6) *
+              charismaMultiplier *
+              looksMultiplier *
+              musicalityMultiplier
+          )
         : Math.round(
-          baseCash * 0.25 * combinedPayoutMultiplier * (0.7 + Math.random() * 0.4) * payoutAdjustment,
-        );
+            baseCash *
+              0.25 *
+              combinedPayoutMultiplier *
+              (0.7 + Math.random() * 0.4) *
+              Math.max(0.5, charismaMultiplier * 0.6)
+          );
 
       const baseFame = selectedLocation.fame_reward;
       const combinedFameMultiplier =
         (modifier?.fame_multiplier ?? 1) * environmentDetails.combined.fameMultiplier;
-
-      const baselineFanGain = calculateFanGain(
-        baseFame,
-        skills?.performance ?? 0,
-        skills?.vocals ?? 0,
+      const rawFame = success
+        ? baseFame * combinedFameMultiplier * (0.9 + Math.random() * 0.4)
+        : baseFame * 0.4 * combinedFameMultiplier * (0.6 + Math.random() * 0.3);
+      const fameGained = Math.max(
+        0,
+        calculateFanGain(rawFame, success ? skillScore : Math.max(10, skillScore * 0.7), attributeScores)
       );
-      const adjustedFanGain = calculateFanGain(
-        baseFame,
-        skills?.performance ?? 0,
-        skills?.vocals ?? 0,
-        attributeBonuses,
-      );
-      const fameAdjustment = baselineFanGain > 0 ? adjustedFanGain / baselineFanGain : 1;
-
-      const fameGained = success
-        ? Math.round(
-          baseFame * combinedFameMultiplier * (0.9 + Math.random() * 0.4) * fameAdjustment,
-        )
-        : Math.round(
-          baseFame * 0.4 * combinedFameMultiplier * (0.6 + Math.random() * 0.3) * fameAdjustment,
-        );
 
       const baseExperience =
         (selectedLocation.experience_reward + (modifier?.experience_bonus ?? 0)) *
-        environmentDetails.combined.experienceMultiplier;
-      const attributeMultiplier = calculateAttributeMultiplier(attributes, BUSKING_ATTRIBUTE_KEYS).multiplier;
-      const successVariance = 0.9 + Math.random() * 0.5;
-      const failureVariance = 0.7 + Math.random() * 0.3;
-      const experienceGained = success
-        ? Math.round(baseExperience * cityMultiplier * successVariance * attributeMultiplier)
-        : Math.round(baseExperience * 0.5 * cityMultiplier * failureVariance * attributeMultiplier);
+        environmentDetails.combined.experienceMultiplier *
+        cityMultiplier;
+      const rawExperience = baseExperience * (success ? (0.9 + Math.random() * 0.5) : 0.5 * (0.7 + Math.random() * 0.3));
+      const experienceGained = Math.max(0, calculateExperienceReward(rawExperience, attributeScores, "performance"));
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
@@ -1127,6 +1091,28 @@ const Busking = () => {
         fame: nextFame,
         experience: nextExperience,
       });
+
+      const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
+      const currentCharisma = attributeScores.charisma ?? 0;
+      const currentLooks = attributeScores.looks ?? 0;
+      const currentMusicality = attributeScores.musicality ?? 0;
+      const charismaGain = Math.round((experienceGained + fameGained) * (success ? 0.4 : 0.25));
+      const looksGain = Math.round(fameGained * (success ? 0.5 : 0.3));
+      const musicalityGain = Math.round(experienceGained * 0.2);
+
+      if (charismaGain > 0) {
+        attributeUpdates.charisma = Math.min(1000, Math.round(currentCharisma + charismaGain));
+      }
+      if (looksGain > 0) {
+        attributeUpdates.looks = Math.min(1000, Math.round(currentLooks + looksGain));
+      }
+      if (musicalityGain > 0) {
+        attributeUpdates.musicality = Math.min(1000, Math.round(currentMusicality + musicalityGain));
+      }
+
+      if (Object.keys(attributeUpdates).length > 0) {
+        await updateAttributes(attributeUpdates);
+      }
 
       const activityMessage = success
         ? `Street performance success at ${selectedLocation.name}${cityName ? ` (${cityName})` : ""}!`

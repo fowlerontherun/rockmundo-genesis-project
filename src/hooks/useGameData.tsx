@@ -358,21 +358,202 @@ const useProvideGameData = (): GameDataContextValue => {
     }
 
     void fetchCharacters();
-  }, [user, fetchCharacters, clearSelectedCharacter]);
+  }, [clearSelectedCharacter, fetchCharacters, user]);
 
-  // The attribute map synchronization logic lives in a dedicated helper now.
-  // Legacy code retained here for reference:
-  // const valueByAttributeId = new Map((data ?? []).map(entry => [entry.attribute_id, entry.value]));
-  // const nextAttributes: AttributesMap = { ...attributes };
-  // payload.forEach(item => {
-  //   const latestValue = valueByAttributeId.get(item.definition.id) ?? item.row.value;
-  //   nextAttributes[item.definition.slug] = {
-  //     definition: item.definition,
-  //     value: latestValue
-  //   };
-  // });
-  // setAttributes(nextAttributes);
-  // return nextAttributes;
+  const updateProfile = useCallback(
+    async (updates: Partial<PlayerProfile>) => {
+      if (!user || !profile) return;
+      try {
+        await supabase
+          .from('profiles')
+          .update({ is_active: false })
+          .eq('user_id', user.id);
+
+        const { data, error: activationError } = await supabase
+          .from('profiles')
+          .update({ is_active: true })
+          .eq('id', characterId)
+          .select()
+          .single();
+
+        if (activationError) throw activationError;
+
+        updateSelectedCharacterId(characterId);
+        setCharacters(prev =>
+          sortCharacters(
+            prev.map(character => ({
+              ...character,
+              is_active: character.id === characterId
+            }))
+          )
+        );
+
+        if (data) {
+          setProfile(data);
+          await resolveCurrentCity(data.current_city_id ?? null);
+        }
+
+        await fetchGameData();
+      } catch (err) {
+        console.error('Error activating character:', err);
+        setError(extractErrorMessage(err));
+        throw err;
+      } finally {
+        setCharactersLoading(false);
+      }
+    },
+    [user, updateSelectedCharacterId, resolveCurrentCity, fetchGameData]
+  );
+
+  const updateProfile = useCallback(
+    async (updates: Partial<PlayerProfile>) => {
+      if (!user || !selectedCharacterId) {
+        throw new Error('No active character selected.');
+      }
+
+      const { data, error: updateError } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', selectedCharacterId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        throw updateError;
+      }
+
+      if (!data) {
+        throw new Error('No profile data returned from Supabase.');
+      }
+
+      setProfile(data);
+      setCharacters(prev =>
+        sortCharacters(prev.map(character => (character.id === data.id ? data : character)))
+      );
+
+      const nextCityId = data.current_city_id ?? null;
+      const currentCityId = currentCity?.id ?? null;
+
+      if (nextCityId !== currentCityId) {
+        await resolveCurrentCity(nextCityId);
+      }
+
+      return data;
+    },
+    [user, selectedCharacterId, currentCity?.id, resolveCurrentCity]
+  );
+
+  const updateSkills = useCallback(
+    async (updates: Partial<PlayerSkills>) => {
+      if (!user || !selectedCharacterId) {
+        throw new Error('No active character selected.');
+      }
+
+      if (!skills) {
+        throw new Error('Skill data is not available.');
+      }
+
+      try {
+        const { data, error }: PostgrestSingleResponse<PlayerSkills> = await supabase
+          .from('player_skills')
+          .update(updates)
+          .eq('user_id', user.id)
+          .eq('profile_id', skills.profile_id)
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          throw new Error('No skill data returned from Supabase.');
+        }
+
+        setSkills(data);
+        return data;
+      } catch (updateError) {
+        console.error('Error updating skills:', updateError);
+        throw updateError;
+      }
+    },
+    [selectedCharacterId, skills, user]
+  );
+
+  const updateAttributes = useCallback(
+    async (updates: Partial<PlayerAttributes>) => {
+      if (!user || !attributes) return;
+
+      try {
+        const { data, error }: PostgrestSingleResponse<PlayerAttributes> = await supabase
+          .from('player_attributes')
+          .update(updates)
+          .eq('user_id', user.id)
+          .eq('profile_id', attributes.profile_id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (!data) {
+          throw new Error('No attribute data returned from Supabase.');
+        }
+        setAttributes(data);
+        return data;
+      } catch (err: unknown) {
+        console.error('Error updating attributes:', err);
+        if (isPostgrestError(err)) {
+          throw err;
+        }
+        if (err instanceof Error) {
+          throw err;
+        }
+        throw new Error('An unknown error occurred while updating attributes.');
+      }
+    },
+    [attributes, user]
+  );
+
+        return {
+          slug,
+          definition,
+          row: {
+            profile_id: selectedCharacterId,
+            attribute_id: definition.id,
+            value
+          }
+        };
+      });
+
+      const { data, error: upsertError } = await supabase
+        .from('profile_attributes')
+        .upsert(
+          payload.map(item => item.row),
+          { onConflict: 'profile_id,attribute_id' }
+        )
+        .select('attribute_id, value');
+
+      if (upsertError) {
+        console.error('Error updating attributes:', upsertError);
+        throw upsertError;
+      }
+
+      const valueByAttributeId = new Map((data ?? []).map(entry => [entry.attribute_id, entry.value]));
+
+      const nextAttributes: AttributesMap = { ...attributes };
+      payload.forEach(item => {
+        const latestValue = valueByAttributeId.get(item.definition.id) ?? item.row.value;
+        nextAttributes[item.definition.slug] = {
+          definition: item.definition,
+          value: latestValue
+        };
+      });
+
+      setAttributes(nextAttributes);
+      return nextAttributes;
+    },
+    [user, selectedCharacterId, attributes, attributeDefinitions]
+  );
 
   const addActivity = useCallback(
     async (

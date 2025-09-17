@@ -22,10 +22,10 @@ const resolveAttributeFactor = (
 };
 
 export const SKILL_CAPS = {
-  beginner: 30,    // 0-1000 exp
-  amateur: 50,     // 1000-5000 exp  
+  beginner: 30, // 0-1000 exp
+  amateur: 50, // 1000-5000 exp
   professional: 80, // 5000-20000 exp
-  master: 100      // 20000+ exp
+  master: 100 // 20000+ exp
 } as const;
 
 export const LEVEL_REQUIREMENTS = {
@@ -56,6 +56,170 @@ export const FAME_THRESHOLDS = {
   legend: 100000
 } as const;
 
+export type AttributeKey =
+  | "looks"
+  | "charisma"
+  | "musicality"
+  | "mental_focus"
+  | "physical_endurance";
+
+export type AttributeFocus = "general" | "instrumental" | "performance" | "songwriting" | "vocals";
+
+export type AttributeScores = Partial<Record<AttributeKey, number | null | undefined>>;
+
+const ATTRIBUTE_KEYS: AttributeKey[] = [
+  "looks",
+  "charisma",
+  "musicality",
+  "mental_focus",
+  "physical_endurance"
+];
+
+const ATTRIBUTE_FOCUS_WEIGHTS: Record<AttributeFocus, Array<{ key: AttributeKey; weight: number }>> = {
+  general: [
+    { key: "musicality", weight: 0.4 },
+    { key: "charisma", weight: 0.35 },
+    { key: "looks", weight: 0.25 }
+  ],
+  instrumental: [
+    { key: "musicality", weight: 0.75 },
+    { key: "charisma", weight: 0.25 }
+  ],
+  performance: [
+    { key: "charisma", weight: 0.6 },
+    { key: "looks", weight: 0.4 }
+  ],
+  songwriting: [
+    { key: "musicality", weight: 0.7 },
+    { key: "charisma", weight: 0.3 }
+  ],
+  vocals: [
+    { key: "charisma", weight: 0.55 },
+    { key: "musicality", weight: 0.45 }
+  ]
+};
+
+const clampNumber = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+export const clampAttributeScore = (value: number | null | undefined): number => {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+
+  if (numeric >= 0 && numeric <= 3) {
+    return clampNumber(Math.round(((numeric - 1) / 2) * 1000), 0, 1000);
+  }
+
+  return clampNumber(Math.round(numeric), 0, 1000);
+};
+
+export const attributeScoreToMultiplier = (
+  value: number | null | undefined,
+  maxBonus = 0.5,
+  baseMultiplier = 1
+): number => {
+  if (value === null || value === undefined) {
+    return baseMultiplier;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return baseMultiplier;
+  }
+
+  if (numeric > 0 && numeric <= 3) {
+    return clampNumber(numeric, 0.25, baseMultiplier + maxBonus);
+  }
+
+  const normalized = clampAttributeScore(numeric);
+  const multiplier = baseMultiplier + (normalized / 1000) * maxBonus;
+  return clampNumber(multiplier, 0.25, baseMultiplier + maxBonus);
+};
+
+export const extractAttributeScores = (source: unknown): AttributeScores => {
+  if (!source || typeof source !== "object") {
+    return {};
+  }
+
+  const record = source as Record<string, unknown>;
+  return ATTRIBUTE_KEYS.reduce<AttributeScores>((accumulator, key) => {
+    const raw = record[key];
+    if (typeof raw === "number") {
+      accumulator[key] = raw;
+      return accumulator;
+    }
+
+    if (raw && typeof raw === "object" && "value" in raw) {
+      const nested = (raw as { value?: unknown }).value;
+      if (typeof nested === "number") {
+        accumulator[key] = nested;
+      }
+    }
+
+    return accumulator;
+  }, {});
+};
+
+const getCombinedAttributeScore = (
+  attributes: AttributeScores | null | undefined,
+  weights: Array<{ key: AttributeKey; weight: number }>
+): number => {
+  if (!attributes || weights.length === 0) {
+    return 0;
+  }
+
+  let weightedTotal = 0;
+  let totalWeight = 0;
+
+  for (const { key, weight } of weights) {
+    const resolvedWeight = Number.isFinite(weight) ? Number(weight) : 0;
+    if (resolvedWeight <= 0) {
+      continue;
+    }
+
+    const rawValue = attributes[key];
+    const score = clampAttributeScore(rawValue ?? 0);
+    weightedTotal += score * resolvedWeight;
+    totalWeight += resolvedWeight;
+  }
+
+  if (totalWeight <= 0) {
+    return 0;
+  }
+
+  return Math.round(weightedTotal / totalWeight);
+};
+
+export const getFocusAttributeScore = (
+  attributes: AttributeScores | null | undefined,
+  focus: AttributeFocus
+): number => {
+  const weights = ATTRIBUTE_FOCUS_WEIGHTS[focus] ?? ATTRIBUTE_FOCUS_WEIGHTS.general;
+  return getCombinedAttributeScore(attributes, weights);
+};
+
+export const calculateExperienceReward = (
+  baseExperience: number,
+  attributes?: AttributeScores,
+  focus: AttributeFocus = "general"
+): number => {
+  const normalizedBase = Number.isFinite(baseExperience) ? baseExperience : 0;
+  if (normalizedBase <= 0) {
+    return 0;
+  }
+
+  const focusScore = getFocusAttributeScore(attributes, focus);
+  const focusMultiplier = attributeScoreToMultiplier(focusScore, focus === "performance" ? 0.45 : focus === "instrumental" ? 0.4 : 0.35);
+  const mentalFocusMultiplier = attributeScoreToMultiplier(attributes?.mental_focus ?? null, 0.3);
+
+  return Math.max(0, Math.round(normalizedBase * focusMultiplier * mentalFocusMultiplier));
+};
+
 // Calculate player level from experience
 export function calculateLevel(experience: number): number {
   return Math.min(
@@ -82,23 +246,40 @@ export function getSkillCap(playerLevel: number, totalExperience: number): numbe
 }
 
 // Calculate training cost for a skill
-export function calculateTrainingCost(currentSkillLevel: number): number {
-  return TRAINING_COSTS.skillTraining(currentSkillLevel);
+export function calculateTrainingCost(
+  currentSkillLevel: number,
+  attributes?: AttributeScores,
+  focus: AttributeFocus = "general"
+): number {
+  const baseCost = TRAINING_COSTS.skillTraining(currentSkillLevel);
+  if (baseCost <= 0) {
+    return 0;
+  }
+
+  const focusScore = getFocusAttributeScore(attributes, focus);
+  const costReduction = clampNumber(focusScore / 1000, 0, 1) * 0.25; // Up to 25% reduction
+  const reductionMultiplier = 1 - costReduction;
+
+  const adjustedCost = Math.round(baseCost * reductionMultiplier);
+  return Math.max(25, adjustedCost);
 }
 
 // Calculate success rate for activities based on skills
 export function calculateSuccessRate(
   requiredSkills: Record<string, number>,
-  playerSkills: Record<string, number>
+  playerSkills: Record<string, number>,
+  attributes?: AttributeScores,
+  focus: AttributeFocus = "general"
 ): number {
   const skillChecks = Object.entries(requiredSkills).map(([skill, required]) => {
     const playerLevel = playerSkills[skill] || 0;
     return Math.min(playerLevel / required, 1.0);
   });
-  
+
   // Average of all skill checks, minimum 10% success
   const averageCheck = skillChecks.reduce((sum, check) => sum + check, 0) / skillChecks.length;
-  return Math.max(averageCheck, 0.1);
+  const attributeMultiplier = attributeScoreToMultiplier(getFocusAttributeScore(attributes, focus), 0.35);
+  return Math.min(1, Math.max(averageCheck, 0.1) * attributeMultiplier);
 }
 
 // Calculate gig payment based on venue and performance
@@ -107,20 +288,18 @@ export function calculateGigPayment(
   performanceSkill: number,
   fameLevel: number,
   successRate: number,
-  attributeBonuses: PerformanceAttributeBonuses = {}
+  attributes?: AttributeScores
 ): number {
-  const baseSkillMultiplier = 1 + clampNumber(performanceSkill, 0, 150) / 100;
-  const stagePresenceFactor = attributeBonuses.stagePresence !== undefined
-    ? resolveAttributeFactor(attributeBonuses.stagePresence, 0.4)
-    : 1;
-  const fameMultiplier = 1 + clampNumber(fameLevel, 0, 100000) / 10000;
-  const successMultiplier = 0.5 + clampNumber(successRate, 0, 1) * 0.5;
-  const crowdFactor = attributeBonuses.crowdEngagement !== undefined
-    ? resolveAttributeFactor(attributeBonuses.crowdEngagement, 0.35)
-    : 1;
+  const skillMultiplier = 1 + (performanceSkill / 100);
+  const fameMultiplier = 1 + (fameLevel / 10000);
+  const performanceMultiplier = 0.5 + (successRate * 0.5); // 50% to 100% based on success
+
+  const charismaMultiplier = attributeScoreToMultiplier(attributes?.charisma ?? null, 0.4);
+  const looksMultiplier = attributeScoreToMultiplier(attributes?.looks ?? null, 0.25);
+  const musicalityMultiplier = attributeScoreToMultiplier(attributes?.musicality ?? null, 0.2);
 
   return Math.floor(
-    basePayment * baseSkillMultiplier * stagePresenceFactor * fameMultiplier * successMultiplier * crowdFactor
+    basePayment * skillMultiplier * fameMultiplier * performanceMultiplier * charismaMultiplier * looksMultiplier * musicalityMultiplier
   );
 }
 
@@ -128,22 +307,13 @@ export function calculateGigPayment(
 export function calculateFanGain(
   baseGain: number,
   performanceSkill: number,
-  charismaBonus: number = 0,
-  attributeBonuses: PerformanceAttributeBonuses = {}
+  attributes?: AttributeScores
 ): number {
-  const skillMultiplier = 1 + clampNumber(performanceSkill, 0, 150) / 200;
-  const charismaMultiplier = 1 + clampNumber(charismaBonus, 0, 200) / 100;
-  const stagePresenceFactor = attributeBonuses.stagePresence !== undefined
-    ? resolveAttributeFactor(attributeBonuses.stagePresence, 0.35)
-    : 1;
-  const crowdFactor = attributeBonuses.crowdEngagement !== undefined
-    ? resolveAttributeFactor(attributeBonuses.crowdEngagement, 0.45)
-    : 1;
-  const socialFactor = attributeBonuses.socialReach !== undefined
-    ? resolveAttributeFactor(attributeBonuses.socialReach, 0.55)
-    : 1;
+  const skillMultiplier = 1 + (performanceSkill / 200); // Max 50% bonus
+  const charismaMultiplier = attributeScoreToMultiplier(attributes?.charisma ?? null, 0.5);
+  const looksMultiplier = attributeScoreToMultiplier(attributes?.looks ?? null, 0.3);
 
-  return Math.floor(baseGain * skillMultiplier * stagePresenceFactor * charismaMultiplier * crowdFactor * socialFactor);
+  return Math.floor(baseGain * skillMultiplier * charismaMultiplier * looksMultiplier);
 }
 
 // Check if player meets requirements for an activity
