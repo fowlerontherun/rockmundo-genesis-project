@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData, type PlayerSkills } from '@/hooks/useGameData';
+import { applyAttributeToValue, type AttributeKey } from '@/utils/attributeProgression';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from '@/components/ui/sonner-toast';
 import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle } from 'lucide-react';
@@ -127,12 +128,14 @@ const SHOW_TYPE_BEHAVIOR: Record<ShowType, {
   acoustic: { earnings: 1, fan: 1.25, experience: 1.2, audienceEase: 1.15, stageTolerance: 5 },
 };
 
+const ADVANCED_GIG_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
+
 const getPerformanceStages = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
 
 const AdvancedGigSystem: React.FC = () => {
   const { gigId } = useParams<{ gigId: string }>();
   const { user } = useAuth();
-  const { profile, skills, updateProfile, addActivity } = useGameData();
+  const { profile, skills, attributes, updateProfile, addActivity } = useGameData();
   const navigate = useNavigate();
 
   const [gig, setGig] = useState<Gig | null>(null);
@@ -377,7 +380,9 @@ const AdvancedGigSystem: React.FC = () => {
     const fameDelta = isFailure
       ? -FAILURE_FAME_PENALTY
       : Math.floor(averageScore * 0.5 * behavior.fan);
-    const experienceGain = Math.floor((isFailure ? averageScore : averageScore * 2) * behavior.experience);
+    const baseExperienceGain = Math.floor((isFailure ? averageScore : averageScore * 2) * behavior.experience);
+    const experienceResult = applyAttributeToValue(Math.max(1, baseExperienceGain), attributes, ADVANCED_GIG_ATTRIBUTES);
+    const experienceGain = experienceResult.value;
     const penaltyValue = isFailure ? Math.max(0, potentialEarnings - totalEarningsValue) : 0;
 
     setFinalScore(averageScore);

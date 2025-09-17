@@ -1531,6 +1531,54 @@ export type Database = {
           },
         ]
       }
+      player_attributes: {
+        Row: {
+          business_acumen: number
+          created_at: string | null
+          creative_insight: number
+          id: string
+          marketing_savvy: number
+          musical_ability: number
+          profile_id: string
+          rhythm_sense: number
+          stage_presence: number
+          technical_mastery: number
+          updated_at: string | null
+          user_id: string
+          vocal_talent: number
+        }
+        Insert: {
+          business_acumen?: number
+          created_at?: string | null
+          creative_insight?: number
+          id?: string
+          marketing_savvy?: number
+          musical_ability?: number
+          profile_id: string
+          rhythm_sense?: number
+          stage_presence?: number
+          technical_mastery?: number
+          updated_at?: string | null
+          user_id: string
+          vocal_talent?: number
+        }
+        Update: {
+          business_acumen?: number
+          created_at?: string | null
+          creative_insight?: number
+          id?: string
+          marketing_savvy?: number
+          musical_ability?: number
+          profile_id?: string
+          rhythm_sense?: number
+          stage_presence?: number
+          technical_mastery?: number
+          updated_at?: string | null
+          user_id?: string
+          vocal_talent?: number
+        }
+        Relationships: []
+      }
       player_skills: {
         Row: {
           bass: number

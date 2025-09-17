@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { useGameData } from "@/hooks/useGameData";
+import { type PlayerAttributes, useGameData } from "@/hooks/useGameData";
 import {
   calculateTrainingCost,
   getSkillCap,
@@ -13,7 +13,38 @@ import {
   getRemainingCooldown,
   COOLDOWNS
 } from "@/utils/gameBalance";
-import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
+import {
+  type LucideIcon,
+  Briefcase,
+  Coins,
+  Cpu,
+  Drum,
+  Guitar,
+  Megaphone,
+  Metronome,
+  Mic,
+  Mic2,
+  Music,
+  Palette,
+  PenTool,
+  PersonStanding,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Volume2,
+  Clock
+} from "lucide-react";
+import {
+  ATTRIBUTE_KEYS,
+  ATTRIBUTE_MAX_VALUE,
+  ATTRIBUTE_METADATA,
+  ATTRIBUTE_TRAINING_INCREMENT,
+  SKILL_ATTRIBUTE_MAP,
+  applyAttributeToValue,
+  clampAttributeValue,
+  getAttributeTrainingCost,
+  type AttributeKey
+} from "@/utils/attributeProgression";
 
 type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
 
@@ -26,11 +57,37 @@ interface TrainingSession {
   description: string;
 }
 
+const ATTRIBUTE_ICONS: Record<AttributeKey, LucideIcon> = {
+  musical_ability: Sparkles,
+  vocal_talent: Mic2,
+  rhythm_sense: Metronome,
+  stage_presence: PersonStanding,
+  creative_insight: Palette,
+  technical_mastery: Cpu,
+  business_acumen: Briefcase,
+  marketing_savvy: Megaphone
+};
+
 const SkillTraining = () => {
   const { toast } = useToast();
-  const { profile, skills, updateSkills, updateProfile, addActivity, loading } = useGameData();
+  const { profile, skills, attributes, updateSkills, updateProfile, updateAttributes, addActivity, loading } = useGameData();
   const [training, setTraining] = useState(false);
+  const [activeTrainingKey, setActiveTrainingKey] = useState<string | null>(null);
   const trainingCooldown = COOLDOWNS.skillTraining;
+
+  const attributeSummaries = useMemo(() =>
+    ATTRIBUTE_KEYS.map(key => {
+      const value = clampAttributeValue(Number(attributes?.[key] ?? 0));
+      return {
+        key,
+        value,
+        metadata: ATTRIBUTE_METADATA[key],
+        icon: ATTRIBUTE_ICONS[key],
+        cost: getAttributeTrainingCost(value),
+        percentage: ATTRIBUTE_MAX_VALUE > 0 ? (value / ATTRIBUTE_MAX_VALUE) * 100 : 0
+      };
+    }),
+  [attributes]);
 
   const trainingSessions: TrainingSession[] = [
     {
@@ -103,6 +160,8 @@ const SkillTraining = () => {
     const trainingCost = calculateTrainingCost(currentSkill);
     const lastTraining = skills.updated_at;
     const cooldownActive = lastTraining ? isOnCooldown(lastTraining, trainingCooldown) : false;
+    const attributeKey = SKILL_ATTRIBUTE_MAP[session.skill] as AttributeKey | undefined;
+    const attributeResult = applyAttributeToValue(session.xpGain, attributes, attributeKey);
 
     if (currentSkill >= skillCap) {
       toast({
@@ -135,12 +194,14 @@ const SkillTraining = () => {
     }
 
     setTraining(true);
+    setActiveTrainingKey(session.skill);
 
     try {
-      const newSkillValue = Math.min(skillCap, currentSkill + session.xpGain);
+      const newSkillValue = Math.min(skillCap, currentSkill + attributeResult.value);
       const skillGain = newSkillValue - currentSkill;
       const newCash = playerCash - trainingCost;
-      const newExperience = totalExperience + session.xpGain;
+      const experienceGain = attributeResult.value;
+      const newExperience = totalExperience + experienceGain;
       const timestamp = new Date().toISOString();
 
       await updateSkills({
@@ -154,15 +215,26 @@ const SkillTraining = () => {
         updated_at: timestamp
       });
 
+      const attributeLabel = attributeKey ? ATTRIBUTE_METADATA[attributeKey].label : null;
+
       await addActivity(
         "training",
-        `Completed ${session.name} training session (+${session.xpGain} XP)`,
-        -trainingCost
+        attributeLabel
+          ? `Completed ${session.name} (+${experienceGain} XP, ${attributeLabel} ×${attributeResult.multiplier.toFixed(2)})`
+          : `Completed ${session.name} training session (+${experienceGain} XP)`,
+        -trainingCost,
+        attributeKey
+          ? {
+              attribute: attributeKey,
+              multiplier: attributeResult.multiplier,
+              experience: experienceGain
+            }
+          : undefined
       );
 
       toast({
         title: "Training Complete!",
-        description: `Your ${session.skill} skill increased by ${skillGain} points!`
+        description: `Your ${session.skill} skill increased by ${skillGain} points (+${experienceGain} XP).`
       });
     } catch (error) {
       console.error("Error during training:", error);
@@ -173,6 +245,88 @@ const SkillTraining = () => {
       });
     } finally {
       setTraining(false);
+      setActiveTrainingKey(null);
+    }
+  };
+
+  const handleAttributeTraining = async (attributeKey: AttributeKey) => {
+    if (!profile || !attributes) {
+      toast({
+        variant: "destructive",
+        title: "Attributes Unavailable",
+        description: "We couldn't load your attribute data yet. Try again shortly."
+      });
+      return;
+    }
+
+    const currentValue = clampAttributeValue(Number(attributes[attributeKey] ?? 0));
+    if (currentValue >= ATTRIBUTE_MAX_VALUE) {
+      toast({
+        variant: "destructive",
+        title: "Attribute Maxed",
+        description: `${ATTRIBUTE_METADATA[attributeKey].label} is already at its peak.`
+      });
+      return;
+    }
+
+    const availableExperience = Math.max(0, Number(profile.experience ?? 0));
+    const trainingCost = getAttributeTrainingCost(currentValue);
+
+    if (availableExperience < trainingCost) {
+      toast({
+        variant: "destructive",
+        title: "Not Enough XP",
+        description: `You need ${trainingCost} XP to train ${ATTRIBUTE_METADATA[attributeKey].label}.`
+      });
+      return;
+    }
+
+    setTraining(true);
+    setActiveTrainingKey(`attribute:${attributeKey}`);
+
+    try {
+      const timestamp = new Date().toISOString();
+      const nextValue = clampAttributeValue(currentValue + ATTRIBUTE_TRAINING_INCREMENT);
+      const actualGain = nextValue - currentValue;
+      const nextExperience = Math.max(0, availableExperience - trainingCost);
+
+      const attributeUpdates: Partial<PlayerAttributes> = {
+        [attributeKey]: nextValue,
+        updated_at: timestamp
+      } as Partial<PlayerAttributes>;
+
+      await updateAttributes(attributeUpdates);
+
+      await updateProfile({
+        experience: nextExperience,
+        updated_at: timestamp
+      });
+
+      await addActivity(
+        "attribute_training",
+        `Invested ${trainingCost} XP to improve ${ATTRIBUTE_METADATA[attributeKey].label} (+${actualGain}).`,
+        0,
+        {
+          attribute: attributeKey,
+          gain: actualGain,
+          cost: trainingCost
+        }
+      );
+
+      toast({
+        title: "Attribute Improved!",
+        description: `${ATTRIBUTE_METADATA[attributeKey].label} increased by ${actualGain} (cost ${trainingCost} XP).`
+      });
+    } catch (error) {
+      console.error("Error during attribute training:", error);
+      toast({
+        variant: "destructive",
+        title: "Training Failed",
+        description: "Something went wrong while training that attribute."
+      });
+    } finally {
+      setTraining(false);
+      setActiveTrainingKey(null);
     }
   };
 
@@ -238,9 +392,10 @@ const SkillTraining = () => {
       </div>
 
       <Tabs defaultValue="skills" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="skills">Current Skills</TabsTrigger>
           <TabsTrigger value="training">Training Sessions</TabsTrigger>
+          <TabsTrigger value="attributes">Attribute Development</TabsTrigger>
         </TabsList>
 
         <TabsContent value="skills" className="space-y-4">
@@ -284,17 +439,23 @@ const SkillTraining = () => {
         <TabsContent value="training" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {trainingSessions.map((session) => {
-              const Icon = session.icon;
-              const currentSkill = Number(skills?.[session.skill] ?? 0);
-              const trainingCost = calculateTrainingCost(currentSkill);
-              const canAfford = (profile?.cash ?? 0) >= trainingCost;
-              const isAtCap = currentSkill >= skillCap;
-              const buttonDisabled = training || !canAfford || isAtCap || cooldownActive;
+            const Icon = session.icon;
+            const currentSkill = Number(skills?.[session.skill] ?? 0);
+            const trainingCost = calculateTrainingCost(currentSkill);
+            const canAfford = (profile?.cash ?? 0) >= trainingCost;
+            const isAtCap = currentSkill >= skillCap;
+            const attributeKey = SKILL_ATTRIBUTE_MAP[session.skill] as AttributeKey | undefined;
+            const attributePreview = applyAttributeToValue(session.xpGain, attributes, attributeKey);
+            const expectedXpGain = attributePreview.value;
+            const attributeLabel = attributeKey ? ATTRIBUTE_METADATA[attributeKey].label : null;
+            const multiplierLabel = attributePreview.multiplier.toFixed(2);
+            const buttonDisabled = training || !canAfford || isAtCap || cooldownActive;
+            const isActive = activeTrainingKey === session.skill;
 
-              return (
-                <Card key={session.skill} className="relative">
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
+            return (
+              <Card key={session.skill} className="relative">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
                       <Icon className="h-5 w-5 text-primary" />
                       <div>
                         <CardTitle className="text-lg font-oswald">{session.name}</CardTitle>
@@ -314,7 +475,10 @@ const SkillTraining = () => {
                       </div>
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-purple-400" />
-                        <span>+{session.xpGain} XP</span>
+                        <span>
+                          +{expectedXpGain} XP
+                          {attributeLabel ? ` • ${attributeLabel} ×${multiplierLabel}` : ""}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <TrendingUp className="h-3 w-3 text-green-400" />
@@ -342,7 +506,7 @@ const SkillTraining = () => {
                       className="w-full"
                       variant={canAfford && !isAtCap && !cooldownActive ? "default" : "outline"}
                     >
-                      {training
+                      {training && isActive
                         ? "Training..."
                         : isAtCap
                           ? "Skill Cap Reached"
@@ -351,6 +515,77 @@ const SkillTraining = () => {
                             : !canAfford
                               ? "Can't Afford"
                               : "Start Training"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="attributes" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {attributeSummaries.map(({ key, value, metadata, icon: AttributeIcon, cost, percentage }) => {
+              const availableExperience = Math.max(0, Number(profile?.experience ?? 0));
+              const canAfford = availableExperience >= cost;
+              const isMaxed = value >= ATTRIBUTE_MAX_VALUE;
+              const isActive = activeTrainingKey === `attribute:${key}`;
+
+              return (
+                <Card key={key} className="relative">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <AttributeIcon className="h-5 w-5 text-primary" />
+                      <div>
+                        <CardTitle className="text-lg font-oswald">{metadata.label}</CardTitle>
+                        <CardDescription className="text-sm">{metadata.description}</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Progress</span>
+                        <span className="font-mono">{value}/{ATTRIBUTE_MAX_VALUE}</span>
+                      </div>
+                      <Progress value={percentage} className="h-2" />
+                      {metadata.relatedSkills.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Boosts: {metadata.relatedSkills.join(", ")}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                      <span>Training Cost</span>
+                      <span>{cost} XP</span>
+                    </div>
+
+                    {isMaxed && (
+                      <div className="text-sm text-green-500">
+                        Attribute mastered!
+                      </div>
+                    )}
+
+                    {!isMaxed && !canAfford && (
+                      <div className="text-sm text-destructive">
+                        Need {Math.max(0, cost - Math.floor(availableExperience))} more XP
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={() => handleAttributeTraining(key)}
+                      disabled={training || isMaxed || !canAfford}
+                      className="w-full"
+                      variant={canAfford && !isMaxed ? "default" : "outline"}
+                    >
+                      {isMaxed
+                        ? "Maxed Out"
+                        : training && isActive
+                          ? "Training..."
+                          : canAfford
+                            ? `Train (+${ATTRIBUTE_TRAINING_INCREMENT})`
+                            : "Need XP"}
                     </Button>
                   </CardContent>
                 </Card>
