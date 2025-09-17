@@ -77,6 +77,33 @@ interface FanMessage {
   replied_at: string | null;
 }
 
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+
+type NumericInput = number | string | null | undefined;
+
+type RawCampaignResults = Omit<CampaignResults, "actual_growth" | "expected_growth" | "estimated_revenue" | "roi"> & {
+  actual_growth?: NumericInput;
+  expected_growth?: NumericInput;
+  estimated_revenue?: NumericInput;
+  roi?: NumericInput;
+};
+
+interface RawFanCampaignRecord {
+  id: string;
+  user_id: string;
+  title: string;
+  cost: NumericInput;
+  duration: NumericInput;
+  expected_growth: NumericInput;
+  target_demo: string;
+  actual_growth?: NumericInput;
+  roi?: NumericInput;
+  results?: RawCampaignResults | null;
+  launched_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string | null;
+}
+
 interface CampaignResults {
   summary?: string | null;
   actual_growth?: number | null;
@@ -115,7 +142,7 @@ const parseNumericValue = (value: unknown): number => {
   return 0;
 };
 
-const normalizeCampaignRecord = (campaign: any): FanCampaignRecord => {
+const normalizeCampaignRecord = (campaign: RawFanCampaignRecord): FanCampaignRecord => {
   const normalizedResults: CampaignResults | null = campaign?.results
     ? {
         ...campaign.results,
@@ -247,7 +274,7 @@ const EnhancedFanManagement = () => {
   const { toast } = useToast();
   const [fanData, setFanData] = useState<FanDemographics | null>(null);
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [campaigning, setCampaigning] = useState(false);
@@ -501,7 +528,7 @@ const EnhancedFanManagement = () => {
         .eq("user_id", user?.id);
 
       if (fanData) {
-        let updates: Partial<FanDemographics> = {
+        const updates: Partial<FanDemographics> = {
           total_fans: fanData.total_fans + actualGrowth,
           weekly_growth: fanData.weekly_growth + actualGrowth
         };
