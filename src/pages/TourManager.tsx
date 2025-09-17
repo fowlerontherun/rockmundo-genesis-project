@@ -263,8 +263,6 @@ const TourManager = () => {
     end_date: ""
   });
   const [venueSchedules, setVenueSchedules] = useState<Record<string, VenueScheduleForm>>({});
-  const [editingTourId, setEditingTourId] = useState<string | null>(null);
-  const [editForms, setEditForms] = useState<Record<string, EditTourForm>>({});
 
   const supabaseClient = useMemo(() => supabase, []);
 
