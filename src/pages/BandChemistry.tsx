@@ -7,17 +7,194 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { Heart, AlertTriangle, MessageSquare, Star, Coffee, Loader2 } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+import { Heart, AlertTriangle, MessageSquare, Star, Coffee, Loader2, Target } from "lucide-react";
 
-import {
-  buildSkillLevelMap,
-  collectSkillSlugs,
-  getSkillLabel,
-  getSkillLevel,
-  type SkillDefinitionRow,
-  type SkillLevelMap,
-  type SkillProgressWithDefinition
-} from "@/utils/skillLevels";
+type ProfileSkillProgressRow = Database["public"]["Tables"]["profile_skill_progress"]["Row"];
+type ProfileSkillUnlockRow = Database["public"]["Tables"]["profile_skill_unlocks"]["Row"];
+type SkillDefinitionRow = Database["public"]["Tables"]["skill_definitions"]["Row"];
+
+type ProfileSkillProgressWithDefinition = ProfileSkillProgressRow & {
+  skill_definitions?: Pick<SkillDefinitionRow, "slug"> | null;
+};
+
+type ProfileSkillUnlockWithDefinition = ProfileSkillUnlockRow & {
+  skill_definitions?: Pick<SkillDefinitionRow, "slug"> | null;
+};
+
+const SKILL_LABELS: Record<string, string> = {
+  guitar: "Guitar",
+  vocals: "Vocals",
+  drums: "Drums",
+  bass: "Bass",
+  performance: "Performance",
+  songwriting: "Songwriting",
+};
+
+const CORE_SKILL_SLUGS = Object.keys(SKILL_LABELS);
+
+type SkillEntry = {
+  level: number;
+  unlocked: boolean;
+  hasProgress: boolean;
+};
+
+type SkillMap = Record<string, SkillEntry>;
+
+type SkillStatusType = "ready" | "developing" | "locked" | "missing";
+
+type SkillStatus = {
+  slug: string;
+  label: string;
+  level: number;
+  unlocked: boolean;
+  hasProgress: boolean;
+  status: SkillStatusType;
+};
+
+const formatSkillLabel = (slug: string) =>
+  SKILL_LABELS[slug] ??
+  slug
+    .split(/[-_\s]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const resolveSkillSlug = (
+  item:
+    | ProfileSkillProgressWithDefinition
+    | ProfileSkillUnlockWithDefinition
+    | { skill_slug: string | null; skill_definitions?: Pick<SkillDefinitionRow, "slug"> | null }
+) => item.skill_slug ?? item.skill_definitions?.slug ?? null;
+
+const mapSkillProgress = (
+  progressRows: ProfileSkillProgressWithDefinition[] | null | undefined,
+  unlockRows: ProfileSkillUnlockWithDefinition[] | null | undefined
+): SkillMap => {
+  const map: SkillMap = {};
+
+  const unlockSlugs = new Set(
+    (unlockRows ?? [])
+      .map((unlock) => resolveSkillSlug(unlock))
+      .filter((slug): slug is string => Boolean(slug))
+  );
+
+  (progressRows ?? []).forEach((row) => {
+    const slug = resolveSkillSlug(row);
+    if (!slug) return;
+    const level = typeof row.current_level === "number" ? row.current_level : 0;
+    const unlocked = unlockSlugs.has(slug) || level > 0;
+    map[slug] = {
+      level,
+      unlocked,
+      hasProgress: true,
+    };
+  });
+
+  (unlockRows ?? []).forEach((unlock) => {
+    const slug = resolveSkillSlug(unlock);
+    if (!slug) return;
+    if (!map[slug]) {
+      map[slug] = {
+        level: 0,
+        unlocked: true,
+        hasProgress: false,
+      };
+    } else if (!map[slug].unlocked) {
+      map[slug] = {
+        ...map[slug],
+        unlocked: true,
+      };
+    }
+  });
+
+  CORE_SKILL_SLUGS.forEach((slug) => {
+    if (!map[slug]) {
+      map[slug] = {
+        level: 0,
+        unlocked: unlockSlugs.has(slug),
+        hasProgress: false,
+      };
+    }
+  });
+
+  return map;
+};
+
+const getSkillEntry = (skills: SkillMap | undefined, slug: string): SkillEntry =>
+  skills?.[slug] ?? {
+    level: 0,
+    unlocked: false,
+    hasProgress: false,
+  };
+
+const getEffectiveSkillLevel = (skills: SkillMap | undefined, slug: string) => {
+  const entry = getSkillEntry(skills, slug);
+  return entry.unlocked ? entry.level : 0;
+};
+
+const getRelevantSkillSlugs = (role: string) => {
+  const normalized = role.toLowerCase();
+  const slugs = new Set<string>(["performance", "songwriting"]);
+
+  if (normalized.includes("guitar")) {
+    slugs.add("guitar");
+  }
+  if (normalized.includes("vocal") || normalized.includes("singer") || normalized.includes("front")) {
+    slugs.add("vocals");
+  }
+  if (normalized.includes("drum")) {
+    slugs.add("drums");
+  }
+  if (normalized.includes("bass")) {
+    slugs.add("bass");
+  }
+  if (
+    normalized.includes("song") ||
+    normalized.includes("writer") ||
+    normalized.includes("compose") ||
+    normalized.includes("lyric")
+  ) {
+    slugs.add("songwriting");
+  }
+  if (normalized.includes("keyboard") || normalized.includes("piano") || normalized.includes("synth")) {
+    slugs.add("songwriting");
+    slugs.add("performance");
+  }
+  if (normalized.includes("producer") || normalized.includes("studio")) {
+    slugs.add("songwriting");
+  }
+
+  return Array.from(slugs);
+};
+
+const buildSkillStatuses = (role: string, skills: SkillMap): SkillStatus[] => {
+  const relevantSlugs = getRelevantSkillSlugs(role);
+
+  return relevantSlugs.map((slug) => {
+    const entry = getSkillEntry(skills, slug);
+    const label = formatSkillLabel(slug);
+    let status: SkillStatusType;
+
+    if (!entry.hasProgress && !entry.unlocked) {
+      status = "missing";
+    } else if (!entry.unlocked) {
+      status = "locked";
+    } else if (entry.level >= 60) {
+      status = "ready";
+    } else {
+      status = "developing";
+    }
+
+    return {
+      slug,
+      label,
+      level: entry.unlocked ? entry.level : 0,
+      unlocked: entry.unlocked,
+      hasProgress: entry.hasProgress,
+      status,
+    };
+  });
+};
 
 type BandMemberCard = {
   id: string;
@@ -34,7 +211,8 @@ type BandMemberCard = {
   personality: string;
   issues: string[];
   strengths: string[];
-  skills: SkillLevelMap;
+  skills: SkillMap;
+  skillStatuses: SkillStatus[];
 };
 
 type TeamEvent = {
@@ -92,20 +270,88 @@ const getRolePersonality = (role: string) => {
   return "Collaborative";
 };
 
-const getDefaultStrengths = (role: string) => {
-  const normalized = role.toLowerCase();
-  if (normalized.includes("drum")) return ["Powerful beats", "Precise timing"];
-  if (normalized.includes("bass")) return ["Solid groove", "Reliable foundation"];
-  if (normalized.includes("keyboard")) return ["Arrangement skills", "Melodic layers"];
-  if (normalized.includes("vocal")) return ["Stage charisma", "Audience connection"];
-  if (normalized.includes("guitar")) return ["Creative riffs", "Showmanship"];
-  return ["Team-focused", "Adaptable performer"];
+const getRoleStrengths = (
+  role: string,
+  skills?: SkillMap | null,
+  precomputedStatuses?: SkillStatus[]
+) => {
+  const strengths: string[] = [];
+  const statuses = precomputedStatuses ?? (skills ? buildSkillStatuses(role, skills) : []);
+
+  if (statuses.length > 0) {
+    const ready = statuses
+      .filter((status) => status.status === "ready")
+      .sort((a, b) => b.level - a.level);
+    ready.slice(0, 2).forEach((status) => {
+      strengths.push(`${status.label} expertise (Lvl ${status.level})`);
+    });
+
+    if (strengths.length < 2) {
+      const developing = statuses
+        .filter((status) => status.status === "developing")
+        .sort((a, b) => b.level - a.level);
+      developing.slice(0, 2 - strengths.length).forEach((status) => {
+        strengths.push(`${status.label} developing (Lvl ${status.level})`);
+      });
+    }
+
+    if (strengths.length === 0) {
+      const locked = statuses.filter((status) => status.status === "locked");
+      if (locked.length > 0) {
+        strengths.push(`Unlock ${locked[0].label} to meet role needs`);
+      } else {
+        const missing = statuses.filter((status) => status.status === "missing");
+        if (missing.length > 0) {
+          strengths.push(`${missing[0].label} skill data missing`);
+        }
+      }
+    }
+  }
+
+  if (strengths.length === 0) {
+    const normalized = role.toLowerCase();
+    if (normalized.includes("drum")) return ["Powerful beats", "Precise timing"];
+    if (normalized.includes("bass")) return ["Solid groove", "Reliable foundation"];
+    if (normalized.includes("keyboard")) return ["Arrangement skills", "Melodic layers"];
+    if (normalized.includes("vocal")) return ["Stage charisma", "Audience connection"];
+    if (normalized.includes("guitar")) return ["Creative riffs", "Showmanship"];
+    return ["Team-focused", "Adaptable performer"];
+  }
+
+  return strengths;
 };
 
-const deriveIssues = (morale: number) => {
-  if (morale < 45) return ["Needs support", "Seeking clearer communication"];
-  if (morale < 60) return ["Wants more creative input"];
-  return [];
+const deriveIssues = (morale: number, statuses: SkillStatus[]) => {
+  const issues = new Set<string>();
+
+  if (morale < 45) {
+    issues.add("Needs support");
+    issues.add("Seeking clearer communication");
+  } else if (morale < 60) {
+    issues.add("Wants more creative input");
+  }
+
+  statuses.forEach((status) => {
+    if (status.status === "locked") {
+      issues.add(`${status.label} skill locked for this role`);
+    } else if (status.status === "missing") {
+      issues.add(`${status.label} skill data missing`);
+    } else if (status.status === "developing") {
+      issues.add(`${status.label} skill needs development (Lvl ${status.level})`);
+    }
+  });
+
+  return Array.from(issues);
+};
+
+const calculateSkillAverage = (skills?: SkillMap | null) => {
+  if (!skills) return 60;
+  const entries = CORE_SKILL_SLUGS.map((slug) => getSkillEntry(skills, slug));
+  const hasData = entries.some((entry) => entry.hasProgress || entry.unlocked);
+  if (!hasData) return 60;
+
+  const total = entries.reduce((sum, entry) => sum + (entry.unlocked ? entry.level : 0), 0);
+  return Math.round(total / entries.length);
 };
 
 const getMoodColor = (mood: string) => {
@@ -436,41 +682,85 @@ const BandChemistry = () => {
           console.error("Error loading profile data:", profileError);
         }
 
-        const skillLevels = await fetchProfileSkillMap(profileData?.id ?? null);
-        const skillAverage = calculateSkillAverage(skillLevels);
-        const loyalty = clampStat(40 + Math.round(skillAverage / 5));
-        const performanceScore = (() => {
-          const value = getSkillLevel(skillLevels, "performance", 0);
-          return typeof value === "number" ? value : 0;
-        })();
-        const songwritingScore = (() => {
-          const value = getSkillLevel(skillLevels, "songwriting", 0);
-          return typeof value === "number" ? value : 0;
-        })();
-        const energy = clampStat(
-          60 + Math.round((performanceScore + songwritingScore) / 4)
-        );
-        const strengths = getRoleStrengths(member.role || "Band Member", skillLevels);
+        let skillMap = mapSkillProgress([], []);
+
+        if (profileData?.id) {
+          const [
+            { data: progressData, error: progressError },
+            { data: unlocksData, error: unlocksError },
+          ] = await Promise.all([
+            supabase
+              .from("profile_skill_progress")
+              .select(
+                `
+                  current_level,
+                  skill_id,
+                  skill_slug,
+                  skill_definitions!inner (
+                    slug
+                  )
+                `
+              )
+              .eq("profile_id", profileData.id),
+            supabase
+              .from("profile_skill_unlocks")
+              .select(
+                `
+                  skill_id,
+                  skill_slug,
+                  skill_definitions!inner (
+                    slug
+                  )
+                `
+              )
+              .eq("profile_id", profileData.id),
+          ]);
+
+          if (progressError) {
+            console.error("Error loading skill progress:", progressError);
+          }
+
+          if (unlocksError) {
+            console.error("Error loading skill unlocks:", unlocksError);
+          }
+
+          skillMap = mapSkillProgress(
+            (progressData as ProfileSkillProgressWithDefinition[]) ?? [],
+            (unlocksData as ProfileSkillUnlockWithDefinition[]) ?? []
+          );
+        }
 
         const morale = member.morale ?? 60;
         const chemistry = member.chemistry ?? 60;
+        const roleLabel = member.role || "Band Member";
+        const skillStatuses = buildSkillStatuses(roleLabel, skillMap);
+        const skillAverage = calculateSkillAverage(skillMap);
+        const energy = clampStat(
+          60 +
+            Math.round(
+              (getEffectiveSkillLevel(skillMap, "performance") +
+                getEffectiveSkillLevel(skillMap, "songwriting")) /
+                4
+            )
+        );
 
         return {
           id: member.id,
           userId: member.user_id,
           name: profileData?.display_name ?? profileData?.username ?? "Band Member",
-          instrument: member.role || "Band Member",
+          instrument: roleLabel,
           mood: getMoodFromMorale(morale),
           morale,
           chemistry,
           skill: skillAverage,
-          loyalty,
+          loyalty: clampStat(40 + Math.round(skillAverage / 5)),
           energy,
-          avatar: getRoleAvatar(member.role || ""),
-          personality: getRolePersonality(member.role || "Band Member"),
-          issues: deriveIssues(morale),
-          strengths,
-          skills: skillLevels,
+          avatar: getRoleAvatar(roleLabel),
+          personality: getRolePersonality(roleLabel),
+          issues: deriveIssues(morale, skillStatuses),
+          strengths: getRoleStrengths(roleLabel, skillMap, skillStatuses),
+          skills: skillMap,
+          skillStatuses,
         };
       })
     );
@@ -769,6 +1059,45 @@ const BandChemistry = () => {
                         </div>
                       </div>
 
+                      {member.skillStatuses.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="flex items-center gap-1 text-sm text-cream/60">
+                            <Target className="h-4 w-4" />
+                            Role Requirements
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {member.skillStatuses.map((status) => {
+                              let badgeClass = "border-slate-500 text-slate-300";
+
+                              if (status.status === "ready") {
+                                badgeClass = "border-green-500 text-green-300";
+                              } else if (status.status === "developing") {
+                                badgeClass = "border-yellow-500 text-yellow-300";
+                              } else if (status.status === "locked") {
+                                badgeClass = "border-red-500 text-red-300";
+                              }
+
+                              const statusText =
+                                status.status === "ready" || status.status === "developing"
+                                  ? `Lvl ${status.level}`
+                                  : status.status === "locked"
+                                  ? "Locked"
+                                  : "No data";
+
+                              return (
+                                <Badge
+                                  key={status.slug}
+                                  variant="outline"
+                                  className={`text-xs ${badgeClass}`}
+                                >
+                                  {status.label}: {statusText}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {member.issues.length > 0 && (
                         <div className="space-y-2">
                           <p className="flex items-center gap-1 text-sm text-cream/60">
@@ -991,51 +1320,65 @@ const BandChemistry = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {bandMembers.map((member) => (
-                    <div key={member.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{member.avatar}</span>
-                          <span className="font-semibold text-cream">{member.name}</span>
+                  {bandMembers.map((member) => {
+                    const lockedCount = member.skillStatuses.filter((status) => status.status === "locked")
+                      .length;
+                    const missingCount = member.skillStatuses.filter((status) => status.status === "missing")
+                      .length;
+                    const unmetRequirements = lockedCount + missingCount;
+
+                    return (
+                      <div key={member.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{member.avatar}</span>
+                            <span className="font-semibold text-cream">{member.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className={`font-bold ${getChemistryColor(member.chemistry)}`}>
+                              {member.chemistry}% Chemistry
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className={`font-bold ${getChemistryColor(member.chemistry)}`}>
-                            {member.chemistry}% Chemistry
+                        <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-cream/60">Skill: </span>
+                            <span className="text-accent">{member.skill}%</span>
+                          </div>
+                          <div>
+                            <span className="text-cream/60">Loyalty: </span>
+                            <span className="text-accent">{member.loyalty}%</span>
+                          </div>
+                          <div>
+                            <span className="text-cream/60">Energy: </span>
+                            <span className="text-accent">{member.energy}%</span>
+                          </div>
+                          <div>
+                            <span className="text-cream/60">Morale: </span>
+                            <span className="text-accent">{member.morale}%</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-cream/60">
+                          <span>
+                            Issues:{" "}
+                            <span className={member.issues.length > 0 ? "text-red-400" : "text-green-400"}>
+                              {member.issues.length}
+                            </span>
+                          </span>
+                          <span>
+                            Strengths:{" "}
+                            {member.strengths.length > 0 ? member.strengths.slice(0, 2).join(", ") : "—"}
+                          </span>
+                          <span>
+                            Locked/Missing:{" "}
+                            <span className={unmetRequirements > 0 ? "text-red-400" : "text-green-400"}>
+                              {unmetRequirements}
+                            </span>
                           </span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-cream/60">Skill: </span>
-                          <span className="text-accent">{member.skill}%</span>
-                        </div>
-                        <div>
-                          <span className="text-cream/60">Loyalty: </span>
-                          <span className="text-accent">{member.loyalty}%</span>
-                        </div>
-                        <div>
-                          <span className="text-cream/60">Energy: </span>
-                          <span className="text-accent">{member.energy}%</span>
-                        </div>
-                        <div>
-                          <span className="text-cream/60">Morale: </span>
-                          <span className="text-accent">{member.morale}%</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-cream/60">
-                        <span>
-                          Issues:{" "}
-                          <span className={member.issues.length > 0 ? "text-red-400" : "text-green-400"}>
-                            {member.issues.length}
-                          </span>
-                        </span>
-                        <span>
-                          Strengths:{" "}
-                          {member.strengths.length > 0 ? member.strengths.slice(0, 2).join(", ") : "—"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
