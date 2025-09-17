@@ -80,8 +80,7 @@ interface TourVenue {
     capacity: number;
   };
   environment_modifiers?: EnvironmentModifierSummary | null;
-  tour_id?: string;
-}
+  show_type?: ShowType;
 
 interface VenueScheduleForm {
   venueId: string;
@@ -141,6 +140,8 @@ type TourVenueInsert = Database['public']['Tables']['tour_venues']['Insert'] & {
 type TourVenueUpdate = Database['public']['Tables']['tour_venues']['Update'] & {
   environment_modifiers?: EnvironmentModifierSummary | null;
 };
+
+type ShowType = Database['public']['Enums']['show_type'];
 
 type SupabaseTour = TourRow & {
   tour_venues?: Array<

@@ -1148,6 +1148,7 @@ export type Database = {
           id: string
           payment: number | null
           scheduled_date: string
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           updated_at: string | null
           venue_id: string
@@ -1160,6 +1161,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id: string
@@ -1172,6 +1174,7 @@ export type Database = {
           id?: string
           payment?: number | null
           scheduled_date?: string
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           updated_at?: string | null
           venue_id?: string
@@ -2032,6 +2035,7 @@ export type Database = {
           date: string
           id: string
           revenue: number | null
+          show_type: Database["public"]["Enums"]["show_type"]
           status: string | null
           ticket_price: number | null
           tickets_sold: number | null
@@ -2049,6 +2053,7 @@ export type Database = {
           date: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -2066,6 +2071,7 @@ export type Database = {
           date?: string
           id?: string
           revenue?: number | null
+          show_type?: Database["public"]["Enums"]["show_type"]
           status?: string | null
           ticket_price?: number | null
           tickets_sold?: number | null
@@ -2425,6 +2431,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "typing" | "muted"
+      show_type: "standard" | "acoustic"
     }
     CompositeTypes: {
       [_ in never]: never
