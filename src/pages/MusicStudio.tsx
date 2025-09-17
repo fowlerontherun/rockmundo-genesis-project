@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP, type AttributeKey } from "@/utils/attributeProgression";
+import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP } from "@/utils/attributeProgression";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Music,

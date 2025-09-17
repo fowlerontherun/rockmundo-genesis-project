@@ -3,7 +3,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { calculateAttributeMultiplier, type AttributeKey } from "@/utils/attributeProgression";
+import { calculateAttributeMultiplier, type AttributeKey as ProgressionAttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -542,7 +542,7 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
   }
 };
 
-const BUSKING_ATTRIBUTE_KEYS: AttributeKey[] = [
+const BUSKING_ATTRIBUTE_KEYS: ProgressionAttributeKey[] = [
   "stage_presence",
   "musical_ability",
   "vocal_talent"
