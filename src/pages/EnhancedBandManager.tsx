@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData } from "@/hooks/useGameData";
 import { Users, Crown, Heart, UserPlus, UserMinus, Star, TrendingUp, Calendar, Music, Coins, Settings } from "lucide-react";
 
 interface Band {
@@ -79,6 +80,7 @@ const defaultPlayerSkills: MemberSkillSet = {
 
 const EnhancedBandManager = () => {
   const { user } = useAuth();
+  const { addActivity } = useGameData();
   const { toast } = useToast();
   const [myBands, setMyBands] = useState<Band[]>([]);
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
@@ -169,6 +171,7 @@ const EnhancedBandManager = () => {
         .from("profiles")
         .select("*")
         .neq("user_id", user?.id)
+        .eq("is_active", true)
         .limit(20);
 
       if (profilesError) throw profilesError;
@@ -176,11 +179,17 @@ const EnhancedBandManager = () => {
       // Fetch skills for each profile
       const profilesWithSkills: AvailableMember[] = await Promise.all(
         (profiles || []).map(async (profile) => {
-          const { data: skills } = await supabase
-            .from("player_skills")
-            .select("guitar, vocals, drums, bass, performance, songwriting")
-            .eq("user_id", profile.user_id)
-            .single();
+          let skills: MemberSkillSet | null = null;
+
+          if (profile.id) {
+            const { data } = await supabase
+              .from("player_skills")
+              .select("guitar, vocals, drums, bass, performance, songwriting")
+              .eq("profile_id", profile.id)
+              .maybeSingle();
+
+            skills = data as MemberSkillSet | null;
+          }
 
           const defaultSkills: MemberSkillSet = {
             guitar: 20,
@@ -228,15 +237,29 @@ const EnhancedBandManager = () => {
       // Fetch profiles and skills for each member
       const membersWithDetails = await Promise.all(
         (members || []).map(async (member) => {
-          const [profileRes, skillsRes] = await Promise.all([
-            supabase.from("profiles").select("username, display_name, level, avatar_url").eq("user_id", member.user_id).single(),
-            supabase.from("player_skills").select("guitar, vocals, drums, bass, performance, songwriting").eq("user_id", member.user_id).single()
-          ]);
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("id, username, display_name, level, avatar_url")
+            .eq("user_id", member.user_id)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          let skillsData: MemberSkillSet | null = null;
+
+          if (profileData?.id) {
+            const { data } = await supabase
+              .from("player_skills")
+              .select("guitar, vocals, drums, bass, performance, songwriting")
+              .eq("profile_id", profileData.id)
+              .maybeSingle();
+
+            skillsData = data as MemberSkillSet | null;
+          }
 
           return {
             ...member,
-            profiles: profileRes.data || { username: "", display_name: "", level: 1, avatar_url: "" },
-            player_skills: skillsRes.data || { guitar: 20, vocals: 20, drums: 20, bass: 20, performance: 20, songwriting: 20 }
+            profiles: profileData || { username: "", display_name: "", level: 1, avatar_url: "" },
+            player_skills: skillsData || { guitar: 20, vocals: 20, drums: 20, bass: 20, performance: 20, songwriting: 20 }
           };
         })
       );
@@ -306,15 +329,11 @@ const EnhancedBandManager = () => {
           salary: 0
         });
 
-      // Add activity
-      await supabase
-        .from("activity_feed")
-        .insert({
-          user_id: user?.id,
-          activity_type: "band",
-          message: `Created new band: "${newBand.name}"`,
-          earnings: 0
-        });
+      await addActivity(
+        "band",
+        `Created new band: "${newBand.name}"`,
+        0
+      );
 
       setMyBands(prev => [data, ...prev]);
       setSelectedBand(data);
@@ -372,14 +391,11 @@ const EnhancedBandManager = () => {
 
       // Add activity
       const member = availableMembers.find(m => m.user_id === memberId);
-      await supabase
-        .from("activity_feed")
-        .insert({
-          user_id: user?.id,
-          activity_type: "band",
-          message: `Invited ${member?.username} to join "${selectedBand.name}" as ${inviteData.role}`,
-          earnings: 0
-        });
+      await addActivity(
+        "band",
+        `Invited ${member?.username} to join "${selectedBand.name}" as ${inviteData.role}`,
+        0
+      );
 
       toast({
         title: "Member Invited!",
@@ -414,14 +430,11 @@ const EnhancedBandManager = () => {
       if (error) throw error;
 
       const member = bandMembers.find(m => m.user_id === memberId);
-      await supabase
-        .from("activity_feed")
-        .insert({
-          user_id: user?.id,
-          activity_type: "band",
-          message: `Removed ${member?.profiles.username} from "${selectedBand.name}"`,
-          earnings: 0
-        });
+      await addActivity(
+        "band",
+        `Removed ${member?.profiles.username} from "${selectedBand.name}"`,
+        0
+      );
 
       toast({
         title: "Member Removed",

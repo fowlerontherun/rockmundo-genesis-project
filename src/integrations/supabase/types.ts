@@ -58,6 +58,7 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          profile_id: string
           user_id: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          profile_id: string
           user_id: string
         }
         Update: {
@@ -76,6 +78,7 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          profile_id?: string
           user_id?: string
         }
         Relationships: []
@@ -1210,6 +1213,7 @@ export type Database = {
           guitar: number | null
           id: string
           marketing: number | null
+          profile_id: string
           performance: number | null
           songwriting: number | null
           technical: number | null
@@ -1227,6 +1231,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id: string
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -1244,6 +1249,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id?: string
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -1392,8 +1398,11 @@ export type Database = {
           fans: number | null
           followers: number | null
           id: string
+          is_active: boolean
           level: number | null
+          slot_number: number
           updated_at: string | null
+          unlock_cost: number
           user_id: string
           username: string
         }
@@ -1409,8 +1418,11 @@ export type Database = {
           fans?: number | null
           followers?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
+          slot_number?: number
           updated_at?: string | null
+          unlock_cost?: number
           user_id: string
           username: string
         }
@@ -1426,8 +1438,11 @@ export type Database = {
           fans?: number | null
           followers?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
+          slot_number?: number
           updated_at?: string | null
+          unlock_cost?: number
           user_id?: string
           username?: string
         }

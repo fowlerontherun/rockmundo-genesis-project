@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Navigation from "@/components/ui/navigation";
+import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
 
 const Layout = () => {
@@ -32,7 +33,9 @@ const Layout = () => {
     <div className="flex h-screen bg-background">
       <Navigation />
       <main className="flex-1 overflow-y-auto lg:ml-0 pt-16 lg:pt-0 pb-16 lg:pb-0">
-        <Outlet />
+        <CharacterGate>
+          <Outlet />
+        </CharacterGate>
       </main>
     </div>
   );

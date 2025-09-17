@@ -155,30 +155,42 @@ const BandManager = () => {
         .map((member) => member.user_id)
         .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
-      let profilesMap = new Map<string, Pick<ProfileRow, 'display_name' | 'avatar_url'>>();
+      let profilesMap = new Map<string, ProfileRow>();
       let skillsMap = new Map<string, PlayerSkillsRow | null>();
 
       if (memberIds.length > 0) {
-        const [profilesResponse, skillsResponse] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('user_id, display_name, avatar_url')
-            .in('user_id', memberIds),
-          supabase
+        const { data: profileRows, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, user_id, display_name, avatar_url')
+          .in('user_id', memberIds)
+          .eq('is_active', true);
+
+        if (profilesError) throw profilesError;
+
+        const activeProfiles = (profileRows as ProfileRow[] | null) ?? [];
+        profilesMap = new Map(activeProfiles.map((profile) => [profile.user_id, profile]));
+
+        const activeProfileIds = activeProfiles.map((profile) => profile.id);
+
+        let skillsRows: PlayerSkillsRow[] | null = [];
+
+        if (activeProfileIds.length > 0) {
+          const { data, error: skillsError } = await supabase
             .from('player_skills')
             .select('*')
-            .in('user_id', memberIds)
-        ]);
+            .in('profile_id', activeProfileIds);
 
-        if (profilesResponse.error) throw profilesResponse.error;
-        if (skillsResponse.error) throw skillsResponse.error;
+          if (skillsError) throw skillsError;
+          skillsRows = data as PlayerSkillsRow[] | null;
+        }
 
-        profilesMap = new Map(
-          ((profilesResponse.data as ProfileRow[]) ?? []).map((profile) => [profile.user_id, profile])
-        );
+        const profileIdToUserId = new Map(activeProfiles.map((profile) => [profile.id, profile.user_id]));
 
         skillsMap = new Map(
-          ((skillsResponse.data as PlayerSkillsRow[]) ?? []).map((skill) => [skill.user_id, skill])
+          (skillsRows ?? []).map((skill) => {
+            const mappedUserId = profileIdToUserId.get(skill.profile_id) ?? skill.user_id;
+            return [mappedUserId, skill];
+          })
         );
       }
 
