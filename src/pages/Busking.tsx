@@ -531,7 +531,15 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
 
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, skills, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    updateProfile,
+    addActivity,
+    loading: gameLoading,
+    currentCity
+  } = useGameData();
   const { toast } = useToast();
 
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -678,9 +686,9 @@ const Busking = () => {
     const performance = skills?.performance ?? 55;
     const vocals = skills?.vocals ?? 50;
     const guitar = skills?.guitar ?? 45;
-    const creativity = skills?.creativity ?? 50;
-    return Math.round((performance * 0.4 + vocals * 0.25 + guitar * 0.2 + creativity * 0.15) || 0);
-  }, [skills]);
+    const musicalityScore = attributes ? attributes.musicality / 10 : 50;
+    return Math.round((performance * 0.4 + vocals * 0.25 + guitar * 0.2 + musicalityScore * 0.15) || 0);
+  }, [attributes, skills]);
 
   const riskLevel = toRiskLevel(selectedLocation?.risk_level);
   const riskPercent = riskPercentMap[riskLevel];
