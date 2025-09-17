@@ -2158,27 +2158,6 @@ const RealtimeCommunication: React.FC = () => {
       toast.error('Failed to send message.');
     }
   }, [currentMessage, isMuted, profile, selectedChannel, syncPresence, user]);
-  const createSession = async () => {
-    if (!profile || !currentUserId) {
-      toast.error('You need a player profile to create jam sessions');
-      return;
-    }
-
-    const trimmedName = newSession.name.trim();
-    const trimmedGenre = newSession.genre.trim();
-    const tempo = Number.isFinite(newSession.tempo) ? Math.max(1, Math.round(newSession.tempo)) : 120;
-    const maxParticipants = Number.isFinite(newSession.maxParticipants)
-      ? Math.max(1, Math.round(newSession.maxParticipants))
-      : 4;
-    const skillRequirement = Number.isFinite(newSession.skillRequirement)
-      ? Math.max(0, Math.round(newSession.skillRequirement))
-      : 0;
-
-    if (!trimmedName || !trimmedGenre) {
-      toast.error('Session name and genre are required');
-      return;
-    }
-  };
 
   useEffect(() => {
     if (activeJam && userId) {
