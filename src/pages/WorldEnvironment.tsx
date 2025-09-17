@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   fetchWorldEnvironmentSnapshot,

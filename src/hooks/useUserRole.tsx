@@ -11,7 +11,13 @@ export const useUserRole = () => {
   const [loading, setLoading] = useState(true);
 
   const loadUserRole = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setUserRole(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const { data, error } = await supabase
@@ -29,13 +35,8 @@ export const useUserRole = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      loadUserRole();
-    } else {
-      setUserRole(null);
-      setLoading(false);
-    }
-  }, [loadUserRole, user]);
+    loadUserRole();
+  }, [loadUserRole]);
 
   const hasRole = (role: UserRole): boolean => {
     if (!userRole) return false;

@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
-import type { PostgrestError } from "@supabase/supabase-js";
+import type {
+  PostgrestError,
+  PostgrestResponse,
+  PostgrestSingleResponse
+} from "@supabase/supabase-js";
 
 export type PlayerProfile = Tables<'profiles'>;
 
@@ -32,7 +36,10 @@ export const useGameData = () => {
       setError(null);
 
       // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
+      const {
+        data: profileData,
+        error: profileError
+      }: PostgrestSingleResponse<PlayerProfile> = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
@@ -41,7 +48,10 @@ export const useGameData = () => {
       if (profileError) throw profileError;
 
       // Fetch skills
-      const { data: skillsData, error: skillsError } = await supabase
+      const {
+        data: skillsData,
+        error: skillsError
+      }: PostgrestSingleResponse<PlayerSkills> = await supabase
         .from('player_skills')
         .select('*')
         .eq('user_id', user.id)
@@ -50,7 +60,10 @@ export const useGameData = () => {
       if (skillsError) throw skillsError;
 
       // Fetch recent activities
-      const { data: activitiesData, error: activitiesError } = await supabase
+      const {
+        data: activitiesData,
+        error: activitiesError
+      }: PostgrestResponse<ActivityItem> = await supabase
         .from('activity_feed')
         .select('*')
         .eq('user_id', user.id)
@@ -64,9 +77,9 @@ export const useGameData = () => {
       setActivities(activitiesData ?? []);
     } catch (err: unknown) {
       console.error('Error fetching game data:', err);
-      if (err instanceof Error) {
+      if (isPostgrestError(err)) {
         setError(err.message);
-      } else if (isPostgrestError(err)) {
+      } else if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('An unknown error occurred while fetching game data.');
@@ -77,16 +90,14 @@ export const useGameData = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      fetchGameData();
-    }
-  }, [user, fetchGameData]);
+    fetchGameData();
+  }, [fetchGameData]);
 
   const updateProfile = async (updates: Partial<PlayerProfile>) => {
     if (!user || !profile) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error }: PostgrestSingleResponse<PlayerProfile> = await supabase
         .from('profiles')
         .update(updates)
         .eq('user_id', user.id)
@@ -101,10 +112,10 @@ export const useGameData = () => {
       return data;
     } catch (err: unknown) {
       console.error('Error updating profile:', err);
-      if (err instanceof Error) {
+      if (isPostgrestError(err)) {
         throw err;
       }
-      if (isPostgrestError(err)) {
+      if (err instanceof Error) {
         throw err;
       }
       throw new Error('An unknown error occurred while updating the profile.');
@@ -115,7 +126,7 @@ export const useGameData = () => {
     if (!user || !skills) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error }: PostgrestSingleResponse<PlayerSkills> = await supabase
         .from('player_skills')
         .update(updates)
         .eq('user_id', user.id)
@@ -130,10 +141,10 @@ export const useGameData = () => {
       return data;
     } catch (err: unknown) {
       console.error('Error updating skills:', err);
-      if (err instanceof Error) {
+      if (isPostgrestError(err)) {
         throw err;
       }
-      if (isPostgrestError(err)) {
+      if (err instanceof Error) {
         throw err;
       }
       throw new Error('An unknown error occurred while updating skills.');
@@ -144,7 +155,7 @@ export const useGameData = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error }: PostgrestSingleResponse<ActivityItem> = await supabase
         .from('activity_feed')
         .insert({
           user_id: user.id,
@@ -165,10 +176,10 @@ export const useGameData = () => {
       return data;
     } catch (err: unknown) {
       console.error('Error adding activity:', err);
-      if (err instanceof Error) {
+      if (isPostgrestError(err)) {
         throw err;
       }
-      if (isPostgrestError(err)) {
+      if (err instanceof Error) {
         throw err;
       }
       throw new Error('An unknown error occurred while adding activity.');
