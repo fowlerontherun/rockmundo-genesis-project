@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -654,12 +654,14 @@ const SongManager = () => {
 
       if (error) throw error;
       setSongs((data || []).map(normalizeSongRecord));
-    } catch (error: any) {
-      console.error('Error fetching songs:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load songs";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error fetching songs:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load songs"
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
     } finally {
       setLoading(false);
@@ -863,12 +865,14 @@ const SongManager = () => {
         title: "Song Created",
         description: `"${data.title}" has been added to your collection!`
       });
-    } catch (error: any) {
-      console.error('Error creating song:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to create song";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error creating song:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create song"
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
     }
   };
@@ -911,12 +915,14 @@ const SongManager = () => {
         title: "Song Recorded",
         description: `"${song.title}" has been professionally recorded!`
       });
-    } catch (error: any) {
-      console.error('Error recording song:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to record song";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error recording song:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to record song"
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
     }
   };
@@ -1051,11 +1057,15 @@ const SongManager = () => {
         title: "Song Released",
         description: baseMessage + royaltyMessage + (collaboratorSummary ? ` Splits: ${collaboratorSummary}.` : '')
       });
-    } catch (error: any) {
-      console.error('Error releasing song:', error);
-      const description = triggeredAutomatically
+    } catch (error: unknown) {
+      const fallbackMessage = triggeredAutomatically
         ? `We couldn't complete the scheduled release of "${song.title}". Please review the song details and try again.`
-        : "Failed to release song";
+        : 'Failed to release song';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error releasing song:', errorMessage, error);
+      const description = errorMessage === fallbackMessage
+        ? fallbackMessage
+        : `${fallbackMessage} (${errorMessage})`;
       toast({
         variant: "destructive",
         title: "Release Error",
@@ -1169,12 +1179,14 @@ const SongManager = () => {
           description: `"${selectedSong.title}" will be released on ${parsedDate.toLocaleString()} with a $${marketingBudget.toLocaleString()} marketing campaign.`
         });
       }
-    } catch (error: any) {
-      console.error('Error scheduling release:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to schedule song release";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error scheduling release:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to schedule song release"
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
     }
   };
@@ -1227,12 +1239,14 @@ const SongManager = () => {
         title: "Song Deleted",
         description: "Song has been removed from your collection"
       });
-    } catch (error: any) {
-      console.error('Error deleting song:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to delete song";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error deleting song:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete song"
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
     }
   };

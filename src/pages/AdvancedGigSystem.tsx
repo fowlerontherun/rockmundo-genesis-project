@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,10 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useGameData } from '@/hooks/useGameData';
+import { useGameData, type PlayerSkills } from '@/hooks/useGameData';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from 'sonner';
 import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type GigRow = Database['public']['Tables']['gigs']['Row'];
+type VenueRow = Database['public']['Tables']['venues']['Row'];
 
 interface Venue {
   id: string;
@@ -108,13 +112,7 @@ const AdvancedGigSystem: React.FC = () => {
   const [fameChange, setFameChange] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
 
-  useEffect(() => {
-    if (gigId && user) {
-      loadGig();
-    }
-  }, [gigId, user]);
-
-  const loadGig = async () => {
+  const loadGig = useCallback(async () => {
     if (!gigId) return;
 
     try {
@@ -126,6 +124,7 @@ const AdvancedGigSystem: React.FC = () => {
         .single();
 
       if (gigError) throw gigError;
+      if (!gigData) throw new Error('Gig not found');
 
       const { data: venueData, error: venueError } = await supabase
         .from('venues')
@@ -134,25 +133,35 @@ const AdvancedGigSystem: React.FC = () => {
         .single();
 
       if (venueError) throw venueError;
-      
       const transformedGig = {
         ...gigData,
         venue: {
-          id: venueData.id,
-          name: venueData.name,
-          capacity: venueData.capacity,
-          prestige_level: venueData.prestige_level
-        }
+          id: venueRow.id,
+          name: venueRow.name,
+          capacity: venueRow.capacity ?? 0,
+          prestige_level: venueRow.prestige_level ?? 0
+        },
+        scheduled_date: gigRow.scheduled_date,
+        payment: gigRow.payment ?? 0,
+        status: gigRow.status ?? 'scheduled'
       };
-      
+
       setGig(transformedGig);
-    } catch (error: any) {
-      console.error('Error loading gig:', error);
-      toast.error('Failed to load gig details');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load gig details';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading gig:', errorMessage, error);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [gigId, supabase, toast]);
+
+  useEffect(() => {
+    if (gigId && user) {
+      loadGig();
+    }
+  }, [gigId, user, loadGig]);
 
   const startPerformance = () => {
     setIsPerforming(true);
@@ -201,7 +210,7 @@ const AdvancedGigSystem: React.FC = () => {
 
     const stage = PERFORMANCE_STAGES[stageIndex];
     const skillLevel = Object.entries(stage.skillRequirements).reduce((avg, [skill, req]) => {
-      const playerSkill = (skills as any)[skill] || 0;
+      const playerSkill = skills?.[skill as keyof PlayerSkills] ?? 0;
       return avg + (playerSkill / req);
     }, 0) / Object.keys(stage.skillRequirements).length;
 
@@ -227,7 +236,7 @@ const AdvancedGigSystem: React.FC = () => {
     const bonuses: string[] = [];
 
     Object.entries(stage.skillRequirements).forEach(([skill, requirement]) => {
-      const playerSkill = (skills as any)[skill] || 0;
+      const playerSkill = skills?.[skill as keyof PlayerSkills] ?? 0;
       const skillRatio = playerSkill / requirement;
       stageScore += skillRatio * 25;
 
@@ -362,9 +371,11 @@ const AdvancedGigSystem: React.FC = () => {
       } catch (wearError) {
         console.error('Failed to apply equipment wear after gig performance', wearError);
       }
-    } catch (error: any) {
-      console.error('Error finishing performance:', error);
-      toast.error('Failed to save performance results');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to save performance results';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error finishing performance:', errorMessage, error);
+      toast.error(errorMessage);
     } finally {
       setIsPerforming(false);
       setShowResults(true);

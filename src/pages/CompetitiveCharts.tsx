@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { toast } from 'sonner';
 import { Trophy, TrendingUp, Crown, Award, Music, Zap } from 'lucide-react';
@@ -595,9 +595,11 @@ const CompetitiveCharts: React.FC = () => {
       );
 
       toast.success(`Registered for ${competition.name}!`);
-    } catch (error: any) {
-      console.error('Error registering for competition:', error);
-      toast.error('Failed to register for competition');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to register for competition';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error registering for competition:', errorMessage, error);
+      toast.error(errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`);
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,16 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  Music, 
-  Users, 
-  Star, 
-  DollarSign, 
+import {
+  Music,
+  Users,
+  Star,
+  DollarSign,
   Clock,
   Zap,
   Heart,
   Trophy
 } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
 
 interface Venue {
   name: string;
@@ -31,6 +32,10 @@ interface Gig {
   payment: number;
   status: string;
 }
+
+type GigRow = Database['public']['Tables']['gigs']['Row'];
+type VenueRow = Database['public']['Tables']['venues']['Row'];
+type GigWithVenue = GigRow & { venues: VenueRow | null };
 
 interface PerformanceMetrics {
   crowd_energy: number;
@@ -59,13 +64,9 @@ const PerformGig = () => {
   const [fanGain, setFanGain] = useState(0);
   const [experienceGain, setExperienceGain] = useState(0);
 
-  useEffect(() => {
-    if (gigId) {
-      loadGig();
-    }
-  }, [gigId]);
+  const loadGig = useCallback(async () => {
+    if (!gigId) return;
 
-  const loadGig = async () => {
     try {
       const { data, error } = await supabase
         .from('gigs')
@@ -77,25 +78,43 @@ const PerformGig = () => {
         .single();
 
       if (error) throw error;
-      if (data && data.venues) {
-        setGig({
-          ...data,
-          venue: {
-            name: data.venues.name,
-            capacity: data.venues.capacity,
-            prestige_level: data.venues.prestige_level
-          }
-        });
-      }
-    } catch (error: any) {
-      console.error('Error loading gig:', error);
+      if (!data) throw new Error('Gig not found');
+
+      const gigData: GigWithVenue = data;
+      const venueData = gigData.venues;
+
+      if (!venueData) throw new Error('Venue details not found');
+
+      const transformedGig: Gig = {
+        id: gigData.id,
+        venue: {
+          name: venueData.name,
+          capacity: venueData.capacity ?? 0,
+          prestige_level: venueData.prestige_level ?? 0
+        },
+        scheduled_date: gigData.scheduled_date,
+        payment: gigData.payment ?? 0,
+        status: gigData.status ?? 'scheduled'
+      };
+
+      setGig(transformedGig);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load gig details";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading gig:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load gig details"
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
       });
     }
-  };
+  }, [gigId, supabase, toast]);
+
+  useEffect(() => {
+    if (gigId) {
+      loadGig();
+    }
+  }, [gigId, loadGig]);
 
   const startPerformance = async () => {
     setIsPerforming(true);
@@ -196,8 +215,10 @@ const PerformGig = () => {
           }
         });
 
-    } catch (error: any) {
-      console.error('Error updating performance results:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to update performance results';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error updating performance results:', errorMessage, error);
     }
 
     setIsPerforming(false);
