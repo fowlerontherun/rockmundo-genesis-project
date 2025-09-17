@@ -47,21 +47,6 @@ interface PlatformBreakdown {
   revenue: number;
 }
 
-type PromotionCampaign = Database["public"]["Tables"]["promotion_campaigns"]["Row"] & {
-  platform?: string | null;
-};
-
-type PromotionFunctionResponse = {
-  success: boolean;
-  message: string;
-  campaign?: PromotionCampaign | null;
-  statsDelta?: {
-    streams: number;
-    revenue: number;
-    listeners: number;
-  } | null;
-};
-
 interface PlatformMetric extends StreamingPlatform {
   monthlyListeners: number;
   monthlyStreams: number;
