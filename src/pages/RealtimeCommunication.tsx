@@ -26,7 +26,6 @@ import {
   Radio,
   Headphones,
   Heart,
-  Loader2,
   Lock,
   Crown,
   Loader2,
