@@ -120,6 +120,29 @@ const slugifyPlatformKey = (value: string, fallback: string) => {
   return slug || fallback;
 };
 
+const isUnauthorizedPostgrestError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const { code, message, status } = error as {
+    code?: string;
+    message?: string;
+    status?: number;
+  };
+
+  const normalizedMessage = typeof message === "string" ? message.toLowerCase() : "";
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    code === "PGRST301" ||
+    code === "42501" ||
+    normalizedMessage.includes("permission denied") ||
+    normalizedMessage.includes("not authorized")
+  );
+};
+
 const buildInitialStreamingBreakdown = (
   initialStreams: number,
   accounts: StreamingAccountRecord[] | null | undefined
@@ -545,6 +568,8 @@ const SongManager = () => {
     }
   };
 
+  const unauthorizedAccountWarningShown = useRef(false);
+
   const createStreamingStatsRecord = useCallback(async (
     songId: string,
     totalStreams: number
@@ -569,6 +594,21 @@ const SongManager = () => {
         .eq('is_connected', true);
 
       if (accountsError) {
+        if (isUnauthorizedPostgrestError(accountsError)) {
+          console.warn('Unauthorized attempt to load streaming accounts:', accountsError);
+
+          if (!unauthorizedAccountWarningShown.current) {
+            unauthorizedAccountWarningShown.current = true;
+            toast({
+              variant: 'destructive',
+              title: 'Access denied',
+              description: 'You are not authorized to view streaming accounts.'
+            });
+          }
+
+          return [];
+        }
+
         throw accountsError;
       }
 

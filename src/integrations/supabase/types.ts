@@ -1533,6 +1533,8 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          current_city_id: string | null
+          current_location: string
           cash: number | null
           created_at: string | null
           display_name: string | null
@@ -1540,6 +1542,7 @@ export type Database = {
           experience: number | null
           fame: number | null
           fans: number | null
+          health: number
           followers: number | null
           id: string
           level: number | null
@@ -1550,6 +1553,8 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          current_city_id?: string | null
+          current_location?: string
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
@@ -1557,6 +1562,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number
           followers?: number | null
           id?: string
           level?: number | null
@@ -1567,6 +1573,8 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          current_city_id?: string | null
+          current_location?: string
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
@@ -1574,6 +1582,7 @@ export type Database = {
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number
           followers?: number | null
           id?: string
           level?: number | null
@@ -1581,7 +1590,15 @@ export type Database = {
           user_id?: string
           username?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       seasons: {
         Row: {
@@ -2243,6 +2260,17 @@ export type Database = {
         }
         Relationships: []
       },
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          display_name: string | null
+          id: string
+          user_id: string
+          username: string
+        }
+        Relationships: []
+      },
       player_achievement_summary: {
         Row: {
           earned_count: number
@@ -2304,6 +2332,13 @@ export type Database = {
           restock_amount?: number | null
         }
         Returns: number
+      }
+      reset_player_character: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          profile: Database["public"]["Tables"]["profiles"]["Row"]
+          skills: Database["public"]["Tables"]["player_skills"]["Row"]
+        }[]
       }
     }
     Enums: {

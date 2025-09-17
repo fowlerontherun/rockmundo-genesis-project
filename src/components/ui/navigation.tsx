@@ -42,6 +42,7 @@ const Navigation = () => {
         { icon: User, label: "Profile", path: "/profile" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
         { icon: Trophy, label: "Achievements", path: "/achievements" },
+        { icon: Sparkles, label: "Character Creator", path: "/character-create" },
       ]
     },
     {
