@@ -12,6 +12,26 @@ type City = Tables<'cities'>;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
 
+const extractErrorMessage = (error: unknown) => {
+  if (isPostgrestError(error)) return error.message;
+  if (error instanceof Error) return error.message;
+  return "An unknown error occurred.";
+};
+
+const readStoredCharacterId = () => {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+};
+
+const persistCharacterId = (characterId: string | null) => {
+  if (typeof window === "undefined") return;
+  if (characterId) {
+    window.localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
+  } else {
+    window.localStorage.removeItem(CHARACTER_STORAGE_KEY);
+  }
+};
+
 export interface CreateCharacterInput {
   username: string;
   displayName?: string;
@@ -30,6 +50,7 @@ interface GameDataContextValue {
   currentCity: City | null;
   loading: boolean;
   error: string | null;
+  currentCity: Tables<'cities'> | null;
   hasCharacters: boolean;
   setActiveCharacter: (characterId: string) => Promise<void>;
   clearSelectedCharacter: () => void;
@@ -44,12 +65,12 @@ interface GameDataContextValue {
   ) => Promise<ActivityItem | null>;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
+  resetCharacter: () => Promise<void>;
   refetch: () => Promise<void>;
   resetCharacter: () => Promise<void>;
 }
 
 const GameDataContext = createContext<GameDataContextValue | undefined>(undefined);
-
 const getStoredCharacterId = (): string | null => {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(CHARACTER_STORAGE_KEY);
@@ -105,13 +126,14 @@ const useProvideGameData = (): GameDataContextValue => {
     }
 
     setCharactersLoading(true);
+    setError(null);
 
     try {
       const { data, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('slot_number', { ascending: true });
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("slot_number", { ascending: true });
 
       if (profilesError) throw profilesError;
 
@@ -245,7 +267,11 @@ const useProvideGameData = (): GameDataContextValue => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (activityError) throw activityError;
+      setSkills(skillsResponse.data ?? null);
+
+      if (activityResponse.error && activityResponse.status !== 406) {
+        throw activityResponse.error;
+      }
 
       setActivities(activityRows ?? []);
     } catch (err) {
@@ -279,10 +305,7 @@ const useProvideGameData = (): GameDataContextValue => {
     void fetchGameData();
   }, [selectedCharacterId, user, fetchGameData]);
 
-  const updateProfile = useCallback(async (updates: Partial<PlayerProfile>) => {
-    if (!user || !selectedCharacterId) {
-      throw new Error('No active character selected.');
-    }
+        setCharacters(prev => sortCharacters([...prev, newProfile]));
 
     const payload = {
       ...updates,
@@ -296,10 +319,24 @@ const useProvideGameData = (): GameDataContextValue => {
       .select('*')
       .single();
 
-    if (updateError) {
-      console.error('Error updating profile:', updateError);
-      throw updateError;
-    }
+        return newProfile;
+      } catch (err) {
+        console.error('Error creating character:', err);
+        setError(extractErrorMessage(err));
+        throw err;
+      } finally {
+        setCharactersLoading(false);
+      }
+    },
+    [
+      user,
+      profile,
+      attributeDefinitions,
+      updateProfile,
+      selectedCharacterId,
+      setActiveCharacter
+    ]
+  );
 
     if (!data) {
       throw new Error('No profile data returned from Supabase.');
@@ -318,9 +355,9 @@ const useProvideGameData = (): GameDataContextValue => {
     return data;
   }, [user, selectedCharacterId, fetchCity]);
 
-  const updateSkills = useCallback(async (updates: Partial<PlayerSkills>) => {
-    if (!user || !selectedCharacterId) {
-      throw new Error('No active character selected.');
+  const resetCharacter = useCallback(async () => {
+    if (!user) {
+      throw new Error('You must be signed in to reset your character.');
     }
 
     const payload = {
@@ -335,14 +372,14 @@ const useProvideGameData = (): GameDataContextValue => {
       .select('*')
       .single();
 
-    if (updateError) {
-      console.error('Error updating skills:', updateError);
-      throw updateError;
-    }
+      const { error: attributesInsertError } = await supabase
+        .from('player_attributes')
+        .insert({
+          user_id: user.id,
+          profile_id: newProfile.id
+        });
 
-    if (!data) {
-      throw new Error('No skill data returned from Supabase.');
-    }
+      if (attributesInsertError) throw attributesInsertError;
 
     setSkills(data);
     return data;
@@ -406,9 +443,9 @@ const useProvideGameData = (): GameDataContextValue => {
       throw insertError;
     }
 
-    if (!data) {
-      throw new Error('No activity data returned from Supabase.');
-    }
+    await fetchCharacters();
+    await fetchGameData();
+  }, [user, updateSelectedCharacterId, clearSelectedCharacter, fetchCharacters, fetchGameData]);
 
     setActivities(prev => [data, ...prev].slice(0, 10));
     return data;
@@ -458,7 +495,7 @@ const useProvideGameData = (): GameDataContextValue => {
     makeActive = false,
   }: CreateCharacterInput) => {
     if (!user) {
-      throw new Error('You must be signed in to create a character.');
+      throw new Error("You must be signed in to reset a character.");
     }
 
     setCharactersLoading(true);
@@ -559,10 +596,11 @@ export const GameDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return <GameDataContext.Provider value={value}>{children}</GameDataContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGameData = (): GameDataContextValue => {
   const context = useContext(GameDataContext);
   if (!context) {
-    throw new Error('useGameData must be used within a GameDataProvider');
+    throw new Error("useGameData must be used within a GameDataProvider");
   }
   return context;
 };

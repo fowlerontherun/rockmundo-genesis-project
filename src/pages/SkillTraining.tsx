@@ -140,6 +140,8 @@ const SkillTraining = () => {
     }
   ];
 
+  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
+
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
   const skillCap = getSkillCap(playerLevel, totalExperience);
@@ -230,6 +232,7 @@ const SkillTraining = () => {
               experience: experienceGain
             }
           : undefined
+
       );
 
       toast({
@@ -451,7 +454,6 @@ const SkillTraining = () => {
             const multiplierLabel = attributePreview.multiplier.toFixed(2);
             const buttonDisabled = training || !canAfford || isAtCap || cooldownActive;
             const isActive = activeTrainingKey === session.skill;
-
             return (
               <Card key={session.skill} className="relative">
                 <CardHeader>

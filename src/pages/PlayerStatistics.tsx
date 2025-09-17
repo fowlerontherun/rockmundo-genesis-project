@@ -11,6 +11,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { calculateLevel, getFameTitle, calculateEquipmentBonus } from "@/utils/gameBalance";
+import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   User,
   TrendingUp,
@@ -348,6 +349,7 @@ const PlayerStatistics = () => {
       const rows = ((data ?? []) as LeaderboardRow[]).map(row => ({
         ...row,
         total_revenue: Number(row.total_revenue ?? 0),
+        avatar_url: getStoredAvatarPreviewUrl(row.avatar_url ?? null),
       }));
 
       setLeaderboardEntries(rows);
@@ -412,6 +414,11 @@ const PlayerStatistics = () => {
     if (!entry) return 0;
     return entry[metricConfig.field];
   }, [leaderboardEntries, metricConfig.field, user]);
+
+  const profileAvatarPreview = useMemo(
+    () => getStoredAvatarPreviewUrl(profile?.avatar_url ?? null),
+    [profile?.avatar_url],
+  );
 
   if (loading || !profile || !skills) {
     return (
@@ -641,7 +648,7 @@ const PlayerStatistics = () => {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12">
                         <AvatarImage
-                          src={profile.avatar_url || undefined}
+                          src={profileAvatarPreview ?? undefined}
                           alt={profile.display_name || profile.username || 'Player avatar'}
                         />
                         <AvatarFallback>{playerAvatarLabel}</AvatarFallback>
@@ -694,7 +701,7 @@ const PlayerStatistics = () => {
                           <div className="flex items-center gap-3">
                             <span className="text-lg font-bold text-muted-foreground">#{index + 1}</span>
                             <Avatar className="h-10 w-10">
-                              <AvatarImage src={entry.avatar_url || undefined} alt={displayName} />
+                              <AvatarImage src={entry.avatar_url ?? undefined} alt={displayName} />
                               <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div>
