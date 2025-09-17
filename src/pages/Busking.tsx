@@ -38,6 +38,7 @@ import {
 type BuskingLocation = Tables<"busking_locations">;
 type BuskingModifier = Tables<"busking_modifiers">;
 type BuskingSession = Tables<"busking_sessions">;
+type PlayerAttributes = Tables<"player_attributes">;
 
 type BuskingSessionWithRelations = BuskingSession & {
   busking_locations: BuskingLocation | null;
@@ -531,7 +532,15 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
 
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, skills, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
+  const {
+    profile,
+    skills,
+    selectedCharacterId,
+    updateProfile,
+    addActivity,
+    loading: gameLoading,
+    currentCity,
+  } = useGameData();
   const { toast } = useToast();
 
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -547,6 +556,7 @@ const Busking = () => {
   const [weatherConditions, setWeatherConditions] = useState<WeatherCondition[]>([]);
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
+  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -664,6 +674,41 @@ const Busking = () => {
     fetchBuskingData();
   }, [fetchBuskingData]);
 
+  useEffect(() => {
+    if (!user || !selectedCharacterId) {
+      setAttributes(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadAttributes = async () => {
+      const { data, error } = await supabase
+        .from("player_attributes")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load player attributes:", error);
+        setAttributes(null);
+        return;
+      }
+
+      setAttributes(data ?? null);
+    };
+
+    void loadAttributes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCharacterId, user]);
+
   const selectedLocation = useMemo(
     () => locations.find((location) => location.id === selectedLocationId) ?? null,
     [locations, selectedLocationId]
@@ -678,9 +723,9 @@ const Busking = () => {
     const performance = skills?.performance ?? 55;
     const vocals = skills?.vocals ?? 50;
     const guitar = skills?.guitar ?? 45;
-    const creativity = skills?.creativity ?? 50;
+    const creativity = (attributes?.creativity ?? 500) / 10;
     return Math.round((performance * 0.4 + vocals * 0.25 + guitar * 0.2 + creativity * 0.15) || 0);
-  }, [skills]);
+  }, [attributes, skills]);
 
   const riskLevel = toRiskLevel(selectedLocation?.risk_level);
   const riskPercent = riskPercentMap[riskLevel];

@@ -153,6 +153,72 @@ interface SpecialItemFormData {
 
 const USER_ACTIONS_PAGE_SIZE = 10;
 
+const SKILL_KEYS = [
+  'guitar',
+  'vocals',
+  'drums',
+  'bass',
+  'performance',
+  'songwriting',
+  'composition',
+  'creativity',
+  'business',
+  'marketing',
+  'technical'
+] as const;
+
+const createEmptyWeighting = () =>
+  SKILL_KEYS.reduce<Record<string, string>>((accumulator, key) => {
+    accumulator[key] = '';
+    return accumulator;
+  }, {});
+
+const normalizeWeighting = (weighting: unknown): Record<string, number> => {
+  if (!weighting || typeof weighting !== 'object' || Array.isArray(weighting)) {
+    return {};
+  }
+
+  return Object.entries(weighting as Record<string, unknown>).reduce(
+    (accumulator, [key, value]) => {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) {
+        accumulator[key] = numeric;
+      }
+      return accumulator;
+    },
+    {} as Record<string, number>
+  );
+};
+
+const buildFormWeighting = (weighting: Record<string, number>) => {
+  const base = createEmptyWeighting();
+  Object.entries(weighting).forEach(([key, value]) => {
+    base[key] = value.toString();
+  });
+  return base;
+};
+
+interface AttributeDefinitionConfig {
+  id: string;
+  slug: string;
+  label: string;
+  description: string | null;
+  scale_max: number;
+  default_value: number;
+  weighting: Record<string, number>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AttributeDefinitionFormState {
+  slug: string;
+  label: string;
+  description: string;
+  scale_max: string;
+  default_value: string;
+  weighting: Record<string, string>;
+}
+
 type FeatureFlagRecord = {
   id: string;
   name: string;
@@ -303,6 +369,18 @@ const AdminDashboard: React.FC = () => {
   const [editingSpecialItemId, setEditingSpecialItemId] = useState<string | null>(null);
   const [specialItemSaving, setSpecialItemSaving] = useState(false);
   const [deletingSpecialItemId, setDeletingSpecialItemId] = useState<string | null>(null);
+  const [attributeDefinitions, setAttributeDefinitions] = useState<AttributeDefinitionConfig[]>([]);
+  const [attributeDefinitionsLoading, setAttributeDefinitionsLoading] = useState(false);
+  const [attributeDefinitionSaving, setAttributeDefinitionSaving] = useState(false);
+  const [editingAttributeId, setEditingAttributeId] = useState<string | null>(null);
+  const [attributeForm, setAttributeForm] = useState<AttributeDefinitionFormState>({
+    slug: '',
+    label: '',
+    description: '',
+    scale_max: '10',
+    default_value: '1',
+    weighting: createEmptyWeighting()
+  });
 
   const fetchFeatureFlags = useCallback(async () => {
     const { data, error } = await supabase
@@ -526,6 +604,184 @@ const AdminDashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchAttributeDefinitions = useCallback(async () => {
+    setAttributeDefinitionsLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('attribute_definitions')
+        .select('*')
+        .order('slug', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      const normalized = (data ?? []).map(item => ({
+        id: item.id,
+        slug: item.slug,
+        label: item.label,
+        description: item.description ?? null,
+        scale_max: item.scale_max,
+        default_value: item.default_value,
+        weighting: normalizeWeighting(item.weighting),
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      })) as AttributeDefinitionConfig[];
+
+      setAttributeDefinitions(normalized);
+    } catch (error) {
+      console.error('Error fetching attribute definitions:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to load attributes',
+        description: 'We could not fetch the attribute catalog. Please try again.'
+      });
+    } finally {
+      setAttributeDefinitionsLoading(false);
+    }
+  }, []);
+
+  const resetAttributeForm = useCallback(() => {
+    setAttributeForm({
+      slug: '',
+      label: '',
+      description: '',
+      scale_max: '10',
+      default_value: '1',
+      weighting: createEmptyWeighting()
+    });
+    setEditingAttributeId(null);
+  }, []);
+
+  const handleEditAttribute = useCallback((definition: AttributeDefinitionConfig) => {
+    setEditingAttributeId(definition.id);
+    setAttributeForm({
+      slug: definition.slug,
+      label: definition.label,
+      description: definition.description ?? '',
+      scale_max: definition.scale_max.toString(),
+      default_value: definition.default_value.toString(),
+      weighting: buildFormWeighting(definition.weighting)
+    });
+  }, []);
+
+  const handleAttributeSubmit = useCallback(async () => {
+    const slug = attributeForm.slug.trim().toLowerCase();
+    const label = attributeForm.label.trim();
+
+    if (!slug) {
+      toast({
+        variant: 'destructive',
+        title: 'Slug required',
+        description: 'Please provide a unique slug for the attribute.'
+      });
+      return;
+    }
+
+    if (!label) {
+      toast({
+        variant: 'destructive',
+        title: 'Label required',
+        description: 'Attributes need a label so designers can identify them.'
+      });
+      return;
+    }
+
+    const scaleMax = Number(attributeForm.scale_max);
+    const defaultValue = Number(attributeForm.default_value);
+
+    if (!Number.isFinite(scaleMax) || scaleMax <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid scale maximum',
+        description: 'Scale maximum must be a positive number.'
+      });
+      return;
+    }
+
+    if (!Number.isFinite(defaultValue) || defaultValue < 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid default value',
+        description: 'Default values must be zero or greater.'
+      });
+      return;
+    }
+
+    setAttributeDefinitionSaving(true);
+
+    try {
+      const weightingPayload = Object.entries(attributeForm.weighting).reduce(
+        (accumulator, [key, value]) => {
+          if (value === '') {
+            return accumulator;
+          }
+
+          const numeric = Number(value);
+          if (Number.isFinite(numeric)) {
+            accumulator[key] = numeric;
+          }
+          return accumulator;
+        },
+        {} as Record<string, number>
+      );
+
+      const payload = {
+        id: editingAttributeId ?? undefined,
+        slug,
+        label,
+        description: attributeForm.description.trim() || null,
+        scale_max: scaleMax,
+        default_value: defaultValue,
+        weighting: weightingPayload
+      };
+
+      const { data, error } = await supabase
+        .from('attribute_definitions')
+        .upsert(payload, { onConflict: 'slug' })
+        .select('*')
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const normalized: AttributeDefinitionConfig = {
+        id: data.id,
+        slug: data.slug,
+        label: data.label,
+        description: data.description ?? null,
+        scale_max: data.scale_max,
+        default_value: data.default_value,
+        weighting: normalizeWeighting(data.weighting),
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+
+      setAttributeDefinitions(prev => {
+        const others = prev.filter(entry => entry.id !== normalized.id);
+        return [...others, normalized].sort((a, b) => a.slug.localeCompare(b.slug));
+      });
+
+      toast({
+        title: editingAttributeId ? 'Attribute updated' : 'Attribute created',
+        description: `${normalized.label} can now influence player builds.`
+      });
+
+      resetAttributeForm();
+    } catch (error) {
+      console.error('Error saving attribute definition:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Unable to save attribute',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.'
+      });
+    } finally {
+      setAttributeDefinitionSaving(false);
+    }
+  }, [attributeForm, editingAttributeId, resetAttributeForm]);
+
   const loadAdminData = useCallback(async () => {
     try {
       setLoading(true);
@@ -549,7 +805,8 @@ const AdminDashboard: React.FC = () => {
         { name: 'cities', promise: fetchCities() },
         { name: 'locations', promise: fetchLocations() },
         { name: 'shops', promise: fetchShops() },
-        { name: 'special items', promise: fetchSpecialItems() }
+        { name: 'special items', promise: fetchSpecialItems() },
+        { name: 'attribute definitions', promise: fetchAttributeDefinitions() }
       ];
 
       const results = await Promise.allSettled(tasks.map(task => task.promise));
@@ -577,7 +834,8 @@ const AdminDashboard: React.FC = () => {
     fetchCities,
     fetchLocations,
     fetchShops,
-    fetchSpecialItems
+    fetchSpecialItems,
+    fetchAttributeDefinitions
   ]);
 
   const toggleFeatureFlag = async (flagId: string, newValue: boolean) => {
@@ -1338,7 +1596,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       <Tabs defaultValue="monitoring" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 xl:grid-cols-10">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 xl:grid-cols-11">
           <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="cities">Cities</TabsTrigger>
@@ -1348,6 +1606,7 @@ const AdminDashboard: React.FC = () => {
           <TabsTrigger value="moderation">Moderation</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="seasons">Seasons</TabsTrigger>
+          <TabsTrigger value="attributes">Attributes</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -2415,6 +2674,188 @@ const AdminDashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="attributes" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <Card>
+              <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <SparklesIcon className="w-6 h-6" />
+                    Attribute Catalog
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Define reusable attributes and link them to the skills they influence.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      void fetchAttributeDefinitions();
+                    }}
+                    disabled={attributeDefinitionsLoading}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refresh
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={resetAttributeForm}
+                  >
+                    New Attribute
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {attributeDefinitionsLoading ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    Loading attribute definitions...
+                  </div>
+                ) : attributeDefinitions.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    No attribute definitions found. Create one using the form on the right.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {attributeDefinitions.map(definition => (
+                      <div key={definition.id} className="rounded-lg border p-4">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="text-sm uppercase text-muted-foreground">{definition.slug}</div>
+                            <div className="text-lg font-semibold">{definition.label}</div>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span>Scale max: <span className="font-medium text-foreground">{definition.scale_max}</span></span>
+                            <span>Default: <span className="font-medium text-foreground">{definition.default_value}</span></span>
+                            <Button size="sm" variant="outline" onClick={() => handleEditAttribute(definition)}>
+                              Edit
+                            </Button>
+                          </div>
+                        </div>
+                        {definition.description && (
+                          <p className="mt-2 text-sm text-muted-foreground">{definition.description}</p>
+                        )}
+                        <div className="mt-3">
+                          <div className="text-xs font-semibold uppercase text-muted-foreground">Skill weighting</div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {Object.entries(definition.weighting).length > 0 ? (
+                              Object.entries(definition.weighting).map(([skill, value]) => (
+                                <Badge key={skill} variant="outline" className="px-2 py-1 text-xs">
+                                  {skill}: {value}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-sm text-muted-foreground">No skills linked yet.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{editingAttributeId ? 'Edit Attribute Definition' : 'Create Attribute Definition'}</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Slugs should be lowercase and unique. Leave weighting fields blank to ignore a skill.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Slug</label>
+                  <Input
+                    value={attributeForm.slug}
+                    onChange={(event) => setAttributeForm(prev => ({ ...prev, slug: event.target.value }))}
+                    placeholder="creativity"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Label</label>
+                  <Input
+                    value={attributeForm.label}
+                    onChange={(event) => setAttributeForm(prev => ({ ...prev, label: event.target.value }))}
+                    placeholder="Creative Spark"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    value={attributeForm.description}
+                    onChange={(event) => setAttributeForm(prev => ({ ...prev, description: event.target.value }))}
+                    placeholder="How does this attribute manifest in gameplay?"
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Scale Maximum</label>
+                    <Input
+                      value={attributeForm.scale_max}
+                      onChange={(event) => setAttributeForm(prev => ({ ...prev, scale_max: event.target.value }))}
+                      placeholder="10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Default Value</label>
+                    <Input
+                      value={attributeForm.default_value}
+                      onChange={(event) => setAttributeForm(prev => ({ ...prev, default_value: event.target.value }))}
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Skill Influence</label>
+                    <span className="text-xs text-muted-foreground">Use numeric multipliers like 1.5</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {SKILL_KEYS.map(skill => (
+                      <div key={skill} className="space-y-1">
+                        <label className="text-xs font-semibold uppercase text-muted-foreground">{skill}</label>
+                        <Input
+                          value={attributeForm.weighting[skill] ?? ''}
+                          onChange={(event) =>
+                            setAttributeForm(prev => ({
+                              ...prev,
+                              weighting: {
+                                ...prev.weighting,
+                                [skill]: event.target.value
+                              }
+                            }))
+                          }
+                          placeholder="0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  onClick={handleAttributeSubmit}
+                  className="w-full"
+                  disabled={attributeDefinitionSaving}
+                >
+                  {attributeDefinitionSaving
+                    ? 'Saving attribute...'
+                    : editingAttributeId
+                      ? 'Update Attribute'
+                      : 'Create Attribute'}
+                </Button>
+                {editingAttributeId && (
+                  <Button variant="ghost" className="w-full" onClick={resetAttributeForm}>
+                    Cancel editing
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">

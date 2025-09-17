@@ -81,6 +81,7 @@ interface TourVenue {
   };
   environment_modifiers?: EnvironmentModifierSummary | null;
   show_type?: ShowType;
+}
 
 interface VenueScheduleForm {
   venueId: string;

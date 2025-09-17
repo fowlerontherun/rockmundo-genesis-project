@@ -83,6 +83,42 @@ export type Database = {
         }
         Relationships: []
       }
+      attribute_catalog: {
+        Row: {
+          base_value: number
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          key: string
+          max_value: number
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          base_value?: number
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          max_value?: number
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          base_value?: number
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          max_value?: number
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       band_conflicts: {
         Row: {
           band_id: string
@@ -1480,6 +1516,54 @@ export type Database = {
           },
         ]
       }
+      player_attributes: {
+        Row: {
+          attribute_points: number
+          created_at: string | null
+          id: string
+          mental_focus: number
+          physical_endurance: number
+          profile_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attribute_points?: number
+          created_at?: string | null
+          id?: string
+          mental_focus?: number
+          physical_endurance?: number
+          profile_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attribute_points?: number
+          created_at?: string | null
+          id?: string
+          mental_focus?: number
+          physical_endurance?: number
+          profile_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_attributes_profile_id_fkey",
+            columns: ["profile_id"],
+            isOneToOne: false,
+            referencedRelation: "profiles",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_attributes_user_id_fkey",
+            columns: ["user_id"],
+            isOneToOne: false,
+            referencedRelation: "profiles",
+            referencedColumns: ["user_id"]
+          }
+        ]
+      }
       player_equipment: {
         Row: {
           condition: number | null
@@ -1534,56 +1618,99 @@ export type Database = {
       player_skills: {
         Row: {
           bass: number
-          business: number
-          composition: number
           created_at: string | null
-          creativity: number
           drums: number
           guitar: number
           id: string
-          marketing: number
           performance: number
+          profile_id: string | null
           songwriting: number
-          technical: number
           updated_at: string | null
           user_id: string
           vocals: number
         }
         Insert: {
           bass?: number
-          business?: number
-          composition?: number
           created_at?: string | null
-          creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
+          profile_id?: string | null
           songwriting?: number
-          technical?: number
           updated_at?: string | null
           user_id: string
           vocals?: number
         }
         Update: {
           bass?: number
-          business?: number
-          composition?: number
           created_at?: string | null
-          creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
+          profile_id?: string | null
           songwriting?: number
-          technical?: number
           updated_at?: string | null
           user_id?: string
           vocals?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_skills_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_attributes: {
+        Row: {
+          business: number
+          composition: number
+          created_at: string | null
+          creativity: number
+          id: string
+          marketing: number
+          profile_id: string | null
+          technical: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business?: number
+          composition?: number
+          created_at?: string | null
+          creativity?: number
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business?: number
+          composition?: number
+          created_at?: string | null
+          creativity?: number
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_attributes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_streaming_accounts: {
         Row: {
@@ -2784,6 +2911,7 @@ export type Database = {
         Returns: {
           profile: Database["public"]["Tables"]["profiles"]["Row"]
           skills: Database["public"]["Tables"]["player_skills"]["Row"]
+          attributes: Database["public"]["Tables"]["player_attributes"]["Row"]
         }[]
       }
     }
