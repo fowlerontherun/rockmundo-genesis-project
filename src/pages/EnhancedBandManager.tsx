@@ -58,14 +58,24 @@ interface BandStats {
 }
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
-type PlayerSkillFields = Pick<
-  Database["public"]["Tables"]["player_skills"]["Row"],
+type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
+type MemberSkillSet = Pick<
+  PlayerSkillsRow,
   "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting"
 >;
 
 interface AvailableMember extends ProfileRow {
-  player_skills: PlayerSkillFields;
+  player_skills: MemberSkillSet;
 }
+
+const defaultPlayerSkills: MemberSkillSet = {
+  guitar: 20,
+  vocals: 20,
+  drums: 20,
+  bass: 20,
+  performance: 20,
+  songwriting: 20
+};
 
 const EnhancedBandManager = () => {
   const { user } = useAuth();
@@ -165,7 +175,7 @@ const EnhancedBandManager = () => {
 
       // Fetch skills for each profile
       const profilesWithSkills: AvailableMember[] = await Promise.all(
-        (profiles || []).map(async (profile): Promise<AvailableMember> => {
+        (profiles || []).map(async (profile) => {
           const { data: skills } = await supabase
             .from("player_skills")
             .select("guitar, vocals, drums, bass, performance, songwriting")
@@ -183,7 +193,14 @@ const EnhancedBandManager = () => {
 
           return {
             ...profile,
-            player_skills: skills ?? defaultSkills
+            player_skills: {
+              guitar: skills?.guitar ?? defaultPlayerSkills.guitar,
+              vocals: skills?.vocals ?? defaultPlayerSkills.vocals,
+              drums: skills?.drums ?? defaultPlayerSkills.drums,
+              bass: skills?.bass ?? defaultPlayerSkills.bass,
+              performance: skills?.performance ?? defaultPlayerSkills.performance,
+              songwriting: skills?.songwriting ?? defaultPlayerSkills.songwriting
+            }
           };
         })
       );
