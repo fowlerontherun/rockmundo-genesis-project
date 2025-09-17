@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
@@ -424,6 +425,16 @@ const CharacterCreation = () => {
 
       if (!upsertedProfile) {
         throw new Error("Profile save did not return any data.");
+      }
+
+      try {
+        await ensureDefaultWardrobe(
+          upsertedProfile.id,
+          user.id,
+          parseClothingLoadout(upsertedProfile.equipped_clothing)
+        );
+      } catch (wardrobeError) {
+        console.error("Failed to assign default wardrobe:", wardrobeError);
       }
 
       const skillPayload: PlayerSkillsInsert = {

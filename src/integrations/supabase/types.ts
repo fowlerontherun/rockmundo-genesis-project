@@ -1757,6 +1757,7 @@ export type Database = {
           bio: string | null
           current_city_id: string | null
           current_location: string
+          equipped_clothing: Json | null
           gender: Database["public"]["Enums"]["profile_gender"]
           city_of_birth: string | null
           age: number
@@ -1788,6 +1789,7 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          equipped_clothing?: Json | null
           gender?: Database["public"]["Enums"]["profile_gender"]
           city_of_birth?: string | null
           age?: number
@@ -1819,6 +1821,7 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          equipped_clothing?: Json | null
           gender?: Database["public"]["Enums"]["profile_gender"]
           city_of_birth?: string | null
           age?: number

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
+import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
 import type {
   PostgrestError,
   PostgrestMaybeSingleResponse,
@@ -311,7 +312,7 @@ const useProvideGameData = (): GameDataContextValue => {
 
       if (profileError && profileStatus !== 406) throw profileError;
 
-      const character = profileRow ?? null;
+      let character = profileRow ?? null;
 
       if (!character) {
         setProfile(null);
@@ -323,6 +324,21 @@ const useProvideGameData = (): GameDataContextValue => {
         updateSelectedCharacterId(null);
         await fetchCharacters();
         return;
+      }
+
+      try {
+        const loadout = parseClothingLoadout(character.equipped_clothing);
+        if (!Object.keys(loadout).length) {
+          const ensured = await ensureDefaultWardrobe(character.id, user.id, loadout);
+          if (ensured) {
+            character = {
+              ...character,
+              equipped_clothing: ensured as PlayerProfile["equipped_clothing"]
+            };
+          }
+        }
+      } catch (wardrobeError) {
+        console.error("Failed to ensure default wardrobe:", wardrobeError);
       }
 
       setCharacters(prev => {
