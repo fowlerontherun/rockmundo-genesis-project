@@ -84,7 +84,7 @@ const parseRenewalOption = (value: unknown): RenewalOption => {
 
 const RecordLabel = () => {
   const { user } = useAuth();
-  const { profile, skills, refetch, addActivity } = useGameData();
+  const { profile, skills, attributes, refetch, addActivity } = useGameData();
   const { toast } = useToast();
   const { isAdmin: isAdminRole, loading: roleLoading } = useUserRole();
   const [labels, setLabels] = useState<RecordLabel[]>([]);
@@ -518,6 +518,10 @@ const RecordLabel = () => {
         if (skillsRecord && typeof skillsRecord[key] === 'number') {
           return skillsRecord[key] as number;
         }
+        const attributesRecord = attributes as Record<string, unknown> | null;
+        if (attributesRecord && typeof attributesRecord[key] === 'number') {
+          return attributesRecord[key] as number;
+        }
         return 0;
       }
     }
@@ -550,6 +554,10 @@ const RecordLabel = () => {
         const skillsRecord = skills as Record<string, unknown> | null;
         if (skillsRecord && typeof skillsRecord[key] === 'number') {
           return (skillsRecord[key] as number).toLocaleString();
+        }
+        const attributesRecord = attributes as Record<string, unknown> | null;
+        if (attributesRecord && typeof attributesRecord[key] === 'number') {
+          return (attributesRecord[key] as number).toLocaleString();
         }
         return '0';
       }

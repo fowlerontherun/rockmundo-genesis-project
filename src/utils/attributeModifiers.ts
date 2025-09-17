@@ -12,6 +12,33 @@ const sanitizeNumeric = (value: unknown, fallback: number) => {
   return numeric;
 };
 
+export const resolveAttributeValue = (
+  source: Record<string, unknown> | null | undefined,
+  key: string,
+  fallback = 1
+): number => {
+  if (!source) {
+    return fallback;
+  }
+
+  const rawValue = source[key];
+
+  if (typeof rawValue === "number") {
+    return rawValue;
+  }
+
+  if (typeof rawValue === "object" && rawValue !== null) {
+    if ("value" in rawValue) {
+      const candidate = (rawValue as { value?: unknown }).value;
+      const numericCandidate = typeof candidate === "number" ? candidate : Number(candidate);
+      return Number.isFinite(numericCandidate) ? numericCandidate : fallback;
+    }
+  }
+
+  const numeric = typeof rawValue === "string" ? Number(rawValue) : NaN;
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
 export const getAttributeMultiplier = (
   value: number | null | undefined,
   {
