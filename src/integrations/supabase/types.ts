@@ -1618,15 +1618,13 @@ export type Database = {
       player_skills: {
         Row: {
           bass: number
-          business: number
           composition: number
           created_at: string | null
-          creativity: number
           drums: number
           guitar: number
           id: string
-          marketing: number
           performance: number
+          profile_id: string
           songwriting: number
           technical: number
           updated_at: string | null
@@ -1635,15 +1633,13 @@ export type Database = {
         }
         Insert: {
           bass?: number
-          business?: number
           composition?: number
           created_at?: string | null
-          creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
+          profile_id: string
           songwriting?: number
           technical?: number
           updated_at?: string | null
@@ -1652,22 +1648,67 @@ export type Database = {
         }
         Update: {
           bass?: number
-          business?: number
           composition?: number
           created_at?: string | null
-          creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
+          profile_id?: string
           songwriting?: number
           technical?: number
           updated_at?: string | null
           user_id?: string
           vocals?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_skills_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      profile_attributes: {
+        Row: {
+          attribute_id: string
+          created_at: string
+          profile_id: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          attribute_id: string
+          created_at?: string
+          profile_id: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          attribute_id?: string
+          created_at?: string
+          profile_id?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_attributes_attribute_id_fkey"
+            columns: ["attribute_id"]
+            isOneToOne: false
+            referencedRelation: "attribute_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_attributes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       player_streaming_accounts: {
         Row: {
