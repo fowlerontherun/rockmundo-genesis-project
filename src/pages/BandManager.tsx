@@ -877,12 +877,6 @@ const BandManager = () => {
     return <Music className="h-4 w-4" />;
   };
 
-  const getSkillColor = (value: number) => {
-    if (value >= 80) return "text-success";
-    if (value >= 60) return "text-warning";
-    return "text-muted-foreground";
-  };
-
   const getEventTypeIcon = (type?: string | null) => {
     const normalized = type?.toLowerCase() ?? '';
 
@@ -1307,11 +1301,12 @@ const BandManager = () => {
                             const value = Number(skills?.[skillKey] ?? 0);
                             return (
                               <div key={skillKey} className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="capitalize">{skillKey}</span>
-                                  <span className={getSkillColor(value)}>{value}/100</span>
-                                </div>
-                                <Progress value={value} className="h-1.5" />
+                                <span className="text-sm capitalize">{skillKey}</span>
+                                <Progress
+                                  value={value}
+                                  className="h-1.5"
+                                  aria-label={`${skillKey} skill level ${value} out of 100`}
+                                />
                               </div>
                             );
                           })}
@@ -1323,11 +1318,12 @@ const BandManager = () => {
                             const percent = Math.min(100, (value / 1000) * 100);
                             return (
                               <div key={attributeKey} className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="capitalize">{attributeKey}</span>
-                                  <span className="text-primary font-semibold">{value}/1000</span>
-                                </div>
-                                <Progress value={percent} className="h-1.5" />
+                                <span className="text-sm capitalize">{attributeKey}</span>
+                                <Progress
+                                  value={percent}
+                                  className="h-1.5"
+                                  aria-label={`${attributeKey} attribute score ${value} out of 1000`}
+                                />
                               </div>
                             );
                           })}

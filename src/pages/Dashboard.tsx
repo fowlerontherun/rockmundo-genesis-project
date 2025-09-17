@@ -50,12 +50,6 @@ const Dashboard = () => {
     "technical"
   ];
 
-  const skillColor = (value: number) => {
-    if (value >= 80) return "text-success";
-    if (value >= 60) return "text-warning";
-    return "text-muted-foreground";
-  };
-
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "gig": return <Play className="h-4 w-4" />;
@@ -275,11 +269,12 @@ const Dashboard = () => {
                 const value = Number(skills?.[skillKey] ?? 0);
                 return (
                   <div key={skillKey} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="capitalize font-medium">{skillKey}</span>
-                      <span className={skillColor(value)}>{value}/100</span>
-                    </div>
-                    <Progress value={value} className="h-2" />
+                    <span className="capitalize font-medium text-sm">{skillKey}</span>
+                    <Progress
+                      value={value}
+                      className="h-2"
+                      aria-label={`${skillKey} skill level ${value} out of 100`}
+                    />
                   </div>
                 );
               })}
@@ -299,11 +294,12 @@ const Dashboard = () => {
                 const percent = Math.min(100, (value / 1000) * 100);
                 return (
                   <div key={attributeKey} className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="capitalize font-medium">{attributeKey}</span>
-                      <span className="text-primary font-semibold">{value}/1000</span>
-                    </div>
-                    <Progress value={percent} className="h-2" />
+                    <span className="capitalize font-medium text-sm">{attributeKey}</span>
+                    <Progress
+                      value={percent}
+                      className="h-2"
+                      aria-label={`${attributeKey} attribute score ${value} out of 1000`}
+                    />
                   </div>
                 );
               })}
