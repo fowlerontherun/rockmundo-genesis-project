@@ -212,6 +212,8 @@ const MusicCreation = () => {
     duration: 180
   });
 
+  const recorderRef = useRef<RecorderInstance | null>(null);
+
   const genres = [
     "Rock", "Pop", "Hip Hop", "Electronic", "Jazz", "Blues", "Country", 
     "Metal", "Punk", "Alternative", "Indie", "Classical", "Folk", "R&B"
