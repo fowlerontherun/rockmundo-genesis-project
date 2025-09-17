@@ -71,6 +71,30 @@ const clamp = (value: number, min: number, max: number) => {
   return Math.max(min, Math.min(max, value));
 };
 
+const formatDateLabel = (date: string | null | undefined, prefix = "") => {
+  if (!date) {
+    return "Date unavailable";
+  }
+
+  return `${prefix}${formatDailyValue(date)}`;
+};
+
+const getDailyLabel = (date: string | null | undefined) => {
+  if (!date) {
+    return "Most popular songs from the latest update";
+  }
+
+  return `Most popular songs on ${formatDailyValue(date)}`;
+};
+
+const getWeekLabel = (date: string | null | undefined, fallback?: string) => {
+  if (!date) {
+    return fallback ?? "No week selected";
+  }
+
+  return formatWeekValue(date);
+};
+
 const WorldPulse = () => {
   const [dailyChart, setDailyChart] = useState<ChartEntry[]>([]);
   const [weeklyChart, setWeeklyChart] = useState<ChartEntry[]>([]);
@@ -78,7 +102,9 @@ const WorldPulse = () => {
   const [currentWeek, setCurrentWeek] = useState("Loading charts...");
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
-  const [dailyLabel, setDailyLabel] = useState("");
+  const [latestDailyDate, setLatestDailyDate] = useState<string | null>(null);
+  const [selectedWeekDate, setSelectedWeekDate] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const enrichChartEntries = useCallback(async (rows: GlobalChartRow[]): Promise<ChartEntry[]> => {
@@ -158,6 +184,7 @@ const WorldPulse = () => {
 
   const loadDailyChart = useCallback(async () => {
     try {
+      setError(null);
       const { data: latestDateRows, error: latestDateError } = await supabase
         .from("global_charts")
         .select("chart_date")
@@ -172,11 +199,11 @@ const WorldPulse = () => {
       const latestDate = latestDateRows?.[0]?.chart_date;
       if (!latestDate) {
         setDailyChart([]);
-        setDailyLabel("");
+        setLatestDailyDate(null);
         return;
       }
 
-      setDailyLabel(formatDailyValue(latestDate));
+      setLatestDailyDate(latestDate);
 
       const { data, error } = await supabase
         .from("global_charts")
@@ -196,6 +223,7 @@ const WorldPulse = () => {
     } catch (error) {
       console.error("Failed to load daily chart:", error);
       setDailyChart([]);
+      setError("Failed to load daily chart. Please try again later.");
     }
   }, [enrichChartEntries]);
 
@@ -219,6 +247,7 @@ const WorldPulse = () => {
     } catch (error) {
       console.error("Failed to load weekly chart:", error);
       setWeeklyChart([]);
+      setError("Failed to load weekly chart. Please try again later.");
     }
   }, [enrichChartEntries]);
 
@@ -244,9 +273,12 @@ const WorldPulse = () => {
 
       setAvailableWeeks(weeks);
       setCurrentWeekIndex(0);
+      setSelectedWeekDate(weeks[0] ?? null);
     } catch (error) {
       console.error("Failed to load chart weeks:", error);
       setAvailableWeeks([]);
+      setSelectedWeekDate(null);
+      setError("Failed to load available chart weeks. Please try again later.");
     }
   }, []);
 
@@ -321,6 +353,7 @@ const WorldPulse = () => {
     } catch (error) {
       console.error("Failed to load genre stats:", error);
       setGenreStats([]);
+      setError("Failed to load genre statistics. Please try again later.");
     }
   }, []);
 
@@ -334,6 +367,7 @@ const WorldPulse = () => {
     if (!availableWeeks.length) {
       setWeeklyChart([]);
       setCurrentWeek("No weekly data");
+      setSelectedWeekDate(null);
       return;
     }
 
@@ -344,12 +378,14 @@ const WorldPulse = () => {
     }
 
     const selectedWeek = availableWeeks[safeIndex];
+    setSelectedWeekDate(selectedWeek);
     setCurrentWeek(formatWeekValue(selectedWeek));
     loadWeeklyChart(selectedWeek);
   }, [availableWeeks, currentWeekIndex, loadWeeklyChart]);
 
   const handleRefreshCharts = useCallback(async () => {
     setIsRefreshing(true);
+    setError(null);
     try {
       const { error } = await supabase.rpc("refresh_global_charts");
       if (error) {
@@ -378,8 +414,6 @@ const WorldPulse = () => {
     });
   };
 
-  const selectedWeekDate = availableWeeks.length > 0 ? availableWeeks[currentWeekIndex] : null;
-  const weekStartLabel = selectedWeekDate ? formatDailyValue(selectedWeekDate) : null;
   const isPrevDisabled = availableWeeks.length === 0 || currentWeekIndex >= availableWeeks.length - 1;
   const isNextDisabled = availableWeeks.length === 0 || currentWeekIndex === 0;
 
@@ -413,11 +447,14 @@ const WorldPulse = () => {
     return <span className="text-lg font-bold text-muted-foreground">#{rank}</span>;
   };
 
+  const selectedWeek = selectedWeekDate;
   const weeklyDescription = selectedWeek
     ? `Most popular songs for ${formatDateLabel(selectedWeek, "Week of ")}`
-    : "Select a week to view rankings";
+    : availableWeeks.length > 0
+      ? "Select a week to view rankings"
+      : "Most popular songs this week";
   const dailyDescription = getDailyLabel(latestDailyDate);
-  const currentWeekLabel = getWeekLabel(selectedWeek);
+  const currentWeekLabel = getWeekLabel(selectedWeek, currentWeek);
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -465,11 +502,7 @@ const WorldPulse = () => {
                   <Trophy className="h-5 w-5 text-primary" />
                   Daily Chart - Top 10
                 </CardTitle>
-                <CardDescription>
-                  {dailyLabel
-                    ? `Most popular songs on ${dailyLabel}`
-                    : "Most popular songs from the latest update"}
-                </CardDescription>
+                <CardDescription>{dailyDescription}</CardDescription>
               </CardHeader>
               <CardContent>
                 {dailyChart.length === 0 ? (
@@ -565,9 +598,7 @@ const WorldPulse = () => {
                   </div>
                 </div>
                 <CardDescription>
-                  {selectedWeekDate
-                    ? `Most popular songs for ${currentWeek}${weekStartLabel ? ` (week of ${weekStartLabel})` : ''}`
-                    : "Most popular songs this week"}
+                  {weeklyDescription}
                 </CardDescription>
               </CardHeader>
               <CardContent>
