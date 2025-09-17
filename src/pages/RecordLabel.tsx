@@ -84,7 +84,7 @@ const parseRenewalOption = (value: unknown): RenewalOption => {
 
 const RecordLabel = () => {
   const { user } = useAuth();
-  const { profile, skills, refetch } = useGameData();
+  const { profile, skills, refetch, addActivity } = useGameData();
   const { toast } = useToast();
   const { isAdmin: isAdminRole, loading: roleLoading } = useUserRole();
   const [labels, setLabels] = useState<RecordLabel[]>([]);
@@ -712,16 +712,11 @@ const RecordLabel = () => {
 
       if (contractError) throw contractError;
 
-      const { error: activityError } = await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          activity_type: 'contract',
-          message: `Renewed contract with ${contract.label_name}`,
-          earnings: 0
-        });
-
-      if (activityError) throw activityError;
+      await addActivity(
+        'contract',
+        `Renewed contract with ${contract.label_name}`,
+        0
+      );
 
       await loadPlayerContracts();
 
@@ -816,20 +811,15 @@ const RecordLabel = () => {
           cash: currentCash + completionBonus,
           fame: currentFame + fameBoost
         })
-        .eq('user_id', user.id);
+        .eq('id', profile.id);
 
       if (profileError) throw profileError;
 
-      const { error: activityError } = await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          activity_type: 'contract',
-          message: `Completed contract with ${contract.label_name}`,
-          earnings: completionBonus
-        });
-
-      if (activityError) throw activityError;
+      await addActivity(
+        'contract',
+        `Completed contract with ${contract.label_name}`,
+        completionBonus
+      );
 
       await loadPlayerContracts();
       await refetch();
@@ -895,20 +885,15 @@ const RecordLabel = () => {
           cash: currentCash - cashPenalty,
           fame: Math.max(currentFame - famePenalty, 0)
         })
-        .eq('user_id', user.id);
+        .eq('id', profile.id);
 
       if (profileError) throw profileError;
 
-      const { error: activityError } = await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          activity_type: 'contract',
-          message: `Terminated contract with ${contract.label_name}`,
-          earnings: -cashPenalty
-        });
-
-      if (activityError) throw activityError;
+      await addActivity(
+        'contract',
+        `Terminated contract with ${contract.label_name}`,
+        -cashPenalty
+      );
 
       await loadPlayerContracts();
       await refetch();
@@ -1008,7 +993,7 @@ const RecordLabel = () => {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ cash: currentCash + advance })
-        .eq('user_id', user.id);
+        .eq('id', profile.id);
 
       if (profileError) {
         if (newContract?.id) {
@@ -1017,16 +1002,11 @@ const RecordLabel = () => {
         throw profileError;
       }
 
-      const { error: activityError } = await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          activity_type: 'contract',
-          message: `Signed ${contractType} contract with ${label.name}`,
-          earnings: advance
-        });
-
-      if (activityError) throw activityError;
+      await addActivity(
+        'contract',
+        `Signed ${contractType} contract with ${label.name}`,
+        advance
+      );
 
       await loadPlayerContracts();
       await refetch();

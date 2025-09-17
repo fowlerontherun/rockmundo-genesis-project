@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -19,10 +19,20 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
+import { supabase } from "@/integrations/supabase/client";
+
+const genderLabels: Record<string, string> = {
+  female: "Female",
+  male: "Male",
+  non_binary: "Non-binary",
+  other: "Other",
+  prefer_not_to_say: "Prefer not to say",
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { profile, skills, activities, loading, error } = useGameData();
+  const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
 
   const skillColor = (value: number) => {
     if (value >= 80) return "text-success";
@@ -41,6 +51,51 @@ const Dashboard = () => {
       default: return <Star className="h-4 w-4" />;
     }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCity = async (cityId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("cities")
+          .select("name, country")
+          .eq("id", cityId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!isMounted) return;
+
+        if (data) {
+          const cityName = data.name ?? "Unnamed City";
+          const label = data.country ? `${cityName}, ${data.country}` : cityName;
+          setBirthCityLabel(label ?? null);
+        } else {
+          setBirthCityLabel(null);
+        }
+      } catch (error) {
+        console.error("Error loading birth city:", error);
+        if (isMounted) {
+          setBirthCityLabel(null);
+        }
+      }
+    };
+
+    if (profile?.city_of_birth) {
+      void loadCity(profile.city_of_birth);
+    } else {
+      setBirthCityLabel(null);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.city_of_birth]);
+
+  const profileGenderLabel = useMemo(() => {
+    if (!profile?.gender) return genderLabels.prefer_not_to_say;
+    return genderLabels[profile.gender] ?? genderLabels.prefer_not_to_say;
+  }, [profile?.gender]);
 
 
   if (loading) {
@@ -87,6 +142,19 @@ const Dashboard = () => {
               Welcome back, {profile.display_name || profile.username}
             </h1>
             <p className="text-muted-foreground font-oswald">Ready to rock the world?</p>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <Badge variant="outline" className="border-border text-foreground/80">
+                Age {profile.age ?? 16}
+              </Badge>
+              <Badge variant="outline" className="border-border text-foreground/80">
+                {profileGenderLabel}
+              </Badge>
+              <Badge variant="outline" className="border-border text-foreground/80">
+                {profile.city_of_birth
+                  ? birthCityLabel ?? "Loading birth city..."
+                  : "Birth city not set"}
+              </Badge>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button
