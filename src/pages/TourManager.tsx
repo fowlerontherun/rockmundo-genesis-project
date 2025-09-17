@@ -120,6 +120,12 @@ interface EditTourForm {
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type TourRow = Database['public']['Tables']['tours']['Row'];
 type TourVenueRow = Database['public']['Tables']['tour_venues']['Row'];
+type TourVenueInsert = Database['public']['Tables']['tour_venues']['Insert'] & {
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
+type TourVenueUpdate = Database['public']['Tables']['tour_venues']['Update'] & {
+  environment_modifiers?: EnvironmentModifierSummary | null;
+};
 
 type SupabaseTour = TourRow & {
   tour_venues?: Array<
@@ -447,7 +453,7 @@ const TourManager = () => {
         ? Math.max(1, Math.round(baseProjectedAttendance * (environmentSummary?.attendanceMultiplier ?? 1)))
         : null;
 
-      const insertPayload: Record<string, unknown> = {
+      const insertPayload: TourVenueInsert = {
         tour_id: tourId,
         venue_id: details.venueId,
         date: details.date,
@@ -458,15 +464,9 @@ const TourManager = () => {
         tickets_sold: 0,
         revenue: 0,
         status: 'scheduled',
+        travel_time: typeof details.travelTime === 'number' ? details.travelTime : undefined,
+        rest_days: typeof details.restDays === 'number' ? details.restDays : undefined,
       };
-
-      if (typeof details.travelTime === 'number') {
-        insertPayload.travel_time = details.travelTime;
-      }
-
-      if (typeof details.restDays === 'number') {
-        insertPayload.rest_days = details.restDays;
-      }
 
       let environmentForInsert: EnvironmentModifierSummary | null = null;
       if (environmentSummary) {
@@ -484,7 +484,7 @@ const TourManager = () => {
 
       const { data: createdVenue, error } = await supabase
         .from('tour_venues')
-        .insert(insertPayload as any)
+        .insert(insertPayload)
         .select(`
           *,
           venues!tour_venues_venue_id_fkey (name, location, capacity)
@@ -868,14 +868,16 @@ const TourManager = () => {
           }
         : null;
 
+      const updatePayload: TourVenueUpdate = {
+        tickets_sold: attendance,
+        revenue,
+        status: 'completed',
+        environment_modifiers: updatedEnvironment ?? tourVenue.environment_modifiers ?? null,
+      };
+
       const { error } = await supabase
         .from('tour_venues')
-        .update({
-          tickets_sold: attendance,
-          revenue,
-          status: 'completed',
-          environment_modifiers: updatedEnvironment ?? tourVenue.environment_modifiers,
-        } as any)
+        .update(updatePayload)
         .eq('id', tourVenue.id);
 
       if (error) throw error;
