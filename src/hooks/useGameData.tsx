@@ -36,6 +36,7 @@ interface GameDataContextValue {
   currentCity: Tables<'cities'> | null;
   loading: boolean;
   error: string | null;
+  currentCity: Tables<'cities'> | null;
   hasCharacters: boolean;
   setActiveCharacter: (characterId: string) => Promise<void>;
   clearSelectedCharacter: () => void;
@@ -62,6 +63,15 @@ const extractErrorMessage = (error: unknown) => {
 
 const sortCharacters = (characters: PlayerProfile[]) =>
   [...characters].sort((a, b) => a.slot_number - b.slot_number);
+
+const getStoredSelectedCharacterId = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedValue = window.localStorage.getItem(CHARACTER_STORAGE_KEY);
+  return storedValue ?? null;
+};
 
 const useProvideGameData = (): GameDataContextValue => {
   const { user } = useAuth();
@@ -122,8 +132,8 @@ const useProvideGameData = (): GameDataContextValue => {
   );
 
   const clearSelectedCharacter = useCallback(() => {
-    setSelectedCharacterId(null);
-    persistSelectedCharacterId(null);
+    const storedValue = persistSelectedCharacterId(null);
+    setSelectedCharacterId(storedValue);
   }, [persistSelectedCharacterId]);
 
   const updateSelectedCharacterId = useCallback(
@@ -188,6 +198,10 @@ const useProvideGameData = (): GameDataContextValue => {
     clearSelectedCharacter
   ]);
 
+  const refreshCharacters = useCallback(async () => {
+    return fetchCharacters();
+  }, [fetchCharacters]);
+
   const fetchGameData = useCallback(async () => {
     if (!user) {
       setProfile(null);
@@ -232,7 +246,6 @@ const useProvideGameData = (): GameDataContextValue => {
         return;
       }
 
-      setProfile(character);
       setCharacters(prev => {
         const others = prev.filter(existing => existing.id !== character.id);
         return sortCharacters([...others, character]);
@@ -245,7 +258,7 @@ const useProvideGameData = (): GameDataContextValue => {
 
       if (skillsError) throw skillsError;
 
-      setSkills(skillsRows?.[0] ?? null);
+      const skillsData = skillsRows?.[0] ?? null;
 
       const { data: activityRows, error: activityError } = await supabase
         .from('activity_feed')
