@@ -188,7 +188,6 @@ const BandManager = () => {
       console.error('Error loading band members:', error);
     }
   }, [user?.id]);
-
   const loadBandStats = useCallback(async (bandId: string) => {
     if (!user?.id || !bandId) {
       setChartPosition(null);
