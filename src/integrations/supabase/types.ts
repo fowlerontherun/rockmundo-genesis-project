@@ -1519,30 +1519,48 @@ export type Database = {
       player_attributes: {
         Row: {
           attribute_points: number
+          charisma: number
           created_at: string | null
           id: string
+          looks: number
           mental_focus: number
+          musicality: number
           physical_endurance: number
+          stage_presence: number
+          crowd_engagement: number
+          social_reach: number
           profile_id: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
           attribute_points?: number
+          charisma?: number
           created_at?: string | null
           id?: string
+          looks?: number
           mental_focus?: number
+          musicality?: number
           physical_endurance?: number
+          stage_presence?: number
+          crowd_engagement?: number
+          social_reach?: number
           profile_id: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
           attribute_points?: number
+          charisma?: number
           created_at?: string | null
           id?: string
+          looks?: number
           mental_focus?: number
+          musicality?: number
           physical_endurance?: number
+          stage_presence?: number
+          crowd_engagement?: number
+          social_reach?: number
           profile_id?: string
           updated_at?: string | null
           user_id?: string
@@ -1615,9 +1633,58 @@ export type Database = {
           },
         ]
       }
+      player_attributes: {
+        Row: {
+          business_acumen: number
+          created_at: string | null
+          creative_insight: number
+          id: string
+          marketing_savvy: number
+          musical_ability: number
+          profile_id: string
+          rhythm_sense: number
+          stage_presence: number
+          technical_mastery: number
+          updated_at: string | null
+          user_id: string
+          vocal_talent: number
+        }
+        Insert: {
+          business_acumen?: number
+          created_at?: string | null
+          creative_insight?: number
+          id?: string
+          marketing_savvy?: number
+          musical_ability?: number
+          profile_id: string
+          rhythm_sense?: number
+          stage_presence?: number
+          technical_mastery?: number
+          updated_at?: string | null
+          user_id: string
+          vocal_talent?: number
+        }
+        Update: {
+          business_acumen?: number
+          created_at?: string | null
+          creative_insight?: number
+          id?: string
+          marketing_savvy?: number
+          musical_ability?: number
+          profile_id?: string
+          rhythm_sense?: number
+          stage_presence?: number
+          technical_mastery?: number
+          updated_at?: string | null
+          user_id?: string
+          vocal_talent?: number
+        }
+        Relationships: []
+      }
       player_skills: {
         Row: {
           bass: number
+          composition: number
           created_at: string | null
           drums: number
           guitar: number
@@ -1631,6 +1698,7 @@ export type Database = {
         }
         Insert: {
           bass?: number
+          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
@@ -1644,6 +1712,7 @@ export type Database = {
         }
         Update: {
           bass?: number
+          composition?: number
           created_at?: string | null
           drums?: number
           guitar?: number
@@ -1665,15 +1734,84 @@ export type Database = {
           },
         ]
       }
+      profile_skill_progress: {
+        Row: {
+          created_at: string | null
+          current_level: number
+          current_xp: number
+          id: string
+          profile_id: string
+          skill_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_level?: number
+          current_xp?: number
+          id?: string
+          profile_id: string
+          skill_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_level?: number
+          current_xp?: number
+          id?: string
+          profile_id?: string
+          skill_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profile_skill_unlocks: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_unlocked: boolean
+          profile_id: string
+          skill_id: string
+          unlocked_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_unlocked?: boolean
+          profile_id: string
+          skill_id: string
+          unlocked_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_unlocked?: boolean
+          profile_id?: string
+          skill_id?: string
+          unlocked_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       player_attributes: {
         Row: {
           business: number
           composition: number
           created_at: string | null
           creativity: number
+          crowd_engagement: number
           id: string
           marketing: number
+          social_reach: number
           profile_id: string | null
+          stage_presence: number
           technical: number
           updated_at: string | null
           user_id: string
@@ -1683,9 +1821,12 @@ export type Database = {
           composition?: number
           created_at?: string | null
           creativity?: number
+          crowd_engagement?: number
           id?: string
           marketing?: number
+          social_reach?: number
           profile_id?: string | null
+          stage_presence?: number
           technical?: number
           updated_at?: string | null
           user_id: string
@@ -1695,9 +1836,12 @@ export type Database = {
           composition?: number
           created_at?: string | null
           creativity?: number
+          crowd_engagement?: number
           id?: string
           marketing?: number
+          social_reach?: number
           profile_id?: string | null
+          stage_presence?: number
           technical?: number
           updated_at?: string | null
           user_id?: string
@@ -1711,6 +1855,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_attributes: {
+        Row: {
+          business: number
+          creativity: number
+          created_at: string | null
+          id: string
+          marketing: number
+          profile_id: string | null
+          technical: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business?: number
+          creativity?: number
+          created_at?: string | null
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business?: number
+          creativity?: number
+          created_at?: string | null
+          id?: string
+          marketing?: number
+          profile_id?: string | null
+          technical?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       player_streaming_accounts: {
         Row: {
@@ -1844,6 +2024,7 @@ export type Database = {
           bio: string | null
           current_city_id: string | null
           current_location: string
+          equipped_clothing: Json | null
           gender: Database["public"]["Enums"]["profile_gender"]
           city_of_birth: string | null
           age: number
@@ -1875,6 +2056,7 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          equipped_clothing?: Json | null
           gender?: Database["public"]["Enums"]["profile_gender"]
           city_of_birth?: string | null
           age?: number
@@ -1906,6 +2088,7 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          equipped_clothing?: Json | null
           gender?: Database["public"]["Enums"]["profile_gender"]
           city_of_birth?: string | null
           age?: number
@@ -1982,6 +2165,63 @@ export type Database = {
         }
         Relationships: []
       }
+      skill_definitions: {
+        Row: {
+          id: string
+          slug: string
+          display_name: string
+          description: string | null
+          tier_caps: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          slug: string
+          display_name: string
+          description?: string | null
+          tier_caps?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          slug?: string
+          display_name?: string
+          description?: string | null
+          tier_caps?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      skill_parent_links: {
+        Row: {
+          id: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          skill_id?: string
+          parent_skill_id?: string
+          unlock_threshold?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       social_campaigns: {
         Row: {
           budget: number
@@ -2024,6 +2264,54 @@ export type Database = {
           status?: "active" | "completed"
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      skill_definitions: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_default_unlocked: boolean | null
+          label: string
+          max_level: number | null
+          slug: string
+          sort_order: number | null
+          starting_experience: number | null
+          starting_level: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default_unlocked?: boolean | null
+          label: string
+          max_level?: number | null
+          slug: string
+          sort_order?: number | null
+          starting_experience?: number | null
+          starting_level?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default_unlocked?: boolean | null
+          label?: string
+          max_level?: number | null
+          slug?: string
+          sort_order?: number | null
+          starting_experience?: number | null
+          starting_level?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2723,6 +3011,7 @@ export type Database = {
       }
       venues: {
         Row: {
+          city_id: string | null
           base_payment: number | null
           capacity: number | null
           created_at: string | null
@@ -2734,6 +3023,7 @@ export type Database = {
           venue_type: string | null
         }
         Insert: {
+          city_id?: string | null
           base_payment?: number | null
           capacity?: number | null
           created_at?: string | null
@@ -2745,6 +3035,7 @@ export type Database = {
           venue_type?: string | null
         }
         Update: {
+          city_id?: string | null
           base_payment?: number | null
           capacity?: number | null
           created_at?: string | null
@@ -2755,7 +3046,15 @@ export type Database = {
           requirements?: Json | null
           venue_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "venues_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

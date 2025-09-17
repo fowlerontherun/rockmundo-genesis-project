@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData, type PlayerSkills } from '@/hooks/useGameData';
+import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from '@/utils/gameBalance';
+import { resolveAttributeValue } from '@/utils/attributeModifiers';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from '@/components/ui/sonner-toast';
 import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle } from 'lucide-react';
@@ -127,12 +129,14 @@ const SHOW_TYPE_BEHAVIOR: Record<ShowType, {
   acoustic: { earnings: 1, fan: 1.25, experience: 1.2, audienceEase: 1.15, stageTolerance: 5 },
 };
 
+const ADVANCED_GIG_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
+
 const getPerformanceStages = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
 
 const AdvancedGigSystem: React.FC = () => {
   const { gigId } = useParams<{ gigId: string }>();
   const { user } = useAuth();
-  const { profile, skills, updateProfile, addActivity } = useGameData();
+  const { profile, skills, unlockedSkills, attributes, updateProfile, addActivity } = useGameData();
   const navigate = useNavigate();
 
   const [gig, setGig] = useState<Gig | null>(null);
@@ -157,6 +161,14 @@ const AdvancedGigSystem: React.FC = () => {
   const [failedStage, setFailedStage] = useState<string | null>(null);
   const [fameChange, setFameChange] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState(0);
+  const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
+    const source = attributes as unknown as Record<string, unknown> | null;
+    return {
+      stagePresence: resolveAttributeValue(source, 'stage_presence', 1),
+      crowdEngagement: resolveAttributeValue(source, 'crowd_engagement', 1),
+      socialReach: resolveAttributeValue(source, 'social_reach', 1),
+    };
+  }, [attributes]);
 
   const loadGig = useCallback(async (): Promise<void> => {
     if (!gigId) return;
@@ -238,6 +250,41 @@ const AdvancedGigSystem: React.FC = () => {
   const performStage = async (stageIndex: number) => {
     const stage = performanceStages[stageIndex];
     if (!stage) return;
+
+    const lockedRequirements = Object.entries(stage.skillRequirements).filter(
+      ([skill]) => !(unlockedSkills?.[skill] ?? false)
+    );
+
+    if (lockedRequirements.length > 0) {
+      const lockedSkillNames = lockedRequirements.map(([skill]) => skill).join(', ');
+      const failureReason = lockedRequirements.length === 1
+        ? `Cannot start ${stage.name} because ${lockedSkillNames} is still locked.`
+        : `Cannot start ${stage.name} because these skills are locked: ${lockedSkillNames}.`;
+
+      toast.error(`Stage blocked: ${failureReason}`);
+
+      const lockedFeedback = lockedRequirements.map(
+        ([skill, requirement]) => `"${skill}" requires level ${requirement}, but the skill is locked.`
+      );
+
+      const lockedResult: StageResult = {
+        stageName: stage.name,
+        score: 0,
+        audienceReaction: { ...audienceReaction },
+        feedback: lockedFeedback,
+        bonuses: []
+      };
+
+      const updatedResults = [...stageResults, lockedResult];
+      setStageResults(updatedResults);
+      await finishPerformance(updatedResults, {
+        forcedFailure: true,
+        failedStage: stage.name,
+        failureReason
+      });
+      return;
+    }
+
     const stageDuration = stage.duration;
     const interval = stageDuration / 100;
 
@@ -291,22 +338,32 @@ const AdvancedGigSystem: React.FC = () => {
     let stageScore = 0;
     const feedback: string[] = [];
     const bonuses: string[] = [];
+    const strugglingRequirements: string[] = [];
 
     Object.entries(stage.skillRequirements).forEach(([skill, requirement]) => {
       const playerSkill = skills?.[skill as keyof PlayerSkills] ?? 0;
-      const skillRatio = playerSkill / requirement;
+      const isUnlocked = unlockedSkills?.[skill] ?? false;
       const weight = currentShowType === 'acoustic' && (skill === 'vocals' || skill === 'songwriting') ? 30 : 25;
+
+      if (!isUnlocked) {
+        feedback.push(`Cannot showcase ${skill}: unlock this skill to meet the level ${requirement} requirement.`);
+        strugglingRequirements.push(`${skill} is locked`);
+        return;
+      }
+
+      const skillRatio = requirement > 0 ? playerSkill / requirement : 0;
       stageScore += skillRatio * weight;
 
       if (skillRatio >= 1.5) {
-        feedback.push(`Exceptional ${skill} performance!`);
+        feedback.push(`Exceptional ${skill} performance! (Level ${playerSkill}/${requirement})`);
         bonuses.push(`+20% ${skill} bonus`);
       } else if (skillRatio >= 1.0) {
-        feedback.push(`Great ${skill} work!`);
+        feedback.push(`Great ${skill} work! (Level ${playerSkill}/${requirement})`);
       } else if (skillRatio >= 0.7) {
-        feedback.push(`Decent ${skill} performance`);
+        feedback.push(`Decent ${skill} delivery (Level ${playerSkill}/${requirement})`);
       } else {
-        feedback.push(`${skill} needs improvement`);
+        feedback.push(`Struggled with ${skill}: level ${playerSkill} of ${requirement} required.`);
+        strugglingRequirements.push(`${skill} at ${playerSkill}/${requirement}`);
       }
     });
 
@@ -330,10 +387,14 @@ const AdvancedGigSystem: React.FC = () => {
 
     const stageFailureThreshold = Math.max(35, STAGE_FAILURE_THRESHOLD - behavior.stageTolerance);
     if (result.score < stageFailureThreshold) {
+      const failureDetails = strugglingRequirements.length > 0
+        ? ` Key issues: ${strugglingRequirements.join('; ')}.`
+        : '';
+
       finishPerformance(updatedResults, {
         forcedFailure: true,
         failedStage: stage.name,
-        failureReason: `${stage.name} score fell below ${stageFailureThreshold}%. The promoter ended the show early.`
+        failureReason: `${stage.name} score fell below ${stageFailureThreshold}%. The promoter ended the show early.${failureDetails}`
       });
       return;
     }
@@ -370,15 +431,47 @@ const AdvancedGigSystem: React.FC = () => {
       derivedFailureReason = `Overall performance score fell below ${failureThreshold}%. The crowd left disappointed.`;
     }
 
-    const failureEarnings = Math.floor(baseEarnings * FAILURE_EARNINGS_MULTIPLIER);
+    const successRatio = Math.min(Math.max(averageScore / 100, 0), 1);
+    const baselineGigPayment = calculateGigPayment(
+      baseEarnings,
+      skills?.performance ?? 0,
+      profile.fame ?? 0,
+      successRatio,
+    );
+    const adjustedGigPayment = calculateGigPayment(
+      baseEarnings,
+      skills?.performance ?? 0,
+      profile.fame ?? 0,
+      successRatio,
+      attributeBonuses,
+    );
+    const payoutAdjustment = baselineGigPayment > 0 ? adjustedGigPayment / baselineGigPayment : 1;
+
+    const failureBase = Math.floor(baseEarnings * FAILURE_EARNINGS_MULTIPLIER);
+    const adjustedPotentialEarnings = Math.floor(potentialEarnings * payoutAdjustment);
+    const adjustedFailureEarnings = Math.floor(failureBase * payoutAdjustment);
     const totalEarningsValue = isFailure
-      ? Math.min(potentialEarnings, failureEarnings)
-      : potentialEarnings;
-    const fameDelta = isFailure
-      ? -FAILURE_FAME_PENALTY
-      : Math.floor(averageScore * 0.5 * behavior.fan);
+      ? Math.min(adjustedPotentialEarnings, adjustedFailureEarnings)
+      : adjustedPotentialEarnings;
+
+    const baseFanGain = Math.max(0, Math.floor(averageScore * 0.5 * behavior.fan));
+    const baselineFanGain = calculateFanGain(
+      baseFanGain,
+      skills?.performance ?? 0,
+      skills?.vocals ?? 0,
+    );
+    const adjustedFanGain = calculateFanGain(
+      baseFanGain,
+      skills?.performance ?? 0,
+      skills?.vocals ?? 0,
+      attributeBonuses,
+    );
+    const fanAdjustment = baselineFanGain > 0 ? adjustedFanGain / baselineFanGain : 1;
+    const successFanGain = Math.max(0, Math.round(baseFanGain * fanAdjustment));
+    const failurePenalty = Math.max(1, Math.round(FAILURE_FAME_PENALTY * fanAdjustment));
+    const fameDelta = isFailure ? -failurePenalty : successFanGain;
     const experienceGain = Math.floor((isFailure ? averageScore : averageScore * 2) * behavior.experience);
-    const penaltyValue = isFailure ? Math.max(0, potentialEarnings - totalEarningsValue) : 0;
+    const penaltyValue = isFailure ? Math.max(0, adjustedPotentialEarnings - totalEarningsValue) : 0;
 
     setFinalScore(averageScore);
     setTotalEarnings(totalEarningsValue);
@@ -421,8 +514,9 @@ const AdvancedGigSystem: React.FC = () => {
       });
 
       const showTypeLabel = currentShowType === 'acoustic' ? 'acoustic' : 'standard';
+      const failureSummary = derivedFailureReason ? ` ${derivedFailureReason}` : '';
       const activityMessage = isFailure
-        ? `Performance at ${gig.venue.name} fell flat (${averageScore.toFixed(1)}%). Lost ${Math.abs(fameDelta)} fame.`
+        ? `Performance at ${gig.venue.name} fell flat (${averageScore.toFixed(1)}%). Lost ${Math.abs(fameDelta)} fame.${failureSummary}`
         : `Performed a ${showTypeLabel} set at ${gig.venue.name} - Score: ${averageScore.toFixed(1)}%`;
 
       await addActivity('gig_performance', activityMessage, totalEarningsValue);

@@ -12,6 +12,8 @@ import { useGameData } from '@/hooks/useGameData';
 import { useGameEvents, type GameEventWithStatus } from '@/hooks/useGameEvents';
 import { toast } from '@/components/ui/sonner-toast';
 import { supabase } from '@/integrations/supabase/client';
+import AvatarWithClothing from '@/components/avatar/AvatarWithClothing';
+import { useEquippedClothing } from '@/hooks/useEquippedClothing';
 import {
   fetchWorldEnvironmentSnapshot,
   fetchCityEnvironmentDetails,
@@ -51,6 +53,7 @@ const REFRESH_INTERVAL = 60_000;
 const WorldEnvironment: React.FC = () => {
   const { user } = useAuth();
   const { profile, updateProfile, addActivity } = useGameData();
+  const { items: equippedClothing } = useEquippedClothing();
   const [weather, setWeather] = useState<WeatherCondition[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
@@ -595,6 +598,45 @@ const WorldEnvironment: React.FC = () => {
           Dynamic world conditions, events, and opportunities that shape your musical journey
         </p>
       </div>
+
+      {profile && (
+        <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+          <CardContent className="p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <AvatarWithClothing
+                avatarUrl={profile.avatar_url}
+                fallbackText={profile.display_name || profile.username}
+                items={equippedClothing}
+                size={104}
+              />
+            </div>
+            <div className="text-center sm:text-left space-y-2">
+              <div>
+                <h2 className="text-xl font-semibold">{profile.display_name || profile.username}</h2>
+                <p className="text-sm text-muted-foreground">@{profile.username}</p>
+              </div>
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2 text-xs text-muted-foreground">
+                {profile.current_city_id && (
+                  <Badge variant="outline" className="border-border text-foreground/80">
+                    Traveling: {profile.travel_mode ? profile.travel_mode : 'Grounded'}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="border-border text-foreground/80">
+                  Level {profile.level ?? 1}
+                </Badge>
+                <Badge variant="outline" className="border-border text-foreground/80">
+                  Cash ${Math.max(0, profile.cash ?? 0).toLocaleString()}
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {equippedClothing.length
+                  ? `Outfit synced across the world with ${equippedClothing.length} clothing piece${equippedClothing.length === 1 ? '' : 's'}.`
+                  : 'No clothing equipped yet — visit the inventory to update your look.'}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="weather" className="w-full">
         <TabsList className="grid w-full grid-cols-5">

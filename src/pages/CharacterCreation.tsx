@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   SparklesIcon,
   Wand2,
@@ -34,7 +34,14 @@ import {
 } from "@/data/avatarPresets";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth-context";
+import {
+  useGameData,
+  type SkillDefinition,
+  type SkillProgressUpsertInput,
+  type SkillUnlockUpsertInput,
+} from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
@@ -79,10 +86,17 @@ const defaultSkills = {
   performance: 1,
   songwriting: 1,
   composition: 1,
+};
+
+const defaultAttributes = {
+  creativity: 1,
+  business: 1,
+  marketing: 1,
   technical: 1,
 };
 
 type SkillKey = keyof typeof defaultSkills;
+type AttributeKey = keyof typeof defaultAttributes;
 
 const SKILL_SCALE_FACTORS: Record<SkillKey, number> = {
   guitar: 10,
@@ -118,7 +132,6 @@ const ATTRIBUTE_KEYS: SkillKey[] = [
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
-type PlayerSkillsInsert = TablesInsert<"player_skills">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
@@ -152,6 +165,14 @@ const CharacterCreation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const {
+    skillDefinitions: contextSkillDefinitions,
+    upsertSkillProgress,
+    upsertSkillUnlocks,
+  } = useGameData();
+
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
+  const [hasRequestedSkillDefinitions, setHasRequestedSkillDefinitions] = useState(false);
 
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
@@ -173,6 +194,7 @@ const CharacterCreation = () => {
     defaultAvatarSelection.cameraId,
   );
   const [skills, setSkills] = useState<Record<SkillKey, number>>(defaultSkills);
+  const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(defaultAttributes);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -206,6 +228,38 @@ const CharacterCreation = () => {
   }, [loading, user, navigate]);
 
   useEffect(() => {
+    if (contextSkillDefinitions.length > 0) {
+      setSkillDefinitions(contextSkillDefinitions);
+      return;
+    }
+
+    if (hasRequestedSkillDefinitions) {
+      return;
+    }
+
+    setHasRequestedSkillDefinitions(true);
+
+    const fetchSkillDefinitions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("skill_definitions")
+          .select("*")
+          .order("sort_order", { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        setSkillDefinitions((data as SkillDefinition[] | null) ?? []);
+      } catch (error) {
+        console.error("Failed to load skill definitions:", error);
+      }
+    };
+
+    void fetchSkillDefinitions();
+  }, [contextSkillDefinitions, hasRequestedSkillDefinitions]);
+
+  useEffect(() => {
     const fetchExistingData = async () => {
       if (!user) return;
 
@@ -223,12 +277,12 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_skills")
-            .select("id, profile_id, guitar, vocals, drums, bass, performance, songwriting")
+            .select("id, guitar, vocals, drums, bass, performance, songwriting, composition")
             .eq("user_id", user.id)
             .maybeSingle(),
           supabase
             .from("player_attributes")
-            .select("id, profile_id, composition, creativity, business, marketing, technical")
+            .select("id, creativity, business, marketing, technical")
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
@@ -296,28 +350,28 @@ const CharacterCreation = () => {
         const mergedSkills: Record<SkillKey, number> = { ...defaultSkills };
 
         if (skillsResponse.data) {
-          INSTRUMENT_KEYS.forEach((key) => {
-            const dbValue = skillsResponse.data?.[key];
-            if (typeof dbValue === "number") {
-              const factor = SKILL_SCALE_FACTORS[key];
-              mergedSkills[key] = Math.max(
-                MIN_SKILL_VALUE,
-                Math.round(dbValue / factor)
-              );
-            }
+          setSkills(prev => {
+            const updated = { ...prev };
+            (Object.keys(defaultSkills) as SkillKey[]).forEach(key => {
+              const value = skillsResponse.data?.[key];
+              if (typeof value === "number") {
+                updated[key] = value;
+              }
+            });
+            return updated;
           });
         }
 
         if (attributesResponse.data) {
-          ATTRIBUTE_KEYS.forEach((key) => {
-            const dbValue = attributesResponse.data?.[key];
-            if (typeof dbValue === "number") {
-              const factor = SKILL_SCALE_FACTORS[key];
-              mergedSkills[key] = Math.max(
-                MIN_SKILL_VALUE,
-                Math.round(dbValue / factor)
-              );
-            }
+          setAttributes(prev => {
+            const updated = { ...prev };
+            (Object.keys(defaultAttributes) as AttributeKey[]).forEach(key => {
+              const value = attributesResponse.data?.[key];
+              if (typeof value === "number") {
+                updated[key] = value;
+              }
+            });
+            return updated;
           });
         }
 
@@ -439,6 +493,14 @@ const CharacterCreation = () => {
     });
   };
 
+  const handleAttributeChange = (key: AttributeKey, value: number) => {
+    const clampedValue = Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+    setAttributes(prev => ({
+      ...prev,
+      [key]: clampedValue,
+    }));
+  };
+
   const totalSkillPoints = useMemo(
     () => Object.values(skills).reduce((acc, val) => acc + val, 0),
     [skills]
@@ -538,56 +600,13 @@ const CharacterCreation = () => {
 
     const skillPayload: PlayerSkillsInsert = {
       user_id: user.id,
-      profile_id: existingProfile?.id,
-      guitar: Math.min(
-        SKILL_SCALE_FACTORS.guitar * skills.guitar,
-        SKILL_SCALE_FACTORS.guitar * MAX_SKILL_VALUE
-      ),
-      vocals: Math.min(
-        SKILL_SCALE_FACTORS.vocals * skills.vocals,
-        SKILL_SCALE_FACTORS.vocals * MAX_SKILL_VALUE
-      ),
-      drums: Math.min(
-        SKILL_SCALE_FACTORS.drums * skills.drums,
-        SKILL_SCALE_FACTORS.drums * MAX_SKILL_VALUE
-      ),
-      bass: Math.min(
-        SKILL_SCALE_FACTORS.bass * skills.bass,
-        SKILL_SCALE_FACTORS.bass * MAX_SKILL_VALUE
-      ),
-      performance: Math.min(
-        SKILL_SCALE_FACTORS.performance * skills.performance,
-        SKILL_SCALE_FACTORS.performance * MAX_SKILL_VALUE
-      ),
-      songwriting: Math.min(
-        SKILL_SCALE_FACTORS.songwriting * skills.songwriting,
-        SKILL_SCALE_FACTORS.songwriting * MAX_SKILL_VALUE
-      ),
-    };
-
-    const attributesPayload: PlayerAttributesInsert = {
-      user_id: user.id,
-      profile_id: existingProfile?.id,
-      composition: Math.min(
-        SKILL_SCALE_FACTORS.composition * skills.composition,
-        SKILL_SCALE_FACTORS.composition * MAX_SKILL_VALUE
-      ),
-      creativity: Math.min(
-        SKILL_SCALE_FACTORS.creativity * skills.creativity,
-        SKILL_SCALE_FACTORS.creativity * MAX_SKILL_VALUE
-      ),
-      business: Math.min(
-        SKILL_SCALE_FACTORS.business * skills.business,
-        SKILL_SCALE_FACTORS.business * MAX_SKILL_VALUE
-      ),
-      marketing: Math.min(
-        SKILL_SCALE_FACTORS.marketing * skills.marketing,
-        SKILL_SCALE_FACTORS.marketing * MAX_SKILL_VALUE
-      ),
-      technical: Math.min(
-        SKILL_SCALE_FACTORS.technical * skills.technical,
-        SKILL_SCALE_FACTORS.technical * MAX_SKILL_VALUE
-      ),
+      guitar: skills.guitar,
+      vocals: skills.vocals,
+      drums: skills.drums,
+      bass: skills.bass,
+      performance: skills.performance,
+      songwriting: skills.songwriting,
+      composition: skills.composition,
     };
 
     try {
@@ -605,30 +624,78 @@ const CharacterCreation = () => {
         throw new Error("Profile save did not return any data.");
       }
 
-      const skillPayload: PlayerSkillsInsert = {
+      const attributesPayload: PlayerAttributesInsert = {
         user_id: user.id,
         profile_id: upsertedProfile.id,
-        guitar: skills.guitar,
-        vocals: skills.vocals,
-        drums: skills.drums,
-        bass: skills.bass,
-        performance: skills.performance,
-        songwriting: skills.songwriting,
-        composition: skills.composition,
-        technical: skills.technical,
+        composition: Math.min(
+          SKILL_SCALE_FACTORS.composition * skills.composition,
+          SKILL_SCALE_FACTORS.composition * MAX_SKILL_VALUE
+        ),
+        creativity: Math.min(
+          SKILL_SCALE_FACTORS.creativity * skills.creativity,
+          SKILL_SCALE_FACTORS.creativity * MAX_SKILL_VALUE
+        ),
+        business: Math.min(
+          SKILL_SCALE_FACTORS.business * skills.business,
+          SKILL_SCALE_FACTORS.business * MAX_SKILL_VALUE
+        ),
+        marketing: Math.min(
+          SKILL_SCALE_FACTORS.marketing * skills.marketing,
+          SKILL_SCALE_FACTORS.marketing * MAX_SKILL_VALUE
+        ),
+        technical: Math.min(
+          SKILL_SCALE_FACTORS.technical * skills.technical,
+          SKILL_SCALE_FACTORS.technical * MAX_SKILL_VALUE
+        ),
       };
 
-      const { error: skillsError } = await supabase
-        .from("player_skills")
-        .upsert(skillPayload, { onConflict: "profile_id" });
+      if (skillDefinitions.length > 0) {
+        const progressEntries: SkillProgressUpsertInput[] = [];
+        const unlockEntries: SkillUnlockUpsertInput[] = [];
 
-      if (skillsError) {
-        throw skillsError;
+        skillDefinitions.forEach((definition) => {
+          if (!definition?.id) {
+            return;
+          }
+
+          const slug = definition.slug as SkillKey;
+          const assignedValue = slug in skills ? skills[slug as SkillKey] : undefined;
+          const defaultLevel = Number.isFinite(definition.starting_level)
+            ? Number(definition.starting_level)
+            : MIN_SKILL_VALUE;
+          const normalizedLevel = Math.max(
+            MIN_SKILL_VALUE,
+            Math.min(MAX_SKILL_VALUE, assignedValue ?? defaultLevel),
+          );
+
+          progressEntries.push({
+            skill_id: definition.id,
+            current_level: normalizedLevel,
+            current_xp: Number.isFinite(definition.starting_experience)
+              ? Number(definition.starting_experience)
+              : 0,
+          });
+
+          const unlockedByDefault = Boolean(definition.is_default_unlocked);
+          unlockEntries.push({
+            skill_id: definition.id,
+            is_unlocked: unlockedByDefault,
+            unlocked_at: unlockedByDefault ? new Date().toISOString() : null,
+          });
+        });
+
+        if (progressEntries.length > 0) {
+          await upsertSkillProgress(upsertedProfile.id, progressEntries);
+        }
+
+        if (unlockEntries.length > 0) {
+          await upsertSkillUnlocks(upsertedProfile.id, unlockEntries);
+        }
       }
 
       const { error: attributesError } = await supabase
         .from("player_attributes")
-        .upsert(attributesPayload, { onConflict: "user_id" });
+        .upsert(attributePayload, { onConflict: "user_id" });
 
       if (attributesError) {
         throw attributesError;
@@ -1054,6 +1121,28 @@ const CharacterCreation = () => {
                   />
                 </div>
               ))}
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground">Career Attributes</h3>
+              <div className="grid gap-5 md:grid-cols-2">
+                {(Object.keys(defaultAttributes) as AttributeKey[]).map(key => (
+                  <div key={key} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium capitalize">{key}</span>
+                      <span className="text-sm font-semibold text-primary">{attributes[key]}</span>
+                    </div>
+                    <Slider
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={[attributes[key]]}
+                      onValueChange={([value]) =>
+                        handleAttributeChange(key, value ?? attributes[key])
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>

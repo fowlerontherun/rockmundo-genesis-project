@@ -247,6 +247,7 @@ const slugifyName = (value: string): string =>
     .replace(/(^-|-$)+/g, "");
 
 const defaultEngineerName = "Self-produced";
+const RECORDING_ATTRIBUTE_KEYS: AttributeKey[] = ["technical_mastery", "creative_insight"];
 
 const MusicCreation = () => {
   const { user } = useAuth();
@@ -939,10 +940,18 @@ const MusicCreation = () => {
 
       if (songError) throw songError;
 
+      const attributeScores = extractAttributeScores(attributes);
+      const recordingFocus: AttributeFocus = "songwriting";
+      const experienceGain = Math.max(
+        0,
+        calculateExperienceReward(session.quality_gain * 5, attributeScores, recordingFocus)
+      );
+
       if (profile) {
+        const xpResult = applyAttributeToValue(session.quality_gain * 5, attributes, RECORDING_ATTRIBUTE_KEYS);
         await updateProfile({
           cash: Math.max(0, (profile.cash ?? 0) - session.total_cost),
-          experience: (profile.experience ?? 0) + session.quality_gain * 5
+          experience: (profile.experience ?? 0) + experienceGain
         });
       }
 
@@ -957,6 +966,25 @@ const MusicCreation = () => {
             skillLevels.vocals + Math.round(session.total_takes / 2)
           )
         });
+      }
+
+      const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
+      const currentMusicality = attributeScores.musicality ?? 0;
+      const currentCharisma = attributeScores.charisma ?? 0;
+
+      const musicalityGain = Math.round(experienceGain * 0.6);
+      const charismaGain = Math.round(experienceGain * 0.25);
+
+      if (musicalityGain > 0) {
+        attributeUpdates.musicality = Math.min(1000, Math.round(currentMusicality + musicalityGain));
+      }
+
+      if (charismaGain > 0) {
+        attributeUpdates.charisma = Math.min(1000, Math.round(currentCharisma + charismaGain));
+      }
+
+      if (Object.keys(attributeUpdates).length > 0) {
+        await updateAttributes(attributeUpdates);
       }
 
       await addActivity(

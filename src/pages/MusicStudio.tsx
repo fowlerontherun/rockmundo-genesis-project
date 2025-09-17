@@ -123,7 +123,6 @@ const MusicStudio = () => {
     [skillProgressMap, skills]
   );
 
-
   const [songs, setSongs] = useState<SupabaseSong[]>([]);
   const [sessionsBySong, setSessionsBySong] = useState<Record<string, RecordingSession[]>>({});
   const [tracksBySession, setTracksBySession] = useState<Record<string, ProductionTrack[]>>({});
@@ -451,20 +450,26 @@ const MusicStudio = () => {
 
       if (profile) {
         const cashDelta = stage === "recording" ? session.total_cost : totalCost - session.total_cost;
+        const experienceResult = applyAttributeToValue(qualityGain * 4, attributes, STUDIO_ATTRIBUTE_KEYS);
         await updateProfile({
           cash: Math.max(0, (profile.cash ?? 0) - cashDelta),
-          experience: (profile.experience ?? 0) + qualityGain * 4
+          experience: (profile.experience ?? 0) + experienceResult.value
         });
       }
 
       if (hasSkillLevels) {
         if (stage === "mixing") {
+          const guitarGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.guitar).value;
+          const bassGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.bass).value;
+          const drumsGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.drums).value;
           await updateSkills({
             guitar: Math.min(100, skillLevels.guitar + 1),
             bass: Math.min(100, skillLevels.bass + 1),
             drums: Math.min(100, skillLevels.drums + 1)
           });
         } else if (stage === "mastering") {
+          const performanceGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.performance).value;
+          const songwritingGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.songwriting).value;
           await updateSkills({
             performance: Math.min(100, skillLevels.performance + 1),
             songwriting: Math.min(100, skillLevels.songwriting + 1)

@@ -21,9 +21,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
-import type { Tables } from "@/integrations/supabase/types";
+import { useGameData, type PlayerAttributes, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP } from "@/utils/attributeProgression";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -43,7 +43,16 @@ import {
   Flame,
 } from "lucide-react";
 import { addMonths } from "date-fns";
-import { calculateLevel } from "@/utils/gameBalance";
+import {
+  AttributeFocus,
+  AttributeKey,
+  calculateExperienceReward,
+  calculateFanGain,
+  calculateLevel,
+  extractAttributeScores,
+  getFocusAttributeScore,
+  attributeScoreToMultiplier
+} from "@/utils/gameBalance";
 import { applyCostReduction } from "@/utils/attributeModifiers";
 
 type EventType = "gig" | "recording" | "rehearsal" | "meeting" | "tour";
@@ -161,17 +170,16 @@ type SkillGainKey =
   | "bass";
 
 type SkillGains = Partial<Record<SkillGainKey, number>>;
-
-type PlayerAttributes = Tables<'player_attributes'>;
-
-const ATTRIBUTE_SCALE = 100;
-const ATTRIBUTE_GAIN_KEYS = new Set<SkillGainKey>([
-  "technical",
-  "composition",
+type AttributeGainKey = "business" | "marketing" | "creativity" | "technical";
+const ATTRIBUTE_GAIN_KEYS: AttributeGainKey[] = [
   "business",
   "marketing",
   "creativity",
-]);
+  "technical"
+];
+const isAttributeGainKey = (key: SkillGainKey): key is AttributeGainKey =>
+  ATTRIBUTE_GAIN_KEYS.includes(key as AttributeGainKey);
+const MAX_ATTRIBUTE_VALUE = 1000;
 
 const EVENT_REWARD_CONFIG: Record<
   EventType,
@@ -218,6 +226,40 @@ const EVENT_REWARD_CONFIG: Record<
     fame: 60,
     skillGains: { performance: 3, marketing: 2, vocals: 2 },
   },
+};
+
+const EVENT_ATTRIBUTE_FOCUS: Record<EventType, AttributeFocus> = {
+  gig: "performance",
+  recording: "songwriting",
+  rehearsal: "instrumental",
+  meeting: "performance",
+  tour: "performance"
+};
+
+const EVENT_ATTRIBUTE_INVESTMENTS: Record<EventType, Array<{ key: AttributeKey; weight: number }>> = {
+  gig: [
+    { key: "charisma", weight: 0.5 },
+    { key: "looks", weight: 0.3 },
+    { key: "musicality", weight: 0.2 }
+  ],
+  recording: [
+    { key: "musicality", weight: 0.7 },
+    { key: "charisma", weight: 0.3 }
+  ],
+  rehearsal: [
+    { key: "musicality", weight: 0.6 },
+    { key: "charisma", weight: 0.2 },
+    { key: "looks", weight: 0.2 }
+  ],
+  meeting: [
+    { key: "charisma", weight: 0.65 },
+    { key: "looks", weight: 0.35 }
+  ],
+  tour: [
+    { key: "charisma", weight: 0.45 },
+    { key: "looks", weight: 0.35 },
+    { key: "musicality", weight: 0.2 }
+  ]
 };
 
 const formatSkillLabel = (skill: string) => skill.charAt(0).toUpperCase() + skill.slice(1);
@@ -737,15 +779,7 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const {
-    profile,
-    skills,
-    selectedCharacterId,
-    updateProfile,
-    updateSkills,
-    addActivity,
-    refetch,
-  } = useGameData();
+  const { profile, skills, attributes, updateProfile, updateSkills, updateAttributes, addActivity, refetch } = useGameData();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -764,8 +798,7 @@ const Schedule = () => {
   const notifiedEventsRef = useRef<Set<string>>(new Set());
   const profileRef = useRef<PlayerProfile | null>(profile);
   const skillsRef = useRef<PlayerSkills | null>(skills);
-  const attributesRef = useRef<PlayerAttributes | null>(null);
-  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
+  const attributesRef = useRef<PlayerAttributes | null>(attributes);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -774,48 +807,9 @@ const Schedule = () => {
   useEffect(() => {
     skillsRef.current = skills;
   }, [skills]);
-
   useEffect(() => {
     attributesRef.current = attributes;
   }, [attributes]);
-
-  useEffect(() => {
-    if (!user || !selectedCharacterId) {
-      setAttributes(null);
-      attributesRef.current = null;
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadAttributes = async () => {
-      const { data, error } = await supabase
-        .from("player_attributes")
-        .select("*")
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        console.error("Failed to load player attributes:", error);
-        setAttributes(null);
-        attributesRef.current = null;
-        return;
-      }
-
-      setAttributes(data ?? null);
-      attributesRef.current = data ?? null;
-    };
-
-    void loadAttributes();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedCharacterId, user]);
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -1030,18 +1024,52 @@ const Schedule = () => {
       const currentExperience = Number(activeProfile.experience ?? 0);
       const currentFame = Number(activeProfile.fame ?? 0);
       const activeAttributes = attributesRef.current;
+      const attributeScores = extractAttributeScores(activeAttributes);
       const baseEnergyCost =
         event.energy_cost !== null && event.energy_cost !== undefined
           ? Number(event.energy_cost)
           : null;
+      const enduranceMultiplier = attributeScoreToMultiplier(attributeScores.physical_endurance ?? null, 0.3);
       const effectiveEnergyCost =
         baseEnergyCost !== null
-          ? applyCostReduction(baseEnergyCost, activeAttributes?.physical_endurance)
+          ? applyCostReduction(baseEnergyCost, enduranceMultiplier)
           : 0;
 
-      const newCash = currentCash + reward.cash;
-      const newExperience = currentExperience + reward.experience;
-      const newFame = Math.max(0, currentFame + reward.fame);
+      const focus = EVENT_ATTRIBUTE_FOCUS[event.type] ?? "general";
+      const charismaMultiplier = attributeScoreToMultiplier(attributeScores.charisma ?? null, 0.4);
+      const looksMultiplier = attributeScoreToMultiplier(attributeScores.looks ?? null, 0.25);
+      const musicalityMultiplier = attributeScoreToMultiplier(attributeScores.musicality ?? null, 0.3);
+
+      let cashMultiplier = charismaMultiplier;
+      if (focus === "performance") {
+        cashMultiplier *= looksMultiplier;
+      } else if (focus === "songwriting" || focus === "instrumental") {
+        cashMultiplier = musicalityMultiplier;
+      }
+
+      const cashGain = Math.round(reward.cash * cashMultiplier);
+      const experienceGain = Math.max(0, calculateExperienceReward(reward.experience, attributeScores, focus));
+
+      const currentSkills = skillsRef.current;
+      const relevantSkill = (() => {
+        if (!currentSkills) return 0;
+        switch (focus) {
+          case "songwriting":
+            return currentSkills.songwriting ?? 0;
+          case "instrumental":
+            return Math.round(
+              ((currentSkills.guitar ?? 0) + (currentSkills.drums ?? 0) + (currentSkills.bass ?? 0)) / 3
+            );
+          default:
+            return currentSkills.performance ?? 0;
+        }
+      })();
+
+      const fameGain = Math.max(0, calculateFanGain(reward.fame, relevantSkill, attributeScores));
+
+      const newCash = currentCash + cashGain;
+      const newExperience = currentExperience + experienceGain;
+      const newFame = Math.max(0, currentFame + fameGain);
 
       profileUpdates.cash = newCash;
       profileUpdates.experience = newExperience;
@@ -1071,7 +1099,7 @@ const Schedule = () => {
       profileRef.current = updatedProfile;
 
       const activeSkills = skillsRef.current;
-      const activeAttributes = attributesRef.current;
+      const latestAttributes = attributesRef.current;
       const skillSummaries: string[] = [];
       if (reward.skillGains) {
         const skillUpdates: Partial<PlayerSkills> = {};
@@ -1084,31 +1112,19 @@ const Schedule = () => {
           }
 
           const skillKey = key as SkillGainKey;
-          if (ATTRIBUTE_GAIN_KEYS.has(skillKey)) {
-            if (!activeAttributes || !selectedCharacterId) {
-              continue;
-            }
-            const currentValue = Number(
-              activeAttributes[skillKey as keyof PlayerAttributes] ?? 0
-            );
-            const nextValue = Math.min(
-              1000,
-              currentValue + numericDelta * ATTRIBUTE_SCALE
-            );
+          if (isAttributeGainKey(skillKey)) {
+            if (!latestAttributes) continue;
+            const currentValue = Number(latestAttributes[skillKey] ?? 0);
+            const nextValue = Math.min(MAX_ATTRIBUTE_VALUE, currentValue + numericDelta);
             const actualGain = nextValue - currentValue;
-
             if (actualGain > 0) {
-              attributeUpdates[skillKey as keyof PlayerAttributes] = nextValue;
-              const displayGain = actualGain / ATTRIBUTE_SCALE;
-              skillSummaries.push(`+${displayGain} ${formatSkillLabel(skillKey)}`);
+              attributeUpdates[skillKey] = nextValue;
+              skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
             }
           } else if (activeSkills) {
-            const currentValue = Number(
-              activeSkills[skillKey as keyof PlayerSkills] ?? 0
-            );
+            const currentValue = Number(activeSkills[skillKey as keyof PlayerSkills] ?? 0);
             const nextValue = Math.min(100, currentValue + numericDelta);
             const actualGain = nextValue - currentValue;
-
             if (actualGain > 0) {
               skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
               skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
@@ -1123,30 +1139,44 @@ const Schedule = () => {
           }
         }
 
-        if (Object.keys(attributeUpdates).length > 0 && selectedCharacterId) {
-          const { data: updatedAttributes, error: attributeError } = await supabase
-            .from("player_attributes")
-            .update(attributeUpdates)
-            .eq("profile_id", selectedCharacterId)
-            .select("*")
-            .single();
-
-          if (attributeError) {
-            console.error("Error updating attributes:", attributeError);
-            throw attributeError;
-          }
-
+        if (Object.keys(attributeUpdates).length > 0) {
+          const updatedAttributes = await updateAttributes(attributeUpdates);
           if (updatedAttributes) {
             attributesRef.current = updatedAttributes;
-            setAttributes(updatedAttributes);
           }
         }
       }
 
+      const attributeInvestments = EVENT_ATTRIBUTE_INVESTMENTS[event.type] ?? [];
+      if (attributeInvestments.length > 0 && (experienceGain > 0 || fameGain > 0)) {
+        const totalWeight = attributeInvestments.reduce((sum, item) => sum + item.weight, 0);
+        const baseInvestment = Math.max(0, Math.round((experienceGain + fameGain) * 0.5));
+        const attributeUpdates: Partial<PlayerAttributes> = {};
+
+        for (const { key, weight } of attributeInvestments) {
+          if (weight <= 0) {
+            continue;
+          }
+
+          const currentValue = attributeScores[key] ?? 0;
+          const distributedGain = Math.round((baseInvestment * weight) / totalWeight);
+          if (distributedGain <= 0) {
+            continue;
+          }
+
+          const nextValue = Math.min(1000, Math.round(currentValue + distributedGain));
+          attributeUpdates[key as keyof PlayerAttributes] = nextValue as PlayerAttributes[keyof PlayerAttributes];
+        }
+
+        if (Object.keys(attributeUpdates).length > 0) {
+          await updateAttributes(attributeUpdates);
+        }
+      }
+
       const summarySegments = [
-        `+${reward.experience} XP`,
-        `+${reward.fame} fame`,
-        `+$${reward.cash.toLocaleString()} cash`,
+        `+${experienceGain} XP`,
+        `+${fameGain} fame`,
+        `+$${cashGain.toLocaleString()} cash`,
       ];
 
       if (effectiveEnergyCost > 0) {
@@ -1165,7 +1195,7 @@ const Schedule = () => {
         " • "
       )}`;
 
-      await addActivity(`schedule_${event.type}`, activityMessage, reward.cash);
+      await addActivity(`schedule_${event.type}`, activityMessage, cashGain);
       await refetch();
 
       return {
@@ -1173,7 +1203,7 @@ const Schedule = () => {
         rewardLabel: reward.label,
       };
     },
-    [addActivity, refetch, selectedCharacterId, updateProfile, updateSkills, user]
+    [addActivity, refetch, updateAttributes, updateProfile, updateSkills, user]
   );
 
   const handleFormChange = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
