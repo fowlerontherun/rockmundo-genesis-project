@@ -75,6 +75,7 @@ const BAND_ROLES = [
 type PlayerSkillsRow = Database['public']['Tables']['player_skills']['Row'];
 
 type BandMemberRow = Database['public']['Tables']['band_members']['Row'];
+type GlobalChartRow = Database['public']['Tables']['global_charts']['Row'];
 
 type BandInvitation = Database['public']['Tables']['band_invitations']['Row'] & {
   band?: Band;
@@ -97,6 +98,25 @@ interface BandScheduleEvent {
   timestamp: number | null;
   status: string | null;
 }
+
+const chartsTable = 'global_charts';
+const chartColumns = ['rank'] as const;
+const songChartColumns = ['chart_position', 'chartPosition', 'position'] as const;
+
+const parseChartPositionValue = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
 
 const BandManager = () => {
   const { toast } = useToast();
@@ -194,7 +214,7 @@ const BandManager = () => {
     if (!user?.id) return;
 
     try {
-      const { data: memberData, error: memberError } = await supabase
+      const { data: memberQueryData, error: memberError } = await supabase
         .from('band_members')
         .select('id, band_id, user_id, role, salary, joined_at')
         .eq('band_id', bandId)
@@ -202,7 +222,7 @@ const BandManager = () => {
 
       if (memberError) throw memberError;
 
-      const memberRows = (memberData ?? []) as BandMemberRow[];
+      const memberRows = (memberQueryData ?? []) as BandMemberRow[];
       const memberIds = memberRows
         .map((member) => member.user_id)
         .filter((id): id is string => typeof id === 'string' && id.length > 0);
@@ -343,8 +363,36 @@ const BandManager = () => {
       const albumNames = new Set<string>();
       const chartPositions: number[] = [];
 
+      const songIds = songsData
+        .map((song) => song.id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+      if (chartsTable && chartColumns.length > 0 && songIds.length > 0) {
+        const columns = Array.from(new Set([...chartColumns, 'song_id'])).join(', ');
+        const { data: chartRows, error: chartsError } = await supabase
+          .from(chartsTable)
+          .select(columns)
+          .in('song_id', songIds);
+
+        if (chartsError) {
+          console.error('Error loading chart positions:', chartsError);
+        } else {
+          const rows = (chartRows as Partial<GlobalChartRow>[] | null | undefined) ?? [];
+          rows.forEach((row) => {
+            const record = row as Record<string, unknown>;
+            for (const column of chartColumns) {
+              const parsed = parseChartPositionValue(record[column]);
+              if (parsed !== null) {
+                chartPositions.push(parsed);
+                break;
+              }
+            }
+          });
+        }
+      }
+
       songsData.forEach((song) => {
-        const record = song as SongRow & {
+        const record = song as SongRow & Record<string, unknown> & {
           album?: string | null;
           album_name?: string | null;
           albumTitle?: string | null;
@@ -355,13 +403,11 @@ const BandManager = () => {
           albumNames.add(albumName.trim());
         }
 
-        const rawPosition = (song as Record<string, unknown>).chart_position ?? (song as Record<string, unknown>).chartPosition;
-        if (typeof rawPosition === 'number' && Number.isFinite(rawPosition)) {
-          chartPositions.push(rawPosition);
-        } else if (typeof rawPosition === 'string') {
-          const parsed = Number(rawPosition);
-          if (!Number.isNaN(parsed)) {
+        for (const column of songChartColumns) {
+          const parsed = parseChartPositionValue(record[column]);
+          if (parsed !== null) {
             chartPositions.push(parsed);
+            break;
           }
         }
       });
