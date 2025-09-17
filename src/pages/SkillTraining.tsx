@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
 import {
+  SkillSystemProvider,
+  useSkillSystem,
+  type SkillDefinitionRecord,
+  type SkillProgressRecord,
+  type SkillRelationshipRecord
+} from "@/hooks/useSkillSystem";
+import {
   calculateTrainingCost,
   getSkillCap,
   isOnCooldown,
@@ -14,107 +21,322 @@ import {
   COOLDOWNS
 } from "@/utils/gameBalance";
 import { applyCooldownModifier, applyRewardBonus } from "@/utils/attributeModifiers";
-import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
+import {
+  type LucideIcon,
+  Guitar,
+  Mic,
+  Music,
+  Drum,
+  Volume2,
+  PenTool,
+  Star,
+  Lock,
+  Coins,
+  Clock,
+  TrendingUp
+} from "lucide-react";
 
-type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
+const iconMap: Record<string, LucideIcon> = {
+  guitar: Guitar,
+  vocals: Mic,
+  drums: Drum,
+  bass: Volume2,
+  performance: Star,
+  songwriting: PenTool
+};
 
-interface TrainingSession {
-  skill: SkillName;
+const fallbackDefinitions: SkillDefinitionRecord[] = [
+  {
+    id: "guitar",
+    slug: "guitar",
+    display_name: "Guitar Practice",
+    description: "Master guitar techniques and improve your playing skills",
+    base_xp_gain: 5,
+    training_duration_minutes: 30,
+    icon_slug: "guitar",
+    is_trainable: true
+  },
+  {
+    id: "vocals",
+    slug: "vocals",
+    display_name: "Vocal Training",
+    description: "Develop your voice range, control, and stage presence",
+    base_xp_gain: 6,
+    training_duration_minutes: 45,
+    icon_slug: "vocals",
+    is_trainable: true
+  },
+  {
+    id: "drums",
+    slug: "drums",
+    display_name: "Drum Lessons",
+    description: "Learn rhythm patterns and improve your timing",
+    base_xp_gain: 5,
+    training_duration_minutes: 40,
+    icon_slug: "drums",
+    is_trainable: true
+  },
+  {
+    id: "bass",
+    slug: "bass",
+    display_name: "Bass Workshop",
+    description: "Strengthen your bass fundamentals and groove",
+    base_xp_gain: 5,
+    training_duration_minutes: 35,
+    icon_slug: "bass",
+    is_trainable: true
+  },
+  {
+    id: "performance",
+    slug: "performance",
+    display_name: "Stage Performance",
+    description: "Enhance your stage presence and crowd engagement",
+    base_xp_gain: 8,
+    training_duration_minutes: 60,
+    icon_slug: "performance",
+    is_trainable: true
+  },
+  {
+    id: "songwriting",
+    slug: "songwriting",
+    display_name: "Songwriting Class",
+    description: "Learn composition, lyrics, and musical arrangement",
+    base_xp_gain: 7,
+    training_duration_minutes: 50,
+    icon_slug: "songwriting",
+    is_trainable: true
+  }
+];
+
+const fallbackDescriptionBySlug = fallbackDefinitions.reduce<Record<string, string>>((acc, definition) => {
+  acc[definition.slug] = definition.description ?? "";
+  return acc;
+}, {});
+
+const fallbackDurationBySlug = fallbackDefinitions.reduce<Record<string, number>>((acc, definition) => {
+  acc[definition.slug] = definition.training_duration_minutes ?? 30;
+  return acc;
+}, {});
+
+const fallbackXpBySlug = fallbackDefinitions.reduce<Record<string, number>>((acc, definition) => {
+  acc[definition.slug] = definition.base_xp_gain ?? 5;
+  return acc;
+}, {});
+
+interface TrainingSessionConfig {
+  slug: string;
   name: string;
   icon: LucideIcon;
   duration: number;
   xpGain: number;
   description: string;
+  definition: SkillDefinitionRecord;
 }
 
-const SkillTraining = () => {
+interface SessionRequirement {
+  relationship: SkillRelationshipRecord;
+  requiredName: string;
+  currentValue: number;
+}
+
+interface DerivedSession extends TrainingSessionConfig {
+  progressEntry?: SkillProgressRecord;
+  isUnlocked: boolean;
+  missingRequirement?: SessionRequirement;
+  cooldownActive: boolean;
+  remainingCooldown: number;
+}
+
+const formatSkillName = (slug: string) =>
+  slug
+    .split("_")
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const SkillTrainingContent = () => {
   const { toast } = useToast();
-  const { profile, skills, attributes, updateSkills, updateProfile, addActivity, loading } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    updateProfile,
+    addActivity,
+    loading: gameDataLoading
+  } = useGameData();
+  const {
+    definitions,
+    relationships,
+    progress,
+    loading: skillSystemLoading,
+    updateSkillProgress
+  } = useSkillSystem();
   const [training, setTraining] = useState(false);
+
   const baseTrainingCooldown = COOLDOWNS.skillTraining;
-
-  const trainingSessions: TrainingSession[] = [
-    {
-      skill: "guitar",
-      name: "Guitar Practice",
-      icon: Guitar,
-      duration: 30,
-      xpGain: 5,
-      description: "Master guitar techniques and improve your playing skills"
-    },
-    {
-      skill: "vocals",
-      name: "Vocal Training",
-      icon: Mic,
-      duration: 45,
-      xpGain: 6,
-      description: "Develop your voice range, control, and stage presence"
-    },
-    {
-      skill: "drums",
-      name: "Drum Lessons",
-      icon: Drum,
-      duration: 40,
-      xpGain: 5,
-      description: "Learn rhythm patterns and improve your timing"
-    },
-    {
-      skill: "bass",
-      name: "Bass Workshop",
-      icon: Volume2,
-      duration: 35,
-      xpGain: 5,
-      description: "Strengthen your bass fundamentals and groove"
-    },
-    {
-      skill: "performance",
-      name: "Stage Performance",
-      icon: Star,
-      duration: 60,
-      xpGain: 8,
-      description: "Enhance your stage presence and crowd engagement"
-    },
-    {
-      skill: "songwriting",
-      name: "Songwriting Class",
-      icon: PenTool,
-      duration: 50,
-      xpGain: 7,
-      description: "Learn composition, lyrics, and musical arrangement"
-    }
-  ];
-
   const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
   const skillCap = getSkillCap(playerLevel, totalExperience);
-  const lastTrainingTime = skills?.updated_at ?? null;
-  const cooldownActive = lastTrainingTime ? isOnCooldown(lastTrainingTime, trainingCooldown) : false;
-  const remainingCooldown = cooldownActive && lastTrainingTime
-    ? getRemainingCooldown(lastTrainingTime, trainingCooldown)
-    : 0;
 
-  const handleTraining = async (session: TrainingSession) => {
+  const availableDefinitions = useMemo(() => {
+    const trainable = definitions.filter(definition => definition.is_trainable !== false);
+    return trainable.length > 0 ? trainable : fallbackDefinitions;
+  }, [definitions]);
+
+  const definitionBySlug = useMemo(() => {
+    return availableDefinitions.reduce<Record<string, SkillDefinitionRecord>>((acc, definition) => {
+      acc[definition.slug] = definition;
+      return acc;
+    }, {});
+  }, [availableDefinitions]);
+
+  const trainingSessions = useMemo<TrainingSessionConfig[]>(() => {
+    return availableDefinitions.map(definition => {
+      const slug = definition.slug;
+      const iconKey = definition.icon_slug ?? slug;
+      const Icon = iconMap[iconKey] ?? Music;
+      const name = definition.display_name ?? formatSkillName(slug);
+      const duration = Number(
+        definition.training_duration_minutes ?? fallbackDurationBySlug[slug] ?? 30
+      );
+      const xpGain = Number(definition.base_xp_gain ?? fallbackXpBySlug[slug] ?? 5);
+      const description = definition.description ?? fallbackDescriptionBySlug[slug] ?? name;
+
+      return {
+        slug,
+        name,
+        icon: Icon,
+        duration,
+        xpGain,
+        description,
+        definition
+      } satisfies TrainingSessionConfig;
+    });
+  }, [availableDefinitions]);
+
+  const relationshipsBySkill = useMemo(() => {
+    return relationships.reduce<Record<string, SkillRelationshipRecord[]>>((acc, relationship) => {
+      if (!relationship.skill_slug) return acc;
+      if (!acc[relationship.skill_slug]) {
+        acc[relationship.skill_slug] = [];
+      }
+      acc[relationship.skill_slug].push(relationship);
+      return acc;
+    }, {});
+  }, [relationships]);
+
+  const progressMap = useMemo(() => {
+    return progress.reduce<Record<string, SkillProgressRecord>>((acc, entry) => {
+      if (entry.skill_slug) {
+        acc[entry.skill_slug] = entry;
+      }
+      return acc;
+    }, {});
+  }, [progress]);
+
+  const getSkillValue = useCallback(
+    (slug: string) => {
+      if (!skills) return 0;
+      const record = skills as unknown as Record<string, unknown>;
+      const value = record[slug];
+      if (typeof value === "number") return value;
+      if (typeof value === "string") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    },
+    [skills]
+  );
+
+  const derivedSessions = useMemo<DerivedSession[]>(() => {
+    return trainingSessions.map(session => {
+      const requirements = relationshipsBySkill[session.slug] ?? [];
+      const missingRequirement = requirements
+        .map(relationship => {
+          const currentValue = getSkillValue(relationship.required_skill_slug);
+          const requiredDefinition = definitionBySlug[relationship.required_skill_slug];
+          return {
+            relationship,
+            currentValue,
+            requiredName: requiredDefinition?.display_name ?? formatSkillName(relationship.required_skill_slug)
+          } satisfies SessionRequirement;
+        })
+        .find(requirement => requirement.currentValue < requirement.relationship.required_value);
+
+      const progressEntry = progressMap[session.slug];
+      const lastTraining = progressEntry?.last_trained_at ?? progressEntry?.updated_at ?? null;
+      const cooldownActive = lastTraining ? isOnCooldown(lastTraining, trainingCooldown) : false;
+      const remainingCooldown = cooldownActive && lastTraining
+        ? getRemainingCooldown(lastTraining, trainingCooldown)
+        : 0;
+
+      const isUnlocked = Boolean(progressEntry?.unlocked_at) || !missingRequirement;
+
+      return {
+        ...session,
+        progressEntry,
+        isUnlocked,
+        missingRequirement,
+        cooldownActive,
+        remainingCooldown
+      } satisfies DerivedSession;
+    });
+  }, [
+    trainingSessions,
+    relationshipsBySkill,
+    getSkillValue,
+    definitionBySlug,
+    progressMap,
+    trainingCooldown
+  ]);
+
+  const sessionBySlug = useMemo(() => {
+    return derivedSessions.reduce<Map<string, DerivedSession>>((acc, session) => {
+      acc.set(session.slug, session);
+      return acc;
+    }, new Map<string, DerivedSession>());
+  }, [derivedSessions]);
+
+  const isLoading = gameDataLoading || skillSystemLoading;
+
+  const getSkillLevel = (value: number) => {
+    if (value >= 90) return "Master";
+    if (value >= 75) return "Expert";
+    if (value >= 60) return "Advanced";
+    if (value >= 40) return "Intermediate";
+    if (value >= 20) return "Beginner";
+    return "Novice";
+  };
+
+  const getSkillColor = (value: number) => {
+    if (value >= 90) return "text-purple-400";
+    if (value >= 75) return "text-blue-400";
+    if (value >= 60) return "text-green-400";
+    if (value >= 40) return "text-yellow-400";
+    if (value >= 20) return "text-orange-400";
+    return "text-red-400";
+  };
+
+  const handleTraining = async (session: DerivedSession) => {
     if (!skills || !profile) return;
 
-    const currentSkill = Number(skills[session.skill] ?? 0);
-    const playerCash = Number(profile.cash ?? 0);
-    const playerLevel = Number(profile.level ?? 1);
-    const totalExperience = Number(profile.experience ?? 0);
-    const skillCap = getSkillCap(playerLevel, totalExperience);
-    const trainingCost = calculateTrainingCost(currentSkill);
-    const lastTraining = skills.updated_at;
-    const cooldownActive = lastTraining ? isOnCooldown(lastTraining, trainingCooldown) : false;
-
-    if (currentSkill >= skillCap) {
+    if (!session.isUnlocked) {
+      const requirement = session.missingRequirement;
       toast({
         variant: "destructive",
-        title: "Skill Cap Reached",
-        description: `Level up to increase your ${session.skill} cap before training again.`
+        title: "Skill Locked",
+        description: requirement
+          ? `Reach ${requirement.requiredName} ${requirement.relationship.required_value} to unlock.`
+          : "This training session is currently locked."
       });
       return;
     }
+
+    const progressEntry = session.progressEntry;
+    const lastTraining = progressEntry?.last_trained_at ?? progressEntry?.updated_at ?? null;
+    const cooldownActive = lastTraining ? isOnCooldown(lastTraining, trainingCooldown) : false;
 
     if (cooldownActive) {
       const remainingMinutes = lastTraining
@@ -128,6 +350,22 @@ const SkillTraining = () => {
       return;
     }
 
+    const currentSkill = getSkillValue(session.slug);
+    const playerCash = Number(profile.cash ?? 0);
+    const playerLevel = Number(profile.level ?? 1);
+    const totalExperience = Number(profile.experience ?? 0);
+    const skillCap = getSkillCap(playerLevel, totalExperience);
+    const trainingCost = calculateTrainingCost(currentSkill);
+
+    if (currentSkill >= skillCap) {
+      toast({
+        variant: "destructive",
+        title: "Skill Cap Reached",
+        description: `Level up to increase your ${session.slug} cap before training again.`
+      });
+      return;
+    }
+
     if (playerCash < trainingCost) {
       toast({
         variant: "destructive",
@@ -137,19 +375,30 @@ const SkillTraining = () => {
       return;
     }
 
+    const focusedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
+    const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
+    const skillGain = newSkillValue - currentSkill;
+
+    if (skillGain <= 0) {
+      toast({
+        variant: "destructive",
+        title: "No Progress",
+        description: "This session won't increase your skill right now. Try raising your cap first."
+      });
+      return;
+    }
+
+    const newCash = playerCash - trainingCost;
+    const newExperience = totalExperience + focusedXp;
+    const timestamp = new Date().toISOString();
+
     setTraining(true);
-
     try {
-      const focusedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
-      const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
-      const skillGain = newSkillValue - currentSkill;
-      const newCash = playerCash - trainingCost;
-      const newExperience = totalExperience + focusedXp;
-      const timestamp = new Date().toISOString();
-
-      await updateSkills({
-        [session.skill]: newSkillValue,
-        updated_at: timestamp
+      await updateSkillProgress({
+        skillSlug: session.slug,
+        newSkillValue,
+        xpGain: skillGain,
+        timestamp
       });
 
       await updateProfile({
@@ -166,7 +415,7 @@ const SkillTraining = () => {
 
       toast({
         title: "Training Complete!",
-        description: `Your ${session.skill} skill increased by ${skillGain} points!`
+        description: `Your ${session.slug} skill increased by ${skillGain} points!`
       });
     } catch (error) {
       console.error("Error during training:", error);
@@ -180,29 +429,11 @@ const SkillTraining = () => {
     }
   };
 
-  const getSkillLevel = (skill: number): string => {
-    if (skill >= 90) return "Master";
-    if (skill >= 75) return "Expert";
-    if (skill >= 60) return "Advanced";
-    if (skill >= 40) return "Intermediate";
-    if (skill >= 20) return "Beginner";
-    return "Novice";
-  };
-
-  const getSkillColor = (skill: number): string => {
-    if (skill >= 90) return "text-purple-400";
-    if (skill >= 75) return "text-blue-400";
-    if (skill >= 60) return "text-green-400";
-    if (skill >= 40) return "text-yellow-400";
-    if (skill >= 20) return "text-orange-400";
-    return "text-red-400";
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-lg font-oswald">Loading training center...</p>
         </div>
       </div>
@@ -232,11 +463,11 @@ const SkillTraining = () => {
         <div className="flex items-center justify-center gap-6 text-sm">
           <div className="flex items-center gap-2">
             <Coins className="h-4 w-4 text-yellow-400" />
-            <span className="font-oswald">${profile?.cash?.toLocaleString() || 0}</span>
+            <span className="font-oswald">${profile.cash?.toLocaleString() || 0}</span>
           </div>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-blue-400" />
-            <span className="font-oswald">{profile?.experience || 0} XP</span>
+            <span className="font-oswald">{profile.experience || 0} XP</span>
           </div>
         </div>
       </div>
@@ -249,62 +480,86 @@ const SkillTraining = () => {
 
         <TabsContent value="skills" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {skills && Object.entries(skills)
-              .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
+            {Object.entries(skills)
+              .filter(([key]) => !["id", "user_id", "profile_id", "created_at", "updated_at"].includes(key))
               .map(([skill, value]) => {
-              const session = trainingSessions.find(s => s.skill === skill);
-              const Icon = session?.icon || Music;
-              const numericValue = typeof value === "number" ? value : Number(value ?? 0);
-              const progressValue = skillCap > 0 ? Math.min(100, (numericValue / skillCap) * 100) : 0;
+                const session = sessionBySlug.get(skill);
+                const Icon = session?.icon ?? Music;
+                const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+                const progressValue = skillCap > 0 ? Math.min(100, (numericValue / skillCap) * 100) : 0;
+                const displayName = session?.name ?? formatSkillName(skill);
 
-              return (
-                <Card key={skill} className="relative overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-lg font-oswald capitalize">{skill}</CardTitle>
+                return (
+                  <Card key={skill} className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-5 w-5 text-primary" />
+                          <CardTitle className="text-lg font-oswald">{displayName}</CardTitle>
+                        </div>
+                        <Badge variant="outline" className={getSkillColor(numericValue)}>
+                          {getSkillLevel(numericValue)}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={getSkillColor(numericValue)}>
-                        {getSkillLevel(numericValue)}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Progress</span>
-                        <span className="font-mono">{numericValue}/{skillCap}</span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progress</span>
+                          <span className="font-mono">{numericValue}/{skillCap}</span>
+                        </div>
+                        <Progress value={progressValue} className="h-2" />
                       </div>
-                      <Progress value={progressValue} className="h-2" />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         </TabsContent>
 
         <TabsContent value="training" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {trainingSessions.map((session) => {
-              const Icon = session.icon;
-              const currentSkill = Number(skills?.[session.skill] ?? 0);
+            {derivedSessions.map(session => {
+              const currentSkill = getSkillValue(session.slug);
               const trainingCost = calculateTrainingCost(currentSkill);
-              const canAfford = (profile?.cash ?? 0) >= trainingCost;
+              const canAfford = (profile.cash ?? 0) >= trainingCost;
               const isAtCap = currentSkill >= skillCap;
-              const buttonDisabled = training || !canAfford || isAtCap || cooldownActive;
-              const adjustedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
+              const buttonDisabled =
+                training ||
+                !canAfford ||
+                isAtCap ||
+                session.cooldownActive ||
+                !session.isUnlocked;
+
+              const buttonLabel = training
+                ? "Training..."
+                : !session.isUnlocked
+                  ? "Locked"
+                  : isAtCap
+                    ? "Skill Cap Reached"
+                    : session.cooldownActive
+                      ? `Cooldown (${session.remainingCooldown}m)`
+                      : !canAfford
+                        ? "Can't Afford"
+                        : "Start Training";
 
               return (
-                <Card key={session.skill} className="relative">
+                <Card key={session.slug} className="relative">
                   <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-5 w-5 text-primary" />
-                      <div>
-                        <CardTitle className="text-lg font-oswald">{session.name}</CardTitle>
-                        <CardDescription className="text-sm">{session.description}</CardDescription>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <session.icon className="h-5 w-5 text-primary" />
+                        <div>
+                          <CardTitle className="text-lg font-oswald">{session.name}</CardTitle>
+                          <CardDescription className="text-sm">{session.description}</CardDescription>
+                        </div>
                       </div>
+                      {!session.isUnlocked && (
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          Locked
+                        </Badge>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -320,8 +575,7 @@ const SkillTraining = () => {
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-purple-400" />
                         <span>
-                          +{adjustedXp} XP
-                          {adjustedXp !== session.xpGain ? " (focus bonus)" : ""}
+                          +{applyRewardBonus(session.xpGain, attributes?.mental_focus)} XP
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -330,6 +584,17 @@ const SkillTraining = () => {
                       </div>
                     </div>
 
+                    {session.missingRequirement && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Lock className="h-3 w-3" />
+                        <span>
+                          Requires {session.missingRequirement.requiredName} {" "}
+                          {session.missingRequirement.relationship.required_value} (current {" "}
+                          {session.missingRequirement.currentValue})
+                        </span>
+                      </div>
+                    )}
+
                     {isAtCap && (
                       <div className="flex items-center gap-2 text-sm text-destructive">
                         <TrendingUp className="h-3 w-3" />
@@ -337,10 +602,10 @@ const SkillTraining = () => {
                       </div>
                     )}
 
-                    {cooldownActive && (
+                    {session.cooldownActive && (
                       <div className="flex items-center gap-2 text-sm text-yellow-500">
                         <Clock className="h-3 w-3" />
-                        <span>Training available in {remainingCooldown}m</span>
+                        <span>Training available in {session.remainingCooldown}m</span>
                       </div>
                     )}
 
@@ -348,17 +613,13 @@ const SkillTraining = () => {
                       onClick={() => handleTraining(session)}
                       disabled={buttonDisabled}
                       className="w-full"
-                      variant={canAfford && !isAtCap && !cooldownActive ? "default" : "outline"}
+                      variant={
+                        !session.isUnlocked || !canAfford || isAtCap || session.cooldownActive
+                          ? "outline"
+                          : "default"
+                      }
                     >
-                      {training
-                        ? "Training..."
-                        : isAtCap
-                          ? "Skill Cap Reached"
-                          : cooldownActive
-                            ? `Cooldown (${remainingCooldown}m)`
-                            : !canAfford
-                              ? "Can't Afford"
-                              : "Start Training"}
+                      {buttonLabel}
                     </Button>
                   </CardContent>
                 </Card>
@@ -370,5 +631,11 @@ const SkillTraining = () => {
     </div>
   );
 };
+
+const SkillTraining = () => (
+  <SkillSystemProvider>
+    <SkillTrainingContent />
+  </SkillSystemProvider>
+);
 
 export default SkillTraining;
