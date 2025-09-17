@@ -260,6 +260,7 @@ const WorldPulse = () => {
 
   const loadDailyChart = useCallback(async () => {
     try {
+      setError(null);
       const { data: latestDateRows, error: latestDateError } = await supabase
         .from("global_charts")
         .select("chart_date")
@@ -279,7 +280,7 @@ const WorldPulse = () => {
         return;
       }
 
-      setDailyLabel(formatDailyValue(latestDate));
+      setLatestDailyDate(latestDate);
 
       const { data, error: chartError } = await supabase
         .from("global_charts")
@@ -441,6 +442,7 @@ const WorldPulse = () => {
     } catch (caught) {
       console.error("Failed to load genre stats:", caught);
       setGenreStats([]);
+      setError("Failed to load genre statistics. Please try again later.");
     }
   }, []);
 
@@ -470,6 +472,7 @@ const WorldPulse = () => {
 
   const handleRefreshCharts = useCallback(async () => {
     setIsRefreshing(true);
+    setError(null);
     try {
       const { error: refreshError } = await supabase.rpc("refresh_global_charts");
       if (refreshError) {
@@ -775,11 +778,7 @@ const WorldPulse = () => {
                   <Trophy className="h-5 w-5 text-primary" />
                   Daily Streaming Chart - Top 10
                 </CardTitle>
-                <CardDescription>
-                  {dailyLabel
-                    ? `Most popular songs on ${dailyLabel}`
-                    : "Most popular songs from the latest update"}
-                </CardDescription>
+                <CardDescription>{dailyDescription}</CardDescription>
               </CardHeader>
               <CardContent>
                 {renderStreamingEntries(

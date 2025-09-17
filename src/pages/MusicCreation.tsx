@@ -207,7 +207,7 @@ const MusicCreation = () => {
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [recording, setRecording] = useState(false);
+  const [recordingSession, setRecordingSession] = useState(false);
   const [localRecordings, setLocalRecordings] = useState<Record<string, LocalRecording[]>>({});
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
