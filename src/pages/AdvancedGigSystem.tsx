@@ -15,6 +15,8 @@ import type { Database } from '@/integrations/supabase/types';
 
 type GigRow = Database['public']['Tables']['gigs']['Row'];
 type VenueRow = Database['public']['Tables']['venues']['Row'];
+type ShowType = Database['public']['Enums']['show_type'];
+const DEFAULT_SHOW_TYPE: ShowType = 'standard';
 
 interface Venue {
   id: string;
@@ -29,6 +31,7 @@ interface Gig {
   scheduled_date: string;
   payment: number;
   status: string;
+  show_type: ShowType;
 }
 
 interface PerformanceStage {
@@ -58,32 +61,73 @@ const OVERALL_FAILURE_THRESHOLD = 60;
 const FAILURE_EARNINGS_MULTIPLIER = 0.25;
 const FAILURE_FAME_PENALTY = 15;
 
-const PERFORMANCE_STAGES: PerformanceStage[] = [
-  {
-    name: "Sound Check",
-    description: "Getting the technical setup right",
-    duration: 3000,
-    skillRequirements: { performance: 30, guitar: 25 }
-  },
-  {
-    name: "Opening Act",
-    description: "Warming up the crowd",
-    duration: 4000,
-    skillRequirements: { performance: 40, vocals: 35 }
-  },
-  {
-    name: "Main Performance",
-    description: "The heart of the show",
-    duration: 6000,
-    skillRequirements: { performance: 50, songwriting: 40, vocals: 45 }
-  },
-  {
-    name: "Encore",
-    description: "Leaving them wanting more",
-    duration: 3000,
-    skillRequirements: { performance: 60, guitar: 50, drums: 40 }
-  }
-];
+const STAGE_PRESETS: Record<ShowType, PerformanceStage[]> = {
+  standard: [
+    {
+      name: "Sound Check",
+      description: "Getting the technical setup right",
+      duration: 3000,
+      skillRequirements: { performance: 30, guitar: 25 }
+    },
+    {
+      name: "Opening Act",
+      description: "Warming up the crowd",
+      duration: 4000,
+      skillRequirements: { performance: 40, vocals: 35 }
+    },
+    {
+      name: "Main Performance",
+      description: "The heart of the show",
+      duration: 6000,
+      skillRequirements: { performance: 50, songwriting: 40, vocals: 45 }
+    },
+    {
+      name: "Encore",
+      description: "Leaving them wanting more",
+      duration: 3000,
+      skillRequirements: { performance: 60, guitar: 50, drums: 40 }
+    }
+  ],
+  acoustic: [
+    {
+      name: "Acoustic Tuning",
+      description: "Dialing in warm, intimate tones",
+      duration: 2600,
+      skillRequirements: { performance: 28, guitar: 20, songwriting: 25 }
+    },
+    {
+      name: "Storytelling",
+      description: "Connecting with the crowd between stripped songs",
+      duration: 3600,
+      skillRequirements: { performance: 35, vocals: 38, songwriting: 35 }
+    },
+    {
+      name: "Unplugged Spotlight",
+      description: "Showcasing vocals and dynamic control",
+      duration: 5000,
+      skillRequirements: { performance: 45, vocals: 50, songwriting: 40 }
+    },
+    {
+      name: "Gentle Encore",
+      description: "Ending with a crowd singalong",
+      duration: 2800,
+      skillRequirements: { performance: 42, vocals: 45, piano: 30 }
+    }
+  ]
+};
+
+const SHOW_TYPE_BEHAVIOR: Record<ShowType, {
+  earnings: number;
+  fan: number;
+  experience: number;
+  audienceEase: number;
+  stageTolerance: number;
+}> = {
+  standard: { earnings: 1, fan: 1, experience: 1, audienceEase: 1, stageTolerance: 0 },
+  acoustic: { earnings: 1, fan: 1.25, experience: 1.2, audienceEase: 1.15, stageTolerance: 5 },
+};
+
+const getPerformanceStages = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
 
 const AdvancedGigSystem: React.FC = () => {
   const { gigId } = useParams<{ gigId: string }>();
@@ -94,6 +138,8 @@ const AdvancedGigSystem: React.FC = () => {
   const [gig, setGig] = useState<Gig | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPerforming, setIsPerforming] = useState(false);
+  const [performanceStages, setPerformanceStages] = useState<PerformanceStage[]>(getPerformanceStages(DEFAULT_SHOW_TYPE));
+  const [currentShowType, setCurrentShowType] = useState<ShowType>(DEFAULT_SHOW_TYPE);
   const [currentStage, setCurrentStage] = useState(0);
   const [stageProgress, setStageProgress] = useState(0);
   const [stageResults, setStageResults] = useState<StageResult[]>([]);
@@ -135,6 +181,7 @@ const AdvancedGigSystem: React.FC = () => {
       if (venueError) throw venueError;
       if (!venueRow) throw new Error('Venue not found');
 
+      const showType = (gigRow.show_type ?? DEFAULT_SHOW_TYPE) as ShowType;
       const transformedGig: Gig = {
         id: gigRow.id,
         venue: {
@@ -145,10 +192,13 @@ const AdvancedGigSystem: React.FC = () => {
         },
         scheduled_date: gigRow.scheduled_date ?? new Date().toISOString(),
         payment: gigRow.payment ?? 0,
-        status: gigRow.status ?? 'scheduled'
+        status: gigRow.status ?? 'scheduled',
+        show_type: showType
       };
 
       setGig(transformedGig);
+      setCurrentShowType(showType);
+      setPerformanceStages(getPerformanceStages(showType));
     } catch (error: unknown) {
       const fallbackMessage = 'Failed to load gig details';
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
@@ -186,7 +236,8 @@ const AdvancedGigSystem: React.FC = () => {
   };
 
   const performStage = async (stageIndex: number) => {
-    const stage = PERFORMANCE_STAGES[stageIndex];
+    const stage = performanceStages[stageIndex];
+    if (!stage) return;
     const stageDuration = stage.duration;
     const interval = stageDuration / 100;
 
@@ -210,27 +261,31 @@ const AdvancedGigSystem: React.FC = () => {
   const updateAudienceReaction = (stageIndex: number, progress: number) => {
     if (!skills || !gig) return;
 
-    const stage = PERFORMANCE_STAGES[stageIndex];
+    const stage = performanceStages[stageIndex];
+    if (!stage) return;
+    const behavior = SHOW_TYPE_BEHAVIOR[currentShowType] ?? SHOW_TYPE_BEHAVIOR[DEFAULT_SHOW_TYPE];
     const skillLevel = Object.entries(stage.skillRequirements).reduce((avg, [skill, req]) => {
       const playerSkill = skills?.[skill as keyof PlayerSkills] ?? 0;
       return avg + (playerSkill / req);
     }, 0) / Object.keys(stage.skillRequirements).length;
 
     const venuePrestige = gig.venue.prestige_level;
-    const baseReaction = Math.min(100, skillLevel * 80 + Math.random() * 20);
-    
+    const baseReaction = Math.min(100, skillLevel * 80 * behavior.audienceEase + Math.random() * 20);
+
     setAudienceReaction(prev => ({
-      energy: Math.max(0, Math.min(100, baseReaction + (progress * 0.2) - (venuePrestige * 5))),
-      satisfaction: Math.max(0, Math.min(100, baseReaction + Math.random() * 20 - 10)),
-      excitement: Math.max(0, Math.min(100, baseReaction + (progress * 0.3))),
-      singing_along: Math.max(0, Math.min(100, (progress > 50 ? baseReaction * 0.8 : 0)))
+      energy: Math.max(0, Math.min(100, baseReaction + (progress * 0.2 * behavior.audienceEase) - (venuePrestige * 5 / behavior.audienceEase))),
+      satisfaction: Math.max(0, Math.min(100, baseReaction + Math.random() * 20 - (10 / behavior.audienceEase))),
+      excitement: Math.max(0, Math.min(100, baseReaction + (progress * 0.3 * behavior.audienceEase))),
+      singing_along: Math.max(0, Math.min(100, (progress > 50 ? baseReaction * 0.85 * behavior.audienceEase : 0)))
     }));
   };
 
   const completeStage = (stageIndex: number) => {
     if (!skills || !gig) return;
 
-    const stage = PERFORMANCE_STAGES[stageIndex];
+    const stage = performanceStages[stageIndex];
+    if (!stage) return;
+    const behavior = SHOW_TYPE_BEHAVIOR[currentShowType] ?? SHOW_TYPE_BEHAVIOR[DEFAULT_SHOW_TYPE];
 
     // Calculate stage score based on skills vs requirements
     let stageScore = 0;
@@ -240,7 +295,8 @@ const AdvancedGigSystem: React.FC = () => {
     Object.entries(stage.skillRequirements).forEach(([skill, requirement]) => {
       const playerSkill = skills?.[skill as keyof PlayerSkills] ?? 0;
       const skillRatio = playerSkill / requirement;
-      stageScore += skillRatio * 25;
+      const weight = currentShowType === 'acoustic' && (skill === 'vocals' || skill === 'songwriting') ? 30 : 25;
+      stageScore += skillRatio * weight;
 
       if (skillRatio >= 1.5) {
         feedback.push(`Exceptional ${skill} performance!`);
@@ -255,7 +311,7 @@ const AdvancedGigSystem: React.FC = () => {
     });
 
     // Add audience reaction bonus
-    const reactionBonus = (audienceReaction.energy + audienceReaction.satisfaction) / 10;
+    const reactionBonus = ((audienceReaction.energy + audienceReaction.satisfaction) / 10) * behavior.audienceEase;
     stageScore += reactionBonus;
 
     if (audienceReaction.energy > 80) bonuses.push("High Energy Bonus!");
@@ -272,17 +328,18 @@ const AdvancedGigSystem: React.FC = () => {
     const updatedResults = [...stageResults, result];
     setStageResults(updatedResults);
 
-    if (result.score < STAGE_FAILURE_THRESHOLD) {
+    const stageFailureThreshold = Math.max(35, STAGE_FAILURE_THRESHOLD - behavior.stageTolerance);
+    if (result.score < stageFailureThreshold) {
       finishPerformance(updatedResults, {
         forcedFailure: true,
         failedStage: stage.name,
-        failureReason: `${stage.name} score fell below ${STAGE_FAILURE_THRESHOLD}%. The promoter ended the show early.`
+        failureReason: `${stage.name} score fell below ${stageFailureThreshold}%. The promoter ended the show early.`
       });
       return;
     }
 
     // Move to next stage or finish performance
-    if (stageIndex < PERFORMANCE_STAGES.length - 1) {
+    if (stageIndex < performanceStages.length - 1) {
       setTimeout(() => {
         setCurrentStage(stageIndex + 1);
         setStageProgress(0);
@@ -300,15 +357,17 @@ const AdvancedGigSystem: React.FC = () => {
     if (!gig || !profile || !user || results.length === 0) return;
 
     const averageScore = results.reduce((sum, result) => sum + result.score, 0) / results.length;
-    const baseEarnings = gig.payment || 1000;
+    const behavior = SHOW_TYPE_BEHAVIOR[currentShowType] ?? SHOW_TYPE_BEHAVIOR[DEFAULT_SHOW_TYPE];
+    const baseEarnings = (gig.payment || 1000) * behavior.earnings;
     const potentialEarnings = Math.floor(baseEarnings * (averageScore / 100));
 
     const forcedFailure = options.forcedFailure ?? false;
     let derivedFailureReason = options.failureReason ?? '';
-    const isFailure = forcedFailure || averageScore < OVERALL_FAILURE_THRESHOLD;
+    const failureThreshold = Math.max(50, OVERALL_FAILURE_THRESHOLD - behavior.stageTolerance);
+    const isFailure = forcedFailure || averageScore < failureThreshold;
 
     if (isFailure && !derivedFailureReason) {
-      derivedFailureReason = `Overall performance score fell below ${OVERALL_FAILURE_THRESHOLD}%. The crowd left disappointed.`;
+      derivedFailureReason = `Overall performance score fell below ${failureThreshold}%. The crowd left disappointed.`;
     }
 
     const failureEarnings = Math.floor(baseEarnings * FAILURE_EARNINGS_MULTIPLIER);
@@ -317,8 +376,8 @@ const AdvancedGigSystem: React.FC = () => {
       : potentialEarnings;
     const fameDelta = isFailure
       ? -FAILURE_FAME_PENALTY
-      : Math.floor(averageScore * 0.5);
-    const experienceGain = Math.floor(isFailure ? averageScore : averageScore * 2);
+      : Math.floor(averageScore * 0.5 * behavior.fan);
+    const experienceGain = Math.floor((isFailure ? averageScore : averageScore * 2) * behavior.experience);
     const penaltyValue = isFailure ? Math.max(0, potentialEarnings - totalEarningsValue) : 0;
 
     setFinalScore(averageScore);
@@ -331,7 +390,9 @@ const AdvancedGigSystem: React.FC = () => {
 
     try {
       const updatedFame = Math.max(0, profile.fame + fameDelta);
-      const attendance = Math.floor(gig.venue.capacity * Math.max(averageScore, 10) / 100);
+      const attendance = Math.floor(
+        gig.venue.capacity * Math.max(averageScore, 10) / 100 * (currentShowType === 'acoustic' ? 0.85 : 1)
+      );
       await supabase
         .from('gigs')
         .update({
@@ -359,9 +420,10 @@ const AdvancedGigSystem: React.FC = () => {
         failure_reason: isFailure ? derivedFailureReason : null
       });
 
+      const showTypeLabel = currentShowType === 'acoustic' ? 'acoustic' : 'standard';
       const activityMessage = isFailure
         ? `Performance at ${gig.venue.name} fell flat (${averageScore.toFixed(1)}%). Lost ${Math.abs(fameDelta)} fame.`
-        : `Performed at ${gig.venue.name} - Score: ${averageScore.toFixed(1)}%`;
+        : `Performed a ${showTypeLabel} set at ${gig.venue.name} - Score: ${averageScore.toFixed(1)}%`;
 
       await addActivity('gig_performance', activityMessage, totalEarningsValue);
 
@@ -536,8 +598,10 @@ const AdvancedGigSystem: React.FC = () => {
   }
 
   if (isPerforming) {
-    const currentStageData = PERFORMANCE_STAGES[currentStage];
-    
+    const totalStages = Math.max(1, performanceStages.length);
+    const currentStageData = performanceStages[currentStage] ?? performanceStages[0];
+    const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
+
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <Card>
@@ -547,12 +611,18 @@ const AdvancedGigSystem: React.FC = () => {
               {currentStageData.name}
             </CardTitle>
             <p className="text-muted-foreground">{currentStageData.description}</p>
+            <Badge
+              variant="outline"
+              className={`w-fit border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs uppercase tracking-wide`}
+            >
+              {showTypeLabel}
+            </Badge>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
               <div className="flex justify-between mb-2">
                 <span className="text-sm font-medium">Stage Progress</span>
-                <span className="text-sm text-muted-foreground">{stageProgress}%</span>
+                <span className="text-sm text-muted-foreground">Stage {currentStage + 1} of {totalStages}</span>
               </div>
               <Progress value={stageProgress} className="h-3" />
             </div>
@@ -577,10 +647,10 @@ const AdvancedGigSystem: React.FC = () => {
 
             <div className="text-center">
               <div className="text-lg font-medium mb-2">
-                Stage {currentStage + 1} of {PERFORMANCE_STAGES.length}
+                Stage {currentStage + 1} of {totalStages}
               </div>
               <div className="flex justify-center gap-2">
-                {PERFORMANCE_STAGES.map((_, index) => (
+                {performanceStages.map((_, index) => (
                   <div
                     key={index}
                     className={`w-3 h-3 rounded-full ${
@@ -614,6 +684,10 @@ const AdvancedGigSystem: React.FC = () => {
     );
   }
 
+  const stagePlan = performanceStages;
+  const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
+  const estimatedMinutes = Math.max(1, Math.round(stagePlan.reduce((sum, stage) => sum + stage.duration, 0) / 60000));
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
@@ -630,11 +704,11 @@ const AdvancedGigSystem: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-lg font-semibold mb-3">Gig Details</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Venue:</span>
-                  <span className="font-medium">{gig.venue.name}</span>
-                </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Venue:</span>
+                <span className="font-medium">{gig.venue.name}</span>
+              </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Capacity:</span>
                   <span className="font-medium">{gig.venue.capacity} people</span>
@@ -643,17 +717,30 @@ const AdvancedGigSystem: React.FC = () => {
                   <span className="text-muted-foreground">Prestige:</span>
                   <Badge variant="outline">{gig.venue.prestige_level}/5</Badge>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Payment:</span>
-                  <span className="font-medium text-green-600">${gig.payment}</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payment:</span>
+                <span className="font-medium text-green-600">${gig.payment}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Show Type:</span>
+                <Badge
+                  variant="outline"
+                  className={`border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs uppercase tracking-wide`}
+                >
+                  {showTypeLabel}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Estimated Duration:</span>
+                <span className="font-medium">~{estimatedMinutes} minutes</span>
               </div>
             </div>
+          </div>
 
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Performance Stages</h3>
-              <div className="space-y-2">
-                {PERFORMANCE_STAGES.map((stage, index) => (
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Performance Stages</h3>
+            <div className="space-y-2">
+                {stagePlan.map((stage, index) => (
                   <div key={index} className="p-3 bg-muted rounded-lg">
                     <div className="font-medium">{stage.name}</div>
                     <div className="text-sm text-muted-foreground">{stage.description}</div>

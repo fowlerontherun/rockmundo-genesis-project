@@ -73,6 +73,48 @@ const fallbackTimestamp = "1970-01-01T00:00:00.000Z";
 
 const fallbackLocations: BuskingLocation[] = [
   {
+    id: "fallback-offices",
+    name: "Near Local Offices",
+    description: "Weekday lunch crowd of office workers eager for quick hits and covers.",
+    neighborhood: "Financial Commons",
+    recommended_skill: 50,
+    base_payout: 180,
+    fame_reward: 10,
+    experience_reward: 48,
+    risk_level: "medium",
+    ambiance: "Clockwork foot traffic surges at noon while security keeps an eye out.",
+    cooldown_minutes: 50,
+    created_at: fallbackTimestamp,
+  },
+  {
+    id: "fallback-town-center",
+    name: "Town Center",
+    description: "Central plaza with families, tourists, and street food all afternoon.",
+    neighborhood: "Civic Plaza",
+    recommended_skill: 65,
+    base_payout: 260,
+    fame_reward: 16,
+    experience_reward: 68,
+    risk_level: "medium",
+    ambiance: "Community events keep energy steady with occasional festival spikes.",
+    cooldown_minutes: 70,
+    created_at: fallbackTimestamp,
+  },
+  {
+    id: "fallback-high-street",
+    name: "High Street",
+    description: "Premier shopping strip packed with trendsetters and impulse tippers.",
+    neighborhood: "Retail Row",
+    recommended_skill: 75,
+    base_payout: 360,
+    fame_reward: 22,
+    experience_reward: 85,
+    risk_level: "high",
+    ambiance: "Boutique launches and brand pop-ups make for fierce competition.",
+    cooldown_minutes: 85,
+    created_at: fallbackTimestamp,
+  },
+  {
     id: "fallback-subway",
     name: "Subway Center Stage",
     description: "A bustling underground transit hub with great acoustics.",
@@ -143,6 +185,27 @@ const fallbackLocations: BuskingLocation[] = [
     created_at: fallbackTimestamp,
   },
 ];
+
+const locationAudienceHighlights: Record<
+  string,
+  {
+    label: string;
+    description: string;
+  }
+> = {
+  "Near Local Offices": {
+    label: "Workday Crowd",
+    description: "Lunch breaks surge from 11:30 to 2:00—arrive early to lock the spot.",
+  },
+  "Town Center": {
+    label: "Community Mix",
+    description: "Families and tourists linger for sing-alongs and upbeat covers.",
+  },
+  "High Street": {
+    label: "Retail Rush",
+    description: "Peak shoppers chase hype tracks and big hooks during evening hours.",
+  },
+};
 
 const fallbackModifiers: BuskingModifier[] = [
   {
@@ -468,7 +531,7 @@ const toRarity = (value: string | null | undefined): ModifierRarity => {
 
 const Busking = () => {
   const { user, loading: authLoading } = useAuth();
-  const { profile, skills, updateProfile, addActivity, loading: gameLoading } = useGameData();
+  const { profile, skills, updateProfile, addActivity, loading: gameLoading, currentCity } = useGameData();
   const { toast } = useToast();
 
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -484,6 +547,24 @@ const Busking = () => {
   const [weatherConditions, setWeatherConditions] = useState<WeatherCondition[]>([]);
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
+
+  const cityBuskingValue = useMemo(() => {
+    if (!currentCity) return 1;
+    const numericValue = Number(currentCity.busking_value ?? 1);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      return 1;
+    }
+    return numericValue;
+  }, [currentCity]);
+
+  const buskingBoostLabel = useMemo(
+    () =>
+      cityBuskingValue.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    [cityBuskingValue]
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -784,6 +865,8 @@ const Busking = () => {
 
       const modifier = selectedModifier;
       const modifierName = modifier ? modifier.name : "No Modifier";
+      const cityName = currentCity?.name;
+      const cityMultiplier = cityBuskingValue;
       const performanceVariance = Math.random() * 12 - 6;
       const performanceScore = Math.min(100, Math.max(15, successChance + performanceVariance));
       const roll = Math.random() * 100;
@@ -807,8 +890,8 @@ const Busking = () => {
         (selectedLocation.experience_reward + (modifier?.experience_bonus ?? 0)) *
         environmentDetails.combined.experienceMultiplier;
       const experienceGained = success
-        ? Math.round(baseExperience * (0.9 + Math.random() * 0.5))
-        : Math.round(baseExperience * 0.5 * (0.7 + Math.random() * 0.3));
+        ? Math.round(baseExperience * cityMultiplier * (0.9 + Math.random() * 0.5))
+        : Math.round(baseExperience * 0.5 * cityMultiplier * (0.7 + Math.random() * 0.3));
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
@@ -856,6 +939,7 @@ const Busking = () => {
       ];
 
       const durationMinutes = Math.max(20, Math.round((selectedLocation.cooldown_minutes ?? 60) * 0.45));
+      const locationTag = cityName ? `${selectedLocation.name} in ${cityName}` : selectedLocation.name;
       const summaryMessage = success
         ? `Crushed it at ${selectedLocation.name} during ${environmentDetails.timeOfDay.label.toLowerCase()} — ${environmentLabel}. Earned $${cashEarned.toLocaleString()} with ${modifierName}.`
         : `Tough break at ${selectedLocation.name} amid ${environmentLabel}. Still brought home $${cashEarned.toLocaleString()} with ${modifierName}.`;
@@ -902,8 +986,8 @@ const Busking = () => {
       });
 
       const activityMessage = success
-        ? `Street performance success at ${selectedLocation.name}!`
-        : `Busking setback at ${selectedLocation.name}. Time to regroup.`;
+        ? `Street performance success at ${selectedLocation.name}${cityName ? ` (${cityName})` : ""}!`
+        : `Busking setback at ${selectedLocation.name}${cityName ? ` (${cityName})` : ""}. Time to regroup.`;
 
       await addActivity("busking", activityMessage, cashEarned);
 
@@ -928,7 +1012,7 @@ const Busking = () => {
         performanceScore: Math.round(performanceScore),
         message: summaryMessage,
         crowdReaction,
-        locationName: selectedLocation.name,
+        locationName: locationTag,
         modifierName,
         environmentSummary: environmentSummaryForResult,
       });
@@ -939,8 +1023,8 @@ const Busking = () => {
         variant: success ? "default" : "destructive",
         title: success ? "Busking success!" : "Busking attempt finished",
         description: success
-          ? `You earned $${cashEarned.toLocaleString()} and gained ${fameGained} fame.`
-          : `You still pocketed $${cashEarned.toLocaleString()} despite the hurdles.`,
+          ? `You earned $${cashEarned.toLocaleString()} and gained ${fameGained} fame (${currentCity ? `${currentCity.name}` : "Neutral city"} boost ×${buskingBoostLabel}).`
+          : `You still pocketed $${cashEarned.toLocaleString()} despite the hurdles (${currentCity ? `${currentCity.name}` : "Neutral city"} boost ×${buskingBoostLabel}).`,
       });
     } catch (err) {
       console.error("Failed to complete busking session", err);
@@ -1002,6 +1086,12 @@ const Busking = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <Badge variant="outline" className="gap-2 bg-muted/30 border-muted/50 text-muted-foreground">
+              <MapPin className="h-4 w-4 text-primary" />
+              {currentCity
+                ? `${currentCity.name} • Busking Boost ×${buskingBoostLabel}`
+                : `No active city • Busking Boost ×${buskingBoostLabel}`}
+            </Badge>
             <Badge variant="outline" className="gap-2 bg-primary/10 border-primary/30 text-primary">
               <Activity className="h-4 w-4" />
               Skill Readiness: {skillScore}
@@ -1170,7 +1260,8 @@ const Busking = () => {
             <div>
               <h2 className="text-2xl font-bebas tracking-widest text-foreground">Choose Your Stage</h2>
               <p className="text-sm text-muted-foreground font-oswald">
-                Each location has its own risk profile, audience, and cooldown timer.
+                Tap into office lunch rushes, civic plaza hangouts, or the high street spotlight—each
+                location has its own risk profile, audience rhythms, and cooldown timer.
               </p>
             </div>
           </div>
@@ -1183,6 +1274,7 @@ const Busking = () => {
               const totalCooldownMs = (location.cooldown_minutes ?? 0) * 60 * 1000;
               const progressValue = totalCooldownMs > 0 ? Math.min(100, Math.max(0, ((totalCooldownMs - cooldownMs) / totalCooldownMs) * 100)) : 100;
               const rewardPercent = Math.round((location.base_payout / maxBasePayout) * 100);
+              const highlight = locationAudienceHighlights[location.name ?? ""];
 
               return (
                 <Card
@@ -1209,6 +1301,17 @@ const Busking = () => {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{location.description}</p>
+                    {highlight && (
+                      <div className="flex items-start gap-2 rounded-md bg-muted/30 p-3">
+                        <History className="h-4 w-4 text-primary mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                            {highlight.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{highlight.description}</p>
+                        </div>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
@@ -1249,7 +1352,11 @@ const Busking = () => {
                 Performance Outlook
               </CardTitle>
               <CardDescription>
-                We crunch your skills, location difficulty, and modifiers to predict the vibe of your next set.
+                We crunch your skills, location difficulty, modifiers, and
+                {" "}
+                {currentCity ? `${currentCity.name}'s street energy` : "neutral city conditions"}
+                {" "}
+                to predict the vibe of your next set.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -305,24 +305,32 @@ const BandChemistry = () => {
 
     const members: BandMemberCard[] = await Promise.all(
       (membersData ?? []).map(async (member) => {
-        const [
-          { data: profileData, error: profileError },
-          { data: skillsData, error: skillsError },
-        ] = await Promise.all([
-          supabase
-            .from("public_profiles")
-            .select("display_name, username, avatar_url")
-            .eq("user_id", member.user_id)
-            .maybeSingle(),
-          supabase
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, display_name, username, avatar_url, level")
+          .eq("user_id", member.user_id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Error loading profile data:", profileError);
+        }
+
+        let skillsData: Partial<PlayerSkillsRow> | null = null;
+
+        if (profileData?.id) {
+          const { data, error: skillsError } = await supabase
             .from("player_skills")
             .select("guitar, vocals, drums, bass, performance, songwriting")
-            .eq("user_id", member.user_id)
-            .maybeSingle(),
-        ]);
+            .eq("profile_id", profileData.id)
+            .maybeSingle();
 
-        if (profileError) console.error("Error loading profile data:", profileError);
-        if (skillsError) console.error("Error loading skills data:", skillsError);
+          if (skillsError) {
+            console.error("Error loading skills data:", skillsError);
+          } else {
+            skillsData = data as Partial<PlayerSkillsRow> | null;
+          }
+        }
 
         const morale = member.morale ?? 60;
         const chemistry = member.chemistry ?? 60;

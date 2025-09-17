@@ -4,21 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
+import { useGameEvents, type GameEventWithStatus } from '@/hooks/useGameEvents';
 import { toast } from '@/components/ui/sonner-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   fetchWorldEnvironmentSnapshot,
+  fetchCityEnvironmentDetails,
+  DEFAULT_TRAVEL_MODES,
   type WeatherCondition,
   type City,
   type WorldEvent,
   type RandomEvent,
+  type CityEnvironmentDetails,
+  type CityTravelMode,
 } from '@/utils/worldEnvironment';
-import { 
-  Cloud, 
-  Sun, 
-  CloudRain, 
+import {
+  Cloud,
+  Sun,
+  CloudRain,
   CloudSnow, 
   Zap, 
   Wind,
@@ -33,7 +41,9 @@ import {
   TrendingUp,
   DollarSign,
   Music,
-  Thermometer
+  Thermometer,
+  Clock,
+  Loader2,
 } from 'lucide-react';
 
 const REFRESH_INTERVAL = 60_000;
@@ -46,8 +56,23 @@ const WorldEnvironment: React.FC = () => {
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
   const [randomEvents, setRandomEvents] = useState<RandomEvent[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [cityDetails, setCityDetails] = useState<CityEnvironmentDetails | null>(null);
+  const [cityDetailsLoading, setCityDetailsLoading] = useState(false);
+  const [activeTravelModeId, setActiveTravelModeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(false);
+
+  const {
+    events: liveEvents,
+    loading: eventsLoading,
+    refreshing: eventsRefreshing,
+    error: eventsError,
+    joinEvent: joinGameEvent,
+    completeEvent: completeGameEvent,
+    refresh: refreshGameEvents,
+    joiningEventId,
+    completingEventId
+  } = useGameEvents({ profile, updateProfile, addActivity });
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -55,6 +80,77 @@ const WorldEnvironment: React.FC = () => {
       isMountedRef.current = false;
     };
   }, []);
+
+  const formatRewardEntries = useCallback((rewards: unknown) => {
+    if (!rewards || typeof rewards !== 'object' || Array.isArray(rewards)) {
+      return [] as { key: string; label: string; value: number }[];
+    }
+
+    return Object.entries(rewards as Record<string, unknown>)
+      .map(([key, value]) => {
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(numericValue) || numericValue === 0) {
+          return null;
+        }
+
+        return {
+          key,
+          label: key.replace(/_/g, ' '),
+          value: numericValue
+        };
+      })
+      .filter((entry): entry is { key: string; label: string; value: number } => entry !== null);
+  }, []);
+
+  const formatRequirementEntries = useCallback((requirements: unknown) => {
+    if (!requirements || typeof requirements !== 'object' || Array.isArray(requirements)) {
+      return [] as { key: string; label: string; value: number }[];
+    }
+
+    return Object.entries(requirements as Record<string, unknown>)
+      .map(([key, value]) => {
+        const numericValue = typeof value === 'number' ? value : Number(value);
+
+        if (!Number.isFinite(numericValue)) {
+          return null;
+        }
+
+        return {
+          key,
+          label: key.replace(/_/g, ' '),
+          value: numericValue
+        };
+      })
+      .filter((entry): entry is { key: string; label: string; value: number } => entry !== null);
+  }, []);
+
+  const handleJoinGameEvent = useCallback(
+    async (event: GameEventWithStatus) => {
+      try {
+        await joinGameEvent(event.id);
+        toast.success(`Joined ${event.title}`);
+      } catch (error: unknown) {
+        console.error('Error joining event:', error);
+        const message = error instanceof Error ? error.message : 'Failed to join event.';
+        toast.error(message);
+      }
+    },
+    [joinGameEvent]
+  );
+
+  const handleCompleteGameEvent = useCallback(
+    async (event: GameEventWithStatus) => {
+      try {
+        await completeGameEvent(event.id);
+        toast.success(`Rewards claimed for ${event.title}`);
+      } catch (error: unknown) {
+        console.error('Error completing event:', error);
+        const message = error instanceof Error ? error.message : 'Failed to complete event.';
+        toast.error(message);
+      }
+    },
+    [completeGameEvent]
+  );
 
   const loadWorldData = useCallback(async (showLoader: boolean = true) => {
     if (!user) {
@@ -101,6 +197,47 @@ const WorldEnvironment: React.FC = () => {
     }
   }, [user]);
 
+  const loadCityDetails = useCallback(
+    async (city: City | null, options: { showLoader?: boolean; quiet?: boolean } = {}) => {
+      const { showLoader = true, quiet = false } = options;
+
+      if (!user || !city) {
+        if (isMountedRef.current) {
+          setCityDetails(null);
+          setCityDetailsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (showLoader && isMountedRef.current) {
+          setCityDetailsLoading(true);
+        }
+
+        const details = await fetchCityEnvironmentDetails(city.id, {
+          cityName: city.name,
+          country: city.country,
+        });
+
+        if (!isMountedRef.current) {
+          return;
+        }
+
+        setCityDetails(details);
+      } catch (error: unknown) {
+        console.error('Error loading city details:', error);
+        if (!quiet) {
+          toast.error(`Failed to load details for ${city.name}`);
+        }
+      } finally {
+        if (isMountedRef.current && showLoader) {
+          setCityDetailsLoading(false);
+        }
+      }
+    },
+    [user],
+  );
+
   useEffect(() => {
     if (!user) {
       setWeather([]);
@@ -108,6 +245,9 @@ const WorldEnvironment: React.FC = () => {
       setWorldEvents([]);
       setRandomEvents([]);
       setSelectedCity(null);
+      setCityDetails(null);
+      setCityDetailsLoading(false);
+      setActiveTravelModeId(null);
       setLoading(false);
       return;
     }
@@ -122,6 +262,59 @@ const WorldEnvironment: React.FC = () => {
       clearInterval(interval);
     };
   }, [user, loadWorldData]);
+
+  useEffect(() => {
+    if (!selectedCity || !user) {
+      if (!selectedCity && isMountedRef.current) {
+        setCityDetails(null);
+        setCityDetailsLoading(false);
+      }
+      return;
+    }
+
+    loadCityDetails(selectedCity, { showLoader: true });
+  }, [selectedCity, user, loadCityDetails]);
+
+  useEffect(() => {
+    setActiveTravelModeId(null);
+  }, [selectedCity?.id]);
+
+  useEffect(() => {
+    if (!selectedCity || !user) {
+      return;
+    }
+
+    const channel = supabase.channel(`world-environment-${selectedCity.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `current_city_id=eq.${selectedCity.id}`,
+      }, () => {
+        loadCityDetails(selectedCity, { showLoader: false, quiet: true });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'gigs',
+      }, () => {
+        loadCityDetails(selectedCity, { showLoader: false, quiet: true });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'city_metadata',
+        filter: `city_id=eq.${selectedCity.id}`,
+      }, () => {
+        loadCityDetails(selectedCity, { showLoader: false, quiet: true });
+      });
+
+    channel.subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedCity, user, loadCityDetails]);
 
   const getWeatherIcon = (condition: string) => {
     switch (condition) {
@@ -153,6 +346,80 @@ const WorldEnvironment: React.FC = () => {
       default: return 'border-gray-300 bg-gray-50';
     }
   };
+
+  const handleTravelTo = useCallback(async (mode: CityTravelMode) => {
+    if (!profile || !selectedCity) {
+      toast.error('Select a city to travel to first');
+      return;
+    }
+
+    const currentCash = typeof profile.cash === 'number' ? profile.cash : 0;
+    const isTraveling = Boolean(profile.travel_eta && Date.parse(profile.travel_eta) > Date.now());
+
+    if (isTraveling) {
+      toast.info('Travel already in progress. Please wait until you arrive.');
+      return;
+    }
+
+    if (profile.current_city_id === selectedCity.id) {
+      toast.info(`You're already in ${selectedCity.name}.`);
+      return;
+    }
+
+    const costValue = Number.isFinite(mode.cost) ? Math.max(0, Math.round(mode.cost)) : 0;
+
+    if (costValue > currentCash) {
+      toast.error('Not enough cash for this travel option.');
+      return;
+    }
+
+    try {
+      setActiveTravelModeId(mode.id);
+
+      const departure = new Date();
+      const travelHours = Number.isFinite(mode.travelTimeHours) && mode.travelTimeHours > 0
+        ? mode.travelTimeHours
+        : 1;
+      const arrival = new Date(departure.getTime() + travelHours * 60 * 60 * 1000);
+
+      const updates: Partial<typeof profile> & {
+        current_city_id?: string | null;
+        travel_mode?: string | null;
+        travel_started_at?: string | null;
+        travel_eta?: string | null;
+      } = {
+        current_city_id: selectedCity.id,
+        travel_mode: mode.id,
+        travel_started_at: departure.toISOString(),
+        travel_eta: arrival.toISOString(),
+      };
+
+      if (costValue > 0) {
+        updates.cash = Math.max(0, currentCash - costValue);
+      }
+
+      const updatedProfile = await updateProfile(updates as Partial<typeof profile>);
+
+      if (updatedProfile) {
+        await addActivity(
+          'travel',
+          `Traveling to ${selectedCity.name} via ${mode.name}`,
+          -costValue,
+        );
+        toast.success(
+          `Traveling to ${selectedCity.name} via ${mode.name}. ETA ${arrival.toLocaleString()}`,
+        );
+        loadCityDetails(selectedCity, { showLoader: false, quiet: true });
+      }
+    } catch (error: unknown) {
+      console.error('Error starting travel:', error);
+      toast.error('Failed to start travel');
+    } finally {
+      if (isMountedRef.current) {
+        setActiveTravelModeId(null);
+      }
+    }
+  }, [profile, selectedCity, updateProfile, addActivity, loadCityDetails]);
 
   const handleRandomEventChoice = async (eventId: string, choiceId: string) => {
     const event = randomEvents.find((item) => item.id === eventId);
@@ -293,6 +560,23 @@ const WorldEnvironment: React.FC = () => {
     }
   };
 
+  const travelInProgress = Boolean(profile?.travel_eta && Date.parse(profile.travel_eta) > Date.now());
+  const isInSelectedCity = Boolean(profile && selectedCity && profile.current_city_id === selectedCity.id);
+  const playerCash = typeof profile?.cash === 'number' ? profile.cash : 0;
+  const activeTravelMode = profile?.travel_mode ?? null;
+  const travelEtaDate = profile?.travel_eta ? new Date(profile.travel_eta) : null;
+  const travelOptions = cityDetails?.travelModes?.length
+    ? cityDetails.travelModes
+    : (!cityDetailsLoading && selectedCity ? DEFAULT_TRAVEL_MODES : cityDetails?.travelModes ?? []);
+  const cityLocations = cityDetails?.locations?.length
+    ? cityDetails.locations
+    : cityDetails?.metadata?.locations ?? [];
+  const playersInCity = cityDetails?.players ?? [];
+  const gigsInCity = cityDetails?.gigs ?? [];
+  const travelModeDisplayName = activeTravelMode
+    ? (cityDetails?.travelModes?.find((mode) => mode.id === activeTravelMode)?.name ?? activeTravelMode)
+    : null;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -372,232 +656,571 @@ const WorldEnvironment: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="cities" className="space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-[2fr,1fr] gap-6 items-start">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {cities.map((city) => {
-                const isSelected = selectedCity?.id === city.id;
-                const signatureDistricts = city.locations.slice(0, 2);
-
-                return (
-                  <Card
-                    key={city.id}
-                    className={`cursor-pointer transition-shadow ${
-                      isSelected ? 'border-primary shadow-lg' : 'hover:shadow-lg'
-                    }`}
-                    onClick={() => setSelectedCity(city)}
-                  >
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-bold">{city.name}</h3>
-                          <p className="text-sm text-muted-foreground">{city.country}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">Music Scene</div>
-                          <div className="text-2xl font-bold text-primary">{city.music_scene}%</div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-muted-foreground">Population</div>
-                          <div className="font-medium">{(city.population / 1_000_000).toFixed(1)}M</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Venues</div>
-                          <div className="font-medium">{city.venues}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Genre</div>
-                          <div className="font-medium">{city.dominant_genre}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">Local Bonus</div>
-                          <div className="font-medium text-green-600">{city.local_bonus}x</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground mb-2">Cost of Living</div>
-                        <Progress value={city.cost_of_living} className="h-2" />
-                        <div className="text-xs text-muted-foreground mt-1">{city.cost_of_living}% of global average</div>
-                      </div>
-
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4" />
-                          <span>
-                            <span className="font-medium text-foreground">{city.famousResident}</span> is the resident icon
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4" />
-                          <span>
-                            Travel hub: <span className="font-medium text-foreground">{city.travelHub || 'Multiple hubs'}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm font-medium mb-2">Cultural Events</div>
-                        <div className="flex flex-wrap gap-1">
-                          {city.cultural_events.map((event, index) => (
-                            <Badge key={`${city.id}-event-${index}`} variant="outline" className="text-xs">
-                              {event}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-
-                      {signatureDistricts.length > 0 && (
-                        <div>
-                          <div className="text-sm font-medium mb-2">Signature Districts</div>
-                          <div className="space-y-2">
-                            {signatureDistricts.map((district) => (
-                              <div key={`${city.id}-${district.name}`} className="border rounded-lg p-3 space-y-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-sm font-semibold">{district.name}</span>
-                                  {typeof district.averageTicketPrice === 'number' && (
-                                    <Badge variant="outline" className="text-xs">
-                                      ~${district.averageTicketPrice}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground">{district.description}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {selectedCity && (
-              <Card className="sticky top-24">
-                <CardHeader>
-                  <CardTitle>Explore {selectedCity.name}</CardTitle>
-                  {selectedCity.description && (
-                    <p className="text-sm text-muted-foreground">{selectedCity.description}</p>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <span>
-                        Famous resident: <span className="font-medium text-foreground">{selectedCity.famousResident}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>
-                        Travel hub: <span className="font-medium text-foreground">{selectedCity.travelHub || 'Multiple hubs'}</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium mb-2">Cultural Events</div>
-                    {selectedCity.cultural_events.length ? (
-                      <div className="flex flex-wrap gap-1">
-                        {selectedCity.cultural_events.map((event, index) => (
-                          <Badge key={`${selectedCity.id}-detail-event-${index}`} variant="secondary" className="text-xs">
-                            {event}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No cultural events recorded yet.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium mb-2">Intra-city Highlights</div>
-                    {selectedCity.locations.length ? (
-                      <div className="space-y-3">
-                        {selectedCity.locations.map((location) => (
-                          <div key={`${selectedCity.id}-${location.name}`} className="border rounded-lg p-3 space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium">{location.name}</span>
-                              {typeof location.averageTicketPrice === 'number' && (
-                                <Badge variant="outline" className="text-xs">
-                                  ~${location.averageTicketPrice}
-                                </Badge>
-                              )}
+          <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6 items-start">
+            <div className="space-y-6">
+              {cities.length ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {cities.map((city) => {
+                    const isSelected = selectedCity?.id === city.id;
+                    return (
+                      <Card
+                        key={city.id}
+                        className={`cursor-pointer transition-shadow ${isSelected ? 'border-primary shadow-lg ring-1 ring-primary/30' : 'hover:shadow-lg'}`}
+                        onClick={() => setSelectedCity(city)}
+                      >
+                        <CardContent className="p-6 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-lg font-bold flex items-center gap-2">
+                                {city.name}
+                                {isSelected && (
+                                  <Badge variant="outline" className="text-xs text-primary border-primary">
+                                    Selected
+                                  </Badge>
+                                )}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">{city.country}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground">{location.description}</p>
-                            {location.vibe && (
-                              <div className="text-xs text-muted-foreground italic">Vibe: {location.vibe}</div>
-                            )}
-                            {location.highlights.length > 0 && (
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-muted-foreground">Music Scene</div>
+                              <div className="text-2xl font-bold text-primary">{city.music_scene}%</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Population</div>
+                              <div className="font-medium">{(city.population / 1000000).toFixed(1)}M</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Venues</div>
+                              <div className="font-medium">{city.venues}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Genre</div>
+                              <div className="font-medium">{city.dominant_genre}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Local Bonus</div>
+                              <div className="font-medium text-green-600">{city.local_bonus}x</div>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Cost of Living</div>
+                            <Progress value={city.cost_of_living} className="h-2" />
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {city.cost_of_living}% of global average
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground mb-2">Cultural Events</div>
+                            {city.cultural_events.length ? (
                               <div className="flex flex-wrap gap-1">
-                                {location.highlights.map((highlight, index) => (
-                                  <Badge key={`${location.name}-${index}`} variant="outline" className="text-xs">
-                                    {highlight}
+                                {city.cultural_events.map((event, index) => (
+                                  <Badge key={`${city.id}-event-${index}`} variant="outline" className="text-xs">
+                                    {event}
                                   </Badge>
                                 ))}
                               </div>
-                            )}
-                            {location.signatureVenue && (
-                              <div className="text-xs text-muted-foreground">
-                                Signature venue:{' '}
-                                <span className="font-medium text-foreground">{location.signatureVenue}</span>
-                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">No cultural events recorded.</p>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No district data available.</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium mb-2">Travel Options</div>
-                    {selectedCity.travelOptions.length ? (
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center text-muted-foreground">
+                    No cities are available right now. Check back soon for new destinations.
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+            <div className="space-y-4">
+              <Card className="sticky top-6">
+                <CardHeader>
+                  <CardTitle>City Insights</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {selectedCity ? (
+                    <>
                       <div className="space-y-3">
-                        {selectedCity.travelOptions.map((option) => (
-                          <div key={`${selectedCity.id}-${option.mode}-${option.name}`} className="border rounded-lg p-3 space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs capitalize">{option.label}</Badge>
-                                <span className="font-medium">{option.name}</span>
-                              </div>
-                              {typeof option.averageCost === 'number' && (
-                                <span className="text-xs text-muted-foreground">Avg cost: ${option.averageCost}</span>
-                              )}
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-primary" />
+                              <h3 className="text-xl font-bold">{selectedCity.name}</h3>
                             </div>
-                            <p className="text-xs text-muted-foreground">{option.description}</p>
-                            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                              {typeof option.durationMinutes === 'number' && (
-                                <span>Duration: {option.durationMinutes} min</span>
-                              )}
-                              {option.frequency && <span>Frequency: {option.frequency}</span>}
-                              {option.connectsTo.length > 0 && (
-                                <span>Connects to: {option.connectsTo.join(', ')}</span>
-                              )}
-                            </div>
-                            {option.comfort && (
-                              <div className="text-[11px] text-muted-foreground">Comfort: {option.comfort}</div>
-                            )}
+                            <p className="text-sm text-muted-foreground">{selectedCity.country}</p>
                           </div>
-                        ))}
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              Music Scene {selectedCity.music_scene}%
+                            </Badge>
+                            {isInSelectedCity ? (
+                              <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700 text-xs">
+                                You are here
+                              </Badge>
+                            ) : travelInProgress && travelModeDisplayName ? (
+                              <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 text-xs">
+                                Traveling via {travelModeDisplayName}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <div className="text-xs text-muted-foreground">Population</div>
+                            <div className="font-medium">{(selectedCity.population / 1000000).toFixed(1)}M</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Venues</div>
+                            <div className="font-medium">{selectedCity.venues}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Cost of Living</div>
+                            <div className="font-medium">{selectedCity.cost_of_living}%</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">Local Bonus</div>
+                            <div className="font-medium text-green-600">{selectedCity.local_bonus}x</div>
+                          </div>
+                        </div>
+                        {travelInProgress && travelEtaDate && (
+                          <p className="text-xs text-muted-foreground">
+                            Arrival expected {travelEtaDate.toLocaleString()}.
+                          </p>
+                        )}
+                        <Separator />
                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Travel data coming soon.</p>
-                    )}
-                  </div>
+                      <div className="space-y-4">
+                        <section className="space-y-2">
+                          <h4 className="flex items-center gap-2 text-sm font-semibold">
+                            <Sparkles className="w-4 h-4 text-purple-500" />
+                            Famous Resident
+                          </h4>
+                          {cityDetailsLoading ? (
+                            <Skeleton className="h-4 w-2/3" />
+                          ) : cityDetails?.metadata?.famousResident ? (
+                            <p className="text-sm">{cityDetails.metadata.famousResident}</p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              No famous resident recorded for this city yet.
+                            </p>
+                          )}
+                        </section>
+                        <Separator />
+                        <section className="space-y-2">
+                          <h4 className="flex items-center gap-2 text-sm font-semibold">
+                            <Building className="w-4 h-4 text-blue-500" />
+                            Intra-city Locations
+                          </h4>
+                          {cityDetailsLoading ? (
+                            <div className="space-y-2">
+                              <Skeleton className="h-16 w-full" />
+                              <Skeleton className="h-16 w-full" />
+                            </div>
+                          ) : cityLocations.length ? (
+                            <div className="space-y-2">
+                              {cityLocations.map((location) => (
+                                <div key={location.id} className="border rounded-lg p-3 space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">{location.name}</span>
+                                    {location.category && (
+                                      <Badge variant="outline" className="text-xs capitalize">
+                                        {location.category}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {location.description && (
+                                    <p className="text-xs text-muted-foreground">{location.description}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              No intra-city locations have been cataloged here yet.
+                            </p>
+                          )}
+                        </section>
+                        <Separator />
+                        <section className="space-y-3">
+                          <h4 className="flex items-center gap-2 text-sm font-semibold">
+                            <Mountain className="w-4 h-4 text-amber-500" />
+                            Travel Modes
+                          </h4>
+                          {cityDetailsLoading && !cityDetails ? (
+                            <div className="space-y-2">
+                              <Skeleton className="h-20 w-full" />
+                              <Skeleton className="h-20 w-full" />
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {travelOptions.map((mode) => {
+                                const insufficientFunds = typeof mode.cost === 'number' && mode.cost > playerCash;
+                                const disableTravel = travelInProgress || isInSelectedCity || insufficientFunds || activeTravelModeId === mode.id;
+                                return (
+                                  <div key={mode.id} className="border rounded-lg p-3 space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div>
+                                        <div className="text-sm font-semibold">{mode.name}</div>
+                                        {mode.description && (
+                                          <p className="text-xs text-muted-foreground mt-1">{mode.description}</p>
+                                        )}
+                                      </div>
+                                      <Badge variant="outline" className="text-xs">
+                                        Comfort {Math.round(mode.comfort)}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Clock className="w-4 h-4" />
+                                        {mode.travelTimeHours.toFixed(1)}h
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <DollarSign className="w-4 h-4" />
+                                        ${Math.max(0, Math.round(mode.cost)).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      className="w-full"
+                                      disabled={disableTravel}
+                                      onClick={() => handleTravelTo(mode)}
+                                    >
+                                      {activeTravelModeId === mode.id && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      )}
+                                      {travelInProgress ? 'Travel in progress' : isInSelectedCity ? 'Already in city' : insufficientFunds ? 'Insufficient funds' : `Travel via ${mode.name}`}
+                                    </Button>
+                                    {insufficientFunds && (
+                                      <p className="text-xs text-red-600">
+                                        Requires ${Math.max(0, Math.round(mode.cost)).toLocaleString()} – you have ${playerCash.toLocaleString()}.
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </section>
+                        <Separator />
+                        <section className="space-y-3">
+                          <h4 className="flex items-center gap-2 text-sm font-semibold">
+                            <Users className="w-4 h-4 text-indigo-500" />
+                            Players Currently Here
+                          </h4>
+                          {cityDetailsLoading && !cityDetails ? (
+                            <div className="space-y-2">
+                              <Skeleton className="h-14 w-full" />
+                              <Skeleton className="h-14 w-full" />
+                            </div>
+                          ) : playersInCity.length ? (
+                            <div className="space-y-2">
+                              {playersInCity.slice(0, 6).map((player) => {
+                                const displayName = player.displayName ?? player.username;
+                                return (
+                                  <div key={player.profileId} className="flex items-center justify-between gap-3 border rounded-lg p-3">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarImage src={player.avatarUrl ?? undefined} alt={displayName} />
+                                        <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <div className="text-sm font-medium">{displayName}</div>
+                                        <div className="text-xs text-muted-foreground">@{player.username}</div>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                      {typeof player.level === 'number' && (
+                                        <Badge variant="outline" className="text-xs">
+                                          Lvl {player.level}
+                                        </Badge>
+                                      )}
+                                      {player.primaryInstrument && (
+                                        <span className="text-xs text-muted-foreground">{player.primaryInstrument}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {playersInCity.length > 6 && (
+                                <p className="text-xs text-muted-foreground">
+                                  and {playersInCity.length - 6} more players exploring the city.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              No players are currently registered in this city.
+                            </p>
+                          )}
+                        </section>
+                        <Separator />
+                        <section className="space-y-3">
+                          <h4 className="flex items-center gap-2 text-sm font-semibold">
+                            <Calendar className="w-4 h-4 text-rose-500" />
+                            Upcoming Gigs
+                          </h4>
+                          {cityDetailsLoading && !cityDetails ? (
+                            <div className="space-y-2">
+                              <Skeleton className="h-20 w-full" />
+                              <Skeleton className="h-20 w-full" />
+                            </div>
+                          ) : gigsInCity.length ? (
+                            <div className="space-y-2">
+                              {gigsInCity.map((gig) => (
+                                <div key={gig.id} className="border rounded-lg p-3 space-y-2">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <div className="text-sm font-semibold">{gig.venue.name}</div>
+                                      <p className="text-xs text-muted-foreground">
+                                        {gig.venue.location ?? selectedCity.name}
+                                      </p>
+                                    </div>
+                                    <Badge variant="outline" className="text-xs capitalize">
+                                      {gig.status.replace('_', ' ')}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-4 h-4" />
+                                      {new Date(gig.scheduledDate).toLocaleString()}
+                                    </span>
+                                    {typeof gig.payment === 'number' && (
+                                      <span className="flex items-center gap-1">
+                                        <DollarSign className="w-4 h-4" />
+                                        ${gig.payment.toLocaleString()}
+                                      </span>
+                                    )}
+                                    {typeof gig.venue.capacity === 'number' && (
+                                      <span className="flex items-center gap-1">
+                                        <Users className="w-4 h-4" />
+                                        {gig.venue.capacity.toLocaleString()} cap
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              No upcoming gigs scheduled here yet.
+                            </p>
+                          )}
+                        </section>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Select a city on the left to explore detailed insights.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
-            )}
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="events" className="space-y-6">
           <div className="space-y-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Live Game Events</h2>
+                <p className="text-sm text-muted-foreground">
+                  Join limited-time challenges to earn rewards alongside the community.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void refreshGameEvents()}
+                disabled={eventsLoading || eventsRefreshing}
+              >
+                {eventsRefreshing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Refreshing
+                  </>
+                ) : (
+                  'Refresh'
+                )}
+              </Button>
+            </div>
+
+            {eventsError && (
+              <Alert variant="destructive">
+                <AlertTitle>Unable to load events</AlertTitle>
+                <AlertDescription>{eventsError}</AlertDescription>
+              </Alert>
+            )}
+
+            {eventsLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : liveEvents.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-sm text-muted-foreground">
+                  No live events are active right now. Check back soon!
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {liveEvents.map((event) => {
+                  const rewardEntries = formatRewardEntries(event.rewards);
+                  const requirementEntries = formatRequirementEntries(event.requirements);
+                  const startDate = new Date(event.start_date);
+                  const endDate = new Date(event.end_date);
+                  const now = Date.now();
+                  const isExpired = endDate.getTime() < now;
+                  const statusLabel = event.is_active
+                    ? 'Active'
+                    : isExpired
+                      ? 'Completed'
+                      : 'Upcoming';
+                  const statusVariant = event.is_active
+                    ? 'default'
+                    : isExpired
+                      ? 'outline'
+                      : 'secondary';
+                  const participantProgress = typeof event.max_participants === 'number'
+                    ? Math.min(100, Math.round((event.participantCount / Math.max(event.max_participants, 1)) * 100))
+                    : null;
+                  const joinDisabled = !event.is_active || event.isUserParticipant || (event.availableSlots !== null && event.availableSlots <= 0);
+                  const completionDisabled = !event.isUserParticipant || event.isUserRewardClaimed;
+
+                  return (
+                    <Card key={event.id} className="border-primary/40">
+                      <CardContent className="space-y-4 p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Music className="h-5 w-5 text-primary" />
+                              <h3 className="text-lg font-bold">{event.title}</h3>
+                            </div>
+                            {event.description && (
+                              <p className="text-sm text-muted-foreground">{event.description}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant={statusVariant} className="capitalize">
+                              {statusLabel}
+                            </Badge>
+                            {event.isUserParticipant && (
+                              <Badge variant={event.isUserRewardClaimed ? 'outline' : 'secondary'}>
+                                {event.isUserRewardClaimed ? 'Reward claimed' : 'Joined'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {startDate.toLocaleString()} – {endDate.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>
+                              {event.participantCount}
+                              {typeof event.max_participants === 'number'
+                                ? ` / ${event.max_participants} participants`
+                                : ' participants'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {participantProgress !== null && (
+                          <div className="space-y-2">
+                            <Progress value={participantProgress} />
+                            <p className="text-xs text-muted-foreground">
+                              {event.availableSlots === 0
+                                ? 'Event is full'
+                                : `${event.availableSlots} slots remaining`}
+                            </p>
+                          </div>
+                        )}
+
+                        {requirementEntries.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">Requirements</h4>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {requirementEntries.map((requirement) => (
+                                <Badge key={`${event.id}-requirement-${requirement.key}`} variant="outline">
+                                  {requirement.label}: {requirement.value}+
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {rewardEntries.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">Rewards</h4>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {rewardEntries.map((reward) => (
+                                <Badge key={`${event.id}-reward-${reward.key}`} variant="secondary">
+                                  {reward.label}: {reward.value > 0 ? '+' : ''}{reward.value}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <Button
+                            size="sm"
+                            onClick={() => void handleJoinGameEvent(event)}
+                            disabled={joinDisabled || joiningEventId === event.id}
+                          >
+                            {joiningEventId === event.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Joining...
+                              </>
+                            ) : (
+                              'Join Event'
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handleCompleteGameEvent(event)}
+                            disabled={completionDisabled || completingEventId === event.id}
+                          >
+                            {event.isUserRewardClaimed ? (
+                              'Rewards claimed'
+                            ) : completingEventId === event.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Claiming...
+                              </>
+                            ) : (
+                              'Complete Event'
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">World Simulation Events</h2>
+              <p className="text-sm text-muted-foreground">
+                These global conditions influence demand, rewards, and tour planning across the world.
+              </p>
+            </div>
             {worldEvents.map((event) => (
               <Card key={event.id} className={event.is_active ? 'border-green-500' : 'border-gray-300'}>
                 <CardContent className="p-6">
@@ -650,7 +1273,7 @@ const WorldEnvironment: React.FC = () => {
                   </div>
 
                   {event.is_active && event.participation_reward > 0 && (
-                    <Button onClick={() => participateInWorldEvent(event.id)} className="w-full">
+                    <Button onClick={() => void participateInWorldEvent(event.id)} className="w-full">
                       Participate in Event
                     </Button>
                   )}
