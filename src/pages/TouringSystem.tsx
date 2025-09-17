@@ -30,6 +30,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { format, addDays, differenceInDays } from 'date-fns';
+import type { Database } from '@/integrations/supabase/types';
 
 interface TourVenue {
   id: string;
@@ -70,11 +71,19 @@ interface TourLogistics {
   misc_cost: number;
 }
 
+type TourRow = Database['public']['Tables']['tours']['Row'];
+type TourVenueRow = Database['public']['Tables']['tour_venues']['Row'];
+type VenueRow = Database['public']['Tables']['venues']['Row'];
+
+type TourRecord = TourRow & {
+  tour_venues: (TourVenueRow & { venue: VenueRow | null })[] | null;
+};
+
 const TouringSystem: React.FC = () => {
   const { user } = useAuth();
   const { profile, updateProfile, addActivity } = useGameData();
   const [tours, setTours] = useState<Tour[]>([]);
-  const [availableVenues, setAvailableVenues] = useState<any[]>([]);
+  const [availableVenues, setAvailableVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateTour, setShowCreateTour] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
@@ -123,26 +132,41 @@ const TouringSystem: React.FC = () => {
       if (toursError) throw toursError;
 
       // Transform the data
-      const transformedTours = (toursData || []).map(tour => ({
-        ...tour,
-        total_expenses: 0,
-        status: tour.status as 'planned' | 'active' | 'completed' | 'cancelled',
-        venues: (tour.tour_venues || []).map((tv: any) => ({
-          id: tv.id,
-          venue_id: tv.venue_id,
-          venue_name: tv.venue?.name || 'Unknown Venue',
-          venue_capacity: tv.venue?.capacity || 0,
-          city: tv.venue?.location || 'Unknown City',
-          country: 'Various',
-          date: tv.date,
-          ticket_price: tv.ticket_price || 50,
-          tickets_sold: tv.tickets_sold || 0,
-          status: tv.status as 'scheduled' | 'completed' | 'cancelled',
-          revenue: tv.revenue || 0,
-          expenses: 0,
-          distance_from_previous: Math.floor(Math.random() * 500) + 100
-        }))
-      }));
+      const toursList = (toursData ?? []) as TourRecord[];
+      const transformedTours: Tour[] = toursList.map(tour => {
+        const status: Tour['status'] = (tour.status as Tour['status']) ?? 'planned';
+        const venues = (tour.tour_venues ?? []).map((tv): TourVenue => {
+          const venueDetails = tv.venue;
+          return {
+            id: tv.id,
+            venue_id: tv.venue_id,
+            venue_name: venueDetails?.name ?? 'Unknown Venue',
+            venue_capacity: venueDetails?.capacity ?? 0,
+            city: venueDetails?.location ?? 'Unknown City',
+            country: 'Various',
+            date: tv.date,
+            ticket_price: tv.ticket_price ?? 50,
+            tickets_sold: tv.tickets_sold ?? 0,
+            status: (tv.status as TourVenue['status']) ?? 'scheduled',
+            revenue: tv.revenue ?? 0,
+            expenses: 0,
+            distance_from_previous: Math.floor(Math.random() * 500) + 100
+          };
+        });
+
+        return {
+          id: tour.id,
+          name: tour.name,
+          description: tour.description ?? '',
+          start_date: tour.start_date,
+          end_date: tour.end_date,
+          status,
+          total_revenue: tour.total_revenue ?? 0,
+          total_expenses: 0,
+          venues,
+          created_at: tour.created_at ?? new Date().toISOString()
+        };
+      });
 
       setTours(transformedTours);
 
@@ -153,11 +177,13 @@ const TouringSystem: React.FC = () => {
         .order('prestige_level', { ascending: false });
 
       if (venuesError) throw venuesError;
-      setAvailableVenues(venuesData || []);
+      setAvailableVenues(venuesData ?? []);
 
-    } catch (error: any) {
-      console.error('Error loading tour data:', error);
-      toast.error('Failed to load tour data');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load tour data';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading tour data:', errorMessage, error);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -201,12 +227,14 @@ const TouringSystem: React.FC = () => {
       const tourVenues = selectedVenues.map((venueId, index) => {
         const venue = availableVenues.find(v => v.id === venueId);
         const showDate = addDays(newTour.start_date, index * 3); // 3 days between shows
-        
+        const basePayment = venue?.base_payment ?? 500;
+        const ticketPrice = Math.max(50, Math.floor(basePayment / 10));
+
         return {
           tour_id: tourData.id,
           venue_id: venueId,
           date: showDate.toISOString(),
-          ticket_price: Math.floor(venue?.base_payment / 10) || 50,
+          ticket_price: ticketPrice,
           status: 'scheduled'
         };
       });
@@ -234,9 +262,11 @@ const TouringSystem: React.FC = () => {
       setSelectedVenues([]);
       loadTourData();
 
-    } catch (error: any) {
-      console.error('Error creating tour:', error);
-      toast.error('Failed to create tour');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to create tour';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error creating tour:', errorMessage, error);
+      toast.error(errorMessage);
     }
   };
 
@@ -291,9 +321,11 @@ const TouringSystem: React.FC = () => {
       toast.success(`Show completed! Sold ${ticketsSold} tickets for $${revenue.toLocaleString()}`);
       loadTourData();
 
-    } catch (error: any) {
-      console.error('Error executing show:', error);
-      toast.error('Failed to execute show');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to execute show';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error executing show:', errorMessage, error);
+      toast.error(errorMessage);
     }
   };
 

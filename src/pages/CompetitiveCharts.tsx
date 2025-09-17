@@ -595,9 +595,11 @@ const CompetitiveCharts: React.FC = () => {
       );
 
       toast.success(`Registered for ${competition.name}!`);
-    } catch (error: any) {
-      console.error('Error registering for competition:', error);
-      toast.error('Failed to register for competition');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to register for competition';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error registering for competition:', errorMessage, error);
+      toast.error(errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`);
     }
   };
 

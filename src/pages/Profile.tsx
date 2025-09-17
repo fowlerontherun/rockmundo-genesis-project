@@ -154,12 +154,14 @@ const Profile = () => {
         title: "Profile Updated!",
         description: "Your profile has been successfully updated.",
       });
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to update profile";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error updating profile:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update profile",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     } finally {
       setSaving(false);
@@ -191,12 +193,14 @@ const Profile = () => {
         title: "Avatar Updated!",
         description: "Your profile picture has been successfully updated.",
       });
-    } catch (error: any) {
-      console.error('Error uploading avatar:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to upload avatar";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error uploading avatar:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Upload failed",
-        description: "Failed to upload avatar",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     } finally {
       setUploading(false);

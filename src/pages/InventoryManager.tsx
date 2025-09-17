@@ -114,12 +114,14 @@ const InventoryManager = () => {
 
       if (error) throw error;
       setInventory(data || []);
-    } catch (error: any) {
-      console.error('Error fetching inventory:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load inventory";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error fetching inventory:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load inventory"
+        description: errorMessage
       });
     } finally {
       setLoading(false);
@@ -146,12 +148,14 @@ const InventoryManager = () => {
         title: "Equipment Updated",
         description: `${item.equipment.name} has been equipped!`
       });
-    } catch (error: any) {
-      console.error('Error equipping item:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to equip item";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error equipping item:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to equip item"
+        description: errorMessage
       });
     }
   };
@@ -175,12 +179,14 @@ const InventoryManager = () => {
         title: "Equipment Updated",
         description: `${item.equipment.name} has been unequipped!`
       });
-    } catch (error: any) {
-      console.error('Error unequipping item:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to unequip item";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error unequipping item:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to unequip item"
+        description: errorMessage
       });
     }
   };
@@ -217,12 +223,14 @@ const InventoryManager = () => {
         title: "Item Repaired",
         description: `${item.equipment.name} has been fully repaired!`
       });
-    } catch (error: any) {
-      console.error('Error repairing item:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to repair item";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error repairing item:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to repair item"
+        description: errorMessage
       });
     }
   };
@@ -250,12 +258,14 @@ const InventoryManager = () => {
         title: "Item Sold",
         description: `Sold ${item.equipment.name} for $${sellPrice}!`
       });
-    } catch (error: any) {
-      console.error('Error selling item:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to sell item";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error selling item:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to sell item"
+        description: errorMessage
       });
     }
   };

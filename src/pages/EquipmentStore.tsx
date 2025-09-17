@@ -137,12 +137,14 @@ const EquipmentStore = () => {
         ...item,
         stat_boosts: normalizeStatBoosts(item.stat_boosts)
       })));
-    } catch (error: any) {
-      console.error('Error loading equipment:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load equipment store";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading equipment:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load equipment store",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
   };
@@ -179,12 +181,14 @@ const EquipmentStore = () => {
       });
 
       setEquipmentUpgrades(grouped);
-    } catch (error: any) {
-      console.error('Error loading equipment upgrades:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load equipment upgrades";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading equipment upgrades:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load equipment upgrades",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
   };
@@ -205,8 +209,10 @@ const EquipmentStore = () => {
         equipped: 'equipped' in item ? Boolean(item.equipped ?? item.is_equipped) : undefined,
         upgrade_level: item.upgrade_level ?? 0
       })));
-    } catch (error: any) {
-      console.error('Error loading player equipment:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load player equipment';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading player equipment:', errorMessage, error);
     } finally {
       setLoading(false);
     }
@@ -298,12 +304,14 @@ const EquipmentStore = () => {
       await loadEquipment();
       await loadPlayerEquipment();
       await refetch?.();
-    } catch (error: any) {
-      console.error('Error purchasing equipment:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to complete purchase';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error purchasing equipment:', errorMessage, error);
       toast({
         variant: 'destructive',
         title: 'Purchase failed',
-        description: 'Failed to complete purchase',
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     } finally {
       setPurchasing(null);
@@ -334,12 +342,14 @@ const EquipmentStore = () => {
         title: equipment.is_equipped ? "Unequipped" : "Equipped",
         description: `Equipment ${equipment.is_equipped ? 'unequipped' : 'equipped'} successfully`,
       });
-    } catch (error: any) {
-      console.error('Error toggling equipment:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to update equipment";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error toggling equipment:', errorMessage, error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update equipment",
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
   };
@@ -497,8 +507,10 @@ const EquipmentStore = () => {
         title: "Upgrade successful!",
         description: `${item.name} has reached Tier ${nextUpgrade.tier}.`
       });
-    } catch (error: any) {
-      console.error('Error upgrading equipment:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'We couldn\'t apply that upgrade. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error upgrading equipment:', errorMessage, error);
       if (profileUpdated) {
         try {
           await updateProfile({ cash: originalCash });
@@ -510,7 +522,7 @@ const EquipmentStore = () => {
       toast({
         variant: "destructive",
         title: "Upgrade failed",
-        description: "We couldn't apply that upgrade. Please try again."
+        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage} (${errorMessage})`
       });
     } finally {
       setUpgrading(null);

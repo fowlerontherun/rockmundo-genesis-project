@@ -62,8 +62,10 @@ export const createAdminUser = async () => {
     }
 
     return { success: false, error: 'User creation failed' };
-  } catch (error: any) {
-    console.error('Error creating admin user:', error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const fallbackMessage = 'Failed to create admin user';
+    const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+    console.error('Error creating admin user:', errorMessage, error);
+    return { success: false, error: errorMessage };
   }
 };
