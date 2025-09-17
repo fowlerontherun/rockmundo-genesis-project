@@ -10,7 +10,6 @@ import {
   Settings, 
   Database,
   Activity,
-  TrendingUp,
   AlertCircle,
   Crown
 } from 'lucide-react';
@@ -18,56 +17,80 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import type { Database } from '@/integrations/supabase/types';
+
+type AppRole = Database['public']['Enums']['app_role'];
 
 interface UserWithRole {
   id: string;
   email: string | null;
   username: string;
   display_name: string;
-  role: string;
-  created_at: string;
-  last_sign_in_at: string;
+  role: AppRole;
+  created_at: string | null;
+  last_sign_in_at: string | null;
 }
 
-type RawUser = {
-  user_id: string;
-  username: string;
-  display_name: string | null;
-  created_at: string;
-  updated_at: string;
-  user_roles?: unknown;
-  auth_users?: unknown;
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type UserRoleRow = Database['public']['Tables']['user_roles']['Row'];
+
+type ProfileWithRole = Pick<
+  ProfileRow,
+  'user_id' | 'username' | 'display_name' | 'created_at' | 'updated_at'
+> & {
+  user_roles: Array<Pick<UserRoleRow, 'role'> | null> | null;
 };
 
-const getRelationValue = (relation: unknown, key: string): unknown => {
-  if (Array.isArray(relation)) {
-    for (const item of relation) {
-      if (item && typeof item === 'object' && key in item) {
-        return (item as Record<string, unknown>)[key];
+const DEFAULT_ROLE: AppRole = 'user';
+
+const resolveRole = (roles: ProfileWithRole['user_roles']): AppRole => {
+  if (Array.isArray(roles)) {
+    for (const entry of roles) {
+      if (entry && entry.role) {
+        return entry.role;
       }
     }
-    return null;
   }
 
-  if (relation && typeof relation === 'object' && key in relation) {
-    return (relation as Record<string, unknown>)[key];
+  return DEFAULT_ROLE;
+};
+
+const fetchAuthEmailMap = async (userIds: string[]): Promise<Map<string, string | null>> => {
+  const emailMap = new Map<string, string | null>();
+
+  if (userIds.length === 0) {
+    return emailMap;
   }
 
-  return null;
-};
+  const uniqueIds = Array.from(new Set(userIds));
+  const perPage = Math.max(1, Math.min(uniqueIds.length, 1000));
 
-const getEmailFromRelation = (relation: unknown): string | null => {
-  const value = getRelationValue(relation, 'email');
-  return typeof value === 'string' ? value : null;
-};
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage,
+    });
 
-const getRoleFromRelation = (relation: unknown): string => {
-  const value = getRelationValue(relation, 'role');
-  return typeof value === 'string' && value.length > 0 ? value : 'user';
+    if (error) {
+      throw error;
+    }
+
+    const idSet = new Set(uniqueIds);
+
+    for (const authUser of data?.users ?? []) {
+      if (idSet.has(authUser.id)) {
+        emailMap.set(authUser.id, authUser.email ?? null);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching user emails:', error);
+  }
+
+  return emailMap;
 };
 
 const Admin = () => {
-  const { userRole, isAdmin } = useUserRole();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,29 +98,39 @@ const Admin = () => {
   const loadUsers = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
-      // Load profiles with roles
       const { data, error } = await supabase
         .from('profiles')
         .select(`
-          *,
-          user_roles(role),
-          auth_users:auth.users(email)
+          user_id,
+          username,
+          display_name,
+          created_at,
+          updated_at,
+          user_roles(role)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .returns<ProfileWithRole[]>();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      const rawUsers = (data ?? []) as RawUser[];
+      const profiles = data ?? [];
+      const emailMap = await fetchAuthEmailMap(profiles.map((profile) => profile.user_id));
 
-      const formattedUsers: UserWithRole[] = rawUsers.map((user) => ({
-        id: user.user_id,
-        email: getEmailFromRelation(user.auth_users),
-        username: user.username,
-        display_name: user.display_name ?? user.username,
-        role: getRoleFromRelation(user.user_roles),
-        created_at: user.created_at,
-        last_sign_in_at: user.updated_at
-      }));
+      const formattedUsers: UserWithRole[] = profiles.map((profile) => {
+        const role = resolveRole(profile.user_roles);
+
+        return {
+          id: profile.user_id,
+          email: emailMap.get(profile.user_id) ?? null,
+          username: profile.username,
+          display_name: profile.display_name ?? profile.username,
+          role,
+          created_at: profile.created_at,
+          last_sign_in_at: profile.updated_at ?? profile.created_at ?? null,
+        };
+      });
 
       setUsers(formattedUsers);
     } catch (error: unknown) {
@@ -116,7 +149,7 @@ const Admin = () => {
     void loadUsers();
   }, [loadUsers]);
 
-  const updateUserRole = async (userId: string, newRole: 'admin' | 'moderator' | 'user') => {
+  const updateUserRole = async (userId: string, newRole: AppRole) => {
     try {
       // First delete existing role
       await supabase
@@ -156,7 +189,7 @@ const Admin = () => {
     }
   };
 
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleBadgeVariant = (role: AppRole) => {
     switch (role) {
       case 'admin': return 'destructive';
       case 'moderator': return 'default';
@@ -229,7 +262,7 @@ const Admin = () => {
                               </Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
-                              Joined: {new Date(user.created_at).toLocaleDateString()}
+                              Joined: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
                             </p>
                           </div>
                           
