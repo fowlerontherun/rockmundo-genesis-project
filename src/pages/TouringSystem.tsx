@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,13 +104,7 @@ const TouringSystem: React.FC = () => {
     misc_cost: 1000
   });
 
-  useEffect(() => {
-    if (user) {
-      loadTourData();
-    }
-  }, [user]);
-
-  const loadTourData = async () => {
+  const loadTourData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -187,7 +181,13 @@ const TouringSystem: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadTourData();
+    }
+  }, [user, loadTourData]);
 
   const createTour = async () => {
     if (!user || !profile) return;

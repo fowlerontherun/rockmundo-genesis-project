@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,15 +117,7 @@ const EquipmentStore = () => {
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadEquipment();
-      loadPlayerEquipment();
-      loadEquipmentUpgrades();
-    }
-  }, [user]);
-
-  const loadEquipment = async () => {
+  const loadEquipment = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('equipment_items')
@@ -147,9 +139,9 @@ const EquipmentStore = () => {
         description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
-  };
+  }, [toast]);
 
-  const loadEquipmentUpgrades = async () => {
+  const loadEquipmentUpgrades = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('equipment_upgrades')
@@ -191,9 +183,9 @@ const EquipmentStore = () => {
         description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
       });
     }
-  };
+  }, [toast]);
 
-  const loadPlayerEquipment = async () => {
+  const loadPlayerEquipment = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -216,7 +208,15 @@ const EquipmentStore = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadEquipment();
+      loadPlayerEquipment();
+      loadEquipmentUpgrades();
+    }
+  }, [user, loadEquipment, loadPlayerEquipment, loadEquipmentUpgrades]);
 
   const purchaseEquipment = async (item: EquipmentItem) => {
     if (purchasing) return;

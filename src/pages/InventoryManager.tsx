@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,11 +51,46 @@ const InventoryManager = () => {
     { value: 'recording', label: 'Recording' },
   ];
 
+  const fetchInventory = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('player_equipment')
+        .select(`
+          *,
+          equipment:equipment_items!player_equipment_equipment_id_fkey (
+            id,
+            name,
+            category,
+            rarity,
+            price,
+            stat_boosts,
+            description
+          )
+        `)
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setInventory(data || []);
+    } catch (error: unknown) {
+      const fallbackMessage = "Failed to load inventory";
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error fetching inventory:', errorMessage, error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (user) {
       fetchInventory();
     }
-  }, [user]);
+  }, [user, fetchInventory]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -92,41 +127,6 @@ const InventoryManager = () => {
       setWearSummary(null);
     }
   }, [user]);
-
-  const fetchInventory = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('player_equipment')
-        .select(`
-          *,
-          equipment:equipment_items!player_equipment_equipment_id_fkey (
-            id,
-            name,
-            category,
-            rarity,
-            price,
-            stat_boosts,
-            description
-          )
-        `)
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setInventory(data || []);
-    } catch (error: unknown) {
-      const fallbackMessage = "Failed to load inventory";
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error('Error fetching inventory:', errorMessage, error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const equipItem = async (item: InventoryItem) => {
     try {

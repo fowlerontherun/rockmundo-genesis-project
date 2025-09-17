@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,20 +90,16 @@ const EnhancedBandManager = () => {
     "Lead Vocalist", "Backing Vocalist", "Keyboardist", "Producer"
   ];
 
-  useEffect(() => {
-    if (user) {
-      fetchBands();
-    }
-  }, [user]);
+  const getUserBandIds = useCallback(async (): Promise<string> => {
+    const { data } = await supabase
+      .from("band_members")
+      .select("band_id")
+      .eq("user_id", user?.id);
 
-  useEffect(() => {
-    if (selectedBand) {
-      fetchBandDetails();
-      fetchAvailableMembers();
-    }
-  }, [selectedBand]);
+    return data?.map(m => m.band_id).join(",") || "";
+  }, [user?.id]);
 
-  const fetchBands = async () => {
+  const fetchBands = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("bands")
@@ -113,7 +109,7 @@ const EnhancedBandManager = () => {
 
       if (error) throw error;
       setMyBands(data || []);
-      
+
       if (data && data.length > 0) {
         setSelectedBand(data[0]);
       }
@@ -122,19 +118,66 @@ const EnhancedBandManager = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getUserBandIds, user?.id]);
 
-  const getUserBandIds = async (): Promise<string> => {
-    const { data } = await supabase
-      .from("band_members")
-      .select("band_id")
-      .eq("user_id", user?.id);
-    
-    return data?.map(m => m.band_id).join(",") || "";
-  };
+  const calculateBandStats = useCallback((members: BandMember[]): BandStats => {
+    const totalSkills = members.reduce((acc, member) => {
+      const skills = member.player_skills;
+      return acc + skills.guitar + skills.vocals + skills.drums + skills.bass + skills.performance + skills.songwriting;
+    }, 0);
 
-  const fetchBandDetails = async () => {
-    if (!selectedBand) return;
+    const avgSkill = members.length > 0 ? totalSkills / (members.length * 6) : 0;
+
+    // Chemistry calculation based on skill balance and member count
+    const chemistry = Math.min(100, Math.max(0, avgSkill * (members.length / 4) * 1.2));
+
+    const weeklyIncome = Math.round(chemistry * 10 + (selectedBand?.popularity ?? 0) * 5);
+
+    return {
+      totalSkill: Math.round(avgSkill),
+      chemistry: Math.round(chemistry),
+      weeklyIncome,
+      songsCreated: 0, // Would need to fetch from songs table
+      gigsPerformed: 0  // Would need to fetch from gigs table
+    };
+  }, [selectedBand?.popularity]);
+
+  const fetchAvailableMembers = useCallback(async (currentMemberIds: string[]) => {
+    try {
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .neq("user_id", user?.id)
+        .limit(20);
+
+      if (profilesError) throw profilesError;
+
+      // Fetch skills for each profile
+      const profilesWithSkills = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: skills } = await supabase
+            .from("player_skills")
+            .select("guitar, vocals, drums, bass, performance, songwriting")
+            .eq("user_id", profile.user_id)
+            .single();
+
+          return {
+            ...profile,
+            player_skills: skills || { guitar: 20, vocals: 20, drums: 20, bass: 20, performance: 20, songwriting: 20 }
+          };
+        })
+      );
+
+      const available = profilesWithSkills?.filter(p => !currentMemberIds.includes(p.user_id)) || [];
+
+      setAvailableMembers(available);
+    } catch (error) {
+      console.error("Error fetching available members:", error);
+    }
+  }, [user?.id]);
+
+  const fetchBandDetails = useCallback(async () => {
+    if (!selectedBand) return null;
 
     try {
       // Fetch band members with their profiles and skills separately due to relation constraints
@@ -163,74 +206,31 @@ const EnhancedBandManager = () => {
 
       setBandMembers(membersWithDetails);
 
-      // Calculate band stats
       if (membersWithDetails) {
         const stats = calculateBandStats(membersWithDetails);
         setBandStats(stats);
+        const currentMemberIds = membersWithDetails.map(member => member.user_id);
+        await fetchAvailableMembers(currentMemberIds);
       }
 
+      return membersWithDetails;
     } catch (error) {
       console.error("Error fetching band details:", error);
+      return null;
     }
-  };
+  }, [calculateBandStats, fetchAvailableMembers, selectedBand]);
 
-  const fetchAvailableMembers = async () => {
-    try {
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .neq("user_id", user?.id)
-        .limit(20);
-
-      if (profilesError) throw profilesError;
-
-      // Fetch skills for each profile
-      const profilesWithSkills = await Promise.all(
-        (profiles || []).map(async (profile) => {
-          const { data: skills } = await supabase
-            .from("player_skills")
-            .select("guitar, vocals, drums, bass, performance, songwriting")
-            .eq("user_id", profile.user_id)
-            .single();
-
-          return {
-            ...profile,
-            player_skills: skills || { guitar: 20, vocals: 20, drums: 20, bass: 20, performance: 20, songwriting: 20 }
-          };
-        })
-      );
-      
-      // Filter out users already in the selected band
-      const currentMemberIds = bandMembers.map(m => m.user_id);
-      const available = profilesWithSkills?.filter(p => !currentMemberIds.includes(p.user_id)) || [];
-      
-      setAvailableMembers(available);
-    } catch (error) {
-      console.error("Error fetching available members:", error);
+  useEffect(() => {
+    if (user) {
+      fetchBands();
     }
-  };
+  }, [user, fetchBands]);
 
-  const calculateBandStats = (members: BandMember[]): BandStats => {
-    const totalSkills = members.reduce((acc, member) => {
-      const skills = member.player_skills;
-      return acc + skills.guitar + skills.vocals + skills.drums + skills.bass + skills.performance + skills.songwriting;
-    }, 0);
-
-    const avgSkill = members.length > 0 ? totalSkills / (members.length * 6) : 0;
-    
-    // Chemistry calculation based on skill balance and member count
-    const chemistry = Math.min(100, Math.max(0, avgSkill * (members.length / 4) * 1.2));
-    
-    const weeklyIncome = Math.round(chemistry * 10 + selectedBand!.popularity * 5);
-    
-    return {
-      totalSkill: Math.round(avgSkill),
-      chemistry: Math.round(chemistry),
-      weeklyIncome,
-      songsCreated: 0, // Would need to fetch from songs table
-      gigsPerformed: 0  // Would need to fetch from gigs table
-    };
-  };
+  useEffect(() => {
+    if (selectedBand) {
+      fetchBandDetails();
+    }
+  }, [selectedBand, fetchBandDetails]);
 
   const createBand = async () => {
     if (!newBand.name || !newBand.genre) {
@@ -349,7 +349,7 @@ const EnhancedBandManager = () => {
         description: `${member?.username} has been added to your band.`
       });
 
-      fetchBandDetails();
+      await fetchBandDetails();
       setInviteData({ role: "", salary: 0 });
 
     } catch (error) {
@@ -391,7 +391,7 @@ const EnhancedBandManager = () => {
         description: "The member has been removed from your band."
       });
 
-      fetchBandDetails();
+      await fetchBandDetails();
 
     } catch (error) {
       console.error("Error removing member:", error);

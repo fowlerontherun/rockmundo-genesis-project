@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, FormEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -125,15 +125,7 @@ const FanManagement = () => {
   const [sentimentFilter, setSentimentFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
 
-  useEffect(() => {
-    if (user) {
-      loadFanData();
-      loadSocialPosts();
-      loadFanMessages();
-    }
-  }, [user]);
-
-  const loadFanData = async () => {
+  const loadFanData = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('fan_demographics')
@@ -148,9 +140,9 @@ const FanManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const loadSocialPosts = async () => {
+  const loadSocialPosts = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -191,7 +183,9 @@ const FanManagement = () => {
         if (finalizeError) {
           console.error('Error finalizing scheduled posts:', finalizeError);
         } else {
-          await applyScheduledPostEffects(duePosts, 'Scheduled social post published');
+          if (typeof applyScheduledPostEffects === 'function') {
+            await applyScheduledPostEffects(duePosts, 'Scheduled social post published');
+          }
           publishedData = publishedData.map((post) =>
             duePostIds.includes(post.id) ? { ...post, scheduled_for: null } : post
           );
@@ -205,7 +199,7 @@ const FanManagement = () => {
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
       console.error('Error loading social posts:', errorMessage, error);
     }
-  };
+  }, [user]);
 
   const formatDateTimeLocal = (date: Date) => {
     const pad = (value: number) => value.toString().padStart(2, "0");
@@ -269,7 +263,7 @@ const FanManagement = () => {
     }
   };
 
-  const loadFanMessages = async () => {
+  const loadFanMessages = useCallback(async () => {
     if (!user) return;
 
     setMessagesLoading(true);
@@ -288,7 +282,15 @@ const FanManagement = () => {
     } finally {
       setMessagesLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadFanData();
+      loadSocialPosts();
+      loadFanMessages();
+    }
+  }, [user, loadFanData, loadSocialPosts, loadFanMessages]);
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case "instagram": return <Instagram className="h-4 w-4" />;
