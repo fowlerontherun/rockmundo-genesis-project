@@ -3,8 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, MapPin, Users, DollarSign, Clock, Star, Music, Volume2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,56 @@ type GigRecord = GigRow & {
   venues: VenueRow | null;
   environment_modifiers?: EnvironmentModifierSummary | null;
 };
+
+type ShowType = Database["public"]["Enums"]["show_type"];
+
+const DEFAULT_SHOW_TYPE: ShowType = "standard";
+
+const SHOW_TYPE_DETAILS: Record<ShowType, {
+  label: string;
+  description: string;
+  paymentMultiplier: number;
+  attendanceModifier: number;
+  successModifier: number;
+  fanMultiplier: number;
+  experienceModifier: number;
+}> = {
+  standard: {
+    label: "Standard",
+    description: "Full band production with amplified sound",
+    paymentMultiplier: 1,
+    attendanceModifier: 1,
+    successModifier: 0,
+    fanMultiplier: 1,
+    experienceModifier: 1,
+  },
+  acoustic: {
+    label: "Acoustic",
+    description: "Intimate unplugged set with lower stage volume",
+    paymentMultiplier: 0.85,
+    attendanceModifier: 0.8,
+    successModifier: 8,
+    fanMultiplier: 1.2,
+    experienceModifier: 1.15,
+  },
+};
+
+const SHOW_TYPE_OPTIONS: Array<{ value: ShowType; label: string; description: string }> = Object.entries(SHOW_TYPE_DETAILS).map(([value, detail]) => ({
+  value: value as ShowType,
+  label: detail.label,
+  description: detail.description,
+}));
+
+const getShowTypeLabel = (showType: ShowType) =>
+  SHOW_TYPE_DETAILS[showType]?.label ?? SHOW_TYPE_DETAILS[DEFAULT_SHOW_TYPE].label;
+
+const getShowTypeBadgeClass = (showType: ShowType) =>
+  showType === "acoustic"
+    ? "bg-amber-500/10 text-amber-500 border-amber-500/40"
+    : "bg-sky-500/10 text-sky-500 border-sky-500/40";
+
+const getShowTypeDetails = (showType: ShowType) =>
+  SHOW_TYPE_DETAILS[showType] ?? SHOW_TYPE_DETAILS[DEFAULT_SHOW_TYPE];
 
 type JsonRequirementRecord = Extract<Json, Record<string, number | boolean | string | null>>;
 type VenueRequirements = JsonRequirementRecord & {
@@ -52,6 +102,7 @@ interface Gig {
   status: string;
   attendance: number;
   fan_gain: number;
+  show_type: ShowType;
   venue: Venue;
   environment_modifiers?: EnvironmentModifierSummary | null;
 }
@@ -96,6 +147,14 @@ const GigBooking = () => {
   const [selectedGig, setSelectedGig] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [showTypeSelections, setShowTypeSelections] = useState<Record<string, ShowType>>({});
+
+  const handleShowTypeSelection = (venueId: string, value: ShowType) => {
+    setShowTypeSelections((prev) => ({
+      ...prev,
+      [venueId]: value,
+    }));
+  };
 
   const loadVenues = useCallback(async () => {
     try {
@@ -165,6 +224,7 @@ const GigBooking = () => {
           status: gig.status ?? 'scheduled',
           attendance: gig.attendance ?? 0,
           fan_gain: gig.fan_gain ?? 0,
+          show_type: (gig.show_type ?? DEFAULT_SHOW_TYPE) as ShowType,
           venue,
           environment_modifiers: gig.environment_modifiers ?? null
         };
@@ -185,18 +245,29 @@ const GigBooking = () => {
     }
   }, [user, loadVenues, loadPlayerGigs]);
 
-  const calculateGigPayment = (venue: Venue) => {
+  const calculateGigPayment = (venue: Venue, showType: ShowType = DEFAULT_SHOW_TYPE) => {
+    const details = getShowTypeDetails(showType);
     const popularityBonus = Math.round(venue.base_payment * ((profile?.fame || 0) / 1000));
-    const skillBonus = Math.round(venue.base_payment * ((skills?.performance || 0) / 200));
-    return venue.base_payment + popularityBonus + skillBonus;
+    const performanceSkill = skills?.performance || 0;
+    const supplementalSkill = showType === "acoustic" ? skills?.songwriting || 0 : skills?.guitar || 0;
+    const skillBonus = Math.round(venue.base_payment * ((performanceSkill + supplementalSkill) / 400));
+    const baseTotal = venue.base_payment + popularityBonus + skillBonus;
+    return Math.round(baseTotal * details.paymentMultiplier);
   };
 
-  const calculateSuccessChance = (venue: Venue) => {
-    const skillFactor = ((skills?.performance || 0) + (skills?.vocals || 0)) / 2;
-    const popularityFactor = Math.min(profile?.fame || 0, 100);
-    const baseChance = 50;
-    
-    return Math.min(95, Math.max(10, baseChance + (skillFactor / 2) + (popularityFactor / 5)));
+  const calculateSuccessChance = (venue: Venue, showType: ShowType = DEFAULT_SHOW_TYPE) => {
+    const details = getShowTypeDetails(showType);
+    const performanceSkill = skills?.performance || 0;
+    const vocalsSkill = skills?.vocals || 0;
+    const songwritingSkill = skills?.songwriting || 0;
+    const instrumentalSkill = skills?.guitar || 0;
+    const skillFactor = showType === "acoustic"
+      ? performanceSkill * 0.35 + vocalsSkill * 0.4 + songwritingSkill * 0.25
+      : (performanceSkill + vocalsSkill + instrumentalSkill * 0.5) / 2.5;
+    const popularityFactor = Math.min(profile?.fame || 0, 120);
+    const baseChance = 48 + details.successModifier;
+
+    return Math.min(97, Math.max(12, baseChance + (skillFactor / 2) + (popularityFactor / 6)));
   };
 
   const meetsRequirements = (venue: Venue) => {
@@ -227,7 +298,10 @@ const GigBooking = () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 14) + 1);
       
-      const payment = calculateGigPayment(venue);
+      const showType = showTypeSelections[venue.id] ?? DEFAULT_SHOW_TYPE;
+      const showTypeDetails = getShowTypeDetails(showType);
+      const showTypeLabel = getShowTypeLabel(showType);
+      const payment = calculateGigPayment(venue, showType);
 
       let environmentSummary: EnvironmentModifierSummary | null = null;
       try {
@@ -238,13 +312,17 @@ const GigBooking = () => {
 
       const baseAttendance = Math.max(1, Math.round(venue.capacity * 0.6));
       const attendanceMultiplier = environmentSummary?.attendanceMultiplier ?? 1;
-      const projectedAttendance = Math.max(1, Math.round(baseAttendance * attendanceMultiplier));
+      const projectedAttendance = Math.max(
+        1,
+        Math.round(baseAttendance * attendanceMultiplier * showTypeDetails.attendanceModifier),
+      );
 
       const gigInsertPayload: GigInsertPayload = {
         venue_id: venue.id,
         band_id: user.id,
         scheduled_date: futureDate.toISOString(),
         payment,
+        show_type: showType,
         status: 'scheduled',
         attendance: projectedAttendance,
         environment_modifiers: environmentSummary
@@ -290,6 +368,7 @@ const GigBooking = () => {
         status: insertedGig.status ?? 'scheduled',
         attendance: insertedGig.attendance ?? projectedAttendance,
         fan_gain: insertedGig.fan_gain ?? 0,
+        show_type: (insertedGig.show_type ?? showType) as ShowType,
         venue: {
           id: venueDetails?.id ?? venue.id,
           name: venueDetails?.name ?? venue.name,
@@ -336,7 +415,7 @@ const GigBooking = () => {
             .join(' | ')
         : null;
 
-      const scheduleDescriptionBase = `Live performance at ${venue.name}`;
+      const scheduleDescriptionBase = `Live ${showTypeLabel} performance at ${venue.name}`;
       const scheduleDescription = environmentNotes
         ? `${scheduleDescriptionBase} • Env: ${environmentNotes}`
         : scheduleDescriptionBase;
@@ -346,7 +425,7 @@ const GigBooking = () => {
         .insert({
           user_id: user.id,
           event_type: 'gig',
-          title: `Gig at ${venue.name}`,
+          title: `${showTypeLabel} gig at ${venue.name}`,
           description: scheduleDescription,
           start_time: futureDate.toISOString(),
           end_time: eventEndTime.toISOString(),
@@ -366,12 +445,14 @@ const GigBooking = () => {
 
       setPlayerGigs(prev => [...prev, newGig]);
       
-      await addActivity('gig', `Booked gig at ${venue.name}`, 0);
+      await addActivity('gig', `Booked a ${showTypeLabel.toLowerCase()} gig at ${venue.name}`, 0);
 
       const toastParts = [
         `You're performing at ${venue.name} on ${futureDate.toLocaleDateString()}.`,
         `Projected attendance: ${projectedAttendance.toLocaleString()}.`,
       ];
+
+      toastParts.unshift(`${showTypeLabel} set secured.`);
 
       if (environmentNotes) {
         toastParts.push(`Environment: ${environmentNotes}.`);
@@ -399,27 +480,41 @@ const GigBooking = () => {
     if (!user || !profile) return;
 
     try {
-      const successChance = calculateSuccessChance(gig.venue);
+      const showType = gig.show_type ?? DEFAULT_SHOW_TYPE;
+      const showTypeDetails = getShowTypeDetails(showType);
+      const showTypeLabel = getShowTypeLabel(showType);
+      const successChance = calculateSuccessChance(gig.venue, showType);
       const isSuccess = Math.random() * 100 < successChance;
 
       const environmentModifiers = gig.environment_modifiers;
       const attendanceMultiplier = environmentModifiers?.attendanceMultiplier ?? 1;
       const moraleMultiplier = environmentModifiers?.moraleModifier ?? 1;
 
-      let attendance, fanGain, actualPayment;
+      const capacity = gig.venue.capacity ?? 0;
+      const successBase = showType === "acoustic"
+        ? 0.55 + Math.random() * 0.25
+        : 0.6 + Math.random() * 0.4;
+      const failureBase = showType === "acoustic"
+        ? 0.25 + Math.random() * 0.2
+        : 0.2 + Math.random() * 0.3;
 
-      if (isSuccess) {
-        attendance = Math.round(gig.venue.capacity * (0.6 + Math.random() * 0.4)); // 60-100% capacity
-        fanGain = Math.round(attendance * 0.1 * (gig.venue.prestige_level / 5));
-        actualPayment = gig.payment;
-      } else {
-        attendance = Math.round(gig.venue.capacity * (0.2 + Math.random() * 0.3)); // 20-50% capacity
-        fanGain = Math.round(attendance * 0.05);
-        actualPayment = Math.round(gig.payment * 0.5); // Half payment for poor performance
-      }
-
+      let attendance = Math.round(
+        capacity * (isSuccess ? successBase : failureBase) * showTypeDetails.attendanceModifier,
+      );
       attendance = Math.max(1, Math.round(attendance * attendanceMultiplier));
-      fanGain = Math.max(0, Math.round(fanGain * moraleMultiplier));
+
+      const prestigeFactor = Math.max(1, gig.venue.prestige_level ?? 1);
+      const baseFanGain = isSuccess
+        ? Math.round(attendance * 0.1 * (prestigeFactor / 5))
+        : Math.round(attendance * 0.05);
+      const fanGain = Math.max(0, Math.round(baseFanGain * showTypeDetails.fanMultiplier * moraleMultiplier));
+
+      const basePaymentMultiplier = isSuccess ? 1 : 0.5;
+      const acousticPayoutModifier = showType === "acoustic" ? (isSuccess ? 0.95 : 0.75) : 1;
+      const actualPayment = Math.max(
+        Math.round(gig.payment * basePaymentMultiplier * acousticPayoutModifier),
+        Math.round(gig.payment * 0.3),
+      );
 
       // Update gig status
       const updatedEnvironment = environmentModifiers
@@ -450,9 +545,9 @@ const GigBooking = () => {
       // Update player stats
       const newCash = (profile.cash || 0) + actualPayment;
       const newFame = (profile.fame || 0) + fanGain;
-      const expGain = Math.round(attendance / 10);
-      
-      await updateProfile({ 
+      const expGain = Math.max(1, Math.round((attendance / 10) * showTypeDetails.experienceModifier));
+
+      await updateProfile({
         cash: newCash,
         fame: newFame,
         experience: (profile.experience || 0) + expGain
@@ -467,6 +562,7 @@ const GigBooking = () => {
               attendance,
               fan_gain: fanGain,
               payment: actualPayment,
+              show_type: showType,
               environment_modifiers: updatedEnvironment ?? g.environment_modifiers,
             }
           : g
@@ -474,7 +570,7 @@ const GigBooking = () => {
 
       await addActivity(
         'gig',
-        `Performed at ${gig.venue.name} (${attendance} attendance)`,
+        `Performed a ${showTypeLabel.toLowerCase()} set at ${gig.venue.name} (${attendance} attendance)`,
         actualPayment
       );
 
@@ -491,7 +587,7 @@ const GigBooking = () => {
 
       toast({
         title: isSuccess ? "Great performance!" : "Performance complete",
-        description: `Earned $${actualPayment}, +${fanGain} fans, +${expGain} XP.${wearNotice}`,
+        description: `${showTypeLabel} show — earned $${actualPayment}, +${fanGain} fans, +${expGain} XP.${wearNotice}`,
       });
     } catch (error: unknown) {
       const fallbackMessage = "Failed to complete the gig";
@@ -588,8 +684,11 @@ const GigBooking = () => {
           <TabsContent value="venues">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {venues.map((venue) => {
-                const payment = calculateGigPayment(venue);
-                const successChance = calculateSuccessChance(venue);
+                const showType = showTypeSelections[venue.id] ?? DEFAULT_SHOW_TYPE;
+                const showTypeLabel = getShowTypeLabel(showType);
+                const showTypeDescription = getShowTypeDetails(showType).description;
+                const payment = calculateGigPayment(venue, showType);
+                const successChance = calculateSuccessChance(venue, showType);
                 const canBook = meetsRequirements(venue);
 
                 return (
@@ -602,6 +701,14 @@ const GigBooking = () => {
                             <MapPin className="h-3 w-3" />
                             {venue.location}
                           </CardDescription>
+                          <div className="mt-2">
+                            <Badge
+                              variant="outline"
+                              className={`border ${getShowTypeBadgeClass(showType)} text-xs uppercase tracking-wide`}
+                            >
+                              {showTypeLabel} Set
+                            </Badge>
+                          </div>
                         </div>
                         {getDifficultyBadge(venue.prestige_level)}
                       </div>
@@ -616,6 +723,35 @@ const GigBooking = () => {
                           <div className="text-muted-foreground">Type</div>
                           <div className="font-semibold capitalize">{venue.venue_type}</div>
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Show Type</span>
+                          <Badge variant="outline" className={`border ${getShowTypeBadgeClass(showType)}`}>
+                            {showTypeLabel}
+                          </Badge>
+                        </div>
+                        <div onClick={(event) => event.stopPropagation()}>
+                          <Select
+                            value={showType}
+                            onValueChange={(value) => handleShowTypeSelection(venue.id, value as ShowType)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select show type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SHOW_TYPE_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {showTypeDescription}
+                        </p>
                       </div>
 
                       <div className="space-y-2">
@@ -669,85 +805,95 @@ const GigBooking = () => {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {upcomingGigs.map((gig) => (
-                    <Card key={gig.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{gig.venue.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {gig.venue.location}
-                            </CardDescription>
-                          </div>
-                          <Badge className={getStatusColor(gig.status)} variant="outline">
-                            {gig.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <div className="text-muted-foreground">Date</div>
-                            <div className="font-semibold">
-                              {new Date(gig.scheduled_date).toLocaleDateString()}
+                  {upcomingGigs.map((gig) => {
+                    const showType = gig.show_type ?? DEFAULT_SHOW_TYPE;
+                    const showTypeLabel = getShowTypeLabel(showType);
+                    const successChance = calculateSuccessChance(gig.venue, showType);
+                    return (
+                      <Card key={gig.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <CardTitle className="text-lg">{gig.venue.name}</CardTitle>
+                              <CardDescription className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {gig.venue.location}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={getStatusColor(gig.status)} variant="outline">
+                                {gig.status}
+                              </Badge>
+                              <Badge variant="outline" className={`border ${getShowTypeBadgeClass(showType)} text-xs`}>
+                                {showTypeLabel}
+                              </Badge>
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Payment</div>
-                            <div className="font-semibold text-success">${gig.payment.toLocaleString()}</div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Success Rate:</span>
-                            <span className="font-bold">{calculateSuccessChance(gig.venue).toFixed(0)}%</span>
-                          </div>
-                          <Progress value={calculateSuccessChance(gig.venue)} className="h-2" />
-                        </div>
-
-                        {gig.environment_modifiers?.projections?.attendance && (
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Projected Attendance</span>
-                            <span className="font-semibold">
-                              {gig.environment_modifiers.projections.attendance.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-
-                        {gig.environment_modifiers?.applied?.length ? (
-                          <div className="space-y-1 border-t border-border/40 pt-3 text-xs">
-                            <div className="text-sm font-semibold text-foreground">Environment Effects</div>
-                            <div className="space-y-1">
-                              {gig.environment_modifiers.applied.map((effect) => {
-                                const summary = summarizeEnvironmentEffect(effect);
-                                const detail = summary || effect.description;
-                                return (
-                                  <div key={`${gig.id}-${effect.id}`} className="flex items-start justify-between gap-2">
-                                    <span className="font-medium text-foreground">{effect.name}</span>
-                                    {detail && (
-                                      <span className="text-muted-foreground text-right">
-                                        {detail}
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <div className="text-muted-foreground">Date</div>
+                              <div className="font-semibold">
+                                {new Date(gig.scheduled_date).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground">Payment</div>
+                              <div className="font-semibold text-success">${gig.payment.toLocaleString()}</div>
                             </div>
                           </div>
-                        ) : null}
 
-                        <Button
-                          onClick={() => performGig(gig)}
-                          className="w-full bg-gradient-primary"
-                        >
-                          <Music className="h-4 w-4 mr-2" />
-                          Perform Now
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">Success Rate:</span>
+                              <span className="font-bold">{successChance.toFixed(0)}%</span>
+                            </div>
+                            <Progress value={successChance} className="h-2" />
+                          </div>
+
+                          {gig.environment_modifiers?.projections?.attendance && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Projected Attendance</span>
+                              <span className="font-semibold">
+                                {gig.environment_modifiers.projections.attendance.toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+
+                          {gig.environment_modifiers?.applied?.length ? (
+                            <div className="space-y-1 border-t border-border/40 pt-3 text-xs">
+                              <div className="text-sm font-semibold text-foreground">Environment Effects</div>
+                              <div className="space-y-1">
+                                {gig.environment_modifiers.applied.map((effect) => {
+                                  const summary = summarizeEnvironmentEffect(effect);
+                                  const detail = summary || effect.description;
+                                  return (
+                                    <div key={`${gig.id}-${effect.id}`} className="flex items-start justify-between gap-2">
+                                      <span className="font-medium text-foreground">{effect.name}</span>
+                                      {detail && (
+                                        <span className="text-muted-foreground text-right">
+                                          {detail}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <Button
+                            onClick={() => performGig(gig)}
+                            className="w-full bg-gradient-primary"
+                          >
+                            <Music className="h-4 w-4 mr-2" />
+                            Perform Now
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -765,60 +911,69 @@ const GigBooking = () => {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {pastGigs.map((gig) => (
-                    <Card key={gig.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{gig.venue.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {gig.venue.location}
-                            </CardDescription>
-                          </div>
-                          <Badge className={getStatusColor(gig.status)} variant="outline">
-                            {gig.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <div className="text-muted-foreground">Date</div>
-                            <div className="font-semibold">
-                              {new Date(gig.scheduled_date).toLocaleDateString()}
+                  {pastGigs.map((gig) => {
+                    const showType = gig.show_type ?? DEFAULT_SHOW_TYPE;
+                    const showTypeLabel = getShowTypeLabel(showType);
+                    return (
+                      <Card key={gig.id} className="bg-card/80 backdrop-blur-sm border-primary/20">
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <CardTitle className="text-lg">{gig.venue.name}</CardTitle>
+                              <CardDescription className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {gig.venue.location}
+                              </CardDescription>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={getStatusColor(gig.status)} variant="outline">
+                                {gig.status}
+                              </Badge>
+                              <Badge variant="outline" className={`border ${getShowTypeBadgeClass(showType)} text-xs`}>
+                                {showTypeLabel}
+                              </Badge>
                             </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">Earned</div>
-                            <div className="font-semibold text-success">${gig.payment.toLocaleString()}</div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <div className="text-muted-foreground">Date</div>
+                              <div className="font-semibold">
+                                {new Date(gig.scheduled_date).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground">Earned</div>
+                              <div className="font-semibold text-success">${gig.payment.toLocaleString()}</div>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <div className="text-muted-foreground">Attendance</div>
-                            <div className="font-semibold">{gig.attendance.toLocaleString()}</div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <div className="text-muted-foreground">Attendance</div>
+                              <div className="font-semibold">{gig.attendance.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-muted-foreground">New Fans</div>
+                              <div className="font-semibold text-accent">+{gig.fan_gain}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-muted-foreground">New Fans</div>
-                            <div className="font-semibold text-accent">+{gig.fan_gain}</div>
-                          </div>
-                        </div>
 
-                        <div className="space-y-2">
-                          <div className="text-sm text-muted-foreground">Venue Fill Rate</div>
-                          <Progress 
-                            value={(gig.attendance / gig.venue.capacity) * 100} 
-                            className="h-2" 
-                          />
-                          <div className="text-xs text-right">
-                            {Math.round((gig.attendance / gig.venue.capacity) * 100)}% capacity
+                          <div className="space-y-2">
+                            <div className="text-sm text-muted-foreground">Venue Fill Rate</div>
+                            <Progress
+                              value={(gig.attendance / gig.venue.capacity) * 100}
+                              className="h-2"
+                            />
+                            <div className="text-xs text-right">
+                              {Math.round((gig.attendance / gig.venue.capacity) * 100)}% capacity
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  User,
-  Camera,
+import CharacterSelect from "@/components/CharacterSelect";
+import { 
+  User, 
+  Camera, 
   Save,
   Star,
   Trophy,
@@ -28,6 +29,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Database } from "@/integrations/supabase/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +56,31 @@ interface FanMetrics {
   updated_at: string | null;
 }
 
+type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+
+type CityOption = {
+  id: string;
+  name: string | null;
+  country: string | null;
+};
+
+type ProfileFormState = {
+  display_name: string;
+  username: string;
+  bio: string;
+  gender: ProfileGender;
+  age: string;
+  city_of_birth: string | null;
+};
+
+const genderOptions: { value: ProfileGender; label: string }[] = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "non_binary", label: "Non-binary" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -59,11 +93,25 @@ const Profile = () => {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [fanMetrics, setFanMetrics] = useState<FanMetrics | null>(null);
-  const [formData, setFormData] = useState({
-    display_name: '',
-    username: '',
-    bio: ''
+  const [formData, setFormData] = useState<ProfileFormState>({
+    display_name: "",
+    username: "",
+    bio: "",
+    gender: "prefer_not_to_say",
+    age: "16",
+    city_of_birth: null,
   });
+  const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
+  const [cityLoading, setCityLoading] = useState(false);
+  const [cityError, setCityError] = useState<string | null>(null);
+
+  const showProfileDetails = Boolean(profile && skills);
+
+  useEffect(() => {
+    if (!showProfileDetails) {
+      setIsEditing(false);
+    }
+  }, [showProfileDetails]);
 
   const fetchFanMetrics = useCallback(async () => {
     if (!user) return;
@@ -92,12 +140,56 @@ const Profile = () => {
   useEffect(() => {
     if (profile) {
       setFormData({
-        display_name: profile.display_name || '',
-        username: profile.username || '',
-        bio: profile.bio || ''
+        display_name: profile.display_name || "",
+        username: profile.username || "",
+        bio: profile.bio || "",
+        gender: (profile.gender as ProfileGender) || "prefer_not_to_say",
+        age: typeof profile.age === "number" ? String(profile.age) : "16",
+        city_of_birth: profile.city_of_birth ?? null,
       });
     }
   }, [profile]);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        setCityLoading(true);
+        setCityError(null);
+
+        const { data, error } = await supabase
+          .from("cities")
+          .select("id, name, country")
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        setCityOptions((data as CityOption[] | null) ?? []);
+      } catch (error) {
+        console.error("Error loading cities:", error);
+        setCityError("We couldn't load cities right now. You can try again later.");
+      } finally {
+        setCityLoading(false);
+      }
+    };
+
+    void fetchCities();
+  }, []);
+
+  const birthCityLabel = useMemo(() => {
+    if (!profile?.city_of_birth) return null;
+    const match = cityOptions.find((city) => city.id === profile.city_of_birth);
+    if (!match) return null;
+    const cityName = match.name ?? "Unnamed City";
+    return match.country ? `${cityName}, ${match.country}` : cityName;
+  }, [profile?.city_of_birth, cityOptions]);
+
+  const profileGenderLabel = useMemo(() => {
+    if (!profile?.gender) return "Prefer not to say";
+    return (
+      genderOptions.find((option) => option.value === (profile.gender as ProfileGender))?.label ??
+      "Prefer not to say"
+    );
+  }, [profile?.gender]);
 
   useEffect(() => {
     if (!user) {
@@ -162,9 +254,26 @@ const Profile = () => {
   const handleSave = async () => {
     if (!user) return;
 
+    const parsedAge = Number.parseInt(formData.age, 10);
+    if (!Number.isFinite(parsedAge) || parsedAge < 13 || parsedAge > 120) {
+      toast({
+        variant: "destructive",
+        title: "Invalid age",
+        description: "Age must be between 13 and 120 to keep your persona grounded.",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      await updateProfile(formData);
+      await updateProfile({
+        display_name: formData.display_name,
+        username: formData.username,
+        bio: formData.bio,
+        gender: formData.gender,
+        age: parsedAge,
+        city_of_birth: formData.city_of_birth,
+      });
       setIsEditing(false);
       toast({
         title: "Profile Updated!",
@@ -233,44 +342,6 @@ const Profile = () => {
     : '0';
   const lastUpdatedLabel = fanMetrics?.updated_at ? new Date(fanMetrics.updated_at).toLocaleString() : null;
 
-  const handleResetConfirm = async () => {
-    setIsResetting(true);
-
-    try {
-      await resetCharacter();
-
-      toast({
-        title: "Character reset",
-        description: "Your profile has been cleared. Let's build a new legacy!",
-      });
-
-      navigate("/character/create", { replace: true });
-    } catch (error: unknown) {
-      const fallbackMessage = "Failed to reset character";
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error('Error resetting character:', errorMessage, error);
-      toast({
-        variant: "destructive",
-        title: "Reset failed",
-        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`,
-      });
-    } finally {
-      setIsResetting(false);
-      setIsResetDialogOpen(false);
-    }
-  };
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg font-oswald">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -281,7 +352,7 @@ const Profile = () => {
             </h1>
             <p className="text-muted-foreground">Manage your musical identity</p>
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          {showProfileDetails && (
             <Button
               onClick={() => setIsEditing(!isEditing)}
               variant={isEditing ? "outline" : "default"}
@@ -290,43 +361,26 @@ const Profile = () => {
               <Edit3 className="h-4 w-4 mr-2" />
               {isEditing ? "Cancel" : "Edit Profile"}
             </Button>
-            <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={isResetting}>
-                  {isResetting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                      Resetting
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <RotateCcw className="h-4 w-4" />
-                      Start Over
-                    </span>
-                  )}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Reset your character?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently remove your profile, skills, songs, tours, social activity, and other progress tied to
-                    this character. We'll recreate the default character so you can go through the creation experience again.
-                    This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResetConfirm} disabled={isResetting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    {isResetting ? "Resetting..." : "Yes, reset everything"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          )}
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Character Management
+            </CardTitle>
+            <CardDescription>
+              Switch between unlocked performers or purchase additional character slots.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CharacterSelect />
+          </CardContent>
+        </Card>
+
+        {showProfileDetails ? (
+          <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="profile">Profile Info</TabsTrigger>
             <TabsTrigger value="stats">Statistics</TabsTrigger>
@@ -373,6 +427,19 @@ const Profile = () => {
                         </Badge>
                         <Badge variant="outline" className="border-accent text-accent">
                           {profile.fame || 0} Fame
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="border-border text-foreground/80">
+                          Age {profile.age ?? 16}
+                        </Badge>
+                        <Badge variant="outline" className="border-border text-foreground/80">
+                          {profileGenderLabel}
+                        </Badge>
+                        <Badge variant="outline" className="border-border text-foreground/80">
+                          {profile.city_of_birth
+                            ? birthCityLabel ?? "Loading birth city..."
+                            : "Birth city not set"}
                         </Badge>
                       </div>
                     </div>
@@ -422,6 +489,74 @@ const Profile = () => {
                         placeholder="Tell the world about your musical journey..."
                         rows={4}
                       />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select
+                          value={formData.gender}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({ ...prev, gender: value as ProfileGender }))
+                          }
+                          disabled={!isEditing}
+                        >
+                          <SelectTrigger id="gender" className={!isEditing ? "bg-secondary/50" : ""}>
+                            <SelectValue placeholder="Select a gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {genderOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="age">Age</Label>
+                        <Input
+                          id="age"
+                          type="number"
+                          min={13}
+                          max={120}
+                          value={formData.age}
+                          onChange={(event) =>
+                            setFormData((prev) => ({ ...prev, age: event.target.value }))
+                          }
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-secondary/50" : ""}
+                        />
+                        <p className="text-xs text-muted-foreground">Age helps us tailor narrative beats.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="city-of-birth">City of Birth</Label>
+                        <Select
+                          value={formData.city_of_birth ?? ""}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({ ...prev, city_of_birth: value || null }))
+                          }
+                          disabled={!isEditing || cityLoading}
+                        >
+                          <SelectTrigger
+                            id="city-of-birth"
+                            className={!isEditing ? "bg-secondary/50" : ""}
+                          >
+                            <SelectValue
+                              placeholder={cityLoading ? "Loading cities..." : "Select a city"}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">No listed city</SelectItem>
+                            {cityOptions.map((city) => (
+                              <SelectItem key={city.id} value={city.id}>
+                                {city.name ?? "Unnamed City"}
+                                {city.country ? `, ${city.country}` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {cityError && <p className="text-xs text-destructive">{cityError}</p>}
+                      </div>
                     </div>
                     {isEditing && (
                       <div className="flex gap-2 pt-4">
@@ -549,7 +684,7 @@ const Profile = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {skills && Object.entries(skills)
-                    .filter(([key]) => !['id', 'user_id', 'created_at', 'updated_at'].includes(key))
+                    .filter(([key]) => !['id', 'user_id', 'profile_id', 'created_at', 'updated_at'].includes(key))
                     .map(([skill, value]) => (
                       <div key={skill} className="space-y-2">
                         <div className="flex justify-between">
@@ -568,7 +703,17 @@ const Profile = () => {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        ) : (
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bebas tracking-wide">No Active Character Selected</CardTitle>
+              <CardDescription>
+                Use the manager above to create or activate a performer to unlock detailed profile controls and statistics.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
       </div>
     </div>
   );
