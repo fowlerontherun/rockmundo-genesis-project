@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SparklesIcon, Wand2, CheckCircle2, AlertCircle, Palette, Gauge, User } from "lucide-react";
+import {
+  SparklesIcon,
+  Wand2,
+  CheckCircle2,
+  AlertCircle,
+  Palette,
+  Gauge,
+  User,
+  Move3d,
+  Camera,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,33 +25,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AvatarPreview3D from "@/components/avatar/AvatarPreview3D";
+import {
+  avatarStyles,
+  avatarPoses,
+  avatarCameras,
+  defaultAvatarSelection,
+} from "@/data/avatarPresets";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
-
-const avatarStyles = [
-  {
-    id: "micah",
-    label: "Neon Rebel",
-    description: "Bold colors and sharp angles for artists who electrify every stage.",
-    gradient: "from-purple-500/80 via-pink-500/70 to-orange-500/60",
-  },
-  {
-    id: "adventurer",
-    label: "Retro Virtuoso",
-    description: "Vintage flair with modern swagger for timeless performers.",
-    gradient: "from-blue-500/80 via-cyan-500/70 to-teal-500/60",
-  },
-  {
-    id: "lorelei",
-    label: "Synthwave Dreamer",
-    description: "A cosmic glow inspired by neon cities and midnight studio sessions.",
-    gradient: "from-amber-400/80 via-rose-400/70 to-fuchsia-500/60",
-  },
-];
+import { getStoredAvatarSelection, serializeAvatarData } from "@/utils/avatar";
 
 const backgrounds = [
   {
@@ -131,7 +128,13 @@ const CharacterCreation = () => {
   const [usernameEdited, setUsernameEdited] = useState<boolean>(false);
   const [bio, setBio] = useState<string>(backgrounds[0].description);
   const [selectedBackground, setSelectedBackground] = useState<string>(backgrounds[0].id);
-  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState<string>(avatarStyles[0].id);
+  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState<string>(
+    defaultAvatarSelection.styleId,
+  );
+  const [selectedAvatarPose, setSelectedAvatarPose] = useState<string>(defaultAvatarSelection.poseId);
+  const [selectedAvatarCamera, setSelectedAvatarCamera] = useState<string>(
+    defaultAvatarSelection.cameraId,
+  );
   const [skills, setSkills] = useState<Record<SkillKey, number>>(defaultSkills);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -143,6 +146,21 @@ const CharacterCreation = () => {
   const [cities, setCities] = useState<CityOption[]>([]);
   const [citiesLoading, setCitiesLoading] = useState<boolean>(false);
   const [citiesError, setCitiesError] = useState<string | null>(null);
+
+  const selectedStyleDefinition = useMemo(
+    () => avatarStyles.find((style) => style.id === selectedAvatarStyle) ?? avatarStyles[0],
+    [selectedAvatarStyle],
+  );
+
+  const selectedPoseDefinition = useMemo(
+    () => avatarPoses.find((pose) => pose.id === selectedAvatarPose) ?? avatarPoses[0],
+    [selectedAvatarPose],
+  );
+
+  const selectedCameraDefinition = useMemo(
+    () => avatarCameras.find((angle) => angle.id === selectedAvatarCamera) ?? avatarCameras[0],
+    [selectedAvatarCamera],
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -201,11 +219,27 @@ const CharacterCreation = () => {
           setCityOfBirth(profileResponse.data.city_of_birth ?? null);
 
           if (profileResponse.data.avatar_url) {
-            const match = avatarStyles.find((style) =>
-              profileResponse.data?.avatar_url?.includes(`/7.x/${style.id}/`)
-            );
-            if (match) {
-              setSelectedAvatarStyle(match.id);
+            const storedSelection = getStoredAvatarSelection(profileResponse.data.avatar_url);
+
+            if (storedSelection) {
+              if (avatarStyles.some((style) => style.id === storedSelection.styleId)) {
+                setSelectedAvatarStyle(storedSelection.styleId);
+              }
+
+              if (avatarPoses.some((pose) => pose.id === storedSelection.poseId)) {
+                setSelectedAvatarPose(storedSelection.poseId);
+              }
+
+              if (avatarCameras.some((angle) => angle.id === storedSelection.cameraId)) {
+                setSelectedAvatarCamera(storedSelection.cameraId);
+              }
+            } else {
+              const match = avatarStyles.find((style) =>
+                profileResponse.data?.avatar_url?.includes(`/7.x/${style.id}/`)
+              );
+              if (match) {
+                setSelectedAvatarStyle(match.id);
+              }
             }
           }
         } else {
@@ -396,12 +430,32 @@ const CharacterCreation = () => {
       backgrounds.find((bg) => bg.id === selectedBackground) ?? backgrounds[0];
     const finalBio = bio?.trim() || selectedBackgroundDetails.description;
 
+    const parsedAgeValue = Number.parseInt(age, 10);
+    const parsedAge = Number.isNaN(parsedAgeValue)
+      ? existingProfile?.age ?? 16
+      : Math.min(120, Math.max(13, parsedAgeValue));
+
+    const activeStyle = selectedStyleDefinition ?? avatarStyles[0];
+    const activePose = selectedPoseDefinition ?? avatarPoses[0];
+    const activeCamera = selectedCameraDefinition ?? avatarCameras[0];
+
+    const avatarSelection = {
+      styleId: activeStyle?.id ?? defaultAvatarSelection.styleId,
+      poseId: activePose?.id ?? defaultAvatarSelection.poseId,
+      cameraId: activeCamera?.id ?? defaultAvatarSelection.cameraId,
+    };
+
+    const serializedAvatar = serializeAvatarData(
+      avatarSelection,
+      avatarPreviewUrl(avatarSelection.styleId),
+    );
+
     const profilePayload: ProfileInsert = {
       user_id: user.id,
       username: trimmedUsername,
       display_name: trimmedDisplayName,
       bio: finalBio,
-      avatar_url: avatarPreviewUrl(selectedAvatarStyle),
+      avatar_url: serializedAvatar,
       level: existingProfile?.level ?? 1,
       experience: existingProfile?.experience ?? 0,
       cash: existingProfile?.cash ?? 500,
@@ -561,16 +615,23 @@ const CharacterCreation = () => {
                 </div>
               </div>
               <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-primary/10 bg-muted/40 p-6">
-                <div className="relative flex h-40 w-40 items-center justify-center overflow-hidden rounded-full bg-gradient-to-tr from-primary/30 to-secondary/20 shadow-lg">
-                  <img
-                    src={avatarPreviewUrl(selectedAvatarStyle)}
-                    alt="Avatar preview"
-                    className="h-full w-full object-cover"
-                  />
+                <AvatarPreview3D
+                  style={selectedStyleDefinition ?? avatarStyles[0]}
+                  pose={selectedPoseDefinition ?? avatarPoses[0]}
+                  camera={selectedCameraDefinition ?? avatarCameras[0]}
+                  className="h-44 w-44"
+                />
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {selectedStyleDefinition?.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedPoseDefinition?.label} • {selectedCameraDefinition?.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This preview updates as you tweak style, pose, and camera.
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground text-center">
-                  This preview updates as you tweak your name and style.
-                </p>
               </div>
             </div>
           </CardContent>
@@ -586,43 +647,105 @@ const CharacterCreation = () => {
               Select the vibe that best represents your persona. You can change it later as your story evolves.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
-              {avatarStyles.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  onClick={() => setSelectedAvatarStyle(style.id)}
-                  className={cn(
-                    "group relative flex h-full flex-col gap-3 overflow-hidden rounded-lg border bg-gradient-to-br p-4 text-left transition shadow-sm",
-                    style.gradient,
-                    selectedAvatarStyle === style.id
-                      ? "border-primary shadow-lg"
-                      : "border-transparent opacity-80 hover:opacity-100"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-background group-hover:drop-shadow-sm">
-                      {style.label}
-                    </h3>
-                    {selectedAvatarStyle === style.id && (
-                      <span className="rounded-full bg-background/80 px-2 py-1 text-xs font-medium text-foreground">
-                        Selected
-                      </span>
+              {avatarStyles.map((style) => {
+                const isActive = selectedAvatarStyle === style.id;
+                return (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => setSelectedAvatarStyle(style.id)}
+                    className={cn(
+                      "group relative flex h-full flex-col gap-3 overflow-hidden rounded-lg border bg-gradient-to-br p-4 text-left transition shadow-sm",
+                      style.gradient,
+                      isActive
+                        ? "border-primary shadow-lg"
+                        : "border-transparent opacity-90 hover:opacity-100",
                     )}
-                  </div>
-                  <p className="text-sm text-background/80 group-hover:text-background">
-                    {style.description}
-                  </p>
-                  <div className="mt-auto flex justify-center">
-                    <img
-                      src={avatarPreviewUrl(style.id)}
-                      alt={`${style.label} preview`}
-                      className="h-24 w-24 rounded-full border-2 border-background/70 bg-background/50 p-1"
-                    />
-                  </div>
-                </button>
-              ))}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-background drop-shadow-sm">
+                        {style.label}
+                      </h3>
+                      {isActive && (
+                        <span className="rounded-full bg-background/80 px-2 py-1 text-xs font-medium text-foreground">
+                          Selected
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-background/80 group-hover:text-background">
+                      {style.description}
+                    </p>
+                    <div className="mt-auto flex items-center gap-1 rounded-md border border-background/40 bg-background/40 p-2">
+                      <div className="h-2 flex-1 rounded-full bg-gradient-to-r from-background/50 to-background/20">
+                        <div
+                          className="h-full w-full rounded-full"
+                          style={{
+                            background: `linear-gradient(90deg, ${style.palette.primary}, ${style.palette.accent}, ${style.palette.secondary})`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  <Move3d className="h-4 w-4 text-primary" /> Pose
+                </div>
+                <div className="space-y-2">
+                  {avatarPoses.map((poseOption) => {
+                    const isActive = selectedAvatarPose === poseOption.id;
+                    return (
+                      <button
+                        key={poseOption.id}
+                        type="button"
+                        onClick={() => setSelectedAvatarPose(poseOption.id)}
+                        className={cn(
+                          "w-full rounded-md border px-4 py-3 text-left transition",
+                          isActive
+                            ? "border-primary bg-primary/10 shadow"
+                            : "border-border bg-background/60 hover:border-primary/60",
+                        )}
+                      >
+                        <p className="text-sm font-semibold text-foreground">{poseOption.label}</p>
+                        <p className="text-xs text-muted-foreground">{poseOption.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  <Camera className="h-4 w-4 text-primary" /> Camera
+                </div>
+                <div className="space-y-2">
+                  {avatarCameras.map((cameraOption) => {
+                    const isActive = selectedAvatarCamera === cameraOption.id;
+                    return (
+                      <button
+                        key={cameraOption.id}
+                        type="button"
+                        onClick={() => setSelectedAvatarCamera(cameraOption.id)}
+                        className={cn(
+                          "w-full rounded-md border px-4 py-3 text-left transition",
+                          isActive
+                            ? "border-primary bg-primary/10 shadow"
+                            : "border-border bg-background/60 hover:border-primary/60",
+                        )}
+                      >
+                        <p className="text-sm font-semibold text-foreground">{cameraOption.label}</p>
+                        <p className="text-xs text-muted-foreground">{cameraOption.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
