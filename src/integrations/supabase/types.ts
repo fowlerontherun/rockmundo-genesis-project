@@ -177,6 +177,156 @@ export type Database = {
           }
         ]
       }
+      busking_locations: {
+        Row: {
+          ambiance: string | null
+          base_payout: number
+          cooldown_minutes: number
+          created_at: string
+          description: string | null
+          experience_reward: number
+          fame_reward: number
+          id: string
+          name: string
+          neighborhood: string | null
+          recommended_skill: number
+          risk_level: string
+        }
+        Insert: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+        }
+        Update: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+        }
+        Relationships: []
+      }
+      busking_modifiers: {
+        Row: {
+          created_at: string
+          description: string | null
+          experience_bonus: number
+          fame_multiplier: number
+          id: string
+          name: string
+          payout_multiplier: number
+          rarity: string
+          risk_modifier: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name?: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Relationships: []
+      }
+      busking_sessions: {
+        Row: {
+          cash_earned: number
+          created_at: string
+          crowd_reaction: string | null
+          duration_minutes: number
+          experience_gained: number
+          failure_reason: string | null
+          fame_gained: number
+          id: string
+          location_id: string
+          modifier_id: string | null
+          notes: string | null
+          performance_score: number
+          risk_level: string | null
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          cash_earned?: number
+          created_at?: string
+          crowd_reaction?: string | null
+          duration_minutes?: number
+          experience_gained?: number
+          failure_reason?: string | null
+          fame_gained?: number
+          id?: string
+          location_id: string
+          modifier_id?: string | null
+          notes?: string | null
+          performance_score?: number
+          risk_level?: string | null
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          cash_earned?: number
+          created_at?: string
+          crowd_reaction?: string | null
+          duration_minutes?: number
+          experience_gained?: number
+          failure_reason?: string | null
+          fame_gained?: number
+          id?: string
+          location_id?: string
+          modifier_id?: string | null
+          notes?: string | null
+          performance_score?: number
+          risk_level?: string | null
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "busking_sessions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "busking_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_modifier_id_fkey"
+            columns: ["modifier_id"]
+            isOneToOne: false
+            referencedRelation: "busking_modifiers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       band_events: {
         Row: {
           band_id: string
