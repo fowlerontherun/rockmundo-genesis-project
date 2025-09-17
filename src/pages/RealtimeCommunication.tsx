@@ -2178,6 +2178,7 @@ const RealtimeCommunication: React.FC = () => {
       toast.error('Session name and genre are required');
       return;
     }
+  };
 
   useEffect(() => {
     if (activeJam && userId) {
