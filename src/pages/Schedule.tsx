@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar as CalendarIcon,
@@ -159,6 +159,17 @@ type SkillGainKey =
   | "bass";
 
 type SkillGains = Partial<Record<SkillGainKey, number>>;
+
+type AttributeGainKey = "business" | "marketing" | "creativity" | "technical";
+const ATTRIBUTE_GAIN_KEYS: AttributeGainKey[] = [
+  "business",
+  "marketing",
+  "creativity",
+  "technical"
+];
+const isAttributeGainKey = (key: SkillGainKey): key is AttributeGainKey =>
+  ATTRIBUTE_GAIN_KEYS.includes(key as AttributeGainKey);
+const MAX_ATTRIBUTE_VALUE = 1000;
 
 const EVENT_REWARD_CONFIG: Record<
   EventType,
@@ -718,7 +729,7 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, updateProfile, updateSkills, addActivity, refetch } = useGameData();
+  const { profile, skills, attributes, updateProfile, updateSkills, updateAttributes, addActivity, refetch } = useGameData();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -737,6 +748,7 @@ const Schedule = () => {
   const notifiedEventsRef = useRef<Set<string>>(new Set());
   const profileRef = useRef<PlayerProfile | null>(profile);
   const skillsRef = useRef<PlayerSkills | null>(skills);
+  const attributesRef = useRef<PlayerAttributes | null>(attributes);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -745,6 +757,9 @@ const Schedule = () => {
   useEffect(() => {
     skillsRef.current = skills;
   }, [skills]);
+  useEffect(() => {
+    attributesRef.current = attributes;
+  }, [attributes]);
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -983,9 +998,11 @@ const Schedule = () => {
       profileRef.current = updatedProfile;
 
       const activeSkills = skillsRef.current;
+      const activeAttributes = attributesRef.current;
       const skillSummaries: string[] = [];
-      if (reward.skillGains && activeSkills) {
+      if (reward.skillGains) {
         const skillUpdates: Partial<PlayerSkills> = {};
+        const attributeUpdates: Partial<PlayerAttributes> = {};
 
         for (const [key, delta] of Object.entries(reward.skillGains)) {
           const numericDelta = Number(delta ?? 0);
@@ -994,15 +1011,23 @@ const Schedule = () => {
           }
 
           const skillKey = key as SkillGainKey;
-          const currentValue = Number(
-            activeSkills[skillKey as keyof PlayerSkills] ?? 0
-          );
-          const nextValue = Math.min(100, currentValue + numericDelta);
-          const actualGain = nextValue - currentValue;
-
-          if (actualGain > 0) {
-            skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
-            skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
+          if (isAttributeGainKey(skillKey)) {
+            if (!activeAttributes) continue;
+            const currentValue = Number(activeAttributes[skillKey] ?? 0);
+            const nextValue = Math.min(MAX_ATTRIBUTE_VALUE, currentValue + numericDelta);
+            const actualGain = nextValue - currentValue;
+            if (actualGain > 0) {
+              attributeUpdates[skillKey] = nextValue;
+              skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
+            }
+          } else if (activeSkills) {
+            const currentValue = Number(activeSkills[skillKey as keyof PlayerSkills] ?? 0);
+            const nextValue = Math.min(100, currentValue + numericDelta);
+            const actualGain = nextValue - currentValue;
+            if (actualGain > 0) {
+              skillUpdates[skillKey as keyof PlayerSkills] = nextValue;
+              skillSummaries.push(`+${actualGain} ${formatSkillLabel(skillKey)}`);
+            }
           }
         }
 
@@ -1010,6 +1035,13 @@ const Schedule = () => {
           const updatedSkills = await updateSkills(skillUpdates);
           if (updatedSkills) {
             skillsRef.current = updatedSkills;
+          }
+        }
+
+        if (Object.keys(attributeUpdates).length > 0) {
+          const updatedAttributes = await updateAttributes(attributeUpdates);
+          if (updatedAttributes) {
+            attributesRef.current = updatedAttributes;
           }
         }
       }
@@ -1036,7 +1068,7 @@ const Schedule = () => {
         rewardLabel: reward.label,
       };
     },
-    [addActivity, refetch, updateProfile, updateSkills, user]
+    [addActivity, refetch, updateProfile, updateSkills, updateAttributes, user]
   );
 
   const handleFormChange = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {

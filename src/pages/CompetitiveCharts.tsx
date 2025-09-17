@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
-import { useGameData } from '@/hooks/useGameData';
+import { useGameData, type PlayerAttributes, type PlayerSkills } from '@/hooks/useGameData';
 import { toast } from '@/components/ui/sonner-toast';
 import { Trophy, TrendingUp, Crown, Award, Music, Zap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
@@ -64,7 +64,7 @@ type CompetitionWithParticipants = CompetitionRow & {
 
 const CompetitiveCharts: React.FC = () => {
   const { user } = useAuth();
-  const { profile, skills, refetch: refetchGameData } = useGameData();
+  const { profile, skills, attributes, refetch: refetchGameData } = useGameData();
   const [playerRankings, setPlayerRankings] = useState<PlayerRanking[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -532,6 +532,10 @@ const CompetitiveCharts: React.FC = () => {
       if (skills && key in skills) {
         const playerSkill = skills?.[key as keyof PlayerSkills] ?? 0;
         return playerSkill >= requiredValue;
+      }
+      if (attributes && key in attributes) {
+        const playerAttribute = attributes?.[key as keyof PlayerAttributes] ?? 0;
+        return playerAttribute >= requiredValue;
       }
       return true;
     });

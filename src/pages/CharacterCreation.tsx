@@ -82,6 +82,9 @@ const defaultSkills = {
   performance: 1,
   songwriting: 1,
   composition: 1,
+};
+
+const defaultAttributes = {
   creativity: 1,
   business: 1,
   marketing: 1,
@@ -89,11 +92,13 @@ const defaultSkills = {
 };
 
 type SkillKey = keyof typeof defaultSkills;
+type AttributeKey = keyof typeof defaultAttributes;
 
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
 type PlayerSkillsInsert = TablesInsert<"player_skills">;
+type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
@@ -133,6 +138,7 @@ const CharacterCreation = () => {
   const [selectedBackground, setSelectedBackground] = useState<string>(backgrounds[0].id);
   const [selectedAvatarStyle, setSelectedAvatarStyle] = useState<string>(avatarStyles[0].id);
   const [skills, setSkills] = useState<Record<SkillKey, number>>(defaultSkills);
+  const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(defaultAttributes);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -158,7 +164,7 @@ const CharacterCreation = () => {
       setLoadError(null);
 
       try {
-        const [profileResponse, skillsResponse] = await Promise.all([
+        const [profileResponse, skillsResponse, attributesResponse] = await Promise.all([
           supabase
             .from("profiles")
             .select(
@@ -168,7 +174,12 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_skills")
-            .select("id, guitar, vocals, drums, bass, performance, songwriting, composition, creativity, business, marketing, technical")
+            .select("id, guitar, vocals, drums, bass, performance, songwriting, composition")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("player_attributes")
+            .select("id, creativity, business, marketing, technical")
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
@@ -179,6 +190,10 @@ const CharacterCreation = () => {
 
         if (skillsResponse.error) {
           throw skillsResponse.error;
+        }
+
+        if (attributesResponse.error) {
+          throw attributesResponse.error;
         }
 
         if (profileResponse.data) {
@@ -214,15 +229,27 @@ const CharacterCreation = () => {
         }
 
         if (skillsResponse.data) {
-          setSkills((prev) => {
+          setSkills(prev => {
             const updated = { ...prev };
-            (Object.entries(skillsResponse.data) as [string, number | null][]).forEach(
-              ([key, value]) => {
-                if (key in prev && typeof value === "number") {
-                  updated[key as SkillKey] = value;
-                }
+            (Object.keys(defaultSkills) as SkillKey[]).forEach(key => {
+              const value = skillsResponse.data?.[key];
+              if (typeof value === "number") {
+                updated[key] = value;
               }
-            );
+            });
+            return updated;
+          });
+        }
+
+        if (attributesResponse.data) {
+          setAttributes(prev => {
+            const updated = { ...prev };
+            (Object.keys(defaultAttributes) as AttributeKey[]).forEach(key => {
+              const value = attributesResponse.data?.[key];
+              if (typeof value === "number") {
+                updated[key] = value;
+              }
+            });
             return updated;
           });
         }
@@ -337,6 +364,14 @@ const CharacterCreation = () => {
     });
   };
 
+  const handleAttributeChange = (key: AttributeKey, value: number) => {
+    const clampedValue = Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+    setAttributes(prev => ({
+      ...prev,
+      [key]: clampedValue,
+    }));
+  };
+
   const totalSkillPoints = useMemo(
     () => Object.values(skills).reduce((acc, val) => acc + val, 0),
     [skills]
@@ -423,10 +458,14 @@ const CharacterCreation = () => {
       performance: skills.performance,
       songwriting: skills.songwriting,
       composition: skills.composition,
-      creativity: skills.creativity,
-      business: skills.business,
-      marketing: skills.marketing,
-      technical: skills.technical,
+    };
+
+    const attributePayload: PlayerAttributesInsert = {
+      user_id: user.id,
+      creativity: attributes.creativity,
+      business: attributes.business,
+      marketing: attributes.marketing,
+      technical: attributes.technical,
     };
 
     try {
@@ -444,6 +483,14 @@ const CharacterCreation = () => {
 
       if (skillsError) {
         throw skillsError;
+      }
+
+      const { error: attributesError } = await supabase
+        .from("player_attributes")
+        .upsert(attributePayload, { onConflict: "user_id" });
+
+      if (attributesError) {
+        throw attributesError;
       }
 
       toast({
@@ -797,6 +844,28 @@ const CharacterCreation = () => {
                   />
                 </div>
               ))}
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground">Career Attributes</h3>
+              <div className="grid gap-5 md:grid-cols-2">
+                {(Object.keys(defaultAttributes) as AttributeKey[]).map(key => (
+                  <div key={key} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium capitalize">{key}</span>
+                      <span className="text-sm font-semibold text-primary">{attributes[key]}</span>
+                    </div>
+                    <Slider
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={[attributes[key]]}
+                      onValueChange={([value]) =>
+                        handleAttributeChange(key, value ?? attributes[key])
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>

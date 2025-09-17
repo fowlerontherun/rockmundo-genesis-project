@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { calculateLevel, getFameTitle, calculateEquipmentBonus } from "@/utils/gameBalance";
@@ -138,7 +138,22 @@ const parseStageResults = (value: unknown): StagePerformanceDetail[] => {
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
-  const { profile, skills } = useGameData();
+  const { profile, skills, attributes } = useGameData();
+  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+    "performance",
+    "songwriting",
+    "guitar",
+    "vocals",
+    "drums",
+    "bass",
+    "composition"
+  ];
+  const attributeKeys: (keyof PlayerAttributes)[] = [
+    "creativity",
+    "business",
+    "marketing",
+    "technical"
+  ];
   const [extendedStats, setExtendedStats] = useState<ExtendedStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
@@ -413,7 +428,7 @@ const PlayerStatistics = () => {
     return entry[metricConfig.field];
   }, [leaderboardEntries, metricConfig.field, user]);
 
-  if (loading || !profile || !skills) {
+  if (loading || !profile || !skills || !attributes) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
         <div className="text-center">
@@ -786,20 +801,47 @@ const PlayerStatistics = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {Object.entries(skills).filter(([key]) => key !== 'id' && key !== 'user_id').map(([skill, value]) => (
-                    <div key={skill} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium capitalize">{skill.replace('_', ' ')}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{value}/100</span>
-                          <Badge variant={value >= 80 ? "default" : value >= 50 ? "secondary" : "outline"}>
-                            {value >= 80 ? "Expert" : value >= 50 ? "Advanced" : "Beginner"}
-                          </Badge>
+                  {instrumentSkillKeys.map(skillKey => {
+                    const value = Number(skills?.[skillKey] ?? 0);
+                    return (
+                      <div key={skillKey} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium capitalize">{skillKey.replace('_', ' ')}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold">{value}/100</span>
+                            <Badge variant={value >= 80 ? "default" : value >= 50 ? "secondary" : "outline"}>
+                              {value >= 80 ? "Expert" : value >= 50 ? "Advanced" : "Beginner"}
+                            </Badge>
+                          </div>
                         </div>
+                        <Progress value={value} className="h-3" />
                       </div>
-                      <Progress value={value} className="h-3" />
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground">Professional Attributes</h4>
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {attributeKeys.map(attributeKey => {
+                      const value = Number(attributes?.[attributeKey] ?? 0);
+                      const percent = Math.min(100, (value / 1000) * 100);
+                      return (
+                        <div key={attributeKey} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium capitalize">{attributeKey.replace('_', ' ')}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold">{value}/1000</span>
+                              <Badge variant={value >= 700 ? "default" : value >= 400 ? "secondary" : "outline"}>
+                                {value >= 700 ? "Elite" : value >= 400 ? "Established" : "Developing"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <Progress value={percent} className="h-3" />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="text-center pt-4">
