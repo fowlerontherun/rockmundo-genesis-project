@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -110,17 +110,15 @@ const SkillTraining = () => {
     ? getRemainingCooldown(lastTrainingTime, trainingCooldown)
     : 0;
 
-  useEffect(() => {
-    if (user) {
-      fetchPlayerData();
+  const fetchPlayerData = useCallback(async () => {
+    if (!user?.id) {
+      return;
     }
-  }, [user]);
 
-  const fetchPlayerData = async () => {
     try {
       const [skillsResponse, profileResponse] = await Promise.all([
-        supabase.from("player_skills").select("*").eq("user_id", user?.id).single(),
-        supabase.from("profiles").select("*").eq("user_id", user?.id).single()
+        supabase.from("player_skills").select("*").eq("user_id", user.id).single(),
+        supabase.from("profiles").select("*").eq("user_id", user.id).single()
       ]);
 
       if (skillsResponse.data) setSkills(skillsResponse.data as PlayerSkills);
@@ -130,7 +128,13 @@ const SkillTraining = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      void fetchPlayerData();
+    }
+  }, [user, fetchPlayerData]);
 
   const handleTraining = async (session: TrainingSession) => {
     if (!skills || !profile) return;
