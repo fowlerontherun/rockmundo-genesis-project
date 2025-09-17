@@ -1523,6 +1523,9 @@ export type Database = {
           id: string
           mental_focus: number
           physical_endurance: number
+          stage_presence: number
+          crowd_engagement: number
+          social_reach: number
           profile_id: string
           updated_at: string | null
           user_id: string
@@ -1533,6 +1536,9 @@ export type Database = {
           id?: string
           mental_focus?: number
           physical_endurance?: number
+          stage_presence?: number
+          crowd_engagement?: number
+          social_reach?: number
           profile_id: string
           updated_at?: string | null
           user_id: string
@@ -1543,6 +1549,9 @@ export type Database = {
           id?: string
           mental_focus?: number
           physical_endurance?: number
+          stage_presence?: number
+          crowd_engagement?: number
+          social_reach?: number
           profile_id?: string
           updated_at?: string | null
           user_id?: string
@@ -1671,9 +1680,12 @@ export type Database = {
           composition: number
           created_at: string | null
           creativity: number
+          crowd_engagement: number
           id: string
           marketing: number
+          social_reach: number
           profile_id: string | null
+          stage_presence: number
           technical: number
           updated_at: string | null
           user_id: string
@@ -1683,9 +1695,12 @@ export type Database = {
           composition?: number
           created_at?: string | null
           creativity?: number
+          crowd_engagement?: number
           id?: string
           marketing?: number
+          social_reach?: number
           profile_id?: string | null
+          stage_presence?: number
           technical?: number
           updated_at?: string | null
           user_id: string
@@ -1695,9 +1710,12 @@ export type Database = {
           composition?: number
           created_at?: string | null
           creativity?: number
+          crowd_engagement?: number
           id?: string
           marketing?: number
+          social_reach?: number
           profile_id?: string | null
+          stage_presence?: number
           technical?: number
           updated_at?: string | null
           user_id?: string

@@ -13,7 +13,7 @@ import {
   getRemainingCooldown,
   COOLDOWNS
 } from "@/utils/gameBalance";
-import { applyCooldownModifier, applyRewardBonus } from "@/utils/attributeModifiers";
+import { applyCooldownModifier, applyRewardBonus, resolveAttributeValue } from "@/utils/attributeModifiers";
 import { type LucideIcon, Guitar, Mic, Music, Drum, Volume2, PenTool, Star, Coins, Clock, TrendingUp } from "lucide-react";
 
 type SkillName = "guitar" | "vocals" | "drums" | "bass" | "performance" | "songwriting";
@@ -32,6 +32,10 @@ const SkillTraining = () => {
   const { profile, skills, attributes, updateSkills, updateProfile, addActivity, loading } = useGameData();
   const [training, setTraining] = useState(false);
   const baseTrainingCooldown = COOLDOWNS.skillTraining;
+
+  const attributeSource = attributes as unknown as Record<string, unknown> | null;
+  const physicalEndurance = resolveAttributeValue(attributeSource, "physical_endurance", 1);
+  const mentalFocus = resolveAttributeValue(attributeSource, "mental_focus", 1);
 
   const trainingSessions: TrainingSession[] = [
     {
@@ -84,7 +88,7 @@ const SkillTraining = () => {
     }
   ];
 
-  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
+  const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, physicalEndurance);
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
@@ -140,7 +144,7 @@ const SkillTraining = () => {
     setTraining(true);
 
     try {
-      const focusedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
+      const focusedXp = applyRewardBonus(session.xpGain, mentalFocus);
       const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
       const skillGain = newSkillValue - currentSkill;
       const newCash = playerCash - trainingCost;
