@@ -93,6 +93,30 @@ const RecordLabel = () => {
   const [releasedSongCount, setReleasedSongCount] = useState(0);
   const [bestChartPosition, setBestChartPosition] = useState<number | null>(null);
   const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
+  const [labelForm, setLabelForm] = useState<{
+    id?: string;
+    name: string;
+    prestige: number;
+    advance_payment: number;
+    royalty_rate: number;
+    description: string;
+    requirements: Record<string, number>;
+    benefits: string[];
+  }>({
+    id: undefined,
+    name: "",
+    prestige: 1,
+    advance_payment: 0,
+    royalty_rate: 0.1,
+    description: "",
+    requirements: {},
+    benefits: []
+  });
+  const [requirementKey, setRequirementKey] = useState("");
+  const [requirementValue, setRequirementValue] = useState("");
+  const [benefitInput, setBenefitInput] = useState("");
+  const [savingLabel, setSavingLabel] = useState(false);
+  const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
 
   const loadLabels = useCallback(async () => {
     try {
