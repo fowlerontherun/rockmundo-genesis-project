@@ -83,6 +83,42 @@ export type Database = {
         }
         Relationships: []
       }
+      attribute_definitions: {
+        Row: {
+          created_at: string
+          default_value: number
+          description: string | null
+          id: string
+          label: string
+          scale_max: number
+          slug: string
+          updated_at: string
+          weighting: Json
+        }
+        Insert: {
+          created_at?: string
+          default_value?: number
+          description?: string | null
+          id?: string
+          label: string
+          scale_max?: number
+          slug: string
+          updated_at?: string
+          weighting?: Json
+        }
+        Update: {
+          created_at?: string
+          default_value?: number
+          description?: string | null
+          id?: string
+          label?: string
+          scale_max?: number
+          slug?: string
+          updated_at?: string
+          weighting?: Json
+        }
+        Relationships: []
+      }
       band_conflicts: {
         Row: {
           band_id: string
@@ -1584,6 +1620,45 @@ export type Database = {
           vocals?: number
         }
         Relationships: []
+      }
+      profile_attributes: {
+        Row: {
+          attribute_id: string
+          created_at: string
+          profile_id: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          attribute_id: string
+          created_at?: string
+          profile_id: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          attribute_id?: string
+          created_at?: string
+          profile_id?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_attributes_attribute_id_fkey"
+            columns: ["attribute_id"]
+            isOneToOne: false
+            referencedRelation: "attribute_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_attributes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       player_streaming_accounts: {
         Row: {
