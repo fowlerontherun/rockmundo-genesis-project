@@ -317,6 +317,7 @@ const FanManagement = () => {
       return sentimentMatch && platformMatch;
     });
   }, [fanMessages, sentimentFilter, platformFilter]);
+  const isScheduling = scheduledTime.trim().length > 0;
 
   const updateMessageForm = (field: keyof MessageFormState, value: string) => {
     setMessageForm((prev) => ({
