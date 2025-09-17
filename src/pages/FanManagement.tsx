@@ -200,8 +200,10 @@ const FanManagement = () => {
 
       setSocialPosts(publishedData);
       setScheduledPosts(scheduledResult.data || []);
-    } catch (error: any) {
-      console.error('Error loading social posts:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load social posts';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading social posts:', errorMessage, error);
     }
   };
 

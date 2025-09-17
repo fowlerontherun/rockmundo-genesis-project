@@ -62,8 +62,10 @@ const Achievements = () => {
         requirements: item.requirements as Record<string, any>,
         rewards: item.rewards as Record<string, any>
       })));
-    } catch (error: any) {
-      console.error('Error loading achievements:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load achievements';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading achievements:', errorMessage, error);
     }
   };
 
@@ -89,8 +91,10 @@ const Achievements = () => {
           rewards: item.achievements?.rewards as Record<string, any>
         }
       })));
-    } catch (error: any) {
-      console.error('Error loading player achievements:', error);
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to load player achievements';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error loading player achievements:', errorMessage, error);
     } finally {
       setLoading(false);
     }
