@@ -249,6 +249,7 @@ export interface City {
   dominant_genre: string;
   venues: number;
   local_bonus: number;
+  busking_value: number;
   cultural_events: string[];
   locations: CityLocation[];
   famousResident: string;
@@ -368,6 +369,7 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     dominant_genre: typeof item.dominant_genre === "string" ? item.dominant_genre : "",
     venues: toNumber(item.venues),
     local_bonus: toNumber(item.local_bonus, 1),
+    busking_value: toNumber(item.busking_value, 1),
     cultural_events: culturalEvents,
     locations,
     famousResident: famousResidentRaw || "Local legend emerging",

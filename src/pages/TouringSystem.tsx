@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +47,7 @@ interface TourVenue {
   revenue: number;
   expenses: number;
   distance_from_previous: number;
+  show_type: ShowType;
 }
 
 interface Tour {
@@ -75,6 +77,33 @@ type TourRow = Database['public']['Tables']['tours']['Row'];
 type TourVenueRow = Database['public']['Tables']['tour_venues']['Row'];
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 
+type ShowType = Database['public']['Enums']['show_type'];
+const DEFAULT_SHOW_TYPE: ShowType = 'standard';
+
+const SHOW_TYPE_OPTIONS: Array<{ value: ShowType; label: string; description: string }> = [
+  { value: 'standard', label: 'Standard', description: 'Full production show with amplified sound' },
+  { value: 'acoustic', label: 'Acoustic', description: 'Intimate unplugged arrangement' },
+];
+
+const getShowTypeLabel = (showType: ShowType) =>
+  SHOW_TYPE_OPTIONS.find(option => option.value === showType)?.label ?? 'Standard';
+
+const getShowTypeBadgeClass = (showType: ShowType) =>
+  showType === 'acoustic'
+    ? 'bg-amber-500/10 text-amber-500 border-amber-500/40'
+    : 'bg-blue-500/10 text-blue-500 border-blue-500/40';
+
+const TOUR_SHOW_BEHAVIOR: Record<ShowType, {
+  attendance: number;
+  revenue: number;
+  fame: number;
+  experience: number;
+  ticket: number;
+}> = {
+  standard: { attendance: 1, revenue: 1, fame: 1, experience: 1, ticket: 1 },
+  acoustic: { attendance: 0.75, revenue: 0.85, fame: 1.35, experience: 1.2, ticket: 0.9 },
+};
+
 type TourRecord = TourRow & {
   tour_venues: (TourVenueRow & { venue: VenueRow | null })[] | null;
 };
@@ -94,6 +123,7 @@ const TouringSystem: React.FC = () => {
     end_date: addDays(new Date(), 30)
   });
   const [selectedVenues, setSelectedVenues] = useState<string[]>([]);
+  const [newTourShowTypes, setNewTourShowTypes] = useState<Record<string, ShowType>>({});
   const [logistics, setLogistics] = useState<TourLogistics>({
     transport_cost: 5000,
     accommodation_cost: 3000,
@@ -144,7 +174,8 @@ const TouringSystem: React.FC = () => {
             status: (tv.status as TourVenue['status']) ?? 'scheduled',
             revenue: tv.revenue ?? 0,
             expenses: 0,
-            distance_from_previous: Math.floor(Math.random() * 500) + 100
+            distance_from_previous: Math.floor(Math.random() * 500) + 100,
+            show_type: (tv.show_type ?? DEFAULT_SHOW_TYPE) as ShowType
           };
         });
 
@@ -228,14 +259,17 @@ const TouringSystem: React.FC = () => {
         const venue = availableVenues.find(v => v.id === venueId);
         const showDate = addDays(newTour.start_date, index * 3); // 3 days between shows
         const basePayment = venue?.base_payment ?? 500;
-        const ticketPrice = Math.max(50, Math.floor(basePayment / 10));
+        const showType = newTourShowTypes[venueId] ?? DEFAULT_SHOW_TYPE;
+        const behavior = TOUR_SHOW_BEHAVIOR[showType] ?? TOUR_SHOW_BEHAVIOR[DEFAULT_SHOW_TYPE];
+        const ticketPrice = Math.max(40, Math.floor((basePayment / 10) * behavior.ticket));
 
         return {
           tour_id: tourData.id,
           venue_id: venueId,
           date: showDate.toISOString(),
           ticket_price: ticketPrice,
-          status: 'scheduled'
+          status: 'scheduled',
+          show_type: showType
         };
       });
 
@@ -260,12 +294,40 @@ const TouringSystem: React.FC = () => {
       setShowCreateTour(false);
       setNewTour({ name: '', description: '', start_date: new Date(), end_date: addDays(new Date(), 30) });
       setSelectedVenues([]);
+      setNewTourShowTypes({});
       loadTourData();
 
     } catch (error: unknown) {
       const fallbackMessage = 'Failed to create tour';
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
       console.error('Error creating tour:', errorMessage, error);
+      toast.error(errorMessage);
+    }
+  };
+
+  const updateTourShowType = async (tourVenueId: string, showType: ShowType) => {
+    try {
+      const { error } = await supabase
+        .from('tour_venues')
+        .update({ show_type: showType })
+        .eq('id', tourVenueId);
+
+      if (error) throw error;
+
+      setTours(prev => prev.map(tour => ({
+        ...tour,
+        venues: tour.venues.map(venue =>
+          venue.id === tourVenueId
+            ? { ...venue, show_type: showType }
+            : venue
+        )
+      })));
+
+      toast.success('Show type updated');
+    } catch (error: unknown) {
+      const fallbackMessage = 'Failed to update show type';
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
+      console.error('Error updating show type:', errorMessage, error);
       toast.error(errorMessage);
     }
   };
@@ -277,13 +339,17 @@ const TouringSystem: React.FC = () => {
     if (!tour || !tour.venues[venueIndex]) return;
 
     const venue = tour.venues[venueIndex];
+    const showType = venue.show_type ?? DEFAULT_SHOW_TYPE;
+    const behavior = TOUR_SHOW_BEHAVIOR[showType] ?? TOUR_SHOW_BEHAVIOR[DEFAULT_SHOW_TYPE];
     
     try {
       // Simulate show performance
-      const performanceScore = Math.random() * 0.4 + 0.6; // 60-100% performance
-      const ticketsSold = Math.floor(venue.venue_capacity * performanceScore);
-      const revenue = ticketsSold * venue.ticket_price;
-      const expenses = Math.floor(revenue * 0.3); // 30% expenses
+      const performanceScore = showType === 'acoustic'
+        ? Math.random() * 0.35 + 0.55
+        : Math.random() * 0.4 + 0.6;
+      const ticketsSold = Math.floor(venue.venue_capacity * performanceScore * behavior.attendance);
+      const revenue = Math.floor(ticketsSold * venue.ticket_price * behavior.revenue);
+      const expenses = Math.floor(revenue * (showType === 'acoustic' ? 0.25 : 0.3));
 
       // Update tour venue
       await supabase
@@ -297,15 +363,18 @@ const TouringSystem: React.FC = () => {
 
       // Update profile
       const netEarnings = revenue - expenses;
+      const fameGain = Math.max(1, Math.floor((ticketsSold / 100) * behavior.fame));
+      const experienceGain = Math.max(10, Math.floor(performanceScore * 100 * behavior.experience));
+
       await updateProfile({
         cash: profile.cash + netEarnings,
-        fame: profile.fame + Math.floor(ticketsSold / 100),
-        experience: profile.experience + Math.floor(performanceScore * 100)
+        fame: profile.fame + fameGain,
+        experience: profile.experience + experienceGain
       });
 
       await addActivity(
         'tour_show',
-        `Performed at ${venue.venue_name} - ${ticketsSold} tickets sold`,
+        `Performed a ${getShowTypeLabel(showType).toLowerCase()} set at ${venue.venue_name} - ${ticketsSold} tickets sold`,
         netEarnings
       );
 
@@ -318,7 +387,7 @@ const TouringSystem: React.FC = () => {
         console.error('Failed to apply equipment wear after executing tour show', wearError);
       }
 
-      toast.success(`Show completed! Sold ${ticketsSold} tickets for $${revenue.toLocaleString()}`);
+      toast.success(`Show completed! ${getShowTypeLabel(showType)} night sold ${ticketsSold} tickets for $${revenue.toLocaleString()}`);
       loadTourData();
 
     } catch (error: unknown) {
@@ -411,30 +480,74 @@ const TouringSystem: React.FC = () => {
             <div className="space-y-4">
               <h3 className="font-semibold">Select Venues</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availableVenues.map((venue) => (
-                  <Card 
-                    key={venue.id}
-                    className={`cursor-pointer transition-colors ${
-                      selectedVenues.includes(venue.id) ? 'border-primary bg-primary/10' : ''
-                    }`}
-                    onClick={() => {
-                      setSelectedVenues(prev => 
-                        prev.includes(venue.id) 
-                          ? prev.filter(id => id !== venue.id)
-                          : [...prev, venue.id]
-                      );
-                    }}
-                  >
-                    <CardContent className="p-3">
-                      <div className="font-medium">{venue.name}</div>
-                      <div className="text-sm text-muted-foreground">{venue.location}</div>
-                      <div className="text-sm">Capacity: {venue.capacity}</div>
-                      <Badge variant="outline" className="mt-1">
-                        Prestige: {venue.prestige_level}/5
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                ))}
+                {availableVenues.map((venue) => {
+                  const isSelected = selectedVenues.includes(venue.id);
+                  const showType = newTourShowTypes[venue.id] ?? DEFAULT_SHOW_TYPE;
+                  const optionDetails = SHOW_TYPE_OPTIONS.find(option => option.value === showType);
+
+                  return (
+                    <Card
+                      key={venue.id}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? 'border-primary bg-primary/10' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedVenues(prev => {
+                          if (prev.includes(venue.id)) {
+                            setNewTourShowTypes(current => {
+                              const next = { ...current };
+                              delete next[venue.id];
+                              return next;
+                            });
+                            return prev.filter(id => id !== venue.id);
+                          }
+                          setNewTourShowTypes(current => ({
+                            ...current,
+                            [venue.id]: current[venue.id] ?? DEFAULT_SHOW_TYPE,
+                          }));
+                          return [...prev, venue.id];
+                        });
+                      }}
+                    >
+                      <CardContent className="p-3 space-y-2">
+                        <div className="font-medium">{venue.name}</div>
+                        <div className="text-sm text-muted-foreground">{venue.location}</div>
+                        <div className="text-sm">Capacity: {venue.capacity}</div>
+                        <Badge variant="outline" className="mt-1">
+                          Prestige: {venue.prestige_level}/5
+                        </Badge>
+
+                        {isSelected && (
+                          <div className="space-y-1 pt-2" onClick={(event) => event.stopPropagation()}>
+                            <Select
+                              value={showType}
+                              onValueChange={(value) =>
+                                setNewTourShowTypes(prev => ({
+                                  ...prev,
+                                  [venue.id]: value as ShowType,
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="w-full text-sm">
+                                <SelectValue placeholder="Select show type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SHOW_TYPE_OPTIONS.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {optionDetails && (
+                              <p className="text-xs text-muted-foreground">{optionDetails.description}</p>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 
@@ -551,50 +664,83 @@ const TouringSystem: React.FC = () => {
                   <div>
                     <h4 className="font-semibold mb-3">Tour Schedule</h4>
                     <div className="space-y-3">
-                      {tour.venues.map((venue, index) => (
-                        <div key={venue.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <div className="text-center min-w-[60px]">
-                              <div className="font-bold">{format(new Date(venue.date), 'MMM')}</div>
-                              <div className="text-lg">{format(new Date(venue.date), 'dd')}</div>
-                            </div>
-                            <div>
-                              <div className="font-medium">{venue.venue_name}</div>
-                              <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                <MapPin className="w-4 h-4" />
-                                {venue.city}
-                                {index > 0 && (
-                                  <>
-                                    <Truck className="w-4 h-4" />
-                                    {venue.distance_from_previous} km
-                                  </>
-                                )}
+                      {tour.venues.map((venue, index) => {
+                        const showType = venue.show_type ?? DEFAULT_SHOW_TYPE;
+                        const showTypeLabel = getShowTypeLabel(showType);
+                        const optionDetails = SHOW_TYPE_OPTIONS.find(option => option.value === showType);
+
+                        return (
+                          <div key={venue.id} className="flex flex-col gap-3 p-3 border rounded-lg md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="text-center min-w-[60px]">
+                                <div className="font-bold">{format(new Date(venue.date), 'MMM')}</div>
+                                <div className="text-lg">{format(new Date(venue.date), 'dd')}</div>
+                              </div>
+                              <div>
+                                <div className="font-medium">{venue.venue_name}</div>
+                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                  <MapPin className="w-4 h-4" />
+                                  {venue.city}
+                                  {index > 0 && (
+                                    <>
+                                      <Truck className="w-4 h-4" />
+                                      {venue.distance_from_previous} km
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {venue.tickets_sold}/{venue.venue_capacity}
+                            <div className="flex flex-col items-end gap-1 min-w-[160px]">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className={getShowTypeBadgeClass(showType)}>
+                                  {showTypeLabel}
+                                </Badge>
+                                {venue.status === 'scheduled' && (
+                                  <Select
+                                    value={showType}
+                                    onValueChange={(value) => updateTourShowType(venue.id, value as ShowType)}
+                                  >
+                                    <SelectTrigger className="w-[140px] text-xs">
+                                      <SelectValue placeholder="Show type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {SHOW_TYPE_OPTIONS.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                              {optionDetails && (
+                                <span className="text-xs text-muted-foreground text-right">
+                                  {optionDetails.description}
+                                </span>
+                              )}
+                              <div className="font-medium">
+                                {venue.tickets_sold}/{venue.venue_capacity}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                ${venue.ticket_price} per ticket
+                              </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              ${venue.ticket_price} per ticket
+                            <div className="flex items-center gap-2">
+                              <Badge variant={venue.status === 'completed' ? 'default' : 'secondary'}>
+                                {venue.status}
+                              </Badge>
+                              {venue.status === 'scheduled' && tour.status === 'active' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => executeTourShow(tour.id, index)}
+                                >
+                                  Perform
+                                </Button>
+                              )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={venue.status === 'completed' ? 'default' : 'secondary'}>
-                              {venue.status}
-                            </Badge>
-                            {venue.status === 'scheduled' && tour.status === 'active' && (
-                              <Button 
-                                size="sm"
-                                onClick={() => executeTourShow(tour.id, index)}
-                              >
-                                Perform
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </CardContent>

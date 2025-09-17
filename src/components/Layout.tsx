@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Navigation from "@/components/ui/navigation";
+import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
 import { checkProfileCompletion } from "@/utils/profileCompletion";
 import { Button } from "@/components/ui/button";
@@ -95,35 +96,9 @@ const Layout = () => {
     <div className="flex h-screen bg-background">
       <Navigation />
       <main className="flex-1 overflow-y-auto lg:ml-0 pt-16 lg:pt-0 pb-16 lg:pb-0">
-        {(profileError || (hasProfile && location.pathname !== "/character-create")) && (
-          <div className="space-y-3 px-4 pt-6 sm:px-6 lg:px-8">
-            {profileError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-5 w-5" />
-                <AlertTitle>Profile check issue</AlertTitle>
-                <AlertDescription>{profileError}</AlertDescription>
-              </Alert>
-            )}
-            {hasProfile && location.pathname !== "/character-create" && (
-              <div className="flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm text-primary sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-primary">
-                  <Wand2 className="h-5 w-5" />
-                  <span className="font-medium">
-                    Ready for a remix? Revisit the character creator anytime.
-                  </span>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigate("/character-create")}
-                >
-                  Edit Character
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-        <Outlet />
+        <CharacterGate>
+          <Outlet />
+        </CharacterGate>
       </main>
     </div>
   );

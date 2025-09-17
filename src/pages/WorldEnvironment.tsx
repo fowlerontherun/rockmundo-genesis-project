@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
+import { useGameEvents, type GameEventWithStatus } from '@/hooks/useGameEvents';
 import { toast } from '@/components/ui/sonner-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -16,16 +18,16 @@ import {
   type RandomEvent,
 } from '@/utils/worldEnvironment';
 import { 
-  Cloud, 
-  Sun, 
-  CloudRain, 
-  CloudSnow, 
-  Zap, 
+  Cloud,
+  Sun,
+  CloudRain,
+  CloudSnow,
+  Zap,
   Wind,
   MapPin,
   Calendar,
   AlertTriangle,
-  Sparkles,
+  SparklesIcon,
   Globe,
   Mountain,
   Building,
@@ -33,7 +35,8 @@ import {
   TrendingUp,
   DollarSign,
   Music,
-  Thermometer
+  Thermometer,
+  Loader2
 } from 'lucide-react';
 
 const REFRESH_INTERVAL = 60_000;
@@ -49,12 +52,95 @@ const WorldEnvironment: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(false);
 
+  const {
+    events: liveEvents,
+    loading: eventsLoading,
+    refreshing: eventsRefreshing,
+    error: eventsError,
+    joinEvent: joinGameEvent,
+    completeEvent: completeGameEvent,
+    refresh: refreshGameEvents,
+    joiningEventId,
+    completingEventId
+  } = useGameEvents({ profile, updateProfile, addActivity });
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
   }, []);
+
+  const formatRewardEntries = useCallback((rewards: unknown) => {
+    if (!rewards || typeof rewards !== 'object' || Array.isArray(rewards)) {
+      return [] as { key: string; label: string; value: number }[];
+    }
+
+    return Object.entries(rewards as Record<string, unknown>)
+      .map(([key, value]) => {
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(numericValue) || numericValue === 0) {
+          return null;
+        }
+
+        return {
+          key,
+          label: key.replace(/_/g, ' '),
+          value: numericValue
+        };
+      })
+      .filter((entry): entry is { key: string; label: string; value: number } => entry !== null);
+  }, []);
+
+  const formatRequirementEntries = useCallback((requirements: unknown) => {
+    if (!requirements || typeof requirements !== 'object' || Array.isArray(requirements)) {
+      return [] as { key: string; label: string; value: number }[];
+    }
+
+    return Object.entries(requirements as Record<string, unknown>)
+      .map(([key, value]) => {
+        const numericValue = typeof value === 'number' ? value : Number(value);
+
+        if (!Number.isFinite(numericValue)) {
+          return null;
+        }
+
+        return {
+          key,
+          label: key.replace(/_/g, ' '),
+          value: numericValue
+        };
+      })
+      .filter((entry): entry is { key: string; label: string; value: number } => entry !== null);
+  }, []);
+
+  const handleJoinGameEvent = useCallback(
+    async (event: GameEventWithStatus) => {
+      try {
+        await joinGameEvent(event.id);
+        toast.success(`Joined ${event.title}`);
+      } catch (error: unknown) {
+        console.error('Error joining event:', error);
+        const message = error instanceof Error ? error.message : 'Failed to join event.';
+        toast.error(message);
+      }
+    },
+    [joinGameEvent]
+  );
+
+  const handleCompleteGameEvent = useCallback(
+    async (event: GameEventWithStatus) => {
+      try {
+        await completeGameEvent(event.id);
+        toast.success(`Rewards claimed for ${event.title}`);
+      } catch (error: unknown) {
+        console.error('Error completing event:', error);
+        const message = error instanceof Error ? error.message : 'Failed to complete event.';
+        toast.error(message);
+      }
+    },
+    [completeGameEvent]
+  );
 
   const loadWorldData = useCallback(async (showLoader: boolean = true) => {
     if (!user) {
@@ -140,7 +226,7 @@ const WorldEnvironment: React.FC = () => {
       case 'competition': return <TrendingUp className="w-5 h-5 text-blue-500" />;
       case 'economic': return <DollarSign className="w-5 h-5 text-green-500" />;
       case 'disaster': return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'celebration': return <Sparkles className="w-5 h-5 text-yellow-500" />;
+      case 'celebration': return <SparklesIcon className="w-5 h-5 text-yellow-500" />;
       default: return <Globe className="w-5 h-5" />;
     }
   };
@@ -598,6 +684,200 @@ const WorldEnvironment: React.FC = () => {
 
         <TabsContent value="events" className="space-y-6">
           <div className="space-y-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Live Game Events</h2>
+                <p className="text-sm text-muted-foreground">
+                  Join limited-time challenges to earn rewards alongside the community.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void refreshGameEvents()}
+                disabled={eventsLoading || eventsRefreshing}
+              >
+                {eventsRefreshing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Refreshing
+                  </>
+                ) : (
+                  'Refresh'
+                )}
+              </Button>
+            </div>
+
+            {eventsError && (
+              <Alert variant="destructive">
+                <AlertTitle>Unable to load events</AlertTitle>
+                <AlertDescription>{eventsError}</AlertDescription>
+              </Alert>
+            )}
+
+            {eventsLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : liveEvents.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-sm text-muted-foreground">
+                  No live events are active right now. Check back soon!
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {liveEvents.map((event) => {
+                  const rewardEntries = formatRewardEntries(event.rewards);
+                  const requirementEntries = formatRequirementEntries(event.requirements);
+                  const startDate = new Date(event.start_date);
+                  const endDate = new Date(event.end_date);
+                  const now = Date.now();
+                  const isExpired = endDate.getTime() < now;
+                  const statusLabel = event.is_active
+                    ? 'Active'
+                    : isExpired
+                      ? 'Completed'
+                      : 'Upcoming';
+                  const statusVariant = event.is_active
+                    ? 'default'
+                    : isExpired
+                      ? 'outline'
+                      : 'secondary';
+                  const participantProgress = typeof event.max_participants === 'number'
+                    ? Math.min(100, Math.round((event.participantCount / Math.max(event.max_participants, 1)) * 100))
+                    : null;
+                  const joinDisabled = !event.is_active || event.isUserParticipant || (event.availableSlots !== null && event.availableSlots <= 0);
+                  const completionDisabled = !event.isUserParticipant || event.isUserRewardClaimed;
+
+                  return (
+                    <Card key={event.id} className="border-primary/40">
+                      <CardContent className="space-y-4 p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Music className="h-5 w-5 text-primary" />
+                              <h3 className="text-lg font-bold">{event.title}</h3>
+                            </div>
+                            {event.description && (
+                              <p className="text-sm text-muted-foreground">{event.description}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant={statusVariant} className="capitalize">
+                              {statusLabel}
+                            </Badge>
+                            {event.isUserParticipant && (
+                              <Badge variant={event.isUserRewardClaimed ? 'outline' : 'secondary'}>
+                                {event.isUserRewardClaimed ? 'Reward claimed' : 'Joined'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {startDate.toLocaleString()} – {endDate.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>
+                              {event.participantCount}
+                              {typeof event.max_participants === 'number'
+                                ? ` / ${event.max_participants} participants`
+                                : ' participants'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {participantProgress !== null && (
+                          <div className="space-y-2">
+                            <Progress value={participantProgress} />
+                            <p className="text-xs text-muted-foreground">
+                              {event.availableSlots === 0
+                                ? 'Event is full'
+                                : `${event.availableSlots} slots remaining`}
+                            </p>
+                          </div>
+                        )}
+
+                        {requirementEntries.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">Requirements</h4>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {requirementEntries.map((requirement) => (
+                                <Badge key={`${event.id}-requirement-${requirement.key}`} variant="outline">
+                                  {requirement.label}: {requirement.value}+
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {rewardEntries.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">Rewards</h4>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {rewardEntries.map((reward) => (
+                                <Badge key={`${event.id}-reward-${reward.key}`} variant="secondary">
+                                  {reward.label}: {reward.value > 0 ? '+' : ''}{reward.value}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <Button
+                            size="sm"
+                            onClick={() => void handleJoinGameEvent(event)}
+                            disabled={joinDisabled || joiningEventId === event.id}
+                          >
+                            {joiningEventId === event.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Joining...
+                              </>
+                            ) : (
+                              'Join Event'
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handleCompleteGameEvent(event)}
+                            disabled={completionDisabled || completingEventId === event.id}
+                          >
+                            {event.isUserRewardClaimed ? (
+                              'Rewards claimed'
+                            ) : completingEventId === event.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Claiming...
+                              </>
+                            ) : (
+                              'Complete Event'
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">World Simulation Events</h2>
+              <p className="text-sm text-muted-foreground">
+                These global conditions influence demand, rewards, and tour planning across the world.
+              </p>
+            </div>
             {worldEvents.map((event) => (
               <Card key={event.id} className={event.is_active ? 'border-green-500' : 'border-gray-300'}>
                 <CardContent className="p-6">
@@ -650,7 +930,7 @@ const WorldEnvironment: React.FC = () => {
                   </div>
 
                   {event.is_active && event.participation_reward > 0 && (
-                    <Button onClick={() => participateInWorldEvent(event.id)} className="w-full">
+                    <Button onClick={() => void participateInWorldEvent(event.id)} className="w-full">
                       Participate in Event
                     </Button>
                   )}
