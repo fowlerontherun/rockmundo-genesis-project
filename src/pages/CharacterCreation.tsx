@@ -41,6 +41,7 @@ import {
   type SkillUnlockUpsertInput,
 } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
@@ -85,10 +86,17 @@ const defaultSkills = {
   performance: 1,
   songwriting: 1,
   composition: 1,
+};
+
+const defaultAttributes = {
+  creativity: 1,
+  business: 1,
+  marketing: 1,
   technical: 1,
 };
 
 type SkillKey = keyof typeof defaultSkills;
+type AttributeKey = keyof typeof defaultAttributes;
 
 const SKILL_SCALE_FACTORS: Record<SkillKey, number> = {
   guitar: 10,
@@ -186,6 +194,7 @@ const CharacterCreation = () => {
     defaultAvatarSelection.cameraId,
   );
   const [skills, setSkills] = useState<Record<SkillKey, number>>(defaultSkills);
+  const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(defaultAttributes);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -268,12 +277,12 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_skills")
-            .select("id, profile_id, guitar, vocals, drums, bass, performance, songwriting")
+            .select("id, guitar, vocals, drums, bass, performance, songwriting, composition")
             .eq("user_id", user.id)
             .maybeSingle(),
           supabase
             .from("player_attributes")
-            .select("id, profile_id, composition, creativity, business, marketing, technical")
+            .select("id, creativity, business, marketing, technical")
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
@@ -341,28 +350,28 @@ const CharacterCreation = () => {
         const mergedSkills: Record<SkillKey, number> = { ...defaultSkills };
 
         if (skillsResponse.data) {
-          INSTRUMENT_KEYS.forEach((key) => {
-            const dbValue = skillsResponse.data?.[key];
-            if (typeof dbValue === "number") {
-              const factor = SKILL_SCALE_FACTORS[key];
-              mergedSkills[key] = Math.max(
-                MIN_SKILL_VALUE,
-                Math.round(dbValue / factor)
-              );
-            }
+          setSkills(prev => {
+            const updated = { ...prev };
+            (Object.keys(defaultSkills) as SkillKey[]).forEach(key => {
+              const value = skillsResponse.data?.[key];
+              if (typeof value === "number") {
+                updated[key] = value;
+              }
+            });
+            return updated;
           });
         }
 
         if (attributesResponse.data) {
-          ATTRIBUTE_KEYS.forEach((key) => {
-            const dbValue = attributesResponse.data?.[key];
-            if (typeof dbValue === "number") {
-              const factor = SKILL_SCALE_FACTORS[key];
-              mergedSkills[key] = Math.max(
-                MIN_SKILL_VALUE,
-                Math.round(dbValue / factor)
-              );
-            }
+          setAttributes(prev => {
+            const updated = { ...prev };
+            (Object.keys(defaultAttributes) as AttributeKey[]).forEach(key => {
+              const value = attributesResponse.data?.[key];
+              if (typeof value === "number") {
+                updated[key] = value;
+              }
+            });
+            return updated;
           });
         }
 
@@ -484,6 +493,14 @@ const CharacterCreation = () => {
     });
   };
 
+  const handleAttributeChange = (key: AttributeKey, value: number) => {
+    const clampedValue = Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+    setAttributes(prev => ({
+      ...prev,
+      [key]: clampedValue,
+    }));
+  };
+
   const totalSkillPoints = useMemo(
     () => Object.values(skills).reduce((acc, val) => acc + val, 0),
     [skills]
@@ -583,31 +600,13 @@ const CharacterCreation = () => {
 
     const skillPayload: PlayerSkillsInsert = {
       user_id: user.id,
-      profile_id: existingProfile?.id,
-      guitar: Math.min(
-        SKILL_SCALE_FACTORS.guitar * skills.guitar,
-        SKILL_SCALE_FACTORS.guitar * MAX_SKILL_VALUE
-      ),
-      vocals: Math.min(
-        SKILL_SCALE_FACTORS.vocals * skills.vocals,
-        SKILL_SCALE_FACTORS.vocals * MAX_SKILL_VALUE
-      ),
-      drums: Math.min(
-        SKILL_SCALE_FACTORS.drums * skills.drums,
-        SKILL_SCALE_FACTORS.drums * MAX_SKILL_VALUE
-      ),
-      bass: Math.min(
-        SKILL_SCALE_FACTORS.bass * skills.bass,
-        SKILL_SCALE_FACTORS.bass * MAX_SKILL_VALUE
-      ),
-      performance: Math.min(
-        SKILL_SCALE_FACTORS.performance * skills.performance,
-        SKILL_SCALE_FACTORS.performance * MAX_SKILL_VALUE
-      ),
-      songwriting: Math.min(
-        SKILL_SCALE_FACTORS.songwriting * skills.songwriting,
-        SKILL_SCALE_FACTORS.songwriting * MAX_SKILL_VALUE
-      ),
+      guitar: skills.guitar,
+      vocals: skills.vocals,
+      drums: skills.drums,
+      bass: skills.bass,
+      performance: skills.performance,
+      songwriting: skills.songwriting,
+      composition: skills.composition,
     };
 
     try {
@@ -696,7 +695,7 @@ const CharacterCreation = () => {
 
       const { error: attributesError } = await supabase
         .from("player_attributes")
-        .upsert(attributesPayload, { onConflict: "user_id" });
+        .upsert(attributePayload, { onConflict: "user_id" });
 
       if (attributesError) {
         throw attributesError;
@@ -1122,6 +1121,28 @@ const CharacterCreation = () => {
                   />
                 </div>
               ))}
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground">Career Attributes</h3>
+              <div className="grid gap-5 md:grid-cols-2">
+                {(Object.keys(defaultAttributes) as AttributeKey[]).map(key => (
+                  <div key={key} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium capitalize">{key}</span>
+                      <span className="text-sm font-semibold text-primary">{attributes[key]}</span>
+                    </div>
+                    <Slider
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={[attributes[key]]}
+                      onValueChange={([value]) =>
+                        handleAttributeChange(key, value ?? attributes[key])
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>

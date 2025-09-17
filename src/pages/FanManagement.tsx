@@ -37,6 +37,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { calculateFanGain, type PerformanceAttributeBonuses } from "@/utils/gameBalance";
+import { resolveAttributeValue } from "@/utils/attributeModifiers";
 
 interface SocialPost {
   id: string;
@@ -128,7 +130,7 @@ const SENTIMENT_OPTIONS = [
 const FanManagement = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, updateProfile, addActivity } = useGameData();
+  const { profile, skills, attributes, updateProfile, addActivity } = useGameData();
 
   const [postContent, setPostContent] = useState("");
   const [fanStats, setFanStats] = useState<FanDemographics | null>(null);
@@ -154,6 +156,23 @@ const FanManagement = () => {
   const [sentimentFilter, setSentimentFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
+    const source = attributes as unknown as Record<string, unknown> | null;
+    return {
+      stagePresence: resolveAttributeValue(source, "stage_presence", 1),
+      crowdEngagement: resolveAttributeValue(source, "crowd_engagement", 1),
+      socialReach: resolveAttributeValue(source, "social_reach", 1),
+    };
+  }, [attributes]);
+
+  const socialAttributeBonuses = useMemo<PerformanceAttributeBonuses>(
+    () => ({
+      crowdEngagement: attributeBonuses.crowdEngagement,
+      socialReach: attributeBonuses.socialReach,
+    }),
+    [attributeBonuses]
+  );
 
   const loadFanData = useCallback(async () => {
     try {
@@ -462,7 +481,22 @@ const FanManagement = () => {
       const baseLikes = Math.round((profile.fame || 0) * (0.1 + Math.random() * 0.2));
       const baseComments = Math.round(baseLikes * (0.1 + Math.random() * 0.15));
       const baseShares = Math.round(baseLikes * (0.05 + Math.random() * 0.1));
-      const fanGrowth = Math.round(baseLikes * 0.02);
+
+      const baseFanSeed = Math.max(1, Math.round(baseLikes * 0.02));
+      const baselineFanConversion = calculateFanGain(
+        baseFanSeed,
+        skills?.performance ?? 0,
+        skills?.vocals ?? 0,
+      );
+      const adjustedFanConversion = calculateFanGain(
+        baseFanSeed,
+        skills?.performance ?? 0,
+        skills?.vocals ?? 0,
+        socialAttributeBonuses,
+      );
+      const fanAdjustment = baselineFanConversion > 0 ? adjustedFanConversion / baselineFanConversion : 1;
+      const fanGrowth = Math.max(1, Math.round(baseFanSeed * fanAdjustment));
+      const fameGain = Math.max(1, Math.round((baseFanSeed / 2) * fanAdjustment));
 
       // Create posts for multiple platforms
       const platforms = ['instagram', 'twitter', 'youtube'];
@@ -505,7 +539,6 @@ const FanManagement = () => {
             .eq('user_id', user.id);
         }
 
-        const fameGain = Math.round(fanGrowth / 2);
         await updateProfile({
           fame: (profile.fame || 0) + fameGain
         });
