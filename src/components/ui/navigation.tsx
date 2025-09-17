@@ -25,7 +25,8 @@ import {
   X,
   MessageSquare,
   Globe,
-  Mic
+  Mic,
+  Sparkles
 } from "lucide-react";
 
 const Navigation = () => {
