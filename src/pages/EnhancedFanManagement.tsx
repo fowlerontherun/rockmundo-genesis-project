@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { 
   Users, 
@@ -76,7 +77,20 @@ interface FanMessage {
   replied_at: string | null;
 }
 
-const FAN_VALUE_PER_FAN = 50;
+type CampaignResults = {
+  summary?: string | null;
+  actual_growth?: number | null;
+  expected_growth?: number | null;
+  estimated_revenue?: number | null;
+  roi?: number | null;
+  notes?: string | null;
+};
+
+type FanCampaignRecord = Database["public"]["Tables"]["fan_campaigns"]["Row"] & {
+  cost: number;
+  roi: number | null;
+  results: CampaignResults | null;
+};
 
 const sentimentDisplay: Record<string, { label: string; className: string }> = {
   positive: {
