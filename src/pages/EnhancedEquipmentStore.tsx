@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { ShoppingCart, Guitar, Mic, Volume2, Star, TrendingUp, Coins, CheckCircle, Lock } from "lucide-react";
 
@@ -29,6 +30,36 @@ interface EquipmentItem {
   image_url?: string;
 }
 
+const normalizeStatBoosts = (
+  boosts: Database["public"]["Tables"]["equipment_items"]["Row"]["stat_boosts"]
+): EquipmentItem["stat_boosts"] => {
+  if (!boosts || typeof boosts !== "object" || Array.isArray(boosts)) {
+    return {};
+  }
+
+  const statKeys: (keyof EquipmentItem["stat_boosts"])[] = [
+    "guitar",
+    "vocals",
+    "drums",
+    "bass",
+    "performance",
+    "songwriting"
+  ];
+
+  return statKeys.reduce<EquipmentItem["stat_boosts"]>((acc, key) => {
+    const value = (boosts as Record<string, unknown>)[key];
+    if (typeof value === "number") {
+      acc[key] = value;
+    } else if (typeof value === "string") {
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        acc[key] = parsed;
+      }
+    }
+    return acc;
+  }, {});
+};
+
 interface PlayerEquipment {
   id: string;
   equipment_id: string;
@@ -42,7 +73,7 @@ const EquipmentStore = () => {
   const { toast } = useToast();
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [playerEquipment, setPlayerEquipment] = useState<PlayerEquipment[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Database["public"]["Tables"]["profiles"]["Row"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
@@ -69,7 +100,7 @@ const EquipmentStore = () => {
         // Transform the data to ensure stat_boosts is properly typed
         const transformedEquipment = equipmentResponse.data.map(item => ({
           ...item,
-          stat_boosts: (item.stat_boosts as any) || {},
+          stat_boosts: normalizeStatBoosts(item.stat_boosts),
           stock: typeof item.stock === "number" ? item.stock : 0
         }));
         setEquipment(transformedEquipment);
@@ -89,7 +120,7 @@ const EquipmentStore = () => {
               ...playerItem,
               equipment_items: equipmentItem ? {
                 ...equipmentItem,
-                stat_boosts: (equipmentItem.stat_boosts as any) || {}
+                stat_boosts: normalizeStatBoosts(equipmentItem.stat_boosts)
               } : null
             };
           })
