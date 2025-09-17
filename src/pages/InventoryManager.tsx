@@ -13,36 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { RECENT_WEAR_STORAGE_KEY, WearEventType, WearSummary } from "@/utils/equipmentWear";
 import { Package, Wrench, Star, Zap, TrendingUp, Shield } from "lucide-react";
 
-type StatBoostKey = "performance" | "creativity" | "technical" | "charisma";
-
-type StatBoosts = Partial<Record<StatBoostKey, number>> & {
-  [key: string]: number | undefined;
-};
-
-const normalizeStatBoosts = (boosts: unknown): StatBoosts | null => {
-  if (!boosts || typeof boosts !== "object" || Array.isArray(boosts)) {
-    return null;
-  }
-
-  return Object.entries(boosts as Record<string, unknown>).reduce<StatBoosts>((acc, [stat, value]) => {
-    const numericValue = typeof value === "number" ? value : Number(value);
-
-    if (Number.isFinite(numericValue)) {
-      acc[stat] = numericValue;
-    }
-
-    return acc;
-  }, {} as StatBoosts);
-};
-
-const getStatBoostEntries = (boosts: StatBoosts | null): Array<[string, number]> => {
-  if (!boosts) return [];
-
-  return Object.entries(boosts).filter((entry): entry is [string, number] => {
-    const value = entry[1];
-    return typeof value === "number" && Number.isFinite(value);
-  });
-};
+type EquipmentStatBoosts = Record<string, number>;
 
 interface InventoryItem {
   id: string;
@@ -59,7 +30,6 @@ interface InventoryItem {
     category: string;
     rarity: string;
     price: number;
-    stat_boosts: StatBoosts | null;
     description: string;
   };
 }
@@ -492,7 +462,7 @@ const InventoryManager = () => {
           <TabsContent value={selectedCategory}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredInventory.map((item) => {
-                const statBoostEntries = getStatBoostEntries(item.equipment.stat_boosts);
+                const statBoosts = item.equipment.stat_boosts;
 
                 return (
                   <Card key={item.id} className={`hover:shadow-lg transition-shadow ${(item.equipped || item.is_equipped) ? 'ring-2 ring-primary' : ''}`}>
@@ -514,7 +484,6 @@ const InventoryManager = () => {
                         </div>
                       </div>
                     </CardHeader>
-
                     <CardContent className="space-y-4">
                       <p className="text-sm text-muted-foreground">{item.equipment.description}</p>
 
@@ -528,17 +497,16 @@ const InventoryManager = () => {
                         </div>
                         <Progress value={item.condition} className="h-2" />
                       </div>
-
                       {/* Stat Boosts */}
-                      {statBoostEntries.length > 0 && (
+                      {statBoosts && Object.keys(statBoosts).length > 0 && (
                         <div>
                           <h4 className="text-sm font-semibold mb-2">Stat Boosts</h4>
                           <div className="grid grid-cols-2 gap-2">
-                            {statBoostEntries.map(([stat, boost]) => (
+                            {Object.entries(statBoosts).map(([stat, boost]) => (
                               <div key={stat} className="flex items-center gap-1 text-sm">
                                 {getStatIcon(stat)}
                                 <span className="capitalize">{stat}</span>
-                                <span className="text-green-600">+{boost}</span>
+                                <span className="text-green-600">+{String(boost)}</span>
                               </div>
                             ))}
                           </div>
