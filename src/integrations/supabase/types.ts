@@ -1619,6 +1619,9 @@ export type Database = {
           bio: string | null
           current_city_id: string | null
           current_location: string
+          gender: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth: string | null
+          age: number
           cash: number | null
           created_at: string | null
           display_name: string | null
@@ -1642,6 +1645,9 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth?: string | null
+          age?: number
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
@@ -1665,6 +1671,9 @@ export type Database = {
           bio?: string | null
           current_city_id?: string | null
           current_location?: string
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth?: string | null
+          age?: number
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
@@ -1687,6 +1696,13 @@ export type Database = {
           {
             foreignKeyName: "profiles_current_city_id_fkey"
             columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_city_of_birth_fkey"
+            columns: ["city_of_birth"]
             isOneToOne: false
             referencedRelation: "cities"
             referencedColumns: ["id"]
@@ -2367,6 +2383,9 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           display_name: string | null
+          gender: Database["public"]["Enums"]["profile_gender"] | null
+          city_of_birth: string | null
+          age: number | null
           id: string
           user_id: string
           username: string
@@ -2446,7 +2465,12 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "typing" | "muted"
-      show_type: "standard" | "acoustic"
+      profile_gender:
+        | "female"
+        | "male"
+        | "non_binary"
+        | "other"
+        | "prefer_not_to_say"
     }
     CompositeTypes: {
       [_ in never]: never
