@@ -239,6 +239,8 @@ interface GameDataContextValue {
   characters: PlayerProfile[];
   selectedCharacterId: string | null;
   profile: PlayerProfile | null;
+  xpWallet: PlayerXpWallet | null;
+  attributeStarTotal: number;
   freshWeeklyBonusAvailable: boolean;
   skillDefinitions: SkillDefinition[];
   skillProgress: SkillProgressRow[];
@@ -297,6 +299,8 @@ const defaultGameDataContext: GameDataContextValue = {
   characters: [],
   selectedCharacterId: null,
   profile: null,
+  xpWallet: null,
+  attributeStarTotal: 0,
   freshWeeklyBonusAvailable: false,
   skillDefinitions: [],
   skillProgress: [],
@@ -470,7 +474,6 @@ const useProvideGameData = (): GameDataContextValue => {
   const [attributeDefinitions, setAttributeDefinitions] = useState<AttributeDefinition[]>([]);
   const [attributes, setAttributes] = useState<any>({});
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet | null>(null);
-  const [progressionCooldowns, setProgressionCooldowns] = useState<Record<string, number>>({});
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [experienceLedger, setExperienceLedger] = useState<ExperienceLedgerEntry[]>([]);
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet | null>(null);
@@ -486,7 +489,6 @@ const useProvideGameData = (): GameDataContextValue => {
     setSkills(null);
     setAttributes(null);
     setXpWallet(null);
-    setProgressionCooldowns({});
     setActivities([]);
     setExperienceLedger([]);
     setXpWallet(null);
@@ -621,6 +623,27 @@ const useProvideGameData = (): GameDataContextValue => {
         }
       } else {
         walletData = (walletResponse.data as PlayerXpWallet | null) ?? null;
+      }
+
+      setXpWallet(walletData);
+
+      let walletData: PlayerXpWallet | null = null;
+      let walletResponse = await supabase
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (walletResponse.error) {
+        if (isMissingTableError(walletResponse.error)) {
+          walletData = null;
+        } else if (walletResponse.error.code === "PGRST116" || walletResponse.status === 406) {
+          walletData = null;
+        } else {
+          throw walletResponse.error;
+        }
+      } else {
+        walletData = (walletResponse.data ?? null) as PlayerXpWallet | null;
       }
 
       setXpWallet(walletData);
@@ -1640,6 +1663,8 @@ const useProvideGameData = (): GameDataContextValue => {
     characters,
     selectedCharacterId,
     profile,
+    xpWallet,
+    attributeStarTotal: Math.max(0, Number(xpWallet?.attribute_points_earned ?? 0)),
     freshWeeklyBonusAvailable,
     skillDefinitions,
     skillProgress,

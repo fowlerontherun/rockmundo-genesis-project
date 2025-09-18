@@ -231,18 +231,17 @@ const categoryPriority = new Map<string, number>(
 
 const SkillTrainingContent = () => {
   const { toast } = useToast();
-    const {
-      profile,
-      skills,
-      attributes,
-      xpWallet,
-      updateProfile,
-      updateAttributes,
-      awardActionXp,
-      buyAttributeStar,
-      addActivity,
-      loading: gameDataLoading
-    } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    updateProfile,
+    addActivity,
+    loading: gameDataLoading,
+    xpWallet,
+    attributeStarTotal
+  } = useGameData();
+
   const {
     definitions,
     relationships,
@@ -256,11 +255,16 @@ const SkillTrainingContent = () => {
   const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
 
   const playerLevel = Number(profile?.level ?? 1);
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
   const totalExperience = Number(profile?.experience ?? 0);
-  const displayExperience = Number(xpWallet?.lifetime_xp ?? totalExperience);
-  const skillCap = getSkillCap(playerLevel, totalExperience);
-  const walletBalance = Math.max(0, xpWallet?.xp_balance ?? 0);
-  const lifetimeXp = Math.max(0, xpWallet?.lifetime_xp ?? totalExperience);
+  const skillCap = getSkillCap(playerLevel, progressionSnapshot);
 
   const availableDefinitions = useMemo(() => {
     const trainable = definitions.filter(definition => definition.is_trainable !== false);
@@ -532,7 +536,11 @@ const SkillTrainingContent = () => {
     const playerCash = Number(profile.cash ?? 0);
     const playerLevel = Number(profile.level ?? 1);
     const totalExperience = Number(profile.experience ?? 0);
-    const skillCap = getSkillCap(playerLevel, totalExperience);
+    const sessionProgression = {
+      ...progressionSnapshot,
+      legacyExperience: totalExperience
+    };
+    const skillCap = getSkillCap(playerLevel, sessionProgression);
     const trainingCost = calculateTrainingCost(currentSkill);
 
     if (currentSkill >= skillCap) {

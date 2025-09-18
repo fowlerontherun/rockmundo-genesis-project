@@ -358,7 +358,7 @@ const resolveSkillBadge = (value: number) => {
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
-  const { profile, skills, attributes, skillDefinitions, xpWallet } = useGameData();
+  const { profile, skills, attributes, skillDefinitions, xpWallet, attributeStarTotal } = useGameData();
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
     "performance",
     "songwriting",
@@ -816,6 +816,15 @@ const PlayerStatistics = () => {
     return entry[metricConfig.field];
   }, [leaderboardEntries, metricConfig.field, user]);
 
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
+
   if (loading || !profile || !skills || !attributes) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
@@ -827,8 +836,7 @@ const PlayerStatistics = () => {
     );
   }
 
-  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile.experience ?? 0);
-  const playerLevel = calculateLevel(totalExperience);
+  const playerLevel = calculateLevel(progressionSnapshot);
   const fameTitle = getFameTitle(profile.fame);
   const playerAvatarLabel = (profile.display_name || profile.username || 'P').slice(0, 2).toUpperCase();
   const MetricIcon = metricConfig.icon;

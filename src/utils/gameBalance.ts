@@ -30,6 +30,149 @@ export const LEVEL_REQUIREMENTS = {
   maxLevel: 100
 } as const;
 
+const ATTRIBUTE_STAR_XP_VALUE = 400;
+const ATTRIBUTE_STAR_REWARD_BONUS = 0.005;
+const ATTRIBUTE_STAR_REWARD_MAX_BONUS = 0.25;
+
+export interface ExperienceWalletSnapshot {
+  xpBalance: number;
+  lifetimeXp: number;
+  xpSpent: number;
+  attributePointsEarned: number;
+  skillPointsEarned: number;
+}
+
+export type ExperienceWalletLike =
+  | ExperienceWalletSnapshot
+  | Partial<{
+      xp_balance: unknown;
+      xpBalance: unknown;
+      lifetime_xp: unknown;
+      lifetimeXp: unknown;
+      xp_spent: unknown;
+      xpSpent: unknown;
+      attribute_points_earned: unknown;
+      attributePointsEarned: unknown;
+      skill_points_earned: unknown;
+      skillPointsEarned: unknown;
+    }>;
+
+export interface ProgressionSnapshotInput {
+  wallet?: ExperienceWalletLike | null;
+  attributeStars?: number | null;
+  legacyExperience?: number | null;
+}
+
+interface ProgressionTotals {
+  lifetimeXp: number;
+  spendableXp: number;
+  attributeStars: number;
+}
+
+const normalizeWalletSnapshot = (
+  wallet: ExperienceWalletLike | null | undefined
+): ExperienceWalletSnapshot | null => {
+  if (!wallet || typeof wallet !== "object") {
+    return null;
+  }
+
+  const candidate = wallet as Record<string, unknown>;
+  const xpBalance = Math.max(
+    0,
+    toFiniteNumber(candidate.xpBalance ?? candidate.xp_balance, 0)
+  );
+  const lifetimeXp = Math.max(
+    0,
+    toFiniteNumber(candidate.lifetimeXp ?? candidate.lifetime_xp, 0)
+  );
+  const xpSpent = Math.max(0, toFiniteNumber(candidate.xpSpent ?? candidate.xp_spent, 0));
+  const attributePointsEarned = Math.max(
+    0,
+    toFiniteNumber(candidate.attributePointsEarned ?? candidate.attribute_points_earned, 0)
+  );
+  const skillPointsEarned = Math.max(
+    0,
+    toFiniteNumber(candidate.skillPointsEarned ?? candidate.skill_points_earned, 0)
+  );
+
+  const hasRelevantField =
+    "xpBalance" in candidate ||
+    "xp_balance" in candidate ||
+    "lifetimeXp" in candidate ||
+    "lifetime_xp" in candidate ||
+    "xpSpent" in candidate ||
+    "xp_spent" in candidate ||
+    "attributePointsEarned" in candidate ||
+    "attribute_points_earned" in candidate ||
+    "skillPointsEarned" in candidate ||
+    "skill_points_earned" in candidate;
+
+  if (!hasRelevantField && xpBalance === 0 && lifetimeXp === 0 && xpSpent === 0 && attributePointsEarned === 0 && skillPointsEarned === 0) {
+    return null;
+  }
+
+  return {
+    xpBalance,
+    lifetimeXp,
+    xpSpent,
+    attributePointsEarned,
+    skillPointsEarned
+  };
+};
+
+const resolveProgressionTotals = (
+  input: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
+  attributeStarsOverride?: number | null
+): ProgressionTotals => {
+  const normalizedOverride = Number.isFinite(attributeStarsOverride as number)
+    ? Math.max(0, toFiniteNumber(attributeStarsOverride, 0))
+    : null;
+
+  if (typeof input === "number") {
+    const legacy = Math.max(0, toFiniteNumber(input, 0));
+    return {
+      lifetimeXp: legacy,
+      spendableXp: legacy,
+      attributeStars: normalizedOverride ?? 0
+    };
+  }
+
+  if (!input) {
+    return {
+      lifetimeXp: 0,
+      spendableXp: 0,
+      attributeStars: normalizedOverride ?? 0
+    };
+  }
+
+  let walletCandidate: ExperienceWalletLike | null | undefined;
+  let attributeStarsCandidate: number | null | undefined;
+  let legacyExperienceCandidate: number | null | undefined;
+
+  if ("wallet" in input || "attributeStars" in input || "legacyExperience" in input) {
+    const context = input as ProgressionSnapshotInput;
+    walletCandidate = context.wallet ?? (context as ExperienceWalletLike);
+    attributeStarsCandidate = context.attributeStars;
+    legacyExperienceCandidate = context.legacyExperience;
+  } else {
+    walletCandidate = input as ExperienceWalletLike;
+  }
+
+  const wallet = normalizeWalletSnapshot(walletCandidate);
+  const lifetimeXp = wallet?.lifetimeXp ?? Math.max(0, toFiniteNumber(legacyExperienceCandidate, 0));
+  const spendableXp = wallet?.xpBalance ?? lifetimeXp;
+  const attributeStars = normalizedOverride ?? Math.max(
+    0,
+    toFiniteNumber(attributeStarsCandidate ?? wallet?.attributePointsEarned ?? 0, 0)
+  );
+
+  return {
+    lifetimeXp,
+    spendableXp,
+    attributeStars
+  };
+};
+
 export const TRAINING_COSTS = {
   skillTraining: (currentLevel: number) => Math.floor(100 * Math.pow(1.5, currentLevel / 10)),
   equipmentRepair: (itemValue: number) => Math.floor(itemValue * 0.1),
@@ -218,7 +361,8 @@ export const getFocusAttributeScore = (
 export const calculateExperienceReward = (
   baseExperience: number,
   attributes?: AttributeScores,
-  focus: AttributeFocus = "general"
+  focus: AttributeFocus = "general",
+  progression?: ProgressionSnapshotInput | ExperienceWalletLike | number | null
 ): number => {
   const normalizedBase = Number.isFinite(baseExperience) ? baseExperience : 0;
   if (normalizedBase <= 0) {
@@ -233,30 +377,107 @@ export const calculateExperienceReward = (
     ? attributeScoreToMultiplier(attributes?.physical_endurance ?? null, 0.2)
     : 1;
 
-  const totalMultiplier = focusMultiplier * mentalMultiplier * staminaMultiplier;
+  const { attributeStars } = resolveProgressionTotals(progression);
+  const starBonus = clampNumber(attributeStars * ATTRIBUTE_STAR_REWARD_BONUS, 0, ATTRIBUTE_STAR_REWARD_MAX_BONUS);
+
+  const totalMultiplier = focusMultiplier * mentalMultiplier * staminaMultiplier * (1 + starBonus);
   return Math.max(0, Math.round(normalizedBase * totalMultiplier));
 };
 
-export function calculateLevel(experience: number): number {
-  return Math.min(
-    Math.floor(experience / LEVEL_REQUIREMENTS.experiencePerLevel) + 1,
-    LEVEL_REQUIREMENTS.maxLevel
-  );
+export function calculateLevel(
+  progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
+  attributeStars?: number | null
+): number;
+export function calculateLevel(experience: number): number;
+export function calculateLevel(
+  progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
+  attributeStars?: number | null
+): number {
+  const totals = resolveProgressionTotals(progression, attributeStars);
+  const effectiveXp = Math.max(0, totals.lifetimeXp + totals.attributeStars * ATTRIBUTE_STAR_XP_VALUE);
+  const rawLevel = Math.floor(effectiveXp / LEVEL_REQUIREMENTS.experiencePerLevel) + 1;
+  if (!Number.isFinite(rawLevel)) {
+    return 1;
+  }
+
+  return Math.min(LEVEL_REQUIREMENTS.maxLevel, Math.max(1, rawLevel));
 }
 
-export function experienceToNextLevel(experience: number): number {
-  const currentLevel = calculateLevel(experience);
-  if (currentLevel >= LEVEL_REQUIREMENTS.maxLevel) return 0;
+export function experienceToNextLevel(
+  progression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined,
+  attributeStars?: number | null
+): number {
+  const totals = resolveProgressionTotals(progression, attributeStars);
+  const effectiveXp = Math.max(0, totals.lifetimeXp + totals.attributeStars * ATTRIBUTE_STAR_XP_VALUE);
+  const rawLevel = Math.floor(effectiveXp / LEVEL_REQUIREMENTS.experiencePerLevel) + 1;
+  const currentLevel = Math.min(LEVEL_REQUIREMENTS.maxLevel, Math.max(1, rawLevel));
+  if (currentLevel >= LEVEL_REQUIREMENTS.maxLevel) {
+    return 0;
+  }
 
   const nextLevelExp = currentLevel * LEVEL_REQUIREMENTS.experiencePerLevel;
-  return nextLevelExp - (experience % LEVEL_REQUIREMENTS.experiencePerLevel);
+  const remaining = nextLevelExp - effectiveXp;
+  return Math.max(0, Math.ceil(remaining));
 }
 
-export function getSkillCap(playerLevel: number, totalExperience: number): number {
-  if (totalExperience >= 20000) return SKILL_CAPS.master;
-  if (totalExperience >= 5000) return SKILL_CAPS.professional;
-  if (totalExperience >= 1000) return SKILL_CAPS.amateur;
-  return Math.max(SKILL_CAPS.beginner, Math.min(SKILL_CAPS.master, Math.round(playerLevel * 0.8)));
+export interface SkillCapContext extends ProgressionSnapshotInput {
+  level?: number | null;
+}
+
+export function getSkillCap(context: SkillCapContext): number;
+export function getSkillCap(
+  playerLevel: number,
+  progression?: ProgressionSnapshotInput | ExperienceWalletLike | number | null,
+  attributeStarsOverride?: number | null
+): number;
+export function getSkillCap(
+  levelOrContext: number | SkillCapContext | null | undefined,
+  progression?: ProgressionSnapshotInput | ExperienceWalletLike | number | null,
+  attributeStarsOverride?: number | null
+): number {
+  let resolvedProgression: ProgressionSnapshotInput | ExperienceWalletLike | number | null | undefined = progression;
+  let resolvedLevel = 1;
+
+  if (typeof levelOrContext === "number") {
+    resolvedLevel = Math.max(1, Math.floor(toFiniteNumber(levelOrContext, 1)));
+  } else if (levelOrContext && typeof levelOrContext === "object") {
+    resolvedProgression = levelOrContext;
+    const candidateLevel = toFiniteNumber(levelOrContext.level, NaN);
+    if (Number.isFinite(candidateLevel) && candidateLevel > 0) {
+      resolvedLevel = Math.max(1, Math.floor(candidateLevel));
+    }
+    if (attributeStarsOverride === undefined && "attributeStars" in levelOrContext) {
+      attributeStarsOverride = levelOrContext.attributeStars ?? attributeStarsOverride;
+    }
+  }
+
+  if (!Number.isFinite(resolvedLevel) || resolvedLevel <= 0) {
+    resolvedLevel = calculateLevel(resolvedProgression);
+  }
+
+  const totals = resolveProgressionTotals(resolvedProgression, attributeStarsOverride);
+  const effectiveXp = Math.max(0, totals.lifetimeXp + totals.attributeStars * ATTRIBUTE_STAR_XP_VALUE);
+
+  if (effectiveXp >= 20000) {
+    return SKILL_CAPS.master;
+  }
+
+  if (effectiveXp >= 5000) {
+    return SKILL_CAPS.professional;
+  }
+
+  if (effectiveXp >= 1000) {
+    return SKILL_CAPS.amateur;
+  }
+
+  const levelBonus = Math.min((resolvedLevel - 1) * 2, SKILL_CAPS.master - SKILL_CAPS.beginner);
+  const attributeBonus = Math.min(
+    totals.attributeStars * 5,
+    SKILL_CAPS.master - SKILL_CAPS.beginner
+  );
+
+  const incrementalCap = SKILL_CAPS.beginner + Math.max(levelBonus, attributeBonus, 0);
+  return Math.max(SKILL_CAPS.beginner, Math.min(SKILL_CAPS.master, incrementalCap));
 }
 
 export function calculateTrainingCost(
