@@ -200,14 +200,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
       void realtimeChannel.unsubscribe();
 
-      void supabase
-        .from("chat_participants")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("channel", effectiveChannel)
-        .catch(error => {
+      void (async () => {
+        const { error } = await supabase
+          .from("chat_participants")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("channel", effectiveChannel);
+
+        if (error) {
           console.error("Error unregistering presence:", error);
-        });
+        }
+      })();
     };
   }, [effectiveChannel, onConnectionStatusChange, onOnlineCountChange, user]);
 

@@ -168,11 +168,17 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       isMounted = false;
       void channel.unsubscribe();
 
-      void supabase
-        .from("chat_participants")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("channel", channelKey);
+      void (async () => {
+        const { error } = await supabase
+          .from("chat_participants")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("channel", channelKey);
+
+        if (error) {
+          console.error("Error unregistering presence:", error);
+        }
+      })();
     };
   }, [channelKey, user]);
 
