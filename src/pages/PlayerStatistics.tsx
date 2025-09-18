@@ -94,6 +94,69 @@ interface ExtendedStats {
 type WeeklyStatsRow = Database['public']['Views']['weekly_stats']['Row'];
 type GigPerformanceRow = Database['public']['Tables']['gig_performances']['Row'];
 
+interface LeaderboardRow {
+  user_id: string | null;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  fame: number | null;
+  experience: number | null;
+  total_revenue: number | null;
+  total_gigs: number | null;
+  total_achievements: number | null;
+}
+
+interface LeaderboardEntry {
+  user_id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  fame: number;
+  experience: number;
+  total_revenue: number;
+  total_gigs: number;
+  total_achievements: number;
+}
+
+type LeaderboardMetricField = keyof Pick<
+  LeaderboardEntry,
+  'fame' | 'total_revenue' | 'total_achievements'
+>;
+
+interface LeaderboardMetricDefinition {
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  field: LeaderboardMetricField;
+  format: (value: number) => string;
+}
+
+const leaderboardMetricConfig = {
+  fame: {
+    label: "Fame Score",
+    description: "Players with the highest fame across the music world.",
+    icon: Crown,
+    field: "fame",
+    format: (value: number) => value.toLocaleString(),
+  },
+  revenue: {
+    label: "Total Earnings",
+    description: "Top grossing artists combining gig and song revenue.",
+    icon: DollarSign,
+    field: "total_revenue",
+    format: (value: number) => `$${value.toLocaleString()}`,
+  },
+  achievements: {
+    label: "Achievements",
+    description: "Players who have unlocked the most achievements.",
+    icon: Trophy,
+    field: "total_achievements",
+    format: (value: number) => value.toLocaleString(),
+  },
+} as const satisfies Record<string, LeaderboardMetricDefinition>;
+
+type LeaderboardMetric = keyof typeof leaderboardMetricConfig;
+
 const RECENT_GIG_LIMIT = 5;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -745,11 +808,27 @@ const PlayerStatistics = () => {
 
       if (error) throw error;
 
-      const rows = ((data ?? []) as LeaderboardRow[]).map(row => ({
-        ...row,
-        total_revenue: Number(row.total_revenue ?? 0),
-        avatar_url: getStoredAvatarPreviewUrl(row.avatar_url ?? null),
-      }));
+      const rows = ((data ?? []) as LeaderboardRow[])
+        .map(row => {
+          if (!row.user_id) {
+            return null;
+          }
+
+          const entry: LeaderboardEntry = {
+            user_id: row.user_id,
+            username: row.username ?? null,
+            display_name: row.display_name ?? null,
+            avatar_url: getStoredAvatarPreviewUrl(row.avatar_url ?? null),
+            fame: Number(row.fame ?? 0),
+            experience: Number(row.experience ?? 0),
+            total_revenue: Number(row.total_revenue ?? 0),
+            total_gigs: Number(row.total_gigs ?? 0),
+            total_achievements: Number(row.total_achievements ?? 0)
+          };
+
+          return entry;
+        })
+        .filter((entry): entry is LeaderboardEntry => entry !== null);
 
       setLeaderboardEntries(rows);
     } catch (error) {
