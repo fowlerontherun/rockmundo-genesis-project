@@ -80,9 +80,6 @@ const backgrounds = [
 const DEFAULT_TOTAL_SKILL_POINTS = 13;
 const MIN_SKILL_VALUE = 0;
 const MAX_SKILL_VALUE = 100;
-const ATTRIBUTE_MIN_VALUE = 0;
-const ATTRIBUTE_MAX_VALUE = 3;
-const ATTRIBUTE_SLIDER_STEP = 0.1;
 
 const extractMissingColumn = (error: PostgrestError | null | undefined) => {
   if (!error) {
@@ -146,55 +143,6 @@ const extractNumericField = (source: unknown, key: string): number | null => {
   }
 
   return null;
-};
-
-const normalizeAttributeValue = (value: unknown): number => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return (
-      Math.round(
-        Math.min(ATTRIBUTE_MAX_VALUE, Math.max(ATTRIBUTE_MIN_VALUE, value)) * 1000,
-      ) / 1000
-    );
-  }
-
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return ATTRIBUTE_MIN_VALUE;
-  }
-
-  return (
-    Math.round(
-      Math.min(ATTRIBUTE_MAX_VALUE, Math.max(ATTRIBUTE_MIN_VALUE, numeric)) * 1000,
-    ) / 1000
-  );
-};
-
-const buildAttributeState = (source: unknown): Record<AttributeKey, number> => {
-  const resolved = { ...defaultAttributes };
-
-  if (!source || typeof source !== "object") {
-    return resolved;
-  }
-
-  const record = source as Record<string, unknown>;
-
-  ATTRIBUTE_KEYS.forEach((key) => {
-    if (key in record) {
-      resolved[key] = normalizeAttributeValue(record[key]);
-    }
-  });
-
-  return resolved;
-};
-
-const formatAttributeDisplay = (value: number): string => {
-  const normalized = normalizeAttributeValue(value);
-
-  if (Number.isInteger(normalized)) {
-    return normalized.toString();
-  }
-
-  return normalized.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 };
 
 const formatSkillDisplayName = (slug: string): string =>
@@ -488,29 +436,11 @@ const normalizeSkillValue = (value: unknown): number => {
   return Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, numeric));
 };
 
-const ATTRIBUTE_KEYS = [
-  "mental_focus",
-  "physical_endurance",
-  "stage_presence",
-  "crowd_engagement",
-  "social_reach",
-] as const;
-
 type SkillSlug = string;
-type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
-
-const defaultAttributes: Record<AttributeKey, number> = {
-  mental_focus: 0,
-  physical_endurance: 0,
-  stage_presence: 0,
-  crowd_engagement: 0,
-  social_reach: 0,
-};
 
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
-type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 type PlayerSkillsInsert = TablesInsert<"player_skills">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
@@ -596,9 +526,6 @@ const CharacterCreation = () => {
   const [loadedSkillsRecord, setLoadedSkillsRecord] = useState<Record<string, unknown> | null>(
     null,
   );
-  const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(defaultAttributes);
-  const [existingAttributesRow, setExistingAttributesRow] =
-    useState<Tables<"player_attributes"> | null>(null);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -805,7 +732,7 @@ const CharacterCreation = () => {
       const shouldUseProfileScope = Boolean(scopedProfileId);
 
       try {
-        const [profileResponse, skillsResponse, attributesResponse] = await Promise.all([
+        const [profileResponse, skillsResponse] = await Promise.all([
           shouldUseProfileScope
             ? supabase
                 .from("profiles")
@@ -832,17 +759,6 @@ const CharacterCreation = () => {
                 )
                 .eq("user_id", user.id)
                 .maybeSingle(),
-          shouldUseProfileScope
-            ? supabase
-                .from("player_attributes")
-                .select("*")
-                .eq("profile_id", scopedProfileId)
-                .maybeSingle()
-            : supabase
-                .from("player_attributes")
-                .select("*")
-                .eq("user_id", user.id)
-                .maybeSingle(),
         ]);
 
         if (profileResponse.error && profileResponse.status !== 406) {
@@ -853,13 +769,8 @@ const CharacterCreation = () => {
           throw skillsResponse.error;
         }
 
-        if (attributesResponse.error && attributesResponse.status !== 406) {
-          throw attributesResponse.error;
-        }
         const profileData = (profileResponse.data as ProfileRow | null) ?? null;
         const skillsData = skillsResponse.data;
-        const attributesRow =
-          (attributesResponse.data as Tables<"player_attributes"> | null) ?? null;
 
         setExistingProfile(profileData);
 
@@ -915,9 +826,6 @@ const CharacterCreation = () => {
           : null;
 
         setLoadedSkillsRecord(normalizedSkillsRow);
-
-        setExistingAttributesRow(attributesRow);
-        setAttributes(buildAttributeState(attributesRow));
       } catch (error) {
         console.error("Failed to load character data:", error);
         setLoadError("We couldn't load your character data. You can still create a new persona.");
@@ -1037,14 +945,6 @@ const CharacterCreation = () => {
         [key]: nextValue,
       };
     });
-  };
-
-  const handleAttributeChange = (key: AttributeKey, value: number) => {
-    const normalized = normalizeAttributeValue(value);
-    setAttributes(prev => ({
-      ...prev,
-      [key]: normalized,
-    }));
   };
 
   const totalSkillPoints = useMemo(
@@ -1214,7 +1114,6 @@ const CharacterCreation = () => {
 
       setExistingProfile(upsertedProfile);
 
-      const attributePoints = existingAttributesRow?.attribute_points ?? 0;
       const normalizedSkillsPayload = skillSlugs.reduce<Record<string, number>>(
         (accumulator, slug) => {
           const rawValue = skills[slug];
@@ -1279,20 +1178,6 @@ const CharacterCreation = () => {
       };
 
       setLoadedSkillsRecord(mergedSkillStateRecord);
-      const normalizedAttributesPayload = ATTRIBUTE_KEYS.reduce<Record<string, number>>(
-        (accumulator, key) => {
-          accumulator[key] = normalizeAttributeValue(attributes[key]);
-          return accumulator;
-        },
-        {} as Record<string, number>,
-      );
-
-      const baseAttributesPayload: Record<string, unknown> = {
-        user_id: user.id,
-        profile_id: upsertedProfile.id,
-        attribute_points: attributePoints,
-        ...normalizedAttributesPayload,
-      };
 
       if (skillDefinitions.length > 0) {
         const progressEntries: SkillProgressUpsertInput[] = [];
@@ -1342,55 +1227,6 @@ const CharacterCreation = () => {
         if (unlockEntries.length > 0) {
           await upsertSkillUnlocks(upsertedProfile.id, unlockEntries);
         }
-      }
-
-      let attemptedAttributesPayload: Record<string, unknown> = { ...baseAttributesPayload };
-      const skippedAttributeColumns = new Set<string>();
-      let finalAttributesPayload: Record<string, unknown> | null = null;
-      let finalAttributesRow: Tables<"player_attributes"> | null = null;
-
-      while (Object.keys(attemptedAttributesPayload).length > 0) {
-        const { data: upsertedAttributes, error: attributesError } = await supabase
-          .from("player_attributes")
-          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "profile_id" })
-          .select()
-          .maybeSingle();
-
-        if (!attributesError) {
-          finalAttributesPayload = { ...attemptedAttributesPayload };
-          finalAttributesRow = upsertedAttributes ?? null;
-          break;
-        }
-
-        const missingColumn = extractMissingColumn(attributesError);
-        if (
-          missingColumn &&
-          !skippedAttributeColumns.has(missingColumn) &&
-          missingColumn in attemptedAttributesPayload &&
-          missingColumn !== "profile_id"
-        ) {
-          skippedAttributeColumns.add(missingColumn);
-          attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
-          continue;
-        }
-
-        throw attributesError;
-      }
-
-      if (finalAttributesPayload) {
-        const sourceRecord =
-          (finalAttributesRow as Record<string, unknown> | null) ??
-          (existingAttributesRow
-            ? { ...existingAttributesRow, ...finalAttributesPayload }
-            : finalAttributesPayload);
-
-        setExistingAttributesRow(
-          finalAttributesRow ??
-            (existingAttributesRow
-              ? ({ ...existingAttributesRow, ...finalAttributesPayload } as Tables<"player_attributes">)
-              : existingAttributesRow ?? null),
-        );
-        setAttributes(buildAttributeState(sourceRecord));
       }
 
       await refreshCharacters();
@@ -1827,30 +1663,6 @@ const CharacterCreation = () => {
                   </div>
                 );
               })}
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground">Career Attributes</h3>
-              <div className="grid gap-5 md:grid-cols-2">
-                {(Object.keys(defaultAttributes) as AttributeKey[]).map(key => (
-                  <div key={key} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium capitalize">{key}</span>
-                      <span className="text-sm font-semibold text-primary">
-                        {formatAttributeDisplay(attributes[key])}
-                      </span>
-                    </div>
-                    <Slider
-                      min={ATTRIBUTE_MIN_VALUE}
-                      max={ATTRIBUTE_MAX_VALUE}
-                      step={ATTRIBUTE_SLIDER_STEP}
-                      value={[attributes[key]]}
-                      onValueChange={([value]) =>
-                        handleAttributeChange(key, value ?? attributes[key])
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
           </CardContent>
         </Card>
