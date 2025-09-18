@@ -26,9 +26,9 @@ type AttributeDefinition = any;
 type ProfileAttribute = any;
 
 // Temporary type definitions until proper types are available
-type SkillDefinition = any;
-type SkillProgressRow = any;
-type SkillUnlockRow = any;
+export type SkillDefinition = any;
+export type SkillProgressRow = any;
+export type SkillUnlockRow = any;
 type UnlockedSkillsMap = Record<string, boolean>;
 type AttributesMap = Record<string, number>;
 type SkillProgressUpsertInput = any;
