@@ -6,11 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
+import Auth from "./pages/Auth";
 
 const Layout = lazy(() => import("./components/Layout"));
 const Index = lazy(() => import("./pages/Index"));
 const PerformGig = lazy(() => import("./pages/PerformGig"));
-const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const BandManager = lazy(() => import("./pages/BandManager"));
 const GigBooking = lazy(() => import("./pages/GigBooking"));
