@@ -14,7 +14,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { applyRoyaltyRecoupment } from "@/utils/contracts";
-import { formatDateTimeLocal } from "@/utils/datetime";
+import * as datetimeUtils from "@/utils/datetime";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
 import type { Database, Json } from "@/integrations/supabase/types";
 
@@ -105,6 +105,16 @@ interface GrowthSummary {
 }
 
 const DEFAULT_REVENUE_PER_PLAY = 0.003;
+
+const fallbackFormatDateTimeLocal = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatDateTimeLocal =
+  datetimeUtils.formatDateTimeLocal ?? fallbackFormatDateTimeLocal;
 
 const DEFAULT_STREAMING_PLATFORM_DISTRIBUTION: BreakdownSource[] = [
   { key: "spotify", name: "Spotify", weight: 45, revenuePerPlay: 0.003 },

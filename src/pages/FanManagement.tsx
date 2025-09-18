@@ -40,7 +40,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { calculateFanGain, type PerformanceAttributeBonuses } from "@/utils/gameBalance";
 import { resolveAttributeValue } from "@/utils/attributeModifiers";
-import { formatDateTimeLocal } from "@/utils/datetime";
+import * as datetimeUtils from "@/utils/datetime";
 
 interface SocialPost {
   id: string;
@@ -113,6 +113,16 @@ type MessageFormState = {
 declare const applyScheduledPostEffects:
   | ((posts: SocialPost[], activityDescription: string) => Promise<void> | void)
   | undefined;
+
+const fallbackFormatDateTimeLocal = (date: Date) => {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatDateTimeLocal =
+  datetimeUtils.formatDateTimeLocal ?? fallbackFormatDateTimeLocal;
 
 const PLATFORM_OPTIONS = [
   { value: "instagram", label: "Instagram" },
