@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,9 @@ const WorldEnvironment: React.FC = () => {
   const [activeTravelModeId, setActiveTravelModeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const cityIdFromParams = searchParams.get('cityId');
+  const searchParamsString = searchParams.toString();
 
   const {
     events: liveEvents,
@@ -83,6 +87,42 @@ const WorldEnvironment: React.FC = () => {
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!cityIdFromParams || !cities.length) {
+      return;
+    }
+
+    setSelectedCity((current) => {
+      if (current?.id === cityIdFromParams) {
+        return current;
+      }
+
+      const match = cities.find((city) => city.id === cityIdFromParams);
+      return match ?? current;
+    });
+  }, [cityIdFromParams, cities]);
+
+  useEffect(() => {
+    if (!selectedCity) {
+      if (!cityIdFromParams) {
+        return;
+      }
+
+      const params = new URLSearchParams(searchParamsString);
+      params.delete('cityId');
+      setSearchParams(params, { replace: true });
+      return;
+    }
+
+    if (selectedCity.id === cityIdFromParams) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParamsString);
+    params.set('cityId', selectedCity.id);
+    setSearchParams(params, { replace: true });
+  }, [selectedCity, cityIdFromParams, searchParamsString, setSearchParams]);
 
   const formatRewardEntries = useCallback((rewards: unknown) => {
     if (!rewards || typeof rewards !== 'object' || Array.isArray(rewards)) {
@@ -126,6 +166,16 @@ const WorldEnvironment: React.FC = () => {
       })
       .filter((entry): entry is { key: string; label: string; value: number } => entry !== null);
   }, []);
+
+  const handleCitySelection = useCallback(
+    (city: City) => {
+      setSelectedCity(city);
+      const params = new URLSearchParams(searchParamsString);
+      params.set('cityId', city.id);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParamsString, setSearchParams]
+  );
 
   const handleJoinGameEvent = useCallback(
     async (event: GameEventWithStatus) => {
@@ -181,6 +231,13 @@ const WorldEnvironment: React.FC = () => {
           return null;
         }
 
+        if (cityIdFromParams) {
+          const requestedCity = citySnapshot.find((city) => city.id === cityIdFromParams);
+          if (requestedCity) {
+            return requestedCity;
+          }
+        }
+
         if (current) {
           const existing = citySnapshot.find((city) => city.id === current.id);
           return existing ?? citySnapshot[0];
@@ -198,7 +255,7 @@ const WorldEnvironment: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [user, cityIdFromParams]);
 
   const loadCityDetails = useCallback(
     async (city: City | null, options: { showLoader?: boolean; quiet?: boolean } = {}) => {
@@ -708,7 +765,7 @@ const WorldEnvironment: React.FC = () => {
                       <Card
                         key={city.id}
                         className={`cursor-pointer transition-shadow ${isSelected ? 'border-primary shadow-lg ring-1 ring-primary/30' : 'hover:shadow-lg'}`}
-                        onClick={() => setSelectedCity(city)}
+                        onClick={() => handleCitySelection(city)}
                       >
                         <CardContent className="p-6 space-y-4">
                           <div className="flex items-center justify-between">
