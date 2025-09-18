@@ -3,6 +3,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { awardActionXp } from "@/utils/progression";
 import { calculateAttributeMultiplier, type AttributeKey as ProgressionAttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -558,6 +559,7 @@ const Busking = () => {
     xpWallet,
     updateProfile,
     updateAttributes,
+    refreshProgressionState,
     addActivity,
     loading: gameLoading,
     currentCity,
@@ -586,7 +588,7 @@ const Busking = () => {
       socialReach: resolveAttributeValue(source, "social_reach", 1),
     };
   }, [cachedAttributes]);
-  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0);
+  const totalExperience = Number(xpWallet?.lifetime_xp ?? 0);
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -1107,14 +1109,33 @@ const Busking = () => {
         throw sessionError;
       }
 
+      const xpMetadata: Record<string, unknown> = {
+        session_id: sessionRecord.id,
+        stage_type: "busking",
+        duration_minutes: durationMinutes,
+        quality_gain: Math.round(performanceScore),
+        collaborators: modifier ? [modifier.name] : [],
+        professionalism_notes: crowdReaction,
+        location_name: selectedLocation.name,
+        modifier_id: modifier?.id ?? null,
+        success
+      };
+
+      await awardActionXp({
+        amount: experienceGained,
+        actionKey: "busking_session",
+        metadata: xpMetadata,
+        uniqueEventId: sessionRecord.id
+      });
+
+      await refreshProgressionState();
+
       const nextCash = (profile.cash ?? 0) + cashEarned;
       const nextFame = (profile.fame ?? 0) + fameGained;
-      const nextExperience = (profile.experience ?? 0) + experienceGained;
 
       await updateProfile({
         cash: nextCash,
-        fame: nextFame,
-        experience: nextExperience,
+        fame: nextFame
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
