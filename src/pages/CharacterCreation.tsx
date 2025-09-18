@@ -720,7 +720,9 @@ const CharacterCreation = () => {
       while (!upsertedProfile) {
         const { data, error: profileError } = await supabase
           .from("profiles")
-          .upsert(attemptedProfilePayload as ProfileInsert)
+          .upsert(attemptedProfilePayload as ProfileInsert, {
+            onConflict: "user_id,slot_number",
+          })
           .select()
           .single();
 
