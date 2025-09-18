@@ -123,7 +123,7 @@ interface Venue {
   id: string;
   name: string;
   location: string;
-  city_id?: string | null;
+  city?: string | null;
   capacity: number;
   venue_type: string;
   base_payment: number;
@@ -269,7 +269,7 @@ const GigBooking = () => {
         .select('*');
 
       if (selectedCityId !== ALL_CITIES_VALUE) {
-        query = query.eq('city_id', selectedCityId);
+        query = query.eq('city', selectedCityId);
       }
 
       const { data, error } = await query
@@ -286,7 +286,7 @@ const GigBooking = () => {
         id: venue.id,
         name: venue.name,
         location: venue.location ?? 'Unknown',
-        city_id: venue.city_id ?? null,
+        city: venue.city ?? null,
         capacity: venue.capacity ?? 0,
         venue_type: venue.venue_type ?? 'general',
         base_payment: venue.base_payment ?? 0,
@@ -328,7 +328,7 @@ const GigBooking = () => {
           id: venueDetails?.id ?? gig.venue_id,
           name: venueDetails?.name ?? 'Unknown Venue',
           location: venueDetails?.location ?? 'Unknown',
-          city_id: venueDetails?.city_id ?? null,
+          city: venueDetails?.city ?? null,
           capacity: venueDetails?.capacity ?? 0,
           venue_type: venueDetails?.venue_type ?? 'general',
           base_payment: venueDetails?.base_payment ?? 0,

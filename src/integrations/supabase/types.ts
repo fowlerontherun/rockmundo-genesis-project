@@ -1706,7 +1706,7 @@ export type Database = {
         Row: {
           base_payment: number | null
           capacity: number | null
-          city_id: string | null
+          city: string | null
           created_at: string | null
           id: string
           location: string | null
@@ -1718,7 +1718,7 @@ export type Database = {
         Insert: {
           base_payment?: number | null
           capacity?: number | null
-          city_id?: string | null
+          city?: string | null
           created_at?: string | null
           id?: string
           location?: string | null
@@ -1730,7 +1730,7 @@ export type Database = {
         Update: {
           base_payment?: number | null
           capacity?: number | null
-          city_id?: string | null
+          city?: string | null
           created_at?: string | null
           id?: string
           location?: string | null
@@ -1741,8 +1741,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "venues_city_id_fkey"
-            columns: ["city_id"]
+            foreignKeyName: "venues_city_fkey"
+            columns: ["city"]
             isOneToOne: false
             referencedRelation: "cities"
             referencedColumns: ["id"]

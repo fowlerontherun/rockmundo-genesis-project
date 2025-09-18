@@ -26,7 +26,7 @@ import {
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type VenueRowBase = Database["public"]["Tables"]["venues"]["Row"];
 type VenueRow = VenueRowBase & {
-  city?: Pick<CityRow, "id" | "name" | "country"> | null;
+  city_details?: Pick<CityRow, "id" | "name" | "country"> | null;
 };
 
 interface VenueRelationshipRow {
@@ -275,7 +275,7 @@ const VenueManagement = () => {
         .from("venues")
         .select(`
           *,
-          city:city_id (
+          city_details:city (
             id,
             name,
             country
@@ -387,9 +387,9 @@ const VenueManagement = () => {
       const relationshipState = relationships[venue.id] ?? { score: 0 };
       const relationshipScore = Math.min(100, Math.max(0, relationshipState.score));
       const venueBookings = bookingRows.filter((booking) => booking.venue_id === venue.id);
-      const cityId = venue.city_id ?? null;
-      const cityName = venue.city?.name ?? null;
-      const cityCountry = venue.city?.country ?? null;
+      const cityId = venue.city ?? null;
+      const cityName = venue.city_details?.name ?? null;
+      const cityCountry = venue.city_details?.country ?? null;
       const locationLabel = cityName
         ? cityCountry
           ? `${cityName}, ${cityCountry}`
