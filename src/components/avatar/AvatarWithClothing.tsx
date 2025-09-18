@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { EquippedClothingItem } from "@/hooks/useEquippedClothing";
 import { formatClothingSlot } from "@/utils/wardrobe";
+import type { FC, ReactNode } from "react";
 
 const overlayPositions = [
   "top-2 left-2",
@@ -18,10 +19,10 @@ export interface AvatarWithClothingProps {
   size?: number;
   className?: string;
   badgeClassName?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
-export const AvatarWithClothing: React.FC<AvatarWithClothingProps> = ({
+export const AvatarWithClothing: FC<AvatarWithClothingProps> = ({
   avatarUrl,
   fallbackText,
   items,
