@@ -1,1 +1,7 @@
 project_id = "yztogmdixmchsmimtent"
+
+[functions.promotions]
+verify_jwt = false
+
+[functions.progression]
+verify_jwt = false

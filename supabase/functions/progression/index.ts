@@ -1,0 +1,658 @@
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import {
+  createClient,
+  type PostgrestError,
+  type SupabaseClient,
+  type User,
+} from "https://esm.sh/@supabase/supabase-js@2.57.4";
+
+import type { Database } from "../../../src/lib/supabase-types.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Cache-Control": "no-store",
+};
+
+type ProgressionAction =
+  | "award_action_xp"
+  | "weekly_bonus"
+  | "buy_attribute_star"
+  | "respec_attributes"
+  | "award_special_xp";
+
+type JsonRecord = Record<string, unknown>;
+
+type HandlerContext = {
+  client: SupabaseClient<Database>;
+  user: User;
+  profile: ProfileSummary;
+};
+
+type HandlerResult = {
+  message?: string;
+  result?: unknown;
+};
+
+type ProfileSummary = {
+  id: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  level: number;
+  experience: number;
+  attribute_points_available: number;
+  skill_points_available: number;
+  last_point_conversion_at: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active?: boolean | null;
+};
+
+type WalletSummary = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
+
+type AttributeSummary = Database["public"]["Tables"]["player_attributes"]["Row"] | null;
+
+type NormalizedResponse = {
+  success: true;
+  action: ProgressionAction;
+  message?: string;
+  profile: ProfileSummary;
+  wallet: WalletSummary;
+  attributes: AttributeSummary;
+  cooldowns: Record<string, number>;
+  result?: unknown;
+};
+
+type ErrorResponse = {
+  success: false;
+  action?: ProgressionAction;
+  message: string;
+  details?: unknown;
+};
+
+class HttpError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(status: number, message: string, details?: unknown) {
+    super(message);
+    this.status = status;
+    this.details = details;
+  }
+}
+
+const LEDGER_EVENT_TYPES: Record<ProgressionAction, string> = {
+  award_action_xp: "action_xp",
+  weekly_bonus: "weekly_bonus",
+  buy_attribute_star: "attribute_purchase",
+  respec_attributes: "attribute_respec",
+  award_special_xp: "special_xp",
+};
+
+serve(async (req) => {
+  try {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
+
+    if (req.method !== "POST") {
+      throw new HttpError(405, "Method not allowed");
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new HttpError(401, "Missing Authorization header");
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new HttpError(500, "Supabase environment variables are not configured");
+    }
+
+    let payload: JsonRecord = {};
+    try {
+      payload = await req.json();
+    } catch (_error) {
+      throw new HttpError(400, "Invalid JSON payload");
+    }
+
+    const action = resolveAction(req.url, payload.action ?? payload.type);
+    if (!action) {
+      throw new HttpError(400, "Unable to resolve progression action from request");
+    }
+
+    const client = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: userResult, error: userError } = await client.auth.getUser();
+    if (userError || !userResult?.user) {
+      throw new HttpError(401, "Unauthorized", userError?.message ?? null);
+    }
+
+    const profileState = await loadActiveProfile(client, userResult.user.id);
+
+    const context: HandlerContext = {
+      client,
+      user: userResult.user,
+      profile: profileState.profile,
+    };
+
+    const handler = ACTION_HANDLERS[action];
+    if (!handler) {
+      throw new HttpError(400, `No handler defined for action: ${action}`);
+    }
+
+    const handlerResult = await handler(context, payload);
+
+    const { profile, wallet, attributes } = await fetchProfileState(client, profileState.profile.id);
+    const cooldowns = await computeActionCooldowns(client, profileState.profile.id);
+
+    const responseBody: NormalizedResponse = {
+      success: true,
+      action,
+      message: handlerResult.message,
+      profile,
+      wallet,
+      attributes,
+      cooldowns,
+      result: handlerResult.result,
+    };
+
+    return jsonResponse(responseBody, 200);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return jsonResponse({
+        success: false,
+        action: undefined,
+        message: error.message,
+        details: error.details ?? null,
+      }, error.status);
+    }
+
+    console.error("Unhandled progression function error", error);
+    return jsonResponse({
+      success: false,
+      action: undefined,
+      message: "Internal server error",
+    }, 500);
+  }
+});
+
+const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: JsonRecord) => Promise<HandlerResult>> = {
+  award_action_xp: async (ctx, payload) => {
+    const amount = resolveNumber(payload.amount ?? payload.xp ?? payload.value);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new HttpError(400, "XP amount must be a positive number");
+    }
+
+    const category = resolveString(payload.category) ?? "general";
+    const actionKey = resolveString(payload.action_key ?? payload.reason ?? payload.source) ?? "gameplay_action";
+    const uniqueEventId = resolveUniqueEventId(payload);
+
+    await enforceLedgerRules(ctx.client, ctx.profile.id, "award_action_xp", {
+      uniqueEventId,
+      windowSeconds: 60,
+      maxEntries: 20,
+    });
+
+    const metadata = buildMetadata(payload, {
+      action_key: actionKey,
+      category,
+      unique_event_id: uniqueEventId ?? null,
+      awarded_by: ctx.user.id,
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_award_action_xp", {
+      p_profile_id: ctx.profile.id,
+      p_amount: amount,
+      p_category: category,
+      p_action_key: actionKey,
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Action XP awarded",
+      result,
+    };
+  },
+
+  weekly_bonus: async (ctx, payload) => {
+    const bonusXp = resolveNumber(payload.xp ?? payload.bonus ?? payload.amount, 0);
+    const attributePoints = Math.max(0, Math.trunc(resolveNumber(payload.attribute_points ?? payload.attributePoints, 0)));
+    if (bonusXp <= 0 && attributePoints <= 0) {
+      throw new HttpError(400, "Weekly bonus requires XP or attribute points");
+    }
+
+    await enforceLedgerRules(ctx.client, ctx.profile.id, "weekly_bonus", {
+      windowSeconds: 7 * 24 * 60 * 60,
+      maxEntries: 1,
+      uniqueEventId: resolveUniqueEventId(payload),
+    });
+
+    const metadata = buildMetadata(payload, {
+      attribute_points: attributePoints,
+      xp_granted: bonusXp,
+      granted_by: ctx.user.id,
+      unique_event_id: resolveUniqueEventId(payload) ?? null,
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_award_weekly_bonus", {
+      p_profile_id: ctx.profile.id,
+      p_bonus_xp: bonusXp,
+      p_attribute_points: attributePoints,
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Weekly bonus processed",
+      result,
+    };
+  },
+
+  buy_attribute_star: async (ctx, payload) => {
+    const attributeKey = resolveString(payload.attribute_key ?? payload.attributeKey);
+    if (!attributeKey) {
+      throw new HttpError(400, "Attribute key is required for purchases");
+    }
+
+    const stars = Math.max(1, Math.trunc(resolveNumber(payload.points ?? payload.quantity ?? 1, 1)));
+    const metadata = buildMetadata(payload, {
+      attribute_key: attributeKey,
+      stars,
+      unique_event_id: resolveUniqueEventId(payload) ?? null,
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_buy_attribute_star", {
+      p_profile_id: ctx.profile.id,
+      p_attribute_key: attributeKey,
+      p_points: stars,
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Attribute upgrade purchased",
+      result,
+    };
+  },
+
+  respec_attributes: async (ctx, payload) => {
+    const distribution = normalizeDistribution(payload.target_distribution ?? payload.attributes ?? payload.distribution);
+    if (!distribution) {
+      throw new HttpError(400, "Attribute distribution payload is required for respec");
+    }
+
+    const metadata = buildMetadata(payload, {
+      unique_event_id: resolveUniqueEventId(payload) ?? null,
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_respec_attributes", {
+      p_profile_id: ctx.profile.id,
+      p_distribution: distribution,
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Attributes respeced",
+      result,
+    };
+  },
+
+  award_special_xp: async (ctx, payload) => {
+    const xpAmount = resolveNumber(payload.xp ?? payload.amount ?? payload.bonus);
+    if (!Number.isFinite(xpAmount) || xpAmount <= 0) {
+      throw new HttpError(400, "Special XP award requires a positive XP amount");
+    }
+
+    const bonusType = resolveString(payload.bonus_type ?? payload.kind ?? payload.reason) ?? "special";
+    const metadata = buildMetadata(payload, {
+      bonus_type: bonusType,
+      unique_event_id: resolveUniqueEventId(payload) ?? null,
+    });
+
+    await enforceLedgerRules(ctx.client, ctx.profile.id, "award_special_xp", {
+      uniqueEventId: resolveUniqueEventId(payload),
+      windowSeconds: 60 * 60,
+      maxEntries: 50,
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_award_special_xp", {
+      p_profile_id: ctx.profile.id,
+      p_amount: xpAmount,
+      p_bonus_type: bonusType,
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Special XP granted",
+      result,
+    };
+  },
+};
+
+function resolveAction(url: string, payloadAction: unknown): ProgressionAction | null {
+  const normalizedPayloadAction = typeof payloadAction === "string"
+    ? payloadAction.trim().toLowerCase()
+    : null;
+
+  if (normalizedPayloadAction && isProgressionAction(normalizedPayloadAction)) {
+    return normalizedPayloadAction as ProgressionAction;
+  }
+
+  const parsedUrl = new URL(url);
+  const segments = parsedUrl.pathname.split("/").filter(Boolean);
+  const progressionIndex = segments.findIndex((segment) => segment === "progression");
+  const pathCandidate = progressionIndex >= 0 && segments.length > progressionIndex + 1
+    ? segments[progressionIndex + 1]?.toLowerCase()
+    : null;
+
+  if (pathCandidate && isProgressionAction(pathCandidate)) {
+    return pathCandidate as ProgressionAction;
+  }
+
+  return null;
+}
+
+function isProgressionAction(action: string): action is ProgressionAction {
+  return [
+    "award_action_xp",
+    "weekly_bonus",
+    "buy_attribute_star",
+    "respec_attributes",
+    "award_special_xp",
+  ].includes(action as ProgressionAction);
+}
+
+async function loadActiveProfile(client: SupabaseClient<Database>, userId: string) {
+  let profileQuery = client
+    .from("profiles")
+    .select(
+      "id, user_id, username, display_name, level, experience, attribute_points_available, skill_points_available, last_point_conversion_at, created_at, updated_at, is_active",
+    )
+    .eq("user_id", userId)
+    .order("is_active", { ascending: false, nullsFirst: true })
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  let { data: profiles, error } = await profileQuery;
+
+  if (error && error.code === "42703") {
+    profileQuery = client
+      .from("profiles")
+      .select(
+        "id, user_id, username, display_name, level, experience, attribute_points_available, skill_points_available, last_point_conversion_at, created_at, updated_at",
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    ({ data: profiles, error } = await profileQuery);
+  }
+
+  if (error) {
+    throw new HttpError(500, "Failed to load active profile", error);
+  }
+
+  const profile = profiles?.[0];
+  if (!profile) {
+    throw new HttpError(404, "Active profile not found for user");
+  }
+
+  return { profile: profile as ProfileSummary };
+}
+
+async function fetchProfileState(client: SupabaseClient<Database>, profileId: string) {
+  const profilePromise = client
+    .from("profiles")
+    .select(
+      "id, user_id, username, display_name, level, experience, attribute_points_available, skill_points_available, last_point_conversion_at, created_at, updated_at, is_active",
+    )
+    .eq("id", profileId)
+    .maybeSingle();
+
+  const walletPromise = client
+    .from("player_xp_wallet")
+    .select("profile_id, xp_balance, lifetime_xp, xp_spent, attribute_points_earned, skill_points_earned, last_recalculated")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  const attributesPromise = client
+    .from("player_attributes")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  const [profileResult, walletResult, attributesResult] = await Promise.all([
+    profilePromise,
+    walletPromise,
+    attributesPromise,
+  ]);
+
+  if (profileResult.error) {
+    throw new HttpError(500, "Failed to reload profile state", profileResult.error);
+  }
+
+  if (!profileResult.data) {
+    throw new HttpError(500, "Profile missing after progression update");
+  }
+
+  if (walletResult.error && walletResult.error.code !== "PGRST116") {
+    throw new HttpError(500, "Failed to load wallet state", walletResult.error);
+  }
+
+  if (attributesResult.error && attributesResult.error.code !== "PGRST116") {
+    throw new HttpError(500, "Failed to load attribute state", attributesResult.error);
+  }
+
+  return {
+    profile: profileResult.data as ProfileSummary,
+    wallet: walletResult.data ?? null,
+    attributes: attributesResult.data ?? null,
+  };
+}
+
+async function computeActionCooldowns(client: SupabaseClient<Database>, profileId: string) {
+  const now = Date.now();
+  const cooldowns: Record<string, number> = {
+    weekly_bonus: 0,
+    award_action_xp: 0,
+    award_special_xp: 0,
+    buy_attribute_star: 0,
+    respec_attributes: 0,
+  };
+
+  const weeklyPromise = client
+    .from("xp_ledger")
+    .select("created_at")
+    .eq("profile_id", profileId)
+    .eq("event_type", LEDGER_EVENT_TYPES.weekly_bonus)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const specialPromise = client
+    .from("xp_ledger")
+    .select("created_at")
+    .eq("profile_id", profileId)
+    .eq("event_type", LEDGER_EVENT_TYPES.award_special_xp)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const [weeklyResult, specialResult] = await Promise.all([weeklyPromise, specialPromise]);
+
+  if (!weeklyResult.error && weeklyResult.data?.created_at) {
+    const elapsed = (now - Date.parse(weeklyResult.data.created_at)) / 1000;
+    const remaining = 7 * 24 * 60 * 60 - elapsed;
+    cooldowns.weekly_bonus = Math.max(0, Math.ceil(remaining));
+  }
+
+  if (!specialResult.error && specialResult.data?.created_at) {
+    const elapsed = (now - Date.parse(specialResult.data.created_at)) / 1000;
+    const remaining = 60 * 60 - elapsed;
+    cooldowns.award_special_xp = Math.max(0, Math.ceil(remaining));
+  }
+
+  return cooldowns;
+}
+
+function resolveUniqueEventId(payload: JsonRecord): string | undefined {
+  const candidateKeys = [
+    "event_id",
+    "eventId",
+    "source_id",
+    "sourceId",
+    "quest_id",
+    "questId",
+    "session_id",
+    "sessionId",
+    "transaction_id",
+    "transactionId",
+  ];
+
+  for (const key of candidateKeys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.length > 0) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function buildMetadata(payload: JsonRecord, extras: JsonRecord = {}): JsonRecord {
+  const metadataSource = payload.metadata;
+  const metadata = typeof metadataSource === "object" && metadataSource !== null && !Array.isArray(metadataSource)
+    ? { ...metadataSource as JsonRecord }
+    : {};
+
+  for (const [key, value] of Object.entries(extras)) {
+    if (value !== undefined) {
+      metadata[key] = value;
+    }
+  }
+
+  return metadata;
+}
+
+function resolveNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  return fallback;
+}
+
+function resolveString(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  return undefined;
+}
+
+async function enforceLedgerRules(
+  client: SupabaseClient<Database>,
+  profileId: string,
+  action: ProgressionAction,
+  options: { uniqueEventId?: string; windowSeconds?: number; maxEntries?: number },
+) {
+  const eventType = LEDGER_EVENT_TYPES[action];
+
+  if (options.uniqueEventId) {
+    const { data, error } = await client
+      .from("xp_ledger")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("event_type", eventType)
+      .contains("metadata", { unique_event_id: options.uniqueEventId })
+      .limit(1)
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      throw new HttpError(500, "Failed to check progression ledger for duplicates", error);
+    }
+
+    if (data) {
+      throw new HttpError(409, "Duplicate progression event detected", { unique_event_id: options.uniqueEventId });
+    }
+  }
+
+  if (options.windowSeconds && options.maxEntries) {
+    const since = new Date(Date.now() - options.windowSeconds * 1000).toISOString();
+    const { data, error } = await client
+      .from("xp_ledger")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("event_type", eventType)
+      .gte("created_at", since);
+
+    if (error) {
+      throw new HttpError(500, "Failed to evaluate progression rate limits", error);
+    }
+
+    if ((data?.length ?? 0) >= options.maxEntries) {
+      throw new HttpError(429, "Progression action rate limit exceeded", {
+        window_seconds: options.windowSeconds,
+        max_entries: options.maxEntries,
+      });
+    }
+  }
+}
+
+async function callProgressionProcedure<T>(
+  client: SupabaseClient<Database>,
+  functionName: string,
+  args: Record<string, unknown>,
+): Promise<T> {
+  const { data, error } = await client.rpc(functionName, args);
+  if (error) {
+    throw new HttpError(mapRpcErrorToStatus(error), error.message, {
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+  }
+  return data as T;
+}
+
+function mapRpcErrorToStatus(error: PostgrestError): number {
+  if (error.code === "P0001" || error.code === "23514" || error.code === "42501") {
+    return 400;
+  }
+  if (error.code === "PGRST116") {
+    return 404;
+  }
+  return 500;
+}
+
+function normalizeDistribution(value: unknown): JsonRecord | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const distribution: JsonRecord = {};
+  for (const [key, raw] of Object.entries(value)) {
+    const numericValue = resolveNumber(raw, Number.NaN);
+    if (Number.isFinite(numericValue)) {
+      distribution[key] = numericValue;
+    }
+  }
+
+  return Object.keys(distribution).length > 0 ? distribution : null;
+}
+
+function jsonResponse(body: NormalizedResponse | ErrorResponse, status: number) {
+  return new Response(JSON.stringify(body, (_key, value) => (value === undefined ? null : value)), {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+  });
+}
