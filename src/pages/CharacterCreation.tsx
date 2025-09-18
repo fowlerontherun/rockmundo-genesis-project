@@ -77,7 +77,7 @@ const backgrounds = [
   },
 ];
 
-const TOTAL_SKILL_POINTS = 0;
+const DEFAULT_TOTAL_SKILL_POINTS = 0;
 const MIN_SKILL_VALUE = 0;
 const MAX_SKILL_VALUE = 100;
 const ATTRIBUTE_MIN_VALUE = 0;
@@ -125,6 +125,27 @@ const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: strin
 
   const { [key]: _omitted, ...rest } = source;
   return rest as T;
+};
+
+const extractNumericField = (source: unknown, key: string): number | null => {
+  if (!source || typeof source !== "object") {
+    return null;
+  }
+
+  const value = (source as Record<string, unknown>)[key];
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+  }
+
+  return null;
 };
 
 const normalizeAttributeValue = (value: unknown): number => {
@@ -338,6 +359,22 @@ const CharacterCreation = () => {
   const slotNumber = existingProfile?.slot_number ?? 1;
   const unlockCost = existingProfile?.unlock_cost ?? 0;
   const isActive = existingProfile?.is_active ?? true;
+
+  const totalSkillPointBudget = useMemo(() => {
+    const existingBudget = extractNumericField(existingProfile, "skill_points_available");
+    if (typeof existingBudget === "number") {
+      return Math.max(0, existingBudget);
+    }
+
+    const activeBudget = extractNumericField(activeProfile, "skill_points_available");
+    if (typeof activeBudget === "number") {
+      return Math.max(0, activeBudget);
+    }
+
+    return Math.max(0, DEFAULT_TOTAL_SKILL_POINTS);
+  }, [existingProfile, activeProfile]);
+
+  const skillCapEnabled = totalSkillPointBudget > 0;
 
   const selectedStyleDefinition = useMemo(
     () => avatarStyles.find((style) => style.id === selectedAvatarStyle) ?? avatarStyles[0],
@@ -627,8 +664,8 @@ const CharacterCreation = () => {
       const currentTotal = Object.values(prev).reduce((acc, val) => acc + val, 0);
       let nextValue = clampedValue;
 
-      if (clampedValue > currentValue) {
-        const availablePoints = TOTAL_SKILL_POINTS - currentTotal;
+      if (skillCapEnabled && clampedValue > currentValue) {
+        const availablePoints = totalSkillPointBudget - currentTotal;
 
         if (availablePoints <= 0) {
           nextValue = currentValue;
@@ -663,19 +700,21 @@ const CharacterCreation = () => {
   );
 
   const remainingSkillPoints = useMemo(
-    () => Math.max(0, TOTAL_SKILL_POINTS - totalSkillPoints),
-    [totalSkillPoints]
+    () =>
+      skillCapEnabled ? Math.max(0, totalSkillPointBudget - totalSkillPoints) : 0,
+    [skillCapEnabled, totalSkillPointBudget, totalSkillPoints]
   );
 
   const overallocatedSkillPoints = useMemo(
-    () => Math.max(0, totalSkillPoints - TOTAL_SKILL_POINTS),
-    [totalSkillPoints]
+    () =>
+      skillCapEnabled ? Math.max(0, totalSkillPoints - totalSkillPointBudget) : 0,
+    [skillCapEnabled, totalSkillPointBudget, totalSkillPoints]
   );
 
-  const allocationRequired = TOTAL_SKILL_POINTS > 0;
+  const allocationRequired = skillCapEnabled;
   const allocationComplete = allocationRequired
-    ? totalSkillPoints === TOTAL_SKILL_POINTS
-    : overallocatedSkillPoints === 0;
+    ? totalSkillPoints === totalSkillPointBudget
+    : true;
   const allocationOver = overallocatedSkillPoints > 0;
 
   const handleSave = async () => {
@@ -707,7 +746,7 @@ const CharacterCreation = () => {
         title: allocationOver ? "Skill allocation exceeded" : "Allocate remaining skill points",
         description: allocationOver
           ? allocationRequired
-            ? `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to hit exactly ${TOTAL_SKILL_POINTS}.`
+            ? `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to hit exactly ${totalSkillPointBudget}.`
             : `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to stay within your available budget.`
           : `You still have ${remainingSkillPoints} point${remainingSkillPoints === 1 ? "" : "s"} to assign before saving.`,
         variant: "destructive",
@@ -1369,7 +1408,7 @@ const CharacterCreation = () => {
                 Skill Points Assigned:{" "}
                 <span className="font-semibold">
                   {allocationRequired
-                    ? `${totalSkillPoints} / ${TOTAL_SKILL_POINTS}`
+                    ? `${totalSkillPoints} / ${totalSkillPointBudget}`
                     : totalSkillPoints}
                 </span>
               </div>
@@ -1388,7 +1427,7 @@ const CharacterCreation = () => {
               )}
               {allocationRequired && !allocationComplete && !allocationOver && (
                 <div className="text-xs text-destructive">
-                  Spend all {TOTAL_SKILL_POINTS} points to continue.
+                  Spend all {totalSkillPointBudget} points to continue.
                 </div>
               )}
             </div>
