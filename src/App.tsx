@@ -37,7 +37,7 @@ const EnhancedFanManagement = lazy(() => import("./pages/EnhancedFanManagement")
 const AdvancedGigSystem = lazy(() => import("./pages/AdvancedGigSystem"));
 const CompetitiveCharts = lazy(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazy(() => import("./pages/TouringSystem"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const Admin = lazy(() => import("./pages/Admin"));
 const RealtimeCommunication = lazy(() => import("./pages/RealtimeCommunication"));
 const WorldEnvironment = lazy(() => import("./pages/WorldEnvironment"));
 const SongManager = lazy(() => import("./pages/SongManager"));
@@ -94,7 +94,7 @@ function App() {
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="charts-competitive" element={<CompetitiveCharts />} />
                     <Route path="tours-system" element={<TouringSystem />} />
-                    <Route path="admin" element={<AdminDashboard />} />
+                    <Route path="admin" element={<Admin />} />
                     <Route path="communication" element={<RealtimeCommunication />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="songs" element={<SongManager />} />
