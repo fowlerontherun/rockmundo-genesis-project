@@ -326,7 +326,13 @@ const Profile = () => {
       }).format(weeklyBonusRecorded)
     : null;
   const recentLedgerEntries = xpLedger.slice(0, 5);
-  const xpBalance = xpWallet?.xp_balance ?? profile?.experience ?? 0;
+  const xpBalance = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
+  const lifetimeXp = Math.max(0, Number(xpWallet?.lifetime_xp ?? 0));
+  const experienceTowardsNextLevel = lifetimeXp % 1000;
+  const levelProgressPercent = Math.min(100, (experienceTowardsNextLevel / 1000) * 100);
+  const formattedLifetimeXp = lifetimeXp.toLocaleString();
+  const formattedXpBalance = xpBalance.toLocaleString();
+  const formattedXpTowardsNextLevel = experienceTowardsNextLevel.toLocaleString();
 
   useEffect(() => {
     if (!showProfileDetails) {
@@ -1293,8 +1299,10 @@ const Profile = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-primary">{profile.level || 1}</div>
-                  <Progress value={((xpBalance || 0) % 1000) / 10} className="h-2 mt-2" />
-                  <p className="text-xs text-muted-foreground mt-1">{xpBalance || 0} XP</p>
+                  <Progress value={levelProgressPercent} className="h-2 mt-2" />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formattedXpTowardsNextLevel}/1000 XP to level {(profile.level ?? 1) + 1}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -1326,8 +1334,10 @@ const Profile = () => {
                   <Trophy className="h-4 w-4 text-warning" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-warning">{xpBalance || 0}</div>
-                  <p className="text-xs text-muted-foreground">Total XP earned</p>
+                  <div className="text-2xl font-bold text-warning">{formattedLifetimeXp}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Lifetime XP · {formattedXpBalance} spendable
+                  </p>
                 </CardContent>
               </Card>
 

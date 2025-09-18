@@ -186,7 +186,8 @@ const Dashboard = () => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const experienceProgress = (xpWallet?.xp_balance ?? profile.experience) % 1000;
+  const lifetimeXp = Math.max(0, Number(xpWallet?.lifetime_xp ?? 0));
+  const experienceProgress = lifetimeXp % 1000;
   const latestWeeklyBonus = xpLedger.find(entry => entry.event_type === "weekly_bonus");
   const latestWeeklyMetadata = (latestWeeklyBonus?.metadata as Record<string, unknown> | null) ?? null;
   const weeklyBonusAmount = latestWeeklyBonus
