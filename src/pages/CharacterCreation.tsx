@@ -1105,17 +1105,24 @@ const CharacterCreation = () => {
       attemptedAttributesPayload = { ...baseAttributesPayload };
       const skippedAttributeColumns = new Set<string>();
       let finalAttributesRow: PlayerAttributesRow | null = null;
+      let attributeConflictColumns = ["profile_id"];
 
       while (Object.keys(attemptedAttributesPayload).length > 0) {
+        const conflictTarget =
+          attributeConflictColumns.length > 0
+            ? attributeConflictColumns.join(",")
+            : undefined;
         console.debug("[CharacterCreation] Attempting attribute upsert", {
           payload: sanitizePayloadForLogging(attemptedAttributesPayload),
           skippedColumns: [...skippedAttributeColumns],
+          conflictTarget,
         });
         const { data: upsertedAttributes, error: attributesError } = await supabase
           .from("player_attributes")
-          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, {
-            onConflict: "profile_id",
-          })
+          .upsert(
+            attemptedAttributesPayload as PlayerAttributesInsert,
+            conflictTarget ? { onConflict: conflictTarget } : undefined,
+          )
           .select()
           .maybeSingle();
 
@@ -1124,21 +1131,79 @@ const CharacterCreation = () => {
           break;
         }
 
-        if (attributesError.code === "42703") {
+        if (attributesError.code === "42703" || attributesError.code === "PGRST204") {
           const missingColumn = extractMissingColumn(attributesError);
           if (
             missingColumn &&
-            !skippedAttributeColumns.has(missingColumn) &&
-            missingColumn in attemptedAttributesPayload &&
-            missingColumn !== "profile_id"
+            !skippedAttributeColumns.has(missingColumn)
           ) {
-            skippedAttributeColumns.add(missingColumn);
-            attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
-            console.warn("[CharacterCreation] Retrying attribute upsert without column", {
-              missingColumn,
-              remainingKeys: Object.keys(attemptedAttributesPayload),
-            });
-            continue;
+            let handledMissingColumn = false;
+
+            if (attributeConflictColumns.includes(missingColumn)) {
+              attributeConflictColumns = attributeConflictColumns.filter(
+                column => column !== missingColumn,
+              );
+
+              if (attributeConflictColumns.length === 0) {
+                if (missingColumn === "profile_id" && "user_id" in attemptedAttributesPayload) {
+                  attributeConflictColumns = ["user_id"];
+                } else if (missingColumn === "user_id" && "profile_id" in attemptedAttributesPayload) {
+                  attributeConflictColumns = ["profile_id"];
+                }
+              } else if (
+                missingColumn === "profile_id" &&
+                !attributeConflictColumns.includes("user_id") &&
+                "user_id" in attemptedAttributesPayload
+              ) {
+                attributeConflictColumns.unshift("user_id");
+              }
+
+              if (missingColumn in attemptedAttributesPayload) {
+                skippedAttributeColumns.add(missingColumn);
+                attemptedAttributesPayload = omitFromRecord(
+                  attemptedAttributesPayload,
+                  missingColumn,
+                );
+              }
+
+              console.warn(
+                "[CharacterCreation] Falling back to legacy attribute conflict target",
+                {
+                  missingColumn,
+                  nextConflictTarget: attributeConflictColumns.join(","),
+                  remainingKeys: Object.keys(attemptedAttributesPayload),
+                },
+              );
+
+              handledMissingColumn = true;
+            }
+
+            if (
+              !handledMissingColumn &&
+              missingColumn in attemptedAttributesPayload &&
+              missingColumn !== "profile_id"
+            ) {
+              skippedAttributeColumns.add(missingColumn);
+              attemptedAttributesPayload = omitFromRecord(
+                attemptedAttributesPayload,
+                missingColumn,
+              );
+              console.warn("[CharacterCreation] Retrying attribute upsert without column", {
+                missingColumn,
+                remainingKeys: Object.keys(attemptedAttributesPayload),
+              });
+              handledMissingColumn = true;
+            }
+
+            if (handledMissingColumn) {
+              if (
+                attributeConflictColumns.length === 0 &&
+                "user_id" in attemptedAttributesPayload
+              ) {
+                attributeConflictColumns = ["user_id"];
+              }
+              continue;
+            }
           }
         }
 
@@ -1170,6 +1235,7 @@ const CharacterCreation = () => {
         skippedProfileColumns: [...skippedProfileColumns],
         profileConflictColumns,
         skippedAttributeColumns: [...skippedAttributeColumns],
+        attributeConflictColumns,
       });
 
       toast({
