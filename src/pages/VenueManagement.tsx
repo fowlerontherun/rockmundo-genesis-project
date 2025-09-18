@@ -638,7 +638,8 @@ const VenueManagement = () => {
 
   const isLoadingVenues = loadingVenues || loadingRelationships;
   const hasVenues = venuesWithDetails.length > 0;
-  const hasUpcomingBookings = upcomingBookings.length > 0;
+  const upcomingBookingsCount = upcomingBookings.length;
+  const hasUpcomingBookings = upcomingBookingsCount > 0;
 
   return (
     <div className="min-h-screen bg-gradient-primary p-6">
