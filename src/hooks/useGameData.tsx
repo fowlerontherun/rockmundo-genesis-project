@@ -677,6 +677,22 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setXpWallet(walletResponse.data ?? null);
 
+      const walletResponse = await supabase
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (
+        walletResponse.error &&
+        walletResponse.error.code !== "PGRST116" &&
+        walletResponse.status !== 406
+      ) {
+        throw walletResponse.error;
+      }
+
+      setXpWallet(walletResponse.data ?? null);
+
       let skillsResponse: PostgrestMaybeSingleResponse<PlayerSkills> | undefined;
 
       if (supportsProfileScopedDataRef.current === false) {
