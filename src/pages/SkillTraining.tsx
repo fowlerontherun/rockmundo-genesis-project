@@ -199,7 +199,9 @@ const SkillTrainingContent = () => {
     attributes,
     updateProfile,
     addActivity,
-    loading: gameDataLoading
+    loading: gameDataLoading,
+    xpWallet,
+    attributeStarTotal
   } = useGameData();
   const {
     definitions,
@@ -214,8 +216,16 @@ const SkillTrainingContent = () => {
   const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
 
   const playerLevel = Number(profile?.level ?? 1);
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
   const totalExperience = Number(profile?.experience ?? 0);
-  const skillCap = getSkillCap(playerLevel, totalExperience);
+  const skillCap = getSkillCap(playerLevel, progressionSnapshot);
 
   const availableDefinitions = useMemo(() => {
     const trainable = definitions.filter(definition => definition.is_trainable !== false);
@@ -487,7 +497,11 @@ const SkillTrainingContent = () => {
     const playerCash = Number(profile.cash ?? 0);
     const playerLevel = Number(profile.level ?? 1);
     const totalExperience = Number(profile.experience ?? 0);
-    const skillCap = getSkillCap(playerLevel, totalExperience);
+    const sessionProgression = {
+      ...progressionSnapshot,
+      legacyExperience: totalExperience
+    };
+    const skillCap = getSkillCap(playerLevel, sessionProgression);
     const trainingCost = calculateTrainingCost(currentSkill);
 
     if (currentSkill >= skillCap) {

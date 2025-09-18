@@ -253,7 +253,17 @@ const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const gameData = useGameData();
-  const { profile, skills, updateProfile, updateSkills, addActivity } = gameData;
+  const { profile, skills, updateProfile, updateSkills, addActivity, xpWallet, attributeStarTotal } = gameData;
+
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars:
+        attributeStarTotal ?? Math.max(0, Number(xpWallet?.attribute_points_earned ?? 0)),
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
 
   const skillProgressSource = useMemo<SkillProgressSource>(() => {
     const withProgress = gameData as unknown as {
@@ -944,7 +954,12 @@ const MusicCreation = () => {
       const recordingFocus: AttributeFocus = "songwriting";
       const experienceGain = Math.max(
         0,
-        calculateExperienceReward(session.quality_gain * 5, attributeScores, recordingFocus)
+        calculateExperienceReward(
+          session.quality_gain * 5,
+          attributeScores,
+          recordingFocus,
+          progressionSnapshot
+        )
       );
 
       if (profile) {

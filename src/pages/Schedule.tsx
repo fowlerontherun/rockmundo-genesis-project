@@ -21,7 +21,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData, type PlayerAttributes, type PlayerProfile, type PlayerSkills } from "@/hooks/useGameData";
+import {
+  useGameData,
+  type PlayerAttributes,
+  type PlayerProfile,
+  type PlayerSkills,
+  type PlayerXpWallet
+} from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import { applyAttributeToValue, SKILL_ATTRIBUTE_MAP } from "@/utils/attributeProgression";
 import {
@@ -779,7 +785,17 @@ const isSameDay = (dateString: string, compareDate: Date) => {
 const Schedule = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, attributes, updateProfile, updateSkills, updateAttributes, addActivity, refetch } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    xpWallet,
+    updateProfile,
+    updateSkills,
+    updateAttributes,
+    addActivity,
+    refetch
+  } = useGameData();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -799,6 +815,7 @@ const Schedule = () => {
   const profileRef = useRef<PlayerProfile | null>(profile);
   const skillsRef = useRef<PlayerSkills | null>(skills);
   const attributesRef = useRef<PlayerAttributes | null>(attributes);
+  const xpWalletRef = useRef<PlayerXpWallet | null>(xpWallet);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -810,6 +827,9 @@ const Schedule = () => {
   useEffect(() => {
     attributesRef.current = attributes;
   }, [attributes]);
+  useEffect(() => {
+    xpWalletRef.current = xpWallet;
+  }, [xpWallet]);
   const fetchEvents = useCallback(async () => {
     if (!user) {
       return;
@@ -1048,7 +1068,16 @@ const Schedule = () => {
       }
 
       const cashGain = Math.round(reward.cash * cashMultiplier);
-      const experienceGain = Math.max(0, calculateExperienceReward(reward.experience, attributeScores, focus));
+      const attributeStars = Math.max(0, Number(xpWalletRef.current?.attribute_points_earned ?? 0));
+      const baseProgression = {
+        wallet: xpWalletRef.current,
+        attributeStars,
+        legacyExperience: currentExperience
+      } as const;
+      const experienceGain = Math.max(
+        0,
+        calculateExperienceReward(reward.experience, attributeScores, focus, baseProgression)
+      );
 
       const currentSkills = skillsRef.current;
       const relevantSkill = (() => {
@@ -1086,8 +1115,8 @@ const Schedule = () => {
       const currentLevel =
         typeof activeProfile.level === "number"
           ? activeProfile.level
-          : calculateLevel(currentExperience);
-      const newLevel = calculateLevel(newExperience);
+          : calculateLevel(baseProgression);
+      const newLevel = calculateLevel({ ...baseProgression, legacyExperience: newExperience });
       if (newLevel !== currentLevel) {
         profileUpdates.level = newLevel;
       }

@@ -167,8 +167,26 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    currentCity,
+    updateProfile,
+    updateAttributes,
+    addActivity,
+    xpWallet,
+    attributeStarTotal
+  } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
   const [selectedGig, setSelectedGig] = useState<string | null>(null);
@@ -697,7 +715,10 @@ const GigBooking = () => {
       const newCash = (profile.cash || 0) + actualPayment;
       const newFame = (profile.fame || 0) + fanGain;
       const baseExperience = (attendance / 10) * showTypeDetails.experienceModifier;
-      const expGain = Math.max(1, calculateExperienceReward(baseExperience, attributeScores, "performance"));
+      const expGain = Math.max(
+        1,
+        calculateExperienceReward(baseExperience, attributeScores, "performance", progressionSnapshot)
+      );
 
       await updateProfile({
         cash: newCash,

@@ -22,6 +22,7 @@ import type {
 export type PlayerProfile = Tables<"profiles">;
 export type PlayerSkills = Tables<"player_skills">;
 export type PlayerAttributes = Tables<"player_attributes">;
+export type PlayerXpWallet = Tables<"player_xp_wallet">;
 export type ActivityItem = Tables<"activity_feed">;
 export type ExperienceLedgerEntry = Tables<"experience_ledger">;
 // Temporary type definitions until database schema is updated
@@ -174,6 +175,8 @@ interface GameDataContextValue {
   characters: PlayerProfile[];
   selectedCharacterId: string | null;
   profile: PlayerProfile | null;
+  xpWallet: PlayerXpWallet | null;
+  attributeStarTotal: number;
   freshWeeklyBonusAvailable: boolean;
   skillDefinitions: SkillDefinition[];
   skillProgress: SkillProgressRow[];
@@ -226,6 +229,8 @@ const defaultGameDataContext: GameDataContextValue = {
   characters: [],
   selectedCharacterId: null,
   profile: null,
+  xpWallet: null,
+  attributeStarTotal: 0,
   freshWeeklyBonusAvailable: false,
   skillDefinitions: [],
   skillProgress: [],
@@ -384,6 +389,7 @@ const useProvideGameData = (): GameDataContextValue => {
   const [skillsUpdatedAt, setSkillsUpdatedAt] = useState<string | null>(null);
   const [attributeDefinitions, setAttributeDefinitions] = useState<AttributeDefinition[]>([]);
   const [attributes, setAttributes] = useState<any>({});
+  const [xpWallet, setXpWallet] = useState<PlayerXpWallet | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [experienceLedger, setExperienceLedger] = useState<ExperienceLedgerEntry[]>([]);
   const [currentCity, setCurrentCity] = useState<Tables<"cities"> | null>(null);
@@ -397,6 +403,7 @@ const useProvideGameData = (): GameDataContextValue => {
     setProfile(null);
     setSkills(null);
     setAttributes(null);
+    setXpWallet(null);
     setActivities([]);
     setExperienceLedger([]);
     setCurrentCity(null);
@@ -509,6 +516,27 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setProfile(character);
       await resolveCurrentCity(character.current_city_id ?? null);
+
+      let walletData: PlayerXpWallet | null = null;
+      let walletResponse = await supabase
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (walletResponse.error) {
+        if (isMissingTableError(walletResponse.error)) {
+          walletData = null;
+        } else if (walletResponse.error.code === "PGRST116" || walletResponse.status === 406) {
+          walletData = null;
+        } else {
+          throw walletResponse.error;
+        }
+      } else {
+        walletData = (walletResponse.data ?? null) as PlayerXpWallet | null;
+      }
+
+      setXpWallet(walletData);
 
       let skillsResponse: PostgrestMaybeSingleResponse<PlayerSkills> | undefined;
 
@@ -1347,6 +1375,8 @@ const useProvideGameData = (): GameDataContextValue => {
     characters,
     selectedCharacterId,
     profile,
+    xpWallet,
+    attributeStarTotal: Math.max(0, Number(xpWallet?.attribute_points_earned ?? 0)),
     freshWeeklyBonusAvailable,
     skillDefinitions,
     skillProgress,

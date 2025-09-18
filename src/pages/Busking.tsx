@@ -555,6 +555,8 @@ const Busking = () => {
     profile,
     skills,
     attributes,
+    xpWallet,
+    attributeStarTotal,
     updateProfile,
     updateAttributes,
     addActivity,
@@ -585,6 +587,15 @@ const Busking = () => {
       socialReach: resolveAttributeValue(source, "social_reach", 1),
     };
   }, [cachedAttributes]);
+
+  const baseProgression = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -877,8 +888,11 @@ const Busking = () => {
     const expectancy = successChance / 100;
     const baseExperience =
       (selectedLocation.experience_reward + modifierBonus) * environmentMultiplier * (0.6 + expectancy * 0.4);
-    return Math.max(0, calculateExperienceReward(baseExperience, attributeScores, "performance"));
-  }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      calculateExperienceReward(baseExperience, attributeScores, "performance", baseProgression)
+    );
+  }, [attributeScores, baseProgression, environmentDetails, selectedLocation, selectedModifier, successChance]);
 
   const WeatherIcon = environmentDetails.weather
     ? getWeatherIcon(environmentDetails.weather.condition)
@@ -1021,7 +1035,10 @@ const Busking = () => {
         environmentDetails.combined.experienceMultiplier *
         cityMultiplier;
       const rawExperience = baseExperience * (success ? (0.9 + Math.random() * 0.5) : 0.5 * (0.7 + Math.random() * 0.3));
-      const experienceGained = Math.max(0, calculateExperienceReward(rawExperience, attributeScores, "performance"));
+      const experienceGained = Math.max(
+        0,
+        calculateExperienceReward(rawExperience, attributeScores, "performance", baseProgression)
+      );
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
