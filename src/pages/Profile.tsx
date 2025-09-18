@@ -93,15 +93,7 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const {
-    profile,
-    skills,
-    attributes,
-    xpWallet,
-    updateProfile,
-    freshWeeklyBonusAvailable,
-    experienceLedger
-  } = useGameData();
+  const { profile, skills, attributes, updateProfile, freshWeeklyBonusAvailable, xpLedger, xpWallet } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -159,29 +151,29 @@ const Profile = () => {
     return Number.isFinite(numeric) ? numeric : fallback;
   };
 
-  const formatLedgerReason = (reason: string) => {
-    if (!reason) {
+  const formatLedgerEvent = (eventType: string) => {
+    if (!eventType) {
       return "XP adjustment";
     }
 
-    if (reason === "weekly_bonus") {
+    if (eventType === "weekly_bonus") {
       return "Weekly bonus";
     }
 
-    return reason
+    return eventType
       .split("_")
       .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
       .join(" ");
   };
 
-  const latestWeeklyBonus = experienceLedger.find(entry => entry.reason === "weekly_bonus");
+  const latestWeeklyBonus = xpLedger.find(entry => entry.event_type === "weekly_bonus");
   const latestWeeklyMetadata = (latestWeeklyBonus?.metadata as Record<string, unknown> | null) ?? null;
   const weeklyBonusAmount = latestWeeklyBonus
-    ? toNumber(latestWeeklyMetadata?.bonus_awarded ?? latestWeeklyBonus.amount ?? 0, 0)
+    ? toNumber(latestWeeklyMetadata?.bonus_awarded ?? latestWeeklyBonus.xp_delta ?? 0, 0)
     : 0;
   const weeklyBonusSourceXp = latestWeeklyMetadata ? toNumber(latestWeeklyMetadata?.experience_gained, 0) : 0;
   const weeklyBonusStreak = latestWeeklyBonus ? Math.max(toNumber(latestWeeklyMetadata?.streak, 1), 1) : 0;
-  const weeklyBonusRecorded = parseDate(latestWeeklyBonus?.recorded_at ?? null);
+  const weeklyBonusRecorded = parseDate(latestWeeklyBonus?.created_at ?? null);
   const formattedWeeklyBonusRecorded = weeklyBonusRecorded
     ? new Intl.DateTimeFormat(undefined, {
         month: "short",
@@ -190,8 +182,8 @@ const Profile = () => {
         minute: "2-digit"
       }).format(weeklyBonusRecorded)
     : null;
-  const recentLedgerEntries = experienceLedger.slice(0, 5);
-  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0);
+  const recentLedgerEntries = xpLedger.slice(0, 5);
+  const xpBalance = xpWallet?.xp_balance ?? profile?.experience ?? 0;
 
   useEffect(() => {
     if (!showProfileDetails) {
@@ -820,8 +812,8 @@ const Profile = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-primary">{profile.level || 1}</div>
-                  <Progress value={(totalExperience % 1000) / 10} className="h-2 mt-2" />
-                  <p className="text-xs text-muted-foreground mt-1">{totalExperience} XP</p>
+                  <Progress value={((xpBalance || 0) % 1000) / 10} className="h-2 mt-2" />
+                  <p className="text-xs text-muted-foreground mt-1">{xpBalance || 0} XP</p>
                 </CardContent>
               </Card>
 
@@ -853,7 +845,7 @@ const Profile = () => {
                   <Trophy className="h-4 w-4 text-warning" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-warning">{totalExperience}</div>
+                  <div className="text-2xl font-bold text-warning">{xpBalance || 0}</div>
                   <p className="text-xs text-muted-foreground">Total XP earned</p>
                 </CardContent>
               </Card>
@@ -902,7 +894,7 @@ const Profile = () => {
                   const metadata = (entry.metadata as Record<string, unknown> | null) ?? null;
                   const sourceXp = toNumber(metadata?.experience_gained);
                   const streak = toNumber(metadata?.streak);
-                  const recordedAt = parseDate(entry.recorded_at);
+                  const recordedAt = parseDate(entry.created_at);
                   const recordedLabel = recordedAt
                     ? new Intl.DateTimeFormat(undefined, {
                         month: "short",
@@ -910,8 +902,8 @@ const Profile = () => {
                         hour: "2-digit",
                         minute: "2-digit"
                       }).format(recordedAt)
-                    : new Date(entry.recorded_at).toLocaleString();
-                  const isGain = entry.amount >= 0;
+                    : new Date(entry.created_at).toLocaleString();
+                  const isGain = entry.xp_delta >= 0;
                   const badgeVariant = isGain ? "secondary" : "outline";
                   const badgeClasses = isGain
                     ? "border-primary/30 bg-primary/10 text-primary"
@@ -920,16 +912,16 @@ const Profile = () => {
                   return (
                     <div key={entry.id} className="flex items-start justify-between gap-3 rounded-lg border border-primary/10 bg-secondary/20 p-3">
                       <div>
-                        <p className="text-sm font-medium">{formatLedgerReason(entry.reason)}</p>
+                        <p className="text-sm font-medium">{formatLedgerEvent(entry.event_type)}</p>
                         <p className="text-xs text-muted-foreground">{recordedLabel} UTC</p>
-                        {entry.reason === "weekly_bonus" && sourceXp > 0 && (
+                        {entry.event_type === "weekly_bonus" && sourceXp > 0 && (
                           <p className="text-xs text-muted-foreground mt-1">
                             Based on {sourceXp} XP earned{streak > 1 ? ` • ${streak}-week streak` : ""}
                           </p>
                         )}
                       </div>
                       <Badge variant={badgeVariant} className={badgeClasses}>
-                        {entry.amount >= 0 ? "+" : ""}{entry.amount} XP
+                        {entry.xp_delta >= 0 ? "+" : ""}{entry.xp_delta} XP
                       </Badge>
                     </div>
                   );
