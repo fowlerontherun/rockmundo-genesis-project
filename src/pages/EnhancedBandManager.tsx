@@ -454,40 +454,6 @@ const EnhancedBandManager = () => {
     }
   }, [fetchProfileSkillMap, skillDefinitions, user?.id]);
 
-  const fetchAvailableMembers = useCallback(
-    async (currentMemberIds: string[]) => {
-      try {
-        const { data: profiles, error: profilesError } = await supabase
-          .from("public_profiles")
-          .select("*")
-          .neq("user_id", user?.id)
-          .eq("is_active", true)
-          .limit(20);
-
-        if (profilesError) throw profilesError;
-
-        const profilesWithSkills: AvailableMember[] = await Promise.all(
-          (profiles ?? []).map(async profile => {
-            const skillLevels = await fetchProfileSkillMap(profile.id ?? null);
-            return {
-              ...profile,
-              skillLevels,
-              levelEstimate: estimateSkillTier(skillLevels, skillDefinitions)
-            };
-          })
-        );
-
-        const available = profilesWithSkills.filter(
-          profile => !currentMemberIds.includes(profile.user_id)
-        );
-
-        setAvailableMembers(available);
-      } catch (error) {
-        console.error("Error fetching available members:", error);
-      }
-    },
-    [fetchProfileSkillMap, skillDefinitions, user?.id]
-  );
 
   const fetchBandDetails = useCallback(async () => {
     if (!selectedBand) return null;
