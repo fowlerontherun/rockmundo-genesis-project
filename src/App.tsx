@@ -43,7 +43,7 @@ const WorldEnvironment = lazy(() => import("./pages/WorldEnvironment"));
 const SongManager = lazy(() => import("./pages/SongManager"));
 const InventoryManager = lazy(() => import("./pages/InventoryManager"));
 const PlayerStatistics = lazy(() => import("./pages/PlayerStatistics"));
-const Busking = lazy(() => import("./pages/Busking"));
+import Busking from "./pages/Busking";
 
 const queryClient = new QueryClient();
 
