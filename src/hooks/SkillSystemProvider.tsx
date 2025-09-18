@@ -6,9 +6,7 @@ import {
   type ReactNode
 } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
-import type { PostgrestError } from "@supabase/supabase-js";
-
+import { SKILL_TREE_DEFINITIONS, SKILL_TREE_RELATIONSHIPS } from "@/data/skillTree";
 import { type PlayerSkills, useGameData } from "./useGameData";
 import {
   type SkillDefinitionRecord,
@@ -234,41 +232,11 @@ export const SkillSystemProvider = ({ children }: { children: ReactNode }) => {
       setStaticLoading(true);
       setError(null);
       try {
-        const [definitionsResponse, relationshipsResponse] = await Promise.all([
-          supabase.from("skill_definitions").select("*").order("display_name", { ascending: true }),
-          supabase.from("skill_relationships").select("*")
-        ]);
+        // Note: Supabase tables are not yet wired, so we serve the static skill tree
+        if (!isMounted) return;
 
-        if (!isMounted) {
-          return;
-        }
-
-        let nextDefinitions: SkillDefinitionRecord[] = [];
-
-        if (definitionsResponse.error) {
-          if (!isMissingTableError(definitionsResponse.error)) {
-            throw definitionsResponse.error;
-          }
-        } else {
-          nextDefinitions = (definitionsResponse.data ?? [])
-            .map(row => mapSkillDefinition(row as RawSkillDefinitionRow))
-            .filter((record): record is SkillDefinitionRecord => Boolean(record));
-        }
-
-        setDefinitions(nextDefinitions);
-
-        if (relationshipsResponse.error) {
-          if (!isMissingTableError(relationshipsResponse.error)) {
-            throw relationshipsResponse.error;
-          }
-          setRelationships([]);
-        } else {
-          const slugById = new Map(nextDefinitions.map(definition => [definition.id, definition.slug] as const));
-          const nextRelationships = (relationshipsResponse.data ?? [])
-            .map(row => mapSkillRelationship(row as RawSkillRelationshipRow, slugById))
-            .filter((record): record is SkillRelationshipRecord => Boolean(record));
-          setRelationships(nextRelationships);
-        }
+        setDefinitions([...SKILL_TREE_DEFINITIONS]);
+        setRelationships([...SKILL_TREE_RELATIONSHIPS]);
       } catch (err) {
         console.error("Error loading skill system data:", err);
         if (isMounted) {
