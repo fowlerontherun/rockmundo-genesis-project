@@ -79,6 +79,9 @@ const backgrounds = [
 const TOTAL_SKILL_POINTS = 13;
 const MIN_SKILL_VALUE = 1;
 const MAX_SKILL_VALUE = 10;
+const ATTRIBUTE_MIN_VALUE = 1;
+const ATTRIBUTE_MAX_VALUE = 3;
+const ATTRIBUTE_SLIDER_STEP = 0.1;
 
 const extractMissingColumn = (error: PostgrestError | null | undefined) => {
   const match = error?.message?.match(
@@ -96,6 +99,55 @@ const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: strin
   return rest as T;
 };
 
+const normalizeAttributeValue = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return (
+      Math.round(
+        Math.min(ATTRIBUTE_MAX_VALUE, Math.max(ATTRIBUTE_MIN_VALUE, value)) * 1000,
+      ) / 1000
+    );
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return ATTRIBUTE_MIN_VALUE;
+  }
+
+  return (
+    Math.round(
+      Math.min(ATTRIBUTE_MAX_VALUE, Math.max(ATTRIBUTE_MIN_VALUE, numeric)) * 1000,
+    ) / 1000
+  );
+};
+
+const buildAttributeState = (source: unknown): Record<AttributeKey, number> => {
+  const resolved = { ...defaultAttributes };
+
+  if (!source || typeof source !== "object") {
+    return resolved;
+  }
+
+  const record = source as Record<string, unknown>;
+
+  ATTRIBUTE_KEYS.forEach((key) => {
+    if (key in record) {
+      resolved[key] = normalizeAttributeValue(record[key]);
+    }
+  });
+
+  return resolved;
+};
+
+const formatAttributeDisplay = (value: number): string => {
+  const normalized = normalizeAttributeValue(value);
+
+  if (Number.isInteger(normalized)) {
+    return normalized.toString();
+  }
+
+  return normalized.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+};
+
 const defaultSkills = {
   guitar: 1,
   vocals: 1,
@@ -106,52 +158,29 @@ const defaultSkills = {
   composition: 1,
 };
 
-const defaultAttributes = {
-  creativity: 1,
-  business: 1,
-  marketing: 1,
-  technical: 1,
-};
+const ATTRIBUTE_KEYS = [
+  "mental_focus",
+  "physical_endurance",
+  "stage_presence",
+  "crowd_engagement",
+  "social_reach",
+] as const;
 
 type SkillKey = keyof typeof defaultSkills;
-type AttributeKey = keyof typeof defaultAttributes;
+type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
 
-const SKILL_SCALE_FACTORS: Record<SkillKey, number> = {
-  guitar: 10,
-  vocals: 10,
-  drums: 10,
-  bass: 10,
-  performance: 10,
-  songwriting: 10,
-  composition: 100,
-  creativity: 100,
-  business: 100,
-  marketing: 100,
-  technical: 100,
+const defaultAttributes: Record<AttributeKey, number> = {
+  mental_focus: 1,
+  physical_endurance: 1,
+  stage_presence: 1,
+  crowd_engagement: 1,
+  social_reach: 1,
 };
-
-const INSTRUMENT_KEYS: SkillKey[] = [
-  "guitar",
-  "vocals",
-  "drums",
-  "bass",
-  "performance",
-  "songwriting",
-];
-
-const ATTRIBUTE_KEYS: SkillKey[] = [
-  "composition",
-  "creativity",
-  "business",
-  "marketing",
-  "technical",
-];
 
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
-type PlayerSkillsInsert = TablesInsert<"player_skills">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
@@ -216,6 +245,8 @@ const CharacterCreation = () => {
   );
   const [skills, setSkills] = useState<Record<SkillKey, number>>(defaultSkills);
   const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(defaultAttributes);
+  const [existingAttributesRow, setExistingAttributesRow] =
+    useState<Tables<"player_attributes"> | null>(null);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -306,7 +337,7 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_attributes")
-            .select("id, creativity, business, marketing, technical")
+            .select("*")
             .eq("user_id", user.id)
             .maybeSingle(),
         ]);
@@ -323,26 +354,31 @@ const CharacterCreation = () => {
           throw attributesResponse.error;
         }
 
-        if (profileResponse.data) {
-          setExistingProfile(profileResponse.data);
-          if (profileResponse.data.display_name) {
-            setDisplayName(profileResponse.data.display_name);
-            setNameSuggestion(profileResponse.data.display_name);
+        const profileData = (profileResponse.data as ProfileRow | null) ?? null;
+        const skillsData = skillsResponse.data;
+        const attributesRow =
+          (attributesResponse.data as Tables<"player_attributes"> | null) ?? null;
+
+        if (profileData) {
+          setExistingProfile(profileData);
+          if (profileData.display_name) {
+            setDisplayName(profileData.display_name);
+            setNameSuggestion(profileData.display_name);
           }
-          if (profileResponse.data.username) {
-            setUsername(profileResponse.data.username);
+          if (profileData.username) {
+            setUsername(profileData.username);
             setUsernameEdited(true);
           }
-          setBio(profileResponse.data.bio ?? backgrounds[0].description);
-          if (profileResponse.data.gender) {
-            setGender(profileResponse.data.gender as ProfileGender);
+          setBio(profileData.bio ?? backgrounds[0].description);
+          if (profileData.gender) {
+            setGender(profileData.gender as ProfileGender);
           }
-          if (typeof profileResponse.data.age === "number") {
-            setAge(String(profileResponse.data.age));
+          if (typeof profileData.age === "number") {
+            setAge(String(profileData.age));
           }
-          setCityOfBirth(profileResponse.data.city_of_birth ?? null);
+          setCityOfBirth(profileData.city_of_birth ?? null);
 
-          if (profileResponse.data.avatar_url) {
+          if (profileData.avatar_url) {
             const storedSelection = getStoredAvatarSelection(profileResponse.data.avatar_url);
 
             if (storedSelection) {
@@ -373,9 +409,9 @@ const CharacterCreation = () => {
 
         const mergedSkills: Record<SkillKey, number> = { ...defaultSkills };
 
-        if (skillsResponse.data) {
+        if (skillsData) {
           (Object.keys(defaultSkills) as SkillKey[]).forEach((key) => {
-            const value = skillsResponse.data?.[key];
+            const value = skillsData?.[key];
             if (typeof value === "number") {
               mergedSkills[key] = value;
             }
@@ -384,18 +420,8 @@ const CharacterCreation = () => {
 
         setSkills(mergedSkills);
 
-        const mergedAttributes: Record<AttributeKey, number> = { ...defaultAttributes };
-
-        if (attributesResponse.data) {
-          (Object.keys(defaultAttributes) as AttributeKey[]).forEach((key) => {
-            const value = attributesResponse.data?.[key];
-            if (typeof value === "number") {
-              mergedAttributes[key] = value;
-            }
-          });
-        }
-
-        setAttributes(mergedAttributes);
+        setExistingAttributesRow(attributesRow);
+        setAttributes(buildAttributeState(attributesRow));
       } catch (error) {
         console.error("Failed to load character data:", error);
         setLoadError("We couldn't load your character data. You can still create a new persona.");
@@ -518,10 +544,10 @@ const CharacterCreation = () => {
   };
 
   const handleAttributeChange = (key: AttributeKey, value: number) => {
-    const clampedValue = Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+    const normalized = normalizeAttributeValue(value);
     setAttributes(prev => ({
       ...prev,
-      [key]: clampedValue,
+      [key]: normalized,
     }));
   };
 
@@ -593,6 +619,12 @@ const CharacterCreation = () => {
     const activePose = selectedPoseDefinition ?? avatarPoses[0];
     const activeCamera = selectedCameraDefinition ?? avatarCameras[0];
 
+    const slotNumber =
+      typeof existingProfile?.slot_number === "number" ? existingProfile.slot_number : 1;
+    const unlockCost =
+      typeof existingProfile?.unlock_cost === "number" ? existingProfile.unlock_cost : 0;
+    const isActive = existingProfile?.is_active ?? true;
+
     const avatarSelection = {
       styleId: activeStyle?.id ?? defaultAvatarSelection.styleId,
       poseId: activePose?.id ?? defaultAvatarSelection.poseId,
@@ -662,29 +694,20 @@ const CharacterCreation = () => {
         throw new Error("Profile save did not return any data.");
       }
 
+      const attributePoints = existingAttributesRow?.attribute_points ?? 0;
+      const normalizedAttributesPayload = ATTRIBUTE_KEYS.reduce<Record<string, number>>(
+        (accumulator, key) => {
+          accumulator[key] = normalizeAttributeValue(attributes[key]);
+          return accumulator;
+        },
+        {} as Record<string, number>,
+      );
+
       const baseAttributesPayload: Record<string, unknown> = {
         user_id: user.id,
         profile_id: upsertedProfile.id,
-        composition: Math.min(
-          SKILL_SCALE_FACTORS.composition * skills.composition,
-          SKILL_SCALE_FACTORS.composition * MAX_SKILL_VALUE
-        ),
-        creativity: Math.min(
-          SKILL_SCALE_FACTORS.creativity * attributes.creativity,
-          SKILL_SCALE_FACTORS.creativity * MAX_SKILL_VALUE
-        ),
-        business: Math.min(
-          SKILL_SCALE_FACTORS.business * attributes.business,
-          SKILL_SCALE_FACTORS.business * MAX_SKILL_VALUE
-        ),
-        marketing: Math.min(
-          SKILL_SCALE_FACTORS.marketing * attributes.marketing,
-          SKILL_SCALE_FACTORS.marketing * MAX_SKILL_VALUE
-        ),
-        technical: Math.min(
-          SKILL_SCALE_FACTORS.technical * attributes.technical,
-          SKILL_SCALE_FACTORS.technical * MAX_SKILL_VALUE
-        ),
+        attribute_points: attributePoints,
+        ...normalizedAttributesPayload,
       };
 
       if (skillDefinitions.length > 0) {
@@ -733,13 +756,19 @@ const CharacterCreation = () => {
 
       let attemptedAttributesPayload: Record<string, unknown> = { ...baseAttributesPayload };
       const skippedAttributeColumns = new Set<string>();
+      let finalAttributesPayload: Record<string, unknown> | null = null;
+      let finalAttributesRow: Tables<"player_attributes"> | null = null;
 
-      while (true) {
-        const { error: attributesError } = await supabase
+      while (Object.keys(attemptedAttributesPayload).length > 0) {
+        const { data: upsertedAttributes, error: attributesError } = await supabase
           .from("player_attributes")
-          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "user_id" });
+          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "user_id" })
+          .select()
+          .maybeSingle();
 
         if (!attributesError) {
+          finalAttributesPayload = { ...attemptedAttributesPayload };
+          finalAttributesRow = upsertedAttributes ?? null;
           break;
         }
 
@@ -757,6 +786,22 @@ const CharacterCreation = () => {
         }
 
         throw attributesError;
+      }
+
+      if (finalAttributesPayload) {
+        const sourceRecord =
+          (finalAttributesRow as Record<string, unknown> | null) ??
+          (existingAttributesRow
+            ? { ...existingAttributesRow, ...finalAttributesPayload }
+            : finalAttributesPayload);
+
+        setExistingAttributesRow(
+          finalAttributesRow ??
+            (existingAttributesRow
+              ? ({ ...existingAttributesRow, ...finalAttributesPayload } as Tables<"player_attributes">)
+              : existingAttributesRow ?? null),
+        );
+        setAttributes(buildAttributeState(sourceRecord));
       }
 
       toast({
@@ -1189,12 +1234,14 @@ const CharacterCreation = () => {
                   <div key={key} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium capitalize">{key}</span>
-                      <span className="text-sm font-semibold text-primary">{attributes[key]}</span>
+                      <span className="text-sm font-semibold text-primary">
+                        {formatAttributeDisplay(attributes[key])}
+                      </span>
                     </div>
                     <Slider
-                      min={1}
-                      max={10}
-                      step={1}
+                      min={ATTRIBUTE_MIN_VALUE}
+                      max={ATTRIBUTE_MAX_VALUE}
+                      step={ATTRIBUTE_SLIDER_STEP}
                       value={[attributes[key]]}
                       onValueChange={([value]) =>
                         handleAttributeChange(key, value ?? attributes[key])
