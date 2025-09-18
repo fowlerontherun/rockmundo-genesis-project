@@ -41,6 +41,7 @@ import {
   type SkillUnlockUpsertInput,
 } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import { sortByOptionalKeys } from "@/utils/sorting";
 import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useToast } from "@/components/ui/use-toast";
@@ -245,14 +246,19 @@ const CharacterCreation = () => {
       try {
         const { data, error } = await supabase
           .from("skill_definitions")
-          .select("*")
-          .order("sort_order", { ascending: true });
+          .select("*");
 
         if (error) {
           throw error;
         }
 
-        setSkillDefinitions((data as SkillDefinition[] | null) ?? []);
+        const sortedDefinitions = sortByOptionalKeys(
+          ((data as SkillDefinition[] | null) ?? []).filter(Boolean),
+          ["display_order", "sort_order", "order_index", "position"],
+          ["name", "slug"]
+        ) as SkillDefinition[];
+
+        setSkillDefinitions(sortedDefinitions);
       } catch (error) {
         console.error("Failed to load skill definitions:", error);
       }

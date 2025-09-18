@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
+import { sortByOptionalKeys } from "@/utils/sorting";
 import type {
   PostgrestError,
   PostgrestMaybeSingleResponse,
@@ -183,15 +184,6 @@ const extractErrorMessage = (error: unknown) => {
   return "An unknown error occurred.";
 };
 
-const isMissingSlotNumberError = (error: PostgrestError) => {
-  if (error.code !== "42703") return false;
-
-  const message = typeof error.message === "string" ? error.message : "";
-  const details = typeof error.details === "string" ? error.details : "";
-
-  return message.includes("slot_number") || details.includes("slot_number");
-};
-
 const sortProfiles = (profiles: PlayerProfile[]) => {
   const toTimestamp = (value: PlayerProfile["created_at"]) => {
     if (!value) return 0;
@@ -273,19 +265,10 @@ const useProvideGameData = (): GameDataContextValue => {
     setError(null);
 
     try {
-      let { data, error: profilesError } = await supabase
+      const { data, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("user_id", user.id)
-        .order("slot_number", { ascending: true });
-
-      if (profilesError && isMissingSlotNumberError(profilesError)) {
-        ({ data, error: profilesError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: true }));
-      }
+        .eq("user_id", user.id);
 
       if (profilesError) throw profilesError;
 
@@ -380,7 +363,7 @@ const useProvideGameData = (): GameDataContextValue => {
           .eq("profile_id", selectedCharacterId)
           .order("created_at", { ascending: false })
           .limit(10),
-        supabase.from("skill_definitions").select("*").order("display_order", { ascending: true }),
+        supabase.from("skill_definitions").select("*"),
         supabase.from("profile_skill_progress").select("*").eq("profile_id", selectedCharacterId),
         Promise.resolve({ data: [], error: null }) // placeholder for profile_skill_unlocks
       ])) as [
@@ -480,7 +463,13 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setAttributes(attributesData);
       setActivities(activityResponse.data ?? []);
-      setSkillDefinitions(skillDefinitionsResponse.data ?? []);
+      const sortedSkillDefinitions = sortByOptionalKeys(
+        ((skillDefinitionsResponse.data ?? []) as SkillDefinition[]).filter(Boolean),
+        ["display_order", "sort_order", "order_index", "position"],
+        ["name", "slug"]
+      ) as SkillDefinition[];
+
+      setSkillDefinitions(sortedSkillDefinitions);
       setSkillProgress(skillProgressResponse.data ?? []);
       setSkillUnlockRows(skillUnlocksResponse.data ?? []);
     } catch (err) {
