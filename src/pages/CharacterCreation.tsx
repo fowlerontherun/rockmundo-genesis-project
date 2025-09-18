@@ -705,17 +705,15 @@ const CharacterCreation = () => {
           break;
         }
 
-        if (profileError.code === "42703") {
-          const missingColumn = extractMissingColumn(profileError);
-          if (
-            missingColumn &&
-            !skippedProfileColumns.has(missingColumn) &&
-            missingColumn in attemptedProfilePayload
-          ) {
-            skippedProfileColumns.add(missingColumn);
-            attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
-            continue;
-          }
+        const missingColumn = extractMissingColumn(profileError);
+        if (
+          missingColumn &&
+          !skippedProfileColumns.has(missingColumn) &&
+          missingColumn in attemptedProfilePayload
+        ) {
+          skippedProfileColumns.add(missingColumn);
+          attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+          continue;
         }
 
         throw profileError;
@@ -803,17 +801,15 @@ const CharacterCreation = () => {
           break;
         }
 
-        if (attributesError.code === "42703") {
-          const missingColumn = extractMissingColumn(attributesError);
-          if (
-            missingColumn &&
-            !skippedAttributeColumns.has(missingColumn) &&
-            missingColumn in attemptedAttributesPayload
-          ) {
-            skippedAttributeColumns.add(missingColumn);
-            attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
-            continue;
-          }
+        const missingColumn = extractMissingColumn(attributesError);
+        if (
+          missingColumn &&
+          !skippedAttributeColumns.has(missingColumn) &&
+          missingColumn in attemptedAttributesPayload
+        ) {
+          skippedAttributeColumns.add(missingColumn);
+          attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
+          continue;
         }
 
         throw attributesError;

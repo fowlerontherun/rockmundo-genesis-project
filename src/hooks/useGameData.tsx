@@ -40,17 +40,55 @@ type Nullable<T> = T | null;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
 
-const isMissingColumnError = (error: PostgrestError | null | undefined, column: string) =>
-  Boolean(
-    error?.code === "42703" &&
-      error.message?.toLowerCase().includes(column.toLowerCase())
+const isMissingColumnError = (
+  error: PostgrestError | null | undefined,
+  column: string
+) => {
+  if (!error || !column) {
+    return false;
+  }
+
+  if (error.code !== "42703" && error.code !== "PGRST204") {
+    return false;
+  }
+
+  const haystacks = [error.message, error.details, error.hint].filter(
+    (value): value is string => typeof value === "string" && value.length > 0
   );
 
+  if (haystacks.length === 0) {
+    return false;
+  }
+
+  const target = column.toLowerCase();
+  return haystacks.some(haystack => haystack.toLowerCase().includes(target));
+};
+
 const extractMissingColumn = (error: PostgrestError | null | undefined) => {
-  const match = error?.message?.match(
-    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i
+  if (!error) {
+    return null;
+  }
+
+  const haystacks = [error.message, error.details, error.hint].filter(
+    (value): value is string => typeof value === "string" && value.length > 0
   );
-  return match?.[1] ?? null;
+
+  const patterns = [
+    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i,
+    /could not find the '([\w]+)' column/i,
+    /'([\w]+)'\s+column/i
+  ];
+
+  for (const haystack of haystacks) {
+    for (const pattern of patterns) {
+      const match = haystack.match(pattern);
+      if (match?.[1]) {
+        return match[1];
+      }
+    }
+  }
+
+  return null;
 };
 
 const isMissingTableError = (error: PostgrestError | null | undefined) =>
@@ -743,13 +781,12 @@ const useProvideGameData = (): GameDataContextValue => {
           return nextProfile ?? undefined;
         }
 
-        if (response.error.code === "42703") {
-          const missingColumn = extractMissingColumn(response.error);
-          if (!missingColumn || skippedColumns.has(missingColumn)) {
-            console.error("Error updating profile:", response.error);
-            throw response.error;
-          }
-
+        const missingColumn = extractMissingColumn(response.error);
+        if (
+          missingColumn &&
+          !skippedColumns.has(missingColumn) &&
+          missingColumn in attemptedPayload
+        ) {
           skippedColumns.add(missingColumn);
           attemptedPayload = omitFromRecord(attemptedPayload, missingColumn);
           continue;
@@ -1000,14 +1037,17 @@ const useProvideGameData = (): GameDataContextValue => {
             break;
           }
 
-          if (error.code === "42703") {
-            const missingColumn = extractMissingColumn(error);
-            if (!missingColumn || skippedProfileColumns.has(missingColumn)) {
-              throw error;
-            }
-
+          const missingColumn = extractMissingColumn(error);
+          if (
+            missingColumn &&
+            !skippedProfileColumns.has(missingColumn) &&
+            missingColumn in attemptedProfilePayload
+          ) {
             skippedProfileColumns.add(missingColumn);
-            attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+            attemptedProfilePayload = omitFromRecord(
+              attemptedProfilePayload,
+              missingColumn
+            );
             continue;
           }
 
