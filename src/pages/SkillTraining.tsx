@@ -18,7 +18,6 @@ import {
 import {
   calculateTrainingCost,
   extractAttributeScores,
-  getFocusAttributeScore,
   getSkillCap,
   isOnCooldown,
   getRemainingCooldown,
@@ -30,6 +29,7 @@ import {
   ATTRIBUTE_METADATA,
   ATTRIBUTE_MAX_VALUE,
   ATTRIBUTE_TRAINING_INCREMENT,
+  ATTRIBUTE_KEYS,
   clampAttributeValue,
   getAttributeTrainingCost,
   type AttributeKey
@@ -47,7 +47,10 @@ import {
   Coins,
   Clock,
   TrendingUp,
-  Wallet
+  Wallet,
+  Cpu,
+  Briefcase,
+  Megaphone
 } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -59,6 +62,17 @@ const iconMap: Record<string, LucideIcon> = {
   songwriting: PenTool,
   genre: Music,
   stagecraft: Star
+};
+
+const attributeIconMap: Record<AttributeKey, LucideIcon> = {
+  musical_ability: Guitar,
+  vocal_talent: Mic,
+  rhythm_sense: Drum,
+  stage_presence: Star,
+  creative_insight: PenTool,
+  technical_mastery: Cpu,
+  business_acumen: Briefcase,
+  marketing_savvy: Megaphone
 };
 
 interface CurrentSkillEntry {
@@ -236,7 +250,10 @@ const SkillTrainingContent = () => {
     skills,
     attributes,
     updateProfile,
+    updateAttributes,
     addActivity,
+    awardActionXp,
+    buyAttributeStar,
     loading: gameDataLoading,
     xpWallet,
     attributeStarTotal
@@ -250,6 +267,7 @@ const SkillTrainingContent = () => {
     updateSkillProgress
   } = useSkillSystem();
   const [training, setTraining] = useState(false);
+  const [activeTrainingKey, setActiveTrainingKey] = useState<string | null>(null);
 
   const baseTrainingCooldown = COOLDOWNS.skillTraining;
   const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
@@ -508,6 +526,33 @@ const SkillTrainingContent = () => {
       });
   }, [derivedSessions]);
 
+  const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
+
+  const attributeSummaries = useMemo(
+    () =>
+      ATTRIBUTE_KEYS.map(key => {
+        const rawValue = attributeScores[key];
+        const numericValue = typeof rawValue === "number" ? rawValue : Number(rawValue ?? 0);
+        const value = clampAttributeValue(numericValue);
+        const metadata = ATTRIBUTE_METADATA[key];
+        const icon = attributeIconMap[key] ?? Star;
+        const cost = getAttributeTrainingCost(value);
+        const percentage = ATTRIBUTE_MAX_VALUE > 0
+          ? Math.min(100, Math.round((value / ATTRIBUTE_MAX_VALUE) * 100))
+          : 0;
+
+        return {
+          key,
+          value,
+          metadata,
+          icon,
+          cost,
+          percentage
+        };
+      }),
+    [attributeScores]
+  );
+
   const isLoading = gameDataLoading || skillSystemLoading;
 
   const getSkillLevel = (value: number) => {
@@ -638,12 +683,13 @@ const SkillTrainingContent = () => {
         amount: focusedXp,
         category: "training",
         actionKey: "skill_training",
-        sessionSlug: session.slug,
-        focus: sessionFocus,
-        durationMinutes: session.duration,
-        collaborationCount: 0,
-        quality: skillGain,
+        uniqueEventId: `${session.slug}:${timestamp}:summary`,
         metadata: {
+          session_slug: session.slug,
+          focus: sessionFocus,
+          duration_minutes: session.duration,
+          collaboration_count: 0,
+          quality: skillGain,
           skill_gain: skillGain,
           skill_value_after: newSkillValue,
           training_cost: trainingCost,
@@ -716,6 +762,10 @@ const SkillTrainingContent = () => {
       const nextValue = clampAttributeValue(currentValue + ATTRIBUTE_TRAINING_INCREMENT);
       const actualGain = nextValue - currentValue;
       const uniqueEventId = `attribute_training:${attributeKey}:${timestamp}`;
+      const attributeUpdates: Partial<PlayerAttributes> = {
+        [attributeKey]: nextValue,
+        updated_at: timestamp
+      };
 
       await buyAttributeStar({
         attributeKey,
