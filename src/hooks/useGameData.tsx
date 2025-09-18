@@ -19,7 +19,6 @@ import {
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
 import type {
-  PlayerXpWallet,
   ProgressionActionSuccessResponse,
   ProgressionSnapshot,
 } from "@/types/progression";
@@ -27,7 +26,7 @@ import { sortByOptionalKeys } from "@/utils/sorting";
 import {
   DEFAULT_PROGRESSION_COOLDOWNS,
   PROGRESSION_COOLDOWN_KEYS,
-  type PlayerXpWalletSnapshot,
+  type PlayerXpWalletSnapshot as PlayerXpWalletSnapshotData,
   type ProgressionCooldowns,
   type ProgressionFunctionResult,
   type ProgressionStateSnapshot
@@ -44,7 +43,8 @@ export type PlayerAttributes = Tables<"player_attributes">;
 export type PlayerXpWallet = Tables<"player_xp_wallet">;
 export type ActivityItem = Tables<"activity_feed">;
 export type XpLedgerEntry = Tables<"xp_ledger">;
-export type PlayerXpWallet = PlayerXpWalletSnapshot;
+
+export type PlayerXpWalletSnapshotType = PlayerXpWalletSnapshotData;
 // Temporary type definitions until database schema is updated
 type AttributeDefinition = any;
 type ProfileAttribute = any;
