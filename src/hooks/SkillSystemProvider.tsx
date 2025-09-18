@@ -32,12 +32,32 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 const safeMetadata = (value: unknown): Record<string, unknown> | undefined =>
   isObject(value) ? value : undefined;
 
-const isMissingTableError = (error: PostgrestError | null | undefined) =>
-  Boolean(
-    error?.code === "42P01" ||
-      error?.code === "PGRST201" ||
-      error?.message?.toLowerCase().includes("does not exist")
+const isMissingTableError = (error: PostgrestError | null | undefined) => {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code === "42P01" || error.code === "PGRST201") {
+    return true;
+  }
+
+  const haystacks = [error.message, error.details, error.hint].filter(
+    (value): value is string => typeof value === "string" && value.length > 0
   );
+
+  if (haystacks.length === 0) {
+    return false;
+  }
+
+  const patterns = [
+    /does not exist/i,
+    /could not find the table/i,
+    /schema cache/i
+  ];
+
+  // PostgREST sometimes bubbles missing-table errors through the schema cache.
+  return haystacks.some(haystack => patterns.some(pattern => pattern.test(haystack)));
+};
 
 const isMissingColumnError = (error: PostgrestError | null | undefined, column: string) => {
   if (!error || !column) {
