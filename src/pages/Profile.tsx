@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CharacterSelect from "@/components/CharacterSelect";
 import AvatarWithClothing from "@/components/avatar/AvatarWithClothing";
 import {
@@ -28,13 +29,18 @@ import {
   Loader2,
   Sparkles,
   ArrowRight,
-  UserPlus
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  Check,
+  X
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { useEquippedClothing } from "@/hooks/useEquippedClothing";
+import { useFriendships, type FriendProfileSummary } from "@/hooks/useFriendships";
 import {
   Select,
   SelectContent,
@@ -66,6 +72,7 @@ interface FanMetrics {
 }
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+type FriendPresenceStatus = Database["public"]["Enums"]["chat_participant_status"];
 
 type CityOption = {
   id: string;
@@ -155,6 +162,116 @@ const Profile = () => {
   const [sendingFriendRequestTo, setSendingFriendRequestTo] = useState<string | null>(null);
   const [requestedFriendUserIds, setRequestedFriendUserIds] = useState<Record<string, boolean>>({});
   const friendSearchRequestId = useRef(0);
+
+  const {
+    loading: friendsLoading,
+    error: friendsError,
+    incomingRequests,
+    outgoingRequests,
+    acceptedFriends,
+    presenceByUserId,
+    acceptFriendship,
+    declineFriendship,
+  } = useFriendships(user?.id);
+
+  const getFriendDisplayName = (friendProfile?: FriendProfileSummary) => {
+    if (!friendProfile) {
+      return "Unknown performer";
+    }
+
+    const label = friendProfile.displayName && friendProfile.displayName.trim().length > 0
+      ? friendProfile.displayName
+      : friendProfile.username;
+
+    return label && label.trim().length > 0 ? label : "Unknown performer";
+  };
+
+  const getFriendInitials = (friendProfile?: FriendProfileSummary) => {
+    const label = getFriendDisplayName(friendProfile);
+    const initials = label
+      .split(" ")
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase())
+      .join("")
+      .slice(0, 2);
+
+    return initials || "RM";
+  };
+
+  const presenceLabel = (status?: FriendPresenceStatus) => {
+    if (!status) {
+      return "Offline";
+    }
+
+    if (status === "typing") {
+      return "Typing";
+    }
+
+    if (status === "muted") {
+      return "Do not disturb";
+    }
+
+    return "Online";
+  };
+
+  const presenceBadgeStyles = (status?: FriendPresenceStatus) => {
+    if (status === "typing" || status === "online") {
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-500";
+    }
+
+    if (status === "muted") {
+      return "border-amber-500/40 bg-amber-500/10 text-amber-500";
+    }
+
+    return "border-muted-foreground/20 bg-muted/40 text-muted-foreground";
+  };
+
+  const isPresenceOnline = (status?: FriendPresenceStatus) => status === "online" || status === "typing";
+
+  const showFriendshipError = (fallback: string, error: unknown) => {
+    const message = error instanceof Error ? error.message : fallback;
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: message === fallback ? fallback : `${fallback}: ${message}`,
+    });
+  };
+
+  const handleAcceptFriendship = async (friendshipId: string) => {
+    try {
+      await acceptFriendship(friendshipId);
+      toast({
+        title: "Friend request accepted",
+        description: "You're now connected.",
+      });
+    } catch (error) {
+      showFriendshipError("Could not accept friend request", error);
+    }
+  };
+
+  const handleDeclineFriendship = async (friendshipId: string) => {
+    try {
+      await declineFriendship(friendshipId);
+      toast({
+        title: "Request declined",
+        description: "The invitation has been dismissed.",
+      });
+    } catch (error) {
+      showFriendshipError("Could not decline friend request", error);
+    }
+  };
+
+  const handleCancelFriendship = async (friendshipId: string) => {
+    try {
+      await declineFriendship(friendshipId);
+      toast({
+        title: "Request cancelled",
+        description: "We've let them know you changed your mind.",
+      });
+    } catch (error) {
+      showFriendshipError("Could not cancel friend request", error);
+    }
+  };
 
   const showProfileDetails = Boolean(profile && skills && attributes);
 
@@ -660,13 +777,13 @@ const Profile = () => {
 
         {showProfileDetails ? (
           <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="profile">Profile Info</TabsTrigger>
-            <TabsTrigger value="stats">Statistics</TabsTrigger>
-            <TabsTrigger value="friends">Friends</TabsTrigger>
-          </TabsList>
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+              <TabsTrigger value="profile">Profile Info</TabsTrigger>
+              <TabsTrigger value="friends">Friends</TabsTrigger>
+              <TabsTrigger value="stats">Statistics</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="profile" className="space-y-6">
+            <TabsContent value="profile" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardContent className="pt-6">
@@ -912,96 +1029,207 @@ const Profile = () => {
                 </Card>
               </div>
             </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="friends" className="space-y-6">
-            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5 text-primary" />
-                  Find Friends
-                </CardTitle>
-                <CardDescription>
-                  Search by email, username, or display name to connect with other performers.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Input
-                    value={friendSearchTerm}
-                    onChange={handleFriendSearchInputChange}
-                    placeholder="Search players by email, username, or display name"
-                    className="w-full"
-                  />
+            <TabsContent value="friends" className="space-y-6">
+              {friendsError && (
+                <Alert variant="destructive">
+                  <AlertTitle>Unable to load friends</AlertTitle>
+                  <AlertDescription>{friendsError}</AlertDescription>
+                </Alert>
+              )}
+
+              {friendsLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span>Syncing your social circle...</span>
                 </div>
-                {friendSearchError ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Search error</AlertTitle>
-                    <AlertDescription>{friendSearchError}</AlertDescription>
-                  </Alert>
-                ) : null}
-                <div className="space-y-3">
-                  {friendSearchTerm.trim().length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Start typing to look up bandmates, rivals, or future collaborators.
-                    </p>
-                  ) : friendSearchLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Searching players...
+              )}
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                    Incoming requests
+                    <Badge variant="secondary">{incomingRequests.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Approve performers who want to connect with you.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {incomingRequests.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">You don't have any pending friend requests right now.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {incomingRequests.map(request => (
+                        <div
+                          key={request.friendshipId}
+                          className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-secondary/40 p-4 sm:flex-row sm:items-center"
+                        >
+                          <div className="flex items-center gap-3 sm:flex-1">
+                            <Avatar className="h-12 w-12">
+                              {request.profile?.avatarUrl ? (
+                                <AvatarImage
+                                  src={request.profile.avatarUrl}
+                                  alt={`${getFriendDisplayName(request.profile)} avatar`}
+                                />
+                              ) : (
+                                <AvatarFallback>{getFriendInitials(request.profile)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{getFriendDisplayName(request.profile)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                @{request.profile?.username ?? "unknown"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 sm:ml-auto">
+                            <Button
+                              size="sm"
+                              className="bg-gradient-primary"
+                              onClick={() => {
+                                void handleAcceptFriendship(request.friendshipId);
+                              }}
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                void handleDeclineFriendship(request.friendshipId);
+                              }}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Decline
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ) : friendSearchResults.length === 0 ? (
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserMinus className="h-5 w-5 text-primary" />
+                    Outgoing requests
+                    <Badge variant="secondary">{outgoingRequests.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Requests you've sent and are waiting on.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {outgoingRequests.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No pending requests from you at the moment.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {outgoingRequests.map(request => (
+                        <div
+                          key={request.friendshipId}
+                          className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-secondary/40 p-4 sm:flex-row sm:items-center"
+                        >
+                          <div className="flex items-center gap-3 sm:flex-1">
+                            <Avatar className="h-12 w-12">
+                              {request.profile?.avatarUrl ? (
+                                <AvatarImage
+                                  src={request.profile.avatarUrl}
+                                  alt={`${getFriendDisplayName(request.profile)} avatar`}
+                                />
+                              ) : (
+                                <AvatarFallback>{getFriendInitials(request.profile)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{getFriendDisplayName(request.profile)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                @{request.profile?.username ?? "unknown"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 sm:ml-auto">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                void handleCancelFriendship(request.friendshipId);
+                              }}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-primary" />
+                    Your friends
+                    <Badge variant="secondary">{acceptedFriends.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>See who's online and ready to jam.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {acceptedFriends.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No players found. Try a different email, username, or display name.
+                      Once you accept requests, your crew will appear here.
                     </p>
                   ) : (
-                    <ul className="space-y-3">
-                      {friendSearchResults.map((result) => {
-                        const isRequested = Boolean(requestedFriendUserIds[result.user_id]);
-                        const isSending = sendingFriendRequestTo === result.user_id;
-                        const disabled = isRequested || isSending || !profile || !user;
+                    <div className="space-y-4">
+                      {acceptedFriends.map(friend => {
+                        const status = presenceByUserId[friend.friendUserId];
+                        const online = isPresenceOnline(status);
+                        const badgeClass = presenceBadgeStyles(status);
 
                         return (
-                          <li
-                            key={result.user_id}
-                            className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between"
+                          <div
+                            key={friend.friendshipId}
+                            className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-secondary/40 p-4 sm:flex-row sm:items-center"
                           >
-                            <div>
-                              <p className="font-semibold">{result.display_name ?? result.username}</p>
-                              <p className="text-sm text-muted-foreground">@{result.username}</p>
-                              <p className="text-xs text-muted-foreground break-all">{result.email}</p>
+                            <div className="flex items-center gap-3 sm:flex-1">
+                              <div className="relative">
+                                <Avatar className="h-12 w-12">
+                                  {friend.profile?.avatarUrl ? (
+                                    <AvatarImage
+                                      src={friend.profile.avatarUrl}
+                                      alt={`${getFriendDisplayName(friend.profile)} avatar`}
+                                    />
+                                  ) : (
+                                    <AvatarFallback>{getFriendInitials(friend.profile)}</AvatarFallback>
+                                  )}
+                                </Avatar>
+                                <span
+                                  className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-background ${online ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
+                                />
+                              </div>
+                              <div>
+                                <p className="font-semibold">{getFriendDisplayName(friend.profile)}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  @{friend.profile?.username ?? "unknown"}
+                                </p>
+                              </div>
                             </div>
-                            <Button
-                              variant={isRequested ? "outline" : "default"}
-                              className={!isRequested ? "bg-gradient-primary" : ""}
-                              disabled={disabled}
-                              onClick={() => handleSendFriendRequest(result)}
-                            >
-                              {isSending ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Sending...
-                                </>
-                              ) : isRequested ? (
-                                "Request sent"
-                              ) : (
-                                <>
-                                  <UserPlus className="mr-2 h-4 w-4" />
-                                  Add friend
-                                </>
-                              )}
-                            </Button>
-                          </li>
+                            <Badge variant="outline" className={badgeClass}>
+                              {presenceLabel(status)}
+                            </Badge>
+                          </div>
                         );
                       })}
-                    </ul>
+                    </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="stats" className="space-y-6">
+            <TabsContent value="stats" className="space-y-6">
             <Alert className="border-primary/30 bg-primary/5 text-primary">
               <Sparkles className="h-4 w-4" />
               <AlertTitle className="flex items-center gap-2">

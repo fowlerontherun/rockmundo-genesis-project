@@ -91,6 +91,30 @@ export type Database = {
           },
         ]
       }
+      chat_participants: {
+        Row: {
+          channel: string
+          id: string
+          status: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       experience_ledger: {
         Row: {
           amount: number
@@ -139,47 +163,29 @@ export type Database = {
       friendships: {
         Row: {
           addressee_id: string
-          created_at: string
+          created_at: string | null
           id: string
           requester_id: string
-          responded_at: string | null
           status: Database["public"]["Enums"]["friendship_status"]
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           addressee_id: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           requester_id: string
-          responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           addressee_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           requester_id?: string
-          responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "friendships_addressee_id_fkey"
-            columns: ["addressee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friendships_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       band_members: {
         Row: {
@@ -1843,6 +1849,8 @@ export type Database = {
       }
     }
     Enums: {
+      chat_participant_status: "muted" | "online" | "typing"
+      friendship_status: "accepted" | "blocked" | "declined" | "pending"
       app_role: "admin" | "moderator" | "user"
       friend_request_status: "accepted" | "cancelled" | "declined" | "pending"
       profile_gender:
