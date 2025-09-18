@@ -183,6 +183,53 @@ const extractErrorMessage = (error: unknown) => {
   return "An unknown error occurred.";
 };
 
+const isMissingSlotNumberError = (error: PostgrestError) => {
+  if (error.code !== "42703") return false;
+
+  const message = typeof error.message === "string" ? error.message : "";
+  const details = typeof error.details === "string" ? error.details : "";
+
+  return message.includes("slot_number") || details.includes("slot_number");
+};
+
+const sortProfiles = (profiles: PlayerProfile[]) => {
+  const toTimestamp = (value: PlayerProfile["created_at"]) => {
+    if (!value) return 0;
+    if (value instanceof Date) return value.getTime();
+
+    const date = new Date(value as string);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+  };
+
+  const getSlotNumber = (profile: PlayerProfile) => {
+    const slot = (profile as Record<string, unknown>).slot_number;
+    return typeof slot === "number" ? slot : null;
+  };
+
+  return [...profiles].sort((a, b) => {
+    const slotA = getSlotNumber(a);
+    const slotB = getSlotNumber(b);
+
+    const hasSlotA = slotA !== null;
+    const hasSlotB = slotB !== null;
+
+    if (hasSlotA && hasSlotB) {
+      if (slotA !== slotB) {
+        return slotA - slotB;
+      }
+    } else if (hasSlotA) {
+      return -1;
+    } else if (hasSlotB) {
+      return 1;
+    }
+
+    const createdAtA = toTimestamp(a.created_at);
+    const createdAtB = toTimestamp(b.created_at);
+
+    return createdAtA - createdAtB;
+  });
+};
+
 const matchProgressToDefinition = (
   progress: SkillProgressRow,
   definition: SkillDefinition
@@ -226,15 +273,23 @@ const useProvideGameData = (): GameDataContextValue => {
     setError(null);
 
     try {
-      const { data, error: profilesError } = await supabase
+      let { data, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", user.id)
         .order("slot_number", { ascending: true });
 
+      if (profilesError && isMissingSlotNumberError(profilesError)) {
+        ({ data, error: profilesError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true }));
+      }
+
       if (profilesError) throw profilesError;
 
-      const list = data ?? [];
+      const list = sortProfiles(data ?? []);
       setCharacters(list);
 
       const hasStored = selectedCharacterId && list.some(character => character.id === selectedCharacterId);
