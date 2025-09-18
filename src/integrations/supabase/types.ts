@@ -58,6 +58,7 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          profile_id: string | null
           user_id: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          profile_id?: string | null
           user_id: string
         }
         Update: {
@@ -76,9 +78,18 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          profile_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       band_members: {
         Row: {
@@ -586,49 +597,55 @@ export type Database = {
       player_attributes: {
         Row: {
           attribute_points: number | null
-          charisma: number | null
+          business: number | null
+          composition: number | null
           created_at: string | null
+          creativity: number | null
           crowd_engagement: number | null
           id: string
-          looks: number | null
+          marketing: number | null
           mental_focus: number | null
-          musicality: number | null
           physical_endurance: number | null
           profile_id: string | null
           social_reach: number | null
           stage_presence: number | null
+          technical: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           attribute_points?: number | null
-          charisma?: number | null
+          business?: number | null
+          composition?: number | null
           created_at?: string | null
+          creativity?: number | null
           crowd_engagement?: number | null
           id?: string
-          looks?: number | null
+          marketing?: number | null
           mental_focus?: number | null
-          musicality?: number | null
           physical_endurance?: number | null
           profile_id?: string | null
           social_reach?: number | null
           stage_presence?: number | null
+          technical?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           attribute_points?: number | null
-          charisma?: number | null
+          business?: number | null
+          composition?: number | null
           created_at?: string | null
+          creativity?: number | null
           crowd_engagement?: number | null
           id?: string
-          looks?: number | null
+          marketing?: number | null
           mental_focus?: number | null
-          musicality?: number | null
           physical_endurance?: number | null
           profile_id?: string | null
           social_reach?: number | null
           stage_presence?: number | null
+          technical?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -701,6 +718,7 @@ export type Database = {
           guitar: number | null
           id: string
           marketing: number | null
+          profile_id: string | null
           performance: number | null
           songwriting: number | null
           technical: number | null
@@ -718,6 +736,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id?: string | null
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -735,6 +754,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id?: string | null
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -742,7 +762,15 @@ export type Database = {
           user_id?: string
           vocals?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_skills_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_streaming_accounts: {
         Row: {
@@ -797,14 +825,21 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          city_of_birth: string | null
+          current_city_id: string | null
           created_at: string | null
           display_name: string | null
+          engagement_rate: number | null
           experience: number | null
           fame: number | null
           fans: number | null
+          followers: number | null
+          gender: Database["public"]["Enums"]["profile_gender"] | null
+          health: number | null
           id: string
           is_active: boolean
           level: number | null
@@ -815,14 +850,21 @@ export type Database = {
           username: string
         }
         Insert: {
+          age?: number | null
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          city_of_birth?: string | null
+          current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
+          gender?: Database["public"]["Enums"]["profile_gender"] | null
+          health?: number | null
           id?: string
           is_active?: boolean
           level?: number | null
@@ -833,14 +875,21 @@ export type Database = {
           username: string
         }
         Update: {
+          age?: number | null
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          city_of_birth?: string | null
+          current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           experience?: number | null
           fame?: number | null
           fans?: number | null
+          followers?: number | null
+          gender?: Database["public"]["Enums"]["profile_gender"] | null
+          health?: number | null
           id?: string
           is_active?: boolean
           level?: number | null
@@ -1192,6 +1241,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      profile_gender:
+        | "female"
+        | "male"
+        | "non_binary"
+        | "other"
+        | "prefer_not_to_say"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
     CompositeTypes: {
