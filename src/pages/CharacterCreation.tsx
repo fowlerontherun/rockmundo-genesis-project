@@ -151,6 +151,7 @@ type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
+type PlayerSkillsInsert = TablesInsert<"player_skills">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
@@ -373,32 +374,28 @@ const CharacterCreation = () => {
         const mergedSkills: Record<SkillKey, number> = { ...defaultSkills };
 
         if (skillsResponse.data) {
-          setSkills(prev => {
-            const updated = { ...prev };
-            (Object.keys(defaultSkills) as SkillKey[]).forEach(key => {
-              const value = skillsResponse.data?.[key];
-              if (typeof value === "number") {
-                updated[key] = value;
-              }
-            });
-            return updated;
-          });
-        }
-
-        if (attributesResponse.data) {
-          setAttributes(prev => {
-            const updated = { ...prev };
-            (Object.keys(defaultAttributes) as AttributeKey[]).forEach(key => {
-              const value = attributesResponse.data?.[key];
-              if (typeof value === "number") {
-                updated[key] = value;
-              }
-            });
-            return updated;
+          (Object.keys(defaultSkills) as SkillKey[]).forEach((key) => {
+            const value = skillsResponse.data?.[key];
+            if (typeof value === "number") {
+              mergedSkills[key] = value;
+            }
           });
         }
 
         setSkills(mergedSkills);
+
+        const mergedAttributes: Record<AttributeKey, number> = { ...defaultAttributes };
+
+        if (attributesResponse.data) {
+          (Object.keys(defaultAttributes) as AttributeKey[]).forEach((key) => {
+            const value = attributesResponse.data?.[key];
+            if (typeof value === "number") {
+              mergedAttributes[key] = value;
+            }
+          });
+        }
+
+        setAttributes(mergedAttributes);
       } catch (error) {
         console.error("Failed to load character data:", error);
         setLoadError("We couldn't load your character data. You can still create a new persona.");
@@ -623,6 +620,9 @@ const CharacterCreation = () => {
       gender,
       age: parsedAge,
       city_of_birth: cityOfBirth,
+      slot_number: slotNumber,
+      unlock_cost: unlockCost,
+      is_active: isActive,
     };
 
     try {
