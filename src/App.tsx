@@ -100,7 +100,7 @@ function App() {
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
-                    <Route path="character/create" element={<CharacterCreation />} />
+                    <Route path="*" element={<NotFound />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>

@@ -13,9 +13,15 @@ const Index = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isActive = true;
+
     const determineLandingPage = async () => {
       if (!user) {
         navigate("/auth");
+        return;
+      }
+
+      if (!isActive) {
         return;
       }
 
@@ -24,18 +30,29 @@ const Index = () => {
 
       try {
         const { isComplete } = await checkProfileCompletion(user.id);
+        if (!isActive) {
+          return;
+        }
         navigate(isComplete ? "/dashboard" : "/character-create");
       } catch (profileError) {
         console.error("Failed to verify profile completion:", profileError);
+        if (!isActive) {
+          return;
+        }
         setError("We couldn't verify your profile status. You can continue to the creator.");
       } finally {
-        setCheckingProfile(false);
+        if (isActive) {
+          setCheckingProfile(false);
+        }
       }
     };
 
     if (!loading) {
       void determineLandingPage();
     }
+    return () => {
+      isActive = false;
+    };
   }, [user, loading, navigate]);
 
   if (loading || checkingProfile) {

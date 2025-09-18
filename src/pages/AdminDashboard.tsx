@@ -1,70 +1,88 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AdminRoute } from '@/components/AdminRoute';
-import { AlertTriangle, Construction } from 'lucide-react';
+import React from "react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AdminRoute } from "@/components/AdminRoute";
+import { AlertTriangle, CheckCircle2, Database, Settings2 } from "lucide-react";
+import SkillDefinitionsManager from "@/components/admin/SkillDefinitionsManager";
 
 const AdminDashboard = () => {
   return (
     <AdminRoute>
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto p-6 space-y-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-muted-foreground">System administration and configuration</p>
+            <p className="text-muted-foreground">Manage core configuration and live game data</p>
           </div>
-          <Badge variant="outline" className="bg-warning/10">
-            Under Development
+          <Badge variant="outline" className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            Live Tools Enabled
           </Badge>
         </div>
 
-        <Alert>
-          <Construction className="h-4 w-4" />
+        <Alert className="bg-muted/60">
           <AlertDescription>
-            The admin dashboard is currently under development. Core functionality is being rebuilt to work with the current database schema.
+            Use these tools to configure skill definitions and parent relationships. Changes are applied immediately to the live database.
           </AlertDescription>
         </Alert>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                System Status
+                <Database className="h-5 w-5 text-primary" />
+                Data Integrity
               </CardTitle>
+              <CardDescription>Track schema health and required follow-up</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Admin functionality is being redesigned to work with the current database structure.
-              </p>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>✅ Skill definitions synced</p>
+              <p>✅ Parent links operational</p>
+              <p>⚠️ Additional admin modules pending migration</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Available Features</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Change Management
+              </CardTitle>
+              <CardDescription>Review update best practices</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-sm">✅ User authentication</p>
-              <p className="text-sm">✅ Role-based access</p>
-              <p className="text-sm">⏳ Database management</p>
-              <p className="text-sm">⏳ System metrics</p>
-              <p className="text-sm">⏳ Configuration tools</p>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>• Validate tier caps before publishing updates.</p>
+              <p>• Link parent skills to enforce proper unlock flow.</p>
+              <p>• Refresh in-game clients after major schema edits.</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Next Steps</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-primary" />
+                Upcoming Modules
+              </CardTitle>
+              <CardDescription>Feature roadmap for admin suite</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Admin tools will be rebuilt once the core database schema is finalized and all required tables are properly configured.
-              </p>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>• Player progression tuning controls</p>
+              <p>• Economy balancing dashboards</p>
+              <p>• Live event configuration tools</p>
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle>Skill Definitions</CardTitle>
+            <CardDescription>Manage available skills, tier caps, and prerequisite relationships.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SkillDefinitionsManager />
+          </CardContent>
+        </Card>
       </div>
     </AdminRoute>
   );

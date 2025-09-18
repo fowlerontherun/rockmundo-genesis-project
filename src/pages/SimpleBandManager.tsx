@@ -3,9 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
 import { Music, Users, Calendar, TrendingUp } from "lucide-react";
 import type { Band, BandMember } from "@/types/database";
 
@@ -18,6 +18,7 @@ interface BandMemberWithProfile extends BandMember {
 
 export default function SimpleBandManager() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [band, setBand] = useState<Band | null>(null);
   const [members, setMembers] = useState<BandMemberWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,11 +45,21 @@ export default function SimpleBandManager() {
       }
     } catch (error) {
       console.error("Error loading band members:", error);
+      toast({
+        title: "Band members unavailable",
+        description: "We couldn't load the current roster. Please try again shortly.",
+        variant: "destructive",
+      });
     }
-  }, []);
+  }, [toast]);
 
   const loadBandData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setBand(null);
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
 
     try {
       // Check if user is a band leader
@@ -91,7 +102,11 @@ export default function SimpleBandManager() {
 
   const createBand = async () => {
     if (!user?.id || !newBandName.trim()) {
-      toast.error("Please enter a band name");
+      toast({
+        title: "Band name required",
+        description: "Enter a name before creating your band.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -114,10 +129,18 @@ export default function SimpleBandManager() {
 
       setBand(data);
       setNewBandName("");
-      toast.success("Band created successfully!");
+      await loadBandMembers(data.id);
+      toast({
+        title: "Band created",
+        description: `${data.name} is ready to take the stage!`,
+      });
     } catch (error) {
       console.error("Error creating band:", error);
-      toast.error("Failed to create band");
+      toast({
+        title: "Could not create band",
+        description: "Something went wrong while saving your band. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
