@@ -176,18 +176,282 @@ const formatAttributeDisplay = (value: number): string => {
   return normalized.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 };
 
-const defaultSkills = {
-  guitar: 0,
-  vocals: 0,
-  drums: 0,
-  bass: 0,
-  performance: 0,
-  songwriting: 0,
-  composition: 0,
-  business: 0,
-  marketing: 0,
-  creativity: 0,
-  technical: 0,
+const formatSkillDisplayName = (slug: string): string =>
+  slug
+    .replace(/[-_]/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const FALLBACK_SKILL_SLUGS = [
+  "guitar",
+  "vocals",
+  "drums",
+  "bass",
+  "performance",
+  "songwriting",
+  "composition",
+  "business",
+  "marketing",
+  "creativity",
+  "technical",
+] as const;
+
+type LegacySkillColumn = (typeof FALLBACK_SKILL_SLUGS)[number];
+
+type NormalizedSkillDefinition = {
+  slug: string;
+  label: string;
+  metadata?: Record<string, unknown>;
+  raw?: SkillDefinition | null;
+};
+
+const FALLBACK_SKILL_DEFINITIONS: NormalizedSkillDefinition[] =
+  FALLBACK_SKILL_SLUGS.map((slug) => ({
+    slug,
+    label: formatSkillDisplayName(slug),
+  }));
+
+const LEGACY_SKILL_COLUMNS = new Set<string>(FALLBACK_SKILL_SLUGS);
+
+const sanitizeIdentifier = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const coerceNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+};
+
+const normalizeSkillDefinition = (
+  definition: SkillDefinition | null | undefined,
+): NormalizedSkillDefinition | null => {
+  if (!definition || typeof definition !== "object") {
+    return null;
+  }
+
+  const record = definition as Record<string, unknown>;
+  const slugValue =
+    typeof record.slug === "string" && record.slug.trim().length > 0
+      ? record.slug.trim()
+      : typeof record.id === "string" && record.id.trim().length > 0
+        ? record.id.trim()
+        : null;
+
+  if (!slugValue) {
+    return null;
+  }
+
+  const labelSource =
+    typeof record.display_name === "string" && record.display_name.trim().length > 0
+      ? record.display_name.trim()
+      : typeof record.name === "string" && record.name.trim().length > 0
+        ? record.name.trim()
+        : undefined;
+
+  const metadata =
+    record.metadata && typeof record.metadata === "object"
+      ? (record.metadata as Record<string, unknown>)
+      : undefined;
+
+  return {
+    slug: slugValue,
+    label: labelSource ?? formatSkillDisplayName(slugValue),
+    metadata,
+    raw: definition,
+  };
+};
+
+const matchLegacyColumnFromString = (
+  value: string | null | undefined,
+): LegacySkillColumn | null => {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = sanitizeIdentifier(value);
+  if (!normalized) {
+    return null;
+  }
+
+  for (const column of LEGACY_SKILL_COLUMNS) {
+    const normalizedColumn = sanitizeIdentifier(column);
+    if (
+      normalized === normalizedColumn ||
+      normalized.startsWith(`${normalizedColumn}_`) ||
+      normalizedColumn.startsWith(`${normalized}_`) ||
+      normalized.includes(normalizedColumn) ||
+      normalizedColumn.includes(normalized)
+    ) {
+      return column as LegacySkillColumn;
+    }
+  }
+
+  return null;
+};
+
+const LEGACY_COLUMN_HEURISTICS: { pattern: RegExp; column: LegacySkillColumn }[] = [
+  { pattern: /(vocal|sing|rap|mc|lyric)/, column: "vocals" },
+  { pattern: /(guitar|strum|string)/, column: "guitar" },
+  { pattern: /(bass)/, column: "bass" },
+  { pattern: /(drum|percuss|rhythm|beat)/, column: "drums" },
+  { pattern: /(songwrit|lyric|poet|story)/, column: "songwriting" },
+  { pattern: /(compos|arrang|orches|theory|harmony)/, column: "composition" },
+  { pattern: /(stage|perform|show|crowd|tour|presence|gig)/, column: "performance" },
+  { pattern: /(business|finance|manage|deal|contract|industry)/, column: "business" },
+  { pattern: /(market|brand|promo|social|press|campaign|advert)/, column: "marketing" },
+  { pattern: /(creativ|innov|concept|imagin|original|idea)/, column: "creativity" },
+  { pattern: /(tech|engineer|mix|master|prod|software|digital|audio)/, column: "technical" },
+];
+
+const resolveLegacySkillColumn = (
+  definition: NormalizedSkillDefinition | undefined,
+): LegacySkillColumn | null => {
+  if (!definition) {
+    return null;
+  }
+
+  const directMatch = matchLegacyColumnFromString(definition.slug);
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const metadata = definition.metadata ?? {};
+  const metadataRecord = metadata as Record<string, unknown>;
+
+  const metadataKeys = [
+    "legacy_column",
+    "legacyColumn",
+    "legacy_skill_column",
+    "legacySkillColumn",
+    "legacy_skill",
+    "legacySkill",
+    "legacy",
+  ];
+
+  for (const key of metadataKeys) {
+    const match = matchLegacyColumnFromString(
+      typeof metadataRecord[key] === "string" ? (metadataRecord[key] as string) : undefined,
+    );
+    if (match) {
+      return match;
+    }
+  }
+
+  if (typeof metadataRecord.track === "string") {
+    const trackMatch = matchLegacyColumnFromString(metadataRecord.track);
+    if (trackMatch) {
+      return trackMatch;
+    }
+  }
+
+  if (typeof metadataRecord.category === "string") {
+    const categoryMatch = matchLegacyColumnFromString(metadataRecord.category);
+    if (categoryMatch) {
+      return categoryMatch;
+    }
+  }
+
+  const slugIdentifier = sanitizeIdentifier(definition.slug);
+  for (const heuristic of LEGACY_COLUMN_HEURISTICS) {
+    if (heuristic.pattern.test(slugIdentifier)) {
+      return heuristic.column;
+    }
+  }
+
+  const metadataValues = Object.values(metadataRecord)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => sanitizeIdentifier(value));
+
+  for (const value of metadataValues) {
+    for (const heuristic of LEGACY_COLUMN_HEURISTICS) {
+      if (heuristic.pattern.test(value)) {
+        return heuristic.column;
+      }
+    }
+
+    const match = matchLegacyColumnFromString(value);
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+};
+
+const aggregateSkillsForLegacyColumns = (
+  skillValuesBySlug: Record<string, number>,
+  definitionsBySlug: Map<string, NormalizedSkillDefinition>,
+): Record<string, number> => {
+  const aggregated: Record<string, number> = {};
+
+  Object.entries(skillValuesBySlug).forEach(([slug, value]) => {
+    const definition = definitionsBySlug.get(slug);
+    const legacyColumn = resolveLegacySkillColumn(definition);
+
+    if (!legacyColumn || legacyColumn === slug) {
+      return;
+    }
+
+    const normalizedValue = normalizeSkillValue(value);
+    const current = aggregated[legacyColumn];
+    aggregated[legacyColumn] =
+      typeof current === "number" ? Math.max(current, normalizedValue) : normalizedValue;
+  });
+
+  return aggregated;
+};
+
+const buildSkillStateFromRecord = (
+  record: Record<string, unknown> | null | undefined,
+  slugs: string[],
+  definitionsBySlug: Map<string, NormalizedSkillDefinition>,
+  previousState?: Record<string, number>,
+): Record<string, number> => {
+  const next: Record<string, number> = {};
+  const source = record ?? {};
+
+  slugs.forEach((slug) => {
+    const directValue = coerceNumber((source as Record<string, unknown>)[slug]);
+
+    if (typeof directValue === "number") {
+      next[slug] = normalizeSkillValue(directValue);
+      return;
+    }
+
+    const definition = definitionsBySlug.get(slug);
+    const legacyColumn = resolveLegacySkillColumn(definition);
+    const legacyValue = legacyColumn
+      ? coerceNumber((source as Record<string, unknown>)[legacyColumn])
+      : undefined;
+
+    if (typeof legacyValue === "number") {
+      next[slug] = normalizeSkillValue(legacyValue);
+      return;
+    }
+
+    if (previousState && typeof previousState[slug] === "number") {
+      next[slug] = normalizeSkillValue(previousState[slug]);
+      return;
+    }
+
+    next[slug] = MIN_SKILL_VALUE;
+  });
+
+  return next;
 };
 
 const normalizeSkillValue = (value: unknown): number => {
@@ -211,7 +475,7 @@ const ATTRIBUTE_KEYS = [
   "social_reach",
 ] as const;
 
-type SkillKey = keyof typeof defaultSkills;
+type SkillSlug = string;
 type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
 
 const defaultAttributes: Record<AttributeKey, number> = {
@@ -220,24 +484,6 @@ const defaultAttributes: Record<AttributeKey, number> = {
   stage_presence: 0,
   crowd_engagement: 0,
   social_reach: 0,
-};
-
-const buildSkillState = (
-  record: Record<string, unknown> | null | undefined,
-): Record<SkillKey, number> => {
-  const resolved: Record<SkillKey, number> = { ...defaultSkills };
-
-  if (!record) {
-    return resolved;
-  }
-
-  (Object.keys(defaultSkills) as SkillKey[]).forEach((key) => {
-    if (key in record) {
-      resolved[key] = normalizeSkillValue(record[key]);
-    }
-  });
-
-  return resolved;
 };
 
 type ProfileRow = Tables<"profiles">;
@@ -320,7 +566,15 @@ const CharacterCreation = () => {
   const [selectedAvatarCamera, setSelectedAvatarCamera] = useState<string>(
     defaultAvatarSelection.cameraId,
   );
-  const [skills, setSkills] = useState<Record<SkillKey, number>>(defaultSkills);
+  const [skills, setSkills] = useState<Record<SkillSlug, number>>(() =>
+    FALLBACK_SKILL_DEFINITIONS.reduce<Record<string, number>>((accumulator, definition) => {
+      accumulator[definition.slug] = MIN_SKILL_VALUE;
+      return accumulator;
+    }, {}),
+  );
+  const [loadedSkillsRecord, setLoadedSkillsRecord] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(defaultAttributes);
   const [existingAttributesRow, setExistingAttributesRow] =
     useState<Tables<"player_attributes"> | null>(null);
@@ -334,6 +588,64 @@ const CharacterCreation = () => {
   const [cities, setCities] = useState<CityOption[]>([]);
   const [citiesLoading, setCitiesLoading] = useState<boolean>(false);
   const [citiesError, setCitiesError] = useState<string | null>(null);
+
+  const normalizedSkillDefinitions = useMemo<NormalizedSkillDefinition[]>(() => {
+    const normalized = skillDefinitions
+      .map((definition) => normalizeSkillDefinition(definition))
+      .filter((definition): definition is NormalizedSkillDefinition => Boolean(definition));
+
+    const uniqueBySlug = new Map<string, NormalizedSkillDefinition>();
+    normalized.forEach((definition) => {
+      if (!uniqueBySlug.has(definition.slug)) {
+        uniqueBySlug.set(definition.slug, definition);
+      }
+    });
+
+    if (uniqueBySlug.size > 0) {
+      return Array.from(uniqueBySlug.values());
+    }
+
+    return FALLBACK_SKILL_DEFINITIONS;
+  }, [skillDefinitions]);
+
+  const skillSlugs = useMemo(
+    () => normalizedSkillDefinitions.map((definition) => definition.slug),
+    [normalizedSkillDefinitions],
+  );
+
+  const skillDefinitionsBySlug = useMemo(() => {
+    const mapping = new Map<string, NormalizedSkillDefinition>();
+    normalizedSkillDefinitions.forEach((definition) => {
+      mapping.set(definition.slug, definition);
+    });
+    return mapping;
+  }, [normalizedSkillDefinitions]);
+
+  useEffect(() => {
+    setSkills((previous) => {
+      const sanitized = skillSlugs.reduce<Record<string, number>>((accumulator, slug) => {
+        const currentValue = typeof previous[slug] === "number" ? previous[slug] : MIN_SKILL_VALUE;
+        accumulator[slug] = normalizeSkillValue(currentValue);
+        return accumulator;
+      }, {});
+
+      const previousKeys = Object.keys(previous);
+      const keysChanged =
+        previousKeys.length !== skillSlugs.length || skillSlugs.some((slug) => !(slug in previous));
+
+      return keysChanged ? sanitized : previous;
+    });
+  }, [skillSlugs]);
+
+  useEffect(() => {
+    if (!loadedSkillsRecord) {
+      return;
+    }
+
+    setSkills((previous) =>
+      buildSkillStateFromRecord(loadedSkillsRecord, skillSlugs, skillDefinitionsBySlug, previous),
+    );
+  }, [loadedSkillsRecord, skillSlugs, skillDefinitionsBySlug]);
 
   const slotNumber = existingProfile?.slot_number ?? 1;
   const unlockCost = existingProfile?.unlock_cost ?? 0;
@@ -513,18 +825,11 @@ const CharacterCreation = () => {
           setUsernameEdited(false);
         }
 
-        const mergedSkills: Record<SkillKey, number> = { ...defaultSkills };
+        const normalizedSkillsRow = skillsData
+          ? { ...(skillsData as Record<string, unknown>) }
+          : null;
 
-        if (skillsData) {
-          (Object.keys(defaultSkills) as SkillKey[]).forEach((key) => {
-            const value = skillsData?.[key];
-            if (typeof value === "number") {
-              mergedSkills[key] = value;
-            }
-          });
-        }
-
-        setSkills(buildSkillState(mergedSkills));
+        setLoadedSkillsRecord(normalizedSkillsRow);
 
         setExistingAttributesRow(attributesRow);
         setAttributes(buildAttributeState(attributesRow));
@@ -615,7 +920,7 @@ const CharacterCreation = () => {
     setUsernameEdited(true);
   };
 
-  const handleSkillChange = (key: SkillKey, value: number) => {
+  const handleSkillChange = (key: SkillSlug, value: number) => {
     setSkills((prev) => {
       const currentValue = prev[key];
       const clampedValue = normalizeSkillValue(value);
@@ -823,17 +1128,24 @@ const CharacterCreation = () => {
       setExistingProfile(upsertedProfile);
 
       const attributePoints = existingAttributesRow?.attribute_points ?? 0;
-      const normalizedSkillsPayload = (Object.keys(defaultSkills) as SkillKey[]).reduce<
-        Record<string, number>
-      >((accumulator, key) => {
-        const rawValue = skills[key];
-        accumulator[key] = normalizeSkillValue(rawValue);
-        return accumulator;
-      }, {});
+      const normalizedSkillsPayload = skillSlugs.reduce<Record<string, number>>(
+        (accumulator, slug) => {
+          const rawValue = skills[slug];
+          accumulator[slug] = normalizeSkillValue(rawValue);
+          return accumulator;
+        },
+        {},
+      );
+
+      const legacySkillsPayload = aggregateSkillsForLegacyColumns(
+        normalizedSkillsPayload,
+        skillDefinitionsBySlug,
+      );
 
       const baseSkillsPayload: Record<string, unknown> = {
         user_id: user.id,
         profile_id: upsertedProfile.id,
+        ...legacySkillsPayload,
         ...normalizedSkillsPayload,
       };
 
@@ -870,7 +1182,16 @@ const CharacterCreation = () => {
         throw skillsError;
       }
 
-      setSkills(buildSkillState(finalSkillsRow ?? attemptedSkillsPayload));
+      const persistedSkillsRecord = finalSkillsRow
+        ? { ...(finalSkillsRow as Record<string, unknown>) }
+        : { ...attemptedSkillsPayload };
+
+      const mergedSkillStateRecord: Record<string, unknown> = {
+        ...persistedSkillsRecord,
+        ...normalizedSkillsPayload,
+      };
+
+      setLoadedSkillsRecord(mergedSkillStateRecord);
       const normalizedAttributesPayload = ATTRIBUTE_KEYS.reduce<Record<string, number>>(
         (accumulator, key) => {
           accumulator[key] = normalizeAttributeValue(attributes[key]);
@@ -895,8 +1216,9 @@ const CharacterCreation = () => {
             return;
           }
 
-          const slug = definition.slug as SkillKey;
-          const assignedValue = slug in skills ? skills[slug as SkillKey] : undefined;
+          const normalizedDefinition = normalizeSkillDefinition(definition);
+          const slug = normalizedDefinition?.slug ?? null;
+          const assignedValue = slug && slug in skills ? skills[slug] : undefined;
           const defaultLevel = Number.isFinite(definition.starting_level)
             ? Number(definition.starting_level)
             : MIN_SKILL_VALUE;
@@ -1393,21 +1715,26 @@ const CharacterCreation = () => {
               )}
             </div>
             <div className="grid gap-5 md:grid-cols-2">
-              {(Object.keys(defaultSkills) as SkillKey[]).map((key) => (
-                <div key={key} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium capitalize">{key}</span>
-                    <span className="text-sm font-semibold text-primary">{skills[key]}</span>
+              {normalizedSkillDefinitions.map((definition) => {
+                const slug = definition.slug;
+                const currentValue = typeof skills[slug] === "number" ? skills[slug] : MIN_SKILL_VALUE;
+
+                return (
+                  <div key={slug} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{definition.label}</span>
+                      <span className="text-sm font-semibold text-primary">{currentValue}</span>
+                    </div>
+                    <Slider
+                      min={MIN_SKILL_VALUE}
+                      max={MAX_SKILL_VALUE}
+                      step={1}
+                      value={[currentValue]}
+                      onValueChange={([value]) => handleSkillChange(slug, value ?? currentValue)}
+                    />
                   </div>
-                  <Slider
-                    min={MIN_SKILL_VALUE}
-                    max={MAX_SKILL_VALUE}
-                    step={1}
-                    value={[skills[key]]}
-                    onValueChange={([value]) => handleSkillChange(key, value ?? skills[key])}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-muted-foreground">Career Attributes</h3>
