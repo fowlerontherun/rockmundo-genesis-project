@@ -82,6 +82,23 @@ type ProfileFormState = {
   city_of_birth: string | null;
 };
 
+const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+  "vocals",
+  "guitar",
+  "drums",
+  "bass",
+  "performance",
+  "songwriting",
+  "composition"
+];
+
+const attributeKeys: (keyof PlayerAttributes)[] = [
+  "creativity",
+  "business",
+  "marketing",
+  "technical"
+];
+
 const genderOptions: { value: ProfileGender; label: string }[] = [
   { value: "female", label: "Female" },
   { value: "male", label: "Male" },
@@ -99,21 +116,20 @@ const Profile = () => {
   const { profile, skills, attributes, updateProfile, freshWeeklyBonusAvailable, xpLedger, xpWallet } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
-  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
-    "vocals",
-    "guitar",
-    "drums",
-    "bass",
-    "performance",
-    "songwriting",
-    "composition"
-  ];
-  const attributeKeys: (keyof PlayerAttributes)[] = [
-    "creativity",
-    "business",
-    "marketing",
-    "technical"
-  ];
+  type MusicalSkill = { key: keyof PlayerSkills; value: number };
+
+  const musicalSkills = useMemo<MusicalSkill[]>(() => {
+    if (!skills) {
+      return [];
+    }
+
+    return instrumentSkillKeys
+      .map(skillKey => ({
+        key: skillKey,
+        value: Number(skills[skillKey] ?? 0)
+      }))
+      .filter(skill => Number.isFinite(skill.value) && skill.value >= 1);
+  }, [skills]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1222,31 +1238,36 @@ const Profile = () => {
                 <CardDescription>Your musical abilities and expertise levels</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {instrumentSkillKeys.map(skillKey => {
-                    const value = Number(skills?.[skillKey] ?? 0);
-                    const percent = Math.min(100, (value / 1000) * 100);
-                    return (
-                      <div key={skillKey} className="space-y-2">
-                        <span className="text-sm font-medium capitalize">{skillKey}</span>
-                        <Progress
-                          value={percent}
-                          className="h-2"
-                          aria-label={`${skillKey} skill level ${value} out of 1000`}
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          {value >= 800
-                            ? "Expert"
-                            : value >= 600
-                              ? "Advanced"
-                              : value >= 400
-                                ? "Intermediate"
-                                : "Beginner"}
+                {musicalSkills.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {musicalSkills.map(({ key: skillKey, value }) => {
+                      const percent = Math.min(100, (value / 1000) * 100);
+                      return (
+                        <div key={skillKey} className="space-y-2">
+                          <span className="text-sm font-medium capitalize">{skillKey}</span>
+                          <Progress
+                            value={percent}
+                            className="h-2"
+                            aria-label={`${skillKey} skill level ${value} out of 1000`}
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {value >= 800
+                              ? "Expert"
+                              : value >= 600
+                                ? "Advanced"
+                                : value >= 400
+                                  ? "Intermediate"
+                                  : "Beginner"}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No musical skills meet the minimum level yet. Earn at least one point to see your progress.
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
