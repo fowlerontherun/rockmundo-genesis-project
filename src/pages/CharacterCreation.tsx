@@ -227,6 +227,10 @@ const CharacterCreation = () => {
   const [citiesLoading, setCitiesLoading] = useState<boolean>(false);
   const [citiesError, setCitiesError] = useState<string | null>(null);
 
+  const slotNumber = existingProfile?.slot_number ?? 1;
+  const unlockCost = existingProfile?.unlock_cost ?? 0;
+  const isActive = existingProfile?.is_active ?? true;
+
   const selectedStyleDefinition = useMemo(
     () => avatarStyles.find((style) => style.id === selectedAvatarStyle) ?? avatarStyles[0],
     [selectedAvatarStyle],
