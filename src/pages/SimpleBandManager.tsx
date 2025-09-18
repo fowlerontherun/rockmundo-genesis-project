@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,13 +26,28 @@ export default function SimpleBandManager() {
 
   const genres = ["Rock", "Pop", "Jazz", "Blues", "Electronic", "Country", "Hip-Hop", "Classical"];
 
-  useEffect(() => {
-    if (user?.id) {
-      loadBandData();
-    }
-  }, [user?.id]);
+  const loadBandMembers = useCallback(async (bandId: string) => {
+    try {
+      const { data } = await supabase
+        .from("band_members")
+        .select(`
+          *,
+          profiles:user_id (
+            display_name,
+            username
+          )
+        `)
+        .eq("band_id", bandId);
 
-  const loadBandData = async () => {
+      if (data) {
+        setMembers(data as BandMemberWithProfile[]);
+      }
+    } catch (error) {
+      console.error("Error loading band members:", error);
+    }
+  }, []);
+
+  const loadBandData = useCallback(async () => {
     if (!user?.id) return;
 
     try {
@@ -64,28 +79,15 @@ export default function SimpleBandManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadBandMembers, user?.id]);
 
-  const loadBandMembers = async (bandId: string) => {
-    try {
-      const { data } = await supabase
-        .from("band_members")
-        .select(`
-          *,
-          profiles:user_id (
-            display_name,
-            username
-          )
-        `)
-        .eq("band_id", bandId);
-
-      if (data) {
-        setMembers(data as BandMemberWithProfile[]);
-      }
-    } catch (error) {
-      console.error("Error loading band members:", error);
+  useEffect(() => {
+    if (!user?.id) {
+      return;
     }
-  };
+
+    loadBandData();
+  }, [loadBandData, user?.id]);
 
   const createBand = async () => {
     if (!user?.id || !newBandName.trim()) {
