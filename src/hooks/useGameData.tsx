@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
@@ -38,6 +39,35 @@ type SkillUnlockUpsertInput = any;
 type Nullable<T> = T | null;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
+
+const isMissingColumnError = (error: PostgrestError | null | undefined, column: string) =>
+  Boolean(
+    error?.code === "42703" &&
+      error.message?.toLowerCase().includes(column.toLowerCase())
+  );
+
+const extractMissingColumn = (error: PostgrestError | null | undefined) => {
+  const match = error?.message?.match(
+    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i
+  );
+  return match?.[1] ?? null;
+};
+
+const isMissingTableError = (error: PostgrestError | null | undefined) =>
+  Boolean(
+    error?.code === "42P01" ||
+      error?.code === "PGRST201" ||
+      error?.message?.toLowerCase().includes("does not exist")
+  );
+
+const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
+  if (!(key in source)) {
+    return source;
+  }
+
+  const { [key]: _omitted, ...rest } = source;
+  return rest as T;
+};
 
 export interface CreateCharacterInput {
   username: string;
@@ -244,6 +274,7 @@ const useProvideGameData = (): GameDataContextValue => {
   const [charactersLoading, setCharactersLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const supportsProfileScopedDataRef = useRef<boolean | null>(null);
   const clearGameState = useCallback(() => {
     setProfile(null);
     setSkills(null);
@@ -335,47 +366,11 @@ const useProvideGameData = (): GameDataContextValue => {
     setError(null);
 
     try {
-      const [
-        profileResponse,
-        skillsResponse,
-        attributeDefinitionsResponse,
-        profileAttributesResponse,
-        activityResponse,
-        skillDefinitionsResponse,
-        skillProgressResponse,
-        skillUnlocksResponse
-      ] = (await Promise.all([
-        supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", selectedCharacterId)
-          .maybeSingle(),
-        supabase
-          .from("player_skills")
-          .select("*")
-          .eq("profile_id", selectedCharacterId)
-          .maybeSingle(),
-        Promise.resolve({ data: [], error: null }), // placeholder for attribute_definitions
-        Promise.resolve({ data: [], error: null }), // placeholder for profile_attributes
-        supabase
-          .from("activity_feed")
-          .select("*")
-          .eq("profile_id", selectedCharacterId)
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase.from("skill_definitions").select("*"),
-        supabase.from("profile_skill_progress").select("*").eq("profile_id", selectedCharacterId),
-        Promise.resolve({ data: [], error: null }) // placeholder for profile_skill_unlocks
-      ])) as [
-        PostgrestMaybeSingleResponse<PlayerProfile>,
-        PostgrestMaybeSingleResponse<PlayerSkills>,
-        PostgrestResponse<AttributeDefinition>,
-        PostgrestResponse<ProfileAttribute>,
-        PostgrestResponse<ActivityItem>,
-        PostgrestResponse<SkillDefinition>,
-        PostgrestResponse<SkillProgressRow>,
-        PostgrestResponse<SkillUnlockRow>
-      ];
+      const profileResponse = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", selectedCharacterId)
+        .maybeSingle();
 
       if (profileResponse.error && profileResponse.status !== 406) {
         throw profileResponse.error;
@@ -395,32 +390,95 @@ const useProvideGameData = (): GameDataContextValue => {
       setProfile(character);
       await resolveCurrentCity(character.current_city_id ?? null);
 
-      if (skillsResponse.error && skillsResponse.status !== 406) {
-        throw skillsResponse.error;
+      let skillsResponse: PostgrestMaybeSingleResponse<PlayerSkills> | undefined;
+
+      if (supportsProfileScopedDataRef.current === false) {
+        skillsResponse = await supabase
+          .from("player_skills")
+          .select("*")
+          .eq("user_id", character.user_id)
+          .maybeSingle();
+
+        if (skillsResponse.error && skillsResponse.status !== 406) {
+          throw skillsResponse.error;
+        }
+      } else {
+        const attempt = await supabase
+          .from("player_skills")
+          .select("*")
+          .eq("profile_id", selectedCharacterId)
+          .maybeSingle();
+
+        if (attempt.error) {
+          if (isMissingColumnError(attempt.error, "profile_id")) {
+            supportsProfileScopedDataRef.current = false;
+            skillsResponse = await supabase
+              .from("player_skills")
+              .select("*")
+              .eq("user_id", character.user_id)
+              .maybeSingle();
+
+            if (skillsResponse.error && skillsResponse.status !== 406) {
+              throw skillsResponse.error;
+            }
+          } else if (attempt.status !== 406) {
+            throw attempt.error;
+          } else {
+            skillsResponse = attempt;
+          }
+        } else {
+          supportsProfileScopedDataRef.current = true;
+          skillsResponse = attempt;
+        }
       }
 
-      let skillsData = skillsResponse.data ?? null;
+      let skillsData = skillsResponse?.data ?? null;
 
       if (!skillsData) {
-        const { data: insertedSkills, error: insertSkillsError } = await supabase
+        const baseSkillPayload: Record<string, unknown> = {
+          user_id: character.user_id,
+          profile_id: character.id
+        };
+
+        const initialSkillPayload =
+          supportsProfileScopedDataRef.current === false
+            ? omitFromRecord(baseSkillPayload, "profile_id")
+            : baseSkillPayload;
+
+        const insertedSkills = await supabase
           .from("player_skills")
-          .insert({
-            user_id: character.user_id,
-            profile_id: character.id
-          })
+          .insert(initialSkillPayload)
           .select()
           .single();
 
-        if (insertSkillsError) throw insertSkillsError;
-        skillsData = insertedSkills;
+        if (insertedSkills.error) {
+          if (isMissingColumnError(insertedSkills.error, "profile_id")) {
+            supportsProfileScopedDataRef.current = false;
+            const fallbackInsert = await supabase
+              .from("player_skills")
+              .insert(omitFromRecord(baseSkillPayload, "profile_id"))
+              .select()
+              .single();
+
+            if (fallbackInsert.error) {
+              throw fallbackInsert.error;
+            }
+
+            skillsData = fallbackInsert.data;
+          } else {
+            throw insertedSkills.error;
+          }
+        } else {
+          skillsData = insertedSkills.data;
+        }
       }
 
       setSkills(skillsData);
 
-      const definitions = attributeDefinitionsResponse.data ?? [];
+      const definitions: AttributeDefinition[] = [];
       setAttributeDefinitions(definitions);
 
-      const profileAttributeRows = profileAttributesResponse.data ?? [];
+      const profileAttributeRows: ProfileAttribute[] = [];
       const definitionById = new Map(definitions.map(definition => [definition.id, definition]));
 
       const resolvedAttributes = profileAttributeRows.reduce<Record<string, number>>((acc, row) => {
@@ -431,38 +489,134 @@ const useProvideGameData = (): GameDataContextValue => {
         return acc;
       }, {});
 
-      const { data: attributeRows, error: attributesError } = await supabase
-        .from("player_attributes")
-        .select("*")
-        .eq("profile_id", selectedCharacterId);
+      let attributesResponse: PostgrestMaybeSingleResponse<PlayerAttributes> | undefined;
 
-      if (attributesError && attributesError.code !== "PGRST116") throw attributesError;
+      if (supportsProfileScopedDataRef.current === false) {
+        attributesResponse = await supabase
+          .from("player_attributes")
+          .select("*")
+          .eq("user_id", character.user_id)
+          .maybeSingle();
+      } else {
+        const attempt = await supabase
+          .from("player_attributes")
+          .select("*")
+          .eq("profile_id", selectedCharacterId)
+          .maybeSingle();
 
-      let attributesData = attributeRows?.[0] ?? null;
-
-      if (skillUnlocksResponse.error) {
-        throw skillUnlocksResponse.error;
+        if (attempt.error) {
+          if (isMissingColumnError(attempt.error, "profile_id")) {
+            supportsProfileScopedDataRef.current = false;
+            attributesResponse = await supabase
+              .from("player_attributes")
+              .select("*")
+              .eq("user_id", character.user_id)
+              .maybeSingle();
+          } else if (
+            attempt.error.code !== "PGRST116" &&
+            attempt.status !== 406
+          ) {
+            throw attempt.error;
+          } else {
+            attributesResponse = attempt;
+          }
+        } else {
+          supportsProfileScopedDataRef.current = true;
+          attributesResponse = attempt;
+        }
       }
 
+      if (
+        attributesResponse?.error &&
+        attributesResponse.error.code !== "PGRST116" &&
+        attributesResponse.status !== 406
+      ) {
+        throw attributesResponse.error;
+      }
+
+      let attributesData = attributesResponse?.data ?? null;
+
       if (!attributesData) {
-        const { data: insertedAttributes, error: insertAttributesError } = await supabase
+        const baseAttributePayload: Record<string, unknown> = {
+          user_id: character.user_id,
+          profile_id: character.id,
+          attribute_points: 0,
+          mental_focus: resolvedAttributes["mental_focus"] ?? 0,
+          physical_endurance: resolvedAttributes["physical_endurance"] ?? 0
+        };
+
+        const initialAttributePayload =
+          supportsProfileScopedDataRef.current === false
+            ? omitFromRecord(baseAttributePayload, "profile_id")
+            : baseAttributePayload;
+
+        const insertedAttributes = await supabase
           .from("player_attributes")
-          .insert({
-            user_id: character.user_id,
-            profile_id: character.id,
-            attribute_points: 0,
-            mental_focus: resolvedAttributes["mental_focus"] ?? 0,
-            physical_endurance: resolvedAttributes["physical_endurance"] ?? 0
-          })
+          .insert(initialAttributePayload)
           .select()
           .single();
 
-        if (insertAttributesError) throw insertAttributesError;
-        attributesData = insertedAttributes;
+        if (insertedAttributes.error) {
+          if (isMissingColumnError(insertedAttributes.error, "profile_id")) {
+            supportsProfileScopedDataRef.current = false;
+            const fallbackInsert = await supabase
+              .from("player_attributes")
+              .insert(omitFromRecord(baseAttributePayload, "profile_id"))
+              .select()
+              .single();
+
+            if (fallbackInsert.error) {
+              throw fallbackInsert.error;
+            }
+
+            attributesData = fallbackInsert.data;
+          } else {
+            throw insertedAttributes.error;
+          }
+        } else {
+          attributesData = insertedAttributes.data;
+        }
       }
 
-      setAttributes(attributesData);
+      setAttributes(attributesData ?? {});
+
+      let activityResponse = await supabase
+        .from("activity_feed")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (activityResponse.error) {
+        if (isMissingColumnError(activityResponse.error, "profile_id")) {
+          supportsProfileScopedDataRef.current = false;
+          activityResponse = await supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", character.user_id)
+            .order("created_at", { ascending: false })
+            .limit(10);
+
+          if (activityResponse.error) {
+            throw activityResponse.error;
+          }
+        } else {
+          throw activityResponse.error;
+        }
+      } else {
+        supportsProfileScopedDataRef.current = true;
+      }
+
       setActivities(activityResponse.data ?? []);
+
+      const [skillDefinitionsResponse, skillProgressResponse] = await Promise.all([
+        supabase.from("skill_definitions").select("*"),
+        supabase
+          .from("profile_skill_progress")
+          .select("*")
+          .eq("profile_id", selectedCharacterId)
+      ]);
+
       const sortedSkillDefinitions = sortByOptionalKeys(
         ((skillDefinitionsResponse.data ?? []) as SkillDefinition[]).filter(Boolean),
         ["display_order", "sort_order", "order_index", "position"],
@@ -470,8 +624,28 @@ const useProvideGameData = (): GameDataContextValue => {
       ) as SkillDefinition[];
 
       setSkillDefinitions(sortedSkillDefinitions);
-      setSkillProgress(skillProgressResponse.data ?? []);
-      setSkillUnlockRows(skillUnlocksResponse.data ?? []);
+
+      let skillProgressData: SkillProgressRow[] = [];
+
+      if (skillProgressResponse.error) {
+        if (
+          skillProgressResponse.status === 404 ||
+          isMissingTableError(skillProgressResponse.error) ||
+          isMissingColumnError(skillProgressResponse.error, "profile_id")
+        ) {
+          if (isMissingColumnError(skillProgressResponse.error, "profile_id")) {
+            supportsProfileScopedDataRef.current = false;
+          }
+          skillProgressData = [];
+        } else {
+          throw skillProgressResponse.error;
+        }
+      } else {
+        skillProgressData = (skillProgressResponse.data ?? []) as SkillProgressRow[];
+      }
+
+      setSkillProgress(skillProgressData);
+      setSkillUnlockRows([]);
     } catch (err) {
       console.error("Error fetching game data:", err);
       setError(extractErrorMessage(err));
@@ -546,26 +720,46 @@ const useProvideGameData = (): GameDataContextValue => {
         throw new Error("No active character selected.");
       }
 
-      const payload = {
+      const basePayload = {
         ...updates,
         updated_at: updates.updated_at ?? new Date().toISOString()
       };
 
-      const { data, error: updateError } = await supabase
-        .from("profiles")
-        .update(payload)
-        .eq("id", selectedCharacterId)
-        .select()
-        .maybeSingle();
+      let attemptedPayload: Record<string, unknown> = { ...basePayload };
+      const skippedColumns = new Set<string>();
 
-      if (updateError) {
-        console.error("Error updating profile:", updateError);
-        throw updateError;
+      while (Object.keys(attemptedPayload).length > 0) {
+        const response = await supabase
+          .from("profiles")
+          .update(attemptedPayload)
+          .eq("id", selectedCharacterId)
+          .select()
+          .maybeSingle();
+
+        if (!response.error) {
+          const appliedPayload = attemptedPayload as Partial<PlayerProfile>;
+          const nextProfile = response.data ?? (profile ? { ...profile, ...appliedPayload } : null);
+          setProfile(nextProfile);
+          return nextProfile ?? undefined;
+        }
+
+        if (response.error.code === "42703") {
+          const missingColumn = extractMissingColumn(response.error);
+          if (!missingColumn || skippedColumns.has(missingColumn)) {
+            console.error("Error updating profile:", response.error);
+            throw response.error;
+          }
+
+          skippedColumns.add(missingColumn);
+          attemptedPayload = omitFromRecord(attemptedPayload, missingColumn);
+          continue;
+        }
+
+        console.error("Error updating profile:", response.error);
+        throw response.error;
       }
 
-      const nextProfile = data ?? (profile ? { ...profile, ...payload } : null);
-      setProfile(nextProfile);
-      return nextProfile ?? undefined;
+      return profile ?? undefined;
     },
     [profile, selectedCharacterId, user]
   );
@@ -581,19 +775,37 @@ const useProvideGameData = (): GameDataContextValue => {
         updated_at: updates.updated_at ?? new Date().toISOString()
       };
 
-      const { data, error: updateError } = await supabase
+      const primaryColumn = supportsProfileScopedDataRef.current === false ? "user_id" : "profile_id";
+      const primaryValue = primaryColumn === "user_id" ? user.id : selectedCharacterId;
+
+      let updateResponse = await supabase
         .from("player_skills")
         .update(payload)
-        .eq("profile_id", selectedCharacterId)
+        .eq(primaryColumn, primaryValue)
         .select()
         .maybeSingle();
 
-      if (updateError) {
-        console.error("Error updating skills:", updateError);
-        throw updateError;
+      if (updateResponse.error) {
+        if (
+          primaryColumn === "profile_id" &&
+          isMissingColumnError(updateResponse.error, "profile_id")
+        ) {
+          supportsProfileScopedDataRef.current = false;
+          updateResponse = await supabase
+            .from("player_skills")
+            .update(payload)
+            .eq("user_id", user.id)
+            .select()
+            .maybeSingle();
+        } else {
+          console.error("Error updating skills:", updateResponse.error);
+          throw updateResponse.error;
+        }
+      } else if (primaryColumn === "profile_id") {
+        supportsProfileScopedDataRef.current = true;
       }
 
-      const nextSkills = data ?? (skills ? { ...skills, ...payload } : null);
+      const nextSkills = updateResponse.data ?? (skills ? { ...skills, ...payload } : null);
       setSkills(nextSkills);
       return nextSkills ?? undefined;
     },
@@ -612,18 +824,36 @@ const useProvideGameData = (): GameDataContextValue => {
       };
 
       try {
-        const { data, error: updateError } = await supabase
+        const primaryColumn = supportsProfileScopedDataRef.current === false ? "user_id" : "profile_id";
+        const primaryValue = primaryColumn === "user_id" ? user.id : selectedCharacterId;
+
+        let updateResponse = await supabase
           .from("player_attributes")
           .update(payload)
-          .eq("profile_id", selectedCharacterId)
+          .eq(primaryColumn, primaryValue)
           .select()
           .maybeSingle();
 
-        if (updateError) {
-          throw updateError;
+        if (updateResponse.error) {
+          if (
+            primaryColumn === "profile_id" &&
+            isMissingColumnError(updateResponse.error, "profile_id")
+          ) {
+            supportsProfileScopedDataRef.current = false;
+            updateResponse = await supabase
+              .from("player_attributes")
+              .update(payload)
+              .eq("user_id", user.id)
+              .select()
+              .maybeSingle();
+          } else {
+            throw updateResponse.error;
+          }
+        } else if (primaryColumn === "profile_id") {
+          supportsProfileScopedDataRef.current = true;
         }
 
-        const nextAttributes = data ?? (attributes ? { ...attributes, ...payload } : null);
+        const nextAttributes = updateResponse.data ?? (attributes ? { ...attributes, ...payload } : null);
         setAttributes(nextAttributes);
         return nextAttributes;
       } catch (updateError) {
@@ -674,23 +904,43 @@ const useProvideGameData = (): GameDataContextValue => {
         throw new Error("No active character selected.");
       }
 
-      const { data, error: insertError } = await supabase
+      const baseActivityPayload: Record<string, unknown> = {
+        user_id: user.id,
+        profile_id: selectedCharacterId,
+        activity_type: activityType,
+        message,
+        earnings,
+        metadata: metadata ?? null
+      };
+
+      const initialActivityPayload =
+        supportsProfileScopedDataRef.current === false
+          ? omitFromRecord(baseActivityPayload, "profile_id")
+          : baseActivityPayload;
+
+      let insertResponse = await supabase
         .from("activity_feed")
-        .insert({
-          user_id: user.id,
-          profile_id: selectedCharacterId,
-          activity_type: activityType,
-          message,
-          earnings,
-          metadata: metadata ?? null
-        })
+        .insert(initialActivityPayload)
         .select()
         .single();
 
-      if (insertError) {
-        console.error("Error adding activity:", insertError);
-        throw insertError;
+      if (insertResponse.error) {
+        if (isMissingColumnError(insertResponse.error, "profile_id")) {
+          supportsProfileScopedDataRef.current = false;
+          insertResponse = await supabase
+            .from("activity_feed")
+            .insert(omitFromRecord(baseActivityPayload, "profile_id"))
+            .select()
+            .single();
+        } else {
+          console.error("Error adding activity:", insertResponse.error);
+          throw insertResponse.error;
+        }
+      } else {
+        supportsProfileScopedDataRef.current = true;
       }
+
+      const data = insertResponse.data;
 
       if (!data) {
         throw new Error("No activity data returned from Supabase.");
@@ -725,30 +975,79 @@ const useProvideGameData = (): GameDataContextValue => {
           await updateProfile({ cash: (profile.cash ?? 0) - unlockCost });
         }
 
-        const { data: newProfile, error: profileInsertError } = await supabase
-          .from("profiles")
-          .insert({
-            user_id: user.id,
-            username,
-            display_name: displayName,
-            slot_number: slotNumber,
-            unlock_cost: unlockCost,
-            is_active: makeActive
-          })
-          .select()
-          .single();
+        const baseProfilePayload: Record<string, unknown> = {
+          user_id: user.id,
+          username,
+          display_name: displayName,
+          slot_number: slotNumber,
+          unlock_cost: unlockCost,
+          is_active: makeActive
+        };
 
-        if (profileInsertError) throw profileInsertError;
-        if (!newProfile) throw new Error("Failed to create character profile.");
+        const skippedProfileColumns = new Set<string>();
+        let attemptedProfilePayload = { ...baseProfilePayload };
+        let newProfile: PlayerProfile | null = null;
+
+        while (Object.keys(attemptedProfilePayload).length > 0) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .insert(attemptedProfilePayload)
+            .select()
+            .single();
+
+          if (!error) {
+            newProfile = data ?? null;
+            break;
+          }
+
+          if (error.code === "42703") {
+            const missingColumn = extractMissingColumn(error);
+            if (!missingColumn || skippedProfileColumns.has(missingColumn)) {
+              throw error;
+            }
+
+            skippedProfileColumns.add(missingColumn);
+            attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+            continue;
+          }
+
+          throw error;
+        }
+
+        if (!newProfile) {
+          throw new Error("Failed to create character profile.");
+        }
+
+        const baseNewSkillPayload: Record<string, unknown> = {
+          user_id: user.id,
+          profile_id: newProfile.id
+        };
+
+        const initialNewSkillPayload =
+          supportsProfileScopedDataRef.current === false
+            ? omitFromRecord(baseNewSkillPayload, "profile_id")
+            : baseNewSkillPayload;
 
         const { error: skillsInsertError } = await supabase
           .from("player_skills")
-          .insert({
-            user_id: user.id,
-            profile_id: newProfile.id
-          });
+          .insert(initialNewSkillPayload);
 
-        if (skillsInsertError) throw skillsInsertError;
+        if (skillsInsertError) {
+          if (isMissingColumnError(skillsInsertError, "profile_id")) {
+            supportsProfileScopedDataRef.current = false;
+            const { error: fallbackSkillError } = await supabase
+              .from("player_skills")
+              .insert(omitFromRecord(baseNewSkillPayload, "profile_id"));
+
+            if (fallbackSkillError) {
+              throw fallbackSkillError;
+            }
+          } else {
+            throw skillsInsertError;
+          }
+        } else {
+          supportsProfileScopedDataRef.current = true;
+        }
 
         if (skillDefinitions.length > 0) {
           await Promise.all([
@@ -761,14 +1060,36 @@ const useProvideGameData = (): GameDataContextValue => {
         }
 
         if (attributeDefinitions.length > 0) {
+          const baseNewAttributePayload: Record<string, unknown> = {
+            user_id: user.id,
+            profile_id: newProfile.id
+          };
+
+          const initialNewAttributePayload =
+            supportsProfileScopedDataRef.current === false
+              ? omitFromRecord(baseNewAttributePayload, "profile_id")
+              : baseNewAttributePayload;
+
           const { error: attributeInsertError } = await supabase
             .from("player_attributes")
-            .insert({
-              user_id: user.id,
-              profile_id: newProfile.id
-            });
+            .insert(initialNewAttributePayload);
 
-          if (attributeInsertError) throw attributeInsertError;
+          if (attributeInsertError) {
+            if (isMissingColumnError(attributeInsertError, "profile_id")) {
+              supportsProfileScopedDataRef.current = false;
+              const { error: fallbackAttributeError } = await supabase
+                .from("player_attributes")
+                .insert(omitFromRecord(baseNewAttributePayload, "profile_id"));
+
+              if (fallbackAttributeError) {
+                throw fallbackAttributeError;
+              }
+            } else {
+              throw attributeInsertError;
+            }
+          } else {
+            supportsProfileScopedDataRef.current = true;
+          }
         }
 
         setCharacters(prev => [...prev, newProfile]);
@@ -798,10 +1119,10 @@ const useProvideGameData = (): GameDataContextValue => {
       throw new Error("You must be signed in to reset a character.");
     }
 
-    const { data, error: resetError } = await supabase.rpc('reset_player_character');
+    const { data, error: resetError } = await supabase.rpc("reset_player_character");
 
     if (resetError) {
-      console.error('Error resetting character:', resetError);
+      console.error("Error resetting character:", resetError);
       throw resetError;
     }
 

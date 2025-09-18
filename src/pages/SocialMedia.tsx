@@ -38,6 +38,7 @@ import {
   Plus,
   Send,
 } from "lucide-react";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 type SocialPostRow = Database["public"]["Tables"]["social_posts"]["Row"];
 type SocialCampaignRow = Database["public"]["Tables"]["social_campaigns"]["Row"];
@@ -101,6 +102,22 @@ interface CampaignFormState {
 }
 
 const campaignStatusOptions: CampaignStatus[] = ["Active", "Completed"];
+
+const extractMissingColumn = (error: PostgrestError | null | undefined) => {
+  const match = error?.message?.match(
+    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i,
+  );
+  return match?.[1] ?? null;
+};
+
+const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
+  if (!(key in source)) {
+    return source;
+  }
+
+  const { [key]: _omitted, ...rest } = source;
+  return rest as T;
+};
 
 const getDisplayName = (profile?: SocialProfile) => {
   if (!profile) {
@@ -583,24 +600,37 @@ const SocialMedia = () => {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("user_id, followers, engagement_rate, username, display_name, avatar_url")
+          .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
 
         if (error) {
+          if (error.code === "42703") {
+            setFollowers(0);
+            setEngagementRate(0);
+            return;
+          }
+
           throw error;
         }
 
         if (data) {
-          setFollowers(data.followers ?? 0);
-          setEngagementRate(data.engagement_rate ?? 0);
-          setProfileLookup((previous) => ({
+          const followerCount = typeof data.followers === "number"
+            ? data.followers
+            : typeof data.fans === "number"
+              ? data.fans
+              : 0;
+          const engagement = typeof data.engagement_rate === "number" ? data.engagement_rate : 0;
+
+          setFollowers(followerCount);
+          setEngagementRate(engagement);
+          setProfileLookup(previous => ({
             ...previous,
             [data.user_id]: {
               userId: data.user_id,
               username: data.username,
-              displayName: data.display_name ?? data.username,
-              avatarUrl: getStoredAvatarPreviewUrl(data.avatar_url ?? null),
+              displayName: data.display_name ?? data.username ?? "Player",
+              avatarUrl: getStoredAvatarPreviewUrl(data.avatar_url ?? null)
             },
           }));
         } else {
@@ -876,17 +906,50 @@ const SocialMedia = () => {
       setFollowers(nextFollowers);
       setEngagementRate(nextEngagement);
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          followers: nextFollowers,
-          engagement_rate: nextEngagement,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
+      const updatePayload: Record<string, unknown> = {
+        followers: nextFollowers,
+        fans: nextFollowers,
+        engagement_rate: nextEngagement,
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) {
-        console.error("Error updating social metrics:", error);
+      let attemptedPayload: Record<string, unknown> = { ...updatePayload };
+      const skippedColumns = new Set<string>();
+      let updateError: PostgrestError | null = null;
+
+      while (Object.keys(attemptedPayload).length > 0) {
+        const { error } = await supabase
+          .from("profiles")
+          .update(attemptedPayload)
+          .eq("user_id", user.id);
+
+        if (!error) {
+          updateError = null;
+          break;
+        }
+
+        if (error.code === "42703") {
+          const missingColumn = extractMissingColumn(error);
+          if (!missingColumn || skippedColumns.has(missingColumn)) {
+            updateError = error;
+            break;
+          }
+
+          skippedColumns.add(missingColumn);
+          attemptedPayload = omitFromRecord(attemptedPayload, missingColumn);
+          continue;
+        }
+
+        updateError = error;
+        break;
+      }
+
+      if (Object.keys(attemptedPayload).length === 0 && updateError?.code === "42703") {
+        updateError = null;
+      }
+
+      if (updateError) {
+        console.error("Error updating social metrics:", updateError);
         setFollowers(currentFollowers);
         setEngagementRate(currentEngagement);
         toast({

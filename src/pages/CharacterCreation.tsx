@@ -44,6 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sortByOptionalKeys } from "@/utils/sorting";
 import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
 import { getStoredAvatarSelection, serializeAvatarData } from "@/utils/avatar";
@@ -78,6 +79,22 @@ const backgrounds = [
 const TOTAL_SKILL_POINTS = 13;
 const MIN_SKILL_VALUE = 1;
 const MAX_SKILL_VALUE = 10;
+
+const extractMissingColumn = (error: PostgrestError | null | undefined) => {
+  const match = error?.message?.match(
+    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i
+  );
+  return match?.[1] ?? null;
+};
+
+const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
+  if (!(key in source)) {
+    return source;
+  }
+
+  const { [key]: _omitted, ...rest } = source;
+  return rest as T;
+};
 
 const defaultSkills = {
   guitar: 1,
@@ -278,9 +295,7 @@ const CharacterCreation = () => {
         const [profileResponse, skillsResponse, attributesResponse] = await Promise.all([
           supabase
             .from("profiles")
-            .select(
-              "id, username, display_name, bio, avatar_url, level, experience, cash, fans, followers, fame, engagement_rate, gender, city_of_birth, age"
-            )
+            .select("*")
             .eq("user_id", user.id)
             .maybeSingle(),
           supabase
@@ -592,7 +607,7 @@ const CharacterCreation = () => {
       avatarPreviewUrl(avatarSelection.styleId),
     );
 
-    const profilePayload: ProfileInsert = {
+    const baseProfilePayload: Record<string, unknown> = {
       user_id: user.id,
       username: trimmedUsername,
       display_name: trimmedDisplayName,
@@ -610,25 +625,36 @@ const CharacterCreation = () => {
       city_of_birth: cityOfBirth,
     };
 
-    const skillPayload: PlayerSkillsInsert = {
-      user_id: user.id,
-      guitar: skills.guitar,
-      vocals: skills.vocals,
-      drums: skills.drums,
-      bass: skills.bass,
-      performance: skills.performance,
-      songwriting: skills.songwriting,
-      composition: skills.composition,
-    };
-
     try {
-      const { data: upsertedProfile, error: profileError } = await supabase
-        .from("profiles")
-        .upsert(profilePayload, { onConflict: "user_id" })
-        .select()
-        .single();
+      let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
+      const skippedProfileColumns = new Set<string>();
+      let upsertedProfile: PlayerProfile | null = null;
 
-      if (profileError) {
+      while (!upsertedProfile) {
+        const { data, error: profileError } = await supabase
+          .from("profiles")
+          .upsert(attemptedProfilePayload as ProfileInsert)
+          .select()
+          .single();
+
+        if (!profileError) {
+          upsertedProfile = data as PlayerProfile | null;
+          break;
+        }
+
+        if (profileError.code === "42703") {
+          const missingColumn = extractMissingColumn(profileError);
+          if (
+            missingColumn &&
+            !skippedProfileColumns.has(missingColumn) &&
+            missingColumn in attemptedProfilePayload
+          ) {
+            skippedProfileColumns.add(missingColumn);
+            attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+            continue;
+          }
+        }
+
         throw profileError;
       }
 
@@ -636,7 +662,7 @@ const CharacterCreation = () => {
         throw new Error("Profile save did not return any data.");
       }
 
-      const attributesPayload: PlayerAttributesInsert = {
+      const baseAttributesPayload: Record<string, unknown> = {
         user_id: user.id,
         profile_id: upsertedProfile.id,
         composition: Math.min(
@@ -705,11 +731,31 @@ const CharacterCreation = () => {
         }
       }
 
-      const { error: attributesError } = await supabase
-        .from("player_attributes")
-        .upsert(attributesPayload, { onConflict: "user_id" });
+      let attemptedAttributesPayload: Record<string, unknown> = { ...baseAttributesPayload };
+      const skippedAttributeColumns = new Set<string>();
 
-      if (attributesError) {
+      while (true) {
+        const { error: attributesError } = await supabase
+          .from("player_attributes")
+          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "user_id" });
+
+        if (!attributesError) {
+          break;
+        }
+
+        if (attributesError.code === "42703") {
+          const missingColumn = extractMissingColumn(attributesError);
+          if (
+            missingColumn &&
+            !skippedAttributeColumns.has(missingColumn) &&
+            missingColumn in attemptedAttributesPayload
+          ) {
+            skippedAttributeColumns.add(missingColumn);
+            attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
+            continue;
+          }
+        }
+
         throw attributesError;
       }
 
