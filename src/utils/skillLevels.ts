@@ -63,11 +63,21 @@ export const getSkillLabel = (
   definitions: SkillDefinitionRow[]
 ): string => {
   const definition = definitions.find(entry => entry.slug === slug);
-  if (definition?.name) {
-    return definition.name;
+  if (definition?.display_name) {
+    return definition.display_name;
   }
 
   return titleFromSlug(slug);
+};
+
+export const getDefaultStrengths = (role: string): string[] => {
+  const normalized = role.toLowerCase();
+  if (normalized.includes("drum")) return ["Powerful beats", "Precise timing"];
+  if (normalized.includes("bass")) return ["Solid groove", "Reliable foundation"];
+  if (normalized.includes("keyboard")) return ["Arrangement skills", "Melodic layers"];
+  if (normalized.includes("vocal")) return ["Stage charisma", "Audience connection"];
+  if (normalized.includes("guitar")) return ["Creative riffs", "Showmanship"];
+  return ["Team-focused", "Adaptable performer"];
 };
 
 export const collectSkillSlugs = (

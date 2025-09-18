@@ -17,7 +17,7 @@ import type { Database } from '@/integrations/supabase/types';
 
 type GigRow = Database['public']['Tables']['gigs']['Row'];
 type VenueRow = Database['public']['Tables']['venues']['Row'];
-type ShowType = Database['public']['Enums']['show_type'];
+type ShowType = 'standard' | 'acoustic';
 const DEFAULT_SHOW_TYPE: ShowType = 'standard';
 
 interface Venue {
@@ -137,6 +137,7 @@ const SHOW_TYPE_BEHAVIOR: Record<ShowType, {
   acoustic: { earnings: 1, fan: 1.25, experience: 1.2, audienceEase: 1.15, stageTolerance: 5 },
 };
 
+type AttributeKey = 'stage_presence' | 'musical_ability' | 'crowd_engagement' | 'social_reach';
 const ADVANCED_GIG_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
 
 const getPerformanceStages = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
@@ -602,8 +603,7 @@ const AdvancedGigSystem: React.FC = () => {
       baseEarnings,
       skills?.performance ?? 0,
       profile.fame ?? 0,
-      successRatio,
-      attributeBonuses,
+      successRatio
     );
     const payoutAdjustment = baselineGigPayment > 0 ? adjustedGigPayment / baselineGigPayment : 1;
 
@@ -618,13 +618,12 @@ const AdvancedGigSystem: React.FC = () => {
     const baselineFanGain = calculateFanGain(
       baseFanGain,
       skills?.performance ?? 0,
-      skills?.vocals ?? 0,
+      skills?.vocals ?? 0
     );
     const adjustedFanGain = calculateFanGain(
       baseFanGain,
       skills?.performance ?? 0,
-      skills?.vocals ?? 0,
-      attributeBonuses,
+      skills?.vocals ?? 0
     );
     const fanAdjustment = baselineFanGain > 0 ? adjustedFanGain / baselineFanGain : 1;
     const successFanGain = Math.max(0, Math.round(baseFanGain * fanAdjustment));
