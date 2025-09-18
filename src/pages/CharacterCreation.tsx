@@ -638,19 +638,19 @@ const CharacterCreation = () => {
           SKILL_SCALE_FACTORS.composition * MAX_SKILL_VALUE
         ),
         creativity: Math.min(
-          SKILL_SCALE_FACTORS.creativity * skills.creativity,
+          SKILL_SCALE_FACTORS.creativity * attributes.creativity,
           SKILL_SCALE_FACTORS.creativity * MAX_SKILL_VALUE
         ),
         business: Math.min(
-          SKILL_SCALE_FACTORS.business * skills.business,
+          SKILL_SCALE_FACTORS.business * attributes.business,
           SKILL_SCALE_FACTORS.business * MAX_SKILL_VALUE
         ),
         marketing: Math.min(
-          SKILL_SCALE_FACTORS.marketing * skills.marketing,
+          SKILL_SCALE_FACTORS.marketing * attributes.marketing,
           SKILL_SCALE_FACTORS.marketing * MAX_SKILL_VALUE
         ),
         technical: Math.min(
-          SKILL_SCALE_FACTORS.technical * skills.technical,
+          SKILL_SCALE_FACTORS.technical * attributes.technical,
           SKILL_SCALE_FACTORS.technical * MAX_SKILL_VALUE
         ),
       };
