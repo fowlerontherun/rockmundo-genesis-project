@@ -656,9 +656,9 @@ const CharacterCreation = () => {
       gender,
       age: parsedAge,
       city_of_birth: cityOfBirth,
-      slot_number: existingProfile?.slot_number ?? 1,
-      unlock_cost: existingProfile?.unlock_cost ?? 0,
-      is_active: existingProfile?.is_active ?? true,
+      slot_number: slotNumber,
+      unlock_cost: unlockCost,
+      is_active: isActive,
     };
 
     try {
