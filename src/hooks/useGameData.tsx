@@ -23,6 +23,11 @@ import type { ProgressionActionSuccessResponse } from "@/types/progression";
 
 import { sortByOptionalKeys } from "@/utils/sorting";
 import {
+  ATTRIBUTE_KEYS,
+  clampAttributeValue,
+  type AttributeKey,
+} from "@/utils/attributeProgression";
+import {
   type PlayerXpWalletSnapshot as PlayerXpWalletSnapshotData,
   type ProgressionCooldowns,
   type ProgressionFunctionResult,
@@ -969,40 +974,63 @@ const useProvideGameData = (): GameDataContextValue => {
           user_id: character.user_id,
           profile_id: character.id,
           attribute_points: 0,
-          mental_focus: resolvedAttributes["mental_focus"] ?? 0,
-          physical_endurance: resolvedAttributes["physical_endurance"] ?? 0
         };
 
-        const initialAttributePayload =
-          supportsProfileScopedDataRef.current === false
-            ? omitFromRecord(baseAttributePayload, "profile_id")
-            : baseAttributePayload;
+        ATTRIBUTE_KEYS.forEach((key: AttributeKey) => {
+          const rawValue = resolvedAttributes[key];
+          baseAttributePayload[key] = clampAttributeValue(
+            typeof rawValue === "number" ? rawValue : 0,
+          );
+        });
 
-        const insertedAttributes = await supabase
-          .from("player_attributes")
-          .insert(initialAttributePayload)
-          .select()
-          .single();
+        let attemptedAttributePayload: Record<string, unknown> = {
+          ...baseAttributePayload,
+        };
+        const skippedAttributeColumns = new Set<string>();
 
-        if (insertedAttributes.error) {
-          if (isMissingColumnError(insertedAttributes.error, "profile_id")) {
-            supportsProfileScopedDataRef.current = false;
-            const fallbackInsert = await supabase
-              .from("player_attributes")
-              .insert(omitFromRecord(baseAttributePayload, "profile_id"))
-              .select()
-              .single();
+        while (Object.keys(attemptedAttributePayload).length > 0) {
+          const payloadToInsert =
+            supportsProfileScopedDataRef.current === false
+              ? omitFromRecord(attemptedAttributePayload, "profile_id")
+              : attemptedAttributePayload;
 
-            if (fallbackInsert.error) {
-              throw fallbackInsert.error;
-            }
+          const insertedAttributes = await supabase
+            .from("player_attributes")
+            .insert(payloadToInsert)
+            .select()
+            .single();
 
-            attributesData = fallbackInsert.data;
-          } else {
-            throw insertedAttributes.error;
+          if (!insertedAttributes.error) {
+            attributesData = insertedAttributes.data;
+            break;
           }
-        } else {
-          attributesData = insertedAttributes.data;
+
+          if (
+            isMissingColumnError(insertedAttributes.error, "profile_id") &&
+            supportsProfileScopedDataRef.current !== false
+          ) {
+            supportsProfileScopedDataRef.current = false;
+            continue;
+          }
+
+          if (insertedAttributes.error.code === "42703") {
+            const missingColumn = extractMissingColumn(insertedAttributes.error);
+            if (
+              missingColumn &&
+              missingColumn !== "profile_id" &&
+              !skippedAttributeColumns.has(missingColumn) &&
+              missingColumn in attemptedAttributePayload
+            ) {
+              skippedAttributeColumns.add(missingColumn);
+              attemptedAttributePayload = omitFromRecord(
+                attemptedAttributePayload,
+                missingColumn,
+              );
+              continue;
+            }
+          }
+
+          throw insertedAttributes.error;
         }
       }
 

@@ -34,21 +34,20 @@ import {
 } from "@/data/avatarPresets";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth-context";
-import {
-  useGameData,
-  type PlayerProfile,
-  type SkillDefinition,
-  type SkillProgressUpsertInput,
-  type SkillUnlockUpsertInput,
-} from "@/hooks/useGameData";
+import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
-import { sortByOptionalKeys } from "@/utils/sorting";
 import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
 import { getStoredAvatarSelection, serializeAvatarData } from "@/utils/avatar";
+import {
+  ATTRIBUTE_KEYS,
+  ATTRIBUTE_METADATA,
+  ATTRIBUTE_MAX_VALUE,
+  type AttributeKey,
+} from "@/utils/attributeProgression";
 
 const backgrounds = [
   {
@@ -77,9 +76,8 @@ const backgrounds = [
   },
 ];
 
-const DEFAULT_TOTAL_SKILL_POINTS = 13;
-const MIN_SKILL_VALUE = 0;
-const MAX_SKILL_VALUE = 100;
+const MIN_ATTRIBUTE_VALUE = 0;
+const MAX_ATTRIBUTE_VALUE = ATTRIBUTE_MAX_VALUE;
 
 const extractMissingColumn = (error: PostgrestError | null | undefined) => {
   if (!error) {
@@ -145,50 +143,13 @@ const extractNumericField = (source: unknown, key: string): number | null => {
   return null;
 };
 
-const formatSkillDisplayName = (slug: string): string =>
+const formatDisplayName = (slug: string): string =>
   slug
     .replace(/[-_]/g, " ")
     .split(" ")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
-
-const FALLBACK_SKILL_SLUGS = [
-  "guitar",
-  "vocals",
-  "drums",
-  "bass",
-  "performance",
-  "songwriting",
-  "composition",
-  "business",
-  "marketing",
-  "creativity",
-  "technical",
-] as const;
-
-type LegacySkillColumn = (typeof FALLBACK_SKILL_SLUGS)[number];
-
-type NormalizedSkillDefinition = {
-  slug: string;
-  label: string;
-  metadata?: Record<string, unknown>;
-  raw?: SkillDefinition | null;
-};
-
-const FALLBACK_SKILL_DEFINITIONS: NormalizedSkillDefinition[] =
-  FALLBACK_SKILL_SLUGS.map((slug) => ({
-    slug,
-    label: formatSkillDisplayName(slug),
-  }));
-
-const LEGACY_SKILL_COLUMNS = new Set<string>(FALLBACK_SKILL_SLUGS);
-
-const sanitizeIdentifier = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
 
 const coerceNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -205,243 +166,51 @@ const coerceNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
-const normalizeSkillDefinition = (
-  definition: SkillDefinition | null | undefined,
-): NormalizedSkillDefinition | null => {
-  if (!definition || typeof definition !== "object") {
-    return null;
-  }
-
-  const record = definition as Record<string, unknown>;
-  const slugValue =
-    typeof record.slug === "string" && record.slug.trim().length > 0
-      ? record.slug.trim()
-      : typeof record.id === "string" && record.id.trim().length > 0
-        ? record.id.trim()
-        : null;
-
-  if (!slugValue) {
-    return null;
-  }
-
-  const labelSource =
-    typeof record.display_name === "string" && record.display_name.trim().length > 0
-      ? record.display_name.trim()
-      : typeof record.name === "string" && record.name.trim().length > 0
-        ? record.name.trim()
-        : undefined;
-
-  const metadata =
-    record.metadata && typeof record.metadata === "object"
-      ? (record.metadata as Record<string, unknown>)
-      : undefined;
-
-  return {
-    slug: slugValue,
-    label: labelSource ?? formatSkillDisplayName(slugValue),
-    metadata,
-    raw: definition,
-  };
-};
-
-const matchLegacyColumnFromString = (
-  value: string | null | undefined,
-): LegacySkillColumn | null => {
-  if (!value || typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = sanitizeIdentifier(value);
-  if (!normalized) {
-    return null;
-  }
-
-  for (const column of LEGACY_SKILL_COLUMNS) {
-    const normalizedColumn = sanitizeIdentifier(column);
-    if (
-      normalized === normalizedColumn ||
-      normalized.startsWith(`${normalizedColumn}_`) ||
-      normalizedColumn.startsWith(`${normalized}_`) ||
-      normalized.includes(normalizedColumn) ||
-      normalizedColumn.includes(normalized)
-    ) {
-      return column as LegacySkillColumn;
-    }
-  }
-
-  return null;
-};
-
-const LEGACY_COLUMN_HEURISTICS: { pattern: RegExp; column: LegacySkillColumn }[] = [
-  { pattern: /(vocal|sing|rap|mc|lyric)/, column: "vocals" },
-  { pattern: /(guitar|strum|string)/, column: "guitar" },
-  { pattern: /(bass)/, column: "bass" },
-  { pattern: /(drum|percuss|rhythm|beat)/, column: "drums" },
-  { pattern: /(songwrit|lyric|poet|story)/, column: "songwriting" },
-  { pattern: /(compos|arrang|orches|theory|harmony)/, column: "composition" },
-  { pattern: /(stage|perform|show|crowd|tour|presence|gig)/, column: "performance" },
-  { pattern: /(business|finance|manage|deal|contract|industry)/, column: "business" },
-  { pattern: /(market|brand|promo|social|press|campaign|advert)/, column: "marketing" },
-  { pattern: /(creativ|innov|concept|imagin|original|idea)/, column: "creativity" },
-  { pattern: /(tech|engineer|mix|master|prod|software|digital|audio)/, column: "technical" },
-];
-
-const resolveLegacySkillColumn = (
-  definition: NormalizedSkillDefinition | undefined,
-): LegacySkillColumn | null => {
-  if (!definition) {
-    return null;
-  }
-
-  const directMatch = matchLegacyColumnFromString(definition.slug);
-  if (directMatch) {
-    return directMatch;
-  }
-
-  const metadata = definition.metadata ?? {};
-  const metadataRecord = metadata as Record<string, unknown>;
-
-  const metadataKeys = [
-    "legacy_column",
-    "legacyColumn",
-    "legacy_skill_column",
-    "legacySkillColumn",
-    "legacy_skill",
-    "legacySkill",
-    "legacy",
-  ];
-
-  for (const key of metadataKeys) {
-    const match = matchLegacyColumnFromString(
-      typeof metadataRecord[key] === "string" ? (metadataRecord[key] as string) : undefined,
-    );
-    if (match) {
-      return match;
-    }
-  }
-
-  if (typeof metadataRecord.track === "string") {
-    const trackMatch = matchLegacyColumnFromString(metadataRecord.track);
-    if (trackMatch) {
-      return trackMatch;
-    }
-  }
-
-  if (typeof metadataRecord.category === "string") {
-    const categoryMatch = matchLegacyColumnFromString(metadataRecord.category);
-    if (categoryMatch) {
-      return categoryMatch;
-    }
-  }
-
-  const slugIdentifier = sanitizeIdentifier(definition.slug);
-  for (const heuristic of LEGACY_COLUMN_HEURISTICS) {
-    if (heuristic.pattern.test(slugIdentifier)) {
-      return heuristic.column;
-    }
-  }
-
-  const metadataValues = Object.values(metadataRecord)
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => sanitizeIdentifier(value));
-
-  for (const value of metadataValues) {
-    for (const heuristic of LEGACY_COLUMN_HEURISTICS) {
-      if (heuristic.pattern.test(value)) {
-        return heuristic.column;
-      }
-    }
-
-    const match = matchLegacyColumnFromString(value);
-    if (match) {
-      return match;
-    }
-  }
-
-  return null;
-};
-
-const aggregateSkillsForLegacyColumns = (
-  skillValuesBySlug: Record<string, number>,
-  definitionsBySlug: Map<string, NormalizedSkillDefinition>,
-): Record<string, number> => {
-  const aggregated: Record<string, number> = {};
-
-  Object.entries(skillValuesBySlug).forEach(([slug, value]) => {
-    const definition = definitionsBySlug.get(slug);
-    const legacyColumn = resolveLegacySkillColumn(definition);
-
-    if (!legacyColumn || legacyColumn === slug) {
-      return;
-    }
-
-    const normalizedValue = normalizeSkillValue(value);
-    const current = aggregated[legacyColumn];
-    aggregated[legacyColumn] =
-      typeof current === "number" ? Math.max(current, normalizedValue) : normalizedValue;
-  });
-
-  return aggregated;
-};
-
-const buildSkillStateFromRecord = (
+const buildAttributeStateFromRecord = (
   record: Record<string, unknown> | null | undefined,
-  slugs: string[],
-  definitionsBySlug: Map<string, NormalizedSkillDefinition>,
-  previousState?: Record<string, number>,
-): Record<string, number> => {
-  const next: Record<string, number> = {};
+  keys: AttributeKey[],
+  previousState?: Record<AttributeKey, number>,
+): Record<AttributeKey, number> => {
+  const next = {} as Record<AttributeKey, number>;
   const source = record ?? {};
 
-  slugs.forEach((slug) => {
-    const directValue = coerceNumber((source as Record<string, unknown>)[slug]);
+  keys.forEach((key) => {
+    const directValue = coerceNumber((source as Record<string, unknown>)[key]);
 
     if (typeof directValue === "number") {
-      next[slug] = normalizeSkillValue(directValue);
+      next[key] = normalizeAttributeValue(directValue);
       return;
     }
 
-    const definition = definitionsBySlug.get(slug);
-    const legacyColumn = resolveLegacySkillColumn(definition);
-    const legacyValue = legacyColumn
-      ? coerceNumber((source as Record<string, unknown>)[legacyColumn])
-      : undefined;
-
-    if (typeof legacyValue === "number") {
-      next[slug] = normalizeSkillValue(legacyValue);
+    if (previousState && typeof previousState[key] === "number") {
+      next[key] = normalizeAttributeValue(previousState[key]);
       return;
     }
 
-    if (previousState && typeof previousState[slug] === "number") {
-      next[slug] = normalizeSkillValue(previousState[slug]);
-      return;
-    }
-
-    next[slug] = MIN_SKILL_VALUE;
+    next[key] = MIN_ATTRIBUTE_VALUE;
   });
 
   return next;
 };
 
-const normalizeSkillValue = (value: unknown): number => {
+const normalizeAttributeValue = (value: unknown): number => {
   if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+    return Math.max(MIN_ATTRIBUTE_VALUE, Math.min(MAX_ATTRIBUTE_VALUE, Math.round(value)));
   }
 
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
-    return MIN_SKILL_VALUE;
+    return MIN_ATTRIBUTE_VALUE;
   }
 
-  return Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, numeric));
+  return Math.max(MIN_ATTRIBUTE_VALUE, Math.min(MAX_ATTRIBUTE_VALUE, Math.round(numeric)));
 };
-
-type SkillSlug = string;
 
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
-type PlayerSkillsInsert = TablesInsert<"player_skills">;
+type PlayerAttributesRow = Tables<"player_attributes">;
+type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
@@ -478,17 +247,11 @@ const CharacterCreation = () => {
   const location = useLocation();
   const { toast } = useToast();
   const {
-    skillDefinitions: contextSkillDefinitions,
-    upsertSkillProgress,
-    upsertSkillUnlocks,
     refreshCharacters,
     setActiveCharacter,
     selectedCharacterId,
     profile: activeProfile,
   } = useGameData();
-
-  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
-  const [hasRequestedSkillDefinitions, setHasRequestedSkillDefinitions] = useState(false);
 
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
@@ -517,15 +280,13 @@ const CharacterCreation = () => {
   const [selectedAvatarCamera, setSelectedAvatarCamera] = useState<string>(
     defaultAvatarSelection.cameraId,
   );
-  const [skills, setSkills] = useState<Record<SkillSlug, number>>(() =>
-    FALLBACK_SKILL_DEFINITIONS.reduce<Record<string, number>>((accumulator, definition) => {
-      accumulator[definition.slug] = MIN_SKILL_VALUE;
+  const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(() =>
+    ATTRIBUTE_KEYS.reduce<Record<AttributeKey, number>>((accumulator, key) => {
+      accumulator[key] = MIN_ATTRIBUTE_VALUE;
       return accumulator;
-    }, {}),
+    }, {} as Record<AttributeKey, number>),
   );
-  const [loadedSkillsRecord, setLoadedSkillsRecord] = useState<Record<string, unknown> | null>(
-    null,
-  );
+  const [existingAttributes, setExistingAttributes] = useState<PlayerAttributesRow | null>(null);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -537,131 +298,18 @@ const CharacterCreation = () => {
   const [citiesLoading, setCitiesLoading] = useState<boolean>(false);
   const [citiesError, setCitiesError] = useState<string | null>(null);
 
-  const normalizedSkillDefinitions = useMemo<NormalizedSkillDefinition[]>(() => {
-    const normalized = skillDefinitions
-      .map((definition) => normalizeSkillDefinition(definition))
-      .filter((definition): definition is NormalizedSkillDefinition => Boolean(definition));
-
-    const uniqueBySlug = new Map<string, NormalizedSkillDefinition>();
-    normalized.forEach((definition) => {
-      if (!uniqueBySlug.has(definition.slug)) {
-        uniqueBySlug.set(definition.slug, definition);
-      }
-    });
-
-    if (uniqueBySlug.size > 0) {
-      const uniqueValues = Array.from(uniqueBySlug.values());
-      const definitionsByLegacyColumn = new Map<LegacySkillColumn, NormalizedSkillDefinition>();
-
-      uniqueValues.forEach((definition) => {
-        const directColumn = LEGACY_SKILL_COLUMNS.has(definition.slug)
-          ? (definition.slug as LegacySkillColumn)
-          : null;
-        const legacyColumn = directColumn ?? resolveLegacySkillColumn(definition);
-
-        if (!legacyColumn) {
-          return;
-        }
-
-        const existing = definitionsByLegacyColumn.get(legacyColumn);
-        if (!existing) {
-          definitionsByLegacyColumn.set(legacyColumn, definition);
-          return;
-        }
-
-        const existingIsDirectMatch = existing.slug === legacyColumn;
-        const currentIsDirectMatch = definition.slug === legacyColumn;
-
-        if (!existingIsDirectMatch && currentIsDirectMatch) {
-          definitionsByLegacyColumn.set(legacyColumn, definition);
-        }
-      });
-
-      if (definitionsByLegacyColumn.size > 0) {
-        return FALLBACK_SKILL_DEFINITIONS.map((fallbackDefinition) => {
-          const legacySlug = fallbackDefinition.slug as LegacySkillColumn;
-          const override = definitionsByLegacyColumn.get(legacySlug);
-
-          if (!override) {
-            return fallbackDefinition;
-          }
-
-          const overrideLabel =
-            typeof override.label === "string" && override.label.trim().length > 0
-              ? override.label
-              : fallbackDefinition.label;
-
-          return {
-            slug: legacySlug,
-            label: overrideLabel,
-            metadata: override.metadata,
-            raw: override.raw,
-          };
-        });
-      }
-    }
-
-    return FALLBACK_SKILL_DEFINITIONS;
-  }, [skillDefinitions]);
-
-  const skillSlugs = useMemo(
-    () => normalizedSkillDefinitions.map((definition) => definition.slug),
-    [normalizedSkillDefinitions],
+  const attributeEntries = useMemo(
+    () =>
+      ATTRIBUTE_KEYS.map((key) => ({
+        key,
+        metadata: ATTRIBUTE_METADATA[key],
+      })),
+    [],
   );
-
-  const skillDefinitionsBySlug = useMemo(() => {
-    const mapping = new Map<string, NormalizedSkillDefinition>();
-    normalizedSkillDefinitions.forEach((definition) => {
-      mapping.set(definition.slug, definition);
-    });
-    return mapping;
-  }, [normalizedSkillDefinitions]);
-
-  useEffect(() => {
-    setSkills((previous) => {
-      const sanitized = skillSlugs.reduce<Record<string, number>>((accumulator, slug) => {
-        const currentValue = typeof previous[slug] === "number" ? previous[slug] : MIN_SKILL_VALUE;
-        accumulator[slug] = normalizeSkillValue(currentValue);
-        return accumulator;
-      }, {});
-
-      const previousKeys = Object.keys(previous);
-      const keysChanged =
-        previousKeys.length !== skillSlugs.length || skillSlugs.some((slug) => !(slug in previous));
-
-      return keysChanged ? sanitized : previous;
-    });
-  }, [skillSlugs]);
-
-  useEffect(() => {
-    if (!loadedSkillsRecord) {
-      return;
-    }
-
-    setSkills((previous) =>
-      buildSkillStateFromRecord(loadedSkillsRecord, skillSlugs, skillDefinitionsBySlug, previous),
-    );
-  }, [loadedSkillsRecord, skillSlugs, skillDefinitionsBySlug]);
 
   const slotNumber = existingProfile?.slot_number ?? 1;
   const unlockCost = existingProfile?.unlock_cost ?? 0;
   const isActive = existingProfile?.is_active ?? true;
-
-  const totalSkillPointBudget = useMemo(() => {
-    const existingBudget = extractNumericField(existingProfile, "skill_points_available");
-    if (typeof existingBudget === "number") {
-      return Math.max(0, existingBudget);
-    }
-
-    const activeBudget = extractNumericField(activeProfile, "skill_points_available");
-    if (typeof activeBudget === "number") {
-      return Math.max(0, activeBudget);
-    }
-
-    return Math.max(0, DEFAULT_TOTAL_SKILL_POINTS);
-  }, [existingProfile, activeProfile]);
-
-  const skillCapEnabled = totalSkillPointBudget > 0;
 
   const selectedStyleDefinition = useMemo(
     () => avatarStyles.find((style) => style.id === selectedAvatarStyle) ?? avatarStyles[0],
@@ -685,43 +333,6 @@ const CharacterCreation = () => {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (contextSkillDefinitions.length > 0) {
-      setSkillDefinitions(contextSkillDefinitions);
-      return;
-    }
-
-    if (hasRequestedSkillDefinitions) {
-      return;
-    }
-
-    setHasRequestedSkillDefinitions(true);
-
-    const fetchSkillDefinitions = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("skill_definitions")
-          .select("*");
-
-        if (error) {
-          throw error;
-        }
-
-        const sortedDefinitions = sortByOptionalKeys(
-          ((data as SkillDefinition[] | null) ?? []).filter(Boolean),
-          ["display_order", "sort_order", "order_index", "position"],
-          ["name", "slug"]
-        ) as SkillDefinition[];
-
-        setSkillDefinitions(sortedDefinitions);
-      } catch (error) {
-        console.error("Failed to load skill definitions:", error);
-      }
-    };
-
-    void fetchSkillDefinitions();
-  }, [contextSkillDefinitions, hasRequestedSkillDefinitions]);
-
-  useEffect(() => {
     const fetchExistingData = async () => {
       if (!user) return;
 
@@ -732,7 +343,14 @@ const CharacterCreation = () => {
       const shouldUseProfileScope = Boolean(scopedProfileId);
 
       try {
-        const [profileResponse, skillsResponse] = await Promise.all([
+        const attributeSelect = [
+          "id",
+          "attribute_points",
+          "attribute_points_spent",
+          ...ATTRIBUTE_KEYS,
+        ].join(", ");
+
+        const [profileResponse, attributesResponse] = await Promise.all([
           shouldUseProfileScope
             ? supabase
                 .from("profiles")
@@ -746,17 +364,13 @@ const CharacterCreation = () => {
                 .maybeSingle(),
           shouldUseProfileScope
             ? supabase
-                .from("player_skills")
-                .select(
-                  "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
-                )
+                .from("player_attributes")
+                .select(attributeSelect)
                 .eq("profile_id", scopedProfileId)
                 .maybeSingle()
             : supabase
-                .from("player_skills")
-                .select(
-                  "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
-                )
+                .from("player_attributes")
+                .select(attributeSelect)
                 .eq("user_id", user.id)
                 .maybeSingle(),
         ]);
@@ -765,14 +379,15 @@ const CharacterCreation = () => {
           throw profileResponse.error;
         }
 
-        if (skillsResponse.error && skillsResponse.status !== 406) {
-          throw skillsResponse.error;
+        if (attributesResponse.error && attributesResponse.status !== 406) {
+          throw attributesResponse.error;
         }
 
         const profileData = (profileResponse.data as ProfileRow | null) ?? null;
-        const skillsData = skillsResponse.data;
+        const attributesData = (attributesResponse.data as PlayerAttributesRow | null) ?? null;
 
         setExistingProfile(profileData);
+        setExistingAttributes(attributesData);
 
         if (profileData) {
           if (profileData.display_name) {
@@ -821,15 +436,18 @@ const CharacterCreation = () => {
           setUsernameEdited(false);
         }
 
-        const normalizedSkillsRow = skillsData
-          ? { ...(skillsData as Record<string, unknown>) }
+        const normalizedAttributesRow = attributesData
+          ? { ...(attributesData as Record<string, unknown>) }
           : null;
 
-        setLoadedSkillsRecord(normalizedSkillsRow);
+        setAttributes((previous) =>
+          buildAttributeStateFromRecord(normalizedAttributesRow, ATTRIBUTE_KEYS, previous),
+        );
       } catch (error) {
         console.error("Failed to load character data:", error);
         setLoadError("We couldn't load your character data. You can still create a new persona.");
         setExistingProfile(null);
+        setExistingAttributes(null);
       } finally {
         setIsLoading(false);
       }
@@ -913,62 +531,25 @@ const CharacterCreation = () => {
     setUsernameEdited(true);
   };
 
-  const handleSkillChange = (key: SkillSlug, value: number) => {
-    setSkills((prev) => {
-      const currentValue = prev[key];
-      const clampedValue = normalizeSkillValue(value);
+  const handleAttributeChange = (key: AttributeKey, value: number) => {
+    setAttributes((prev) => {
+      const clampedValue = normalizeAttributeValue(value);
 
-      if (clampedValue === currentValue) {
-        return prev;
-      }
-
-      const currentTotal = Object.values(prev).reduce((acc, val) => acc + val, 0);
-      let nextValue = clampedValue;
-
-      if (skillCapEnabled && clampedValue > currentValue) {
-        const availablePoints = totalSkillPointBudget - currentTotal;
-
-        if (availablePoints <= 0) {
-          nextValue = currentValue;
-        } else {
-          const allowedIncrease = Math.min(clampedValue - currentValue, availablePoints);
-          nextValue = currentValue + allowedIncrease;
-        }
-      }
-
-      if (nextValue === currentValue) {
+      if (prev[key] === clampedValue) {
         return prev;
       }
 
       return {
         ...prev,
-        [key]: nextValue,
+        [key]: clampedValue,
       };
     });
   };
 
-  const totalSkillPoints = useMemo(
-    () => Object.values(skills).reduce((acc, val) => acc + val, 0),
-    [skills]
+  const totalAttributePoints = useMemo(
+    () => Object.values(attributes).reduce((acc, val) => acc + val, 0),
+    [attributes],
   );
-
-  const remainingSkillPoints = useMemo(
-    () =>
-      skillCapEnabled ? Math.max(0, totalSkillPointBudget - totalSkillPoints) : 0,
-    [skillCapEnabled, totalSkillPointBudget, totalSkillPoints]
-  );
-
-  const overallocatedSkillPoints = useMemo(
-    () =>
-      skillCapEnabled ? Math.max(0, totalSkillPoints - totalSkillPointBudget) : 0,
-    [skillCapEnabled, totalSkillPointBudget, totalSkillPoints]
-  );
-
-  const allocationRequired = skillCapEnabled;
-  const allocationComplete = allocationRequired
-    ? totalSkillPoints === totalSkillPointBudget
-    : true;
-  const allocationOver = overallocatedSkillPoints > 0;
 
   const handleSave = async () => {
     if (!user) return;
@@ -989,19 +570,6 @@ const CharacterCreation = () => {
       toast({
         title: "Artist handle required",
         description: "Create a handle so other players can find you.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if ((allocationRequired && !allocationComplete) || (!allocationRequired && allocationOver)) {
-      toast({
-        title: allocationOver ? "Skill allocation exceeded" : "Allocate remaining skill points",
-        description: allocationOver
-          ? allocationRequired
-            ? `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to hit exactly ${totalSkillPointBudget}.`
-            : `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to stay within your available budget.`
-          : `You still have ${remainingSkillPoints} point${remainingSkillPoints === 1 ? "" : "s"} to assign before saving.`,
         variant: "destructive",
       });
       return;
@@ -1114,120 +682,91 @@ const CharacterCreation = () => {
 
       setExistingProfile(upsertedProfile);
 
-      const normalizedSkillsPayload = skillSlugs.reduce<Record<string, number>>(
-        (accumulator, slug) => {
-          const rawValue = skills[slug];
-          accumulator[slug] = normalizeSkillValue(rawValue);
+      const normalizedAttributes = ATTRIBUTE_KEYS.reduce<Record<AttributeKey, number>>(
+        (accumulator, key) => {
+          const rawValue = attributes[key];
+          accumulator[key] = normalizeAttributeValue(rawValue);
           return accumulator;
         },
-        {},
+        {} as Record<AttributeKey, number>,
       );
 
-      const legacySkillsPayload = aggregateSkillsForLegacyColumns(
-        normalizedSkillsPayload,
-        skillDefinitionsBySlug,
+      const totalAllocatedAttributePoints = Object.values(normalizedAttributes).reduce(
+        (acc, val) => acc + val,
+        0,
       );
 
-      const baseSkillsPayload: Record<string, unknown> = {
+      const existingAttributePoints = Math.max(
+        0,
+        Math.round(coerceNumber(existingAttributes?.attribute_points) ?? 0),
+      );
+      const existingAttributePointsSpent = coerceNumber(
+        existingAttributes?.attribute_points_spent,
+      );
+      const resolvedAttributePointsSpent = Math.max(
+        0,
+        Math.round(
+          typeof existingAttributePointsSpent === "number"
+            ? existingAttributePointsSpent
+            : totalAllocatedAttributePoints,
+        ),
+      );
+
+      const baseAttributesPayload: Record<string, unknown> = {
         user_id: user.id,
         profile_id: upsertedProfile.id,
-        ...legacySkillsPayload,
-        ...normalizedSkillsPayload,
+        attribute_points: existingAttributePoints,
+        attribute_points_spent: resolvedAttributePointsSpent,
+        ...normalizedAttributes,
       };
 
-      let attemptedSkillsPayload: Record<string, unknown> = { ...baseSkillsPayload };
-      const skippedSkillsColumns = new Set<string>();
-      let finalSkillsRow: Tables<"player_skills"> | null = null;
+      let attemptedAttributesPayload: Record<string, unknown> = { ...baseAttributesPayload };
+      const skippedAttributeColumns = new Set<string>();
+      let finalAttributesRow: PlayerAttributesRow | null = null;
 
-      while (Object.keys(attemptedSkillsPayload).length > 0) {
-        const { data: upsertedSkills, error: skillsError } = await supabase
-          .from("player_skills")
-          .upsert(attemptedSkillsPayload as PlayerSkillsInsert, { onConflict: "profile_id" })
+      while (Object.keys(attemptedAttributesPayload).length > 0) {
+        const { data: upsertedAttributes, error: attributesError } = await supabase
+          .from("player_attributes")
+          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, {
+            onConflict: "profile_id",
+          })
           .select()
           .maybeSingle();
 
-        if (!skillsError) {
-          finalSkillsRow = upsertedSkills ?? null;
+        if (!attributesError) {
+          finalAttributesRow = (upsertedAttributes as PlayerAttributesRow | null) ?? null;
           break;
         }
 
-        if (skillsError.code === "42703") {
-          const missingColumn = extractMissingColumn(skillsError);
+        if (attributesError.code === "42703") {
+          const missingColumn = extractMissingColumn(attributesError);
           if (
             missingColumn &&
-            !skippedSkillsColumns.has(missingColumn) &&
-            missingColumn in attemptedSkillsPayload &&
+            !skippedAttributeColumns.has(missingColumn) &&
+            missingColumn in attemptedAttributesPayload &&
             missingColumn !== "profile_id"
           ) {
-            skippedSkillsColumns.add(missingColumn);
-            attemptedSkillsPayload = omitFromRecord(attemptedSkillsPayload, missingColumn);
+            skippedAttributeColumns.add(missingColumn);
+            attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
             continue;
           }
         }
 
-        throw skillsError;
+        throw attributesError;
       }
 
-      const persistedSkillsRecord = finalSkillsRow
-        ? { ...(finalSkillsRow as Record<string, unknown>) }
-        : { ...attemptedSkillsPayload };
+      const persistedAttributesRecord = finalAttributesRow
+        ? { ...(finalAttributesRow as Record<string, unknown>) }
+        : { ...attemptedAttributesPayload };
 
-      const mergedSkillStateRecord: Record<string, unknown> = {
-        ...persistedSkillsRecord,
-        ...normalizedSkillsPayload,
-      };
+      setExistingAttributes((previous) => ({
+        ...(previous ?? {}) as PlayerAttributesRow,
+        ...(persistedAttributesRecord as Partial<PlayerAttributesRow>),
+      }));
 
-      setLoadedSkillsRecord(mergedSkillStateRecord);
-
-      if (skillDefinitions.length > 0) {
-        const progressEntries: SkillProgressUpsertInput[] = [];
-        const unlockEntries: SkillUnlockUpsertInput[] = [];
-
-        skillDefinitions.forEach((definition) => {
-          if (!definition?.id) {
-            return;
-          }
-
-          const normalizedDefinition = normalizeSkillDefinition(definition);
-          const slug = normalizedDefinition?.slug ?? null;
-          const legacyColumn = normalizedDefinition
-            ? resolveLegacySkillColumn(normalizedDefinition)
-            : null;
-          const assignedValue =
-            (legacyColumn && legacyColumn in skills ? skills[legacyColumn] : undefined) ??
-            (slug && slug in skills ? skills[slug] : undefined);
-          const defaultLevel = Number.isFinite(definition.starting_level)
-            ? Number(definition.starting_level)
-            : MIN_SKILL_VALUE;
-          const normalizedLevel = Math.max(
-            MIN_SKILL_VALUE,
-            Math.min(MAX_SKILL_VALUE, assignedValue ?? defaultLevel),
-          );
-
-          progressEntries.push({
-            skill_id: definition.id,
-            current_level: normalizedLevel,
-            current_xp: Number.isFinite(definition.starting_experience)
-              ? Number(definition.starting_experience)
-              : 0,
-          });
-
-          const unlockedByDefault = Boolean(definition.is_default_unlocked);
-          unlockEntries.push({
-            skill_id: definition.id,
-            is_unlocked: unlockedByDefault,
-            unlocked_at: unlockedByDefault ? new Date().toISOString() : null,
-          });
-        });
-
-        if (progressEntries.length > 0) {
-          await upsertSkillProgress(upsertedProfile.id, progressEntries);
-        }
-
-        if (unlockEntries.length > 0) {
-          await upsertSkillUnlocks(upsertedProfile.id, unlockEntries);
-        }
-      }
+      setAttributes((previous) =>
+        buildAttributeStateFromRecord(persistedAttributesRecord, ATTRIBUTE_KEYS, previous),
+      );
 
       await refreshCharacters();
       await setActiveCharacter(upsertedProfile.id);
@@ -1283,7 +822,7 @@ const CharacterCreation = () => {
             Design Your Stage Persona
           </h1>
           <p className="text-base text-muted-foreground">
-            Shape your artist identity, pick a backstory, and tune the skills that define your playstyle.
+            Shape your artist identity, pick a backstory, and define the attributes that set your playstyle in motion.
           </p>
         </div>
 
@@ -1607,59 +1146,55 @@ const CharacterCreation = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Gauge className="h-5 w-5 text-primary" />
-              Skill Distribution
+              Attribute Distribution
             </CardTitle>
             <CardDescription>
-              Allocate your starting strengths across musical and career disciplines. Every skill ranges from 0-100 and influences early gameplay systems.
+              Invest your starting attribute strengths. These values influence performance, creativity, and career growth and can be trained further in-game.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary space-y-1">
-              <div>
-                Skill Points Assigned:{" "}
-                <span className="font-semibold">
-                  {allocationRequired
-                    ? `${totalSkillPoints} / ${totalSkillPointBudget}`
-                    : totalSkillPoints}
-                </span>
+            <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary space-y-2">
+              <div className="flex items-center justify-between">
+                <span>Total Attribute Investment</span>
+                <span className="font-semibold">{totalAttributePoints}</span>
               </div>
-              {allocationOver ? (
-                <div className="text-xs text-destructive">
-                  Overallocated by {overallocatedSkillPoints} point
-                  {overallocatedSkillPoints === 1 ? "" : "s"}. Adjust to continue.
-                </div>
-              ) : (
-                allocationRequired && (
-                  <div className="text-xs text-primary/80">
-                    Remaining Points:{" "}
-                    <span className="font-semibold">{remainingSkillPoints}</span>
-                  </div>
-                )
-              )}
-              {allocationRequired && !allocationComplete && !allocationOver && (
-                <div className="text-xs text-destructive">
-                  Spend all {totalSkillPointBudget} points to continue.
-                </div>
-              )}
+              <p className="text-xs text-primary/80">
+                Attributes range from {MIN_ATTRIBUTE_VALUE} to {MAX_ATTRIBUTE_VALUE}. Your starting distribution sets the tone for your artist&apos;s playstyle.
+              </p>
             </div>
             <div className="grid gap-5 md:grid-cols-2">
-              {normalizedSkillDefinitions.map((definition) => {
-                const slug = definition.slug;
-                const currentValue = typeof skills[slug] === "number" ? skills[slug] : MIN_SKILL_VALUE;
+              {attributeEntries.map(({ key, metadata }) => {
+                const currentValue = attributes[key] ?? MIN_ATTRIBUTE_VALUE;
 
                 return (
-                  <div key={slug} className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{definition.label}</span>
+                  <div key={key} className="space-y-3 rounded-lg border border-border/70 bg-muted/40 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium">{metadata.label}</span>
+                        <p className="text-xs text-muted-foreground leading-snug">{metadata.description}</p>
+                      </div>
                       <span className="text-sm font-semibold text-primary">{currentValue}</span>
                     </div>
                     <Slider
-                      min={MIN_SKILL_VALUE}
-                      max={MAX_SKILL_VALUE}
+                      min={MIN_ATTRIBUTE_VALUE}
+                      max={MAX_ATTRIBUTE_VALUE}
                       step={1}
                       value={[currentValue]}
-                      onValueChange={([value]) => handleSkillChange(slug, value ?? currentValue)}
+                      onValueChange={([value]) => handleAttributeChange(key, value ?? currentValue)}
                     />
+                    {metadata.relatedSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {metadata.relatedSkills.map((skill) => (
+                          <Badge
+                            key={`${key}-${skill}`}
+                            variant="outline"
+                            className="text-[10px] uppercase tracking-wider"
+                          >
+                            {formatDisplayName(skill)}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
