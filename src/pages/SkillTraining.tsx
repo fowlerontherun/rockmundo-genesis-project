@@ -197,6 +197,7 @@ const SkillTrainingContent = () => {
     profile,
     skills,
     attributes,
+    xpWallet,
     updateProfile,
     addActivity,
     loading: gameDataLoading
@@ -215,6 +216,7 @@ const SkillTrainingContent = () => {
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
+  const displayExperience = Number(xpWallet?.lifetime_xp ?? totalExperience);
   const skillCap = getSkillCap(playerLevel, totalExperience);
 
   const availableDefinitions = useMemo(() => {
@@ -686,7 +688,7 @@ const SkillTrainingContent = () => {
           </div>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-blue-400" />
-            <span className="font-oswald">{profile.experience || 0} XP</span>
+            <span className="font-oswald">{displayExperience} XP</span>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-purple-400" />

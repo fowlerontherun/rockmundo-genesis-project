@@ -38,6 +38,7 @@ const Dashboard = () => {
     attributes,
     activities,
     experienceLedger,
+    xpWallet,
     loading,
     error,
     freshWeeklyBonusAvailable
@@ -185,7 +186,8 @@ const Dashboard = () => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const experienceProgress = profile.experience % 1000;
+  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0);
+  const experienceProgress = totalExperience % 1000;
   const latestWeeklyBonus = experienceLedger.find(entry => entry.reason === "weekly_bonus");
   const latestWeeklyMetadata = (latestWeeklyBonus?.metadata as Record<string, unknown> | null) ?? null;
   const weeklyBonusAmount = latestWeeklyBonus

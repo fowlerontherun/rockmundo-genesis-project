@@ -93,7 +93,15 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, attributes, updateProfile, freshWeeklyBonusAvailable, experienceLedger } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    xpWallet,
+    updateProfile,
+    freshWeeklyBonusAvailable,
+    experienceLedger
+  } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -183,6 +191,7 @@ const Profile = () => {
       }).format(weeklyBonusRecorded)
     : null;
   const recentLedgerEntries = experienceLedger.slice(0, 5);
+  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0);
 
   useEffect(() => {
     if (!showProfileDetails) {
@@ -811,8 +820,8 @@ const Profile = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-primary">{profile.level || 1}</div>
-                  <Progress value={((profile.experience || 0) % 1000) / 10} className="h-2 mt-2" />
-                  <p className="text-xs text-muted-foreground mt-1">{profile.experience || 0} XP</p>
+                  <Progress value={(totalExperience % 1000) / 10} className="h-2 mt-2" />
+                  <p className="text-xs text-muted-foreground mt-1">{totalExperience} XP</p>
                 </CardContent>
               </Card>
 
@@ -844,7 +853,7 @@ const Profile = () => {
                   <Trophy className="h-4 w-4 text-warning" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-warning">{profile.experience || 0}</div>
+                  <div className="text-2xl font-bold text-warning">{totalExperience}</div>
                   <p className="text-xs text-muted-foreground">Total XP earned</p>
                 </CardContent>
               </Card>

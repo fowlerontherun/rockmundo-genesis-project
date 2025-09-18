@@ -358,7 +358,7 @@ const resolveSkillBadge = (value: number) => {
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
-  const { profile, skills, attributes, skillDefinitions } = useGameData();
+  const { profile, skills, attributes, skillDefinitions, xpWallet } = useGameData();
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
     "performance",
     "songwriting",
@@ -827,7 +827,8 @@ const PlayerStatistics = () => {
     );
   }
 
-  const playerLevel = calculateLevel(profile.experience);
+  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile.experience ?? 0);
+  const playerLevel = calculateLevel(totalExperience);
   const fameTitle = getFameTitle(profile.fame);
   const playerAvatarLabel = (profile.display_name || profile.username || 'P').slice(0, 2).toUpperCase();
   const MetricIcon = metricConfig.icon;
@@ -1416,7 +1417,7 @@ const PlayerStatistics = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Experience:</span>
-                    <span className="font-bold text-blue-600">{profile.experience.toLocaleString()}</span>
+                    <span className="font-bold text-blue-600">{totalExperience.toLocaleString()}</span>
                   </div>
                 </CardContent>
               </Card>
