@@ -30,6 +30,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
+import { useEquippedClothing } from "@/hooks/useEquippedClothing";
 import {
   Select,
   SelectContent,
@@ -90,6 +91,7 @@ const Profile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { profile, skills, attributes, updateProfile } = useGameData();
+  const { items: equippedClothing } = useEquippedClothing();
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
     "vocals",
