@@ -113,6 +113,245 @@ const extractMissingColumn = (error: PostgrestError | null | undefined) => {
   return null;
 };
 
+const isPostgrestError = (error: unknown): error is PostgrestError => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as Partial<PostgrestError>;
+  return typeof candidate.code === "string" && typeof candidate.message === "string";
+};
+
+const buildSaveErrorMessage = (error: unknown) => {
+  if (isPostgrestError(error)) {
+    const parts = [error.message, error.details, error.hint].filter(
+      (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
+
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+
+  return "An unknown error occurred while saving your character.";
+};
+
+const sanitizePayloadForLogging = (
+  payload: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null | undefined => {
+  if (!payload) {
+    return payload ?? null;
+  }
+
+  const sanitized: Record<string, unknown> = { ...payload };
+
+  if ("avatar_url" in sanitized) {
+    sanitized.avatar_url = "[omitted]";
+  }
+
+  if ("bio" in sanitized && typeof sanitized.bio === "string") {
+    const bio = sanitized.bio as string;
+    sanitized.bio = bio.length > 120 ? `${bio.slice(0, 117)}...` : bio;
+  }
+
+  return sanitized;
+};
+
+const ensureNonEmptyString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const extractConstraintName = (error: PostgrestError): string | null => {
+  const haystacks = [error.message, error.details, error.hint].filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
+  );
+
+  for (const haystack of haystacks) {
+    const match = haystack.match(/constraint\s+"([^"]+)"/i);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+};
+
+const extractDuplicateKeyDetail = (
+  source: string | null | undefined,
+): { field: string; value: string } | null => {
+  if (!source) {
+    return null;
+  }
+
+  const match = source.match(/Key \(([^)]+)\)=\(([^)]+)\) already exists\.?/i);
+  if (match?.[1] && match?.[2]) {
+    return { field: match[1], value: match[2] };
+  }
+
+  return null;
+};
+
+type SaveFailureStage =
+  | "profile-upsert"
+  | "ensure-wardrobe"
+  | "attribute-upsert"
+  | "refresh-characters"
+  | "activate-character"
+  | "unknown";
+
+const SAVE_ERROR_STAGE_LABELS: Record<SaveFailureStage, string> = {
+  "profile-upsert": "Saving your profile details",
+  "ensure-wardrobe": "Ensuring your wardrobe is initialized",
+  "attribute-upsert": "Saving your attribute distribution",
+  "refresh-characters": "Refreshing your character list",
+  "activate-character": "Activating your saved character",
+  unknown: "Completing the character save",
+};
+
+type SaveErrorState = {
+  message: string;
+  stage: SaveFailureStage;
+  code?: string;
+  details?: string;
+  hint?: string;
+  friendlyMessage?: string;
+  duplicateField?: string;
+  duplicateValue?: string;
+  constraint?: string;
+  profilePayload?: Record<string, unknown> | null;
+  attributesPayload?: Record<string, unknown> | null;
+};
+
+const getFriendlySaveErrorMessage = (
+  error: unknown,
+  stage: SaveFailureStage,
+  duplicateDetail?: { field: string; value: string } | null,
+  constraint?: string | null,
+): string | null => {
+  if (isPostgrestError(error)) {
+    if (error.code === "23505") {
+      if (duplicateDetail?.field === "username") {
+        return `The artist handle "${duplicateDetail.value}" is already taken. Try a different handle.`;
+      }
+
+      if (duplicateDetail?.field === "display_name") {
+        return `The stage name "${duplicateDetail.value}" is already in use. Pick something more unique.`;
+      }
+
+      if (duplicateDetail) {
+        return `Another record already uses the ${duplicateDetail.field} value "${duplicateDetail.value}". Try updating that value.`;
+      }
+
+      if (constraint) {
+        return `This save conflicts with the constraint "${constraint}". Try changing any values that must be unique.`;
+      }
+
+      return "One of the values you entered must be unique. Try choosing different details.";
+    }
+
+    if (error.code === "23503") {
+      return "We couldn't link this save to the related records it expects. Refresh the page and try again.";
+    }
+
+    if (error.code === "42501" || /row-level security/i.test(error.message)) {
+      return "Your account doesn't have permission to save this character. Make sure you're logged in with the right profile.";
+    }
+
+    if (error.code === "22P02") {
+      return "One of the values sent to the server had the wrong format. Double-check any numbers or selections and try again.";
+    }
+
+    if (error.code === "42703") {
+      return "The server rejected one of the fields we sent. Refresh the page to make sure you have the latest form.";
+    }
+  }
+
+  if (error instanceof Error) {
+    if (/did not return any data/i.test(error.message)) {
+      return "The server didn't confirm the save. Please try again in a moment.";
+    }
+  }
+
+  if (stage === "ensure-wardrobe") {
+    return "We couldn't prepare your wardrobe after saving. Try again so we can finish setting up your look.";
+  }
+
+  return null;
+};
+
+const buildSaveErrorState = (
+  error: unknown,
+  stage: SaveFailureStage,
+  attemptedProfilePayload: Record<string, unknown> | null | undefined,
+  attemptedAttributesPayload: Record<string, unknown> | null | undefined,
+): SaveErrorState => {
+  const sanitizedProfilePayload = sanitizePayloadForLogging(attemptedProfilePayload) ?? null;
+  const sanitizedAttributesPayload = sanitizePayloadForLogging(attemptedAttributesPayload) ?? null;
+
+  const baseState: SaveErrorState = {
+    message: buildSaveErrorMessage(error),
+    stage,
+    profilePayload: sanitizedProfilePayload,
+    attributesPayload: sanitizedAttributesPayload,
+  };
+
+  if (isPostgrestError(error)) {
+    const code = ensureNonEmptyString(error.code);
+    if (code) {
+      baseState.code = code;
+    }
+
+    const details = ensureNonEmptyString(error.details);
+    if (details) {
+      baseState.details = details;
+    }
+
+    const hint = ensureNonEmptyString(error.hint);
+    if (hint) {
+      baseState.hint = hint;
+    }
+
+    const duplicateDetail =
+      extractDuplicateKeyDetail(details) || extractDuplicateKeyDetail(error.message);
+    if (duplicateDetail) {
+      baseState.duplicateField = duplicateDetail.field;
+      baseState.duplicateValue = duplicateDetail.value;
+    }
+
+    const constraint = extractConstraintName(error);
+    if (constraint) {
+      baseState.constraint = constraint;
+    }
+
+    const friendlyMessage = getFriendlySaveErrorMessage(error, stage, duplicateDetail, constraint);
+    if (friendlyMessage) {
+      baseState.friendlyMessage = friendlyMessage;
+    }
+
+    return baseState;
+  }
+
+  const friendlyMessage = getFriendlySaveErrorMessage(error, stage);
+  if (friendlyMessage) {
+    baseState.friendlyMessage = friendlyMessage;
+  }
+
+  return baseState;
+};
+
 const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
   if (!(key in source)) {
     return source;
@@ -291,6 +530,7 @@ const CharacterCreation = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<SaveErrorState | null>(null);
   const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
   const [age, setAge] = useState<string>("16");
   const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
@@ -576,6 +816,13 @@ const CharacterCreation = () => {
     }
 
     setIsSaving(true);
+    setSaveError(null);
+
+    console.info("[CharacterCreation] Starting character save", {
+      userId: user.id,
+      existingProfileId: existingProfile?.id ?? null,
+      targetProfileId,
+    });
 
     const selectedBackgroundDetails =
       backgrounds.find((bg) => bg.id === selectedBackground) ?? backgrounds[0];
@@ -628,12 +875,19 @@ const CharacterCreation = () => {
       is_active: isActive,
     };
 
+    let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
+    let attemptedAttributesPayload: Record<string, unknown> | null = null;
+    let currentStage: SaveFailureStage = "profile-upsert";
+
     try {
-      let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
       const skippedProfileColumns = new Set<string>();
       let upsertedProfile: PlayerProfile | null = null;
 
       while (!upsertedProfile) {
+        console.debug("[CharacterCreation] Attempting profile upsert", {
+          payload: sanitizePayloadForLogging(attemptedProfilePayload),
+          skippedColumns: [...skippedProfileColumns],
+        });
         const { data, error: profileError } = await supabase
           .from("profiles")
           .upsert(attemptedProfilePayload as ProfileInsert, {
@@ -647,6 +901,14 @@ const CharacterCreation = () => {
           break;
         }
 
+        console.warn("[CharacterCreation] Profile upsert failed", {
+          error: buildSaveErrorMessage(profileError),
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint,
+          attemptedKeys: Object.keys(attemptedProfilePayload),
+        });
+
         const missingColumn = extractMissingColumn(profileError);
         if (
           missingColumn &&
@@ -655,6 +917,10 @@ const CharacterCreation = () => {
         ) {
           skippedProfileColumns.add(missingColumn);
           attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+          console.warn("[CharacterCreation] Retrying profile upsert without column", {
+            missingColumn,
+            remainingKeys: Object.keys(attemptedProfilePayload),
+          });
           continue;
         }
 
@@ -664,6 +930,8 @@ const CharacterCreation = () => {
       if (!upsertedProfile) {
         throw new Error("Profile save did not return any data.");
       }
+
+      currentStage = "ensure-wardrobe";
 
       const ensuredLoadout = await ensureDefaultWardrobe(
         upsertedProfile.id,
@@ -681,6 +949,8 @@ const CharacterCreation = () => {
       }
 
       setExistingProfile(upsertedProfile);
+
+      currentStage = "attribute-upsert";
 
       const normalizedAttributes = ATTRIBUTE_KEYS.reduce<Record<AttributeKey, number>>(
         (accumulator, key) => {
@@ -720,11 +990,15 @@ const CharacterCreation = () => {
         ...normalizedAttributes,
       };
 
-      let attemptedAttributesPayload: Record<string, unknown> = { ...baseAttributesPayload };
+      attemptedAttributesPayload = { ...baseAttributesPayload };
       const skippedAttributeColumns = new Set<string>();
       let finalAttributesRow: PlayerAttributesRow | null = null;
 
       while (Object.keys(attemptedAttributesPayload).length > 0) {
+        console.debug("[CharacterCreation] Attempting attribute upsert", {
+          payload: sanitizePayloadForLogging(attemptedAttributesPayload),
+          skippedColumns: [...skippedAttributeColumns],
+        });
         const { data: upsertedAttributes, error: attributesError } = await supabase
           .from("player_attributes")
           .upsert(attemptedAttributesPayload as PlayerAttributesInsert, {
@@ -748,6 +1022,10 @@ const CharacterCreation = () => {
           ) {
             skippedAttributeColumns.add(missingColumn);
             attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
+            console.warn("[CharacterCreation] Retrying attribute upsert without column", {
+              missingColumn,
+              remainingKeys: Object.keys(attemptedAttributesPayload),
+            });
             continue;
           }
         }
@@ -768,8 +1046,18 @@ const CharacterCreation = () => {
         buildAttributeStateFromRecord(persistedAttributesRecord, ATTRIBUTE_KEYS, previous),
       );
 
+      currentStage = "refresh-characters";
       await refreshCharacters();
+
+      currentStage = "activate-character";
       await setActiveCharacter(upsertedProfile.id);
+
+      console.info("[CharacterCreation] Character save complete", {
+        profileId: upsertedProfile.id,
+        userId: user.id,
+        skippedProfileColumns: [...skippedProfileColumns],
+        skippedAttributeColumns: [...skippedAttributeColumns],
+      });
 
       toast({
         title: "Character ready!",
@@ -780,10 +1068,35 @@ const CharacterCreation = () => {
 
       navigate("/dashboard");
     } catch (error) {
-      console.error("Failed to save character:", error);
+      const errorState = buildSaveErrorState(
+        error,
+        currentStage,
+        attemptedProfilePayload,
+        attemptedAttributesPayload,
+      );
+
+      console.error("[CharacterCreation] Failed to save character", {
+        stage: currentStage,
+        stageLabel: SAVE_ERROR_STAGE_LABELS[currentStage] ?? SAVE_ERROR_STAGE_LABELS.unknown,
+        errorState,
+        rawError: error,
+        userId: user.id,
+      });
+
+      setSaveError(errorState);
+
+      const toastDescriptionParts = [
+        errorState.friendlyMessage ?? errorState.message,
+        errorState.code ? `Error code: ${errorState.code}` : null,
+        `Step: ${SAVE_ERROR_STAGE_LABELS[currentStage] ?? SAVE_ERROR_STAGE_LABELS.unknown}`,
+        errorState.duplicateField && errorState.duplicateValue
+          ? `${errorState.duplicateField}: ${errorState.duplicateValue}`
+          : null,
+      ].filter((part): part is string => Boolean(part));
+
       toast({
         title: "Could not save character",
-        description: "Please review your details and try again.",
+        description: toastDescriptionParts.join(" — "),
         variant: "destructive",
       });
     } finally {
@@ -831,6 +1144,87 @@ const CharacterCreation = () => {
             <AlertCircle className="h-5 w-5" />
             <AlertTitle>Heads up!</AlertTitle>
             <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        )}
+
+        {saveError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-5 w-5" />
+            <AlertTitle>Unable to save</AlertTitle>
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-destructive-foreground">
+                  {saveError.friendlyMessage ?? saveError.message}
+                </p>
+                <div className="space-y-1 text-xs text-destructive-foreground opacity-90">
+                  <div>
+                    <span className="font-semibold text-destructive-foreground">Step:</span>{" "}
+                    {SAVE_ERROR_STAGE_LABELS[saveError.stage] ?? SAVE_ERROR_STAGE_LABELS.unknown}
+                  </div>
+                  {saveError.code && (
+                    <div>
+                      <span className="font-semibold text-destructive-foreground">Supabase code:</span>{" "}
+                      {saveError.code}
+                    </div>
+                  )}
+                  {saveError.duplicateField && saveError.duplicateValue && (
+                    <div>
+                      <span className="font-semibold text-destructive-foreground">Conflict:</span>{" "}
+                      {saveError.duplicateField} = {saveError.duplicateValue}
+                    </div>
+                  )}
+                  {saveError.constraint && (
+                    <div>
+                      <span className="font-semibold text-destructive-foreground">Constraint:</span>{" "}
+                      {saveError.constraint}
+                    </div>
+                  )}
+                  {saveError.details && (
+                    <div>
+                      <span className="font-semibold text-destructive-foreground">Details:</span>{" "}
+                      {saveError.details}
+                    </div>
+                  )}
+                  {saveError.hint && (
+                    <div>
+                      <span className="font-semibold text-destructive-foreground">Hint:</span>{" "}
+                      {saveError.hint}
+                    </div>
+                  )}
+                  {saveError.friendlyMessage && saveError.friendlyMessage !== saveError.message && (
+                    <div>
+                      <span className="font-semibold text-destructive-foreground">Server message:</span>{" "}
+                      {saveError.message}
+                    </div>
+                  )}
+                </div>
+                {(saveError.profilePayload || saveError.attributesPayload) && (
+                  <details className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive-foreground">
+                    <summary className="cursor-pointer font-semibold">
+                      View data we attempted to save
+                    </summary>
+                    <div className="space-y-2">
+                      {saveError.profilePayload && (
+                        <div className="space-y-1">
+                          <div className="font-semibold">Profile payload</div>
+                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-destructive/20 p-2 text-[11px] leading-relaxed">
+                            {JSON.stringify(saveError.profilePayload, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {saveError.attributesPayload && (
+                        <div className="space-y-1">
+                          <div className="font-semibold">Attribute payload</div>
+                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-destructive/20 p-2 text-[11px] leading-relaxed">
+                            {JSON.stringify(saveError.attributesPayload, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
+              </div>
+            </AlertDescription>
           </Alert>
         )}
 
