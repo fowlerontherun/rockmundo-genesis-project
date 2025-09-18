@@ -39,6 +39,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { calculateFanGain, type PerformanceAttributeBonuses } from "@/utils/gameBalance";
 import { resolveAttributeValue } from "@/utils/attributeModifiers";
+import { formatDateTimeLocal } from "@/utils/datetime";
 
 interface SocialPost {
   id: string;
@@ -249,11 +250,6 @@ const FanManagement = () => {
       console.error('Error loading social posts:', errorMessage, error);
     }
   }, [user]);
-
-  const formatDateTimeLocal = (date: Date) => {
-    const pad = (value: number) => value.toString().padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  };
 
   const clearMediaSelection = () => {
     setMediaFile(null);
