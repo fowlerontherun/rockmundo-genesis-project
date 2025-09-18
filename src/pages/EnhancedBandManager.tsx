@@ -446,6 +446,14 @@ const EnhancedBandManager = () => {
         };
       });
 
+      setAvailableMembers(profilesWithSkills.filter(
+        profile => !currentMemberIds.includes(profile.user_id)
+      ));
+    } catch (error) {
+      console.error("Error fetching available members:", error);
+    }
+  }, [fetchProfileSkillMap, skillDefinitions, user?.id]);
+
   const fetchAvailableMembers = useCallback(
     async (currentMemberIds: string[]) => {
       try {
