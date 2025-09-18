@@ -41,7 +41,7 @@ type SkillProgressRow = Database['public']['Tables']['profile_skill_progress']['
 
 type MemberSkillMap = Record<string, number>;
 
-type SkillProgressWithDefinition = Pick<SkillProgressRow, 'profile_id' | 'current_level' | 'skill_slug'> & {
+type SkillProgressWithDefinition = Pick<SkillProgressRow, 'profile_id' | 'current_level'> & {
   skill_definitions?: Pick<SkillDefinitionRow, 'slug'> | null;
 };
 
@@ -107,7 +107,7 @@ type SongRow = Database['public']['Tables']['songs']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'] & {
   venue?: { name?: string | null; location?: string | null } | null;
 };
-type ScheduleEventRow = Database['public']['Tables']['schedule_events']['Row'];
+// Removed schedule_events table reference as it doesn't exist
 type PublicProfileRow = Database['public']['Views']['public_profiles']['Row'];
 
 interface BandScheduleEvent {
@@ -172,10 +172,10 @@ const BandManager = () => {
     "composition"
   ];
   const attributeKeys: (keyof PlayerAttributes)[] = [
-    "creativity",
-    "business",
-    "marketing",
-    "technical"
+    "charisma",
+    "looks",
+    "musicality",
+    "stage_presence"
   ];
 
   const [band, setBand] = useState<Band | null>(null);
@@ -216,7 +216,7 @@ const BandManager = () => {
         return current;
       }
 
-      const preview = getStoredAvatarPreviewUrl(profile.avatar_url ?? null);
+      const preview = profile.avatar_url;
       return preview ?? "";
     });
   }, [profile]);
@@ -260,12 +260,12 @@ const BandManager = () => {
         if (activeProfileIds.length > 0) {
           const { data, error: skillsError } = await supabase
             .from('profile_skill_progress')
-            .select('profile_id, current_level, skill_slug, skill_definitions!inner(slug)')
+            .select('profile_id, current_level, skill_id')
             .in('profile_id', activeProfileIds);
 
           if (skillsError) throw skillsError;
 
-          const progressRows = (data as SkillProgressWithDefinition[] | null) ?? [];
+          const progressRows = (data as unknown as SkillProgressWithDefinition[] | null) ?? [];
 
           progressRows.forEach((progress) => {
             const slug = progress.skill_slug ?? progress.skill_definitions?.slug ?? null;
