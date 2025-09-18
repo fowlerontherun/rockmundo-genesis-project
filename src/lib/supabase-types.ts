@@ -203,6 +203,255 @@ export interface Database {
           updated_at?: string
         }
       }
+      player_attributes: {
+        Row: {
+          id: string
+          profile_id: string
+          created_at: string
+          updated_at: string
+          attribute_points: number
+          attribute_points_spent: number
+          physical_endurance: number
+          mental_focus: number
+          stage_presence: number
+          crowd_engagement: number
+          social_reach: number
+          creativity: number
+          technical: number
+          business: number
+          marketing: number
+          composition: number
+          musical_ability: number
+          vocal_talent: number
+          rhythm_sense: number
+          creative_insight: number
+          technical_mastery: number
+          business_acumen: number
+          marketing_savvy: number
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          created_at?: string
+          updated_at?: string
+          attribute_points?: number
+          attribute_points_spent?: number
+          physical_endurance?: number
+          mental_focus?: number
+          stage_presence?: number
+          crowd_engagement?: number
+          social_reach?: number
+          creativity?: number
+          technical?: number
+          business?: number
+          marketing?: number
+          composition?: number
+          musical_ability?: number
+          vocal_talent?: number
+          rhythm_sense?: number
+          creative_insight?: number
+          technical_mastery?: number
+          business_acumen?: number
+          marketing_savvy?: number
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          created_at?: string
+          updated_at?: string
+          attribute_points?: number
+          attribute_points_spent?: number
+          physical_endurance?: number
+          mental_focus?: number
+          stage_presence?: number
+          crowd_engagement?: number
+          social_reach?: number
+          creativity?: number
+          technical?: number
+          business?: number
+          marketing?: number
+          composition?: number
+          musical_ability?: number
+          vocal_talent?: number
+          rhythm_sense?: number
+          creative_insight?: number
+          technical_mastery?: number
+          business_acumen?: number
+          marketing_savvy?: number
+          user_id?: string | null
+        }
+      }
+      player_daily_cats: {
+        Row: {
+          id: string
+          profile_id: string
+          activity_date: string
+          category: string
+          xp_earned: number
+          xp_spent: number
+          activity_count: number
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          activity_date: string
+          category: string
+          xp_earned?: number
+          xp_spent?: number
+          activity_count?: number
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          activity_date?: string
+          category?: string
+          xp_earned?: number
+          xp_spent?: number
+          activity_count?: number
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      player_weekly_activity: {
+        Row: {
+          id: string
+          profile_id: string
+          week_start: string
+          xp_earned: number
+          xp_spent: number
+          sessions_completed: number
+          quests_completed: number
+          rehearsals_logged: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          week_start: string
+          xp_earned?: number
+          xp_spent?: number
+          sessions_completed?: number
+          quests_completed?: number
+          rehearsals_logged?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          week_start?: string
+          xp_earned?: number
+          xp_spent?: number
+          sessions_completed?: number
+          quests_completed?: number
+          rehearsals_logged?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      player_xp_wallet: {
+        Row: {
+          profile_id: string
+          xp_balance: number
+          lifetime_xp: number
+          xp_spent: number
+          attribute_points_earned: number
+          skill_points_earned: number
+          last_recalculated: string
+        }
+        Insert: {
+          profile_id: string
+          xp_balance?: number
+          lifetime_xp?: number
+          xp_spent?: number
+          attribute_points_earned?: number
+          skill_points_earned?: number
+          last_recalculated?: string
+        }
+        Update: {
+          profile_id?: string
+          xp_balance?: number
+          lifetime_xp?: number
+          xp_spent?: number
+          attribute_points_earned?: number
+          skill_points_earned?: number
+          last_recalculated?: string
+        }
+      }
+      attribute_spend: {
+        Row: {
+          id: string
+          profile_id: string
+          attribute_key: string
+          points_spent: number
+          xp_cost: number
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          attribute_key: string
+          points_spent: number
+          xp_cost: number
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          attribute_key?: string
+          points_spent?: number
+          xp_cost?: number
+          metadata?: Json | null
+          created_at?: string
+        }
+      }
+      xp_ledger: {
+        Row: {
+          id: string
+          profile_id: string
+          event_type: string
+          xp_delta: number
+          balance_after: number
+          attribute_points_delta: number
+          skill_points_delta: number
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          event_type: string
+          xp_delta: number
+          balance_after: number
+          attribute_points_delta?: number
+          skill_points_delta?: number
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          event_type?: string
+          xp_delta?: number
+          balance_after?: number
+          attribute_points_delta?: number
+          skill_points_delta?: number
+          metadata?: Json | null
+          created_at?: string
+        }
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
