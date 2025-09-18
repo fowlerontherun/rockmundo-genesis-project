@@ -12,6 +12,7 @@ import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses
 import { resolveAttributeValue } from '@/utils/attributeModifiers';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { toast } from '@/components/ui/sonner-toast';
+import { awardActionXp } from '@/utils/progression';
 import { Music, Zap, Heart, Star, TrendingUp, Volume2, Mic, AlertTriangle, Lock } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -154,6 +155,7 @@ const AdvancedGigSystem: React.FC = () => {
     skillDefinitions,
     updateProfile,
     addActivity,
+    refreshProgressionState,
   } = useGameData();
   const navigate = useNavigate();
 
@@ -645,6 +647,13 @@ const AdvancedGigSystem: React.FC = () => {
       const attendance = Math.floor(
         gig.venue.capacity * Math.max(averageScore, 10) / 100 * (currentShowType === 'acoustic' ? 0.85 : 1)
       );
+      const totalShowDurationMs = performanceStages.reduce((total, stage) => total + stage.duration, 0);
+      const professionalismIndicators = {
+        avoided_failures: !isFailure,
+        audience_energy: audienceReaction.energy >= 60,
+        execution_consistency: stageResults.every(result => result.score >= STAGE_FAILURE_THRESHOLD),
+      };
+
       await supabase
         .from('gigs')
         .update({
@@ -654,9 +663,27 @@ const AdvancedGigSystem: React.FC = () => {
         })
         .eq('id', gig.id);
 
+      await awardActionXp({
+        amount: Math.max(0, experienceGain),
+        actionKey: 'advanced_gig_performance',
+        metadata: {
+          gig_id: gig.id,
+          show_type: currentShowType,
+          show_duration_seconds: Math.round(totalShowDurationMs / 1000),
+          venue_tier: gig.venue.prestige_level,
+          final_score: Number(averageScore.toFixed(2)),
+          attendance,
+          collaboration_size: performanceStages.length,
+          professionalism: professionalismIndicators,
+          failure: isFailure,
+        },
+        uniqueEventId: gig.id,
+      });
+
+      await refreshProgressionState();
+
       await updateProfile({
         cash: profile.cash + totalEarningsValue,
-        experience: profile.experience + experienceGain,
         fame: updatedFame
       });
 

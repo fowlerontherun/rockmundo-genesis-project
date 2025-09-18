@@ -22,6 +22,7 @@ import {
 } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
+import { awardActionXp } from "@/utils/progression";
 import type { Database, Json } from "@/integrations/supabase/types";
 
 type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
@@ -69,6 +70,16 @@ const SHOW_TYPE_DETAILS: Record<ShowType, {
     fanMultiplier: 1.2,
     experienceModifier: 1.15,
   },
+};
+
+const SHOW_TYPE_DURATION_SECONDS: Record<ShowType, number> = {
+  standard: 7200,
+  acoustic: 5400,
+};
+
+const SHOW_TYPE_COLLABORATION_SIZE: Record<ShowType, number> = {
+  standard: 5,
+  acoustic: 3,
 };
 
 const SHOW_TYPE_OPTIONS: Array<{ value: ShowType; label: string; description: string }> = Object.entries(SHOW_TYPE_DETAILS).map(([value, detail]) => ({
@@ -167,7 +178,16 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    currentCity,
+    updateProfile,
+    updateAttributes,
+    addActivity,
+    refreshProgressionState,
+  } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
@@ -698,11 +718,49 @@ const GigBooking = () => {
       const newFame = (profile.fame || 0) + fanGain;
       const baseExperience = (attendance / 10) * showTypeDetails.experienceModifier;
       const expGain = Math.max(1, calculateExperienceReward(baseExperience, attributeScores, "performance"));
+      const performanceRatio = Math.max(0, Math.min(1, isSuccess ? successBase : failureBase));
+      const finalScore = Number((performanceRatio * 100).toFixed(2));
+      const showDurationSeconds = SHOW_TYPE_DURATION_SECONDS[showType] ?? SHOW_TYPE_DURATION_SECONDS[DEFAULT_SHOW_TYPE];
+      const collaborationSize = SHOW_TYPE_COLLABORATION_SIZE[showType] ?? SHOW_TYPE_COLLABORATION_SIZE[DEFAULT_SHOW_TYPE];
+      const attendanceCapacityRatio = capacity > 0 ? Number((attendance / capacity).toFixed(3)) : null;
+      const professionalismIndicators = {
+        crowd_engagement: performanceRatio >= 0.65,
+        technical_precision: moraleMultiplier >= 1,
+        stayed_on_schedule: true,
+      };
+
+      const xpMetadata: Record<string, unknown> = {
+        gig_id: gig.id,
+        show_type: showType,
+        show_duration_seconds: showDurationSeconds,
+        venue_tier: gig.venue.prestige_level ?? 0,
+        final_score: finalScore,
+        attendance,
+        collaboration_size: collaborationSize,
+        professionalism: professionalismIndicators,
+        success: isSuccess,
+      };
+
+      if (attendanceCapacityRatio !== null) {
+        xpMetadata.attendance_capacity_ratio = attendanceCapacityRatio;
+      }
+
+      if (environmentModifiers?.applied) {
+        xpMetadata.environment_modifiers_applied = environmentModifiers.applied.length;
+      }
+
+      await awardActionXp({
+        amount: expGain,
+        actionKey: "gig_booking_performance",
+        metadata: xpMetadata,
+        uniqueEventId: gig.id,
+      });
+
+      await refreshProgressionState();
 
       await updateProfile({
         cash: newCash,
         fame: newFame,
-        experience: (profile.experience || 0) + expGain
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};

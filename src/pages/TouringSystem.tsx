@@ -15,6 +15,7 @@ import { useGameData } from '@/hooks/useGameData';
 import { applyAttributeToValue } from '@/utils/attributeProgression';
 import { toast } from '@/components/ui/sonner-toast';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
+import { awardActionXp } from '@/utils/progression';
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -39,6 +40,7 @@ interface TourVenue {
   venue_id: string;
   venue_name: string;
   venue_capacity: number;
+  venue_prestige_level: number;
   city: string;
   country: string;
   date: string;
@@ -105,6 +107,16 @@ const TOUR_SHOW_BEHAVIOR: Record<ShowType, {
   acoustic: { attendance: 0.75, revenue: 0.85, fame: 1.35, experience: 1.2, ticket: 0.9 },
 };
 
+const TOUR_SHOW_DURATION_SECONDS: Record<ShowType, number> = {
+  standard: 7200,
+  acoustic: 5400,
+};
+
+const TOUR_COLLABORATION_SIZE: Record<ShowType, number> = {
+  standard: 5,
+  acoustic: 3,
+};
+
 const TOUR_EXPERIENCE_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
 
 type TourRecord = TourRow & {
@@ -113,7 +125,7 @@ type TourRecord = TourRow & {
 
 const TouringSystem: React.FC = () => {
   const { user } = useAuth();
-  const { profile, attributes, updateProfile, addActivity } = useGameData();
+  const { profile, attributes, updateProfile, addActivity, refreshProgressionState } = useGameData();
   const [tours, setTours] = useState<Tour[]>([]);
   const [availableVenues, setAvailableVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,6 +181,7 @@ const TouringSystem: React.FC = () => {
             venue_id: tv.venue_id,
             venue_name: venueDetails?.name ?? 'Unknown Venue',
             venue_capacity: venueDetails?.capacity ?? 0,
+            venue_prestige_level: venueDetails?.prestige_level ?? 0,
             city: venueDetails?.location ?? 'Unknown City',
             country: 'Various',
             date: tv.date,
@@ -344,7 +357,7 @@ const TouringSystem: React.FC = () => {
     const venue = tour.venues[venueIndex];
     const showType = venue.show_type ?? DEFAULT_SHOW_TYPE;
     const behavior = TOUR_SHOW_BEHAVIOR[showType] ?? TOUR_SHOW_BEHAVIOR[DEFAULT_SHOW_TYPE];
-    
+
     try {
       // Simulate show performance
       const performanceScore = showType === 'acoustic'
@@ -371,10 +384,36 @@ const TouringSystem: React.FC = () => {
       const experienceResult = applyAttributeToValue(baseExperienceGain, attributes, TOUR_EXPERIENCE_ATTRIBUTES);
       const experienceGain = experienceResult.value;
 
+      const finalScorePercentage = Number((performanceScore * 100).toFixed(2));
+      const professionalismIndicators = {
+        smooth_logistics: expenses <= revenue,
+        morale_high: performanceScore >= 0.65,
+        on_time_arrival: true,
+      };
+
+      await awardActionXp({
+        amount: Math.max(0, experienceGain),
+        actionKey: 'tour_show',
+        metadata: {
+          tour_id: tour.id,
+          tour_stop_id: venue.id,
+          show_type: showType,
+          show_duration_seconds: TOUR_SHOW_DURATION_SECONDS[showType] ?? TOUR_SHOW_DURATION_SECONDS[DEFAULT_SHOW_TYPE],
+          venue_tier: venue.venue_prestige_level,
+          final_score: finalScorePercentage,
+          attendance: ticketsSold,
+          collaboration_size: TOUR_COLLABORATION_SIZE[showType] ?? TOUR_COLLABORATION_SIZE[DEFAULT_SHOW_TYPE],
+          professionalism: professionalismIndicators,
+          distance_from_previous: venue.distance_from_previous,
+        },
+        uniqueEventId: venue.id,
+      });
+
+      await refreshProgressionState();
+
       await updateProfile({
         cash: profile.cash + netEarnings,
-        fame: profile.fame + fameGain,
-        experience: profile.experience + experienceGain
+        fame: profile.fame + fameGain
       });
 
       await addActivity(

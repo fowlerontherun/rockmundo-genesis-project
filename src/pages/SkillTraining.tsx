@@ -248,6 +248,7 @@ const SkillTrainingContent = () => {
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
+  const displayExperience = Number(xpWallet?.lifetime_xp ?? totalExperience);
   const skillCap = getSkillCap(playerLevel, totalExperience);
   const walletBalance = Math.max(0, xpWallet?.xp_balance ?? 0);
   const lifetimeXp = Math.max(0, xpWallet?.lifetime_xp ?? totalExperience);
