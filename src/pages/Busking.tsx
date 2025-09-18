@@ -13,16 +13,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchWorldEnvironmentSnapshot, type WeatherCondition } from "@/utils/worldEnvironment";
-import { calculateGigPayment, type PerformanceAttributeBonuses } from "@/utils/gameBalance";
 import { resolveAttributeValue } from "@/utils/attributeModifiers";
 import {
   AttributeFocus,
   AttributeKey,
+  attributeScoreToMultiplier,
   calculateExperienceReward,
   calculateFanGain,
+  calculateGigPayment,
   extractAttributeScores,
   getFocusAttributeScore,
-  attributeScoreToMultiplier
+  type PerformanceAttributeBonuses
 } from "@/utils/gameBalance";
 import {
   Activity,
