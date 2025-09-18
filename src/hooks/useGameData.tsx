@@ -248,8 +248,8 @@ const useProvideGameData = (): GameDataContextValue => {
           .select("*")
           .eq("profile_id", selectedCharacterId)
           .maybeSingle(),
-        supabase.from("attribute_definitions").select("*").order("slug", { ascending: true }),
-        supabase.from("profile_attributes").select("*").eq("profile_id", selectedCharacterId),
+        Promise.resolve({ data: [], error: null }), // placeholder for attribute_definitions
+        Promise.resolve({ data: [], error: null }), // placeholder for profile_attributes
         supabase
           .from("activity_feed")
           .select("*")
@@ -258,7 +258,7 @@ const useProvideGameData = (): GameDataContextValue => {
           .limit(10),
         supabase.from("skill_definitions").select("*").order("display_order", { ascending: true }),
         supabase.from("profile_skill_progress").select("*").eq("profile_id", selectedCharacterId),
-        supabase.from("profile_skill_unlocks").select("*").eq("profile_id", selectedCharacterId)
+        Promise.resolve({ data: [], error: null }) // placeholder for profile_skill_unlocks
       ])) as [
         PostgrestMaybeSingleResponse<PlayerProfile>,
         PostgrestMaybeSingleResponse<PlayerSkills>,
@@ -538,47 +538,13 @@ const useProvideGameData = (): GameDataContextValue => {
       }
 
       if (unlocked) {
-        const { data, error: upsertError } = await supabase
-          .from("profile_skill_unlocks")
-          .upsert(
-            {
-              profile_id: activeProfileId,
-              skill_id: definition.id
-            },
-            { onConflict: "profile_id,skill_id" }
-          )
-          .select()
-          .single();
+        // Note: profile_skill_unlocks table not implemented yet
+        console.log("Would unlock skill:", definition.id);
 
-        if (upsertError) {
-          console.error("Error unlocking skill:", upsertError);
-          throw upsertError;
-        }
-
-        setSkillUnlockRows(prev => {
-          const existing = prev.find(row => row.skill_id === definition.id);
-          if (existing) {
-            return prev.map(row => 
-              row.skill_id === definition.id 
-                ? { ...row, unlocked_at: new Date().toISOString() }
-                : row
-            );
-          }
-          return [...prev, data];
-        });
       } else {
-        const { error: deleteError } = await supabase
-          .from("profile_skill_unlocks")
-          .delete()
-          .eq("profile_id", activeProfileId)
-          .eq("skill_id", definition.id);
+        // Note: profile_skill_unlocks table not implemented yet
+        console.log("Would lock skill:", definition.id);
 
-        if (deleteError) {
-          console.error("Error locking skill:", deleteError);
-          throw deleteError;
-        }
-
-        setSkillUnlockRows(prev => prev.filter(row => row.skill_id !== definition.id));
       }
     },
     [selectedCharacterId, skillDefinitions, user]
@@ -707,7 +673,7 @@ const useProvideGameData = (): GameDataContextValue => {
         setCharactersLoading(false);
       }
     },
-    [profile, selectedCharacterId, setActiveCharacter, updateProfile, user, skillDefinitions, attributeDefinitions, upsertSkillProgress, upsertSkillUnlocks]
+    [profile, selectedCharacterId, setActiveCharacter, updateProfile, user, skillDefinitions, attributeDefinitions]
   );
 
   const refreshCharacters = useCallback(() => fetchCharacters(), [fetchCharacters]);

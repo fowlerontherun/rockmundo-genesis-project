@@ -64,7 +64,7 @@ const parseRewardPayload = (rewards: unknown, profile: PlayerProfile | null): Re
     const baseValue = typeof currentValue === "number" ? currentValue : 0;
     const nextValue = baseValue + numericValue;
 
-    updates[field] = nextValue as PlayerProfile[typeof field];
+    (updates as any)[field] = nextValue;
     messageDetails.push(`${formatKey(field as string)} ${numericValue > 0 ? "+" : ""}${numericValue}`);
 
     if (field === "cash") {
@@ -184,14 +184,14 @@ export const useGameEvents = (options?: Partial<UseGameEventsOptions>) => {
 
     const channel = supabase.channel('game-events-feed');
 
-    channel.on('postgres_changes', { schema: 'public', table: 'game_events' }, () => {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'game_events' }, () => {
       if (!isMounted) {
         return;
       }
       void fetchEvents();
     });
 
-    channel.on('postgres_changes', { schema: 'public', table: 'event_participants' }, () => {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'event_participants' }, () => {
       if (!isMounted) {
         return;
       }

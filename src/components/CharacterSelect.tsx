@@ -34,8 +34,8 @@ const CharacterSelect = () => {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasInitialCharacter = characters.some(character => character.slot_number === 1);
-  const hasSecondSlot = characters.some(character => character.slot_number === 2);
+  const hasInitialCharacter = characters.length > 0;
+  const hasSecondSlot = characters.length > 1;
 
   const nextSlotNumber = useMemo(() => {
     if (!hasInitialCharacter) return 1;
@@ -94,7 +94,7 @@ const CharacterSelect = () => {
               {character.display_name || character.username}
             </CardTitle>
             <CardDescription>
-              Slot {character.slot_number} • Level {character.level ?? 1}
+              Level {character.level ?? 1}
             </CardDescription>
           </div>
           {isActive ? (

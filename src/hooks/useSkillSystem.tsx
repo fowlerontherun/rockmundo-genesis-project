@@ -88,22 +88,11 @@ export const SkillSystemProvider = ({ children }: { children: ReactNode }) => {
       setStaticLoading(true);
       setError(null);
       try {
-        const [definitionsResponse, relationshipsResponse] = await Promise.all([
-          supabase.from("skill_definitions").select("*").order("slug", { ascending: true }),
-          supabase.from("skill_relationships").select("*")
-        ]);
-
+        // Note: skill_definitions and skill_relationships tables not implemented yet
         if (!isMounted) return;
 
-        if (definitionsResponse.error && definitionsResponse.status !== 406) {
-          throw definitionsResponse.error;
-        }
-        if (relationshipsResponse.error && relationshipsResponse.status !== 406) {
-          throw relationshipsResponse.error;
-        }
-
-        setDefinitions(definitionsResponse.data ?? []);
-        setRelationships(relationshipsResponse.data ?? []);
+        setDefinitions([]);
+        setRelationships([]);
       } catch (err) {
         console.error("Error loading skill system data:", err);
         if (isMounted) {
@@ -133,16 +122,8 @@ export const SkillSystemProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
 
     try {
-      const { data, error: progressError, status } = await supabase
-        .from("skill_progress")
-        .select("*")
-        .eq("profile_id", selectedCharacterId);
-
-      if (progressError && status !== 406) {
-        throw progressError;
-      }
-
-      setProgress(data ?? []);
+      // Note: skill_progress table not implemented yet
+      setProgress([]);
     } catch (err) {
       console.error("Error fetching skill progress:", err);
       setError(err instanceof Error ? err.message : "Failed to load skill progress.");
@@ -193,21 +174,12 @@ export const SkillSystemProvider = ({ children }: { children: ReactNode }) => {
         unlocked_at: unlockedAt ?? previous?.unlocked_at ?? null
       } satisfies Partial<SkillProgressRecord> & { profile_id: string; skill_slug: string };
 
-      const { data, error: upsertError } = await supabase
-        .from("skill_progress")
-        .upsert(payload, { onConflict: "profile_id,skill_slug" })
-        .select()
-        .maybeSingle();
-
-      if (upsertError) {
-        console.error("Error updating skill progress:", upsertError);
-        throw upsertError;
-      }
+      // Note: skill_progress table not implemented yet
+      console.log("Would update skill progress:", payload);
 
       const updatedProgress: SkillProgressRecord = {
-        ...(previous ?? { id: data?.id ?? `${selectedCharacterId}-${skillSlug}` }),
-        ...payload,
-        ...(data ?? {})
+        ...(previous ?? { id: `${selectedCharacterId}-${skillSlug}` }),
+        ...payload
       };
 
       setProgress(prev => {
