@@ -200,6 +200,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cities: {
+        Row: {
+          cost_of_living: number | null
+          country: string
+          created_at: string | null
+          cultural_events: string[] | null
+          dominant_genre: string | null
+          id: string
+          local_bonus: number | null
+          music_scene: number | null
+          name: string
+          population: number | null
+          updated_at: string | null
+          venues: number | null
+        }
+        Insert: {
+          cost_of_living?: number | null
+          country: string
+          created_at?: string | null
+          cultural_events?: string[] | null
+          dominant_genre?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name: string
+          population?: number | null
+          updated_at?: string | null
+          venues?: number | null
+        }
+        Update: {
+          cost_of_living?: number | null
+          country?: string
+          created_at?: string | null
+          cultural_events?: string[] | null
+          dominant_genre?: string | null
+          id?: string
+          local_bonus?: number | null
+          music_scene?: number | null
+          name?: string
+          population?: number | null
+          updated_at?: string | null
+          venues?: number | null
+        }
+        Relationships: []
+      }
       equipment_items: {
         Row: {
           category: string
