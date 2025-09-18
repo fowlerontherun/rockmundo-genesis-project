@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,8 @@ import {
   RotateCcw,
   Loader2,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  UserPlus
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { searchProfiles, type SearchProfilesRow } from "@/integrations/supabase/profileSearch";
+import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   AlertDialog,
@@ -145,6 +148,13 @@ const Profile = () => {
   const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
   const [cityLoading, setCityLoading] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
+  const [friendSearchTerm, setFriendSearchTerm] = useState("");
+  const [friendSearchResults, setFriendSearchResults] = useState<SearchProfilesRow[]>([]);
+  const [friendSearchLoading, setFriendSearchLoading] = useState(false);
+  const [friendSearchError, setFriendSearchError] = useState<string | null>(null);
+  const [sendingFriendRequestTo, setSendingFriendRequestTo] = useState<string | null>(null);
+  const [requestedFriendUserIds, setRequestedFriendUserIds] = useState<Record<string, boolean>>({});
+  const friendSearchRequestId = useRef(0);
 
   const showProfileDetails = Boolean(profile && skills && attributes);
 
@@ -231,6 +241,68 @@ const Profile = () => {
     }
   }, [user]);
 
+  const executeFriendSearch = useCallback(
+    async (term: string) => {
+      friendSearchRequestId.current += 1;
+      const requestId = friendSearchRequestId.current;
+
+      if (!user) {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchResults([]);
+          setFriendSearchError(null);
+          setFriendSearchLoading(false);
+        }
+        return;
+      }
+
+      const trimmed = term.trim();
+
+      if (trimmed.length === 0) {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchResults([]);
+          setFriendSearchError(null);
+          setFriendSearchLoading(false);
+        }
+        return;
+      }
+
+      setFriendSearchLoading(true);
+      setFriendSearchError(null);
+
+      try {
+        const results = await searchProfiles(trimmed);
+
+        if (requestId !== friendSearchRequestId.current) {
+          return;
+        }
+
+        const filtered = results.filter(result => result.user_id !== user.id);
+        setFriendSearchResults(filtered);
+      } catch (error) {
+        if (requestId !== friendSearchRequestId.current) {
+          return;
+        }
+
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Failed to search for players.";
+
+        setFriendSearchError(message);
+        toast({
+          variant: "destructive",
+          title: "Search failed",
+          description: message,
+        });
+      } finally {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchLoading(false);
+        }
+      }
+    },
+    [toast, user],
+  );
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -302,6 +374,16 @@ const Profile = () => {
 
     fetchFanMetrics();
   }, [user, fetchFanMetrics]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      void executeFriendSearch(friendSearchTerm);
+    }, 400);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [friendSearchTerm, executeFriendSearch]);
 
   useEffect(() => {
     if (!user) return;
@@ -394,6 +476,73 @@ const Profile = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSendFriendRequest = useCallback(
+    async (target: SearchProfilesRow) => {
+      if (!user || !profile) {
+        toast({
+          variant: "destructive",
+          title: "Profile unavailable",
+          description: "You need an active character to send friend requests.",
+        });
+        return;
+      }
+
+      if (target.user_id === user.id) {
+        toast({
+          variant: "destructive",
+          title: "Cannot send request",
+          description: "You can't send a friend request to yourself.",
+        });
+        return;
+      }
+
+      const requestKey = target.user_id;
+      setSendingFriendRequestTo(requestKey);
+
+      try {
+        await sendFriendRequest({
+          senderProfileId: profile.id,
+          senderUserId: user.id,
+          recipientProfileId: target.profile_id,
+          recipientUserId: target.user_id,
+        });
+
+        setRequestedFriendUserIds((previous) => ({ ...previous, [requestKey]: true }));
+
+        toast({
+          title: "Friend request sent",
+          description: `Waiting for ${target.display_name ?? target.username} to respond.`,
+        });
+      } catch (error) {
+        const fallbackMessage = "Failed to send friend request. Please try again.";
+        const rawMessage = error instanceof Error && error.message ? error.message : fallbackMessage;
+        const normalized = rawMessage.toLowerCase();
+        const duplicateRequest =
+          normalized.includes("friend_requests_pending_pair_idx") ||
+          normalized.includes("duplicate key value");
+
+        if (duplicateRequest) {
+          setRequestedFriendUserIds((previous) => ({ ...previous, [requestKey]: true }));
+        }
+
+        toast({
+          variant: duplicateRequest ? "default" : "destructive",
+          title: duplicateRequest ? "Request already sent" : "Unable to send friend request",
+          description: duplicateRequest
+            ? "Wait for your friend to respond before sending another invite."
+            : rawMessage,
+        });
+      } finally {
+        setSendingFriendRequestTo((current) => (current === requestKey ? null : current));
+      }
+    },
+    [profile, toast, user],
+  );
+
+  const handleFriendSearchInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFriendSearchTerm(event.target.value);
   };
 
   const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -511,9 +660,10 @@ const Profile = () => {
 
         {showProfileDetails ? (
           <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile">Profile Info</TabsTrigger>
             <TabsTrigger value="stats">Statistics</TabsTrigger>
+            <TabsTrigger value="friends">Friends</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-6">
@@ -762,6 +912,93 @@ const Profile = () => {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="friends" className="space-y-6">
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                  Find Friends
+                </CardTitle>
+                <CardDescription>
+                  Search by email, username, or display name to connect with other performers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Input
+                    value={friendSearchTerm}
+                    onChange={handleFriendSearchInputChange}
+                    placeholder="Search players by email, username, or display name"
+                    className="w-full"
+                  />
+                </div>
+                {friendSearchError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Search error</AlertTitle>
+                    <AlertDescription>{friendSearchError}</AlertDescription>
+                  </Alert>
+                ) : null}
+                <div className="space-y-3">
+                  {friendSearchTerm.trim().length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Start typing to look up bandmates, rivals, or future collaborators.
+                    </p>
+                  ) : friendSearchLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Searching players...
+                    </div>
+                  ) : friendSearchResults.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No players found. Try a different email, username, or display name.
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {friendSearchResults.map((result) => {
+                        const isRequested = Boolean(requestedFriendUserIds[result.user_id]);
+                        const isSending = sendingFriendRequestTo === result.user_id;
+                        const disabled = isRequested || isSending || !profile || !user;
+
+                        return (
+                          <li
+                            key={result.user_id}
+                            className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div>
+                              <p className="font-semibold">{result.display_name ?? result.username}</p>
+                              <p className="text-sm text-muted-foreground">@{result.username}</p>
+                              <p className="text-xs text-muted-foreground break-all">{result.email}</p>
+                            </div>
+                            <Button
+                              variant={isRequested ? "outline" : "default"}
+                              className={!isRequested ? "bg-gradient-primary" : ""}
+                              disabled={disabled}
+                              onClick={() => handleSendFriendRequest(result)}
+                            >
+                              {isSending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : isRequested ? (
+                                "Request sent"
+                              ) : (
+                                <>
+                                  <UserPlus className="mr-2 h-4 w-4" />
+                                  Add friend
+                                </>
+                              )}
+                            </Button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
