@@ -138,9 +138,7 @@ export const toSkillProgressMap = (
     if (normalizedEntries.length > 0) {
       return new Map(normalizedEntries);
     }
-  }
-
-  if (Array.isArray(source)) {
+  } else if (Array.isArray(source)) {
     if (source.length > 0 && Array.isArray(source[0]) && source[0]?.length === 2) {
       const iterable = new Map(source as Iterable<[string, SkillProgressLike]>);
       return toSkillProgressMap(iterable, fallback);
@@ -150,12 +148,15 @@ export const toSkillProgressMap = (
     if (arrayMap.size > 0) {
       return arrayMap;
     }
-  }
-
-  if (source && typeof source === "object") {
-    if ("entries" in source && typeof (source as Iterable<unknown>)[Symbol.iterator] === "function") {
+  } else if (source && typeof source === "object") {
+    if (
+      "entries" in source &&
+      typeof (source as Iterable<unknown>)[Symbol.iterator] === "function"
+    ) {
       const iterable = Array.from(source as Iterable<[string, SkillProgressLike]>);
-      return toSkillProgressMap(iterable, fallback);
+      if (iterable.length > 0) {
+        return toSkillProgressMap(iterable, fallback);
+      }
     }
 
     const recordMap = mapFromRecord(source as Record<string, SkillProgressLike>);
