@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import Auth from "./pages/Auth";
+import WorldPulse from "./pages/WorldPulse";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import WorldPulsePage from "./pages/WorldPulse";
 
