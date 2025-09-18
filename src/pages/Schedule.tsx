@@ -1256,15 +1256,13 @@ const Schedule = () => {
 
     try {
       const icsContent = generateICS(events);
-      const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
+      const dataUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
       const link = document.createElement("a");
-      link.href = url;
+      link.href = dataUrl;
       link.download = "rockmundo-schedule.ics";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       toast({
         title: "Calendar exported",
