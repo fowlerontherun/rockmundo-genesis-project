@@ -235,6 +235,7 @@ const extractForeignKeyDetail = (
   };
 };
 
+
 type SaveFailureStage =
   | "profile-upsert"
   | "ensure-wardrobe"
@@ -262,9 +263,11 @@ type SaveErrorState = {
   duplicateField?: string;
   duplicateValue?: string;
   constraint?: string;
+
   foreignKeyFields?: string[];
   foreignKeyValues?: string[];
   foreignTable?: string | null;
+
   profilePayload?: Record<string, unknown> | null;
   attributesPayload?: Record<string, unknown> | null;
 };
@@ -275,6 +278,7 @@ const getFriendlySaveErrorMessage = (
   duplicateDetail?: { field: string; value: string } | null,
   constraint?: string | null,
   foreignKeyDetail?: ForeignKeyDetail | null,
+
 ): string | null => {
   if (isPostgrestError(error)) {
     if (error.code === "23505") {
@@ -309,6 +313,7 @@ const getFriendlySaveErrorMessage = (
         const formattedField = primaryField.replace(/_/g, " ");
         return `We couldn't find a related ${formattedField} record with the value "${primaryValue}". Refresh and try again.`;
       }
+
 
       return "We couldn't link this save to the related records it expects. Refresh the page and try again.";
     }
@@ -400,6 +405,7 @@ const buildSaveErrorState = (
       constraint,
       foreignKeyDetail,
     );
+
     if (friendlyMessage) {
       baseState.friendlyMessage = friendlyMessage;
     }
@@ -941,6 +947,7 @@ const CharacterCreation = () => {
     let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
     let attemptedAttributesPayload: Record<string, unknown> | null = null;
     let currentStage: SaveFailureStage = "profile-upsert";
+
 
     try {
       const skippedProfileColumns = new Set<string>();
