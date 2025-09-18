@@ -70,7 +70,7 @@ const Layout = () => {
     const isOnProfile = location.pathname === "/profile";
 
     if (!loading && user && !checkingProfile && !hasProfile && !isOnCharacterCreation && !isOnProfile) {
-      navigate("/character-create");
+      navigate("/character-create", { state: { fromProfile: true } });
     }
   }, [loading, user, checkingProfile, hasProfile, location.pathname, navigate]);
 
