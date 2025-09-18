@@ -2012,6 +2012,8 @@ const useProvideGameData = (): GameDataContextValue => {
       }
     },
     [applyCooldownState, fetchProgressionSnapshot, loadXpLedger, profile, selectedCharacterId]
+  );
+
   const upsertSkillProgress = useCallback(async (profileId: string, entries: SkillProgressUpsertInput[]) => {
     return [];
   }, []);
