@@ -22,10 +22,18 @@ import {
   getSkillCap,
   isOnCooldown,
   getRemainingCooldown,
-  attributeScoreToMultiplier,
-  COOLDOWNS
+  COOLDOWNS,
+  type AttributeFocus
 } from "@/utils/gameBalance";
 import { applyCooldownModifier, applyRewardBonus } from "@/utils/attributeModifiers";
+import {
+  ATTRIBUTE_METADATA,
+  ATTRIBUTE_MAX_VALUE,
+  ATTRIBUTE_TRAINING_INCREMENT,
+  clampAttributeValue,
+  getAttributeTrainingCost,
+  type AttributeKey
+} from "@/utils/attributeProgression";
 import {
   type LucideIcon,
   Guitar,
@@ -38,7 +46,8 @@ import {
   Lock,
   Coins,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -165,6 +174,35 @@ interface DerivedSession extends TrainingSessionConfig {
   remainingCooldown: number;
 }
 
+const resolveSessionFocus = (session: DerivedSession): AttributeFocus => {
+  const slug = session.slug.toLowerCase();
+  const category = session.category.toLowerCase();
+  const track = session.track?.toLowerCase() ?? "";
+
+  if (slug.includes("vocal") || category.includes("vocal") || track.includes("vocal")) {
+    return "vocals";
+  }
+
+  if (
+    slug.includes("song") ||
+    category.includes("songwriting") ||
+    track.includes("song") ||
+    track.includes("lyric")
+  ) {
+    return "songwriting";
+  }
+
+  if (slug.includes("performance") || category.includes("stage") || track.includes("stage")) {
+    return "performance";
+  }
+
+  if (category.includes("instrument") || track.includes("guitar") || track.includes("drum") || track.includes("bass")) {
+    return "instrumental";
+  }
+
+  return "instrumental";
+};
+
 const formatSkillName = (slug: string) =>
   slug
     .split("_")
@@ -199,8 +237,11 @@ const SkillTrainingContent = () => {
     attributes,
     updateProfile,
     addActivity,
-    loading: gameDataLoading
+    loading: gameDataLoading,
+    xpWallet,
+    attributeStarTotal
   } = useGameData();
+
   const {
     definitions,
     relationships,
@@ -214,8 +255,16 @@ const SkillTrainingContent = () => {
   const trainingCooldown = applyCooldownModifier(baseTrainingCooldown, attributes?.physical_endurance);
 
   const playerLevel = Number(profile?.level ?? 1);
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
   const totalExperience = Number(profile?.experience ?? 0);
-  const skillCap = getSkillCap(playerLevel, totalExperience);
+  const skillCap = getSkillCap(playerLevel, progressionSnapshot);
 
   const availableDefinitions = useMemo(() => {
     const trainable = definitions.filter(definition => definition.is_trainable !== false);
@@ -487,7 +536,11 @@ const SkillTrainingContent = () => {
     const playerCash = Number(profile.cash ?? 0);
     const playerLevel = Number(profile.level ?? 1);
     const totalExperience = Number(profile.experience ?? 0);
-    const skillCap = getSkillCap(playerLevel, totalExperience);
+    const sessionProgression = {
+      ...progressionSnapshot,
+      legacyExperience: totalExperience
+    };
+    const skillCap = getSkillCap(playerLevel, sessionProgression);
     const trainingCost = calculateTrainingCost(currentSkill);
 
     if (currentSkill >= skillCap) {
@@ -511,6 +564,7 @@ const SkillTrainingContent = () => {
     const focusedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
     const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
     const skillGain = newSkillValue - currentSkill;
+    const sessionFocus = resolveSessionFocus(session);
 
     if (skillGain <= 0) {
       toast({
@@ -522,7 +576,6 @@ const SkillTrainingContent = () => {
     }
 
     const newCash = playerCash - trainingCost;
-    const newExperience = totalExperience + focusedXp;
     const timestamp = new Date().toISOString();
 
     setTraining(true);
@@ -534,19 +587,48 @@ const SkillTrainingContent = () => {
         timestamp
       });
 
+      if (focusedXp > 0) {
+        await awardActionXp({
+          amount: focusedXp,
+          category: "practice",
+          actionKey: "skill_training",
+          uniqueEventId: `${session.slug}:${timestamp}`,
+          metadata: {
+            skill_slug: session.slug,
+            skill_gain: skillGain,
+            xp_awarded: focusedXp,
+            training_cost: trainingCost,
+          },
+        });
+      }
+
       await updateProfile({
         cash: newCash,
-        experience: newExperience,
         updated_at: timestamp
       });
 
-      if (Object.keys(attributeInvestments).length > 0) {
-        await updateAttributes(attributeInvestments as Partial<PlayerAttributes>);
-      }
+      await awardActionXp({
+        amount: focusedXp,
+        category: "training",
+        actionKey: "skill_training",
+        sessionSlug: session.slug,
+        focus: sessionFocus,
+        durationMinutes: session.duration,
+        collaborationCount: 0,
+        quality: skillGain,
+        metadata: {
+          skill_gain: skillGain,
+          skill_value_after: newSkillValue,
+          training_cost: trainingCost,
+          category: session.category,
+          tier: session.tier,
+          track: session.track
+        }
+      });
 
       await addActivity(
         "training",
-        `Completed ${session.name} training session (+${xpGain} XP)`,
+        `Completed ${session.name} training session (+${focusedXp} XP)`,
         -trainingCost
       );
 
@@ -587,10 +669,15 @@ const SkillTrainingContent = () => {
       return;
     }
 
-    const availableExperience = Math.max(0, Number(profile.experience ?? 0));
+    const profileExperience = Number(profile.experience ?? 0);
+    const walletBalance =
+      typeof xpWallet?.xp_balance === "number" && Number.isFinite(xpWallet.xp_balance)
+        ? xpWallet.xp_balance
+        : null;
+    const availableExperience = Math.max(0, walletBalance ?? profileExperience);
     const trainingCost = getAttributeTrainingCost(currentValue);
 
-    if (availableExperience < trainingCost) {
+    if (availableXp < trainingCost) {
       toast({
         variant: "destructive",
         title: "Not Enough XP",
@@ -606,19 +693,20 @@ const SkillTrainingContent = () => {
       const timestamp = new Date().toISOString();
       const nextValue = clampAttributeValue(currentValue + ATTRIBUTE_TRAINING_INCREMENT);
       const actualGain = nextValue - currentValue;
-      const nextExperience = Math.max(0, availableExperience - trainingCost);
+      const uniqueEventId = `attribute_training:${attributeKey}:${timestamp}`;
 
-      const attributeUpdates: Partial<PlayerAttributes> = {
-        [attributeKey]: nextValue,
-        updated_at: timestamp
-      } as Partial<PlayerAttributes>;
+      await buyAttributeStar({
+        attributeKey,
+        points: actualGain,
+        uniqueEventId,
+        metadata: {
+          source: "skill_training_center",
+          attribute_gain: actualGain,
+          training_cost: trainingCost,
+        },
+      });
 
       await updateAttributes(attributeUpdates);
-
-      await updateProfile({
-        experience: nextExperience,
-        updated_at: timestamp
-      });
 
       await addActivity(
         "attribute_training",
@@ -627,7 +715,8 @@ const SkillTrainingContent = () => {
         {
           attribute: attributeKey,
           gain: actualGain,
-          cost: trainingCost
+          cost: trainingCost,
+          event_id: uniqueEventId
         }
       );
 
@@ -685,8 +774,12 @@ const SkillTrainingContent = () => {
             <span className="font-oswald">${profile.cash?.toLocaleString() || 0}</span>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
-            <span className="font-oswald">{profile.experience || 0} XP</span>
+            <Wallet className="h-4 w-4 text-blue-400" />
+            <span className="font-oswald">{walletBalance.toLocaleString()} XP available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-green-400" />
+            <span className="font-oswald">{lifetimeXp.toLocaleString()} lifetime XP</span>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-purple-400" />
@@ -898,7 +991,7 @@ const SkillTrainingContent = () => {
         <TabsContent value="attributes" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {attributeSummaries.map(({ key, value, metadata, icon: AttributeIcon, cost, percentage }) => {
-              const availableExperience = Math.max(0, Number(profile?.experience ?? 0));
+              const availableExperience = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
               const canAfford = availableExperience >= cost;
               const isMaxed = value >= ATTRIBUTE_MAX_VALUE;
               const isActive = activeTrainingKey === `attribute:${key}`;

@@ -19,6 +19,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { awardActionXp } from "@/utils/progression";
+import {
+  AttributeFocus,
+  AttributeKey,
+  calculateExperienceReward,
+  extractAttributeScores
+} from "@/utils/gameBalance";
 import {
   buildSkillLevelRecord,
   hasSkillData,
@@ -247,13 +254,21 @@ const slugifyName = (value: string): string =>
     .replace(/(^-|-$)+/g, "");
 
 const defaultEngineerName = "Self-produced";
-const RECORDING_ATTRIBUTE_KEYS: AttributeKey[] = ["technical_mastery", "creative_insight"];
 
 const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const gameData = useGameData();
-  const { profile, skills, updateProfile, updateSkills, addActivity } = gameData;
+  const {
+    profile,
+    skills,
+    attributes,
+    updateProfile,
+    updateSkills,
+    updateAttributes,
+    refreshProgressionState,
+    addActivity
+  } = gameData;
 
   const skillProgressSource = useMemo<SkillProgressSource>(() => {
     const withProgress = gameData as unknown as {
@@ -944,14 +959,66 @@ const MusicCreation = () => {
       const recordingFocus: AttributeFocus = "songwriting";
       const experienceGain = Math.max(
         0,
-        calculateExperienceReward(session.quality_gain * 5, attributeScores, recordingFocus)
+        calculateExperienceReward(
+          session.quality_gain * 5,
+          attributeScores,
+          recordingFocus,
+          progressionSnapshot
+        )
       );
 
+      const sessionDurationMinutes = (() => {
+        if (session.started_at) {
+          const started = new Date(session.started_at).getTime();
+          const completed = new Date(completionTime).getTime();
+          if (Number.isFinite(started) && Number.isFinite(completed) && completed > started) {
+            return Math.max(1, Math.round((completed - started) / 60000));
+          }
+        }
+        const durationField = (session as Record<string, unknown>).duration_minutes;
+        if (typeof durationField === "number" && Number.isFinite(durationField) && durationField > 0) {
+          return Math.round(durationField);
+        }
+        return null;
+      })();
+
+      const collaborators = (() => {
+        if (Array.isArray((session as Record<string, unknown>).collaborators)) {
+          return ((session as Record<string, unknown>).collaborators as unknown[])
+            .map((entry) =>
+              typeof entry === "string"
+                ? entry
+                : typeof entry === "object" && entry !== null && "name" in entry
+                  ? String((entry as { name?: unknown }).name ?? "")
+                  : ""
+            )
+            .filter((name) => name.length > 0);
+        }
+
+        const engineerName = typeof session.engineer_name === "string" ? session.engineer_name : null;
+        return engineerName ? [engineerName] : [];
+      })();
+
+      await awardActionXp({
+        amount: experienceGain,
+        actionKey: `music_creation_${session.stage}`,
+        metadata: {
+          session_id: session.id,
+          song_id: song.id,
+          stage_type: session.stage,
+          duration_minutes: sessionDurationMinutes,
+          quality_gain: session.quality_gain,
+          collaborators,
+          professionalism_notes: session.notes ?? null
+        },
+        uniqueEventId: session.id
+      });
+
+      await refreshProgressionState();
+
       if (profile) {
-        const xpResult = applyAttributeToValue(session.quality_gain * 5, attributes, RECORDING_ATTRIBUTE_KEYS);
         await updateProfile({
-          cash: Math.max(0, (profile.cash ?? 0) - session.total_cost),
-          experience: (profile.experience ?? 0) + experienceGain
+          cash: Math.max(0, (profile.cash ?? 0) - session.total_cost)
         });
       }
 

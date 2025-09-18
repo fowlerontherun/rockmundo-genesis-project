@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from '@/utils/gameBalance';
 import { resolveAttributeValue } from '@/utils/attributeModifiers';
+import { awardActionXp } from '@/utils/progression';
 import {
   Music,
   Users,
@@ -85,7 +86,7 @@ const PerformGig = () => {
   const { gigId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, skills, attributes, addActivity } = useGameData();
+  const { profile, skills, attributes, addActivity, updateProfile, refreshProgressionState } = useGameData();
   const { toast } = useToast();
   const toastRef = useRef(toast);
 
@@ -253,6 +254,17 @@ const PerformGig = () => {
     setFanGain(finalFanGain);
     setExperienceGain(expGain);
 
+    const totalShowDurationMs = stageSequence.reduce((sum, stage) => sum + stage.duration, 0);
+    const attendanceCapacityRatio = gig.venue.capacity > 0
+      ? attendanceResult / gig.venue.capacity
+      : 0;
+    const professionalismIndicators = {
+      crowd_engagement: performance.crowd_energy >= 65,
+      technical_precision: performance.technical_skill >= 65,
+      stage_presence: performance.stage_presence >= 65,
+      stayed_on_schedule: true,
+    };
+
     // Update database
     try {
       // Update gig status and results
@@ -265,22 +277,46 @@ const PerformGig = () => {
         })
         .eq('id', gigId);
 
-      // Update player profile with earnings and experience
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('cash, experience, fame')
-        .eq('user_id', user.id)
-        .single();
+      await awardActionXp({
+        amount: expGain,
+        actionKey: 'gig_performance',
+        metadata: {
+          gig_id: gig.id,
+          show_type: currentShowType,
+          show_duration_seconds: Math.round(totalShowDurationMs / 1000),
+          venue_tier: gig.venue.prestige_level,
+          final_score: Number(finalScore.toFixed(2)),
+          attendance: attendanceResult,
+          attendance_capacity_ratio: Number(attendanceCapacityRatio.toFixed(3)),
+          collaboration_size: 1,
+          professionalism: professionalismIndicators,
+        },
+        uniqueEventId: gig.id,
+      });
 
-      if (profile?.id) {
-        await supabase
+      await refreshProgressionState();
+
+      if (profile) {
+        await updateProfile({
+          cash: profile.cash + finalEarnings,
+          fame: profile.fame + finalFanGain
+        });
+      } else {
+        const { data: profileRow } = await supabase
           .from('profiles')
-          .update({
-            cash: profile.cash + finalEarnings,
-            experience: profile.experience + expGain,
-            fame: profile.fame + finalFanGain
-          })
-          .eq('id', profile.id);
+          .select('id, cash, fame')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileRow?.id) {
+          await supabase
+            .from('profiles')
+            .update({
+              cash: profileRow.cash + finalEarnings,
+              fame: profileRow.fame + finalFanGain
+            })
+            .eq('id', profileRow.id);
+        }
       }
 
       // Add activity feed entry

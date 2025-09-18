@@ -3,6 +3,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { awardActionXp } from "@/utils/progression";
 import { calculateAttributeMultiplier, type AttributeKey as ProgressionAttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchWorldEnvironmentSnapshot, type WeatherCondition } from "@/utils/worldEnvironment";
+import type { ProgressionActionSuccessResponse } from "@/types/progression";
 import { resolveAttributeValue } from "@/utils/attributeModifiers";
 import {
   AttributeFocus,
@@ -555,12 +557,18 @@ const Busking = () => {
     profile,
     skills,
     attributes,
+    xpWallet,
     updateProfile,
+    awardActionXp,
     updateAttributes,
+    refreshProgressionState,
     addActivity,
     loading: gameLoading,
     currentCity,
-    selectedCharacterId
+    selectedCharacterId,
+    xpWallet,
+    refreshProgressionState,
+    applyProgressionUpdate
   } = useGameData();
   const { toast } = useToast();
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -577,6 +585,10 @@ const Busking = () => {
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [cachedAttributes, setCachedAttributes] = useState<PlayerAttributes | null>(null);
+  const xpDisplay = useMemo(
+    () => xpWallet?.xp_balance ?? profile?.experience ?? 0,
+    [xpWallet?.xp_balance, profile?.experience]
+  );
   const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
     const source = cachedAttributes as unknown as Record<string, unknown> | null;
     return {
@@ -585,6 +597,16 @@ const Busking = () => {
       socialReach: resolveAttributeValue(source, "social_reach", 1),
     };
   }, [cachedAttributes]);
+  const totalExperience = Number(xpWallet?.lifetime_xp ?? 0);
+
+  const baseProgression = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -877,8 +899,11 @@ const Busking = () => {
     const expectancy = successChance / 100;
     const baseExperience =
       (selectedLocation.experience_reward + modifierBonus) * environmentMultiplier * (0.6 + expectancy * 0.4);
-    return Math.max(0, calculateExperienceReward(baseExperience, attributeScores, "performance"));
-  }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      calculateExperienceReward(baseExperience, attributeScores, "performance", baseProgression)
+    );
+  }, [attributeScores, baseProgression, environmentDetails, selectedLocation, selectedModifier, successChance]);
 
   const WeatherIcon = environmentDetails.weather
     ? getWeatherIcon(environmentDetails.weather.condition)
@@ -1021,7 +1046,10 @@ const Busking = () => {
         environmentDetails.combined.experienceMultiplier *
         cityMultiplier;
       const rawExperience = baseExperience * (success ? (0.9 + Math.random() * 0.5) : 0.5 * (0.7 + Math.random() * 0.3));
-      const experienceGained = Math.max(0, calculateExperienceReward(rawExperience, attributeScores, "performance"));
+      const experienceGained = Math.max(
+        0,
+        calculateExperienceReward(rawExperience, attributeScores, "performance", baseProgression)
+      );
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
@@ -1105,14 +1133,33 @@ const Busking = () => {
         throw sessionError;
       }
 
+      const xpMetadata: Record<string, unknown> = {
+        session_id: sessionRecord.id,
+        stage_type: "busking",
+        duration_minutes: durationMinutes,
+        quality_gain: Math.round(performanceScore),
+        collaborators: modifier ? [modifier.name] : [],
+        professionalism_notes: crowdReaction,
+        location_name: selectedLocation.name,
+        modifier_id: modifier?.id ?? null,
+        success
+      };
+
+      await awardActionXp({
+        amount: experienceGained,
+        actionKey: "busking_session",
+        metadata: xpMetadata,
+        uniqueEventId: sessionRecord.id
+      });
+
+      await refreshProgressionState();
+
       const nextCash = (profile.cash ?? 0) + cashEarned;
       const nextFame = (profile.fame ?? 0) + fameGained;
-      const nextExperience = (profile.experience ?? 0) + experienceGained;
 
       await updateProfile({
         cash: nextCash,
-        fame: nextFame,
-        experience: nextExperience,
+        fame: nextFame
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
@@ -1291,7 +1338,7 @@ const Busking = () => {
               <Award className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{profile.experience ?? 0}</div>
+              <div className="text-2xl font-bold text-accent">{xpDisplay.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Every street set sharpens your craft.</p>
             </CardContent>
           </Card>
