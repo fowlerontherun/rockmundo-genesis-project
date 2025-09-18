@@ -259,11 +259,13 @@ const SkillTrainingContent = () => {
     () => ({
       wallet: xpWallet ?? null,
       attributeStars: attributeStarTotal,
-      legacyExperience: profile?.experience ?? null
+      legacyExperience: xpWallet?.lifetime_xp ?? null
     }),
-    [xpWallet, attributeStarTotal, profile?.experience]
+    [xpWallet, attributeStarTotal]
   );
-  const totalExperience = Number(profile?.experience ?? 0);
+  const spendableXp = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
+  const lifetimeXp = Math.max(0, Number(xpWallet?.lifetime_xp ?? 0));
+  const formattedSpendableXp = spendableXp.toLocaleString();
   const skillCap = getSkillCap(playerLevel, progressionSnapshot);
 
   const availableDefinitions = useMemo(() => {
@@ -535,10 +537,10 @@ const SkillTrainingContent = () => {
     const currentSkill = getSkillValue(session.slug);
     const playerCash = Number(profile.cash ?? 0);
     const playerLevel = Number(profile.level ?? 1);
-    const totalExperience = Number(profile.experience ?? 0);
+    const totalLifetimeXp = Math.max(0, Number(xpWallet?.lifetime_xp ?? 0));
     const sessionProgression = {
       ...progressionSnapshot,
-      legacyExperience: totalExperience
+      legacyExperience: totalLifetimeXp
     };
     const skillCap = getSkillCap(playerLevel, sessionProgression);
     const trainingCost = calculateTrainingCost(currentSkill);
@@ -669,12 +671,7 @@ const SkillTrainingContent = () => {
       return;
     }
 
-    const profileExperience = Number(profile.experience ?? 0);
-    const walletBalance =
-      typeof xpWallet?.xp_balance === "number" && Number.isFinite(xpWallet.xp_balance)
-        ? xpWallet.xp_balance
-        : null;
-    const availableExperience = Math.max(0, walletBalance ?? profileExperience);
+    const availableXp = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
     const trainingCost = getAttributeTrainingCost(currentValue);
 
     if (availableXp < trainingCost) {
@@ -775,7 +772,7 @@ const SkillTrainingContent = () => {
           </div>
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-blue-400" />
-            <span className="font-oswald">{walletBalance.toLocaleString()} XP available</span>
+            <span className="font-oswald">{formattedSpendableXp} XP available</span>
           </div>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-green-400" />
