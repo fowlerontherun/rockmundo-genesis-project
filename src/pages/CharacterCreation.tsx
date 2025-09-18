@@ -164,6 +164,7 @@ const sanitizePayloadForLogging = (
 
   return sanitized;
 };
+
 const ensureNonEmptyString = (value: unknown): string | null => {
   if (typeof value !== "string") {
     return null;
@@ -203,6 +204,38 @@ const extractDuplicateKeyDetail = (
   return null;
 };
 
+type ForeignKeyDetail = {
+  fields: string[];
+  values: string[];
+  foreignTable?: string | null;
+};
+
+const extractForeignKeyDetail = (
+  source: string | null | undefined,
+): ForeignKeyDetail | null => {
+  if (!source) {
+    return null;
+  }
+
+  const match = source.match(
+    /Key \(([^)]+)\)=\(([^)]+)\) is not present(?: in table "?([^"]+)"?)?/i,
+  );
+
+  if (!match?.[1] || !match?.[2]) {
+    return null;
+  }
+
+  const rawFields = match[1].split(",").map((field) => field.trim().replace(/^"|"$/g, ""));
+  const rawValues = match[2].split(",").map((value) => value.trim().replace(/^"|"$/g, ""));
+
+  return {
+    fields: rawFields,
+    values: rawValues,
+    foreignTable: match[3]?.trim() ?? null,
+  };
+};
+
+
 type SaveFailureStage =
   | "profile-upsert"
   | "ensure-wardrobe"
@@ -230,6 +263,11 @@ type SaveErrorState = {
   duplicateField?: string;
   duplicateValue?: string;
   constraint?: string;
+
+  foreignKeyFields?: string[];
+  foreignKeyValues?: string[];
+  foreignTable?: string | null;
+
   profilePayload?: Record<string, unknown> | null;
   attributesPayload?: Record<string, unknown> | null;
 };
@@ -239,6 +277,8 @@ const getFriendlySaveErrorMessage = (
   stage: SaveFailureStage,
   duplicateDetail?: { field: string; value: string } | null,
   constraint?: string | null,
+  foreignKeyDetail?: ForeignKeyDetail | null,
+
 ): string | null => {
   if (isPostgrestError(error)) {
     if (error.code === "23505") {
@@ -262,6 +302,19 @@ const getFriendlySaveErrorMessage = (
     }
 
     if (error.code === "23503") {
+      if (foreignKeyDetail?.fields?.length && foreignKeyDetail.values?.length) {
+        const [primaryField] = foreignKeyDetail.fields;
+        const [primaryValue] = foreignKeyDetail.values;
+
+        if (primaryField === "slot_number") {
+          return `We couldn't find character slot ${primaryValue} for your profile. Unlock that slot or choose another before saving again.`;
+        }
+
+        const formattedField = primaryField.replace(/_/g, " ");
+        return `We couldn't find a related ${formattedField} record with the value "${primaryValue}". Refresh and try again.`;
+      }
+
+
       return "We couldn't link this save to the related records it expects. Refresh the page and try again.";
     }
 
@@ -335,7 +388,24 @@ const buildSaveErrorState = (
       baseState.constraint = constraint;
     }
 
-    const friendlyMessage = getFriendlySaveErrorMessage(error, stage, duplicateDetail, constraint);
+    const foreignKeyDetail =
+      extractForeignKeyDetail(details) ||
+      extractForeignKeyDetail(error.message) ||
+      extractForeignKeyDetail(error.hint);
+    if (foreignKeyDetail) {
+      baseState.foreignKeyFields = foreignKeyDetail.fields;
+      baseState.foreignKeyValues = foreignKeyDetail.values;
+      baseState.foreignTable = foreignKeyDetail.foreignTable ?? null;
+    }
+
+    const friendlyMessage = getFriendlySaveErrorMessage(
+      error,
+      stage,
+      duplicateDetail,
+      constraint,
+      foreignKeyDetail,
+    );
+
     if (friendlyMessage) {
       baseState.friendlyMessage = friendlyMessage;
     }
@@ -530,7 +600,6 @@ const CharacterCreation = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<SaveErrorState | null>(null);
-
   const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
   const [age, setAge] = useState<string>("16");
   const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
@@ -1093,6 +1162,15 @@ const CharacterCreation = () => {
         errorState.duplicateField && errorState.duplicateValue
           ? `${errorState.duplicateField}: ${errorState.duplicateValue}`
           : null,
+        errorState.foreignKeyFields?.length
+          ? `Missing relation: ${errorState.foreignKeyFields
+              .map((field, index) =>
+                `${field}=${
+                  errorState.foreignKeyValues?.[index] ?? errorState.foreignKeyValues?.[0] ?? "unknown"
+                }`,
+              )
+              .join(", ")}${errorState.foreignTable ? ` → ${errorState.foreignTable}` : ""}`
+          : null,
       ].filter((part): part is string => Boolean(part));
 
       toast({
@@ -1178,6 +1256,21 @@ const CharacterCreation = () => {
                     <div>
                       <span className="font-semibold text-destructive-foreground">Constraint:</span>{" "}
                       {saveError.constraint}
+                    </div>
+                  )}
+                  {saveError.foreignKeyFields?.length && (
+                    <div>
+                      <span className="font-semibold text-destructive-foreground">Missing relation:</span>{" "}
+                      {saveError.foreignKeyFields
+                        .map((field, index) =>
+                          `${field} = ${
+                            saveError.foreignKeyValues?.[index] ??
+                            saveError.foreignKeyValues?.[0] ??
+                            "unknown"
+                          }`,
+                        )
+                        .join(", ")}
+                      {saveError.foreignTable ? ` (expected in ${saveError.foreignTable})` : ""}
                     </div>
                   )}
                   {saveError.details && (
