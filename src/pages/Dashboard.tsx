@@ -715,6 +715,11 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           </div>
+          <RealtimeChatPanel
+            channelKey="general"
+            title="Live Chat"
+            className="bg-card/80 backdrop-blur-sm border-primary/20"
+          />
         </div>
       </div>
     </div>

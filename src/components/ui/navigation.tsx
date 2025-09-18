@@ -24,7 +24,6 @@ import {
   Play,
   Menu,
   X,
-  MessageSquare,
   Globe,
   Mic
 } from "lucide-react";
@@ -101,7 +100,6 @@ const Navigation = () => {
     {
       title: "Advanced Systems",
       items: [
-        { icon: MessageSquare, label: "Live Chat", path: "/communication" },
         { icon: Globe, label: "World Events", path: "/world" },
         { icon: TrendingUp, label: "Statistics", path: "/statistics" },
         { icon: Settings, label: "Admin Panel", path: "/admin" },

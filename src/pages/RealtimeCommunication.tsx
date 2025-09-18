@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import ChatWindow from '@/components/realtime/ChatWindow';
 import { MessageSquare, Music } from 'lucide-react';
+
 
 interface AudioMeterHandle {
   analyser: AnalyserNode;
@@ -13,6 +14,15 @@ interface AudioMeterHandle {
 const RealtimeCommunication: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [bandId, setBandId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'general' | 'band'>('general');
+  const channelKey = useMemo(() => {
+    if (activeTab === 'band') {
+      return bandId ? `band:${bandId}` : null;
+    }
+
+    return 'general';
+  }, [activeTab, bandId]);
   const audioMetersRef = useRef<Record<string, AudioMeterHandle>>({});
 
   const destroyAudioMeter = useCallback((participantId: string) => {
@@ -40,27 +50,13 @@ const RealtimeCommunication: React.FC = () => {
   }, [destroyAudioMeter]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">RockMundo Live</h1>
           <p className="text-muted-foreground">
             Real-time communication and collaboration
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-2 px-3 py-1 rounded-full ${
-              isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}
-          >
-            <div
-              className={`w-2 h-2 rounded-full ${
-                isConnected ? 'bg-green-500' : 'bg-red-500'
-              }`}
-            />
-            {isConnected ? 'Connected' : 'Connecting...'}
-          </div>
         </div>
       </div>
 
@@ -70,7 +66,9 @@ const RealtimeCommunication: React.FC = () => {
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
               <span>Chat</span>
-              <Badge variant="secondary">{onlineCount}</Badge>
+              <Badge variant="secondary">
+                {`${activeTab === 'band' ? 'Band' : 'Global'}: ${onlineCount}`}
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -86,7 +84,7 @@ const RealtimeCommunication: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Music className="w-5 h-5" />
+              <Music className="h-5 w-5" />
               <span>Jam Sessions</span>
             </CardTitle>
           </CardHeader>
