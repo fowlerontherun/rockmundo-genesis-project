@@ -147,6 +147,7 @@ const WorldPulse = () => {
   const [genreStats, setGenreStats] = useState<GenreStats[]>([]);
   const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  const [latestDailyDate, setLatestDailyDate] = useState<string | null>(null);
   const [dailyLabel, setDailyLabel] = useState("");
   const [currentWeekLabel, setCurrentWeekLabel] = useState("Loading charts...");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -276,11 +277,13 @@ const WorldPulse = () => {
       if (!latestDate) {
         setDailyStreamingChart([]);
         setDailySalesChart([]);
+        setLatestDailyDate(null);
         setDailyLabel("");
         return;
       }
 
       setLatestDailyDate(latestDate);
+      setDailyLabel(formatDailyValue(latestDate));
 
       const { data, error: chartError } = await supabase
         .from("global_charts")
@@ -303,6 +306,7 @@ const WorldPulse = () => {
       console.error("Failed to load daily chart:", caught);
       setDailyStreamingChart([]);
       setDailySalesChart([]);
+      setLatestDailyDate(null);
       setDailyLabel("");
       setError("Failed to load the daily charts. Please try again.");
     }
@@ -518,6 +522,10 @@ const WorldPulse = () => {
   const selectedWeekDate = availableWeeks.length > 0 ? availableWeeks[currentWeekIndex] : null;
   const isPrevDisabled = availableWeeks.length === 0 || currentWeekIndex >= availableWeeks.length - 1;
   const isNextDisabled = availableWeeks.length === 0 || currentWeekIndex === 0;
+
+  const dailyDescription = latestDailyDate
+    ? `Most streamed songs for ${formatDailyValue(latestDailyDate)}`
+    : "Daily streaming stats from the latest update";
 
   const dailySalesSummary = useMemo(() => buildSalesSummary(dailySalesChart), [dailySalesChart]);
   const weeklySalesSummary = useMemo(() => buildSalesSummary(weeklySalesChart), [weeklySalesChart]);
