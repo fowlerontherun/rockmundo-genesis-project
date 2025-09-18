@@ -53,7 +53,7 @@ type ProfileAttribute = any;
 export type SkillDefinition = any;
 export type SkillProgressRow = any;
 export type SkillUnlockRow = any;
-type UnlockedSkillsMap = Record<string, boolean>;
+export type UnlockedSkillsMap = Record<string, boolean>;
 type SkillProgressUpsertInput = any;
 type SkillUnlockUpsertInput = any;
 
