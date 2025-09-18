@@ -573,7 +573,7 @@ const Auth = () => {
             Join thousands of musicians living their dream
           </p>
           <a
-            href="https://discord.gg/zkGYKYVu"
+            href="https://discord.gg/KB45k3XJuZ"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs font-oswald text-primary underline underline-offset-4 hover:text-primary/80"
