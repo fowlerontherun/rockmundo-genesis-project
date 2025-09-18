@@ -14,6 +14,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
+import { sortByOptionalKeys } from "@/utils/sorting";
 import {
   buildSkillLevelMap,
   collectSkillSlugs,
@@ -304,12 +305,24 @@ const EnhancedBandManager = () => {
     const loadDefinitions = async () => {
       const { data, error } = await supabase
         .from("skill_definitions")
-        .select("id, slug, name, display_order")
-        .order("display_order", { ascending: true });
+        .select("*");
 
-      if (!error && isMounted) {
-        setSkillDefinitions(data ?? []);
+      if (error) {
+        console.error("Failed to load skill definitions:", error);
+        return;
       }
+
+      if (!isMounted) {
+        return;
+      }
+
+      const sortedDefinitions = sortByOptionalKeys(
+        ((data as SkillDefinitionRow[] | null) ?? []).filter(Boolean),
+        ["display_order", "sort_order", "order_index", "position"],
+        ["name", "slug"]
+      ) as SkillDefinitionRow[];
+
+      setSkillDefinitions(sortedDefinitions);
     };
 
     void loadDefinitions();
