@@ -248,6 +248,7 @@ type CityOption = {
 
 type CharacterCreationLocationState = {
   fromProfile?: boolean;
+  profileId?: string | null;
 };
 
 const genderOptions: { value: ProfileGender; label: string }[] = [
@@ -277,6 +278,8 @@ const CharacterCreation = () => {
     upsertSkillUnlocks,
     refreshCharacters,
     setActiveCharacter,
+    selectedCharacterId,
+    profile: activeProfile,
   } = useGameData();
 
   const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
@@ -284,6 +287,14 @@ const CharacterCreation = () => {
 
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
+  const locationProfileId =
+    typeof locationState?.profileId === "string" && locationState.profileId.length > 0
+      ? locationState.profileId
+      : null;
+  const activeProfileId = activeProfile?.id ?? null;
+  const targetProfileId = useMemo(() => {
+    return locationProfileId ?? selectedCharacterId ?? activeProfileId ?? null;
+  }, [locationProfileId, selectedCharacterId, activeProfileId]);
 
   const [nameSuggestion, setNameSuggestion] = useState<string>(() => generateRandomName());
   const [displayName, setDisplayName] = useState<string>(nameSuggestion);
@@ -385,46 +396,69 @@ const CharacterCreation = () => {
       setIsLoading(true);
       setLoadError(null);
 
+      const scopedProfileId = targetProfileId;
+      const shouldUseProfileScope = Boolean(scopedProfileId);
+
       try {
         const [profileResponse, skillsResponse, attributesResponse] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase
-            .from("player_skills")
-            .select(
-              "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
-            )
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase
-            .from("player_attributes")
-            .select("*")
-            .eq("user_id", user.id)
-            .maybeSingle(),
+          shouldUseProfileScope
+            ? supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", scopedProfileId)
+                .maybeSingle()
+            : supabase
+                .from("profiles")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle(),
+          shouldUseProfileScope
+            ? supabase
+                .from("player_skills")
+                .select(
+                  "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
+                )
+                .eq("profile_id", scopedProfileId)
+                .maybeSingle()
+            : supabase
+                .from("player_skills")
+                .select(
+                  "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
+                )
+                .eq("user_id", user.id)
+                .maybeSingle(),
+          shouldUseProfileScope
+            ? supabase
+                .from("player_attributes")
+                .select("*")
+                .eq("profile_id", scopedProfileId)
+                .maybeSingle()
+            : supabase
+                .from("player_attributes")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle(),
         ]);
 
-        if (profileResponse.error) {
+        if (profileResponse.error && profileResponse.status !== 406) {
           throw profileResponse.error;
         }
 
-        if (skillsResponse.error) {
+        if (skillsResponse.error && skillsResponse.status !== 406) {
           throw skillsResponse.error;
         }
 
-        if (attributesResponse.error) {
+        if (attributesResponse.error && attributesResponse.status !== 406) {
           throw attributesResponse.error;
         }
-
         const profileData = (profileResponse.data as ProfileRow | null) ?? null;
         const skillsData = skillsResponse.data;
         const attributesRow =
           (attributesResponse.data as Tables<"player_attributes"> | null) ?? null;
 
+        setExistingProfile(profileData);
+
         if (profileData) {
-          setExistingProfile(profileData);
           if (profileData.display_name) {
             setDisplayName(profileData.display_name);
             setNameSuggestion(profileData.display_name);
@@ -443,7 +477,7 @@ const CharacterCreation = () => {
           setCityOfBirth(profileData.city_of_birth ?? null);
 
           if (profileData.avatar_url) {
-            const storedSelection = getStoredAvatarSelection(profileResponse.data.avatar_url);
+            const storedSelection = getStoredAvatarSelection(profileResponse.data?.avatar_url);
 
             if (storedSelection) {
               if (avatarStyles.some((style) => style.id === storedSelection.styleId)) {
@@ -498,7 +532,7 @@ const CharacterCreation = () => {
     if (user) {
       void fetchExistingData();
     }
-  }, [user]);
+  }, [user, targetProfileId]);
 
   useEffect(() => {
     if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
@@ -809,7 +843,7 @@ const CharacterCreation = () => {
       while (Object.keys(attemptedSkillsPayload).length > 0) {
         const { data: upsertedSkills, error: skillsError } = await supabase
           .from("player_skills")
-          .upsert(attemptedSkillsPayload as PlayerSkillsInsert, { onConflict: "user_id" })
+          .upsert(attemptedSkillsPayload as PlayerSkillsInsert, { onConflict: "profile_id" })
           .select()
           .maybeSingle();
 
@@ -823,7 +857,8 @@ const CharacterCreation = () => {
           if (
             missingColumn &&
             !skippedSkillsColumns.has(missingColumn) &&
-            missingColumn in attemptedSkillsPayload
+            missingColumn in attemptedSkillsPayload &&
+            missingColumn !== "profile_id"
           ) {
             skippedSkillsColumns.add(missingColumn);
             attemptedSkillsPayload = omitFromRecord(attemptedSkillsPayload, missingColumn);
@@ -902,7 +937,7 @@ const CharacterCreation = () => {
       while (Object.keys(attemptedAttributesPayload).length > 0) {
         const { data: upsertedAttributes, error: attributesError } = await supabase
           .from("player_attributes")
-          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "user_id" })
+          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "profile_id" })
           .select()
           .maybeSingle();
 
@@ -916,7 +951,8 @@ const CharacterCreation = () => {
         if (
           missingColumn &&
           !skippedAttributeColumns.has(missingColumn) &&
-          missingColumn in attemptedAttributesPayload
+          missingColumn in attemptedAttributesPayload &&
+          missingColumn !== "profile_id"
         ) {
           skippedAttributeColumns.add(missingColumn);
           attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
