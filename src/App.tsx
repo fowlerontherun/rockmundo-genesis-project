@@ -8,6 +8,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
+import WorldPulsePage from "./pages/WorldPulse";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
@@ -18,7 +19,6 @@ const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 const Profile = lazyWithRetry(() => import("./pages/Profile"));
 const CharacterCreation = lazyWithRetry(() => import("./pages/CharacterCreation"));
 const MusicStudio = lazyWithRetry(() => import("./pages/MusicStudio"));
-const WorldPulse = lazyWithRetry(() => import("./pages/WorldPulse"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
@@ -75,7 +75,7 @@ function App() {
                     <Route path="profile" element={<Profile />} />
                     <Route path="character-create" element={<CharacterCreation />} />
                     <Route path="music" element={<MusicStudio />} />
-                    <Route path="charts" element={<WorldPulse />} />
+                    <Route path="charts" element={<WorldPulsePage />} />
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="equipment" element={<EquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
