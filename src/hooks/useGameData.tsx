@@ -369,6 +369,8 @@ interface GameDataContextValue {
     earnings?: number,
     metadata?: ActivityItem["metadata"]
   ) => Promise<ActivityItem>;
+  awardActionXp: (input: AwardActionXpInput) => Promise<ProgressionResponse>;
+  buyAttributeStar: (input: BuyAttributeStarInput) => Promise<ProgressionResponse>;
   applyProgressionUpdate: (response: ProgressionActionSuccessResponse) => void;
   refreshProgressionState: (
     options?: RefreshProgressionOptions
@@ -446,6 +448,14 @@ const defaultGameDataContext: GameDataContextValue = {
   addActivity: async () => {
     warnMissingProvider();
     return Promise.reject(new Error(missingProviderMessage)) as Promise<ActivityItem>;
+  },
+  awardActionXp: async () => {
+    warnMissingProvider();
+    return Promise.reject(new Error(missingProviderMessage)) as Promise<ProgressionResponse>;
+  },
+  buyAttributeStar: async () => {
+    warnMissingProvider();
+    return Promise.reject(new Error(missingProviderMessage)) as Promise<ProgressionResponse>;
   },
   applyProgressionUpdate: () => {
     warnMissingProvider();
@@ -2288,6 +2298,8 @@ const useProvideGameData = (): GameDataContextValue => {
     updateSkills,
     updateAttributes,
     addActivity,
+    awardActionXp,
+    buyAttributeStar,
     applyProgressionUpdate,
     refreshProgressionState,
     acknowledgeWeeklyBonus,
