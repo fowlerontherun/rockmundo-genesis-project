@@ -452,7 +452,7 @@ const EnhancedBandManager = () => {
     } catch (error) {
       console.error("Error fetching available members:", error);
     }
-  }, [fetchProfileSkillMap, skillDefinitions, user?.id]);
+  }, [user?.id]);
 
 
   const fetchBandDetails = useCallback(async () => {
@@ -540,9 +540,7 @@ const EnhancedBandManager = () => {
   }, [
     calculateBandStats,
     fetchAvailableMembers,
-    fetchProfileSkillMap,
     selectedBand,
-    skillDefinitions
   ]);
 
   useEffect(() => {
