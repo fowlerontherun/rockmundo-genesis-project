@@ -269,12 +269,9 @@ interface GameDataContextValue {
   skills: PlayerSkills | null;
   attributes: PlayerAttributes | null;
   activities: ActivityItem[];
-  xpWallet: PlayerXpWallet | null;
   xpLedger: XpLedgerEntry[];
   progressionCooldowns: ProgressionCooldowns;
   currentCity: Tables<"cities"> | null;
-  xpWallet: PlayerXpLedger | null;
-  progressionCooldowns: Record<string, number>;
   loading: boolean;
   error: string | null;
   hasCharacters: boolean;
@@ -290,9 +287,11 @@ interface GameDataContextValue {
     earnings?: number
   ) => Promise<ActivityItem | undefined>;
   applyProgressionUpdate: (response: ProgressionActionSuccessResponse) => void;
-  refreshProgressionState: () => Promise<ProgressionSnapshot | null>;
+  refreshProgressionState: (
+    snapshotOrResult?: ProgressionStateSnapshot | ProgressionFunctionResult | null,
+    options?: RefreshProgressionOptions
+  ) => Promise<void>;
   acknowledgeWeeklyBonus: () => void;
-  refreshProgressionState: () => Promise<void>;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
   refetch: () => Promise<void>;
@@ -305,10 +304,6 @@ interface GameDataContextValue {
     profileId: string,
     entries: SkillUnlockUpsertInput[]
   ) => Promise<SkillUnlockRow[]>;
-  refreshProgressionState: (
-    snapshot?: ProgressionStateSnapshot | ProgressionFunctionResult | null,
-    options?: RefreshProgressionOptions
-  ) => Promise<void>;
 }
 
 const GameDataContext = createContext<GameDataContextValue | undefined>(undefined);
@@ -338,12 +333,9 @@ const defaultGameDataContext: GameDataContextValue = {
   skills: null,
   attributes: null,
   activities: [],
-  xpWallet: null,
   xpLedger: [],
   progressionCooldowns: createDefaultCooldownState(),
   currentCity: null,
-  xpWallet: null,
-  progressionCooldowns: {},
   loading: false,
   error: missingProviderMessage,
   hasCharacters: false,
@@ -375,12 +367,8 @@ const defaultGameDataContext: GameDataContextValue = {
   },
   refreshProgressionState: async () => {
     warnMissingProvider();
-    return null;
   },
   acknowledgeWeeklyBonus: () => {
-    warnMissingProvider();
-  },
-  refreshProgressionState: async () => {
     warnMissingProvider();
   },
   createCharacter: async () => {
@@ -405,9 +393,6 @@ const defaultGameDataContext: GameDataContextValue = {
     warnMissingProvider();
     return [];
   },
-  refreshProgressionState: async () => {
-    warnMissingProvider();
-  }
 };
 
 const readStoredCharacterId = () => {
@@ -554,8 +539,6 @@ const useProvideGameData = (): GameDataContextValue => {
   );
   const [currentCity, setCurrentCity] = useState<Tables<"cities"> | null>(null);
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
-  const [xpWallet, setXpWallet] = useState<PlayerXpLedger | null>(null);
-  const [progressionCooldowns, setProgressionCooldowns] = useState<Record<string, number>>({});
   const [charactersLoading, setCharactersLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -614,11 +597,8 @@ const useProvideGameData = (): GameDataContextValue => {
     setXpWallet(null);
     setActivities([]);
     setXpLedger([]);
-    setXpWallet(null);
     applyCooldownState();
     setCurrentCity(null);
-    setXpWallet(null);
-    setProgressionCooldowns({});
     setFreshWeeklyBonusAvailable(false);
   }, [applyCooldownState]);
 
@@ -727,84 +707,36 @@ const useProvideGameData = (): GameDataContextValue => {
       }
 
       setProfile(character);
-      setProgressionCooldowns({});
+      applyCooldownState();
       await resolveCurrentCity(character.current_city_id ?? null);
-      let walletData: PlayerXpWallet | null = null;
-      let walletResponse = await supabase
+
+      const walletResponse = await supabase
         .from("player_xp_wallet")
-        .select("*")
+        .select(
+          "profile_id, xp_balance, lifetime_xp, xp_spent, attribute_points_earned, skill_points_earned, last_recalculated"
+        )
         .eq("profile_id", selectedCharacterId)
         .maybeSingle();
 
+      let walletData: PlayerXpWallet | null = null;
+
       if (walletResponse.error) {
-        if (isMissingTableError(walletResponse.error)) {
-          walletData = null;
-        } else if (
-          isMissingColumnError(walletResponse.error, "profile_id") ||
-          walletResponse.status === 406
+        if (
+          walletResponse.status === 404 ||
+          walletResponse.status === 406 ||
+          walletResponse.error.code === "PGRST116" ||
+          isMissingTableError(walletResponse.error) ||
+          isMissingColumnError(walletResponse.error, "profile_id")
         ) {
           walletData = null;
         } else {
           throw walletResponse.error;
         }
-      } else {
-        walletData = (walletResponse.data as PlayerXpWallet | null) ?? null;
+      } else if (walletResponse.data) {
+        walletData = mapWalletRowToSnapshot(walletResponse.data, character.id);
       }
 
       setXpWallet(walletData);
-
-      let walletData: PlayerXpWallet | null = null;
-      let walletResponse = await supabase
-        .from("player_xp_wallet")
-        .select("*")
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (walletResponse.error) {
-        if (isMissingTableError(walletResponse.error)) {
-          walletData = null;
-        } else if (walletResponse.error.code === "PGRST116" || walletResponse.status === 406) {
-          walletData = null;
-        } else {
-          throw walletResponse.error;
-        }
-      } else {
-        walletData = (walletResponse.data ?? null) as PlayerXpWallet | null;
-      }
-
-      setXpWallet(walletData);
-
-      const walletResponse = await supabase
-        .from("player_xp_wallet")
-        .select("*")
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (
-        walletResponse.error &&
-        walletResponse.error.code !== "PGRST116" &&
-        walletResponse.status !== 406
-      ) {
-        throw walletResponse.error;
-      }
-
-      setXpWallet(walletResponse.data ?? null);
-
-      const walletResponse = await supabase
-        .from("player_xp_wallet")
-        .select("*")
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (
-        walletResponse.error &&
-        walletResponse.error.code !== "PGRST116" &&
-        walletResponse.status !== 406
-      ) {
-        throw walletResponse.error;
-      }
-
-      setXpWallet(walletResponse.data ?? null);
 
       let skillsResponse: PostgrestMaybeSingleResponse<PlayerSkills> | undefined;
 
@@ -996,29 +928,6 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setAttributes(attributesData ?? null);
 
-      let walletData: PlayerXpWallet | null = null;
-      const walletResponse = await supabase
-        .from("player_xp_wallet")
-        .select("*")
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (walletResponse.error) {
-        if (
-          walletResponse.status === 404 ||
-          walletResponse.status === 406 ||
-          isMissingTableError(walletResponse.error)
-        ) {
-          walletData = null;
-        } else {
-          throw walletResponse.error;
-        }
-      } else {
-        walletData = (walletResponse.data as PlayerXpWallet | null) ?? null;
-      }
-
-      setXpWallet(walletData);
-
       let activityResponse = await supabase
         .from("activity_feed")
         .select("*")
@@ -1047,20 +956,6 @@ const useProvideGameData = (): GameDataContextValue => {
       }
 
       setActivities(activityResponse.data ?? []);
-
-      const walletResponse = await supabase
-        .from("player_xp_wallet")
-        .select(
-          "profile_id, xp_balance, lifetime_xp, xp_spent, attribute_points_earned, skill_points_earned, last_recalculated"
-        )
-        .eq("profile_id", selectedCharacterId)
-        .maybeSingle();
-
-      if (walletResponse.error && walletResponse.error.code !== "PGRST116") {
-        throw walletResponse.error;
-      }
-
-      setXpWallet(mapWalletRowToSnapshot(walletResponse.data, character.id));
 
       await loadXpLedger(character.id);
 
@@ -1148,8 +1043,6 @@ const useProvideGameData = (): GameDataContextValue => {
     writeWeeklyBonusAcknowledgement(profile.id, acknowledgementTimestamp);
     setFreshWeeklyBonusAvailable(false);
   }, [profile, xpLedger]);
-
-  const refreshProgressionState = useCallback(() => fetchGameData(), [fetchGameData]);
 
   useEffect(() => {
     if (!profile?.id) {
@@ -1716,7 +1609,7 @@ const useProvideGameData = (): GameDataContextValue => {
     []
   );
 
-  const refreshProgressionState = useCallback(async (): Promise<ProgressionSnapshot | null> => {
+  const fetchProgressionSnapshot = useCallback(async (): Promise<ProgressionSnapshot | null> => {
     if (!user || !selectedCharacterId) {
       return null;
     }
@@ -2030,9 +1923,15 @@ const useProvideGameData = (): GameDataContextValue => {
       snapshotOrResult?: ProgressionStateSnapshot | ProgressionFunctionResult | null,
       options?: RefreshProgressionOptions
     ) => {
-      const snapshot = snapshotOrResult && "state" in (snapshotOrResult as ProgressionFunctionResult)
-        ? (snapshotOrResult as ProgressionFunctionResult).state
-        : (snapshotOrResult as ProgressionStateSnapshot | null | undefined) ?? null;
+      let snapshot =
+        snapshotOrResult && "state" in (snapshotOrResult as ProgressionFunctionResult)
+          ? (snapshotOrResult as ProgressionFunctionResult).state
+          : (snapshotOrResult as ProgressionStateSnapshot | null | undefined) ?? null;
+
+      if (!snapshot) {
+        const fetched = await fetchProgressionSnapshot();
+        snapshot = (fetched as ProgressionStateSnapshot | null | undefined) ?? null;
+      }
 
       if (snapshot) {
         const nextProfile = snapshot.profile;
@@ -2047,7 +1946,14 @@ const useProvideGameData = (): GameDataContextValue => {
 
         setXpWallet(snapshot.wallet ?? null);
         setAttributes(snapshot.attributes ?? null);
-        applyCooldownState(snapshot.cooldowns);
+        const maybeCooldowns = (snapshot as { cooldowns?: ProgressionCooldowns | Record<string, number> }).cooldowns;
+        if (maybeCooldowns) {
+          applyCooldownState(maybeCooldowns);
+        } else {
+          applyCooldownState();
+        }
+      } else {
+        applyCooldownState();
       }
 
       if (options?.ledgerEntries !== undefined) {
@@ -2087,7 +1993,7 @@ const useProvideGameData = (): GameDataContextValue => {
         }
       }
     },
-    [applyCooldownState, loadXpLedger, profile, selectedCharacterId]
+    [applyCooldownState, fetchProgressionSnapshot, loadXpLedger, profile, selectedCharacterId]
   );
 
   const upsertSkillProgress = useCallback(async (profileId: string, entries: SkillProgressUpsertInput[]) => {
@@ -2145,13 +2051,10 @@ const useProvideGameData = (): GameDataContextValue => {
     unlockedSkills,
     skills,
     attributes,
-    xpWallet,
+    activities,
     xpLedger,
     progressionCooldowns,
-    activities,
     currentCity,
-    xpWallet,
-    progressionCooldowns,
     loading,
     error,
     hasCharacters,
@@ -2165,14 +2068,12 @@ const useProvideGameData = (): GameDataContextValue => {
     applyProgressionUpdate,
     refreshProgressionState,
     acknowledgeWeeklyBonus,
-    refreshProgressionState,
     createCharacter,
     refreshCharacters,
     refetch,
     resetCharacter,
     upsertSkillProgress,
-    upsertSkillUnlocks,
-    refreshProgressionState
+    upsertSkillUnlocks
   };
 };
 
