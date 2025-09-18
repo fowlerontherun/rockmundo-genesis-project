@@ -4,6 +4,7 @@ import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Home,
   Users,
@@ -33,6 +34,7 @@ const Navigation = () => {
   const location = useLocation();
   const { signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
 
   const navSections = [
     {
@@ -117,17 +119,35 @@ const Navigation = () => {
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
+    toast({
+      title: "Signed out",
+      description: "You have been logged out of Rockmundo.",
+    });
     setIsOpen(false);
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    if (location.pathname === path) {
+      return true;
+    }
+
+    if (!path || path === "/") {
+      return false;
+    }
+
+    return location.pathname.startsWith(`${path}/`);
+  };
 
   const handleNavigation = (path: string) => {
     navigate(path);
     setIsOpen(false);
   };
 
-  const NavigationContent = ({ isMobile = false }) => (
+  interface NavigationContentProps {
+    isMobile?: boolean;
+  }
+
+  const NavigationContent = ({ isMobile = false }: NavigationContentProps) => (
     <>
       {/* Logo */}
       <div className={`${isMobile ? 'p-6' : 'p-6'} border-b border-sidebar-border/50`}>
@@ -155,11 +175,12 @@ const Navigation = () => {
                     key={item.path}
                     variant={isActive(item.path) ? "secondary" : "ghost"}
                     className={`w-full justify-start gap-3 ${
-                      isActive(item.path) 
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" 
+                      isActive(item.path)
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                     onClick={() => handleNavigation(item.path)}
+                    aria-current={isActive(item.path) ? "page" : undefined}
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
@@ -198,7 +219,7 @@ const Navigation = () => {
           
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="Open navigation menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -227,11 +248,12 @@ const Navigation = () => {
                 variant="ghost"
                 size="sm"
                 className={`flex flex-col gap-1 h-12 px-2 ${
-                  isActive(item.path) 
-                    ? "text-primary" 
+                  isActive(item.path)
+                    ? "text-primary"
                     : "text-muted-foreground"
                 }`}
                 onClick={() => handleNavigation(item.path)}
+                aria-current={isActive(item.path) ? "page" : undefined}
               >
                 <Icon className="h-4 w-4" />
                 <span className="text-xs font-oswald">{item.label.split(' ')[0]}</span>

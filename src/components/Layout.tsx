@@ -5,9 +5,8 @@ import Navigation from "@/components/ui/navigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
 import { checkProfileCompletion } from "@/utils/profileCompletion";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Wand2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -25,6 +24,10 @@ const Layout = () => {
   }, [user, loading, navigate]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
     const handleProfileUpdated = () => {
       setProfileRefresh((previous) => previous + 1);
     };
@@ -93,6 +96,15 @@ const Layout = () => {
     <div className="flex h-screen bg-background">
       <Navigation />
       <main className="flex-1 overflow-y-auto lg:ml-0 pt-16 lg:pt-0 pb-16 lg:pb-0">
+        {profileError && (
+          <div className="px-4 pt-4 lg:px-6">
+            <Alert variant="destructive" className="max-w-2xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Profile verification failed</AlertTitle>
+              <AlertDescription>{profileError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
         <CharacterGate>
           <Outlet />
         </CharacterGate>

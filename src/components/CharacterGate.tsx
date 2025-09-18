@@ -13,12 +13,19 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const allowWithoutCharacter =
-    location.pathname === "/" ||
-    location.pathname === "/profile" ||
-    ["/character-create", "/character/create"].some((path) =>
-      location.pathname === path || location.pathname.startsWith(`${path}/`),
-    );
+  const allowWithoutCharacter = (() => {
+    const currentPath = location.pathname;
+
+    if (currentPath === "/") {
+      return true;
+    }
+
+    if (currentPath === "/character-create" || currentPath.startsWith("/character-create/")) {
+      return true;
+    }
+
+    return currentPath === "/profile" || currentPath.startsWith("/profile/");
+  })();
 
   if (loading) {
     return (

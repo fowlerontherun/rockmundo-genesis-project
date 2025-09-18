@@ -47,7 +47,78 @@ const Auth = () => {
     username: "",
     displayName: ""
   });
+
+  const getBrowserOrigin = () => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    return window.location.origin;
+  };
+
+  const formatRequirementList = (requirements: string[]) => {
+    if (requirements.length === 1) {
+      return requirements[0];
+    }
+
+    if (requirements.length === 2) {
+      return `${requirements[0]} and ${requirements[1]}`;
+    }
+
+    const allButLast = requirements.slice(0, -1);
+    const last = requirements[requirements.length - 1];
+    return `${allButLast.join(", ")}, and ${last}`;
+  };
+
+  const assessPasswordStrength = (password: string) => {
+    const trimmed = password.trim();
+    const requirements = [
+      { check: trimmed.length >= 8, message: "be at least 8 characters" },
+      { check: /[a-z]/.test(trimmed), message: "include a lowercase letter" },
+      { check: /[A-Z]/.test(trimmed), message: "include an uppercase letter" },
+      { check: /\d/.test(trimmed), message: "include a number" }
+    ];
+
+    const unmet = requirements.filter((requirement) => !requirement.check).map((requirement) => requirement.message);
+
+    if (trimmed.length === 0) {
+      return {
+        valid: false,
+        message: "Use at least 8 characters including upper and lowercase letters and a number.",
+      };
+    }
+
+    if (unmet.length === 0) {
+      return {
+        valid: true,
+        message: "Strong password!",
+      };
+    }
+
+    return {
+      valid: false,
+      message: `Make sure your password ${formatRequirementList(unmet)}.`,
+    };
+  };
+
+  const passwordStrength = assessPasswordStrength(newPassword);
+  const signupPasswordStrength = assessPasswordStrength(signupData.password);
+  const passwordStrengthTone = passwordStrength.valid
+    ? "text-emerald-500"
+    : newPassword.length > 0
+      ? "text-destructive"
+      : "text-muted-foreground";
+  const signupPasswordStrengthTone = signupPasswordStrength.valid
+    ? "text-emerald-500"
+    : signupData.password.length > 0
+      ? "text-destructive"
+      : "text-muted-foreground";
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let isMounted = true;
     const hash = window.location.hash;
     const isRecovery = hash.includes("type=recovery");
 
@@ -60,12 +131,36 @@ const Auth = () => {
     }
 
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && !isRecovery) {
-        navigate("/");
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (sessionError) {
+          console.error("Failed to fetch auth session:", sessionError);
+          setError("We couldn't verify your session. Please sign in again.");
+          return;
+        }
+
+        if (data.session?.user && !isRecovery) {
+          navigate("/");
+        }
+      } catch (sessionError) {
+        console.error("Unexpected error fetching auth session:", sessionError);
+        if (!isMounted) {
+          return;
+        }
+        setError("We couldn't verify your session. Please sign in again.");
       }
     };
-    checkUser();
+
+    void checkUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   useEffect(() => {
@@ -137,16 +232,51 @@ const Auth = () => {
     setUnverifiedEmail("");
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const email = signupData.email.trim();
+      const username = signupData.username.trim();
+      const displayName = signupData.displayName.trim();
+      const password = signupData.password;
+
+      const usernamePattern = /^[a-zA-Z0-9_]+$/;
+
+      if (!usernamePattern.test(username)) {
+        setError("Usernames can only include letters, numbers, and underscores.");
+        setLoading(false);
+        return;
+      }
+
+      if (displayName.length < 2) {
+        setError("Choose a stage name with at least two characters.");
+        setLoading(false);
+        return;
+      }
+
+      const passwordAssessment = assessPasswordStrength(password);
+
+      if (!passwordAssessment.valid) {
+        setError(passwordAssessment.message);
+        setLoading(false);
+        return;
+      }
+
+      const origin = getBrowserOrigin();
+
+      if (!origin) {
+        setError("Sign-up is only available in a browser environment.");
+        setLoading(false);
+        return;
+      }
+
+      const redirectUrl = `${origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
-        email: signupData.email,
-        password: signupData.password,
+        email,
+        password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            username: signupData.username,
-            display_name: signupData.displayName
+            username,
+            display_name: displayName
           }
         }
       });
@@ -154,14 +284,14 @@ const Auth = () => {
       if (error) {
         setError(error.message);
       } else if (data.user) {
-        setUnverifiedEmail(signupData.email);
+        setUnverifiedEmail(email);
         setStatus({
-          message: `We've sent a verification link to ${signupData.email}. Confirm your email to start playing!`,
+          message: `We've sent a verification link to ${email}. Confirm your email to start playing!`,
           variant: "info",
           showResend: true,
         });
         setActiveTab("login");
-        setLoginData((prev) => ({ ...prev, email: signupData.email }));
+        setLoginData((prev) => ({ ...prev, email }));
         toast({
           title: "Account created!",
           description: "Check your email to confirm your account",
@@ -183,7 +313,15 @@ const Auth = () => {
     setStatus(null);
 
     try {
-      const redirectUrl = `${window.location.origin}/auth`;
+      const origin = getBrowserOrigin();
+
+      if (!origin) {
+        setError("We couldn't determine the current site origin for password recovery.");
+        setResetLinkLoading(false);
+        return;
+      }
+
+      const redirectUrl = `${origin}/auth`;
       const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
         redirectTo: redirectUrl,
       });
@@ -216,6 +354,13 @@ const Auth = () => {
       return;
     }
 
+    const passwordAssessment = assessPasswordStrength(newPassword);
+
+    if (!passwordAssessment.valid) {
+      setError(passwordAssessment.message);
+      return;
+    }
+
     setPasswordUpdateLoading(true);
 
     try {
@@ -232,7 +377,9 @@ const Auth = () => {
         setConfirmPassword("");
         setIsResettingPassword(false);
         setActiveTab("login");
-        window.history.replaceState(null, "", window.location.pathname);
+        if (typeof window !== "undefined" && window.history?.replaceState) {
+          window.history.replaceState(null, "", window.location.pathname);
+        }
         const { error: signOutError } = await supabase.auth.signOut();
         if (signOutError) {
           console.error("Error signing out after password reset:", signOutError);
@@ -253,11 +400,19 @@ const Auth = () => {
     setError("");
 
     try {
+      const origin = getBrowserOrigin();
+
+      if (!origin) {
+        setError("Unable to resend verification email without a browser environment.");
+        setResendingVerification(false);
+        return;
+      }
+
       const { error } = await supabase.auth.resend({
         type: "signup",
         email: unverifiedEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${origin}/`,
         },
       });
 
@@ -280,6 +435,15 @@ const Auth = () => {
 
   const handleDiscordLinkClick = async () => {
     const discordUrl = "https://discord.gg/KB45k3XJuZ";
+    if (typeof window === "undefined") {
+      toast({
+        title: "Discord invite unavailable",
+        description: "Open this link manually: https://discord.gg/KB45k3XJuZ",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newWindow = window.open(discordUrl, "_blank", "noopener,noreferrer");
 
     if (!newWindow) {
@@ -289,7 +453,7 @@ const Auth = () => {
       });
 
       try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
+        if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(discordUrl);
         } else {
           throw new Error("Clipboard API not available");
@@ -384,6 +548,9 @@ const Auth = () => {
                         minLength={6}
                       />
                     </div>
+                    <p className={`text-xs font-oswald ${passwordStrengthTone}`}>
+                      {passwordStrength.message}
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -541,6 +708,9 @@ const Auth = () => {
                             minLength={6}
                           />
                         </div>
+                        <p className={`text-xs font-oswald ${signupPasswordStrengthTone}`}>
+                          {signupPasswordStrength.message}
+                        </p>
                       </div>
 
                       <Button
