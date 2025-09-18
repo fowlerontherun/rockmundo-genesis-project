@@ -1106,6 +1106,94 @@ const CharacterCreation = () => {
       const skippedAttributeColumns = new Set<string>();
       let finalAttributesRow: PlayerAttributesRow | null = null;
       let attributeConflictColumns = ["profile_id"];
+      const invalidAttributeConflictColumns = new Set<string>();
+
+      const persistAttributesManually = async (
+        lookupColumn: "profile_id" | "user_id",
+        payload: Record<string, unknown>,
+      ): Promise<PlayerAttributesRow | null> => {
+        const lookupValue = ensureNonEmptyString(payload[lookupColumn]);
+
+        if (!lookupValue) {
+          return null;
+        }
+
+        console.warn(
+          "[CharacterCreation] Falling back to manual attribute persistence",
+          {
+            lookupColumn,
+            lookupValue,
+          },
+        );
+
+        const { data: existingRow, error: fetchError } = await supabase
+          .from("player_attributes")
+          .select("id")
+          .eq(lookupColumn, lookupValue)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (fetchError) {
+          console.error(
+            "[CharacterCreation] Unable to locate existing attribute row for manual persistence",
+            {
+              lookupColumn,
+              lookupValue,
+              error: buildSaveErrorMessage(fetchError),
+              code: fetchError.code,
+              details: fetchError.details,
+              hint: fetchError.hint,
+            },
+          );
+          return null;
+        }
+
+        if (existingRow?.id) {
+          const { data: updatedRow, error: updateError } = await supabase
+            .from("player_attributes")
+            .update(payload as PlayerAttributesInsert)
+            .eq("id", existingRow.id)
+            .select()
+            .single();
+
+          if (!updateError) {
+            return (updatedRow as PlayerAttributesRow | null) ?? null;
+          }
+
+          console.error("[CharacterCreation] Manual attribute update failed", {
+            lookupColumn,
+            lookupValue,
+            error: buildSaveErrorMessage(updateError),
+            code: updateError.code,
+            details: updateError.details,
+            hint: updateError.hint,
+          });
+
+          return null;
+        }
+
+        const { data: insertedRow, error: insertError } = await supabase
+          .from("player_attributes")
+          .insert(payload as PlayerAttributesInsert)
+          .select()
+          .single();
+
+        if (!insertError) {
+          return (insertedRow as PlayerAttributesRow | null) ?? null;
+        }
+
+        console.error("[CharacterCreation] Manual attribute insert failed", {
+          lookupColumn,
+          lookupValue,
+          error: buildSaveErrorMessage(insertError),
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint,
+        });
+
+        return null;
+      };
 
       while (Object.keys(attemptedAttributesPayload).length > 0) {
         const conflictTarget =
@@ -1205,6 +1293,65 @@ const CharacterCreation = () => {
               continue;
             }
           }
+        }
+
+        if (attributesError.code === "42P10") {
+          const attemptedColumns = (conflictTarget ?? "")
+            .split(",")
+            .map((column) => column.trim())
+            .filter((column) => column.length > 0);
+
+          attemptedColumns.forEach((column) => {
+            invalidAttributeConflictColumns.add(column as "profile_id" | "user_id");
+          });
+
+          console.warn(
+            "[CharacterCreation] Attribute upsert conflict target missing unique constraint",
+            {
+              conflictTarget,
+              attemptedColumns,
+              payload: sanitizePayloadForLogging(attemptedAttributesPayload),
+            },
+          );
+
+          const hasProfileId =
+            !invalidAttributeConflictColumns.has("profile_id") &&
+            ensureNonEmptyString(attemptedAttributesPayload.profile_id);
+          const hasUserId =
+            !invalidAttributeConflictColumns.has("user_id") &&
+            ensureNonEmptyString(attemptedAttributesPayload.user_id);
+
+          if (hasProfileId) {
+            attributeConflictColumns = ["profile_id"];
+            continue;
+          }
+
+          if (hasUserId) {
+            attributeConflictColumns = ["user_id"];
+            continue;
+          }
+
+          const manualLookupColumn = ensureNonEmptyString(
+            attemptedAttributesPayload.profile_id,
+          )
+            ? "profile_id"
+            : ensureNonEmptyString(attemptedAttributesPayload.user_id)
+              ? "user_id"
+              : null;
+
+          if (manualLookupColumn) {
+            const manualResult = await persistAttributesManually(
+              manualLookupColumn,
+              attemptedAttributesPayload,
+            );
+
+            if (manualResult) {
+              finalAttributesRow = manualResult;
+              break;
+            }
+          }
+
+          throw attributesError;
         }
 
         throw attributesError;
