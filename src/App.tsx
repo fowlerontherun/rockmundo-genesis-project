@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import Auth from "./pages/Auth";
+import WorldPulse from "./pages/WorldPulse";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
@@ -18,7 +19,6 @@ const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 const Profile = lazyWithRetry(() => import("./pages/Profile"));
 const CharacterCreation = lazyWithRetry(() => import("./pages/CharacterCreation"));
 const MusicStudio = lazyWithRetry(() => import("./pages/MusicStudio"));
-const WorldPulse = lazyWithRetry(() => import("./pages/WorldPulse"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
