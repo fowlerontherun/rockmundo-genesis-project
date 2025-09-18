@@ -18,16 +18,10 @@ import {
 } from "@/integrations/supabase/progressionClient";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
-import type {
-  PlayerXpWallet,
-  ProgressionActionResponse,
-  ProgressionActionSuccessResponse,
-  ProgressionSnapshot,
-} from "@/types/progression";
+import type { ProgressionActionSuccessResponse } from "@/types/progression";
+
 import { sortByOptionalKeys } from "@/utils/sorting";
 import {
-  DEFAULT_PROGRESSION_COOLDOWNS,
-  PROGRESSION_COOLDOWN_KEYS,
   type PlayerXpWalletSnapshot as PlayerXpWalletSnapshotData,
   type ProgressionCooldowns,
   type ProgressionFunctionResult,
@@ -284,11 +278,11 @@ interface GameDataContextValue {
   addActivity: (
     activityType: string,
     message: string,
-    earnings?: number
-  ) => Promise<ActivityItem | undefined>;
+    earnings?: number,
+    metadata?: ActivityItem["metadata"]
+  ) => Promise<ActivityItem>;
   applyProgressionUpdate: (response: ProgressionActionSuccessResponse) => void;
   refreshProgressionState: (
-    snapshotOrResult?: ProgressionStateSnapshot | ProgressionFunctionResult | null,
     options?: RefreshProgressionOptions
   ) => Promise<void>;
   acknowledgeWeeklyBonus: () => void;
@@ -315,6 +309,9 @@ const warnMissingProvider = () => {
     console.warn(missingProviderMessage);
   }
 };
+
+const DEFAULT_PROGRESSION_COOLDOWNS = {} as ProgressionCooldowns;
+const PROGRESSION_COOLDOWN_KEYS = [] as (keyof ProgressionCooldowns)[];
 
 const createDefaultCooldownState = (): ProgressionCooldowns => ({
   ...DEFAULT_PROGRESSION_COOLDOWNS
@@ -360,7 +357,7 @@ const defaultGameDataContext: GameDataContextValue = {
   },
   addActivity: async () => {
     warnMissingProvider();
-    return undefined;
+    return Promise.reject(new Error(missingProviderMessage)) as Promise<ActivityItem>;
   },
   applyProgressionUpdate: () => {
     warnMissingProvider();
@@ -1728,7 +1725,6 @@ const useProvideGameData = (): GameDataContextValue => {
       return null;
     }
   }, [attributes, profile, selectedCharacterId, user]);
-
   const createCharacter = useCallback(
     async ({
       username,
@@ -1991,11 +1987,11 @@ const useProvideGameData = (): GameDataContextValue => {
         if (targetProfileId) {
           await loadXpLedger(targetProfileId);
         }
+      } else if (!snapshot && selectedCharacterId) {
+        await loadXpLedger(selectedCharacterId);
       }
     },
     [applyCooldownState, fetchProgressionSnapshot, loadXpLedger, profile, selectedCharacterId]
-  );
-
   const upsertSkillProgress = useCallback(async (profileId: string, entries: SkillProgressUpsertInput[]) => {
     return [];
   }, []);

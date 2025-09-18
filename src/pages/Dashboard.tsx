@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Music,
   Users,
@@ -17,10 +18,15 @@ import {
   Play,
   AlertCircle,
   Sparkles,
+  MessageSquare,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import ChatWindow from "@/components/realtime/ChatWindow";
+import { deriveCityChannel } from "@/utils/chat";
+
+type ChatScope = "general" | "city";
 
 const genderLabels: Record<string, string> = {
   female: "Female",
@@ -41,9 +47,19 @@ const Dashboard = () => {
     xpWallet,
     loading,
     error,
-    freshWeeklyBonusAvailable
+    freshWeeklyBonusAvailable,
+    currentCity
   } = useGameData();
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
+  const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
+  const [chatOnlineCounts, setChatOnlineCounts] = useState<Record<ChatScope, number>>({
+    general: 0,
+    city: 0
+  });
+  const [chatConnections, setChatConnections] = useState<Record<ChatScope, boolean>>({
+    general: false,
+    city: false
+  });
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
     "vocals",
@@ -60,6 +76,53 @@ const Dashboard = () => {
     "marketing",
     "technical"
   ];
+
+  const handleChatTabChange = useCallback((value: string) => {
+    setActiveChatTab(value === "city" ? "city" : "general");
+  }, []);
+
+  const handleGeneralOnlineCount = useCallback((count: number) => {
+    setChatOnlineCounts(previous => ({ ...previous, general: count }));
+  }, []);
+
+  const handleCityOnlineCount = useCallback((count: number) => {
+    setChatOnlineCounts(previous => ({ ...previous, city: count }));
+  }, []);
+
+  const handleGeneralConnection = useCallback((connected: boolean) => {
+    setChatConnections(previous => ({ ...previous, general: connected }));
+  }, []);
+
+  const handleCityConnection = useCallback((connected: boolean) => {
+    setChatConnections(previous => ({ ...previous, city: connected }));
+  }, []);
+
+  const cityChannel = useMemo(
+    () => deriveCityChannel(profile?.current_city_id ?? currentCity?.id ?? null),
+    [currentCity?.id, profile?.current_city_id]
+  );
+
+  const cityNameLabel = useMemo(() => {
+    if (!currentCity?.name) {
+      return null;
+    }
+
+    return currentCity.country ? `${currentCity.name}, ${currentCity.country}` : currentCity.name;
+  }, [currentCity?.country, currentCity?.name]);
+
+  const cityTabLabel = profile?.current_city_id
+    ? currentCity?.name
+      ? `${currentCity.name} Chat`
+      : "City Chat"
+    : "City Lounge";
+  const activeOnlineCount = chatOnlineCounts[activeChatTab];
+  const activeConnection = chatConnections[activeChatTab];
+  const cityChatPlaceholder = profile?.current_city_id
+    ? `Say hello to musicians in ${cityNameLabel ?? "your city"}...`
+    : "Chat with players in the city lounge while you settle in.";
+  const chatCardDescription = profile?.current_city_id
+    ? `Toggle between the global community and ${cityNameLabel ?? "your city"} chat.`
+    : "Toggle between the global community and the city lounge until you set your location.";
 
   const toNumber = (value: unknown, fallback = 0) => {
     if (typeof value === "number" && Number.isFinite(value)) {
@@ -369,6 +432,75 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+          <CardHeader className="space-y-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Community Chat
+              </CardTitle>
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant="secondary"
+                  className="border-primary/30 bg-primary/10 text-primary"
+                >
+                  {activeOnlineCount}
+                </Badge>
+                <div
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full ${
+                    activeConnection
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      activeConnection ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  />
+                  {activeConnection ? "Connected" : "Connecting..."}
+                </div>
+              </div>
+            </div>
+            <CardDescription>{chatCardDescription}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeChatTab} onValueChange={handleChatTabChange} className="space-y-4">
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="general" className="flex items-center justify-center gap-2">
+                  General
+                  <Badge variant={activeChatTab === "general" ? "secondary" : "outline"}>
+                    {chatOnlineCounts.general}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="city" className="flex items-center justify-center gap-2">
+                  {cityTabLabel}
+                  <Badge variant={activeChatTab === "city" ? "secondary" : "outline"}>
+                    {chatOnlineCounts.city}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="general">
+                <ChatWindow
+                  channel="general"
+                  hideHeader
+                  onOnlineCountChange={handleGeneralOnlineCount}
+                  onConnectionStatusChange={handleGeneralConnection}
+                />
+              </TabsContent>
+              <TabsContent value="city">
+                <ChatWindow
+                  channel={cityChannel}
+                  hideHeader
+                  onOnlineCountChange={handleCityOnlineCount}
+                  onConnectionStatusChange={handleCityConnection}
+                  messagePlaceholder={cityChatPlaceholder}
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Skills */}
           <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
@@ -583,6 +715,11 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           </div>
+          <RealtimeChatPanel
+            channelKey="general"
+            title="Live Chat"
+            className="bg-card/80 backdrop-blur-sm border-primary/20"
+          />
         </div>
       </div>
     </div>
