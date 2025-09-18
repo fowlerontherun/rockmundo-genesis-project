@@ -414,7 +414,7 @@ const AdminDashboard: React.FC = () => {
       throw error;
     }
 
-    const normalizedSeasons = (data ?? []).map((season: SeasonRecord) => ({
+    const normalizedSeasons = (data ?? []).map((season: any) => ({
       id: season.id,
       name: season.name,
       start_date: season.start_date,
@@ -513,7 +513,7 @@ const AdminDashboard: React.FC = () => {
 
     try {
       const { data, error } = await supabase
-        .from('locations')
+        .from('cities')
         .select('*')
         .order('name', { ascending: true });
 
@@ -545,7 +545,7 @@ const AdminDashboard: React.FC = () => {
 
     try {
       const { data, error } = await supabase
-        .from('shops')
+        .from('equipment_items')
         .select('*')
         .order('name', { ascending: true });
 
@@ -577,7 +577,7 @@ const AdminDashboard: React.FC = () => {
 
     try {
       const { data, error } = await supabase
-        .from('special_items')
+        .from('equipment_items')
         .select('*')
         .order('rarity', { ascending: true })
         .order('name', { ascending: true });
@@ -610,7 +610,7 @@ const AdminDashboard: React.FC = () => {
 
     try {
       const { data, error } = await supabase
-        .from('attribute_definitions')
+        // Note: attribute_definitions table not implemented yet - using placeholder
         .select('*')
         .order('slug', { ascending: true });
 

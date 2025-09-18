@@ -8,7 +8,7 @@ import {
   Users, 
   Shield, 
   Settings, 
-  Database,
+  DatabaseIcon,
   Activity,
   AlertCircle,
   Crown
@@ -17,9 +17,9 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database as DatabaseType } from '@/integrations/supabase/types';
 
-type AppRole = Database['public']['Enums']['app_role'];
+type AppRole = DatabaseType['public']['Enums']['app_role'];
 
 interface UserWithRole {
   id: string;
@@ -31,8 +31,8 @@ interface UserWithRole {
   last_sign_in_at: string | null;
 }
 
-type PublicProfileRow = Database['public']['Views']['public_profiles']['Row'];
-type UserRoleRow = Database['public']['Tables']['user_roles']['Row'];
+type PublicProfileRow = DatabaseType['public']['Views']['public_profiles']['Row'];
+type UserRoleRow = DatabaseType['public']['Tables']['user_roles']['Row'];
 
 type AuthUserInfo = {
   email: string | null;
@@ -370,7 +370,7 @@ const Admin = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Database className="h-5 w-5" />
+                    <DatabaseIcon className="h-5 w-5" />
                     System Information
                   </CardTitle>
                   <CardDescription>
