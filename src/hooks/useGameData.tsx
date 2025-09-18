@@ -13,6 +13,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
 import { sortByOptionalKeys } from "@/utils/sorting";
+import {
+  DEFAULT_PROGRESSION_COOLDOWNS,
+  PROGRESSION_COOLDOWN_KEYS,
+  type PlayerXpWalletSnapshot,
+  type ProgressionCooldowns,
+  type ProgressionFunctionResult,
+  type ProgressionStateSnapshot
+} from "@/utils/progressionClient";
 import type {
   PostgrestError,
   PostgrestMaybeSingleResponse,
@@ -23,7 +31,8 @@ export type PlayerProfile = Tables<"profiles">;
 export type PlayerSkills = Tables<"player_skills">;
 export type PlayerAttributes = Tables<"player_attributes">;
 export type ActivityItem = Tables<"activity_feed">;
-export type ExperienceLedgerEntry = Tables<"experience_ledger">;
+export type XpLedgerEntry = Tables<"xp_ledger">;
+export type PlayerXpWallet = PlayerXpWalletSnapshot;
 // Temporary type definitions until database schema is updated
 type AttributeDefinition = any;
 type ProfileAttribute = any;
@@ -33,7 +42,6 @@ export type SkillDefinition = any;
 export type SkillProgressRow = any;
 export type SkillUnlockRow = any;
 type UnlockedSkillsMap = Record<string, boolean>;
-type AttributesMap = Record<string, number>;
 type SkillProgressUpsertInput = any;
 type SkillUnlockUpsertInput = any;
 
@@ -49,15 +57,15 @@ export interface WeeklyBonusEvaluationResult {
 }
 
 export const resolveWeeklyBonusAcknowledgementTimestamp = (
-  latestEntry: ExperienceLedgerEntry | undefined,
+  latestEntry: XpLedgerEntry | undefined,
   now: Date = new Date()
 ) => {
-  const recordedAt = toValidDate(latestEntry?.recorded_at ?? null);
+  const recordedAt = toValidDate(latestEntry?.created_at ?? null);
   return (recordedAt ?? now).toISOString();
 };
 
 export const evaluateWeeklyBonusState = (
-  latestEntry: ExperienceLedgerEntry | undefined,
+  latestEntry: XpLedgerEntry | undefined,
   storedAcknowledgement: string | null,
   now: Date = new Date()
 ): WeeklyBonusEvaluationResult => {
@@ -68,7 +76,7 @@ export const evaluateWeeklyBonusState = (
     };
   }
 
-  const recordedAt = toValidDate(latestEntry.recorded_at);
+  const recordedAt = toValidDate(latestEntry.created_at);
   const acknowledgedAt = storedAcknowledgement ? toValidDate(storedAcknowledgement) : null;
 
   if (recordedAt && (!acknowledgedAt || recordedAt > acknowledgedAt)) {
@@ -93,6 +101,21 @@ const toValidDate = (value: unknown) => {
     }
   }
   return null;
+};
+
+const toSafeNumber = (value: unknown, fallback = 0) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return fallback;
 };
 
 const isMissingColumnError = (
@@ -179,9 +202,11 @@ interface GameDataContextValue {
   skillProgress: SkillProgressRow[];
   unlockedSkills: UnlockedSkillsMap;
   skills: PlayerSkills | null;
-  attributes: AttributesMap;
+  attributes: PlayerAttributes | null;
   activities: ActivityItem[];
-  experienceLedger: ExperienceLedgerEntry[];
+  xpWallet: PlayerXpWallet | null;
+  xpLedger: XpLedgerEntry[];
+  progressionCooldowns: ProgressionCooldowns;
   currentCity: Tables<"cities"> | null;
   loading: boolean;
   error: string | null;
@@ -210,6 +235,10 @@ interface GameDataContextValue {
     profileId: string,
     entries: SkillUnlockUpsertInput[]
   ) => Promise<SkillUnlockRow[]>;
+  refreshProgressionState: (
+    snapshot?: ProgressionStateSnapshot | ProgressionFunctionResult | null,
+    options?: RefreshProgressionOptions
+  ) => Promise<void>;
 }
 
 const GameDataContext = createContext<GameDataContextValue | undefined>(undefined);
@@ -222,6 +251,10 @@ const warnMissingProvider = () => {
   }
 };
 
+const createDefaultCooldownState = (): ProgressionCooldowns => ({
+  ...DEFAULT_PROGRESSION_COOLDOWNS
+});
+
 const defaultGameDataContext: GameDataContextValue = {
   characters: [],
   selectedCharacterId: null,
@@ -231,9 +264,11 @@ const defaultGameDataContext: GameDataContextValue = {
   skillProgress: [],
   unlockedSkills: {},
   skills: null,
-  attributes: {},
+  attributes: null,
   activities: [],
-  experienceLedger: [],
+  xpWallet: null,
+  xpLedger: [],
+  progressionCooldowns: createDefaultCooldownState(),
   currentCity: null,
   loading: false,
   error: missingProviderMessage,
@@ -285,6 +320,9 @@ const defaultGameDataContext: GameDataContextValue = {
   upsertSkillUnlocks: async () => {
     warnMissingProvider();
     return [];
+  },
+  refreshProgressionState: async () => {
+    warnMissingProvider();
   }
 };
 
@@ -373,6 +411,46 @@ const matchProgressToDefinition = (
   definition: SkillDefinition
 ) => progress.skill_id === definition.id || progress.skill_slug === definition.slug;
 
+const XP_LEDGER_LIMIT = 20;
+
+const ledgerTimestamp = (value: string | null | undefined) => {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const sortLedgerEntries = (entries: XpLedgerEntry[]) =>
+  [...entries].sort((a, b) => ledgerTimestamp(b.created_at) - ledgerTimestamp(a.created_at));
+
+type RefreshProgressionOptions = {
+  ledgerEntries?: XpLedgerEntry[] | null;
+  appendLedgerEntries?: XpLedgerEntry | XpLedgerEntry[] | null;
+  refetchLedger?: boolean;
+};
+
+const mapWalletRowToSnapshot = (
+  row: Tables<"player_xp_wallet"> | null | undefined,
+  profileId: string
+): PlayerXpWallet | null => {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    profile_id: row.profile_id ?? profileId,
+    xp_balance: toSafeNumber(row.xp_balance),
+    lifetime_xp: toSafeNumber(row.lifetime_xp),
+    xp_spent: toSafeNumber(row.xp_spent),
+    attribute_points_earned: toSafeNumber(row.attribute_points_earned),
+    skill_points_earned: toSafeNumber(row.skill_points_earned),
+    last_recalculated:
+      typeof row.last_recalculated === "string" ? row.last_recalculated : null
+  };
+};
+
 const useProvideGameData = (): GameDataContextValue => {
   const { user } = useAuth();
   const [characters, setCharacters] = useState<PlayerProfile[]>([]);
@@ -383,9 +461,13 @@ const useProvideGameData = (): GameDataContextValue => {
   const [skillUnlockRows, setSkillUnlockRows] = useState<any[]>([]);
   const [skillsUpdatedAt, setSkillsUpdatedAt] = useState<string | null>(null);
   const [attributeDefinitions, setAttributeDefinitions] = useState<AttributeDefinition[]>([]);
-  const [attributes, setAttributes] = useState<any>({});
+  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [experienceLedger, setExperienceLedger] = useState<ExperienceLedgerEntry[]>([]);
+  const [xpLedger, setXpLedger] = useState<XpLedgerEntry[]>([]);
+  const [xpWallet, setXpWallet] = useState<PlayerXpWallet | null>(null);
+  const [progressionCooldowns, setProgressionCooldowns] = useState<ProgressionCooldowns>(
+    createDefaultCooldownState
+  );
   const [currentCity, setCurrentCity] = useState<Tables<"cities"> | null>(null);
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [charactersLoading, setCharactersLoading] = useState(false);
@@ -393,15 +475,63 @@ const useProvideGameData = (): GameDataContextValue => {
   const [error, setError] = useState<string | null>(null);
   const [freshWeeklyBonusAvailable, setFreshWeeklyBonusAvailable] = useState(false);
   const supportsProfileScopedDataRef = useRef<boolean | null>(null);
+  const applyCooldownState = useCallback(
+    (cooldowns?: ProgressionCooldowns | Record<string, number>) => {
+      setProgressionCooldowns(() => {
+        const next = createDefaultCooldownState();
+
+        if (!cooldowns) {
+          return next;
+        }
+
+        for (const key of PROGRESSION_COOLDOWN_KEYS) {
+          const rawValue = (cooldowns as Record<string, unknown>)[key];
+          const numericValue = toSafeNumber(rawValue, DEFAULT_PROGRESSION_COOLDOWNS[key]);
+          next[key] = numericValue < 0 ? 0 : Math.floor(numericValue);
+        }
+
+        return next;
+      });
+    },
+    []
+  );
+
+  const loadXpLedger = useCallback(
+    async (profileId: string) => {
+      const response = await supabase
+        .from("xp_ledger")
+        .select("*")
+        .eq("profile_id", profileId)
+        .order("created_at", { ascending: false })
+        .limit(XP_LEDGER_LIMIT);
+
+      if (response.error) {
+        if (isMissingTableError(response.error)) {
+          setXpLedger([]);
+          return [] as XpLedgerEntry[];
+        }
+
+        throw response.error;
+      }
+
+      const data = sortLedgerEntries((response.data ?? []) as XpLedgerEntry[]);
+      setXpLedger(data);
+      return data;
+    },
+    []
+  );
+
   const clearGameState = useCallback(() => {
     setProfile(null);
     setSkills(null);
     setAttributes(null);
     setActivities([]);
-    setExperienceLedger([]);
+    setXpLedger([]);
+    setXpWallet(null);
+    applyCooldownState();
     setCurrentCity(null);
     setFreshWeeklyBonusAvailable(false);
-  }, []);
+  }, [applyCooldownState]);
 
   const fetchCharacters = useCallback(async () => {
     if (!user) {
@@ -698,7 +828,7 @@ const useProvideGameData = (): GameDataContextValue => {
         }
       }
 
-      setAttributes(attributesData ?? {});
+      setAttributes(attributesData ?? null);
 
       let activityResponse = await supabase
         .from("activity_feed")
@@ -729,38 +859,21 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setActivities(activityResponse.data ?? []);
 
-      let ledgerData: ExperienceLedgerEntry[] = [];
-      let ledgerResponse = await supabase
-        .from("experience_ledger")
-        .select("*")
+      const walletResponse = await supabase
+        .from("player_xp_wallet")
+        .select(
+          "profile_id, xp_balance, lifetime_xp, xp_spent, attribute_points_earned, skill_points_earned, last_recalculated"
+        )
         .eq("profile_id", selectedCharacterId)
-        .order("recorded_at", { ascending: false })
-        .limit(20);
+        .maybeSingle();
 
-      if (ledgerResponse.error) {
-        if (isMissingTableError(ledgerResponse.error)) {
-          ledgerData = [];
-        } else if (isMissingColumnError(ledgerResponse.error, "profile_id")) {
-          ledgerResponse = await supabase
-            .from("experience_ledger")
-            .select("*")
-            .eq("user_id", character.user_id)
-            .order("recorded_at", { ascending: false })
-            .limit(20);
-
-          if (ledgerResponse.error) {
-            throw ledgerResponse.error;
-          }
-
-          ledgerData = (ledgerResponse.data ?? []) as ExperienceLedgerEntry[];
-        } else {
-          throw ledgerResponse.error;
-        }
-      } else {
-        ledgerData = (ledgerResponse.data ?? []) as ExperienceLedgerEntry[];
+      if (walletResponse.error && walletResponse.error.code !== "PGRST116") {
+        throw walletResponse.error;
       }
 
-      setExperienceLedger(ledgerData);
+      setXpWallet(mapWalletRowToSnapshot(walletResponse.data, character.id));
+
+      await loadXpLedger(character.id);
 
       const [skillDefinitionsResponse, skillProgressResponse] = await Promise.all([
         supabase.from("skill_definitions").select("*"),
@@ -810,7 +923,8 @@ const useProvideGameData = (): GameDataContextValue => {
     selectedCharacterId,
     clearGameState,
     fetchCharacters,
-    resolveCurrentCity
+    resolveCurrentCity,
+    loadXpLedger
   ]);
 
   useEffect(() => {
@@ -838,13 +952,13 @@ const useProvideGameData = (): GameDataContextValue => {
       return;
     }
 
-    const latestWeeklyBonus = experienceLedger.find(
-      entry => entry.reason === WEEKLY_BONUS_REASON
+    const latestWeeklyBonus = xpLedger.find(
+      entry => entry.event_type === WEEKLY_BONUS_REASON
     );
     const acknowledgementTimestamp = resolveWeeklyBonusAcknowledgementTimestamp(latestWeeklyBonus);
     writeWeeklyBonusAcknowledgement(profile.id, acknowledgementTimestamp);
     setFreshWeeklyBonusAvailable(false);
-  }, [experienceLedger, profile]);
+  }, [profile, xpLedger]);
 
   useEffect(() => {
     if (!profile?.id) {
@@ -852,8 +966,8 @@ const useProvideGameData = (): GameDataContextValue => {
       return;
     }
 
-    const latestWeeklyBonus = experienceLedger.find(
-      entry => entry.reason === WEEKLY_BONUS_REASON
+    const latestWeeklyBonus = xpLedger.find(
+      entry => entry.event_type === WEEKLY_BONUS_REASON
     );
     const acknowledgement = readWeeklyBonusAcknowledgement(profile.id);
     const { freshWeeklyBonusAvailable: hasFreshBonus, acknowledgementToPersist } =
@@ -864,7 +978,7 @@ const useProvideGameData = (): GameDataContextValue => {
     if (acknowledgementToPersist !== undefined) {
       writeWeeklyBonusAcknowledgement(profile.id, acknowledgementToPersist);
     }
-  }, [experienceLedger, profile]);
+  }, [profile, xpLedger]);
 
   const setActiveCharacter = useCallback(
     async (characterId: string) => {
@@ -1326,6 +1440,71 @@ const useProvideGameData = (): GameDataContextValue => {
     await fetchGameData();
   }, [clearSelectedCharacter, fetchCharacters, fetchGameData, user]);
 
+  const refreshProgressionState = useCallback(
+    async (
+      snapshotOrResult?: ProgressionStateSnapshot | ProgressionFunctionResult | null,
+      options?: RefreshProgressionOptions
+    ) => {
+      const snapshot = snapshotOrResult && "state" in (snapshotOrResult as ProgressionFunctionResult)
+        ? (snapshotOrResult as ProgressionFunctionResult).state
+        : (snapshotOrResult as ProgressionStateSnapshot | null | undefined) ?? null;
+
+      if (snapshot) {
+        const nextProfile = snapshot.profile;
+        if (nextProfile) {
+          setProfile(prev => {
+            if (!prev) {
+              return nextProfile as unknown as PlayerProfile;
+            }
+            return { ...prev, ...nextProfile } as PlayerProfile;
+          });
+        }
+
+        setXpWallet(snapshot.wallet ?? null);
+        setAttributes(snapshot.attributes ?? null);
+        applyCooldownState(snapshot.cooldowns);
+      }
+
+      if (options?.ledgerEntries !== undefined) {
+        setXpLedger(sortLedgerEntries(options.ledgerEntries ?? []).slice(0, XP_LEDGER_LIMIT));
+      } else if (options?.appendLedgerEntries) {
+        const appendList = Array.isArray(options.appendLedgerEntries)
+          ? options.appendLedgerEntries
+          : [options.appendLedgerEntries];
+
+        const entriesToAdd = appendList.filter(
+          (entry): entry is XpLedgerEntry => Boolean(entry)
+        );
+
+        if (entriesToAdd.length > 0) {
+          setXpLedger(prev => {
+            const seen = new Set(prev.map(entry => entry.id));
+            const deduped = entriesToAdd.filter(entry => {
+              if (seen.has(entry.id)) {
+                return false;
+              }
+              seen.add(entry.id);
+              return true;
+            });
+
+            if (deduped.length === 0) {
+              return prev;
+            }
+
+            const merged = [...deduped, ...prev];
+            return sortLedgerEntries(merged).slice(0, XP_LEDGER_LIMIT);
+          });
+        }
+      } else if (options?.refetchLedger) {
+        const targetProfileId = snapshot?.profile?.id ?? profile?.id ?? selectedCharacterId;
+        if (targetProfileId) {
+          await loadXpLedger(targetProfileId);
+        }
+      }
+    },
+    [applyCooldownState, loadXpLedger, profile, selectedCharacterId]
+  );
+
   const upsertSkillProgress = useCallback(async (profileId: string, entries: SkillProgressUpsertInput[]) => {
     return [];
   }, []);
@@ -1340,8 +1519,34 @@ const useProvideGameData = (): GameDataContextValue => {
     [charactersLoading, dataLoading]
   );
 
-  // Add missing functions and variables that are referenced
-  const unlockedSkills = {};
+  const unlockedSkills = useMemo(() => {
+    const map: UnlockedSkillsMap = {};
+
+    for (const row of skillUnlockRows) {
+      if (!row) continue;
+
+      const candidate = row as Record<string, unknown>;
+      const slugCandidate =
+        typeof candidate.skill_slug === "string" && candidate.skill_slug.length > 0
+          ? candidate.skill_slug
+          : candidate.skill_id;
+      const resolvedSlug =
+        typeof slugCandidate === "string"
+          ? slugCandidate
+          : typeof slugCandidate === "number"
+            ? String(slugCandidate)
+            : undefined;
+
+      if (!resolvedSlug) {
+        continue;
+      }
+
+      const unlockedValue = candidate.unlocked;
+      map[resolvedSlug] = unlockedValue === undefined ? true : Boolean(unlockedValue);
+    }
+
+    return map;
+  }, [skillUnlockRows]);
 
   return {
     characters,
@@ -1353,8 +1558,10 @@ const useProvideGameData = (): GameDataContextValue => {
     unlockedSkills,
     skills,
     attributes,
+    xpWallet,
+    xpLedger,
+    progressionCooldowns,
     activities,
-    experienceLedger,
     currentCity,
     loading,
     error,
@@ -1372,7 +1579,8 @@ const useProvideGameData = (): GameDataContextValue => {
     refetch,
     resetCharacter,
     upsertSkillProgress,
-    upsertSkillUnlocks
+    upsertSkillUnlocks,
+    refreshProgressionState
   };
 };
 
