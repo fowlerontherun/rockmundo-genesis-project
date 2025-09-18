@@ -829,6 +829,7 @@ export type Database = {
           age: number | null
           avatar_url: string | null
           bio: string | null
+          equipped_clothing: Json | null
           cash: number | null
           city_of_birth: string | null
           current_city_id: string | null
@@ -858,6 +859,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
+          equipped_clothing?: Json | null
           cash?: number | null
           city_of_birth?: string | null
           current_city_id?: string | null
@@ -887,6 +889,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
+          equipped_clothing?: Json | null
           cash?: number | null
           city_of_birth?: string | null
           current_city_id?: string | null
