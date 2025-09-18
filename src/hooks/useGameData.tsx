@@ -932,14 +932,33 @@ const useProvideGameData = (): GameDataContextValue => {
         return acc;
       }, {});
 
+      const missingAttributeColumns = new Set<string>();
       let attributesResponse: PostgrestMaybeSingleResponse<PlayerAttributes> | undefined;
 
       if (supportsProfileScopedDataRef.current === false) {
-        attributesResponse = await supabase
+        const legacyResponse = await supabase
           .from("player_attributes")
           .select("*")
           .eq("user_id", character.user_id)
           .maybeSingle();
+
+        if (legacyResponse.error) {
+          const missingColumn = extractMissingColumn(legacyResponse.error);
+          if (missingColumn) {
+            missingAttributeColumns.add(missingColumn);
+            attributesResponse = {
+              data: null,
+              error: null,
+              count: null,
+              status: legacyResponse.status,
+              statusText: legacyResponse.statusText
+            };
+          } else {
+            attributesResponse = legacyResponse;
+          }
+        } else {
+          attributesResponse = legacyResponse;
+        }
       } else {
         const attempt = await supabase
           .from("player_attributes")
@@ -950,18 +969,50 @@ const useProvideGameData = (): GameDataContextValue => {
         if (attempt.error) {
           if (isMissingColumnError(attempt.error, "profile_id")) {
             supportsProfileScopedDataRef.current = false;
-            attributesResponse = await supabase
+            missingAttributeColumns.add("profile_id");
+
+            const legacyResponse = await supabase
               .from("player_attributes")
               .select("*")
               .eq("user_id", character.user_id)
               .maybeSingle();
-          } else if (
-            attempt.error.code !== "PGRST116" &&
-            attempt.status !== 406
-          ) {
-            throw attempt.error;
+
+            if (legacyResponse.error) {
+              const missingColumn = extractMissingColumn(legacyResponse.error);
+              if (missingColumn) {
+                missingAttributeColumns.add(missingColumn);
+                attributesResponse = {
+                  data: null,
+                  error: null,
+                  count: null,
+                  status: legacyResponse.status,
+                  statusText: legacyResponse.statusText
+                };
+              } else {
+                attributesResponse = legacyResponse;
+              }
+            } else {
+              attributesResponse = legacyResponse;
+            }
           } else {
-            attributesResponse = attempt;
+            const missingColumn = extractMissingColumn(attempt.error);
+            if (missingColumn) {
+              missingAttributeColumns.add(missingColumn);
+              attributesResponse = {
+                data: null,
+                error: null,
+                count: null,
+                status: attempt.status,
+                statusText: attempt.statusText
+              };
+            } else if (
+              attempt.error.code !== "PGRST116" &&
+              attempt.status !== 406
+            ) {
+              throw attempt.error;
+            } else {
+              attributesResponse = attempt;
+            }
           }
         } else {
           supportsProfileScopedDataRef.current = true;
@@ -980,13 +1031,25 @@ const useProvideGameData = (): GameDataContextValue => {
       let attributesData = attributesResponse?.data ?? null;
 
       if (!attributesData) {
-        const baseAttributePayload: Record<string, unknown> = {
-          user_id: character.user_id,
-          profile_id: character.id,
-          attribute_points: 0,
-        };
+        const baseAttributePayload: Record<string, unknown> = {};
+
+        if (!missingAttributeColumns.has("user_id")) {
+          baseAttributePayload.user_id = character.user_id;
+        }
+
+        if (!missingAttributeColumns.has("profile_id")) {
+          baseAttributePayload.profile_id = character.id;
+        }
+
+        if (!missingAttributeColumns.has("attribute_points")) {
+          baseAttributePayload.attribute_points = 0;
+        }
 
         ATTRIBUTE_KEYS.forEach((key: AttributeKey) => {
+          if (missingAttributeColumns.has(key)) {
+            return;
+          }
+
           const rawValue = resolvedAttributes[key];
           baseAttributePayload[key] = clampAttributeValue(
             typeof rawValue === "number" ? rawValue : 0,
@@ -996,7 +1059,7 @@ const useProvideGameData = (): GameDataContextValue => {
         let attemptedAttributePayload: Record<string, unknown> = {
           ...baseAttributePayload,
         };
-        const skippedAttributeColumns = new Set<string>();
+        const skippedAttributeColumns = new Set<string>(missingAttributeColumns);
 
         while (Object.keys(attemptedAttributePayload).length > 0) {
           const payloadToInsert =
