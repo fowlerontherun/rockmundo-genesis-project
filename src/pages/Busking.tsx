@@ -3,7 +3,6 @@ import { format, formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { awardActionXp } from "@/utils/progression";
 import { calculateAttributeMultiplier, type AttributeKey as ProgressionAttributeKey } from "@/utils/attributeProgression";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -558,6 +557,7 @@ const Busking = () => {
     skills,
     attributes,
     xpWallet,
+    attributeStarTotal,
     updateProfile,
     awardActionXp,
     updateAttributes,
@@ -565,10 +565,7 @@ const Busking = () => {
     addActivity,
     loading: gameLoading,
     currentCity,
-    selectedCharacterId,
-    xpWallet,
-    refreshProgressionState,
-    applyProgressionUpdate
+    selectedCharacterId
   } = useGameData();
   const { toast } = useToast();
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
