@@ -270,6 +270,8 @@ const CharacterCreation = () => {
     skillDefinitions: contextSkillDefinitions,
     upsertSkillProgress,
     upsertSkillUnlocks,
+    refreshCharacters,
+    setActiveCharacter,
   } = useGameData();
 
   const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
@@ -915,6 +917,9 @@ const CharacterCreation = () => {
         );
         setAttributes(buildAttributeState(sourceRecord));
       }
+
+      await refreshCharacters();
+      await setActiveCharacter(upsertedProfile.id);
 
       toast({
         title: "Character ready!",
