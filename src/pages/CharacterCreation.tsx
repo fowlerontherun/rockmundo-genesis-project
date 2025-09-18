@@ -76,10 +76,10 @@ const backgrounds = [
   },
 ];
 
-const TOTAL_SKILL_POINTS = 13;
-const MIN_SKILL_VALUE = 1;
+const TOTAL_SKILL_POINTS = 0;
+const MIN_SKILL_VALUE = 0;
 const MAX_SKILL_VALUE = 10;
-const ATTRIBUTE_MIN_VALUE = 1;
+const ATTRIBUTE_MIN_VALUE = 0;
 const ATTRIBUTE_MAX_VALUE = 3;
 const ATTRIBUTE_SLIDER_STEP = 0.1;
 
@@ -176,13 +176,13 @@ const formatAttributeDisplay = (value: number): string => {
 };
 
 const defaultSkills = {
-  guitar: 1,
-  vocals: 1,
-  drums: 1,
-  bass: 1,
-  performance: 1,
-  songwriting: 1,
-  composition: 1,
+  guitar: 0,
+  vocals: 0,
+  drums: 0,
+  bass: 0,
+  performance: 0,
+  songwriting: 0,
+  composition: 0,
 };
 
 const ATTRIBUTE_KEYS = [
@@ -197,11 +197,11 @@ type SkillKey = keyof typeof defaultSkills;
 type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
 
 const defaultAttributes: Record<AttributeKey, number> = {
-  mental_focus: 1,
-  physical_endurance: 1,
-  stage_presence: 1,
-  crowd_engagement: 1,
-  social_reach: 1,
+  mental_focus: 0,
+  physical_endurance: 0,
+  stage_presence: 0,
+  crowd_engagement: 0,
+  social_reach: 0,
 };
 
 const buildSkillState = (
@@ -621,7 +621,10 @@ const CharacterCreation = () => {
     [totalSkillPoints]
   );
 
-  const allocationComplete = totalSkillPoints === TOTAL_SKILL_POINTS;
+  const allocationRequired = TOTAL_SKILL_POINTS > 0;
+  const allocationComplete = allocationRequired
+    ? totalSkillPoints === TOTAL_SKILL_POINTS
+    : overallocatedSkillPoints === 0;
   const allocationOver = overallocatedSkillPoints > 0;
 
   const handleSave = async () => {
@@ -648,11 +651,13 @@ const CharacterCreation = () => {
       return;
     }
 
-    if (!allocationComplete) {
+    if ((allocationRequired && !allocationComplete) || (!allocationRequired && allocationOver)) {
       toast({
         title: allocationOver ? "Skill allocation exceeded" : "Allocate remaining skill points",
         description: allocationOver
-          ? `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to hit exactly ${TOTAL_SKILL_POINTS}.`
+          ? allocationRequired
+            ? `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to hit exactly ${TOTAL_SKILL_POINTS}.`
+            : `Reduce your skills by ${overallocatedSkillPoints} point${overallocatedSkillPoints === 1 ? "" : "s"} to stay within your available budget.`
           : `You still have ${remainingSkillPoints} point${remainingSkillPoints === 1 ? "" : "s"} to assign before saving.`,
         variant: "destructive",
       });
@@ -1289,15 +1294,17 @@ const CharacterCreation = () => {
               Skill Distribution
             </CardTitle>
             <CardDescription>
-              Allocate your starting strengths. Every skill ranges from 1-10 and influences early gameplay systems.
+              Allocate your starting strengths. Every skill ranges from 0-10 and influences early gameplay systems.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary space-y-1">
               <div>
-                Total Skill Points:{" "}
+                Skill Points Assigned:{" "}
                 <span className="font-semibold">
-                  {totalSkillPoints} / {TOTAL_SKILL_POINTS}
+                  {allocationRequired
+                    ? `${totalSkillPoints} / ${TOTAL_SKILL_POINTS}`
+                    : totalSkillPoints}
                 </span>
               </div>
               {allocationOver ? (
@@ -1306,12 +1313,14 @@ const CharacterCreation = () => {
                   {overallocatedSkillPoints === 1 ? "" : "s"}. Adjust to continue.
                 </div>
               ) : (
-                <div className="text-xs text-primary/80">
-                  Remaining Points:{" "}
-                  <span className="font-semibold">{remainingSkillPoints}</span>
-                </div>
+                allocationRequired && (
+                  <div className="text-xs text-primary/80">
+                    Remaining Points:{" "}
+                    <span className="font-semibold">{remainingSkillPoints}</span>
+                  </div>
+                )
               )}
-              {!allocationComplete && !allocationOver && (
+              {allocationRequired && !allocationComplete && !allocationOver && (
                 <div className="text-xs text-destructive">
                   Spend all {TOTAL_SKILL_POINTS} points to continue.
                 </div>
@@ -1325,8 +1334,8 @@ const CharacterCreation = () => {
                     <span className="text-sm font-semibold text-primary">{skills[key]}</span>
                   </div>
                   <Slider
-                    min={1}
-                    max={10}
+                    min={MIN_SKILL_VALUE}
+                    max={MAX_SKILL_VALUE}
                     step={1}
                     value={[skills[key]]}
                     onValueChange={([value]) => handleSkillChange(key, value ?? skills[key])}
