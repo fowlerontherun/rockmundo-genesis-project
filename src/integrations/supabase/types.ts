@@ -966,6 +966,170 @@ export type Database = {
           },
         ]
       }
+      profile_action_xp_events: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          profile_id: string
+          xp_amount: number
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          profile_id: string
+          xp_amount: number
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          profile_id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_action_xp_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_attribute_transactions: {
+        Row: {
+          attribute_key: string | null
+          attribute_value_delta: number
+          created_at: string
+          id: string
+          metadata: Json
+          points_delta: number
+          profile_id: string
+          transaction_type: string
+          xp_delta: number
+        }
+        Insert: {
+          attribute_key?: string | null
+          attribute_value_delta?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points_delta: number
+          profile_id: string
+          transaction_type: string
+          xp_delta?: number
+        }
+        Update: {
+          attribute_key?: string | null
+          attribute_value_delta?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points_delta?: number
+          profile_id?: string
+          transaction_type?: string
+          xp_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_attribute_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_respec_events: {
+        Row: {
+          attribute_points_refunded: number
+          created_at: string
+          id: string
+          initiated_by: string | null
+          metadata: Json
+          profile_id: string
+          reset_reason: string | null
+          skill_points_refunded: number
+          xp_refunded: number
+        }
+        Insert: {
+          attribute_points_refunded?: number
+          created_at?: string
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json
+          profile_id: string
+          reset_reason?: string | null
+          skill_points_refunded?: number
+          xp_refunded?: number
+        }
+        Update: {
+          attribute_points_refunded?: number
+          created_at?: string
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json
+          profile_id?: string
+          reset_reason?: string | null
+          skill_points_refunded?: number
+          xp_refunded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_respec_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_weekly_bonus_claims: {
+        Row: {
+          bonus_type: string
+          claimed_at: string
+          id: string
+          metadata: Json
+          profile_id: string
+          week_start: string
+          xp_awarded: number
+        }
+        Insert: {
+          bonus_type: string
+          claimed_at?: string
+          id?: string
+          metadata?: Json
+          profile_id: string
+          week_start: string
+          xp_awarded?: number
+        }
+        Update: {
+          bonus_type?: string
+          claimed_at?: string
+          id?: string
+          metadata?: Json
+          profile_id?: string
+          week_start?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_weekly_bonus_claims_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_streaming_accounts: {
         Row: {
           connected_at: string | null
@@ -1477,12 +1641,52 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profile_action_xp_daily_totals: {
+        Row: {
+          action_type: string
+          activity_date: string | null
+          event_count: number | null
+          profile_id: string
+          total_xp: number | null
+        }
+        Relationships: []
+      }
+      profile_action_xp_weekly_totals: {
+        Row: {
+          action_type: string
+          event_count: number | null
+          profile_id: string
+          total_xp: number | null
+          week_start: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_profile_action_xp_totals: {
+        Args: {
+          p_profile_id: string
+          p_action: string
+          p_reference?: string
+        }
+        Returns: {
+          day_events: number | null
+          day_xp: number | null
+          week_events: number | null
+          week_xp: number | null
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_claimed_weekly_bonus: {
+        Args: {
+          p_profile_id: string
+          p_week_start: string
+          p_bonus_type: string
+        }
+        Returns: boolean
       }
       has_role: {
         Args: {

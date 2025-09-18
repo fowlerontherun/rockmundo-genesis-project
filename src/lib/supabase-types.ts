@@ -388,6 +388,134 @@ export interface Database {
           last_recalculated?: string
         }
       }
+      profile_action_xp_events: {
+        Row: {
+          id: string
+          profile_id: string
+          action_type: string
+          xp_amount: number
+          occurred_at: string
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          action_type: string
+          xp_amount: number
+          occurred_at?: string
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          action_type?: string
+          xp_amount?: number
+          occurred_at?: string
+          metadata?: Json
+          created_at?: string
+        }
+      }
+      profile_weekly_bonus_claims: {
+        Row: {
+          id: string
+          profile_id: string
+          week_start: string
+          bonus_type: string
+          xp_awarded: number
+          metadata: Json
+          claimed_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          week_start: string
+          bonus_type: string
+          xp_awarded?: number
+          metadata?: Json
+          claimed_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          week_start?: string
+          bonus_type?: string
+          xp_awarded?: number
+          metadata?: Json
+          claimed_at?: string
+        }
+      }
+      profile_attribute_transactions: {
+        Row: {
+          id: string
+          profile_id: string
+          transaction_type: string
+          attribute_key: string | null
+          points_delta: number
+          attribute_value_delta: number
+          xp_delta: number
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          transaction_type: string
+          attribute_key?: string | null
+          points_delta: number
+          attribute_value_delta?: number
+          xp_delta?: number
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          transaction_type?: string
+          attribute_key?: string | null
+          points_delta?: number
+          attribute_value_delta?: number
+          xp_delta?: number
+          metadata?: Json
+          created_at?: string
+        }
+      }
+      profile_respec_events: {
+        Row: {
+          id: string
+          profile_id: string
+          attribute_points_refunded: number
+          skill_points_refunded: number
+          xp_refunded: number
+          reset_reason: string | null
+          metadata: Json
+          initiated_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          attribute_points_refunded?: number
+          skill_points_refunded?: number
+          xp_refunded?: number
+          reset_reason?: string | null
+          metadata?: Json
+          initiated_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          attribute_points_refunded?: number
+          skill_points_refunded?: number
+          xp_refunded?: number
+          reset_reason?: string | null
+          metadata?: Json
+          initiated_by?: string | null
+          created_at?: string
+        }
+      }
       attribute_spend: {
         Row: {
           id: string
@@ -453,8 +581,49 @@ export interface Database {
         }
       }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
+    Views: {
+      profile_action_xp_daily_totals: {
+        Row: {
+          profile_id: string
+          action_type: string
+          activity_date: string
+          total_xp: number | null
+          event_count: number
+        }
+      }
+      profile_action_xp_weekly_totals: {
+        Row: {
+          profile_id: string
+          action_type: string
+          week_start: string
+          total_xp: number | null
+          event_count: number
+        }
+      }
+    }
+    Functions: {
+      get_profile_action_xp_totals: {
+        Args: {
+          p_profile_id: string
+          p_action: string
+          p_reference?: string
+        }
+        Returns: {
+          day_xp: number
+          day_events: number
+          week_xp: number
+          week_events: number
+        }[]
+      }
+      has_claimed_weekly_bonus: {
+        Args: {
+          p_profile_id: string
+          p_week_start: string
+          p_bonus_type: string
+        }
+        Returns: boolean
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
