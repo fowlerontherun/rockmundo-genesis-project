@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { searchProfiles, type SearchProfilesRow } from "@/integrations/supabase/profileSearch";
+import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   AlertDialog,
@@ -87,6 +89,23 @@ type ProfileFormState = {
   city_of_birth: string | null;
 };
 
+const instrumentSkillKeys: (keyof PlayerSkills)[] = [
+  "vocals",
+  "guitar",
+  "drums",
+  "bass",
+  "performance",
+  "songwriting",
+  "composition"
+];
+
+const attributeKeys: (keyof PlayerAttributes)[] = [
+  "creativity",
+  "business",
+  "marketing",
+  "technical"
+];
+
 const genderOptions: { value: ProfileGender; label: string }[] = [
   { value: "female", label: "Female" },
   { value: "male", label: "Male" },
@@ -104,21 +123,20 @@ const Profile = () => {
   const { profile, skills, attributes, updateProfile, freshWeeklyBonusAvailable, xpLedger, xpWallet } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
-  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
-    "vocals",
-    "guitar",
-    "drums",
-    "bass",
-    "performance",
-    "songwriting",
-    "composition"
-  ];
-  const attributeKeys: (keyof PlayerAttributes)[] = [
-    "creativity",
-    "business",
-    "marketing",
-    "technical"
-  ];
+  type MusicalSkill = { key: keyof PlayerSkills; value: number };
+
+  const musicalSkills = useMemo<MusicalSkill[]>(() => {
+    if (!skills) {
+      return [];
+    }
+
+    return instrumentSkillKeys
+      .map(skillKey => ({
+        key: skillKey,
+        value: Number(skills[skillKey] ?? 0)
+      }))
+      .filter(skill => Number.isFinite(skill.value) && skill.value >= 1);
+  }, [skills]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -137,6 +155,13 @@ const Profile = () => {
   const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
   const [cityLoading, setCityLoading] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
+  const [friendSearchTerm, setFriendSearchTerm] = useState("");
+  const [friendSearchResults, setFriendSearchResults] = useState<SearchProfilesRow[]>([]);
+  const [friendSearchLoading, setFriendSearchLoading] = useState(false);
+  const [friendSearchError, setFriendSearchError] = useState<string | null>(null);
+  const [sendingFriendRequestTo, setSendingFriendRequestTo] = useState<string | null>(null);
+  const [requestedFriendUserIds, setRequestedFriendUserIds] = useState<Record<string, boolean>>({});
+  const friendSearchRequestId = useRef(0);
 
   const {
     loading: friendsLoading,
@@ -333,6 +358,68 @@ const Profile = () => {
     }
   }, [user]);
 
+  const executeFriendSearch = useCallback(
+    async (term: string) => {
+      friendSearchRequestId.current += 1;
+      const requestId = friendSearchRequestId.current;
+
+      if (!user) {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchResults([]);
+          setFriendSearchError(null);
+          setFriendSearchLoading(false);
+        }
+        return;
+      }
+
+      const trimmed = term.trim();
+
+      if (trimmed.length === 0) {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchResults([]);
+          setFriendSearchError(null);
+          setFriendSearchLoading(false);
+        }
+        return;
+      }
+
+      setFriendSearchLoading(true);
+      setFriendSearchError(null);
+
+      try {
+        const results = await searchProfiles(trimmed);
+
+        if (requestId !== friendSearchRequestId.current) {
+          return;
+        }
+
+        const filtered = results.filter(result => result.user_id !== user.id);
+        setFriendSearchResults(filtered);
+      } catch (error) {
+        if (requestId !== friendSearchRequestId.current) {
+          return;
+        }
+
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Failed to search for players.";
+
+        setFriendSearchError(message);
+        toast({
+          variant: "destructive",
+          title: "Search failed",
+          description: message,
+        });
+      } finally {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchLoading(false);
+        }
+      }
+    },
+    [toast, user],
+  );
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -404,6 +491,16 @@ const Profile = () => {
 
     fetchFanMetrics();
   }, [user, fetchFanMetrics]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      void executeFriendSearch(friendSearchTerm);
+    }, 400);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [friendSearchTerm, executeFriendSearch]);
 
   useEffect(() => {
     if (!user) return;
@@ -496,6 +593,73 @@ const Profile = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSendFriendRequest = useCallback(
+    async (target: SearchProfilesRow) => {
+      if (!user || !profile) {
+        toast({
+          variant: "destructive",
+          title: "Profile unavailable",
+          description: "You need an active character to send friend requests.",
+        });
+        return;
+      }
+
+      if (target.user_id === user.id) {
+        toast({
+          variant: "destructive",
+          title: "Cannot send request",
+          description: "You can't send a friend request to yourself.",
+        });
+        return;
+      }
+
+      const requestKey = target.user_id;
+      setSendingFriendRequestTo(requestKey);
+
+      try {
+        await sendFriendRequest({
+          senderProfileId: profile.id,
+          senderUserId: user.id,
+          recipientProfileId: target.profile_id,
+          recipientUserId: target.user_id,
+        });
+
+        setRequestedFriendUserIds((previous) => ({ ...previous, [requestKey]: true }));
+
+        toast({
+          title: "Friend request sent",
+          description: `Waiting for ${target.display_name ?? target.username} to respond.`,
+        });
+      } catch (error) {
+        const fallbackMessage = "Failed to send friend request. Please try again.";
+        const rawMessage = error instanceof Error && error.message ? error.message : fallbackMessage;
+        const normalized = rawMessage.toLowerCase();
+        const duplicateRequest =
+          normalized.includes("friend_requests_pending_pair_idx") ||
+          normalized.includes("duplicate key value");
+
+        if (duplicateRequest) {
+          setRequestedFriendUserIds((previous) => ({ ...previous, [requestKey]: true }));
+        }
+
+        toast({
+          variant: duplicateRequest ? "default" : "destructive",
+          title: duplicateRequest ? "Request already sent" : "Unable to send friend request",
+          description: duplicateRequest
+            ? "Wait for your friend to respond before sending another invite."
+            : rawMessage,
+        });
+      } finally {
+        setSendingFriendRequestTo((current) => (current === requestKey ? null : current));
+      }
+    },
+    [profile, toast, user],
+  );
+
+  const handleFriendSearchInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFriendSearchTerm(event.target.value);
   };
 
   const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -1302,31 +1466,36 @@ const Profile = () => {
                 <CardDescription>Your musical abilities and expertise levels</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {instrumentSkillKeys.map(skillKey => {
-                    const value = Number(skills?.[skillKey] ?? 0);
-                    const percent = Math.min(100, (value / 1000) * 100);
-                    return (
-                      <div key={skillKey} className="space-y-2">
-                        <span className="text-sm font-medium capitalize">{skillKey}</span>
-                        <Progress
-                          value={percent}
-                          className="h-2"
-                          aria-label={`${skillKey} skill level ${value} out of 1000`}
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          {value >= 800
-                            ? "Expert"
-                            : value >= 600
-                              ? "Advanced"
-                              : value >= 400
-                                ? "Intermediate"
-                                : "Beginner"}
+                {musicalSkills.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {musicalSkills.map(({ key: skillKey, value }) => {
+                      const percent = Math.min(100, (value / 1000) * 100);
+                      return (
+                        <div key={skillKey} className="space-y-2">
+                          <span className="text-sm font-medium capitalize">{skillKey}</span>
+                          <Progress
+                            value={percent}
+                            className="h-2"
+                            aria-label={`${skillKey} skill level ${value} out of 1000`}
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {value >= 800
+                              ? "Expert"
+                              : value >= 600
+                                ? "Advanced"
+                                : value >= 400
+                                  ? "Intermediate"
+                                  : "Beginner"}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No musical skills meet the minimum level yet. Earn at least one point to see your progress.
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
