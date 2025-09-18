@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
 import type {
   PlayerXpWallet,
+  ProgressionActionResponse,
   ProgressionActionSuccessResponse,
   ProgressionSnapshot,
 } from "@/types/progression";
@@ -1338,6 +1339,40 @@ const useProvideGameData = (): GameDataContextValue => {
     [],
   );
 
+  const invokeProgressionMutation = useCallback(
+    async (
+      action: string,
+      body: Record<string, unknown>,
+    ): Promise<ProgressionActionSuccessResponse> => {
+      const { data, error } = await supabase.functions.invoke<ProgressionActionResponse>(
+        `progression/${action}`,
+        { body }
+      );
+
+      if (error) {
+        throw Object.assign(new Error(error.message ?? "Progression request failed"), {
+          code: (error as { code?: string }).code ?? (error.status ? String(error.status) : undefined),
+          details: (error as { details?: unknown }).details ?? null,
+          hint: (error as { hint?: string }).hint ?? null,
+        });
+      }
+
+      if (!data) {
+        throw new Error("Progression service returned an empty response");
+      }
+
+      if (!data.success) {
+        const failure = data;
+        throw Object.assign(new Error(failure.message ?? "Progression update rejected"), {
+          details: failure.details ?? null,
+        });
+      }
+
+      return data;
+    },
+    []
+  );
+
   const updateProfile = useCallback(
     async (updates: Partial<PlayerProfile>) => {
       if (!user || !selectedCharacterId) {
@@ -1346,45 +1381,72 @@ const useProvideGameData = (): GameDataContextValue => {
 
       const basePayload = {
         ...updates,
-        updated_at: updates.updated_at ?? new Date().toISOString()
+        updated_at: updates.updated_at ?? new Date().toISOString(),
       };
 
-      let attemptedPayload: Record<string, unknown> = { ...basePayload };
+      let attemptedPayload: Record<string, unknown> = Object.fromEntries(
+        Object.entries(basePayload).filter(([, value]) => value !== undefined)
+      );
       const skippedColumns = new Set<string>();
 
       while (Object.keys(attemptedPayload).length > 0) {
-        const response = await supabase
-          .from("profiles")
-          .update(attemptedPayload)
-          .eq("id", selectedCharacterId)
-          .select()
-          .maybeSingle();
+        try {
+          const response = await invokeProgressionMutation("update_profile", {
+            profile_id: selectedCharacterId,
+            user_id: user.id,
+            updates: attemptedPayload,
+          });
 
-        if (!response.error) {
-          const appliedPayload = attemptedPayload as Partial<PlayerProfile>;
-          const nextProfile = response.data ?? (profile ? { ...profile, ...appliedPayload } : null);
-          setProfile(nextProfile);
-          return nextProfile ?? undefined;
+          applyProgressionResult(response);
+
+          let resolvedProfile: PlayerProfile | null = null;
+          setProfile(prev => {
+            const baseProfile = prev ?? null;
+
+            if (!baseProfile) {
+              const fallbackProfile = {
+                id: selectedCharacterId,
+                ...(attemptedPayload as Partial<PlayerProfile>),
+                ...(response.profile as Partial<PlayerProfile> | null | undefined),
+              } as PlayerProfile;
+              resolvedProfile = fallbackProfile;
+              return fallbackProfile;
+            }
+
+            const nextProfile = {
+              ...baseProfile,
+              ...(attemptedPayload as Partial<PlayerProfile>),
+            } as PlayerProfile;
+
+            if (response.profile) {
+              Object.assign(nextProfile, response.profile as Partial<PlayerProfile>);
+            }
+
+            resolvedProfile = nextProfile;
+            return nextProfile;
+          });
+
+          return resolvedProfile ?? undefined;
+        } catch (error) {
+          const missingColumn = extractMissingColumn(error as PostgrestError | null | undefined);
+          if (
+            missingColumn &&
+            !skippedColumns.has(missingColumn) &&
+            missingColumn in attemptedPayload
+          ) {
+            skippedColumns.add(missingColumn);
+            attemptedPayload = omitFromRecord(attemptedPayload, missingColumn);
+            continue;
+          }
+
+          console.error("Error updating profile via progression:", error);
+          throw error;
         }
-
-        const missingColumn = extractMissingColumn(response.error);
-        if (
-          missingColumn &&
-          !skippedColumns.has(missingColumn) &&
-          missingColumn in attemptedPayload
-        ) {
-          skippedColumns.add(missingColumn);
-          attemptedPayload = omitFromRecord(attemptedPayload, missingColumn);
-          continue;
-        }
-
-        console.error("Error updating profile:", response.error);
-        throw response.error;
       }
 
-      return profile ?? undefined;
+      return undefined;
     },
-    [profile, selectedCharacterId, user]
+    [applyProgressionResult, invokeProgressionMutation, selectedCharacterId, user]
   );
 
   const awardActionXp = useCallback(
@@ -1413,44 +1475,103 @@ const useProvideGameData = (): GameDataContextValue => {
 
       const payload = {
         ...updates,
-        updated_at: updates.updated_at ?? new Date().toISOString()
+        updated_at: updates.updated_at ?? new Date().toISOString(),
       };
 
-      const primaryColumn = supportsProfileScopedDataRef.current === false ? "user_id" : "profile_id";
-      const primaryValue = primaryColumn === "user_id" ? user.id : selectedCharacterId;
+      const attemptedPayload: Record<string, unknown> = Object.fromEntries(
+        Object.entries(payload).filter(([, value]) => value !== undefined)
+      );
 
-      let updateResponse = await supabase
-        .from("player_skills")
-        .update(payload)
-        .eq(primaryColumn, primaryValue)
-        .select()
-        .maybeSingle();
+      const preferredScope = supportsProfileScopedDataRef.current === false ? "user" : "profile";
+      const scopes: Array<"profile" | "user"> =
+        preferredScope === "profile" ? ["profile", "user"] : ["user", "profile"];
 
-      if (updateResponse.error) {
-        if (
-          primaryColumn === "profile_id" &&
-          isMissingColumnError(updateResponse.error, "profile_id")
-        ) {
-          supportsProfileScopedDataRef.current = false;
-          updateResponse = await supabase
-            .from("player_skills")
-            .update(payload)
-            .eq("user_id", user.id)
-            .select()
-            .maybeSingle();
-        } else {
-          console.error("Error updating skills:", updateResponse.error);
-          throw updateResponse.error;
+      const extractSkillsPatch = (result: unknown): Partial<PlayerSkills> | null => {
+        if (!result || typeof result !== "object") {
+          return null;
         }
-      } else if (primaryColumn === "profile_id") {
-        supportsProfileScopedDataRef.current = true;
+
+        const record = result as Record<string, unknown>;
+        const candidates = [
+          record.skills,
+          record.player_skills,
+          record.playerSkills,
+        ];
+
+        for (const candidate of candidates) {
+          if (candidate && typeof candidate === "object") {
+            return candidate as Partial<PlayerSkills>;
+          }
+        }
+
+        return null;
+      };
+
+      for (const scope of scopes) {
+        try {
+          const response = await invokeProgressionMutation("update_skills", {
+            profile_id: selectedCharacterId,
+            user_id: user.id,
+            scope,
+            updates: attemptedPayload,
+          });
+
+          supportsProfileScopedDataRef.current = scope === "profile";
+
+          applyProgressionResult(response);
+
+          const skillsPatch = extractSkillsPatch(response.result);
+          let resolvedSkills: PlayerSkills | null = null;
+
+          setSkills(prev => {
+            const baseSkills = prev ?? null;
+
+            if (!baseSkills) {
+              if (skillsPatch) {
+                const merged = skillsPatch as PlayerSkills;
+                resolvedSkills = merged;
+                return merged;
+              }
+
+              const fallback = {
+                profile_id: selectedCharacterId,
+                ...(attemptedPayload as Partial<PlayerSkills>),
+              } as PlayerSkills;
+              resolvedSkills = fallback;
+              return fallback;
+            }
+
+            const nextSkills = {
+              ...baseSkills,
+              ...(attemptedPayload as Partial<PlayerSkills>),
+            } as PlayerSkills;
+
+            if (skillsPatch) {
+              Object.assign(nextSkills, skillsPatch);
+            }
+
+            resolvedSkills = nextSkills;
+            return nextSkills;
+          });
+
+          return resolvedSkills ?? undefined;
+        } catch (error) {
+          if (
+            scope === "profile" &&
+            isMissingColumnError(error as PostgrestError | null | undefined, "profile_id")
+          ) {
+            supportsProfileScopedDataRef.current = false;
+            continue;
+          }
+
+          console.error("Error updating skills via progression:", error);
+          throw error;
+        }
       }
 
-      const nextSkills = updateResponse.data ?? (skills ? { ...skills, ...payload } : null);
-      setSkills(nextSkills);
-      return nextSkills ?? undefined;
+      return undefined;
     },
-    [selectedCharacterId, skills, user]
+    [applyProgressionResult, invokeProgressionMutation, selectedCharacterId, user]
   );
 
   const updateAttributes = useCallback(
@@ -1461,48 +1582,82 @@ const useProvideGameData = (): GameDataContextValue => {
 
       const payload = {
         ...updates,
-        updated_at: updates.updated_at ?? new Date().toISOString()
+        updated_at: updates.updated_at ?? new Date().toISOString(),
       };
 
-      try {
-        const primaryColumn = supportsProfileScopedDataRef.current === false ? "user_id" : "profile_id";
-        const primaryValue = primaryColumn === "user_id" ? user.id : selectedCharacterId;
+      const attemptedPayload: Record<string, unknown> = Object.fromEntries(
+        Object.entries(payload).filter(([, value]) => value !== undefined)
+      );
 
-        let updateResponse = await supabase
-          .from("player_attributes")
-          .update(payload)
-          .eq(primaryColumn, primaryValue)
-          .select()
-          .maybeSingle();
+      const preferredScope = supportsProfileScopedDataRef.current === false ? "user" : "profile";
+      const scopes: Array<"profile" | "user"> =
+        preferredScope === "profile" ? ["profile", "user"] : ["user", "profile"];
 
-        if (updateResponse.error) {
+      for (const scope of scopes) {
+        try {
+          const response = await invokeProgressionMutation("update_attributes", {
+            profile_id: selectedCharacterId,
+            user_id: user.id,
+            scope,
+            updates: attemptedPayload,
+          });
+
+          supportsProfileScopedDataRef.current = scope === "profile";
+
+          applyProgressionResult(response);
+
+          let resolvedAttributes: PlayerAttributes | null = null;
+
+          setAttributes(prev => {
+            const baseAttributes = prev ?? null;
+
+            if (!baseAttributes) {
+              if (response.attributes && typeof response.attributes === "object") {
+                const merged = response.attributes as PlayerAttributes;
+                resolvedAttributes = merged;
+                return merged;
+              }
+
+              const fallback = {
+                profile_id: selectedCharacterId,
+                user_id: user.id,
+                ...(attemptedPayload as Partial<PlayerAttributes>),
+              } as PlayerAttributes;
+              resolvedAttributes = fallback;
+              return fallback;
+            }
+
+            const nextAttributes = {
+              ...baseAttributes,
+              ...(attemptedPayload as Partial<PlayerAttributes>),
+            } as PlayerAttributes;
+
+            if (response.attributes && typeof response.attributes === "object") {
+              Object.assign(nextAttributes, response.attributes as Partial<PlayerAttributes>);
+            }
+
+            resolvedAttributes = nextAttributes;
+            return nextAttributes;
+          });
+
+          return resolvedAttributes ?? undefined;
+        } catch (error) {
           if (
-            primaryColumn === "profile_id" &&
-            isMissingColumnError(updateResponse.error, "profile_id")
+            scope === "profile" &&
+            isMissingColumnError(error as PostgrestError | null | undefined, "profile_id")
           ) {
             supportsProfileScopedDataRef.current = false;
-            updateResponse = await supabase
-              .from("player_attributes")
-              .update(payload)
-              .eq("user_id", user.id)
-              .select()
-              .maybeSingle();
-          } else {
-            throw updateResponse.error;
+            continue;
           }
-        } else if (primaryColumn === "profile_id") {
-          supportsProfileScopedDataRef.current = true;
-        }
 
-        const nextAttributes = updateResponse.data ?? (attributes ? { ...attributes, ...payload } : null);
-        setAttributes(nextAttributes);
-        return nextAttributes;
-      } catch (updateError) {
-        console.error("Error updating attributes:", updateError);
-        throw updateError;
+          console.error("Error updating attributes via progression:", error);
+          throw error;
+        }
       }
+
+      return undefined;
     },
-    [attributes, selectedCharacterId, user]
+    [applyProgressionResult, invokeProgressionMutation, selectedCharacterId, user]
   );
 
   const setSkillUnlocked = useCallback(
