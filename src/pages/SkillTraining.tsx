@@ -306,20 +306,20 @@ const SkillTrainingContent = () => {
   const isLoading = gameDataLoading || skillSystemLoading;
 
   const getSkillLevel = (value: number) => {
-    if (value >= 90) return "Master";
-    if (value >= 75) return "Expert";
-    if (value >= 60) return "Advanced";
-    if (value >= 40) return "Intermediate";
-    if (value >= 20) return "Beginner";
+    if (value >= 900) return "Master";
+    if (value >= 750) return "Expert";
+    if (value >= 600) return "Advanced";
+    if (value >= 400) return "Intermediate";
+    if (value >= 200) return "Beginner";
     return "Novice";
   };
 
   const getSkillColor = (value: number) => {
-    if (value >= 90) return "text-purple-400";
-    if (value >= 75) return "text-blue-400";
-    if (value >= 60) return "text-green-400";
-    if (value >= 40) return "text-yellow-400";
-    if (value >= 20) return "text-orange-400";
+    if (value >= 900) return "text-purple-400";
+    if (value >= 750) return "text-blue-400";
+    if (value >= 600) return "text-green-400";
+    if (value >= 400) return "text-yellow-400";
+    if (value >= 200) return "text-orange-400";
     return "text-red-400";
   };
 

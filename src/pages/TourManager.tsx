@@ -1160,7 +1160,7 @@ const TourManager = () => {
 
     try {
       // Calculate show success based on skills and venue prestige
-      const successRate = Math.min(0.9, skills.performance / 100);
+      const successRate = Math.min(0.9, (skills.performance ?? 0) / 1000);
       const capacity = venueInfo.capacity || 500;
       const environmentModifiers = tourVenue.environment_modifiers;
       const attendanceMultiplier = environmentModifiers?.attendanceMultiplier ?? 1;

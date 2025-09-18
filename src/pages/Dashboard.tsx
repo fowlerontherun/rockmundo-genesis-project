@@ -267,13 +267,14 @@ const Dashboard = () => {
             <CardContent className="space-y-4">
               {instrumentSkillKeys.map(skillKey => {
                 const value = Number(skills?.[skillKey] ?? 0);
+                const percent = Math.min(100, (value / 1000) * 100);
                 return (
                   <div key={skillKey} className="space-y-2">
                     <span className="capitalize font-medium text-sm">{skillKey}</span>
                     <Progress
-                      value={value}
+                      value={percent}
                       className="h-2"
-                      aria-label={`${skillKey} skill level ${value} out of 100`}
+                      aria-label={`${skillKey} skill level ${value} out of 1000`}
                     />
                   </div>
                 );
