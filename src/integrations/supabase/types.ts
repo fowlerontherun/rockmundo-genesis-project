@@ -806,7 +806,10 @@ export type Database = {
           fame: number | null
           fans: number | null
           id: string
+          is_active: boolean
           level: number | null
+          slot_number: number
+          unlock_cost: number
           updated_at: string | null
           user_id: string
           username: string
@@ -821,7 +824,10 @@ export type Database = {
           fame?: number | null
           fans?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
+          slot_number?: number
+          unlock_cost?: number
           updated_at?: string | null
           user_id: string
           username: string
@@ -836,7 +842,10 @@ export type Database = {
           fame?: number | null
           fans?: number | null
           id?: string
+          is_active?: boolean
           level?: number | null
+          slot_number?: number
+          unlock_cost?: number
           updated_at?: string | null
           user_id?: string
           username?: string
