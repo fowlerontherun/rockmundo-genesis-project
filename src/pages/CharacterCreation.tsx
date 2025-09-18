@@ -77,7 +77,7 @@ const backgrounds = [
   },
 ];
 
-const DEFAULT_TOTAL_SKILL_POINTS = 0;
+const DEFAULT_TOTAL_SKILL_POINTS = 13;
 const MIN_SKILL_VALUE = 0;
 const MAX_SKILL_VALUE = 100;
 const ATTRIBUTE_MIN_VALUE = 0;
