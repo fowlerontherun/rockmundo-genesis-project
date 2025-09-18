@@ -572,6 +572,14 @@ const Auth = () => {
           <p className="text-xs text-muted-foreground/70 font-oswald">
             Join thousands of musicians living their dream
           </p>
+          <a
+            href="https://discord.gg/zkGYKYVu"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-oswald text-primary underline underline-offset-4 hover:text-primary/80"
+          >
+            Connect with the Rockmundo community on Discord
+          </a>
         </div>
       </div>
     </div>
