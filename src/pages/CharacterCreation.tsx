@@ -134,6 +134,7 @@ type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
+type PlayerSkillsInsert = TablesInsert<"player_skills">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
@@ -279,7 +280,7 @@ const CharacterCreation = () => {
           supabase
             .from("profiles")
             .select(
-              "id, username, display_name, bio, avatar_url, level, experience, cash, fans, followers, fame, engagement_rate, gender, city_of_birth, age"
+              "id, username, display_name, bio, avatar_url, level, experience, cash, fans, followers, fame, engagement_rate, gender, city_of_birth, age, slot_number, unlock_cost, is_active"
             )
             .eq("user_id", user.id)
             .maybeSingle(),
@@ -358,32 +359,28 @@ const CharacterCreation = () => {
         const mergedSkills: Record<SkillKey, number> = { ...defaultSkills };
 
         if (skillsResponse.data) {
-          setSkills(prev => {
-            const updated = { ...prev };
-            (Object.keys(defaultSkills) as SkillKey[]).forEach(key => {
-              const value = skillsResponse.data?.[key];
-              if (typeof value === "number") {
-                updated[key] = value;
-              }
-            });
-            return updated;
-          });
-        }
-
-        if (attributesResponse.data) {
-          setAttributes(prev => {
-            const updated = { ...prev };
-            (Object.keys(defaultAttributes) as AttributeKey[]).forEach(key => {
-              const value = attributesResponse.data?.[key];
-              if (typeof value === "number") {
-                updated[key] = value;
-              }
-            });
-            return updated;
+          (Object.keys(defaultSkills) as SkillKey[]).forEach((key) => {
+            const value = skillsResponse.data?.[key];
+            if (typeof value === "number") {
+              mergedSkills[key] = value;
+            }
           });
         }
 
         setSkills(mergedSkills);
+
+        const mergedAttributes: Record<AttributeKey, number> = { ...defaultAttributes };
+
+        if (attributesResponse.data) {
+          (Object.keys(defaultAttributes) as AttributeKey[]).forEach((key) => {
+            const value = attributesResponse.data?.[key];
+            if (typeof value === "number") {
+              mergedAttributes[key] = value;
+            }
+          });
+        }
+
+        setAttributes(mergedAttributes);
       } catch (error) {
         console.error("Failed to load character data:", error);
         setLoadError("We couldn't load your character data. You can still create a new persona.");
@@ -592,6 +589,14 @@ const CharacterCreation = () => {
       avatarPreviewUrl(avatarSelection.styleId),
     );
 
+    const slotNumber = typeof existingProfile?.slot_number === "number"
+      ? existingProfile.slot_number
+      : 1;
+    const unlockCost = typeof existingProfile?.unlock_cost === "number"
+      ? existingProfile.unlock_cost
+      : 0;
+    const isActive = existingProfile?.is_active ?? true;
+
     const profilePayload: ProfileInsert = {
       user_id: user.id,
       username: trimmedUsername,
@@ -608,6 +613,9 @@ const CharacterCreation = () => {
       gender,
       age: parsedAge,
       city_of_birth: cityOfBirth,
+      slot_number: slotNumber,
+      unlock_cost: unlockCost,
+      is_active: isActive,
     };
 
     const skillPayload: PlayerSkillsInsert = {
@@ -624,7 +632,7 @@ const CharacterCreation = () => {
     try {
       const { data: upsertedProfile, error: profileError } = await supabase
         .from("profiles")
-        .upsert(profilePayload, { onConflict: "user_id" })
+        .upsert(profilePayload, { onConflict: "user_id, slot_number" })
         .select()
         .single();
 
@@ -634,6 +642,20 @@ const CharacterCreation = () => {
 
       if (!upsertedProfile) {
         throw new Error("Profile save did not return any data.");
+      }
+
+      const { error: skillsError } = await supabase
+        .from("player_skills")
+        .upsert(
+          {
+            ...skillPayload,
+            profile_id: upsertedProfile.id,
+          },
+          { onConflict: "profile_id" }
+        );
+
+      if (skillsError) {
+        throw skillsError;
       }
 
       const attributesPayload: PlayerAttributesInsert = {
@@ -707,7 +729,7 @@ const CharacterCreation = () => {
 
       const { error: attributesError } = await supabase
         .from("player_attributes")
-        .upsert(attributesPayload, { onConflict: "user_id" });
+        .upsert(attributesPayload, { onConflict: "profile_id" });
 
       if (attributesError) {
         throw attributesError;
