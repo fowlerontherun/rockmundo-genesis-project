@@ -436,6 +436,31 @@ const SkillTrainingContent = () => {
     trainingCooldown
   ]);
 
+  const { cooldownActive: overallCooldownActive, remainingCooldown: overallRemainingCooldown } =
+    useMemo(() => {
+      let hasActiveCooldown = false;
+      let shortestRemaining = Number.POSITIVE_INFINITY;
+
+      for (const session of derivedSessions) {
+        if (!session.cooldownActive) continue;
+        hasActiveCooldown = true;
+
+        if (session.remainingCooldown > 0) {
+          shortestRemaining = Math.min(shortestRemaining, session.remainingCooldown);
+        }
+      }
+
+      const normalizedRemaining =
+        hasActiveCooldown && Number.isFinite(shortestRemaining)
+          ? Math.max(0, shortestRemaining)
+          : 0;
+
+      return {
+        cooldownActive: hasActiveCooldown,
+        remainingCooldown: normalizedRemaining
+      };
+    }, [derivedSessions]);
+
   const sessionBySlug = useMemo(() => {
     return derivedSessions.reduce<Map<string, DerivedSession>>((acc, session) => {
       acc.set(session.slug, session);
@@ -781,7 +806,9 @@ const SkillTrainingContent = () => {
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-purple-400" />
             <span className="font-oswald">
-              {cooldownActive ? `Cooldown: ${remainingCooldown}m` : "Ready to train"}
+              {overallCooldownActive
+                ? `Cooldown: ${overallRemainingCooldown}m`
+                : "Ready to train"}
             </span>
           </div>
         </div>
