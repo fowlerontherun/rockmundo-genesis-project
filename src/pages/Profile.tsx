@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import CharacterSelect from "@/components/CharacterSelect";
 import AvatarWithClothing from "@/components/avatar/AvatarWithClothing";
 import {
@@ -24,7 +25,9 @@ import {
   TrendingUp,
   Heart,
   RotateCcw,
-  Loader2
+  Loader2,
+  Sparkles,
+  ArrowRight
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,7 +93,7 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, attributes, updateProfile } = useGameData();
+  const { profile, skills, attributes, updateProfile, freshPointGrantAvailable } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -128,6 +131,25 @@ const Profile = () => {
   const [cityError, setCityError] = useState<string | null>(null);
 
   const showProfileDetails = Boolean(profile && skills && attributes);
+
+  const parseDate = (value?: string | null) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const skillPoints = Number(profile?.skill_points_available ?? 0);
+  const attributePoints = Number(profile?.attribute_points_available ?? 0);
+  const hasUnspentPoints = skillPoints + attributePoints > 0;
+  const lastPointRefresh = parseDate(profile?.last_point_conversion_at ?? null);
+  const formattedLastPointRefresh = lastPointRefresh
+    ? new Intl.DateTimeFormat(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(lastPointRefresh)
+    : null;
 
   useEffect(() => {
     if (!showProfileDetails) {
@@ -693,6 +715,45 @@ const Profile = () => {
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
+            {hasUnspentPoints && (
+              <Alert className="border-primary/30 bg-primary/5 text-primary">
+                <Sparkles className="h-4 w-4" />
+                <AlertTitle className="flex items-center gap-2">
+                  Spend your banked training points
+                  {freshPointGrantAvailable && (
+                    <Badge variant="secondary" className="border-primary/40 bg-primary/10 text-primary">
+                      New today
+                    </Badge>
+                  )}
+                </AlertTitle>
+                <AlertDescription className="space-y-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-3 font-medium">
+                    <span className="text-primary">
+                      {skillPoints} skill {skillPoints === 1 ? "point" : "points"}
+                    </span>
+                    <span className="text-primary">
+                      {attributePoints} attribute {attributePoints === 1 ? "point" : "points"}
+                    </span>
+                  </div>
+                  {formattedLastPointRefresh && (
+                    <p className="text-xs text-primary/70">
+                      Last conversion ran {formattedLastPointRefresh} UTC
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => navigate("/training")}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      size="sm"
+                    >
+                      Allocate points
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -736,6 +797,36 @@ const Profile = () => {
                 <CardContent>
                   <div className="text-2xl font-bold text-warning">{profile.experience || 0}</div>
                   <p className="text-xs text-muted-foreground">Total XP earned</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Spendable Points</CardTitle>
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Skill</span>
+                    <span className="font-semibold text-primary">{skillPoints}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Attribute</span>
+                    <span className="font-semibold text-primary">{attributePoints}</span>
+                  </div>
+                  {hasUnspentPoints ? (
+                    <Button
+                      onClick={() => navigate("/training")}
+                      variant="outline"
+                      className="w-full border-primary/40 text-primary hover:bg-primary/10"
+                      size="sm"
+                    >
+                      Allocate now
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">All points allocated</p>
+                  )}
                 </CardContent>
               </Card>
             </div>

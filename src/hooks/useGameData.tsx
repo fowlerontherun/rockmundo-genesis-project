@@ -39,6 +39,17 @@ type SkillUnlockUpsertInput = any;
 type Nullable<T> = T | null;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
+const POINT_ACK_STORAGE_PREFIX = "rockmundo:pointsAck:";
+
+const toValidDate = (value: unknown) => {
+  if (typeof value === "string" || value instanceof Date) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  return null;
+};
 
 const isMissingColumnError = (
   error: PostgrestError | null | undefined,
@@ -119,6 +130,7 @@ interface GameDataContextValue {
   characters: PlayerProfile[];
   selectedCharacterId: string | null;
   profile: PlayerProfile | null;
+  freshPointGrantAvailable: boolean;
   skillDefinitions: SkillDefinition[];
   skillProgress: SkillProgressRow[];
   unlockedSkills: UnlockedSkillsMap;
@@ -140,6 +152,7 @@ interface GameDataContextValue {
     message: string,
     earnings?: number
   ) => Promise<ActivityItem | undefined>;
+  acknowledgePointGrant: () => void;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
   refetch: () => Promise<void>;
@@ -168,6 +181,7 @@ const defaultGameDataContext: GameDataContextValue = {
   characters: [],
   selectedCharacterId: null,
   profile: null,
+  freshPointGrantAvailable: false,
   skillDefinitions: [],
   skillProgress: [],
   unlockedSkills: {},
@@ -200,6 +214,9 @@ const defaultGameDataContext: GameDataContextValue = {
   addActivity: async () => {
     warnMissingProvider();
     return undefined;
+  },
+  acknowledgePointGrant: () => {
+    warnMissingProvider();
   },
   createCharacter: async () => {
     warnMissingProvider();
@@ -237,6 +254,21 @@ const writeStoredCharacterId = (characterId: string | null) => {
     window.localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
   } else {
     window.localStorage.removeItem(CHARACTER_STORAGE_KEY);
+  }
+};
+
+const readPointAcknowledgement = (profileId: string) => {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(`${POINT_ACK_STORAGE_PREFIX}${profileId}`);
+};
+
+const writePointAcknowledgement = (profileId: string, timestamp: string | null) => {
+  if (typeof window === "undefined") return;
+  const storageKey = `${POINT_ACK_STORAGE_PREFIX}${profileId}`;
+  if (timestamp) {
+    window.localStorage.setItem(storageKey, timestamp);
+  } else {
+    window.localStorage.removeItem(storageKey);
   }
 };
 
@@ -312,6 +344,7 @@ const useProvideGameData = (): GameDataContextValue => {
   const [charactersLoading, setCharactersLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [freshPointGrantAvailable, setFreshPointGrantAvailable] = useState(false);
   const supportsProfileScopedDataRef = useRef<boolean | null>(null);
   const clearGameState = useCallback(() => {
     setProfile(null);
@@ -319,6 +352,7 @@ const useProvideGameData = (): GameDataContextValue => {
     setAttributes(null);
     setActivities([]);
     setCurrentCity(null);
+    setFreshPointGrantAvailable(false);
   }, []);
 
   const fetchCharacters = useCallback(async () => {
@@ -717,6 +751,49 @@ const useProvideGameData = (): GameDataContextValue => {
     writeStoredCharacterId(selectedCharacterId);
     void fetchGameData();
   }, [fetchGameData, selectedCharacterId]);
+
+  const acknowledgePointGrant = useCallback(() => {
+    if (!profile?.id) {
+      return;
+    }
+
+    const lastConversion = toValidDate((profile as Record<string, unknown>).last_point_conversion_at);
+    const acknowledgementTimestamp = (lastConversion ?? new Date()).toISOString();
+    writePointAcknowledgement(profile.id, acknowledgementTimestamp);
+    setFreshPointGrantAvailable(false);
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile?.id) {
+      setFreshPointGrantAvailable(false);
+      return;
+    }
+
+    const skillPoints = Number((profile as Record<string, unknown>).skill_points_available ?? 0);
+    const attributePoints = Number((profile as Record<string, unknown>).attribute_points_available ?? 0);
+    const totalPoints = skillPoints + attributePoints;
+    const lastConversion = toValidDate((profile as Record<string, unknown>).last_point_conversion_at);
+    const acknowledgement = readPointAcknowledgement(profile.id);
+    const acknowledgedAt = acknowledgement ? toValidDate(acknowledgement) : null;
+
+    if (totalPoints <= 0) {
+      if (lastConversion) {
+        if (!acknowledgedAt || lastConversion > acknowledgedAt) {
+          writePointAcknowledgement(profile.id, lastConversion.toISOString());
+        }
+      } else if (!acknowledgedAt) {
+        writePointAcknowledgement(profile.id, new Date().toISOString());
+      }
+      setFreshPointGrantAvailable(false);
+      return;
+    }
+
+    if (lastConversion) {
+      setFreshPointGrantAvailable(!acknowledgedAt || lastConversion > acknowledgedAt);
+    } else {
+      setFreshPointGrantAvailable(!acknowledgedAt);
+    }
+  }, [profile]);
 
   const setActiveCharacter = useCallback(
     async (characterId: string) => {
@@ -1199,6 +1276,7 @@ const useProvideGameData = (): GameDataContextValue => {
     characters,
     selectedCharacterId,
     profile,
+    freshPointGrantAvailable,
     skillDefinitions,
     skillProgress,
     unlockedSkills,
@@ -1216,6 +1294,7 @@ const useProvideGameData = (): GameDataContextValue => {
     updateSkills,
     updateAttributes,
     addActivity,
+    acknowledgePointGrant,
     createCharacter,
     refreshCharacters,
     refetch,
