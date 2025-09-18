@@ -64,7 +64,7 @@ const parseRewardPayload = (rewards: unknown, profile: PlayerProfile | null): Re
     const baseValue = typeof currentValue === "number" ? currentValue : 0;
     const nextValue = baseValue + numericValue;
 
-    (updates as any)[field] = nextValue;
+    updates[field] = nextValue;
     messageDetails.push(`${formatKey(field as string)} ${numericValue > 0 ? "+" : ""}${numericValue}`);
 
     if (field === "cash") {
