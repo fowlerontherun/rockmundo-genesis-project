@@ -204,10 +204,34 @@ const defaultAttributes: Record<AttributeKey, number> = {
   social_reach: 1,
 };
 
+const buildSkillState = (
+  record: Record<string, unknown> | null | undefined,
+): Record<SkillKey, number> => {
+  const resolved: Record<SkillKey, number> = { ...defaultSkills };
+
+  if (!record) {
+    return resolved;
+  }
+
+  (Object.keys(defaultSkills) as SkillKey[]).forEach((key) => {
+    const value = record[key];
+
+    if (typeof value === "number") {
+      resolved[key] = Math.max(
+        MIN_SKILL_VALUE,
+        Math.min(MAX_SKILL_VALUE, value),
+      );
+    }
+  });
+
+  return resolved;
+};
+
 type ProfileRow = Tables<"profiles">;
 
 type ProfileInsert = TablesInsert<"profiles">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
+type PlayerSkillsInsert = TablesInsert<"player_skills">;
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
@@ -726,6 +750,60 @@ const CharacterCreation = () => {
       }
 
       const attributePoints = existingAttributesRow?.attribute_points ?? 0;
+      const normalizedSkillsPayload = (Object.keys(defaultSkills) as SkillKey[]).reduce<
+        Record<string, number>
+      >((accumulator, key) => {
+        const rawValue = skills[key];
+        const numericValue = Math.max(
+          MIN_SKILL_VALUE,
+          Math.min(
+            MAX_SKILL_VALUE,
+            Number.isFinite(rawValue) ? Number(rawValue) : MIN_SKILL_VALUE,
+          ),
+        );
+        accumulator[key] = numericValue;
+        return accumulator;
+      }, {});
+
+      const baseSkillsPayload: Record<string, unknown> = {
+        user_id: user.id,
+        profile_id: upsertedProfile.id,
+        ...normalizedSkillsPayload,
+      };
+
+      let attemptedSkillsPayload: Record<string, unknown> = { ...baseSkillsPayload };
+      const skippedSkillsColumns = new Set<string>();
+      let finalSkillsRow: Tables<"player_skills"> | null = null;
+
+      while (Object.keys(attemptedSkillsPayload).length > 0) {
+        const { data: upsertedSkills, error: skillsError } = await supabase
+          .from("player_skills")
+          .upsert(attemptedSkillsPayload as PlayerSkillsInsert, { onConflict: "user_id" })
+          .select()
+          .maybeSingle();
+
+        if (!skillsError) {
+          finalSkillsRow = upsertedSkills ?? null;
+          break;
+        }
+
+        if (skillsError.code === "42703") {
+          const missingColumn = extractMissingColumn(skillsError);
+          if (
+            missingColumn &&
+            !skippedSkillsColumns.has(missingColumn) &&
+            missingColumn in attemptedSkillsPayload
+          ) {
+            skippedSkillsColumns.add(missingColumn);
+            attemptedSkillsPayload = omitFromRecord(attemptedSkillsPayload, missingColumn);
+            continue;
+          }
+        }
+
+        throw skillsError;
+      }
+
+      setSkills(buildSkillState(finalSkillsRow ?? attemptedSkillsPayload));
       const normalizedAttributesPayload = ATTRIBUTE_KEYS.reduce<Record<string, number>>(
         (accumulator, key) => {
           accumulator[key] = normalizeAttributeValue(attributes[key]);
