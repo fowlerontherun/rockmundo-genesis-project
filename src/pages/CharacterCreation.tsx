@@ -948,20 +948,24 @@ const CharacterCreation = () => {
     let attemptedAttributesPayload: Record<string, unknown> | null = null;
     let currentStage: SaveFailureStage = "profile-upsert";
 
+    let profileConflictColumns: string[] = ["user_id", "slot_number"];
+
 
     try {
       const skippedProfileColumns = new Set<string>();
       let upsertedProfile: PlayerProfile | null = null;
 
       while (!upsertedProfile) {
+        const conflictTarget = profileConflictColumns.join(",");
         console.debug("[CharacterCreation] Attempting profile upsert", {
           payload: sanitizePayloadForLogging(attemptedProfilePayload),
           skippedColumns: [...skippedProfileColumns],
+          conflictTarget,
         });
         const { data, error: profileError } = await supabase
           .from("profiles")
           .upsert(attemptedProfilePayload as ProfileInsert, {
-            onConflict: "user_id,slot_number",
+            onConflict: conflictTarget,
           })
           .select()
           .single();
@@ -977,21 +981,59 @@ const CharacterCreation = () => {
           details: profileError.details,
           hint: profileError.hint,
           attemptedKeys: Object.keys(attemptedProfilePayload),
+          conflictTarget,
         });
 
         const missingColumn = extractMissingColumn(profileError);
-        if (
-          missingColumn &&
-          !skippedProfileColumns.has(missingColumn) &&
-          missingColumn in attemptedProfilePayload
-        ) {
-          skippedProfileColumns.add(missingColumn);
-          attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
-          console.warn("[CharacterCreation] Retrying profile upsert without column", {
-            missingColumn,
-            remainingKeys: Object.keys(attemptedProfilePayload),
-          });
-          continue;
+        if (missingColumn) {
+          let handledMissingColumn = false;
+
+          if (missingColumn === "slot_number" && profileConflictColumns.includes("slot_number")) {
+            profileConflictColumns = profileConflictColumns
+              .filter((column) => column !== "slot_number")
+              .filter((column, index, array) => array.indexOf(column) === index);
+
+            if (profileConflictColumns.length === 0) {
+              profileConflictColumns = ["user_id"];
+            } else if (!profileConflictColumns.includes("user_id")) {
+              profileConflictColumns.unshift("user_id");
+            }
+
+            if (!skippedProfileColumns.has(missingColumn)) {
+              skippedProfileColumns.add(missingColumn);
+            }
+
+            if (missingColumn in attemptedProfilePayload) {
+              attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+            }
+
+            console.warn(
+              "[CharacterCreation] Falling back to legacy profile conflict target",
+              {
+                missingColumn,
+                nextConflictTarget: profileConflictColumns.join(","),
+                remainingKeys: Object.keys(attemptedProfilePayload),
+              },
+            );
+
+            handledMissingColumn = true;
+          }
+
+          if (!handledMissingColumn && missingColumn in attemptedProfilePayload) {
+            if (!skippedProfileColumns.has(missingColumn)) {
+              skippedProfileColumns.add(missingColumn);
+            }
+            attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+            console.warn("[CharacterCreation] Retrying profile upsert without column", {
+              missingColumn,
+              remainingKeys: Object.keys(attemptedProfilePayload),
+            });
+            handledMissingColumn = true;
+          }
+
+          if (handledMissingColumn) {
+            continue;
+          }
         }
 
         throw profileError;
@@ -1126,6 +1168,7 @@ const CharacterCreation = () => {
         profileId: upsertedProfile.id,
         userId: user.id,
         skippedProfileColumns: [...skippedProfileColumns],
+        profileConflictColumns,
         skippedAttributeColumns: [...skippedAttributeColumns],
       });
 
