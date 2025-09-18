@@ -183,6 +183,10 @@ const defaultSkills = {
   performance: 0,
   songwriting: 0,
   composition: 0,
+  business: 0,
+  marketing: 0,
+  creativity: 0,
+  technical: 0,
 };
 
 const ATTRIBUTE_KEYS = [
@@ -389,7 +393,9 @@ const CharacterCreation = () => {
             .maybeSingle(),
           supabase
             .from("player_skills")
-            .select("id, guitar, vocals, drums, bass, performance, songwriting, composition")
+            .select(
+              "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
+            )
             .eq("user_id", user.id)
             .maybeSingle(),
           supabase
@@ -1299,7 +1305,7 @@ const CharacterCreation = () => {
               Skill Distribution
             </CardTitle>
             <CardDescription>
-              Allocate your starting strengths. Every skill ranges from 0-10 and influences early gameplay systems.
+              Allocate your starting strengths across musical and career disciplines. Every skill ranges from 0-10 and influences early gameplay systems.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
