@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchWorldEnvironmentSnapshot, type WeatherCondition } from "@/utils/worldEnvironment";
+import type { ProgressionActionSuccessResponse } from "@/types/progression";
 import { resolveAttributeValue } from "@/utils/attributeModifiers";
 import {
   AttributeFocus,
@@ -562,7 +563,10 @@ const Busking = () => {
     addActivity,
     loading: gameLoading,
     currentCity,
-    selectedCharacterId
+    selectedCharacterId,
+    xpWallet,
+    refreshProgressionState,
+    applyProgressionUpdate
   } = useGameData();
   const { toast } = useToast();
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -579,6 +583,10 @@ const Busking = () => {
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [cachedAttributes, setCachedAttributes] = useState<PlayerAttributes | null>(null);
+  const xpDisplay = useMemo(
+    () => xpWallet?.xp_balance ?? profile?.experience ?? 0,
+    [xpWallet?.xp_balance, profile?.experience]
+  );
   const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
     const source = cachedAttributes as unknown as Record<string, unknown> | null;
     return {
@@ -1123,25 +1131,257 @@ const Busking = () => {
         throw sessionError;
       }
 
-      const nextCash = (profile.cash ?? 0) + cashEarned;
-      const nextFame = (profile.fame ?? 0) + fameGained;
+      const songsPerformed = Math.max(1, Math.round(durationMinutes / 4));
+      const baseAudience = Math.max(12, Math.round((selectedLocation.base_payout ?? 0) / 6));
+      const audienceEstimate = Math.max(
+        6,
+        Math.round(
+          baseAudience *
+            weatherAttendanceEffect *
+            cityMultiplier *
+            (0.6 + successChance / 100)
+        )
+      );
+
+      const normalizeScore = (value: number, max: number) => {
+        if (max <= 0) return 0;
+        return clampNumber(value / max, 0, 1);
+      };
+
+      const rarityWeights: Record<ModifierRarity, number> = {
+        common: 0.12,
+        uncommon: 0.22,
+        rare: 0.32,
+        legendary: 0.42,
+      };
+
+      const modifierRarity = modifier ? toRarity(modifier.rarity) : null;
+      const setlistDiversity = Number(
+        ((songsPerformed / 10 + (modifier ? 0.1 : 0)) * (success ? 1.05 : 0.85)).toFixed(2)
+      );
+      const cashPerMinute = Number((cashEarned / durationMinutes).toFixed(2));
+
+      const varietyScore = Number(
+        (
+          clampNumber(
+            normalizeScore(songsPerformed, 12) * 0.5 +
+              normalizeScore(setlistDiversity, 1.8) * 0.3 +
+              (modifierRarity ? rarityWeights[modifierRarity] : 0.08) * 0.2,
+            0,
+            1
+          ) * 100
+        ).toFixed(2)
+      );
+
+      const volumeScore = Number(
+        (
+          clampNumber(
+            normalizeScore(durationMinutes, 150) * 0.35 +
+              normalizeScore(songsPerformed, 18) * 0.15 +
+              normalizeScore(audienceEstimate, 450) * 0.3 +
+              normalizeScore(cashPerMinute, 90) * 0.2,
+            0,
+            1
+          ) * 100
+        ).toFixed(2)
+      );
+
+      const qualityScore = Number(
+        (
+          clampNumber(
+            normalizeScore(performanceScore, 100) * 0.45 +
+              normalizeScore(successChance, 100) * 0.25 +
+              normalizeScore(skillScore, 110) * 0.3,
+            0,
+            1
+          ) * 100
+        ).toFixed(2)
+      );
+
+      const socialScore = Number(
+        (
+          clampNumber(
+            normalizeScore(attributeScores.charisma ?? 0, 1000) * 0.5 +
+              normalizeScore(attributeBonuses.crowdEngagement ?? 1, 2) * 0.25 +
+              normalizeScore(attributeBonuses.socialReach ?? 1, 2) * 0.25,
+            0,
+            1
+          ) * 100
+        ).toFixed(2)
+      );
+
+      const professionalismScore = Number(
+        (
+          clampNumber(
+            normalizeScore(attributeScores.musicality ?? 0, 1000) * 0.4 +
+              normalizeScore(attributeBonuses.stagePresence ?? 1, 2) * 0.35 +
+              normalizeScore(attributeScores.looks ?? 0, 1000) * 0.25,
+            0,
+            1
+          ) * 100
+        ).toFixed(2)
+      );
+
+      const signals = {
+        variety: {
+          songs_performed: songsPerformed,
+          modifier_rarity: modifierRarity,
+          setlist_diversity: setlistDiversity,
+          score: varietyScore,
+        },
+        volume: {
+          duration_minutes: durationMinutes,
+          songs_performed: songsPerformed,
+          estimated_audience: audienceEstimate,
+          cash_per_minute: cashPerMinute,
+          score: volumeScore,
+        },
+        quality: {
+          performance_score: Math.round(performanceScore),
+          success_chance: successChance,
+          skill_score: skillScore,
+          outcome: success ? "success" : "setback",
+          score: qualityScore,
+        },
+        social: {
+          charisma: attributeScores.charisma ?? 0,
+          crowd_engagement: attributeBonuses.crowdEngagement ?? 1,
+          social_reach: attributeBonuses.socialReach ?? 1,
+          score: socialScore,
+        },
+        professionalism: {
+          musicality: attributeScores.musicality ?? 0,
+          stage_presence: attributeBonuses.stagePresence ?? 1,
+          looks: attributeScores.looks ?? 0,
+          score: professionalismScore,
+        },
+      };
+
+      const signalSummary = {
+        variety: varietyScore,
+        volume: volumeScore,
+        quality: qualityScore,
+        social: socialScore,
+        professionalism: professionalismScore,
+      };
+
+      const environmentMetadata = {
+        success_adjustment: environmentDetails.combined.successAdjustment,
+        success_multiplier: environmentDetails.combined.successMultiplier,
+        payout_multiplier: environmentDetails.combined.payoutMultiplier,
+        fame_multiplier: environmentDetails.combined.fameMultiplier,
+        experience_multiplier: environmentDetails.combined.experienceMultiplier,
+        time_of_day: environmentDetails.timeOfDay.label,
+        day_segment: environmentDetails.daySegment.label,
+        weather: weatherData
+          ? {
+              condition: weatherData.condition,
+              attendance_effect: weatherAttendanceEffect,
+              mood_effect: weatherData.effects?.mood_modifier ?? 1,
+              temperature_celsius: weatherData.temperature,
+              location: weatherData.city,
+            }
+          : null,
+      };
+
+      const progressionMetadata = {
+        session: {
+          id: sessionRecord.id,
+          duration_minutes: durationMinutes,
+          success,
+          performance_score: Math.round(performanceScore),
+          crowd_reaction: crowdReaction,
+        },
+        location: {
+          id: selectedLocation.id,
+          name: selectedLocation.name,
+          neighborhood: selectedLocation.neighborhood,
+          risk_level: selectedLocation.risk_level,
+          base_payout: selectedLocation.base_payout,
+          recommended_skill: selectedLocation.recommended_skill,
+        },
+        city: currentCity
+          ? {
+              id: currentCity.id,
+              name: currentCity.name,
+              busking_value: currentCity.busking_value,
+            }
+          : null,
+        modifier: modifier
+          ? {
+              id: modifier.id,
+              name: modifier.name,
+              rarity: toRarity(modifier.rarity),
+              fame_multiplier: modifier.fame_multiplier,
+              payout_multiplier: modifier.payout_multiplier,
+              experience_bonus: modifier.experience_bonus,
+            }
+          : null,
+        rewards: {
+          cash: cashEarned,
+          fame: fameGained,
+          experience: experienceGained,
+        },
+        environment: environmentMetadata,
+        audience: {
+          estimated_size: audienceEstimate,
+          base_foot_traffic: baseAudience,
+          attendance_effect: weatherAttendanceEffect,
+        },
+        signals,
+        signal_summary: signalSummary,
+      };
+
+      let progressionResponse: ProgressionActionSuccessResponse | null = null;
+      let refreshedSnapshot: Awaited<ReturnType<typeof refreshProgressionState>> | null = null;
+
       if (experienceGained > 0) {
-        await awardActionXp({
-          amount: experienceGained,
-          category: "performance",
-          actionKey: "busking_session",
-          uniqueEventId: sessionRecord.id,
-          metadata: {
-            session_id: sessionRecord.id,
-            location_id: selectedLocation.id,
-            modifier_id: modifier?.id ?? null,
-            success,
-            cash_earned: cashEarned,
-            fame_gained: fameGained,
-            experience_gained: experienceGained,
-          },
-        });
+        try {
+          const { data: progressionData, error: progressionError } = await supabase.functions.invoke<ProgressionActionSuccessResponse>(
+            "progression",
+            {
+              body: {
+                action: "award_action_xp",
+                amount: experienceGained,
+                category: "performance",
+                action_key: "busking_session",
+                session_id: sessionRecord.id,
+                location_id: selectedLocation.id,
+                metadata: progressionMetadata,
+              },
+            }
+          );
+
+          if (progressionError) {
+            throw progressionError;
+          }
+
+          if (!progressionData?.success) {
+            throw new Error(progressionData?.message ?? "Progression helper did not return success");
+          }
+
+          applyProgressionUpdate(progressionData);
+          progressionResponse = progressionData;
+        } catch (progressionError) {
+          console.error("Failed to award progression XP for busking session", progressionError);
+          refreshedSnapshot = await refreshProgressionState();
+        }
+      } else {
+        refreshedSnapshot = await refreshProgressionState();
       }
+
+      let profileAfterProgression = profile;
+      if (progressionResponse?.profile) {
+        profileAfterProgression = {
+          ...profileAfterProgression,
+          ...progressionResponse.profile,
+        };
+      } else if (refreshedSnapshot?.profile) {
+        profileAfterProgression = refreshedSnapshot.profile;
+      }
+
+      const nextCash = (profileAfterProgression?.cash ?? profile.cash ?? 0) + cashEarned;
+      const nextFame = (profileAfterProgression?.fame ?? profile.fame ?? 0) + fameGained;
 
       await updateProfile({
         cash: nextCash,
@@ -1324,7 +1564,7 @@ const Busking = () => {
               <Award className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{totalExperience}</div>
+              <div className="text-2xl font-bold text-accent">{xpDisplay.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Every street set sharpens your craft.</p>
             </CardContent>
           </Card>
