@@ -113,6 +113,58 @@ const extractMissingColumn = (error: PostgrestError | null | undefined) => {
   return null;
 };
 
+const isPostgrestError = (error: unknown): error is PostgrestError => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as Partial<PostgrestError>;
+  return typeof candidate.code === "string" && typeof candidate.message === "string";
+};
+
+const buildSaveErrorMessage = (error: unknown) => {
+  if (isPostgrestError(error)) {
+    const parts = [error.message, error.details, error.hint].filter(
+      (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
+
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+
+  return "An unknown error occurred while saving your character.";
+};
+
+const sanitizePayloadForLogging = (
+  payload: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null | undefined => {
+  if (!payload) {
+    return payload ?? null;
+  }
+
+  const sanitized: Record<string, unknown> = { ...payload };
+
+  if ("avatar_url" in sanitized) {
+    sanitized.avatar_url = "[omitted]";
+  }
+
+  if ("bio" in sanitized && typeof sanitized.bio === "string") {
+    const bio = sanitized.bio as string;
+    sanitized.bio = bio.length > 120 ? `${bio.slice(0, 117)}...` : bio;
+  }
+
+  return sanitized;
+};
+
 const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
   if (!(key in source)) {
     return source;
@@ -291,6 +343,7 @@ const CharacterCreation = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
   const [age, setAge] = useState<string>("16");
   const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
@@ -576,6 +629,13 @@ const CharacterCreation = () => {
     }
 
     setIsSaving(true);
+    setSaveError(null);
+
+    console.info("[CharacterCreation] Starting character save", {
+      userId: user.id,
+      existingProfileId: existingProfile?.id ?? null,
+      targetProfileId,
+    });
 
     const selectedBackgroundDetails =
       backgrounds.find((bg) => bg.id === selectedBackground) ?? backgrounds[0];
@@ -628,12 +688,18 @@ const CharacterCreation = () => {
       is_active: isActive,
     };
 
+    let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
+    let attemptedAttributesPayload: Record<string, unknown> | null = null;
+
     try {
-      let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
       const skippedProfileColumns = new Set<string>();
       let upsertedProfile: PlayerProfile | null = null;
 
       while (!upsertedProfile) {
+        console.debug("[CharacterCreation] Attempting profile upsert", {
+          payload: sanitizePayloadForLogging(attemptedProfilePayload),
+          skippedColumns: [...skippedProfileColumns],
+        });
         const { data, error: profileError } = await supabase
           .from("profiles")
           .upsert(attemptedProfilePayload as ProfileInsert, {
@@ -647,6 +713,14 @@ const CharacterCreation = () => {
           break;
         }
 
+        console.warn("[CharacterCreation] Profile upsert failed", {
+          error: buildSaveErrorMessage(profileError),
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint,
+          attemptedKeys: Object.keys(attemptedProfilePayload),
+        });
+
         const missingColumn = extractMissingColumn(profileError);
         if (
           missingColumn &&
@@ -655,6 +729,10 @@ const CharacterCreation = () => {
         ) {
           skippedProfileColumns.add(missingColumn);
           attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
+          console.warn("[CharacterCreation] Retrying profile upsert without column", {
+            missingColumn,
+            remainingKeys: Object.keys(attemptedProfilePayload),
+          });
           continue;
         }
 
@@ -720,11 +798,15 @@ const CharacterCreation = () => {
         ...normalizedAttributes,
       };
 
-      let attemptedAttributesPayload: Record<string, unknown> = { ...baseAttributesPayload };
+      attemptedAttributesPayload = { ...baseAttributesPayload };
       const skippedAttributeColumns = new Set<string>();
       let finalAttributesRow: PlayerAttributesRow | null = null;
 
       while (Object.keys(attemptedAttributesPayload).length > 0) {
+        console.debug("[CharacterCreation] Attempting attribute upsert", {
+          payload: sanitizePayloadForLogging(attemptedAttributesPayload),
+          skippedColumns: [...skippedAttributeColumns],
+        });
         const { data: upsertedAttributes, error: attributesError } = await supabase
           .from("player_attributes")
           .upsert(attemptedAttributesPayload as PlayerAttributesInsert, {
@@ -748,6 +830,10 @@ const CharacterCreation = () => {
           ) {
             skippedAttributeColumns.add(missingColumn);
             attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
+            console.warn("[CharacterCreation] Retrying attribute upsert without column", {
+              missingColumn,
+              remainingKeys: Object.keys(attemptedAttributesPayload),
+            });
             continue;
           }
         }
@@ -771,6 +857,13 @@ const CharacterCreation = () => {
       await refreshCharacters();
       await setActiveCharacter(upsertedProfile.id);
 
+      console.info("[CharacterCreation] Character save complete", {
+        profileId: upsertedProfile.id,
+        userId: user.id,
+        skippedProfileColumns: [...skippedProfileColumns],
+        skippedAttributeColumns: [...skippedAttributeColumns],
+      });
+
       toast({
         title: "Character ready!",
         description: "Your artist profile has been saved. Time to take the stage.",
@@ -780,10 +873,18 @@ const CharacterCreation = () => {
 
       navigate("/dashboard");
     } catch (error) {
-      console.error("Failed to save character:", error);
+      const errorMessage = buildSaveErrorMessage(error);
+      console.error("[CharacterCreation] Failed to save character", {
+        message: errorMessage,
+        error,
+        userId: user.id,
+        attemptedProfilePayload: sanitizePayloadForLogging(attemptedProfilePayload),
+        attemptedAttributesPayload: sanitizePayloadForLogging(attemptedAttributesPayload),
+      });
+      setSaveError(errorMessage);
       toast({
         title: "Could not save character",
-        description: "Please review your details and try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -831,6 +932,14 @@ const CharacterCreation = () => {
             <AlertCircle className="h-5 w-5" />
             <AlertTitle>Heads up!</AlertTitle>
             <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        )}
+
+        {saveError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-5 w-5" />
+            <AlertTitle>Unable to save</AlertTitle>
+            <AlertDescription>{saveError}</AlertDescription>
           </Alert>
         )}
 
