@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
+import Busking from "./pages/Busking";
 
 const Layout = lazy(() => import("./components/Layout"));
 const Index = lazy(() => import("./pages/Index"));
@@ -43,7 +44,6 @@ const WorldEnvironment = lazy(() => import("./pages/WorldEnvironment"));
 const SongManager = lazy(() => import("./pages/SongManager"));
 const InventoryManager = lazy(() => import("./pages/InventoryManager"));
 const PlayerStatistics = lazy(() => import("./pages/PlayerStatistics"));
-const Busking = lazy(() => import("./pages/Busking"));
 
 const queryClient = new QueryClient();
 
