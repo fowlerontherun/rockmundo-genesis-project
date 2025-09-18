@@ -380,10 +380,6 @@ BEGIN
     WHERE profile_id = NEW.profile_id;
   END IF;
 
-  UPDATE public.profiles
-  SET attribute_points_available = GREATEST(COALESCE(attribute_points_available, 0) + v_points, 0)
-  WHERE id = NEW.profile_id;
-
   INSERT INTO public.player_attributes (profile_id)
   VALUES (NEW.profile_id)
   ON CONFLICT (profile_id) DO NOTHING;
@@ -449,6 +445,7 @@ BEGIN
   SET
     xp_balance = GREATEST(xp_balance + v_xp, 0),
     xp_spent = GREATEST(xp_spent - GREATEST(v_xp, 0), 0),
+    skill_points_earned = skill_points_earned + GREATEST(v_skill, 0),
     last_recalculated = timezone('utc', now())
   WHERE profile_id = NEW.profile_id
   RETURNING * INTO v_wallet;
@@ -460,10 +457,7 @@ BEGIN
   END IF;
 
   UPDATE public.profiles
-  SET
-    attribute_points_available = GREATEST(COALESCE(attribute_points_available, 0) + v_attr, 0),
-    skill_points_available = GREATEST(COALESCE(skill_points_available, 0) + v_skill, 0),
-    experience = GREATEST(COALESCE(experience, 0) + v_xp, 0)
+  SET experience = GREATEST(COALESCE(experience, 0) + v_xp, 0)
   WHERE id = NEW.profile_id;
 
   INSERT INTO public.player_attributes (profile_id)
@@ -572,3 +566,153 @@ FOR EACH ROW EXECUTE FUNCTION public.apply_profile_respec_event();
 CREATE TRIGGER trg_profile_weekly_bonus_apply
 AFTER INSERT ON public.profile_weekly_bonus_claims
 FOR EACH ROW EXECUTE FUNCTION public.apply_profile_weekly_bonus();
+
+-- Smoke tests to ensure the new progression triggers execute without referencing
+-- removed profile columns. These run against an arbitrary existing profile and
+-- clean up after themselves so no persistent state changes remain.
+DO $$
+DECLARE
+  v_profile_id uuid;
+  v_wallet public.player_xp_wallet%ROWTYPE;
+  v_wallet_exists boolean := false;
+  v_attr_points integer := 0;
+  v_attr_spent integer := 0;
+  v_attr_value integer := 0;
+  v_attr_updated timestamptz := NULL;
+  v_attr_exists boolean := false;
+  v_profile_experience integer := 0;
+  v_action_event_id uuid;
+  v_attribute_tx_id uuid;
+  v_respec_id uuid;
+  v_bonus_id uuid;
+  v_week_start date := date_trunc('week', timezone('utc', now()))::date;
+BEGIN
+  SELECT id, experience INTO v_profile_id, v_profile_experience
+  FROM public.profiles
+  LIMIT 1;
+
+  IF v_profile_id IS NULL THEN
+    RAISE NOTICE 'Skipping profile progression trigger smoke tests: no profiles available.';
+    RETURN;
+  END IF;
+
+  SELECT * INTO v_wallet
+  FROM public.player_xp_wallet
+  WHERE profile_id = v_profile_id;
+  IF FOUND THEN
+    v_wallet_exists := true;
+  END IF;
+
+  SELECT attribute_points, attribute_points_spent, musical_ability, updated_at
+  INTO v_attr_points, v_attr_spent, v_attr_value, v_attr_updated
+  FROM public.player_attributes
+  WHERE profile_id = v_profile_id;
+  IF FOUND THEN
+    v_attr_exists := true;
+  END IF;
+
+  INSERT INTO public.profile_action_xp_events (
+    profile_id,
+    action_type,
+    xp_amount,
+    metadata
+  )
+  VALUES (
+    v_profile_id,
+    'regression_trigger_smoke',
+    25,
+    jsonb_build_object('test_run', 'progression_trigger_regression', 'source', 'action_event')
+  )
+  RETURNING id INTO v_action_event_id;
+
+  INSERT INTO public.profile_attribute_transactions (
+    profile_id,
+    transaction_type,
+    attribute_key,
+    points_delta,
+    attribute_value_delta,
+    xp_delta,
+    metadata
+  )
+  VALUES (
+    v_profile_id,
+    'regression_trigger_smoke',
+    'musical_ability',
+    1,
+    10,
+    -15,
+    jsonb_build_object('test_run', 'progression_trigger_regression', 'source', 'attribute_transaction')
+  )
+  RETURNING id INTO v_attribute_tx_id;
+
+  INSERT INTO public.profile_respec_events (
+    profile_id,
+    attribute_points_refunded,
+    skill_points_refunded,
+    xp_refunded,
+    metadata
+  )
+  VALUES (
+    v_profile_id,
+    2,
+    1,
+    5,
+    jsonb_build_object('test_run', 'progression_trigger_regression', 'source', 'respec_event')
+  )
+  RETURNING id INTO v_respec_id;
+
+  INSERT INTO public.profile_weekly_bonus_claims (
+    profile_id,
+    week_start,
+    bonus_type,
+    xp_awarded,
+    metadata
+  )
+  VALUES (
+    v_profile_id,
+    v_week_start,
+    concat('regression_trigger_smoke_', gen_random_uuid()),
+    35,
+    jsonb_build_object('test_run', 'progression_trigger_regression', 'source', 'weekly_bonus')
+  )
+  RETURNING id INTO v_bonus_id;
+
+  DELETE FROM public.profile_weekly_bonus_claims WHERE id = v_bonus_id;
+  DELETE FROM public.profile_respec_events WHERE id = v_respec_id;
+  DELETE FROM public.profile_attribute_transactions WHERE id = v_attribute_tx_id;
+  DELETE FROM public.profile_action_xp_events WHERE id = v_action_event_id;
+
+  DELETE FROM public.xp_ledger
+  WHERE metadata ->> 'test_run' = 'progression_trigger_regression';
+
+  IF v_wallet_exists THEN
+    UPDATE public.player_xp_wallet
+    SET
+      xp_balance = v_wallet.xp_balance,
+      lifetime_xp = v_wallet.lifetime_xp,
+      xp_spent = v_wallet.xp_spent,
+      attribute_points_earned = v_wallet.attribute_points_earned,
+      skill_points_earned = v_wallet.skill_points_earned,
+      last_recalculated = v_wallet.last_recalculated
+    WHERE profile_id = v_profile_id;
+  ELSE
+    DELETE FROM public.player_xp_wallet WHERE profile_id = v_profile_id;
+  END IF;
+
+  IF v_attr_exists THEN
+    UPDATE public.player_attributes
+    SET
+      attribute_points = v_attr_points,
+      attribute_points_spent = v_attr_spent,
+      musical_ability = v_attr_value,
+      updated_at = v_attr_updated
+    WHERE profile_id = v_profile_id;
+  ELSE
+    DELETE FROM public.player_attributes WHERE profile_id = v_profile_id;
+  END IF;
+
+  UPDATE public.profiles
+  SET experience = v_profile_experience
+  WHERE id = v_profile_id;
+END;
+$$;

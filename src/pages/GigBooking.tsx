@@ -22,6 +22,7 @@ import {
 } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
+import { awardActionXp } from "@/utils/progression";
 import type { Database, Json } from "@/integrations/supabase/types";
 
 type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
@@ -69,6 +70,16 @@ const SHOW_TYPE_DETAILS: Record<ShowType, {
     fanMultiplier: 1.2,
     experienceModifier: 1.15,
   },
+};
+
+const SHOW_TYPE_DURATION_SECONDS: Record<ShowType, number> = {
+  standard: 7200,
+  acoustic: 5400,
+};
+
+const SHOW_TYPE_COLLABORATION_SIZE: Record<ShowType, number> = {
+  standard: 5,
+  acoustic: 3,
 };
 
 const SHOW_TYPE_OPTIONS: Array<{ value: ShowType; label: string; description: string }> = Object.entries(SHOW_TYPE_DETAILS).map(([value, detail]) => ({
@@ -167,8 +178,26 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    currentCity,
+    updateProfile,
+    updateAttributes,
+    addActivity,
+    xpWallet,
+    attributeStarTotal
+  } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
   const [selectedGig, setSelectedGig] = useState<string | null>(null);
@@ -697,12 +726,14 @@ const GigBooking = () => {
       const newCash = (profile.cash || 0) + actualPayment;
       const newFame = (profile.fame || 0) + fanGain;
       const baseExperience = (attendance / 10) * showTypeDetails.experienceModifier;
-      const expGain = Math.max(1, calculateExperienceReward(baseExperience, attributeScores, "performance"));
+      const expGain = Math.max(
+        1,
+        calculateExperienceReward(baseExperience, attributeScores, "performance", progressionSnapshot)
+      );
 
       await updateProfile({
         cash: newCash,
         fame: newFame,
-        experience: (profile.experience || 0) + expGain
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
