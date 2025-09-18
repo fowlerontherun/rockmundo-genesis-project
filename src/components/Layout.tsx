@@ -66,13 +66,10 @@ const Layout = () => {
   }, [user, loading, profileRefresh]);
 
   useEffect(() => {
-    if (
-      !loading &&
-      user &&
-      !checkingProfile &&
-      !hasProfile &&
-      location.pathname !== "/character-create"
-    ) {
+    const isOnCharacterCreation = location.pathname === "/character-create";
+    const isOnProfile = location.pathname === "/profile";
+
+    if (!loading && user && !checkingProfile && !hasProfile && !isOnCharacterCreation && !isOnProfile) {
       navigate("/character-create");
     }
   }, [loading, user, checkingProfile, hasProfile, location.pathname, navigate]);
