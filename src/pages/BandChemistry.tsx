@@ -190,6 +190,41 @@ const teamEvents: TeamEvent[] = [
   },
 ];
 
+const mockBandMembers: BandMemberCard[] = [
+  {
+    id: "1",
+    userId: "user1",
+    name: "Alex Rivera",
+    instrument: "Lead Guitar",
+    mood: "Motivated",
+    morale: 75,
+    chemistry: 85,
+    skill: 70,
+    loyalty: 80,
+    energy: 90,
+    avatar: "🎸",
+    personality: "Dynamic",
+    issues: ["Wants more creative input"],
+    strengths: ["Guitar expertise", "Stage presence"],
+  },
+  {
+    id: "2",
+    userId: "user2",
+    name: "Sam Taylor",
+    instrument: "Vocals",
+    mood: "Content",
+    morale: 60,
+    chemistry: 70,
+    skill: 65,
+    loyalty: 75,
+    energy: 80,
+    avatar: "🎤",
+    personality: "Charismatic",
+    issues: ["Schedule conflicts", "Seeking clearer communication"],
+    strengths: ["Vocal talent", "Audience connection"],
+  },
+];
+
 const initialConflicts: BandConflict[] = [
   {
     id: 1,
@@ -228,42 +263,6 @@ const BandChemistry = () => {
   const [loading, setLoading] = useState(true);
   const [processingEventId, setProcessingEventId] = useState<number | null>(null);
   const [resolvingConflictId, setResolvingConflictId] = useState<number | null>(null);
-
-  // Mock data for demonstration
-  const mockBandMembers: BandMemberCard[] = [
-    {
-      id: "1",
-      userId: "user1",
-      name: "Alex Rivera",
-      instrument: "Lead Guitar",
-      mood: "Motivated",
-      morale: 75,
-      chemistry: 85,
-      skill: 70,
-      loyalty: 80,
-      energy: 90,
-      avatar: "🎸",
-      personality: "Dynamic",
-      issues: ["Wants more creative input"],
-      strengths: ["Guitar expertise", "Stage presence"],
-    },
-    {
-      id: "2",
-      userId: "user2",
-      name: "Sam Taylor",
-      instrument: "Vocals",
-      mood: "Content",
-      morale: 60,
-      chemistry: 70,
-      skill: 65,
-      loyalty: 75,
-      energy: 80,
-      avatar: "🎤",
-      personality: "Charismatic",
-      issues: ["Schedule conflicts", "Seeking clearer communication"],
-      strengths: ["Vocal talent", "Audience connection"],
-    },
-  ];
 
   useEffect(() => {
     const loadBandData = async () => {
