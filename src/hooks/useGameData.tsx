@@ -13,6 +13,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
 import { sortByOptionalKeys } from "@/utils/sorting";
+import {
+  awardActionXp as invokeAwardActionXp,
+  buyAttributeStar as invokeBuyAttributeStar,
+  isProgressionSuccessResponse,
+  type AwardActionXpInput,
+  type BuyAttributeStarInput,
+  type ProgressionSuccessResponse
+} from "@/utils/progressionClient";
 import type {
   PostgrestError,
   PostgrestMaybeSingleResponse,
@@ -25,6 +33,7 @@ export type PlayerAttributes = Tables<"player_attributes">;
 export type PlayerXpWallet = Tables<"player_xp_wallet">;
 export type ActivityItem = Tables<"activity_feed">;
 export type ExperienceLedgerEntry = Tables<"experience_ledger">;
+export type PlayerXpWallet = Tables<"player_xp_wallet">;
 // Temporary type definitions until database schema is updated
 type AttributeDefinition = any;
 type ProfileAttribute = any;
@@ -182,6 +191,7 @@ interface GameDataContextValue {
   skills: PlayerSkills | null;
   attributes: AttributesMap;
   xpWallet: PlayerXpWallet | null;
+  progressionCooldowns: Record<string, number>;
   activities: ActivityItem[];
   experienceLedger: ExperienceLedgerEntry[];
   currentCity: Tables<"cities"> | null;
@@ -199,6 +209,9 @@ interface GameDataContextValue {
     message: string,
     earnings?: number
   ) => Promise<ActivityItem | undefined>;
+  awardActionXp: (input: AwardActionXpInput) => Promise<ProgressionSuccessResponse>;
+  buyAttributeStar: (input: BuyAttributeStarInput) => Promise<ProgressionSuccessResponse>;
+  refreshProgressionState: () => Promise<void>;
   acknowledgeWeeklyBonus: () => void;
   refreshProgressionState: () => Promise<void>;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
@@ -236,6 +249,7 @@ const defaultGameDataContext: GameDataContextValue = {
   skills: null,
   attributes: {},
   xpWallet: null,
+  progressionCooldowns: {},
   activities: [],
   experienceLedger: [],
   currentCity: null,
@@ -264,6 +278,17 @@ const defaultGameDataContext: GameDataContextValue = {
   addActivity: async () => {
     warnMissingProvider();
     return undefined;
+  },
+  awardActionXp: async () => {
+    warnMissingProvider();
+    throw new Error(missingProviderMessage);
+  },
+  buyAttributeStar: async () => {
+    warnMissingProvider();
+    throw new Error(missingProviderMessage);
+  },
+  refreshProgressionState: async () => {
+    warnMissingProvider();
   },
   acknowledgeWeeklyBonus: () => {
     warnMissingProvider();
@@ -391,6 +416,8 @@ const useProvideGameData = (): GameDataContextValue => {
   const [skillsUpdatedAt, setSkillsUpdatedAt] = useState<string | null>(null);
   const [attributeDefinitions, setAttributeDefinitions] = useState<AttributeDefinition[]>([]);
   const [attributes, setAttributes] = useState<any>({});
+  const [xpWallet, setXpWallet] = useState<PlayerXpWallet | null>(null);
+  const [progressionCooldowns, setProgressionCooldowns] = useState<Record<string, number>>({});
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [experienceLedger, setExperienceLedger] = useState<ExperienceLedgerEntry[]>([]);
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet | null>(null);
@@ -405,6 +432,8 @@ const useProvideGameData = (): GameDataContextValue => {
     setProfile(null);
     setSkills(null);
     setAttributes(null);
+    setXpWallet(null);
+    setProgressionCooldowns({});
     setActivities([]);
     setExperienceLedger([]);
     setCurrentCity(null);
@@ -480,7 +509,7 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setCurrentCity(data ?? null);
     },
-    []
+    [setAttributes, setProfile, setProgressionCooldowns, setXpWallet]
   );
 
   const fetchGameData = useCallback(async () => {
@@ -730,6 +759,29 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setAttributes(attributesData ?? {});
 
+      let walletData: PlayerXpWallet | null = null;
+      const walletResponse = await supabase
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (walletResponse.error) {
+        if (
+          walletResponse.status === 404 ||
+          walletResponse.status === 406 ||
+          isMissingTableError(walletResponse.error)
+        ) {
+          walletData = null;
+        } else {
+          throw walletResponse.error;
+        }
+      } else {
+        walletData = (walletResponse.data as PlayerXpWallet | null) ?? null;
+      }
+
+      setXpWallet(walletData);
+
       let activityResponse = await supabase
         .from("activity_feed")
         .select("*")
@@ -875,6 +927,87 @@ const useProvideGameData = (): GameDataContextValue => {
     writeWeeklyBonusAcknowledgement(profile.id, acknowledgementTimestamp);
     setFreshWeeklyBonusAvailable(false);
   }, [experienceLedger, profile]);
+
+  const applyProgressionState = useCallback(
+    (response: ProgressionSuccessResponse | null | undefined) => {
+      if (!response) {
+        return;
+      }
+
+      if (response.cooldowns) {
+        setProgressionCooldowns(response.cooldowns);
+      }
+
+      if (response.wallet !== undefined) {
+        setXpWallet(response.wallet ?? null);
+      }
+
+      if (response.attributes) {
+        setAttributes(response.attributes);
+      }
+
+      if (response.profile) {
+        setProfile(previous => {
+          if (!previous) {
+            return previous;
+          }
+
+          const patch: Partial<PlayerProfile> & Record<string, unknown> = {
+            experience: response.profile.experience,
+            level: response.profile.level,
+            updated_at: response.profile.updated_at
+          };
+
+          if (typeof response.profile.display_name !== "undefined") {
+            patch.display_name = response.profile.display_name;
+          }
+
+          if (typeof response.profile.username === "string") {
+            patch.username = response.profile.username;
+          }
+
+          if (typeof response.profile.attribute_points_available === "number") {
+            patch.attribute_points_available = response.profile.attribute_points_available;
+          }
+
+          if (typeof response.profile.skill_points_available === "number") {
+            patch.skill_points_available = response.profile.skill_points_available;
+          }
+
+          return { ...previous, ...patch } as PlayerProfile;
+        });
+      }
+    },
+    [setAttributes, setProfile, setProgressionCooldowns, setXpWallet]
+  );
+
+  const awardActionXp = useCallback(
+    async (input: AwardActionXpInput) => {
+      const response = await invokeAwardActionXp(input);
+      if (!isProgressionSuccessResponse(response)) {
+        throw new Error(response.message ?? "Failed to award action XP.");
+      }
+
+      applyProgressionState(response);
+      return response;
+    },
+    [applyProgressionState]
+  );
+
+  const buyAttributeStar = useCallback(
+    async (input: BuyAttributeStarInput) => {
+      const response = await invokeBuyAttributeStar(input);
+      if (!isProgressionSuccessResponse(response)) {
+        throw new Error(response.message ?? "Failed to purchase attribute upgrade.");
+      }
+
+      applyProgressionState(response);
+      return response;
+    },
+    [applyProgressionState]
+  );
+
+  const refreshProgressionState = useCallback(() => fetchGameData(), [fetchGameData]);
 
   useEffect(() => {
     if (!profile?.id) {
@@ -1424,6 +1557,7 @@ const useProvideGameData = (): GameDataContextValue => {
     skills,
     attributes,
     xpWallet,
+    progressionCooldowns,
     activities,
     experienceLedger,
     currentCity,
@@ -1437,6 +1571,9 @@ const useProvideGameData = (): GameDataContextValue => {
     updateSkills,
     updateAttributes,
     addActivity,
+    awardActionXp,
+    buyAttributeStar,
+    refreshProgressionState,
     acknowledgeWeeklyBonus,
     refreshProgressionState,
     createCharacter,
