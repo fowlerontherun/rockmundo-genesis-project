@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { type PlayerAttributes, useGameData } from "@/hooks/useGameData";
+import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
+import { useSkillSystem } from "@/hooks/useSkillSystem";
 import {
-  SkillSystemProvider,
-  useSkillSystem,
   type SkillDefinitionRecord,
   type SkillProgressRecord,
   type SkillRelationshipRecord
-} from "@/hooks/useSkillSystem";
+} from "@/hooks/useSkillSystem.types";
 import {
   calculateTrainingCost,
   extractAttributeScores,
