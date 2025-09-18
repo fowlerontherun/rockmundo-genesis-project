@@ -487,7 +487,7 @@ const TourManager = () => {
         .select('*');
 
       if (selectedCityId !== ALL_CITIES_VALUE) {
-        query = query.eq('city_id', selectedCityId);
+        query = query.eq('city', selectedCityId);
       }
 
       const { data, error } = await query
