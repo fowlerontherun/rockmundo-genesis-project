@@ -759,9 +759,17 @@ const Busking = () => {
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
 
   const skillScore = useMemo(() => {
-    const performance = skills?.performance ?? 55;
-    const vocals = skills?.vocals ?? 50;
-    const guitar = skills?.guitar ?? 45;
+    const toSkillValue = (value: unknown, fallback: number) => {
+      const numeric = typeof value === "number" ? value : Number(value ?? NaN);
+      return Number.isFinite(numeric) ? numeric : fallback;
+    };
+
+    const performanceRaw = toSkillValue(skills?.performance, 550);
+    const vocalsRaw = toSkillValue(skills?.vocals, 500);
+    const guitarRaw = toSkillValue(skills?.guitar, 450);
+    const performance = performanceRaw / 10;
+    const vocals = vocalsRaw / 10;
+    const guitar = guitarRaw / 10;
     const baseScore = performance * 0.4 + vocals * 0.25 + guitar * 0.2;
     const charismaBonus = (attributeScores.charisma ?? 0) * 0.012;
     const looksBonus = (attributeScores.looks ?? 0) * 0.008;
@@ -859,7 +867,7 @@ const Busking = () => {
     const environmentMultiplier = environmentDetails.combined.fameMultiplier;
     const expectancy = successChance / 100;
     const baseFans = selectedLocation.fame_reward * modifierMultiplier * environmentMultiplier * (0.5 + expectancy * 0.5);
-    return Math.max(0, calculateFanGain(baseFans, skillScore, attributeScores));
+    return Math.max(0, calculateFanGain(baseFans, skillScore * 10, attributeScores));
   }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, skillScore, successChance]);
 
   const expectedExperience = useMemo(() => {
@@ -1001,7 +1009,11 @@ const Busking = () => {
         : baseFame * 0.4 * combinedFameMultiplier * (0.6 + Math.random() * 0.3);
       const fameGained = Math.max(
         0,
-        calculateFanGain(rawFame, success ? skillScore : Math.max(10, skillScore * 0.7), attributeScores)
+        calculateFanGain(
+          rawFame,
+          success ? skillScore * 10 : Math.max(100, skillScore * 7),
+          attributeScores
+        )
       );
 
       const baseExperience =

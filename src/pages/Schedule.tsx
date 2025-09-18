@@ -1123,7 +1123,7 @@ const Schedule = () => {
             }
           } else if (activeSkills) {
             const currentValue = Number(activeSkills[skillKey as keyof PlayerSkills] ?? 0);
-            const nextValue = Math.min(100, currentValue + numericDelta);
+            const nextValue = Math.min(1000, currentValue + numericDelta);
             const actualGain = nextValue - currentValue;
             if (actualGain > 0) {
               skillUpdates[skillKey as keyof PlayerSkills] = nextValue;

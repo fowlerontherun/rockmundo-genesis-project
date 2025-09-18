@@ -795,20 +795,21 @@ const Profile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {instrumentSkillKeys.map(skillKey => {
                     const value = Number(skills?.[skillKey] ?? 0);
+                    const percent = Math.min(100, (value / 1000) * 100);
                     return (
                       <div key={skillKey} className="space-y-2">
                         <span className="text-sm font-medium capitalize">{skillKey}</span>
                         <Progress
-                          value={value}
+                          value={percent}
                           className="h-2"
-                          aria-label={`${skillKey} skill level ${value} out of 100`}
+                          aria-label={`${skillKey} skill level ${value} out of 1000`}
                         />
                         <div className="text-xs text-muted-foreground">
-                          {value >= 80
+                          {value >= 800
                             ? "Expert"
-                            : value >= 60
+                            : value >= 600
                               ? "Advanced"
-                              : value >= 40
+                              : value >= 400
                                 ? "Intermediate"
                                 : "Beginner"}
                         </div>

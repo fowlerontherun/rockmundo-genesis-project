@@ -1337,10 +1337,11 @@ const BandManager = () => {
                             const isLocked = rawValue === undefined || rawValue === null;
                             const numericValue = Number(rawValue ?? 0);
                             const sanitizedValue = Number.isFinite(numericValue) ? numericValue : 0;
-                            const clampedValue = Math.max(0, Math.min(100, sanitizedValue));
+                            const clampedValue = Math.max(0, Math.min(1000, sanitizedValue));
+                            const percent = Math.min(100, (clampedValue / 1000) * 100);
                             const ariaLabel = isLocked
                               ? `${skillSlug} skill locked`
-                              : `${skillSlug} skill level ${clampedValue} out of 100`;
+                              : `${skillSlug} skill level ${clampedValue} out of 1000`;
 
                             return (
                               <div key={skillSlug} className="space-y-1">
@@ -1357,7 +1358,7 @@ const BandManager = () => {
                                     <span className="text-xs text-muted-foreground">Lv. {Math.round(clampedValue)}</span>
                                   )}
                                 </div>
-                                <Progress value={clampedValue} className="h-1.5" aria-label={ariaLabel} />
+                                <Progress value={percent} className="h-1.5" aria-label={ariaLabel} />
                               </div>
                             );
                           })}

@@ -463,16 +463,16 @@ const MusicStudio = () => {
           const bassGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.bass).value;
           const drumsGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.drums).value;
           await updateSkills({
-            guitar: Math.min(100, skillLevels.guitar + 1),
-            bass: Math.min(100, skillLevels.bass + 1),
-            drums: Math.min(100, skillLevels.drums + 1)
+            guitar: Math.min(1000, skillLevels.guitar + 1),
+            bass: Math.min(1000, skillLevels.bass + 1),
+            drums: Math.min(1000, skillLevels.drums + 1)
           });
         } else if (stage === "mastering") {
           const performanceGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.performance).value;
           const songwritingGain = applyAttributeToValue(1, attributes, SKILL_ATTRIBUTE_MAP.songwriting).value;
           await updateSkills({
-            performance: Math.min(100, skillLevels.performance + 1),
-            songwriting: Math.min(100, skillLevels.songwriting + 1)
+            performance: Math.min(1000, skillLevels.performance + 1),
+            songwriting: Math.min(1000, skillLevels.songwriting + 1)
           });
         }
       }

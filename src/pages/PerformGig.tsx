@@ -217,13 +217,13 @@ const PerformGig = () => {
     const successRatio = Math.min(Math.max(finalScore / 100, 0), 1);
     const baselinePayment = calculateGigPayment(
       basePayment,
-      skills?.performance ?? finalScore,
+      skills?.performance ?? finalScore * 10,
       profile?.fame ?? 0,
       successRatio,
     );
     const adjustedPayment = calculateGigPayment(
       basePayment,
-      skills?.performance ?? finalScore,
+      skills?.performance ?? finalScore * 10,
       profile?.fame ?? 0,
       successRatio,
       attributeBonuses,
@@ -235,12 +235,12 @@ const PerformGig = () => {
     const stagePresenceMetric = performance.stage_presence || finalScore;
     const baselineFanGain = calculateFanGain(
       Math.max(1, baseFanGain),
-      skills?.performance ?? finalScore,
+      skills?.performance ?? finalScore * 10,
       stagePresenceMetric,
     );
     const adjustedFanGain = calculateFanGain(
       Math.max(1, baseFanGain),
-      skills?.performance ?? finalScore,
+      skills?.performance ?? finalScore * 10,
       stagePresenceMetric,
       attributeBonuses,
     );

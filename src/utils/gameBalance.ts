@@ -19,10 +19,10 @@ const toFiniteNumber = (value: unknown, fallback = 0) => {
 };
 
 export const SKILL_CAPS = {
-  beginner: 30, // 0-1000 exp
-  amateur: 50, // 1000-5000 exp
-  professional: 80, // 5000-20000 exp
-  master: 100 // 20000+ exp
+  beginner: 300, // 0-1000 exp
+  amateur: 500, // 1000-5000 exp
+  professional: 800, // 5000-20000 exp
+  master: 1000 // 20000+ exp
 } as const;
 
 export const LEVEL_REQUIREMENTS = {
@@ -264,7 +264,8 @@ export function calculateTrainingCost(
   attributes?: AttributeScores,
   focus: AttributeFocus = "general"
 ): number {
-  const baseCost = TRAINING_COSTS.skillTraining(currentSkillLevel);
+  const normalizedSkillLevel = clampNumber(currentSkillLevel / 10, 0, 100);
+  const baseCost = TRAINING_COSTS.skillTraining(normalizedSkillLevel);
   if (baseCost <= 0) {
     return 0;
   }
@@ -320,7 +321,8 @@ export function calculateGigPayment(
     return 0;
   }
 
-  const skillMultiplier = 1 + performanceSkill / 100;
+  const normalizedSkill = clampNumber(performanceSkill / 1000, 0, 1);
+  const skillMultiplier = 1 + normalizedSkill;
   const fameMultiplier = 1 + fameLevel / 10000;
   const performanceMultiplier = 0.5 + successRate * 0.5;
 
@@ -349,7 +351,8 @@ export function calculateFanGain(
     return 0;
   }
 
-  const skillMultiplier = 1 + performanceSkill / 200;
+  const normalizedSkill = clampNumber(performanceSkill / 1000, 0, 1);
+  const skillMultiplier = 1 + normalizedSkill * 0.5;
   const charismaMultiplier = attributeScoreToMultiplier(attributes?.charisma ?? null, 0.5);
   const looksMultiplier = attributeScoreToMultiplier(attributes?.looks ?? null, 0.3);
 

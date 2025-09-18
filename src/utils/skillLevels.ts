@@ -123,5 +123,5 @@ export const estimateSkillTier = (
   }
 
   const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-  return Math.max(1, Math.round(average / 10));
+  return Math.max(1, Math.round(average / 100));
 };
