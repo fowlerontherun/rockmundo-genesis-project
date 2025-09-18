@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import { SKILL_TIER_ORDER, type TierName } from "@/data/skillTree";
 import { type PlayerAttributes, useGameData } from "@/hooks/useGameData";
 import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
@@ -46,7 +47,9 @@ const iconMap: Record<string, LucideIcon> = {
   drums: Drum,
   bass: Volume2,
   performance: Star,
-  songwriting: PenTool
+  songwriting: PenTool,
+  genre: Music,
+  stagecraft: Star
 };
 
 const fallbackDefinitions: SkillDefinitionRecord[] = [
@@ -134,6 +137,9 @@ interface TrainingSessionConfig {
   duration: number;
   xpGain: number;
   description: string;
+  category: string;
+  tier: TierName;
+  track?: string;
   definition: SkillDefinitionRecord;
 }
 
@@ -156,6 +162,26 @@ const formatSkillName = (slug: string) =>
     .split("_")
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+
+const isTierName = (value: unknown): value is TierName =>
+  typeof value === "string" && SKILL_TIER_ORDER.includes(value as TierName);
+
+const tierDescriptions: Record<TierName, string> = {
+  Basic: "Foundation training and entry-level techniques.",
+  Professional: "Advanced industry workflows and expert coaching.",
+  Mastery: "Signature artistry for world-class performers."
+};
+
+const CATEGORY_ORDER = [
+  "Songwriting & Production",
+  "Genres",
+  "Instruments & Performance",
+  "Stage & Showmanship"
+] as const;
+
+const categoryPriority = new Map<string, number>(
+  CATEGORY_ORDER.map((category, index) => [category, index])
+);
 
 const SkillTrainingContent = () => {
   const { toast } = useToast();
@@ -206,6 +232,11 @@ const SkillTrainingContent = () => {
       );
       const xpGain = Number(definition.base_xp_gain ?? fallbackXpBySlug[slug] ?? 5);
       const description = definition.description ?? fallbackDescriptionBySlug[slug] ?? name;
+      const metadata = (definition.metadata ?? {}) as Record<string, unknown>;
+      const category = typeof metadata.category === "string" ? metadata.category : "General";
+      const rawTier = metadata.tier;
+      const tier: TierName = isTierName(rawTier) ? rawTier : "Basic";
+      const track = typeof metadata.track === "string" ? metadata.track : undefined;
 
       return {
         slug,
@@ -214,6 +245,9 @@ const SkillTrainingContent = () => {
         duration,
         xpGain,
         description,
+        category,
+        tier,
+        track,
         definition
       } satisfies TrainingSessionConfig;
     });
@@ -303,6 +337,46 @@ const SkillTrainingContent = () => {
     }, new Map<string, DerivedSession>());
   }, [derivedSessions]);
 
+  const categoryGroups = useMemo(() => {
+    const categoryMap = new Map<string, Map<TierName, DerivedSession[]>>();
+
+    derivedSessions.forEach(session => {
+      const { category, tier } = session;
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, new Map());
+      }
+
+      const tierMap = categoryMap.get(category)!;
+      const existing = tierMap.get(tier) ?? [];
+      tierMap.set(tier, [...existing, session]);
+    });
+
+    return Array.from(categoryMap.entries())
+      .map(([category, tierMap]) => {
+        const tiers = (SKILL_TIER_ORDER as TierName[])
+          .map(tier => {
+            const sessions = tierMap.get(tier) ?? [];
+            return {
+              tier,
+              sessions: [...sessions].sort((a, b) => a.name.localeCompare(b.name))
+            };
+          })
+          .filter(group => group.sessions.length > 0);
+
+        const total = tiers.reduce((sum, group) => sum + group.sessions.length, 0);
+
+        return { category, tiers, total };
+      })
+      .sort((a, b) => {
+        const priorityA = categoryPriority.get(a.category) ?? Number.MAX_SAFE_INTEGER;
+        const priorityB = categoryPriority.get(b.category) ?? Number.MAX_SAFE_INTEGER;
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        return a.category.localeCompare(b.category);
+      });
+  }, [derivedSessions]);
+
   const isLoading = gameDataLoading || skillSystemLoading;
 
   const getSkillLevel = (value: number) => {
@@ -344,7 +418,7 @@ const SkillTrainingContent = () => {
 
     if (cooldownActive) {
       const remainingMinutes = lastTraining
-        ? getRemainingCooldown(lastTraining, trainingCooldownMs)
+        ? getRemainingCooldown(lastTraining, trainingCooldown)
         : 0;
       toast({
         variant: "destructive",
@@ -614,115 +688,158 @@ const SkillTrainingContent = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="training" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {derivedSessions.map(session => {
-              const currentSkill = getSkillValue(session.slug);
-              const trainingCost = calculateTrainingCost(currentSkill);
-              const canAfford = (profile.cash ?? 0) >= trainingCost;
-              const isAtCap = currentSkill >= skillCap;
-              const buttonDisabled =
-                training ||
-                !canAfford ||
-                isAtCap ||
-                session.cooldownActive ||
-                !session.isUnlocked;
+        <TabsContent value="training" className="space-y-6">
+          {categoryGroups.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+              No training sessions available yet. Check back after creating new skills.
+            </div>
+          ) : (
+            categoryGroups.map(group => (
+              <section key={group.category} className="space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-oswald">{group.category}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Specialized development paths across {group.category}.
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="h-fit">
+                    {group.total} skill{group.total === 1 ? '' : 's'}
+                  </Badge>
+                </div>
 
-              const buttonLabel = training
-                ? "Training..."
-                : !session.isUnlocked
-                  ? "Locked"
-                  : isAtCap
-                    ? "Skill Cap Reached"
-                    : session.cooldownActive
-                      ? `Cooldown (${session.remainingCooldown}m)`
-                      : !canAfford
-                        ? "Can't Afford"
-                        : "Start Training";
-
-              return (
-                <Card key={session.slug} className="relative">
-                  <CardHeader>
-                    <div className="flex items-center justify-between gap-2">
+                {group.tiers.map(({ tier, sessions }) => (
+                  <div key={tier} className="space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
-                        <session.icon className="h-5 w-5 text-primary" />
-                        <div>
-                          <CardTitle className="text-lg font-oswald">{session.name}</CardTitle>
-                          <CardDescription className="text-sm">{session.description}</CardDescription>
-                        </div>
-                      </div>
-                      {!session.isUnlocked && (
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <Lock className="h-3 w-3" />
-                          Locked
+                        <Badge variant="outline" className="uppercase tracking-wide">
+                          {tier}
                         </Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Coins className="h-3 w-3 text-yellow-400" />
-                        <span>${trainingCost.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-blue-400" />
-                        <span>{session.duration}m</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 text-purple-400" />
-                        <span>
-                          +{applyRewardBonus(session.xpGain, attributes?.mental_focus)} XP
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3 text-green-400" />
-                        <span>Skill: {currentSkill}/{effectiveSkillCap}</span>
+                        <span className="text-sm text-muted-foreground">{tierDescriptions[tier]}</span>
                       </div>
                     </div>
 
-                    {session.missingRequirement && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Lock className="h-3 w-3" />
-                        <span>
-                          Requires {session.missingRequirement.requiredName} {" "}
-                          {session.missingRequirement.relationship.required_value} (current {" "}
-                          {session.missingRequirement.currentValue})
-                        </span>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {sessions.map(session => {
+                        const currentSkill = getSkillValue(session.slug);
+                        const trainingCost = calculateTrainingCost(currentSkill);
+                        const canAfford = (profile.cash ?? 0) >= trainingCost;
+                        const effectiveSkillCap = Math.max(skillCap, currentSkill);
+                        const isAtCap = currentSkill >= skillCap;
+                        const buttonDisabled =
+                          training ||
+                          !canAfford ||
+                          isAtCap ||
+                          session.cooldownActive ||
+                          !session.isUnlocked;
 
-                    {isAtCap && (
-                      <div className="flex items-center gap-2 text-sm text-destructive">
-                        <TrendingUp className="h-3 w-3" />
-                        <span>Skill cap reached. Level up to continue training.</span>
-                      </div>
-                    )}
+                        const buttonLabel = training
+                          ? "Training..."
+                          : !session.isUnlocked
+                            ? "Locked"
+                            : isAtCap
+                              ? "Skill Cap Reached"
+                              : session.cooldownActive
+                                ? `Cooldown (${session.remainingCooldown}m)`
+                                : !canAfford
+                                  ? "Can't Afford"
+                                  : "Start Training";
 
-                    {session.cooldownActive && (
-                      <div className="flex items-center gap-2 text-sm text-yellow-500">
-                        <Clock className="h-3 w-3" />
-                        <span>Training available in {session.remainingCooldown}m</span>
-                      </div>
-                    )}
+                        return (
+                          <Card key={session.slug} className="relative">
+                            <CardHeader>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-3">
+                                  <session.icon className="h-6 w-6 text-primary" />
+                                  <div className="space-y-1">
+                                    <CardTitle className="text-lg font-oswald">{session.name}</CardTitle>
+                                    <CardDescription className="text-sm">
+                                      {session.description}
+                                    </CardDescription>
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                      <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                                        {session.track ?? session.category}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                                {!session.isUnlocked && (
+                                  <Badge variant="secondary" className="flex items-center gap-1">
+                                    <Lock className="h-3 w-3" />
+                                    Locked
+                                  </Badge>
+                                )}
+                              </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Coins className="h-3 w-3 text-yellow-400" />
+                                  <span>${trainingCost.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-blue-400" />
+                                  <span>{session.duration}m</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-3 w-3 text-purple-400" />
+                                  <span>
+                                    +{applyRewardBonus(session.xpGain, attributes?.mental_focus)} XP
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <TrendingUp className="h-3 w-3 text-green-400" />
+                                  <span>Skill: {currentSkill}/{effectiveSkillCap}</span>
+                                </div>
+                              </div>
 
-                    <Button
-                      onClick={() => handleTraining(session)}
-                      disabled={buttonDisabled}
-                      className="w-full"
-                      variant={
-                        !session.isUnlocked || !canAfford || isAtCap || session.cooldownActive
-                          ? "outline"
-                          : "default"
-                      }
-                    >
-                      {buttonLabel}
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                              {session.missingRequirement && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Lock className="h-3 w-3" />
+                                  <span>
+                                    Requires {session.missingRequirement.requiredName}{' '}
+                                    {session.missingRequirement.relationship.required_value} (current{' '}
+                                    {session.missingRequirement.currentValue})
+                                  </span>
+                                </div>
+                              )}
+
+                              {isAtCap && (
+                                <div className="flex items-center gap-2 text-sm text-destructive">
+                                  <TrendingUp className="h-3 w-3" />
+                                  <span>Skill cap reached. Level up to continue training.</span>
+                                </div>
+                              )}
+
+                              {session.cooldownActive && (
+                                <div className="flex items-center gap-2 text-sm text-yellow-500">
+                                  <Clock className="h-3 w-3" />
+                                  <span>Training available in {session.remainingCooldown}m</span>
+                                </div>
+                              )}
+
+                              <Button
+                                onClick={() => handleTraining(session)}
+                                disabled={buttonDisabled}
+                                className="w-full"
+                                variant={
+                                  !session.isUnlocked || !canAfford || isAtCap || session.cooldownActive
+                                    ? "outline"
+                                    : "default"
+                                }
+                              >
+                                {buttonLabel}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ))
+          )}
         </TabsContent>
 
         <TabsContent value="attributes" className="space-y-4">

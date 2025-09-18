@@ -6,6 +6,8 @@ import {
   type ReactNode
 } from "react";
 
+import { SKILL_TREE_DEFINITIONS, SKILL_TREE_RELATIONSHIPS } from "@/data/skillTree";
+
 import { type PlayerSkills, useGameData } from "./useGameData";
 import {
   type SkillDefinitionRecord,
@@ -41,11 +43,11 @@ export const SkillSystemProvider = ({ children }: { children: ReactNode }) => {
       setStaticLoading(true);
       setError(null);
       try {
-        // Note: skill_definitions and skill_relationships tables not implemented yet
+        // Note: Supabase tables are not yet wired, so we serve the static skill tree
         if (!isMounted) return;
 
-        setDefinitions([]);
-        setRelationships([]);
+        setDefinitions([...SKILL_TREE_DEFINITIONS]);
+        setRelationships([...SKILL_TREE_RELATIONSHIPS]);
       } catch (err) {
         console.error("Error loading skill system data:", err);
         if (isMounted) {
