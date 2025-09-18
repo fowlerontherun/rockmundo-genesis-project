@@ -91,41 +91,48 @@ export type Database = {
           },
         ]
       }
-      attribute_spend: {
+      experience_ledger: {
         Row: {
-          attribute_key: string
-          created_at: string
+          amount: number
           id: string
-          metadata: Json | null
-          points_spent: number
+          metadata: Json
           profile_id: string
-          xp_cost: number
+          reason: string
+          recorded_at: string
+          user_id: string
         }
         Insert: {
-          attribute_key: string
-          created_at?: string
+          amount: number
           id?: string
-          metadata?: Json | null
-          points_spent: number
+          metadata?: Json
           profile_id: string
-          xp_cost: number
+          reason: string
+          recorded_at?: string
+          user_id: string
         }
         Update: {
-          attribute_key?: string
-          created_at?: string
+          amount?: number
           id?: string
-          metadata?: Json | null
-          points_spent?: number
+          metadata?: Json
           profile_id?: string
-          xp_cost?: number
+          reason?: string
+          recorded_at?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "attribute_spend_profile_id_fkey"
+            foreignKeyName: "experience_ledger_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "experience_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1183,7 +1190,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          attribute_points_available: number | null
           age: number | null
           avatar_url: string | null
           bio: string | null
@@ -1195,7 +1201,7 @@ export type Database = {
           display_name: string | null
           engagement_rate: number | null
           experience: number | null
-          experience_at_last_conversion: number | null
+          experience_at_last_weekly_bonus: number
           fame: number | null
           fans: number | null
           followers: number | null
@@ -1203,9 +1209,10 @@ export type Database = {
           health: number | null
           id: string
           is_active: boolean
-          last_point_conversion_at: string | null
+          last_weekly_bonus_at: string | null
           level: number | null
-          skill_points_available: number | null
+          weekly_bonus_metadata: Json
+          weekly_bonus_streak: number
           slot_number: number
           unlock_cost: number
           updated_at: string | null
@@ -1213,7 +1220,6 @@ export type Database = {
           username: string
         }
         Insert: {
-          attribute_points_available?: number | null
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
@@ -1225,7 +1231,7 @@ export type Database = {
           display_name?: string | null
           engagement_rate?: number | null
           experience?: number | null
-          experience_at_last_conversion?: number | null
+          experience_at_last_weekly_bonus?: number
           fame?: number | null
           fans?: number | null
           followers?: number | null
@@ -1233,9 +1239,10 @@ export type Database = {
           health?: number | null
           id?: string
           is_active?: boolean
-          last_point_conversion_at?: string | null
+          last_weekly_bonus_at?: string | null
           level?: number | null
-          skill_points_available?: number | null
+          weekly_bonus_metadata?: Json
+          weekly_bonus_streak?: number
           slot_number?: number
           unlock_cost?: number
           updated_at?: string | null
@@ -1243,7 +1250,6 @@ export type Database = {
           username: string
         }
         Update: {
-          attribute_points_available?: number | null
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
@@ -1255,7 +1261,7 @@ export type Database = {
           display_name?: string | null
           engagement_rate?: number | null
           experience?: number | null
-          experience_at_last_conversion?: number | null
+          experience_at_last_weekly_bonus?: number
           fame?: number | null
           fans?: number | null
           followers?: number | null
@@ -1263,9 +1269,10 @@ export type Database = {
           health?: number | null
           id?: string
           is_active?: boolean
-          last_point_conversion_at?: string | null
+          last_weekly_bonus_at?: string | null
           level?: number | null
-          skill_points_available?: number | null
+          weekly_bonus_metadata?: Json
+          weekly_bonus_streak?: number
           slot_number?: number
           unlock_cost?: number
           updated_at?: string | null

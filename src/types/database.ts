@@ -23,13 +23,13 @@ export interface Profile {
   bio: string | null;
   level: number;
   experience: number;
-  experience_at_last_conversion: number;
+  experience_at_last_weekly_bonus: number;
   cash: number;
   fame: number;
   fans: number;
-  skill_points_available: number;
-  attribute_points_available: number;
-  last_point_conversion_at: string | null;
+  last_weekly_bonus_at: string | null;
+  weekly_bonus_streak: number;
+  weekly_bonus_metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }

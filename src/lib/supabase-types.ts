@@ -6,7 +6,6 @@ export interface Database {
     Tables: {
       profiles: {
         Row: {
-          attribute_points_available: number
           id: string
           user_id: string
           username: string
@@ -15,17 +14,17 @@ export interface Database {
           bio: string | null
           level: number
           experience: number
-          experience_at_last_conversion: number
+          experience_at_last_weekly_bonus: number
           cash: number
           fame: number
           fans: number
-          skill_points_available: number
-          last_point_conversion_at: string | null
+          last_weekly_bonus_at: string | null
+          weekly_bonus_streak: number
+          weekly_bonus_metadata: Json
           created_at: string
           updated_at: string
         }
         Insert: {
-          attribute_points_available?: number
           id?: string
           user_id: string
           username: string
@@ -34,17 +33,17 @@ export interface Database {
           bio?: string | null
           level?: number
           experience?: number
-          experience_at_last_conversion?: number
+          experience_at_last_weekly_bonus?: number
           cash?: number
           fame?: number
           fans?: number
-          skill_points_available?: number
-          last_point_conversion_at?: string | null
+          last_weekly_bonus_at?: string | null
+          weekly_bonus_streak?: number
+          weekly_bonus_metadata?: Json
           created_at?: string
           updated_at?: string
         }
         Update: {
-          attribute_points_available?: number
           id?: string
           user_id?: string
           username?: string
@@ -53,14 +52,44 @@ export interface Database {
           bio?: string | null
           level?: number
           experience?: number
-          experience_at_last_conversion?: number
+          experience_at_last_weekly_bonus?: number
           cash?: number
           fame?: number
           fans?: number
-          skill_points_available?: number
-          last_point_conversion_at?: string | null
+          last_weekly_bonus_at?: string | null
+          weekly_bonus_streak?: number
+          weekly_bonus_metadata?: Json
           created_at?: string
           updated_at?: string
+        }
+      }
+      experience_ledger: {
+        Row: {
+          id: string
+          profile_id: string
+          user_id: string
+          amount: number
+          reason: string
+          metadata: Json
+          recorded_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          user_id: string
+          amount: number
+          reason: string
+          metadata?: Json
+          recorded_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          user_id?: string
+          amount?: number
+          reason?: string
+          metadata?: Json
+          recorded_at?: string
         }
       }
       bands: {

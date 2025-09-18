@@ -23,6 +23,7 @@ export type PlayerProfile = Tables<"profiles">;
 export type PlayerSkills = Tables<"player_skills">;
 export type PlayerAttributes = Tables<"player_attributes">;
 export type ActivityItem = Tables<"activity_feed">;
+export type ExperienceLedgerEntry = Tables<"experience_ledger">;
 // Temporary type definitions until database schema is updated
 type AttributeDefinition = any;
 type ProfileAttribute = any;
@@ -39,7 +40,50 @@ type SkillUnlockUpsertInput = any;
 type Nullable<T> = T | null;
 
 const CHARACTER_STORAGE_KEY = "rockmundo:selectedCharacterId";
-const POINT_ACK_STORAGE_PREFIX = "rockmundo:pointsAck:";
+const WEEKLY_BONUS_ACK_STORAGE_PREFIX = "rockmundo:weeklyBonusAck:";
+export const WEEKLY_BONUS_REASON = "weekly_bonus" as const;
+
+export interface WeeklyBonusEvaluationResult {
+  freshWeeklyBonusAvailable: boolean;
+  acknowledgementToPersist?: string | null;
+}
+
+export const resolveWeeklyBonusAcknowledgementTimestamp = (
+  latestEntry: ExperienceLedgerEntry | undefined,
+  now: Date = new Date()
+) => {
+  const recordedAt = toValidDate(latestEntry?.recorded_at ?? null);
+  return (recordedAt ?? now).toISOString();
+};
+
+export const evaluateWeeklyBonusState = (
+  latestEntry: ExperienceLedgerEntry | undefined,
+  storedAcknowledgement: string | null,
+  now: Date = new Date()
+): WeeklyBonusEvaluationResult => {
+  if (!latestEntry) {
+    return {
+      freshWeeklyBonusAvailable: false,
+      acknowledgementToPersist: storedAcknowledgement ? undefined : null
+    };
+  }
+
+  const recordedAt = toValidDate(latestEntry.recorded_at);
+  const acknowledgedAt = storedAcknowledgement ? toValidDate(storedAcknowledgement) : null;
+
+  if (recordedAt && (!acknowledgedAt || recordedAt > acknowledgedAt)) {
+    return { freshWeeklyBonusAvailable: true };
+  }
+
+  if (!recordedAt && !storedAcknowledgement) {
+    return {
+      freshWeeklyBonusAvailable: false,
+      acknowledgementToPersist: now.toISOString()
+    };
+  }
+
+  return { freshWeeklyBonusAvailable: false };
+};
 
 const toValidDate = (value: unknown) => {
   if (typeof value === "string" || value instanceof Date) {
@@ -130,13 +174,14 @@ interface GameDataContextValue {
   characters: PlayerProfile[];
   selectedCharacterId: string | null;
   profile: PlayerProfile | null;
-  freshPointGrantAvailable: boolean;
+  freshWeeklyBonusAvailable: boolean;
   skillDefinitions: SkillDefinition[];
   skillProgress: SkillProgressRow[];
   unlockedSkills: UnlockedSkillsMap;
   skills: PlayerSkills | null;
   attributes: AttributesMap;
   activities: ActivityItem[];
+  experienceLedger: ExperienceLedgerEntry[];
   currentCity: Tables<"cities"> | null;
   loading: boolean;
   error: string | null;
@@ -152,7 +197,7 @@ interface GameDataContextValue {
     message: string,
     earnings?: number
   ) => Promise<ActivityItem | undefined>;
-  acknowledgePointGrant: () => void;
+  acknowledgeWeeklyBonus: () => void;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
   refetch: () => Promise<void>;
@@ -181,13 +226,14 @@ const defaultGameDataContext: GameDataContextValue = {
   characters: [],
   selectedCharacterId: null,
   profile: null,
-  freshPointGrantAvailable: false,
+  freshWeeklyBonusAvailable: false,
   skillDefinitions: [],
   skillProgress: [],
   unlockedSkills: {},
   skills: null,
   attributes: {},
   activities: [],
+  experienceLedger: [],
   currentCity: null,
   loading: false,
   error: missingProviderMessage,
@@ -215,7 +261,7 @@ const defaultGameDataContext: GameDataContextValue = {
     warnMissingProvider();
     return undefined;
   },
-  acknowledgePointGrant: () => {
+  acknowledgeWeeklyBonus: () => {
     warnMissingProvider();
   },
   createCharacter: async () => {
@@ -257,14 +303,14 @@ const writeStoredCharacterId = (characterId: string | null) => {
   }
 };
 
-const readPointAcknowledgement = (profileId: string) => {
+const readWeeklyBonusAcknowledgement = (profileId: string) => {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(`${POINT_ACK_STORAGE_PREFIX}${profileId}`);
+  return window.localStorage.getItem(`${WEEKLY_BONUS_ACK_STORAGE_PREFIX}${profileId}`);
 };
 
-const writePointAcknowledgement = (profileId: string, timestamp: string | null) => {
+const writeWeeklyBonusAcknowledgement = (profileId: string, timestamp: string | null) => {
   if (typeof window === "undefined") return;
-  const storageKey = `${POINT_ACK_STORAGE_PREFIX}${profileId}`;
+  const storageKey = `${WEEKLY_BONUS_ACK_STORAGE_PREFIX}${profileId}`;
   if (timestamp) {
     window.localStorage.setItem(storageKey, timestamp);
   } else {
@@ -339,20 +385,22 @@ const useProvideGameData = (): GameDataContextValue => {
   const [attributeDefinitions, setAttributeDefinitions] = useState<AttributeDefinition[]>([]);
   const [attributes, setAttributes] = useState<any>({});
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [experienceLedger, setExperienceLedger] = useState<ExperienceLedgerEntry[]>([]);
   const [currentCity, setCurrentCity] = useState<Tables<"cities"> | null>(null);
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [charactersLoading, setCharactersLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [freshPointGrantAvailable, setFreshPointGrantAvailable] = useState(false);
+  const [freshWeeklyBonusAvailable, setFreshWeeklyBonusAvailable] = useState(false);
   const supportsProfileScopedDataRef = useRef<boolean | null>(null);
   const clearGameState = useCallback(() => {
     setProfile(null);
     setSkills(null);
     setAttributes(null);
     setActivities([]);
+    setExperienceLedger([]);
     setCurrentCity(null);
-    setFreshPointGrantAvailable(false);
+    setFreshWeeklyBonusAvailable(false);
   }, []);
 
   const fetchCharacters = useCallback(async () => {
@@ -681,6 +729,39 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setActivities(activityResponse.data ?? []);
 
+      let ledgerData: ExperienceLedgerEntry[] = [];
+      let ledgerResponse = await supabase
+        .from("experience_ledger")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .order("recorded_at", { ascending: false })
+        .limit(20);
+
+      if (ledgerResponse.error) {
+        if (isMissingTableError(ledgerResponse.error)) {
+          ledgerData = [];
+        } else if (isMissingColumnError(ledgerResponse.error, "profile_id")) {
+          ledgerResponse = await supabase
+            .from("experience_ledger")
+            .select("*")
+            .eq("user_id", character.user_id)
+            .order("recorded_at", { ascending: false })
+            .limit(20);
+
+          if (ledgerResponse.error) {
+            throw ledgerResponse.error;
+          }
+
+          ledgerData = (ledgerResponse.data ?? []) as ExperienceLedgerEntry[];
+        } else {
+          throw ledgerResponse.error;
+        }
+      } else {
+        ledgerData = (ledgerResponse.data ?? []) as ExperienceLedgerEntry[];
+      }
+
+      setExperienceLedger(ledgerData);
+
       const [skillDefinitionsResponse, skillProgressResponse] = await Promise.all([
         supabase.from("skill_definitions").select("*"),
         supabase
@@ -752,48 +833,38 @@ const useProvideGameData = (): GameDataContextValue => {
     void fetchGameData();
   }, [fetchGameData, selectedCharacterId]);
 
-  const acknowledgePointGrant = useCallback(() => {
+  const acknowledgeWeeklyBonus = useCallback(() => {
     if (!profile?.id) {
       return;
     }
 
-    const lastConversion = toValidDate((profile as Record<string, unknown>).last_point_conversion_at);
-    const acknowledgementTimestamp = (lastConversion ?? new Date()).toISOString();
-    writePointAcknowledgement(profile.id, acknowledgementTimestamp);
-    setFreshPointGrantAvailable(false);
-  }, [profile]);
+    const latestWeeklyBonus = experienceLedger.find(
+      entry => entry.reason === WEEKLY_BONUS_REASON
+    );
+    const acknowledgementTimestamp = resolveWeeklyBonusAcknowledgementTimestamp(latestWeeklyBonus);
+    writeWeeklyBonusAcknowledgement(profile.id, acknowledgementTimestamp);
+    setFreshWeeklyBonusAvailable(false);
+  }, [experienceLedger, profile]);
 
   useEffect(() => {
     if (!profile?.id) {
-      setFreshPointGrantAvailable(false);
+      setFreshWeeklyBonusAvailable(false);
       return;
     }
 
-    const skillPoints = Number((profile as Record<string, unknown>).skill_points_available ?? 0);
-    const attributePoints = Number((profile as Record<string, unknown>).attribute_points_available ?? 0);
-    const totalPoints = skillPoints + attributePoints;
-    const lastConversion = toValidDate((profile as Record<string, unknown>).last_point_conversion_at);
-    const acknowledgement = readPointAcknowledgement(profile.id);
-    const acknowledgedAt = acknowledgement ? toValidDate(acknowledgement) : null;
+    const latestWeeklyBonus = experienceLedger.find(
+      entry => entry.reason === WEEKLY_BONUS_REASON
+    );
+    const acknowledgement = readWeeklyBonusAcknowledgement(profile.id);
+    const { freshWeeklyBonusAvailable: hasFreshBonus, acknowledgementToPersist } =
+      evaluateWeeklyBonusState(latestWeeklyBonus, acknowledgement);
 
-    if (totalPoints <= 0) {
-      if (lastConversion) {
-        if (!acknowledgedAt || lastConversion > acknowledgedAt) {
-          writePointAcknowledgement(profile.id, lastConversion.toISOString());
-        }
-      } else if (!acknowledgedAt) {
-        writePointAcknowledgement(profile.id, new Date().toISOString());
-      }
-      setFreshPointGrantAvailable(false);
-      return;
-    }
+    setFreshWeeklyBonusAvailable(hasFreshBonus);
 
-    if (lastConversion) {
-      setFreshPointGrantAvailable(!acknowledgedAt || lastConversion > acknowledgedAt);
-    } else {
-      setFreshPointGrantAvailable(!acknowledgedAt);
+    if (acknowledgementToPersist !== undefined) {
+      writeWeeklyBonusAcknowledgement(profile.id, acknowledgementToPersist);
     }
-  }, [profile]);
+  }, [experienceLedger, profile]);
 
   const setActiveCharacter = useCallback(
     async (characterId: string) => {
@@ -1276,13 +1347,14 @@ const useProvideGameData = (): GameDataContextValue => {
     characters,
     selectedCharacterId,
     profile,
-    freshPointGrantAvailable,
+    freshWeeklyBonusAvailable,
     skillDefinitions,
     skillProgress,
     unlockedSkills,
     skills,
     attributes,
     activities,
+    experienceLedger,
     currentCity,
     loading,
     error,
@@ -1294,7 +1366,7 @@ const useProvideGameData = (): GameDataContextValue => {
     updateSkills,
     updateAttributes,
     addActivity,
-    acknowledgePointGrant,
+    acknowledgeWeeklyBonus,
     createCharacter,
     refreshCharacters,
     refetch,
