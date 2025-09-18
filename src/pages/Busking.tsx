@@ -555,6 +555,7 @@ const Busking = () => {
     profile,
     skills,
     attributes,
+    xpWallet,
     updateProfile,
     awardActionXp,
     updateAttributes,
@@ -586,6 +587,7 @@ const Busking = () => {
       socialReach: resolveAttributeValue(source, "social_reach", 1),
     };
   }, [cachedAttributes]);
+  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0);
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -1307,7 +1309,7 @@ const Busking = () => {
               <Award className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{profile.experience ?? 0}</div>
+              <div className="text-2xl font-bold text-accent">{totalExperience}</div>
               <p className="text-xs text-muted-foreground">Every street set sharpens your craft.</p>
             </CardContent>
           </Card>

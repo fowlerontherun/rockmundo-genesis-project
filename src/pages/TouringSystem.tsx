@@ -15,6 +15,7 @@ import { useGameData } from '@/hooks/useGameData';
 import { applyAttributeToValue } from '@/utils/attributeProgression';
 import { toast } from '@/components/ui/sonner-toast';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
+import { awardActionXp } from '@/utils/progression';
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -39,6 +40,7 @@ interface TourVenue {
   venue_id: string;
   venue_name: string;
   venue_capacity: number;
+  venue_prestige_level: number;
   city: string;
   country: string;
   date: string;
@@ -105,6 +107,16 @@ const TOUR_SHOW_BEHAVIOR: Record<ShowType, {
   acoustic: { attendance: 0.75, revenue: 0.85, fame: 1.35, experience: 1.2, ticket: 0.9 },
 };
 
+const TOUR_SHOW_DURATION_SECONDS: Record<ShowType, number> = {
+  standard: 7200,
+  acoustic: 5400,
+};
+
+const TOUR_COLLABORATION_SIZE: Record<ShowType, number> = {
+  standard: 5,
+  acoustic: 3,
+};
+
 const TOUR_EXPERIENCE_ATTRIBUTES: AttributeKey[] = ['stage_presence', 'musical_ability'];
 
 type TourRecord = TourRow & {
@@ -169,6 +181,7 @@ const TouringSystem: React.FC = () => {
             venue_id: tv.venue_id,
             venue_name: venueDetails?.name ?? 'Unknown Venue',
             venue_capacity: venueDetails?.capacity ?? 0,
+            venue_prestige_level: venueDetails?.prestige_level ?? 0,
             city: venueDetails?.location ?? 'Unknown City',
             country: 'Various',
             date: tv.date,
@@ -344,7 +357,7 @@ const TouringSystem: React.FC = () => {
     const venue = tour.venues[venueIndex];
     const showType = venue.show_type ?? DEFAULT_SHOW_TYPE;
     const behavior = TOUR_SHOW_BEHAVIOR[showType] ?? TOUR_SHOW_BEHAVIOR[DEFAULT_SHOW_TYPE];
-    
+
     try {
       // Simulate show performance
       const performanceScore = showType === 'acoustic'

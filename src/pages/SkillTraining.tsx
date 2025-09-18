@@ -22,8 +22,8 @@ import {
   getSkillCap,
   isOnCooldown,
   getRemainingCooldown,
-  attributeScoreToMultiplier,
-  COOLDOWNS
+  COOLDOWNS,
+  type AttributeFocus
 } from "@/utils/gameBalance";
 import { applyCooldownModifier, applyRewardBonus } from "@/utils/attributeModifiers";
 import {
@@ -46,7 +46,8 @@ import {
   Lock,
   Coins,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -173,6 +174,35 @@ interface DerivedSession extends TrainingSessionConfig {
   remainingCooldown: number;
 }
 
+const resolveSessionFocus = (session: DerivedSession): AttributeFocus => {
+  const slug = session.slug.toLowerCase();
+  const category = session.category.toLowerCase();
+  const track = session.track?.toLowerCase() ?? "";
+
+  if (slug.includes("vocal") || category.includes("vocal") || track.includes("vocal")) {
+    return "vocals";
+  }
+
+  if (
+    slug.includes("song") ||
+    category.includes("songwriting") ||
+    track.includes("song") ||
+    track.includes("lyric")
+  ) {
+    return "songwriting";
+  }
+
+  if (slug.includes("performance") || category.includes("stage") || track.includes("stage")) {
+    return "performance";
+  }
+
+  if (category.includes("instrument") || track.includes("guitar") || track.includes("drum") || track.includes("bass")) {
+    return "instrumental";
+  }
+
+  return "instrumental";
+};
+
 const formatSkillName = (slug: string) =>
   slug
     .split("_")
@@ -227,7 +257,10 @@ const SkillTrainingContent = () => {
 
   const playerLevel = Number(profile?.level ?? 1);
   const totalExperience = Number(profile?.experience ?? 0);
+  const displayExperience = Number(xpWallet?.lifetime_xp ?? totalExperience);
   const skillCap = getSkillCap(playerLevel, totalExperience);
+  const walletBalance = Math.max(0, xpWallet?.xp_balance ?? 0);
+  const lifetimeXp = Math.max(0, xpWallet?.lifetime_xp ?? totalExperience);
 
   const availableDefinitions = useMemo(() => {
     const trainable = definitions.filter(definition => definition.is_trainable !== false);
@@ -523,6 +556,7 @@ const SkillTrainingContent = () => {
     const focusedXp = applyRewardBonus(session.xpGain, attributes?.mental_focus);
     const newSkillValue = Math.min(skillCap, currentSkill + focusedXp);
     const skillGain = newSkillValue - currentSkill;
+    const sessionFocus = resolveSessionFocus(session);
 
     if (skillGain <= 0) {
       toast({
@@ -534,7 +568,6 @@ const SkillTrainingContent = () => {
     }
 
     const newCash = playerCash - trainingCost;
-    const newExperience = totalExperience + focusedXp;
     const timestamp = new Date().toISOString();
 
     setTraining(true);
@@ -566,13 +599,28 @@ const SkillTrainingContent = () => {
         updated_at: timestamp
       });
 
-      if (Object.keys(attributeInvestments).length > 0) {
-        await updateAttributes(attributeInvestments as Partial<PlayerAttributes>);
-      }
+      await awardActionXp({
+        amount: focusedXp,
+        category: "training",
+        actionKey: "skill_training",
+        sessionSlug: session.slug,
+        focus: sessionFocus,
+        durationMinutes: session.duration,
+        collaborationCount: 0,
+        quality: skillGain,
+        metadata: {
+          skill_gain: skillGain,
+          skill_value_after: newSkillValue,
+          training_cost: trainingCost,
+          category: session.category,
+          tier: session.tier,
+          track: session.track
+        }
+      });
 
       await addActivity(
         "training",
-        `Completed ${session.name} training session (+${xpGain} XP)`,
+        `Completed ${session.name} training session (+${focusedXp} XP)`,
         -trainingCost
       );
 
@@ -621,7 +669,7 @@ const SkillTrainingContent = () => {
     const availableExperience = Math.max(0, walletBalance ?? profileExperience);
     const trainingCost = getAttributeTrainingCost(currentValue);
 
-    if (availableExperience < trainingCost) {
+    if (availableXp < trainingCost) {
       toast({
         variant: "destructive",
         title: "Not Enough XP",
@@ -637,7 +685,6 @@ const SkillTrainingContent = () => {
       const timestamp = new Date().toISOString();
       const nextValue = clampAttributeValue(currentValue + ATTRIBUTE_TRAINING_INCREMENT);
       const actualGain = nextValue - currentValue;
-
       const uniqueEventId = `attribute_training:${attributeKey}:${timestamp}`;
 
       await buyAttributeStar({
@@ -650,6 +697,8 @@ const SkillTrainingContent = () => {
           training_cost: trainingCost,
         },
       });
+
+      await updateAttributes(attributeUpdates);
 
       await addActivity(
         "attribute_training",
@@ -717,8 +766,12 @@ const SkillTrainingContent = () => {
             <span className="font-oswald">${profile.cash?.toLocaleString() || 0}</span>
           </div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
-            <span className="font-oswald">{profile.experience || 0} XP</span>
+            <Wallet className="h-4 w-4 text-blue-400" />
+            <span className="font-oswald">{walletBalance.toLocaleString()} XP available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-green-400" />
+            <span className="font-oswald">{lifetimeXp.toLocaleString()} lifetime XP</span>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-purple-400" />
@@ -930,7 +983,7 @@ const SkillTrainingContent = () => {
         <TabsContent value="attributes" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {attributeSummaries.map(({ key, value, metadata, icon: AttributeIcon, cost, percentage }) => {
-              const availableExperience = Math.max(0, Number(profile?.experience ?? 0));
+              const availableExperience = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
               const canAfford = availableExperience >= cost;
               const isMaxed = value >= ATTRIBUTE_MAX_VALUE;
               const isActive = activeTrainingKey === `attribute:${key}`;
