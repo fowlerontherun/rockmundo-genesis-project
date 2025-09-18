@@ -212,7 +212,12 @@ const GigBooking = () => {
         .order('name', { ascending: true });
 
       if (error) throw error;
-      setCities((data ?? []) as CityRow[]);
+
+      const sanitizedCities = ((data ?? []) as CityRow[]).filter(
+        (city): city is CityRow => typeof city.id === 'string' && city.id.trim().length > 0,
+      );
+
+      setCities(sanitizedCities);
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load cities";
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;
@@ -243,7 +248,11 @@ const GigBooking = () => {
         .order('capacity', { ascending: true });
 
       if (error) throw error;
-      const venueRows = (data ?? []) as VenueRow[];
+
+      const venueRows = ((data ?? []) as VenueRow[]).filter(
+        (venue): venue is VenueRow => typeof venue.id === 'string' && venue.id.trim().length > 0,
+      );
+
       setVenues(venueRows.map(venue => ({
         id: venue.id,
         name: venue.name,

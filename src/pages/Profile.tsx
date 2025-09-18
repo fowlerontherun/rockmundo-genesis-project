@@ -183,7 +183,11 @@ const Profile = () => {
 
         if (error) throw error;
 
-        setCityOptions((data as CityOption[] | null) ?? []);
+        const sanitizedCities = ((data as CityOption[] | null) ?? []).filter(
+          (city): city is CityOption => typeof city.id === "string" && city.id.trim().length > 0,
+        );
+
+        setCityOptions(sanitizedCities);
       } catch (error) {
         console.error("Error loading cities:", error);
         setCityError("We couldn't load cities right now. You can try again later.");
