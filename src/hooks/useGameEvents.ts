@@ -21,12 +21,6 @@ type UseGameEventsOptions = {
   addActivity: (activityType: string, message: string, earnings?: number) => Promise<ActivityItem | null | undefined>;
 };
 
-type RewardSummary = {
-  updates: Partial<PlayerProfile>;
-  messageDetails: string[];
-  cashDelta: number;
-};
-
 type RawRecord = Record<string, unknown>;
 
 const rewardableFields: (keyof PlayerProfile)[] = [
@@ -39,10 +33,18 @@ const rewardableFields: (keyof PlayerProfile)[] = [
   "health"
 ];
 
+type RewardField = (typeof rewardableFields)[number];
+
+type RewardSummary = {
+  updates: Partial<Pick<PlayerProfile, RewardField>>;
+  messageDetails: string[];
+  cashDelta: number;
+};
+
 const formatKey = (key: string) => key.replace(/_/g, " ");
 
 const parseRewardPayload = (rewards: unknown, profile: PlayerProfile | null): RewardSummary => {
-  const updates: Partial<PlayerProfile> = {};
+  const updates: Partial<Pick<PlayerProfile, RewardField>> = {};
   const messageDetails: string[] = [];
   let cashDelta = 0;
 
@@ -53,21 +55,21 @@ const parseRewardPayload = (rewards: unknown, profile: PlayerProfile | null): Re
   const rewardsRecord = rewards as RawRecord;
 
   rewardableFields.forEach(field => {
-    const value = rewardsRecord[field as string];
+    const rewardField = field as RewardField;
+    const value = rewardsRecord[rewardField as keyof RawRecord];
     const numericValue = typeof value === "number" ? value : Number(value);
 
     if (!Number.isFinite(numericValue) || numericValue === 0) {
       return;
     }
 
-    const currentValue = profile?.[field];
+    const currentValue = profile?.[rewardField];
     const baseValue = typeof currentValue === "number" ? currentValue : 0;
     const nextValue = baseValue + numericValue;
 
-    updates[field] = nextValue;
-    messageDetails.push(`${formatKey(field as string)} ${numericValue > 0 ? "+" : ""}${numericValue}`);
-
-    if (field === "cash") {
+    updates[rewardField] = nextValue;
+    messageDetails.push(`${formatKey(String(rewardField))} ${numericValue > 0 ? "+" : ""}${numericValue}`);
+    if (rewardField === "cash") {
       cashDelta += numericValue;
     }
   });
