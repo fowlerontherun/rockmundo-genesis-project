@@ -358,7 +358,7 @@ const resolveSkillBadge = (value: number) => {
 
 const PlayerStatistics = () => {
   const { user } = useAuth();
-  const { profile, skills, attributes } = useGameData();
+  const { profile, skills, attributes, skillDefinitions } = useGameData();
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
     "performance",
     "songwriting",
@@ -385,28 +385,73 @@ const PlayerStatistics = () => {
   const [skillProgressError, setSkillProgressError] = useState<string | null>(null);
 
   const fallbackSkillEntries = useMemo<SkillProgressEntry[]>(() => {
-    if (!skills) return [];
+    const entries: SkillProgressEntry[] = [];
+    const processedSlugs = new Set<string>();
 
-    return Object.entries(skills)
-      .filter(([key]) => !["id", "user_id", "profile_id", "created_at", "updated_at"].includes(key))
-      .map(([key, value], index) => {
-        const numericValue = typeof value === "number" ? value : Number(value ?? 0);
-        const clampedValue = Number.isFinite(numericValue)
-          ? Math.max(0, Math.min(numericValue, 100))
-          : 0;
+    if (skills) {
+      Object.entries(skills)
+        .filter(([key]) => !["id", "user_id", "profile_id", "created_at", "updated_at"].includes(key))
+        .forEach(([key, value], index) => {
+          const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+          const clampedValue = Number.isFinite(numericValue)
+            ? Math.max(0, Math.min(numericValue, 100))
+            : 0;
 
-        return {
-          id: key,
-          slug: key,
-          name: formatLabel(key),
-          currentValue: clampedValue,
+          entries.push({
+            id: key,
+            slug: key,
+            name: formatLabel(key),
+            currentValue: clampedValue,
+            maxValue: 100,
+            progressPercent: Math.max(0, Math.min(clampedValue, 100)),
+            unlocked: true,
+            order: index
+          });
+
+          processedSlugs.add(key);
+        });
+    }
+
+    if (Array.isArray(skillDefinitions) && skillDefinitions.length > 0) {
+      const baseCount = entries.length;
+
+      skillDefinitions.forEach((definition, definitionIndex) => {
+        if (!definition) {
+          return;
+        }
+
+        const slug = typeof definition.slug === "string" ? definition.slug : null;
+        if (!slug || processedSlugs.has(slug)) {
+          return;
+        }
+
+        const displayName =
+          typeof definition.display_name === "string" && definition.display_name.trim().length > 0
+            ? definition.display_name
+            : formatLabel(slug);
+        const description =
+          typeof definition.description === "string" && definition.description.trim().length > 0
+            ? definition.description
+            : undefined;
+
+        entries.push({
+          id: slug,
+          slug,
+          name: displayName,
+          description,
+          currentValue: 0,
           maxValue: 100,
-          progressPercent: Math.max(0, Math.min(clampedValue, 100)),
-          unlocked: true,
-          order: index
-        } satisfies SkillProgressEntry;
+          progressPercent: 0,
+          unlocked: false,
+          order: baseCount + definitionIndex
+        });
+
+        processedSlugs.add(slug);
       });
-  }, [skills]);
+    }
+
+    return entries;
+  }, [skills, skillDefinitions]);
 
   const baseSkillEntries = useMemo<SkillProgressEntry[]>(() => {
     if (skillProgress.length > 0) {

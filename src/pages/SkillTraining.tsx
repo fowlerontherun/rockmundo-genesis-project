@@ -49,6 +49,14 @@ const iconMap: Record<string, LucideIcon> = {
   songwriting: PenTool
 };
 
+interface CurrentSkillEntry {
+  slug: string;
+  name: string;
+  currentValue: number;
+  description?: string;
+  order: number;
+}
+
 const fallbackDefinitions: SkillDefinitionRecord[] = [
   {
     id: "guitar",
@@ -238,6 +246,53 @@ const SkillTrainingContent = () => {
       return acc;
     }, {});
   }, [progress]);
+
+  const currentSkillEntries = useMemo<CurrentSkillEntry[]>(() => {
+    const entries: CurrentSkillEntry[] = [];
+    const processedSlugs = new Set<string>();
+
+    if (skills) {
+      Object.entries(skills)
+        .filter(([key]) => !["id", "user_id", "profile_id", "created_at", "updated_at"].includes(key))
+        .forEach(([key, value], index) => {
+          const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+          const sanitizedValue = Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
+
+          entries.push({
+            slug: key,
+            name: formatSkillName(key),
+            currentValue: sanitizedValue,
+            order: index
+          });
+
+          processedSlugs.add(key);
+        });
+    }
+
+    const baseCount = entries.length;
+
+    availableDefinitions.forEach((definition, definitionIndex) => {
+      const slug = definition.slug;
+      if (!slug || processedSlugs.has(slug)) {
+        return;
+      }
+
+      const displayName = definition.display_name ?? formatSkillName(slug);
+      const description = definition.description ?? undefined;
+
+      entries.push({
+        slug,
+        name: displayName,
+        description,
+        currentValue: 0,
+        order: baseCount + definitionIndex
+      });
+
+      processedSlugs.add(slug);
+    });
+
+    return entries.sort((a, b) => a.order - b.order);
+  }, [availableDefinitions, skills]);
 
   const getSkillValue = useCallback(
     (slug: string) => {
@@ -577,40 +632,38 @@ const SkillTrainingContent = () => {
 
         <TabsContent value="skills" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(skills)
-              .filter(([key]) => !["id", "user_id", "profile_id", "created_at", "updated_at"].includes(key))
-              .map(([skill, value]) => {
-                const session = sessionBySlug.get(skill);
-                const Icon = session?.icon ?? Music;
-                const numericValue = typeof value === "number" ? value : Number(value ?? 0);
-                const progressValue = skillCap > 0 ? Math.min(100, (numericValue / skillCap) * 100) : 0;
-                const displayName = session?.name ?? formatSkillName(skill);
+            {currentSkillEntries.map(entry => {
+              const session = sessionBySlug.get(entry.slug);
+              const Icon = session?.icon ?? Music;
+              const numericValue = entry.currentValue;
+              const progressValue = skillCap > 0 ? Math.min(100, (numericValue / skillCap) * 100) : 0;
+              const displayName = session?.name ?? entry.name;
 
-                return (
-                  <Card key={skill} className="relative overflow-hidden">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-5 w-5 text-primary" />
-                          <CardTitle className="text-lg font-oswald">{displayName}</CardTitle>
-                        </div>
-                        <Badge variant="outline" className={getSkillColor(numericValue)}>
-                          {getSkillLevel(numericValue)}
-                        </Badge>
+              return (
+                <Card key={entry.slug} className="relative overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-lg font-oswald">{displayName}</CardTitle>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Progress</span>
-                          <span className="font-mono">{numericValue}/{skillCap}</span>
-                        </div>
-                        <Progress value={progressValue} className="h-2" />
+                      <Badge variant="outline" className={getSkillColor(numericValue)}>
+                        {getSkillLevel(numericValue)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Progress</span>
+                        <span className="font-mono">{numericValue}/{skillCap}</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      <Progress value={progressValue} className="h-2" />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
