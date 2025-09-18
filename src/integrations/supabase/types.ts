@@ -433,6 +433,58 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          pair_key: string
+          recipient_profile_id: string
+          recipient_user_id: string
+          responded_at: string | null
+          sender_profile_id: string
+          sender_user_id: string
+          status: Database["public"]["Enums"]["friend_request_status"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          recipient_profile_id: string
+          recipient_user_id: string
+          responded_at?: string | null
+          sender_profile_id: string
+          sender_user_id: string
+          status?: Database["public"]["Enums"]["friend_request_status"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          recipient_profile_id?: string
+          recipient_user_id?: string
+          responded_at?: string | null
+          sender_profile_id?: string
+          sender_user_id?: string
+          status?: Database["public"]["Enums"]["friend_request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_requests_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friend_requests_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_events: {
         Row: {
           created_at: string | null
@@ -1702,9 +1754,28 @@ export type Database = {
         }
         Returns: boolean
       }
+      search_public_profiles: {
+        Args: {
+          search_term: string
+          result_limit?: number
+        }
+        Returns: {
+          profile_id: string
+          user_id: string
+          email: string
+          username: string
+          display_name: string | null
+          avatar_url: string | null
+          bio: string | null
+          gender: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth: string | null
+          age: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      friend_request_status: "accepted" | "cancelled" | "declined" | "pending"
       profile_gender:
         | "female"
         | "male"
