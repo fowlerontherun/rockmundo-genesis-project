@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
   type CityEnvironmentDetails,
   type CityTravelMode,
 } from '@/utils/worldEnvironment';
+import { calculateDistanceBetweenCoordinates, getCoordinatesForCity } from '@/utils/worldTravel';
 import {
   Cloud,
   Sun,
@@ -53,10 +54,10 @@ const REFRESH_INTERVAL = 60_000;
 
 const WorldEnvironment: React.FC = () => {
   const { user } = useAuth();
-  const { profile, updateProfile, addActivity } = useGameData();
+  const { profile, updateProfile, addActivity, currentCity } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
   const [weather, setWeather] = useState<WeatherCondition[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
+  const [cityRecords, setCityRecords] = useState<City[]>([]);
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
   const [randomEvents, setRandomEvents] = useState<RandomEvent[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
@@ -68,6 +69,70 @@ const WorldEnvironment: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const cityIdFromParams = searchParams.get('cityId');
   const searchParamsString = searchParams.toString();
+  const playerCityId = profile?.current_city_id ?? currentCity?.id ?? null;
+  const profileRecord = profile as Record<string, unknown> | null;
+  const rawProfileLocation = profileRecord?.['current_location'];
+  const profileLocationLabel =
+    typeof rawProfileLocation === 'string' && rawProfileLocation.trim().length > 0
+      ? rawProfileLocation
+      : null;
+
+  const applyCityDistances = useCallback(
+    (cityList: City[]): City[] => {
+      if (!cityList.length) {
+        return [];
+      }
+
+      const normalize = (value?: string | null) => value?.trim().toLowerCase() ?? '';
+
+      const matchedCity = playerCityId
+        ? cityList.find((city) => city.id === playerCityId) ?? null
+        : null;
+
+      const originName = matchedCity?.name
+        ?? (typeof currentCity?.name === 'string' ? currentCity.name : null)
+        ?? profileLocationLabel;
+      const originCountry = matchedCity?.country
+        ?? (typeof currentCity?.country === 'string' ? currentCity.country : null)
+        ?? null;
+
+      if (!originName || !originName.trim()) {
+        return cityList.map((city) => ({ ...city, distanceKm: null }));
+      }
+
+      const originCoordinates = getCoordinatesForCity(originName, originCountry);
+      const normalizedOriginName = normalize(originName);
+      const normalizedOriginCountry = normalize(originCountry);
+
+      return cityList.map((city) => {
+        const normalizedCityName = normalize(city.name);
+        const normalizedCityCountry = normalize(city.country);
+        const isOriginCity =
+          (playerCityId && city.id === playerCityId) ||
+          (currentCity?.id && city.id === currentCity.id) ||
+          (normalizedOriginName !== '' && normalizedCityName === normalizedOriginName &&
+            (normalizedOriginCountry === '' || normalizedCityCountry === normalizedOriginCountry));
+
+        if (isOriginCity) {
+          return { ...city, distanceKm: 0 };
+        }
+
+        const destinationCoordinates = getCoordinatesForCity(city.name, city.country);
+        const distance = calculateDistanceBetweenCoordinates(originCoordinates, destinationCoordinates);
+        const normalizedDistance = Number.isFinite(distance)
+          ? Math.max(0, Math.round(distance * 100) / 100)
+          : null;
+
+        return {
+          ...city,
+          distanceKm: normalizedDistance,
+        };
+      });
+    },
+    [playerCityId, currentCity?.id, currentCity?.name, currentCity?.country, profileLocationLabel],
+  );
+
+  const cities = useMemo(() => applyCityDistances(cityRecords), [cityRecords, applyCityDistances]);
 
   const {
     events: liveEvents,
@@ -89,19 +154,30 @@ const WorldEnvironment: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!cityIdFromParams || !cities.length) {
+    if (!cities.length) {
+      setSelectedCity(null);
       return;
     }
 
+    if (cityIdFromParams) {
+      const match = cities.find((city) => city.id === cityIdFromParams);
+      if (match) {
+        setSelectedCity(match);
+        return;
+      }
+    }
+
     setSelectedCity((current) => {
-      if (current?.id === cityIdFromParams) {
-        return current;
+      if (current) {
+        const updated = cities.find((city) => city.id === current.id);
+        if (updated) {
+          return updated;
+        }
       }
 
-      const match = cities.find((city) => city.id === cityIdFromParams);
-      return match ?? current;
+      return cities[0];
     });
-  }, [cityIdFromParams, cities]);
+  }, [cities, cityIdFromParams]);
 
   useEffect(() => {
     if (!selectedCity) {
@@ -223,28 +299,12 @@ const WorldEnvironment: React.FC = () => {
       }
 
       setWeather(weatherSnapshot);
-      setCities(citySnapshot);
+      setCityRecords(citySnapshot);
       setWorldEvents(worldEventSnapshot);
       setRandomEvents(randomEventSnapshot);
-      setSelectedCity((current) => {
-        if (!citySnapshot.length) {
-          return null;
-        }
-
-        if (cityIdFromParams) {
-          const requestedCity = citySnapshot.find((city) => city.id === cityIdFromParams);
-          if (requestedCity) {
-            return requestedCity;
-          }
-        }
-
-        if (current) {
-          const existing = citySnapshot.find((city) => city.id === current.id);
-          return existing ?? citySnapshot[0];
-        }
-
-        return citySnapshot[0];
-      });
+      if (!citySnapshot.length) {
+        setSelectedCity(null);
+      }
     } catch (error: unknown) {
       console.error('Error loading world data:', error);
       if (showLoader) {
@@ -255,7 +315,7 @@ const WorldEnvironment: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [user, cityIdFromParams]);
+  }, [user]);
 
   const loadCityDetails = useCallback(
     async (city: City | null, options: { showLoader?: boolean; quiet?: boolean } = {}) => {
@@ -301,7 +361,7 @@ const WorldEnvironment: React.FC = () => {
   useEffect(() => {
     if (!user) {
       setWeather([]);
-      setCities([]);
+      setCityRecords([]);
       setWorldEvents([]);
       setRandomEvents([]);
       setSelectedCity(null);
@@ -621,7 +681,7 @@ const WorldEnvironment: React.FC = () => {
   };
 
   const travelInProgress = Boolean(profile?.travel_eta && Date.parse(profile.travel_eta) > Date.now());
-  const isInSelectedCity = Boolean(profile && selectedCity && profile.current_city_id === selectedCity.id);
+  const isInSelectedCity = Boolean(selectedCity && playerCityId && selectedCity.id === playerCityId);
   const playerCash = typeof profile?.cash === 'number' ? profile.cash : 0;
   const activeTravelMode = profile?.travel_mode ?? null;
   const travelEtaDate = profile?.travel_eta ? new Date(profile.travel_eta) : null;
@@ -636,6 +696,40 @@ const WorldEnvironment: React.FC = () => {
   const travelModeDisplayName = activeTravelMode
     ? (cityDetails?.travelModes?.find((mode) => mode.id === activeTravelMode)?.name ?? activeTravelMode)
     : null;
+  const formatDistanceValue = useCallback((distance: number) => {
+    const digits = distance >= 100 ? 0 : distance >= 10 ? 1 : 2;
+    return distance.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: digits,
+    });
+  }, []);
+
+  const getCityDistanceLabel = useCallback(
+    (city: City): string => {
+      if (!city) {
+        return 'Distance unavailable';
+      }
+
+      const { distanceKm } = city;
+
+      if (typeof distanceKm !== 'number' || Number.isNaN(distanceKm)) {
+        return playerCityId ? 'Distance unavailable' : 'Set a home city to calculate distance';
+      }
+
+      if ((playerCityId && city.id === playerCityId) || distanceKm === 0) {
+        return 'You are currently in this city';
+      }
+
+      if (distanceKm < 1) {
+        return 'Less than 1 km from your current city';
+      }
+
+      return `${formatDistanceValue(distanceKm)} km from your current city`;
+    },
+    [playerCityId, formatDistanceValue],
+  );
+
+  const selectedCityDistanceLabel = selectedCity ? getCityDistanceLabel(selectedCity) : null;
 
   if (loading) {
     return (
@@ -761,6 +855,7 @@ const WorldEnvironment: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {cities.map((city) => {
                     const isSelected = selectedCity?.id === city.id;
+                    const distanceLabel = getCityDistanceLabel(city);
                     return (
                       <Card
                         key={city.id}
@@ -801,6 +896,10 @@ const WorldEnvironment: React.FC = () => {
                             <div>
                               <div className="text-xs text-muted-foreground">Local Bonus</div>
                               <div className="font-medium text-green-600">{city.local_bonus}x</div>
+                            </div>
+                            <div className="col-span-2">
+                              <div className="text-xs text-muted-foreground">Distance</div>
+                              <div className="font-medium">{distanceLabel}</div>
                             </div>
                           </div>
                           <div>
@@ -885,6 +984,10 @@ const WorldEnvironment: React.FC = () => {
                           <div>
                             <div className="text-xs text-muted-foreground">Local Bonus</div>
                             <div className="font-medium text-green-600">{selectedCity.local_bonus}x</div>
+                          </div>
+                          <div className="col-span-2">
+                            <div className="text-xs text-muted-foreground">Distance from you</div>
+                            <div className="font-medium">{selectedCityDistanceLabel ?? 'Distance unavailable'}</div>
                           </div>
                         </div>
                         {travelInProgress && travelEtaDate && (

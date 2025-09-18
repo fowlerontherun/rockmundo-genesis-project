@@ -279,6 +279,7 @@ export interface City {
   famousResident: string;
   travelHub: string;
   travelOptions: TravelOption[];
+  distanceKm: number | null;
 }
 
 export interface WorldEvent {
@@ -500,6 +501,7 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     famousResident: famousResidentRaw || "Local legend emerging",
     travelHub: travelHubRaw || travelOptions[0]?.name || "",
     travelOptions,
+    distanceKm: null,
   };
 };
 
