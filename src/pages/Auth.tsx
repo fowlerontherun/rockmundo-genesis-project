@@ -278,6 +278,33 @@ const Auth = () => {
     }
   };
 
+  const handleDiscordLinkClick = async () => {
+    const discordUrl = "https://discord.gg/KB45k3XJuZ";
+    const newWindow = window.open(discordUrl, "_blank", "noopener,noreferrer");
+
+    if (!newWindow) {
+      toast({
+        title: "Unable to open Discord",
+        description: "We've copied the invite link so you can join manually.",
+      });
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(discordUrl);
+        } else {
+          throw new Error("Clipboard API not available");
+        }
+      } catch (clipboardError) {
+        console.error("Failed to copy Discord invite link:", clipboardError);
+        toast({
+          title: "Copy link manually",
+          description: "Please copy this invite link: https://discord.gg/KB45k3XJuZ",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-8 sm:px-6">
       <div className="w-full max-w-sm sm:max-w-md">
@@ -572,14 +599,14 @@ const Auth = () => {
           <p className="text-xs text-muted-foreground/70 font-oswald">
             Join thousands of musicians living their dream
           </p>
-          <a
-            href="https://discord.gg/KB45k3XJuZ"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-oswald text-primary underline underline-offset-4 hover:text-primary/80"
+          <Button
+            type="button"
+            onClick={handleDiscordLinkClick}
+            variant="link"
+            className="text-xs font-oswald text-primary underline underline-offset-4 hover:text-primary/80 px-0 h-auto"
           >
             Connect with the Rockmundo community on Discord
-          </a>
+          </Button>
         </div>
       </div>
     </div>
