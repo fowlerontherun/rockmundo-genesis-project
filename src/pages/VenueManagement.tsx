@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,15 +14,20 @@ import {
   Users,
   Star,
   Calendar,
-  DollarSign, 
-  TrendingUp, 
-  Music, 
+  DollarSign,
+  TrendingUp,
+  Music,
   Clock,
   Heart,
-  Award
+  Award,
+  ArrowUpRight,
 } from "lucide-react";
 
-type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
+type CityRow = Database["public"]["Tables"]["cities"]["Row"];
+type VenueRowBase = Database["public"]["Tables"]["venues"]["Row"];
+type VenueRow = VenueRowBase & {
+  city?: Pick<CityRow, "id" | "name" | "country"> | null;
+};
 
 interface VenueRelationshipRow {
   id: string;
@@ -71,6 +77,9 @@ interface VenueCardData {
   name: string;
   capacity: number;
   location: string;
+  cityId: string | null;
+  cityName: string | null;
+  cityCountry: string | null;
   relationship: number;
   relationshipLevel: string;
   bookedShows: number;
@@ -264,7 +273,14 @@ const VenueManagement = () => {
     try {
       const { data, error } = await supabase
         .from("venues")
-        .select("*")
+        .select(`
+          *,
+          city:city_id (
+            id,
+            name,
+            country
+          )
+        `)
         .order("prestige_level", { ascending: true });
 
       if (error) throw error;
@@ -371,6 +387,14 @@ const VenueManagement = () => {
       const relationshipState = relationships[venue.id] ?? { score: 0 };
       const relationshipScore = Math.min(100, Math.max(0, relationshipState.score));
       const venueBookings = bookingRows.filter((booking) => booking.venue_id === venue.id);
+      const cityId = venue.city_id ?? null;
+      const cityName = venue.city?.name ?? null;
+      const cityCountry = venue.city?.country ?? null;
+      const locationLabel = cityName
+        ? cityCountry
+          ? `${cityName}, ${cityCountry}`
+          : cityName
+        : venue.location ?? "Unknown";
       const upcomingBookingsForVenue = venueBookings
         .map((booking) => ({
           ...booking,
@@ -401,7 +425,10 @@ const VenueManagement = () => {
         id: venue.id,
         name: venue.name ?? "Unknown Venue",
         capacity: safeNumber(venue.capacity),
-        location: venue.location ?? "Unknown",
+        location: locationLabel,
+        cityId,
+        cityName,
+        cityCountry: cityCountry ?? null,
         relationship: relationshipScore,
         relationshipLevel: getRelationshipLevel(relationshipScore),
         bookedShows: venueBookings.length,
@@ -676,7 +703,18 @@ const VenueManagement = () => {
                           </CardTitle>
                           <CardDescription className="flex items-center gap-2">
                             <MapPin className="h-4 w-4" />
-                            {venue.location}
+                            {venue.cityId ? (
+                              <Link
+                                to={`/world?cityId=${venue.cityId}`}
+                                className="inline-flex items-center gap-1 text-accent transition-colors hover:text-accent/90 hover:underline"
+                                title={`Explore ${venue.location}`}
+                              >
+                                <span>{venue.location}</span>
+                                <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+                              </Link>
+                            ) : (
+                              <span>{venue.location}</span>
+                            )}
                           </CardDescription>
                         </div>
                         <Badge variant="secondary">{venue.relationshipLevel}</Badge>
