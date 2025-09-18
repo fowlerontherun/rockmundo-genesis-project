@@ -701,7 +701,7 @@ const CharacterCreation = () => {
 
       const { error: attributesError } = await supabase
         .from("player_attributes")
-        .upsert(attributePayload, { onConflict: "user_id" });
+        .upsert(attributesPayload, { onConflict: "user_id" });
 
       if (attributesError) {
         throw attributesError;
