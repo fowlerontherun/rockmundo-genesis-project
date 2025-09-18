@@ -623,7 +623,55 @@ const CharacterCreation = () => {
     });
 
     if (uniqueBySlug.size > 0) {
-      return Array.from(uniqueBySlug.values());
+      const uniqueValues = Array.from(uniqueBySlug.values());
+      const definitionsByLegacyColumn = new Map<LegacySkillColumn, NormalizedSkillDefinition>();
+
+      uniqueValues.forEach((definition) => {
+        const directColumn = LEGACY_SKILL_COLUMNS.has(definition.slug)
+          ? (definition.slug as LegacySkillColumn)
+          : null;
+        const legacyColumn = directColumn ?? resolveLegacySkillColumn(definition);
+
+        if (!legacyColumn) {
+          return;
+        }
+
+        const existing = definitionsByLegacyColumn.get(legacyColumn);
+        if (!existing) {
+          definitionsByLegacyColumn.set(legacyColumn, definition);
+          return;
+        }
+
+        const existingIsDirectMatch = existing.slug === legacyColumn;
+        const currentIsDirectMatch = definition.slug === legacyColumn;
+
+        if (!existingIsDirectMatch && currentIsDirectMatch) {
+          definitionsByLegacyColumn.set(legacyColumn, definition);
+        }
+      });
+
+      if (definitionsByLegacyColumn.size > 0) {
+        return FALLBACK_SKILL_DEFINITIONS.map((fallbackDefinition) => {
+          const legacySlug = fallbackDefinition.slug as LegacySkillColumn;
+          const override = definitionsByLegacyColumn.get(legacySlug);
+
+          if (!override) {
+            return fallbackDefinition;
+          }
+
+          const overrideLabel =
+            typeof override.label === "string" && override.label.trim().length > 0
+              ? override.label
+              : fallbackDefinition.label;
+
+          return {
+            slug: legacySlug,
+            label: overrideLabel,
+            metadata: override.metadata,
+            raw: override.raw,
+          };
+        });
+      }
     }
 
     return FALLBACK_SKILL_DEFINITIONS;
@@ -1257,7 +1305,12 @@ const CharacterCreation = () => {
 
           const normalizedDefinition = normalizeSkillDefinition(definition);
           const slug = normalizedDefinition?.slug ?? null;
-          const assignedValue = slug && slug in skills ? skills[slug] : undefined;
+          const legacyColumn = normalizedDefinition
+            ? resolveLegacySkillColumn(normalizedDefinition)
+            : null;
+          const assignedValue =
+            (legacyColumn && legacyColumn in skills ? skills[legacyColumn] : undefined) ??
+            (slug && slug in skills ? skills[slug] : undefined);
           const defaultLevel = Number.isFinite(definition.starting_level)
             ? Number(definition.starting_level)
             : MIN_SKILL_VALUE;
