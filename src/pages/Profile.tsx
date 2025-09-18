@@ -93,7 +93,7 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, attributes, updateProfile, freshPointGrantAvailable } = useGameData();
+  const { profile, skills, attributes, updateProfile, freshWeeklyBonusAvailable, experienceLedger } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -138,18 +138,51 @@ const Profile = () => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
-  const skillPoints = Number(profile?.skill_points_available ?? 0);
-  const attributePoints = Number(profile?.attribute_points_available ?? 0);
-  const hasUnspentPoints = skillPoints + attributePoints > 0;
-  const lastPointRefresh = parseDate(profile?.last_point_conversion_at ?? null);
-  const formattedLastPointRefresh = lastPointRefresh
+  const toNumber = (value: unknown, fallback = 0) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim().length === 0) {
+      return fallback;
+    }
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  };
+
+  const formatLedgerReason = (reason: string) => {
+    if (!reason) {
+      return "XP adjustment";
+    }
+
+    if (reason === "weekly_bonus") {
+      return "Weekly bonus";
+    }
+
+    return reason
+      .split("_")
+      .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(" ");
+  };
+
+  const latestWeeklyBonus = experienceLedger.find(entry => entry.reason === "weekly_bonus");
+  const latestWeeklyMetadata = (latestWeeklyBonus?.metadata as Record<string, unknown> | null) ?? null;
+  const weeklyBonusAmount = latestWeeklyBonus
+    ? toNumber(latestWeeklyMetadata?.bonus_awarded ?? latestWeeklyBonus.amount ?? 0, 0)
+    : 0;
+  const weeklyBonusSourceXp = latestWeeklyMetadata ? toNumber(latestWeeklyMetadata?.experience_gained, 0) : 0;
+  const weeklyBonusStreak = latestWeeklyBonus ? Math.max(toNumber(latestWeeklyMetadata?.streak, 1), 1) : 0;
+  const weeklyBonusRecorded = parseDate(latestWeeklyBonus?.recorded_at ?? null);
+  const formattedWeeklyBonusRecorded = weeklyBonusRecorded
     ? new Intl.DateTimeFormat(undefined, {
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit"
-      }).format(lastPointRefresh)
+      }).format(weeklyBonusRecorded)
     : null;
+  const recentLedgerEntries = experienceLedger.slice(0, 5);
 
   useEffect(() => {
     if (!showProfileDetails) {
@@ -715,44 +748,60 @@ const Profile = () => {
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
-            {hasUnspentPoints && (
-              <Alert className="border-primary/30 bg-primary/5 text-primary">
-                <Sparkles className="h-4 w-4" />
-                <AlertTitle className="flex items-center gap-2">
-                  Spend your banked training points
-                  {freshPointGrantAvailable && (
-                    <Badge variant="secondary" className="border-primary/40 bg-primary/10 text-primary">
-                      New today
+            <Alert className="border-primary/30 bg-primary/5 text-primary">
+              <Sparkles className="h-4 w-4" />
+              <AlertTitle className="flex items-center gap-2">
+                Weekly rehearsal cadence
+                {freshWeeklyBonusAvailable && (
+                  <Badge variant="secondary" className="border-primary/40 bg-primary/10 text-primary">
+                    New this week
+                  </Badge>
+                )}
+              </AlertTitle>
+              <AlertDescription className="space-y-3 text-sm">
+                <p>
+                  {weeklyBonusAmount > 0
+                    ? `You banked ${weeklyBonusSourceXp} XP from your actions and gained an extra ${weeklyBonusAmount} XP from this week's rehearsal bonus.`
+                    : "Keep performing, creating, and training to build XP during the week. Every Monday at 05:15 UTC we add a rehearsal bonus based on your momentum."}
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {weeklyBonusAmount > 0 && (
+                    <Badge variant="secondary" className="border-primary/30 bg-primary/10 text-primary">
+                      +{weeklyBonusAmount} XP bonus
                     </Badge>
                   )}
-                </AlertTitle>
-                <AlertDescription className="space-y-3 text-sm">
-                  <div className="flex flex-wrap items-center gap-3 font-medium">
-                    <span className="text-primary">
-                      {skillPoints} skill {skillPoints === 1 ? "point" : "points"}
-                    </span>
-                    <span className="text-primary">
-                      {attributePoints} attribute {attributePoints === 1 ? "point" : "points"}
-                    </span>
-                  </div>
-                  {formattedLastPointRefresh && (
-                    <p className="text-xs text-primary/70">
-                      Last conversion ran {formattedLastPointRefresh} UTC
-                    </p>
+                  {weeklyBonusSourceXp > 0 && (
+                    <Badge variant="outline" className="border-primary/40 text-primary">
+                      {weeklyBonusSourceXp} XP earned
+                    </Badge>
                   )}
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => navigate("/training")}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90"
-                      size="sm"
-                    >
-                      Allocate points
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
+                  {weeklyBonusStreak > 1 && (
+                    <Badge variant="outline" className="border-primary/40 text-primary">
+                      {weeklyBonusStreak}-week streak
+                    </Badge>
+                  )}
+                </div>
+                {formattedWeeklyBonusRecorded ? (
+                  <p className="text-xs text-primary/70">
+                    Last bonus processed {formattedWeeklyBonusRecorded} UTC.
+                  </p>
+                ) : (
+                  <p className="text-xs text-primary/70">
+                    Bonuses process automatically every Monday at 05:15 UTC.
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => navigate("/training")}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    size="sm"
+                  >
+                    Plan training
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
@@ -802,34 +851,86 @@ const Profile = () => {
 
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Spendable Points</CardTitle>
+                  <CardTitle className="text-sm font-medium">Weekly Bonus</CardTitle>
                   <Sparkles className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Skill</span>
-                    <span className="font-semibold text-primary">{skillPoints}</span>
+                    <span className="text-muted-foreground">Latest bonus</span>
+                    <span className="font-semibold text-primary">
+                      {weeklyBonusAmount > 0 ? `+${weeklyBonusAmount} XP` : "Not yet awarded"}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Attribute</span>
-                    <span className="font-semibold text-primary">{attributePoints}</span>
+                    <span className="text-muted-foreground">XP earned this cycle</span>
+                    <span className="font-semibold text-primary">{weeklyBonusSourceXp}</span>
                   </div>
-                  {hasUnspentPoints ? (
-                    <Button
-                      onClick={() => navigate("/training")}
-                      variant="outline"
-                      className="w-full border-primary/40 text-primary hover:bg-primary/10"
-                      size="sm"
-                    >
-                      Allocate now
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Streak</span>
+                    <span className="font-semibold text-primary">
+                      {weeklyBonusStreak > 0 ? `${weeklyBonusStreak} week${weeklyBonusStreak === 1 ? "" : "s"}` : "Building"}
+                    </span>
+                  </div>
+                  {formattedWeeklyBonusRecorded ? (
+                    <p className="text-xs text-muted-foreground">Processed {formattedWeeklyBonusRecorded} UTC</p>
                   ) : (
-                    <p className="text-xs text-muted-foreground">All points allocated</p>
+                    <p className="text-xs text-muted-foreground">Bonuses process Mondays at 05:15 UTC.</p>
                   )}
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  XP Ledger
+                </CardTitle>
+                <CardDescription>Track how weekly bonuses and other adjustments change your XP.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {recentLedgerEntries.length > 0 ? recentLedgerEntries.map(entry => {
+                  const metadata = (entry.metadata as Record<string, unknown> | null) ?? null;
+                  const sourceXp = toNumber(metadata?.experience_gained);
+                  const streak = toNumber(metadata?.streak);
+                  const recordedAt = parseDate(entry.recorded_at);
+                  const recordedLabel = recordedAt
+                    ? new Intl.DateTimeFormat(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      }).format(recordedAt)
+                    : new Date(entry.recorded_at).toLocaleString();
+                  const isGain = entry.amount >= 0;
+                  const badgeVariant = isGain ? "secondary" : "outline";
+                  const badgeClasses = isGain
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-destructive/30 text-destructive";
+
+                  return (
+                    <div key={entry.id} className="flex items-start justify-between gap-3 rounded-lg border border-primary/10 bg-secondary/20 p-3">
+                      <div>
+                        <p className="text-sm font-medium">{formatLedgerReason(entry.reason)}</p>
+                        <p className="text-xs text-muted-foreground">{recordedLabel} UTC</p>
+                        {entry.reason === "weekly_bonus" && sourceXp > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Based on {sourceXp} XP earned{streak > 1 ? ` • ${streak}-week streak` : ""}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant={badgeVariant} className={badgeClasses}>
+                        {entry.amount >= 0 ? "+" : ""}{entry.amount} XP
+                      </Badge>
+                    </div>
+                  );
+                }) : (
+                  <p className="text-center text-muted-foreground text-sm py-4">
+                    No XP entries yet. Play through the week to trigger your first rehearsal bonus.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
               <CardHeader>

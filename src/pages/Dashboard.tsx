@@ -17,7 +17,6 @@ import {
   Play,
   AlertCircle,
   Sparkles,
-  ArrowRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
@@ -33,7 +32,16 @@ const genderLabels: Record<string, string> = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { profile, skills, attributes, activities, loading, error, freshPointGrantAvailable } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    activities,
+    experienceLedger,
+    loading,
+    error,
+    freshWeeklyBonusAvailable
+  } = useGameData();
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -52,6 +60,34 @@ const Dashboard = () => {
     "technical"
   ];
 
+  const toNumber = (value: unknown, fallback = 0) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim().length === 0) {
+      return fallback;
+    }
+
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  };
+
+  const formatLedgerReason = (reason: string) => {
+    if (!reason) {
+      return "XP adjustment";
+    }
+
+    if (reason === "weekly_bonus") {
+      return "Weekly bonus";
+    }
+
+    return reason
+      .split("_")
+      .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(" ");
+  };
+
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "gig": return <Play className="h-4 w-4" />;
@@ -60,7 +96,9 @@ const Dashboard = () => {
       case "song": return <Music className="h-4 w-4" />;
       case "join": return <Star className="h-4 w-4" />;
       case "busking": return <Mic className="h-4 w-4" />;
-      case "point_grant": return <Sparkles className="h-4 w-4" />;
+      case "point_grant":
+      case "weekly_bonus":
+        return <Sparkles className="h-4 w-4" />;
       default: return <Star className="h-4 w-4" />;
     }
   };
@@ -148,18 +186,23 @@ const Dashboard = () => {
   };
 
   const experienceProgress = profile.experience % 1000;
-  const skillPoints = Number(profile.skill_points_available ?? 0);
-  const attributePoints = Number(profile.attribute_points_available ?? 0);
-  const hasUnspentPoints = skillPoints + attributePoints > 0;
-  const lastPointRefresh = parseDate(profile.last_point_conversion_at ?? null);
-  const formattedLastPointRefresh = lastPointRefresh
+  const latestWeeklyBonus = experienceLedger.find(entry => entry.reason === "weekly_bonus");
+  const latestWeeklyMetadata = (latestWeeklyBonus?.metadata as Record<string, unknown> | null) ?? null;
+  const weeklyBonusAmount = latestWeeklyBonus
+    ? toNumber(latestWeeklyMetadata?.bonus_awarded ?? latestWeeklyBonus.amount ?? 0, 0)
+    : 0;
+  const weeklyBonusSourceXp = latestWeeklyMetadata ? toNumber(latestWeeklyMetadata?.experience_gained, 0) : 0;
+  const weeklyBonusStreak = latestWeeklyBonus ? Math.max(toNumber(latestWeeklyMetadata?.streak, 1), 1) : 0;
+  const weeklyBonusRecorded = parseDate(latestWeeklyBonus?.recorded_at ?? null);
+  const formattedWeeklyBonusRecorded = weeklyBonusRecorded
     ? new Intl.DateTimeFormat(undefined, {
         month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit"
-      }).format(lastPointRefresh)
+      }).format(weeklyBonusRecorded)
     : null;
+  const recentLedgerEntries = experienceLedger.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -212,40 +255,53 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {hasUnspentPoints && (
+        {latestWeeklyBonus ? (
           <Alert className="border-primary/30 bg-primary/5 text-primary">
             <Sparkles className="h-4 w-4" />
             <AlertTitle className="flex items-center gap-2">
-              Daily training rewards are ready
-              {freshPointGrantAvailable && (
+              Weekly rehearsal bonus delivered
+              {freshWeeklyBonusAvailable && (
                 <Badge variant="secondary" className="border-primary/40 bg-primary/10 text-primary">
-                  New today
+                  New this week
                 </Badge>
               )}
             </AlertTitle>
             <AlertDescription className="space-y-3 text-sm">
-              <div className="flex flex-wrap items-center gap-3 font-medium">
-                <span className="text-primary">
-                  {skillPoints} skill {skillPoints === 1 ? "point" : "points"}
-                </span>
-                <span className="text-primary">
-                  {attributePoints} attribute {attributePoints === 1 ? "point" : "points"}
-                </span>
+              <p>
+                {weeklyBonusAmount > 0
+                  ? `You gained ${weeklyBonusSourceXp} XP through play and received a ${weeklyBonusAmount} XP bonus for keeping up your momentum.`
+                  : "No bonus was awarded this cycle. Earn more XP during the week to unlock next Monday's boost."}
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                {weeklyBonusAmount > 0 && (
+                  <Badge variant="secondary" className="border-primary/30 bg-primary/10 text-primary">
+                    +{weeklyBonusAmount} XP bonus
+                  </Badge>
+                )}
+                {weeklyBonusSourceXp > 0 && (
+                  <Badge variant="outline" className="border-primary/40 text-primary">
+                    {weeklyBonusSourceXp} XP earned
+                  </Badge>
+                )}
+                {weeklyBonusStreak > 1 && (
+                  <Badge variant="outline" className="border-primary/40 text-primary">
+                    {weeklyBonusStreak}-week streak
+                  </Badge>
+                )}
               </div>
-              {formattedLastPointRefresh && (
+              {formattedWeeklyBonusRecorded && (
                 <p className="text-xs text-primary/70">
-                  Last conversion ran {formattedLastPointRefresh} UTC
+                  Processed {formattedWeeklyBonusRecorded} UTC · Next bonus hits Mondays at 05:15 UTC.
                 </p>
               )}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={() => navigate("/training")}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Allocate points
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-primary/30 bg-primary/5 text-primary">
+            <Sparkles className="h-4 w-4" />
+            <AlertTitle>Weekly rehearsal bonus</AlertTitle>
+            <AlertDescription className="text-sm">
+              Build experience through gigs, practice, and storytelling. Every Monday at 05:15 UTC we grant a bonus based on the XP you earned over the previous week.
             </AlertDescription>
           </Alert>
         )}
@@ -400,16 +456,14 @@ const Dashboard = () => {
               <CardContent className="space-y-3">
                 {activities.length > 0 ? activities.map(activity => {
                   const metadata = (activity.metadata as Record<string, unknown> | null) ?? null;
-                  const skillPointsAwarded = typeof metadata?.skill_points === "number"
-                    ? metadata.skill_points
-                    : Number(metadata?.skill_points ?? 0);
-                  const attributePointsAwarded = typeof metadata?.attribute_points === "number"
-                    ? metadata.attribute_points
-                    : Number(metadata?.attribute_points ?? 0);
-                  const experienceConverted = typeof metadata?.experience_converted === "number"
-                    ? metadata.experience_converted
-                    : Number(metadata?.experience_converted ?? 0);
+                  const skillPointsAwarded = toNumber(metadata?.skill_points);
+                  const attributePointsAwarded = toNumber(metadata?.attribute_points);
+                  const experienceConverted = toNumber(metadata?.experience_converted);
+                  const bonusAwarded = toNumber(metadata?.bonus_awarded);
+                  const experienceGainedFromBonus = toNumber(metadata?.experience_gained);
+                  const streakCount = toNumber(metadata?.streak);
                   const isPointGrant = activity.activity_type === "point_grant";
+                  const isWeeklyBonus = activity.activity_type === "weekly_bonus";
 
                   return (
                     <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-secondary/30">
@@ -445,12 +499,83 @@ const Dashboard = () => {
                             )}
                           </div>
                         )}
+                        {isWeeklyBonus && (
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                            {bonusAwarded > 0 && (
+                              <Badge variant="secondary" className="border-primary/20 bg-primary/10 text-primary">
+                                +{bonusAwarded} XP bonus
+                              </Badge>
+                            )}
+                            {experienceGainedFromBonus > 0 && (
+                              <Badge variant="outline" className="border-primary/30 text-primary">
+                                {experienceGainedFromBonus} XP earned
+                              </Badge>
+                            )}
+                            {streakCount > 1 && (
+                              <Badge variant="outline" className="border-primary/30 text-primary">
+                                {streakCount}-week streak
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
                 }) : (
                   <p className="text-center text-muted-foreground text-sm py-4">
                     No recent activity. Start your musical journey!
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  XP Ledger
+                </CardTitle>
+                <CardDescription>Weekly bonuses and other XP adjustments appear here.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {recentLedgerEntries.length > 0 ? recentLedgerEntries.map(entry => {
+                  const entryMetadata = (entry.metadata as Record<string, unknown> | null) ?? null;
+                  const sourceXp = toNumber(entryMetadata?.experience_gained);
+                  const streak = toNumber(entryMetadata?.streak);
+                  const recordedAt = parseDate(entry.recorded_at);
+                  const recordedLabel = recordedAt
+                    ? new Intl.DateTimeFormat(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      }).format(recordedAt)
+                    : new Date(entry.recorded_at).toLocaleString();
+                  const isGain = entry.amount >= 0;
+                  const badgeVariant = isGain ? "secondary" : "outline";
+                  const badgeClasses = isGain
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-destructive/30 text-destructive";
+
+                  return (
+                    <div key={entry.id} className="flex items-start justify-between gap-3 rounded-lg border border-primary/10 bg-secondary/20 p-3">
+                      <div>
+                        <p className="text-sm font-medium">{formatLedgerReason(entry.reason)}</p>
+                        <p className="text-xs text-muted-foreground">{recordedLabel} UTC</p>
+                        {entry.reason === "weekly_bonus" && sourceXp > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Based on {sourceXp} XP earned{streak > 1 ? ` • ${streak}-week streak` : ""}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant={badgeVariant} className={badgeClasses}>
+                        {entry.amount >= 0 ? "+" : ""}{entry.amount} XP
+                      </Badge>
+                    </div>
+                  );
+                }) : (
+                  <p className="text-center text-muted-foreground text-sm py-4">
+                    No XP adjustments yet. Keep playing to unlock your first weekly bonus.
                   </p>
                 )}
               </CardContent>
