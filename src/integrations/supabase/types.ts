@@ -825,6 +825,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          attribute_points_available: number | null
           age: number | null
           avatar_url: string | null
           bio: string | null
@@ -835,6 +836,7 @@ export type Database = {
           display_name: string | null
           engagement_rate: number | null
           experience: number | null
+          experience_at_last_conversion: number | null
           fame: number | null
           fans: number | null
           followers: number | null
@@ -842,7 +844,9 @@ export type Database = {
           health: number | null
           id: string
           is_active: boolean
+          last_point_conversion_at: string | null
           level: number | null
+          skill_points_available: number | null
           slot_number: number
           unlock_cost: number
           updated_at: string | null
@@ -850,6 +854,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          attribute_points_available?: number | null
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
@@ -860,6 +865,7 @@ export type Database = {
           display_name?: string | null
           engagement_rate?: number | null
           experience?: number | null
+          experience_at_last_conversion?: number | null
           fame?: number | null
           fans?: number | null
           followers?: number | null
@@ -867,7 +873,9 @@ export type Database = {
           health?: number | null
           id?: string
           is_active?: boolean
+          last_point_conversion_at?: string | null
           level?: number | null
+          skill_points_available?: number | null
           slot_number?: number
           unlock_cost?: number
           updated_at?: string | null
@@ -875,6 +883,7 @@ export type Database = {
           username: string
         }
         Update: {
+          attribute_points_available?: number | null
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
@@ -885,6 +894,7 @@ export type Database = {
           display_name?: string | null
           engagement_rate?: number | null
           experience?: number | null
+          experience_at_last_conversion?: number | null
           fame?: number | null
           fans?: number | null
           followers?: number | null
@@ -892,7 +902,9 @@ export type Database = {
           health?: number | null
           id?: string
           is_active?: boolean
+          last_point_conversion_at?: string | null
           level?: number | null
+          skill_points_available?: number | null
           slot_number?: number
           unlock_cost?: number
           updated_at?: string | null

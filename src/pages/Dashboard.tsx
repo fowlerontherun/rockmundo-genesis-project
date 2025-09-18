@@ -3,19 +3,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Music, 
-  Users, 
-  Calendar, 
-  TrendingUp, 
-  Guitar, 
-  Mic, 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Music,
+  Users,
+  Calendar,
+  TrendingUp,
+  Guitar,
+  Mic,
   Headphones,
   DollarSign,
   Star,
   Play,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  ArrowRight
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
@@ -31,7 +33,7 @@ const genderLabels: Record<string, string> = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { profile, skills, attributes, activities, loading, error } = useGameData();
+  const { profile, skills, attributes, activities, loading, error, freshPointGrantAvailable } = useGameData();
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
 
   const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -58,6 +60,7 @@ const Dashboard = () => {
       case "song": return <Music className="h-4 w-4" />;
       case "join": return <Star className="h-4 w-4" />;
       case "busking": return <Mic className="h-4 w-4" />;
+      case "point_grant": return <Sparkles className="h-4 w-4" />;
       default: return <Star className="h-4 w-4" />;
     }
   };
@@ -138,9 +141,25 @@ const Dashboard = () => {
     return null;
   }
 
-  // Calculate experience to next level (simple formula)
-  const experienceToNext = profile.level * 1000;
-  const experienceProgress = (profile.experience % 1000);
+  const parseDate = (value?: string | null) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const experienceProgress = profile.experience % 1000;
+  const skillPoints = Number(profile.skill_points_available ?? 0);
+  const attributePoints = Number(profile.attribute_points_available ?? 0);
+  const hasUnspentPoints = skillPoints + attributePoints > 0;
+  const lastPointRefresh = parseDate(profile.last_point_conversion_at ?? null);
+  const formattedLastPointRefresh = lastPointRefresh
+    ? new Intl.DateTimeFormat(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(lastPointRefresh)
+    : null;
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -192,6 +211,44 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
+
+        {hasUnspentPoints && (
+          <Alert className="border-primary/30 bg-primary/5 text-primary">
+            <Sparkles className="h-4 w-4" />
+            <AlertTitle className="flex items-center gap-2">
+              Daily training rewards are ready
+              {freshPointGrantAvailable && (
+                <Badge variant="secondary" className="border-primary/40 bg-primary/10 text-primary">
+                  New today
+                </Badge>
+              )}
+            </AlertTitle>
+            <AlertDescription className="space-y-3 text-sm">
+              <div className="flex flex-wrap items-center gap-3 font-medium">
+                <span className="text-primary">
+                  {skillPoints} skill {skillPoints === 1 ? "point" : "points"}
+                </span>
+                <span className="text-primary">
+                  {attributePoints} attribute {attributePoints === 1 ? "point" : "points"}
+                </span>
+              </div>
+              {formattedLastPointRefresh && (
+                <p className="text-xs text-primary/70">
+                  Last conversion ran {formattedLastPointRefresh} UTC
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => navigate("/training")}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Allocate points
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -340,24 +397,57 @@ const Dashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {activities.length > 0 ? activities.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-secondary/30">
-                    <div className="text-primary mt-0.5">
-                      {getActivityIcon(activity.activity_type)}
+                {activities.length > 0 ? activities.map(activity => {
+                  const metadata = (activity.metadata as Record<string, unknown> | null) ?? null;
+                  const skillPointsAwarded = typeof metadata?.skill_points === "number"
+                    ? metadata.skill_points
+                    : Number(metadata?.skill_points ?? 0);
+                  const attributePointsAwarded = typeof metadata?.attribute_points === "number"
+                    ? metadata.attribute_points
+                    : Number(metadata?.attribute_points ?? 0);
+                  const experienceConverted = typeof metadata?.experience_converted === "number"
+                    ? metadata.experience_converted
+                    : Number(metadata?.experience_converted ?? 0);
+                  const isPointGrant = activity.activity_type === "point_grant";
+
+                  return (
+                    <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg bg-secondary/30">
+                      <div className="text-primary mt-0.5">
+                        {getActivityIcon(activity.activity_type)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{activity.message}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(activity.created_at).toLocaleDateString()}
+                        </p>
+                        {activity.earnings > 0 && (
+                          <Badge variant="outline" className="mt-1 text-xs border-success text-success">
+                            +${activity.earnings}
+                          </Badge>
+                        )}
+                        {isPointGrant && (
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                            {skillPointsAwarded > 0 && (
+                              <Badge variant="secondary" className="border-primary/20 bg-primary/10 text-primary">
+                                +{skillPointsAwarded} skill {skillPointsAwarded === 1 ? "point" : "points"}
+                              </Badge>
+                            )}
+                            {attributePointsAwarded > 0 && (
+                              <Badge variant="secondary" className="border-primary/20 bg-primary/10 text-primary">
+                                +{attributePointsAwarded} attribute {attributePointsAwarded === 1 ? "point" : "points"}
+                              </Badge>
+                            )}
+                            {experienceConverted > 0 && (
+                              <Badge variant="outline" className="border-primary/30 text-primary">
+                                {experienceConverted} XP converted
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.created_at).toLocaleDateString()}
-                      </p>
-                      {activity.earnings > 0 && (
-                        <Badge variant="outline" className="mt-1 text-xs border-success text-success">
-                          +${activity.earnings}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )) : (
+                  );
+                }) : (
                   <p className="text-center text-muted-foreground text-sm py-4">
                     No recent activity. Start your musical journey!
                   </p>
