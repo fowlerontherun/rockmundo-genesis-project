@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import ChatWindow from "@/components/realtime/ChatWindow";
+import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
 import { deriveCityChannel } from "@/utils/chat";
 
 type ChatScope = "general" | "city";
