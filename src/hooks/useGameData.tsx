@@ -87,6 +87,75 @@ interface GameDataContextValue {
 
 const GameDataContext = createContext<GameDataContextValue | undefined>(undefined);
 
+const missingProviderMessage = "useGameData must be used within a GameDataProvider";
+
+const warnMissingProvider = () => {
+  if (typeof console !== "undefined") {
+    console.warn(missingProviderMessage);
+  }
+};
+
+const defaultGameDataContext: GameDataContextValue = {
+  characters: [],
+  selectedCharacterId: null,
+  profile: null,
+  skillDefinitions: [],
+  skillProgress: [],
+  unlockedSkills: {},
+  skills: null,
+  attributes: {},
+  activities: [],
+  currentCity: null,
+  loading: false,
+  error: missingProviderMessage,
+  hasCharacters: false,
+  skillUnlocks: [],
+  setActiveCharacter: async () => {
+    warnMissingProvider();
+  },
+  clearSelectedCharacter: () => {
+    warnMissingProvider();
+  },
+  updateProfile: async () => {
+    warnMissingProvider();
+    return undefined;
+  },
+  updateSkills: async () => {
+    warnMissingProvider();
+    return undefined;
+  },
+  updateAttributes: async () => {
+    warnMissingProvider();
+    return undefined;
+  },
+  addActivity: async () => {
+    warnMissingProvider();
+    return undefined;
+  },
+  createCharacter: async () => {
+    warnMissingProvider();
+    throw new Error(missingProviderMessage);
+  },
+  refreshCharacters: async () => {
+    warnMissingProvider();
+    return [];
+  },
+  refetch: async () => {
+    warnMissingProvider();
+  },
+  resetCharacter: async () => {
+    warnMissingProvider();
+  },
+  upsertSkillProgress: async () => {
+    warnMissingProvider();
+    return [];
+  },
+  upsertSkillUnlocks: async () => {
+    warnMissingProvider();
+    return [];
+  }
+};
+
 const readStoredCharacterId = () => {
   if (typeof window === "undefined") return null;
   const value = window.localStorage.getItem(CHARACTER_STORAGE_KEY);
@@ -760,7 +829,7 @@ export const GameDataProvider = ({ children }: { children: ReactNode }) => {
 export const useGameData = (): GameDataContextValue => {
   const context = useContext(GameDataContext);
   if (!context) {
-    throw new Error("useGameData must be used within a GameDataProvider");
+    return defaultGameDataContext;
   }
 
   return context;
