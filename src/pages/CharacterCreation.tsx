@@ -78,8 +78,8 @@ const backgrounds = [
 ];
 
 const DEFAULT_TOTAL_SKILL_POINTS = 0;
-const MIN_SKILL_VALUE = 0;
-const MAX_SKILL_VALUE = 100;
+const MIN_SKILL_VALUE = 1;
+const MAX_SKILL_VALUE = 10;
 const ATTRIBUTE_MIN_VALUE = 0;
 const ATTRIBUTE_MAX_VALUE = 3;
 const ATTRIBUTE_SLIDER_STEP = 0.1;
@@ -1721,7 +1721,7 @@ const CharacterCreation = () => {
               Skill Distribution
             </CardTitle>
             <CardDescription>
-              Allocate your starting strengths across musical and career disciplines. Every skill ranges from 0-100 and influences early gameplay systems.
+              Allocate your starting strengths across musical and career disciplines. Every skill ranges from 1-10 and influences early gameplay systems.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
