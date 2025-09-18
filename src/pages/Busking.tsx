@@ -557,6 +557,7 @@ const Busking = () => {
     attributes,
     xpWallet,
     updateProfile,
+    awardActionXp,
     updateAttributes,
     addActivity,
     loading: gameLoading,
@@ -1109,12 +1110,27 @@ const Busking = () => {
 
       const nextCash = (profile.cash ?? 0) + cashEarned;
       const nextFame = (profile.fame ?? 0) + fameGained;
-      const nextExperience = (profile.experience ?? 0) + experienceGained;
+      if (experienceGained > 0) {
+        await awardActionXp({
+          amount: experienceGained,
+          category: "performance",
+          actionKey: "busking_session",
+          uniqueEventId: sessionRecord.id,
+          metadata: {
+            session_id: sessionRecord.id,
+            location_id: selectedLocation.id,
+            modifier_id: modifier?.id ?? null,
+            success,
+            cash_earned: cashEarned,
+            fame_gained: fameGained,
+            experience_gained: experienceGained,
+          },
+        });
+      }
 
       await updateProfile({
         cash: nextCash,
         fame: nextFame,
-        experience: nextExperience,
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};

@@ -178,16 +178,7 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const {
-    profile,
-    skills,
-    attributes,
-    currentCity,
-    updateProfile,
-    updateAttributes,
-    addActivity,
-    refreshProgressionState,
-  } = useGameData();
+  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity, awardActionXp } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
@@ -757,6 +748,24 @@ const GigBooking = () => {
       });
 
       await refreshProgressionState();
+
+      if (expGain > 0) {
+        await awardActionXp({
+          amount: expGain,
+          category: "performance",
+          actionKey: "gig_show",
+          uniqueEventId: gig.id,
+          metadata: {
+            gig_id: gig.id,
+            venue_id: gig.venue_id,
+            show_type: showType,
+            success: isSuccess,
+            attendance,
+            payment: actualPayment,
+            fame_gained: fanGain,
+          },
+        });
+      }
 
       await updateProfile({
         cash: newCash,

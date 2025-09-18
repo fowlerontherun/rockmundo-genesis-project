@@ -253,7 +253,7 @@ const MusicCreation = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const gameData = useGameData();
-  const { profile, skills, updateProfile, updateSkills, addActivity } = gameData;
+  const { profile, skills, updateProfile, updateSkills, addActivity, awardActionXp } = gameData;
 
   const skillProgressSource = useMemo<SkillProgressSource>(() => {
     const withProgress = gameData as unknown as {
@@ -948,10 +948,24 @@ const MusicCreation = () => {
       );
 
       if (profile) {
-        const xpResult = applyAttributeToValue(session.quality_gain * 5, attributes, RECORDING_ATTRIBUTE_KEYS);
+        if (experienceGain > 0) {
+          await awardActionXp({
+            amount: experienceGain,
+            category: "practice",
+            actionKey: "recording_session",
+            uniqueEventId: session.id,
+            metadata: {
+              session_id: session.id,
+              song_id: song.id,
+              quality_gain: session.quality_gain,
+              total_cost: session.total_cost,
+              takes_recorded: session.total_takes,
+            },
+          });
+        }
+
         await updateProfile({
           cash: Math.max(0, (profile.cash ?? 0) - session.total_cost),
-          experience: (profile.experience ?? 0) + experienceGain
         });
       }
 
