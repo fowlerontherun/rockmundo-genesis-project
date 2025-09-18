@@ -411,7 +411,11 @@ const CharacterCreation = () => {
 
         if (error) throw error;
 
-        setCities((data as CityOption[] | null) ?? []);
+        const sanitizedCities = ((data as CityOption[] | null) ?? []).filter(
+          (city): city is CityOption => typeof city.id === "string" && city.id.trim().length > 0,
+        );
+
+        setCities(sanitizedCities);
       } catch (error) {
         console.error("Failed to load cities:", error);
         setCitiesError("We couldn't load cities right now. You can update this later in your profile.");

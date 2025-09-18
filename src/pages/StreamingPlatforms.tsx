@@ -561,7 +561,10 @@ const StreamingPlatforms = () => {
         }
       }
 
-      const songsData: SongRecord[] = finalSongs ?? [];
+      const songsDataRaw: SongRecord[] = finalSongs ?? [];
+      const songsData: SongRecord[] = songsDataRaw.filter(
+        (song): song is SongRecord => typeof song.id === 'string' && song.id.trim().length > 0,
+      );
 
       let streamingStatsData: StreamingStatsRecord[] = [];
       if (songsData.length > 0) {

@@ -179,7 +179,11 @@ const SkillDefinitionsManager: React.FC = () => {
       const skillRows = (skillsResponse.data ?? []) as SkillDefinitionRow[];
       const parentRows = (parentLinksResponse.data ?? []) as SkillParentLinkRow[];
 
-      const normalizedSkills = skillRows.map<SkillDefinitionWithParents>((row) => ({
+      const sanitizedSkillRows = skillRows.filter(
+        (row): row is SkillDefinitionRow => typeof row.id === 'string' && row.id.trim().length > 0,
+      );
+
+      const normalizedSkills = sanitizedSkillRows.map<SkillDefinitionWithParents>((row) => ({
         id: row.id,
         slug: row.slug,
         displayName: row.display_name,

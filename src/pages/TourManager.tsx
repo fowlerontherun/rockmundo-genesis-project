@@ -542,7 +542,12 @@ const TourManager = () => {
         .order('capacity', { ascending: true });
 
       if (error) throw error;
-      setVenues(data || []);
+
+      const sanitizedVenues = ((data ?? []) as VenueRow[]).filter(
+        (venue): venue is VenueRow => typeof venue.id === 'string' && venue.id.trim().length > 0,
+      );
+
+      setVenues(sanitizedVenues);
     } catch (error: unknown) {
       console.error('Error loading venues:', error);
     } finally {
@@ -560,7 +565,12 @@ const TourManager = () => {
         .order('name', { ascending: true });
 
       if (error) throw error;
-      setCities((data ?? []) as CityRow[]);
+
+      const sanitizedCities = ((data ?? []) as CityRow[]).filter(
+        (city): city is CityRow => typeof city.id === 'string' && city.id.trim().length > 0,
+      );
+
+      setCities(sanitizedCities);
     } catch (error: unknown) {
       const fallbackMessage = "Failed to load cities";
       const errorMessage = error instanceof Error ? error.message : fallbackMessage;

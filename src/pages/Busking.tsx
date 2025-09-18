@@ -681,12 +681,21 @@ const Busking = () => {
           : fallbackModifiers;
       const fetchedHistory = (historyResponse.data as BuskingSessionWithRelations[]) ?? [];
 
-      setLocations(fetchedLocations);
-      setModifiers(fetchedModifiers);
+      const sanitizedLocations = fetchedLocations.filter(
+        (location): location is BuskingLocation =>
+          typeof location.id === "string" && location.id.trim().length > 0,
+      );
+      const sanitizedModifiers = fetchedModifiers.filter(
+        (modifier): modifier is BuskingModifier =>
+          typeof modifier.id === "string" && modifier.id.trim().length > 0,
+      );
+
+      setLocations(sanitizedLocations);
+      setModifiers(sanitizedModifiers);
       setHistory(fetchedHistory);
 
-      if (fetchedLocations.length > 0) {
-        setSelectedLocationId((current) => current || fetchedLocations[0].id);
+      if (sanitizedLocations.length > 0) {
+        setSelectedLocationId((current) => current || sanitizedLocations[0].id);
       } else {
         setSelectedLocationId("");
       }
