@@ -84,10 +84,37 @@ const ATTRIBUTE_MAX_VALUE = 3;
 const ATTRIBUTE_SLIDER_STEP = 0.1;
 
 const extractMissingColumn = (error: PostgrestError | null | undefined) => {
-  const match = error?.message?.match(
-    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i
+  if (!error) {
+    return null;
+  }
+
+  const haystacks = [error.message, error.details, error.hint].filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
   );
-  return match?.[1] ?? null;
+
+  const patterns = [
+    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i,
+    /'([\w]+)'\s+column/i,
+  ];
+
+  for (const haystack of haystacks) {
+    for (const pattern of patterns) {
+      const match = haystack.match(pattern);
+      if (match?.[1]) {
+        return match[1];
+      }
+    }
+  }
+
+  if (error.code === "PGRST204") {
+    // PostgREST may return this error before its schema cache refreshes.
+    const fallbackMatch = error.message?.match(/'([\w]+)'/);
+    if (fallbackMatch?.[1]) {
+      return fallbackMatch[1];
+    }
+  }
+
+  return null;
 };
 
 const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
