@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CharacterSelect from "@/components/CharacterSelect";
 import AvatarWithClothing from "@/components/avatar/AvatarWithClothing";
 import {
@@ -27,13 +28,19 @@ import {
   RotateCcw,
   Loader2,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  Check,
+  X
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { useEquippedClothing } from "@/hooks/useEquippedClothing";
+import { useFriendships, type FriendProfileSummary } from "@/hooks/useFriendships";
 import {
   Select,
   SelectContent,
@@ -42,6 +49,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Database } from "@/integrations/supabase/types";
+import { searchProfiles, type SearchProfilesRow } from "@/integrations/supabase/profileSearch";
+import { sendFriendRequest } from "@/integrations/supabase/friends";
 import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   AlertDialog,
@@ -63,6 +72,7 @@ interface FanMetrics {
 }
 
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+type FriendPresenceStatus = Database["public"]["Enums"]["chat_participant_status"];
 
 type CityOption = {
   id: string;
@@ -145,6 +155,123 @@ const Profile = () => {
   const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
   const [cityLoading, setCityLoading] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
+  const [friendSearchTerm, setFriendSearchTerm] = useState("");
+  const [friendSearchResults, setFriendSearchResults] = useState<SearchProfilesRow[]>([]);
+  const [friendSearchLoading, setFriendSearchLoading] = useState(false);
+  const [friendSearchError, setFriendSearchError] = useState<string | null>(null);
+  const [sendingFriendRequestTo, setSendingFriendRequestTo] = useState<string | null>(null);
+  const [requestedFriendUserIds, setRequestedFriendUserIds] = useState<Record<string, boolean>>({});
+  const friendSearchRequestId = useRef(0);
+
+  const {
+    loading: friendsLoading,
+    error: friendsError,
+    incomingRequests,
+    outgoingRequests,
+    acceptedFriends,
+    presenceByUserId,
+    acceptFriendship,
+    declineFriendship,
+  } = useFriendships(user?.id);
+
+  const getFriendDisplayName = (friendProfile?: FriendProfileSummary) => {
+    if (!friendProfile) {
+      return "Unknown performer";
+    }
+
+    const label = friendProfile.displayName && friendProfile.displayName.trim().length > 0
+      ? friendProfile.displayName
+      : friendProfile.username;
+
+    return label && label.trim().length > 0 ? label : "Unknown performer";
+  };
+
+  const getFriendInitials = (friendProfile?: FriendProfileSummary) => {
+    const label = getFriendDisplayName(friendProfile);
+    const initials = label
+      .split(" ")
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase())
+      .join("")
+      .slice(0, 2);
+
+    return initials || "RM";
+  };
+
+  const presenceLabel = (status?: FriendPresenceStatus) => {
+    if (!status) {
+      return "Offline";
+    }
+
+    if (status === "typing") {
+      return "Typing";
+    }
+
+    if (status === "muted") {
+      return "Do not disturb";
+    }
+
+    return "Online";
+  };
+
+  const presenceBadgeStyles = (status?: FriendPresenceStatus) => {
+    if (status === "typing" || status === "online") {
+      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-500";
+    }
+
+    if (status === "muted") {
+      return "border-amber-500/40 bg-amber-500/10 text-amber-500";
+    }
+
+    return "border-muted-foreground/20 bg-muted/40 text-muted-foreground";
+  };
+
+  const isPresenceOnline = (status?: FriendPresenceStatus) => status === "online" || status === "typing";
+
+  const showFriendshipError = (fallback: string, error: unknown) => {
+    const message = error instanceof Error ? error.message : fallback;
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: message === fallback ? fallback : `${fallback}: ${message}`,
+    });
+  };
+
+  const handleAcceptFriendship = async (friendshipId: string) => {
+    try {
+      await acceptFriendship(friendshipId);
+      toast({
+        title: "Friend request accepted",
+        description: "You're now connected.",
+      });
+    } catch (error) {
+      showFriendshipError("Could not accept friend request", error);
+    }
+  };
+
+  const handleDeclineFriendship = async (friendshipId: string) => {
+    try {
+      await declineFriendship(friendshipId);
+      toast({
+        title: "Request declined",
+        description: "The invitation has been dismissed.",
+      });
+    } catch (error) {
+      showFriendshipError("Could not decline friend request", error);
+    }
+  };
+
+  const handleCancelFriendship = async (friendshipId: string) => {
+    try {
+      await declineFriendship(friendshipId);
+      toast({
+        title: "Request cancelled",
+        description: "We've let them know you changed your mind.",
+      });
+    } catch (error) {
+      showFriendshipError("Could not cancel friend request", error);
+    }
+  };
 
   const showProfileDetails = Boolean(profile && skills && attributes);
 
@@ -231,6 +358,68 @@ const Profile = () => {
     }
   }, [user]);
 
+  const executeFriendSearch = useCallback(
+    async (term: string) => {
+      friendSearchRequestId.current += 1;
+      const requestId = friendSearchRequestId.current;
+
+      if (!user) {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchResults([]);
+          setFriendSearchError(null);
+          setFriendSearchLoading(false);
+        }
+        return;
+      }
+
+      const trimmed = term.trim();
+
+      if (trimmed.length === 0) {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchResults([]);
+          setFriendSearchError(null);
+          setFriendSearchLoading(false);
+        }
+        return;
+      }
+
+      setFriendSearchLoading(true);
+      setFriendSearchError(null);
+
+      try {
+        const results = await searchProfiles(trimmed);
+
+        if (requestId !== friendSearchRequestId.current) {
+          return;
+        }
+
+        const filtered = results.filter(result => result.user_id !== user.id);
+        setFriendSearchResults(filtered);
+      } catch (error) {
+        if (requestId !== friendSearchRequestId.current) {
+          return;
+        }
+
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "Failed to search for players.";
+
+        setFriendSearchError(message);
+        toast({
+          variant: "destructive",
+          title: "Search failed",
+          description: message,
+        });
+      } finally {
+        if (requestId === friendSearchRequestId.current) {
+          setFriendSearchLoading(false);
+        }
+      }
+    },
+    [toast, user],
+  );
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -302,6 +491,16 @@ const Profile = () => {
 
     fetchFanMetrics();
   }, [user, fetchFanMetrics]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      void executeFriendSearch(friendSearchTerm);
+    }, 400);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [friendSearchTerm, executeFriendSearch]);
 
   useEffect(() => {
     if (!user) return;
@@ -394,6 +593,73 @@ const Profile = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSendFriendRequest = useCallback(
+    async (target: SearchProfilesRow) => {
+      if (!user || !profile) {
+        toast({
+          variant: "destructive",
+          title: "Profile unavailable",
+          description: "You need an active character to send friend requests.",
+        });
+        return;
+      }
+
+      if (target.user_id === user.id) {
+        toast({
+          variant: "destructive",
+          title: "Cannot send request",
+          description: "You can't send a friend request to yourself.",
+        });
+        return;
+      }
+
+      const requestKey = target.user_id;
+      setSendingFriendRequestTo(requestKey);
+
+      try {
+        await sendFriendRequest({
+          senderProfileId: profile.id,
+          senderUserId: user.id,
+          recipientProfileId: target.profile_id,
+          recipientUserId: target.user_id,
+        });
+
+        setRequestedFriendUserIds((previous) => ({ ...previous, [requestKey]: true }));
+
+        toast({
+          title: "Friend request sent",
+          description: `Waiting for ${target.display_name ?? target.username} to respond.`,
+        });
+      } catch (error) {
+        const fallbackMessage = "Failed to send friend request. Please try again.";
+        const rawMessage = error instanceof Error && error.message ? error.message : fallbackMessage;
+        const normalized = rawMessage.toLowerCase();
+        const duplicateRequest =
+          normalized.includes("friend_requests_pending_pair_idx") ||
+          normalized.includes("duplicate key value");
+
+        if (duplicateRequest) {
+          setRequestedFriendUserIds((previous) => ({ ...previous, [requestKey]: true }));
+        }
+
+        toast({
+          variant: duplicateRequest ? "default" : "destructive",
+          title: duplicateRequest ? "Request already sent" : "Unable to send friend request",
+          description: duplicateRequest
+            ? "Wait for your friend to respond before sending another invite."
+            : rawMessage,
+        });
+      } finally {
+        setSendingFriendRequestTo((current) => (current === requestKey ? null : current));
+      }
+    },
+    [profile, toast, user],
+  );
+
+  const handleFriendSearchInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFriendSearchTerm(event.target.value);
   };
 
   const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -511,12 +777,13 @@ const Profile = () => {
 
         {showProfileDetails ? (
           <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">Profile Info</TabsTrigger>
-            <TabsTrigger value="stats">Statistics</TabsTrigger>
-          </TabsList>
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+              <TabsTrigger value="profile">Profile Info</TabsTrigger>
+              <TabsTrigger value="friends">Friends</TabsTrigger>
+              <TabsTrigger value="stats">Statistics</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="profile" className="space-y-6">
+            <TabsContent value="profile" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardContent className="pt-6">
@@ -762,9 +1029,207 @@ const Profile = () => {
                 </Card>
               </div>
             </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="stats" className="space-y-6">
+            <TabsContent value="friends" className="space-y-6">
+              {friendsError && (
+                <Alert variant="destructive">
+                  <AlertTitle>Unable to load friends</AlertTitle>
+                  <AlertDescription>{friendsError}</AlertDescription>
+                </Alert>
+              )}
+
+              {friendsLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span>Syncing your social circle...</span>
+                </div>
+              )}
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                    Incoming requests
+                    <Badge variant="secondary">{incomingRequests.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Approve performers who want to connect with you.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {incomingRequests.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">You don't have any pending friend requests right now.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {incomingRequests.map(request => (
+                        <div
+                          key={request.friendshipId}
+                          className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-secondary/40 p-4 sm:flex-row sm:items-center"
+                        >
+                          <div className="flex items-center gap-3 sm:flex-1">
+                            <Avatar className="h-12 w-12">
+                              {request.profile?.avatarUrl ? (
+                                <AvatarImage
+                                  src={request.profile.avatarUrl}
+                                  alt={`${getFriendDisplayName(request.profile)} avatar`}
+                                />
+                              ) : (
+                                <AvatarFallback>{getFriendInitials(request.profile)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{getFriendDisplayName(request.profile)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                @{request.profile?.username ?? "unknown"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 sm:ml-auto">
+                            <Button
+                              size="sm"
+                              className="bg-gradient-primary"
+                              onClick={() => {
+                                void handleAcceptFriendship(request.friendshipId);
+                              }}
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                void handleDeclineFriendship(request.friendshipId);
+                              }}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Decline
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserMinus className="h-5 w-5 text-primary" />
+                    Outgoing requests
+                    <Badge variant="secondary">{outgoingRequests.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Requests you've sent and are waiting on.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {outgoingRequests.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No pending requests from you at the moment.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {outgoingRequests.map(request => (
+                        <div
+                          key={request.friendshipId}
+                          className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-secondary/40 p-4 sm:flex-row sm:items-center"
+                        >
+                          <div className="flex items-center gap-3 sm:flex-1">
+                            <Avatar className="h-12 w-12">
+                              {request.profile?.avatarUrl ? (
+                                <AvatarImage
+                                  src={request.profile.avatarUrl}
+                                  alt={`${getFriendDisplayName(request.profile)} avatar`}
+                                />
+                              ) : (
+                                <AvatarFallback>{getFriendInitials(request.profile)}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{getFriendDisplayName(request.profile)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                @{request.profile?.username ?? "unknown"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 sm:ml-auto">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                void handleCancelFriendship(request.friendshipId);
+                              }}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-primary" />
+                    Your friends
+                    <Badge variant="secondary">{acceptedFriends.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>See who's online and ready to jam.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {acceptedFriends.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Once you accept requests, your crew will appear here.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {acceptedFriends.map(friend => {
+                        const status = presenceByUserId[friend.friendUserId];
+                        const online = isPresenceOnline(status);
+                        const badgeClass = presenceBadgeStyles(status);
+
+                        return (
+                          <div
+                            key={friend.friendshipId}
+                            className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-secondary/40 p-4 sm:flex-row sm:items-center"
+                          >
+                            <div className="flex items-center gap-3 sm:flex-1">
+                              <div className="relative">
+                                <Avatar className="h-12 w-12">
+                                  {friend.profile?.avatarUrl ? (
+                                    <AvatarImage
+                                      src={friend.profile.avatarUrl}
+                                      alt={`${getFriendDisplayName(friend.profile)} avatar`}
+                                    />
+                                  ) : (
+                                    <AvatarFallback>{getFriendInitials(friend.profile)}</AvatarFallback>
+                                  )}
+                                </Avatar>
+                                <span
+                                  className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-background ${online ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
+                                />
+                              </div>
+                              <div>
+                                <p className="font-semibold">{getFriendDisplayName(friend.profile)}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  @{friend.profile?.username ?? "unknown"}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className={badgeClass}>
+                              {presenceLabel(status)}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="stats" className="space-y-6">
             <Alert className="border-primary/30 bg-primary/5 text-primary">
               <Sparkles className="h-4 w-4" />
               <AlertTitle className="flex items-center gap-2">

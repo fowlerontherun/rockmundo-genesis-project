@@ -91,6 +91,30 @@ export type Database = {
           },
         ]
       }
+      chat_participants: {
+        Row: {
+          channel: string
+          id: string
+          status: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       experience_ledger: {
         Row: {
           amount: number
@@ -135,6 +159,33 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string | null
+          id: string
+          requester_id: string
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string | null
+          id?: string
+          requester_id: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string | null
+          id?: string
+          requester_id?: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       band_members: {
         Row: {
@@ -432,6 +483,58 @@ export type Database = {
           weekly_growth?: number | null
         }
         Relationships: []
+      }
+      friend_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          pair_key: string
+          recipient_profile_id: string
+          recipient_user_id: string
+          responded_at: string | null
+          sender_profile_id: string
+          sender_user_id: string
+          status: Database["public"]["Enums"]["friend_request_status"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          recipient_profile_id: string
+          recipient_user_id: string
+          responded_at?: string | null
+          sender_profile_id: string
+          sender_user_id: string
+          status?: Database["public"]["Enums"]["friend_request_status"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          recipient_profile_id?: string
+          recipient_user_id?: string
+          responded_at?: string | null
+          sender_profile_id?: string
+          sender_user_id?: string
+          status?: Database["public"]["Enums"]["friend_request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_requests_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friend_requests_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       game_events: {
         Row: {
@@ -1648,6 +1751,30 @@ export type Database = {
       }
     }
     Views: {
+      accepted_friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string
+        }
+        Relationships: []
+      }
+      pending_friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string
+        }
+        Relationships: []
+      }
       profile_action_xp_daily_totals: {
         Row: {
           action_type: string
@@ -1702,9 +1829,30 @@ export type Database = {
         }
         Returns: boolean
       }
+      search_public_profiles: {
+        Args: {
+          search_term: string
+          result_limit?: number
+        }
+        Returns: {
+          profile_id: string
+          user_id: string
+          email: string
+          username: string
+          display_name: string | null
+          avatar_url: string | null
+          bio: string | null
+          gender: Database["public"]["Enums"]["profile_gender"]
+          city_of_birth: string | null
+          age: number
+        }[]
+      }
     }
     Enums: {
+      chat_participant_status: "muted" | "online" | "typing"
+      friendship_status: "accepted" | "blocked" | "declined" | "pending"
       app_role: "admin" | "moderator" | "user"
+      friend_request_status: "accepted" | "cancelled" | "declined" | "pending"
       profile_gender:
         | "female"
         | "male"

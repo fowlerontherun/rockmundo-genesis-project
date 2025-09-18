@@ -28,7 +28,7 @@ import { sortByOptionalKeys } from "@/utils/sorting";
 import {
   DEFAULT_PROGRESSION_COOLDOWNS,
   PROGRESSION_COOLDOWN_KEYS,
-  type PlayerXpWalletSnapshot,
+  type PlayerXpWalletSnapshot as PlayerXpWalletSnapshotData,
   type ProgressionCooldowns,
   type ProgressionFunctionResult,
   type ProgressionStateSnapshot
@@ -45,7 +45,8 @@ export type PlayerAttributes = Tables<"player_attributes">;
 export type PlayerXpWallet = Tables<"player_xp_wallet">;
 export type ActivityItem = Tables<"activity_feed">;
 export type XpLedgerEntry = Tables<"xp_ledger">;
-export type PlayerXpWallet = PlayerXpWalletSnapshot;
+
+export type PlayerXpWalletSnapshotType = PlayerXpWalletSnapshotData;
 // Temporary type definitions until database schema is updated
 type AttributeDefinition = any;
 type ProfileAttribute = any;
@@ -54,7 +55,7 @@ type ProfileAttribute = any;
 export type SkillDefinition = any;
 export type SkillProgressRow = any;
 export type SkillUnlockRow = any;
-type UnlockedSkillsMap = Record<string, boolean>;
+export type UnlockedSkillsMap = Record<string, boolean>;
 type SkillProgressUpsertInput = any;
 type SkillUnlockUpsertInput = any;
 
@@ -1147,85 +1148,6 @@ const useProvideGameData = (): GameDataContextValue => {
     writeWeeklyBonusAcknowledgement(profile.id, acknowledgementTimestamp);
     setFreshWeeklyBonusAvailable(false);
   }, [profile, xpLedger]);
-
-  const applyProgressionState = useCallback(
-    (response: ProgressionSuccessResponse | null | undefined) => {
-      if (!response) {
-        return;
-      }
-
-      if (response.cooldowns) {
-        setProgressionCooldowns(response.cooldowns);
-      }
-
-      if (response.wallet !== undefined) {
-        setXpWallet(response.wallet ?? null);
-      }
-
-      if (response.attributes) {
-        setAttributes(response.attributes);
-      }
-
-      if (response.profile) {
-        setProfile(previous => {
-          if (!previous) {
-            return previous;
-          }
-
-          const patch: Partial<PlayerProfile> & Record<string, unknown> = {
-            experience: response.profile.experience,
-            level: response.profile.level,
-            updated_at: response.profile.updated_at
-          };
-
-          if (typeof response.profile.display_name !== "undefined") {
-            patch.display_name = response.profile.display_name;
-          }
-
-          if (typeof response.profile.username === "string") {
-            patch.username = response.profile.username;
-          }
-
-          if (typeof response.profile.attribute_points_available === "number") {
-            patch.attribute_points_available = response.profile.attribute_points_available;
-          }
-
-          if (typeof response.profile.skill_points_available === "number") {
-            patch.skill_points_available = response.profile.skill_points_available;
-          }
-
-          return { ...previous, ...patch } as PlayerProfile;
-        });
-      }
-    },
-    [setAttributes, setProfile, setProgressionCooldowns, setXpWallet]
-  );
-
-  const awardActionXp = useCallback(
-    async (input: AwardActionXpInput) => {
-      const response = await invokeAwardActionXp(input);
-      if (!isProgressionSuccessResponse(response)) {
-        throw new Error(response.message ?? "Failed to award action XP.");
-      }
-
-      applyProgressionState(response);
-      return response;
-    },
-    [applyProgressionState]
-  );
-
-  const buyAttributeStar = useCallback(
-    async (input: BuyAttributeStarInput) => {
-      const response = await invokeBuyAttributeStar(input);
-      if (!isProgressionSuccessResponse(response)) {
-        throw new Error(response.message ?? "Failed to purchase attribute upgrade.");
-      }
-
-      applyProgressionState(response);
-      return response;
-    },
-    [applyProgressionState]
-  );
 
   const refreshProgressionState = useCallback(() => fetchGameData(), [fetchGameData]);
 
