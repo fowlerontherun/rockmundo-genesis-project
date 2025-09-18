@@ -121,6 +121,7 @@ export interface Database {
           name: string
           location: string | null
           capacity: number | null
+          city_id: string | null
           base_payment: number
           venue_type: string | null
           prestige_level: number
@@ -132,6 +133,7 @@ export interface Database {
           name: string
           location?: string | null
           capacity?: number | null
+          city_id?: string | null
           base_payment?: number
           venue_type?: string | null
           prestige_level?: number
@@ -143,6 +145,7 @@ export interface Database {
           name?: string
           location?: string | null
           capacity?: number | null
+          city_id?: string | null
           base_payment?: number
           venue_type?: string | null
           prestige_level?: number
