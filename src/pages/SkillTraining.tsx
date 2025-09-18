@@ -27,6 +27,14 @@ import {
 } from "@/utils/gameBalance";
 import { applyCooldownModifier, applyRewardBonus } from "@/utils/attributeModifiers";
 import {
+  ATTRIBUTE_METADATA,
+  ATTRIBUTE_MAX_VALUE,
+  ATTRIBUTE_TRAINING_INCREMENT,
+  clampAttributeValue,
+  getAttributeTrainingCost,
+  type AttributeKey
+} from "@/utils/attributeProgression";
+import {
   type LucideIcon,
   Guitar,
   Mic,
@@ -193,14 +201,18 @@ const categoryPriority = new Map<string, number>(
 
 const SkillTrainingContent = () => {
   const { toast } = useToast();
-  const {
-    profile,
-    skills,
-    attributes,
-    updateProfile,
-    addActivity,
-    loading: gameDataLoading
-  } = useGameData();
+    const {
+      profile,
+      skills,
+      attributes,
+      xpWallet,
+      updateProfile,
+      updateAttributes,
+      awardActionXp,
+      buyAttributeStar,
+      addActivity,
+      loading: gameDataLoading
+    } = useGameData();
   const {
     definitions,
     relationships,
@@ -534,9 +546,23 @@ const SkillTrainingContent = () => {
         timestamp
       });
 
+      if (focusedXp > 0) {
+        await awardActionXp({
+          amount: focusedXp,
+          category: "practice",
+          actionKey: "skill_training",
+          uniqueEventId: `${session.slug}:${timestamp}`,
+          metadata: {
+            skill_slug: session.slug,
+            skill_gain: skillGain,
+            xp_awarded: focusedXp,
+            training_cost: trainingCost,
+          },
+        });
+      }
+
       await updateProfile({
         cash: newCash,
-        experience: newExperience,
         updated_at: timestamp
       });
 
@@ -587,7 +613,12 @@ const SkillTrainingContent = () => {
       return;
     }
 
-    const availableExperience = Math.max(0, Number(profile.experience ?? 0));
+    const profileExperience = Number(profile.experience ?? 0);
+    const walletBalance =
+      typeof xpWallet?.xp_balance === "number" && Number.isFinite(xpWallet.xp_balance)
+        ? xpWallet.xp_balance
+        : null;
+    const availableExperience = Math.max(0, walletBalance ?? profileExperience);
     const trainingCost = getAttributeTrainingCost(currentValue);
 
     if (availableExperience < trainingCost) {
@@ -606,18 +637,18 @@ const SkillTrainingContent = () => {
       const timestamp = new Date().toISOString();
       const nextValue = clampAttributeValue(currentValue + ATTRIBUTE_TRAINING_INCREMENT);
       const actualGain = nextValue - currentValue;
-      const nextExperience = Math.max(0, availableExperience - trainingCost);
 
-      const attributeUpdates: Partial<PlayerAttributes> = {
-        [attributeKey]: nextValue,
-        updated_at: timestamp
-      } as Partial<PlayerAttributes>;
+      const uniqueEventId = `attribute_training:${attributeKey}:${timestamp}`;
 
-      await updateAttributes(attributeUpdates);
-
-      await updateProfile({
-        experience: nextExperience,
-        updated_at: timestamp
+      await buyAttributeStar({
+        attributeKey,
+        points: actualGain,
+        uniqueEventId,
+        metadata: {
+          source: "skill_training_center",
+          attribute_gain: actualGain,
+          training_cost: trainingCost,
+        },
       });
 
       await addActivity(
@@ -627,7 +658,8 @@ const SkillTrainingContent = () => {
         {
           attribute: attributeKey,
           gain: actualGain,
-          cost: trainingCost
+          cost: trainingCost,
+          event_id: uniqueEventId
         }
       );
 

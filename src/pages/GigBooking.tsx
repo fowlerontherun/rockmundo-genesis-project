@@ -167,7 +167,7 @@ const normalizeVenueRequirements = (
 const GigBooking = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity } = useGameData();
+  const { profile, skills, attributes, currentCity, updateProfile, updateAttributes, addActivity, awardActionXp } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
@@ -699,10 +699,27 @@ const GigBooking = () => {
       const baseExperience = (attendance / 10) * showTypeDetails.experienceModifier;
       const expGain = Math.max(1, calculateExperienceReward(baseExperience, attributeScores, "performance"));
 
+      if (expGain > 0) {
+        await awardActionXp({
+          amount: expGain,
+          category: "performance",
+          actionKey: "gig_show",
+          uniqueEventId: gig.id,
+          metadata: {
+            gig_id: gig.id,
+            venue_id: gig.venue_id,
+            show_type: showType,
+            success: isSuccess,
+            attendance,
+            payment: actualPayment,
+            fame_gained: fanGain,
+          },
+        });
+      }
+
       await updateProfile({
         cash: newCash,
         fame: newFame,
-        experience: (profile.experience || 0) + expGain
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};

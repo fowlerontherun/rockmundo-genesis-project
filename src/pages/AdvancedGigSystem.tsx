@@ -153,6 +153,7 @@ const AdvancedGigSystem: React.FC = () => {
     skillProgress,
     skillDefinitions,
     updateProfile,
+    awardActionXp,
     addActivity,
   } = useGameData();
   const navigate = useNavigate();
@@ -654,9 +655,25 @@ const AdvancedGigSystem: React.FC = () => {
         })
         .eq('id', gig.id);
 
+      if (experienceGain > 0) {
+        await awardActionXp({
+          amount: experienceGain,
+          category: "performance",
+          actionKey: "advanced_gig",
+          uniqueEventId: gig.id,
+          metadata: {
+            gig_id: gig.id,
+            show_type: currentShowType,
+            success: !isFailure,
+            earnings: totalEarningsValue,
+            fame_delta: fameDelta,
+            performance_score: Math.round(averageScore),
+          },
+        });
+      }
+
       await updateProfile({
         cash: profile.cash + totalEarningsValue,
-        experience: profile.experience + experienceGain,
         fame: updatedFame
       });
 

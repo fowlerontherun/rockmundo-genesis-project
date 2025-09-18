@@ -10,6 +10,12 @@ import {
 } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import {
+  progressionClient,
+  type AwardActionXpInput,
+  type BuyAttributeStarInput,
+  type ProgressionResponse
+} from "@/integrations/supabase/progressionClient";
 import { useAuth } from "@/hooks/use-auth-context";
 import type { Tables } from "@/integrations/supabase/types";
 import { sortByOptionalKeys } from "@/utils/sorting";
@@ -22,6 +28,7 @@ import type {
 export type PlayerProfile = Tables<"profiles">;
 export type PlayerSkills = Tables<"player_skills">;
 export type PlayerAttributes = Tables<"player_attributes">;
+export type PlayerXpWallet = Tables<"player_xp_wallet">;
 export type ActivityItem = Tables<"activity_feed">;
 export type ExperienceLedgerEntry = Tables<"experience_ledger">;
 // Temporary type definitions until database schema is updated
@@ -162,6 +169,55 @@ const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: strin
   return rest as T;
 };
 
+const extractLedgerEntriesFromResult = (result: unknown): ExperienceLedgerEntry[] => {
+  if (!result || typeof result !== "object") {
+    return [];
+  }
+
+  const source = result as Record<string, unknown>;
+  const entries: ExperienceLedgerEntry[] = [];
+  const seen = new Set<string>();
+
+  const candidateObjects = [
+    source.ledger_entry,
+    source.xp_ledger_entry,
+    source.ledgerEntry,
+    source.ledger,
+  ];
+
+  for (const candidate of candidateObjects) {
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      const entry = candidate as ExperienceLedgerEntry;
+      if (entry.id && !seen.has(entry.id)) {
+        entries.push(entry);
+        seen.add(entry.id);
+      }
+    }
+  }
+
+  const candidateLists = [
+    source.ledger_entries,
+    source.xp_ledger_entries,
+    source.ledger,
+  ];
+
+  for (const list of candidateLists) {
+    if (Array.isArray(list)) {
+      for (const item of list) {
+        if (item && typeof item === "object") {
+          const entry = item as ExperienceLedgerEntry;
+          if (entry.id && !seen.has(entry.id)) {
+            entries.push(entry);
+            seen.add(entry.id);
+          }
+        }
+      }
+    }
+  }
+
+  return entries;
+};
+
 export interface CreateCharacterInput {
   username: string;
   displayName?: string;
@@ -182,6 +238,7 @@ interface GameDataContextValue {
   attributes: AttributesMap;
   activities: ActivityItem[];
   experienceLedger: ExperienceLedgerEntry[];
+  xpWallet: PlayerXpWallet | null;
   currentCity: Tables<"cities"> | null;
   loading: boolean;
   error: string | null;
@@ -197,6 +254,8 @@ interface GameDataContextValue {
     message: string,
     earnings?: number
   ) => Promise<ActivityItem | undefined>;
+  awardActionXp: (input: AwardActionXpInput) => Promise<ProgressionResponse>;
+  buyAttributeStar: (input: BuyAttributeStarInput) => Promise<ProgressionResponse>;
   acknowledgeWeeklyBonus: () => void;
   createCharacter: (input: CreateCharacterInput) => Promise<PlayerProfile>;
   refreshCharacters: () => Promise<PlayerProfile[]>;
@@ -234,6 +293,7 @@ const defaultGameDataContext: GameDataContextValue = {
   attributes: {},
   activities: [],
   experienceLedger: [],
+  xpWallet: null,
   currentCity: null,
   loading: false,
   error: missingProviderMessage,
@@ -260,6 +320,14 @@ const defaultGameDataContext: GameDataContextValue = {
   addActivity: async () => {
     warnMissingProvider();
     return undefined;
+  },
+  awardActionXp: async () => {
+    warnMissingProvider();
+    return Promise.reject(new Error(missingProviderMessage));
+  },
+  buyAttributeStar: async () => {
+    warnMissingProvider();
+    return Promise.reject(new Error(missingProviderMessage));
   },
   acknowledgeWeeklyBonus: () => {
     warnMissingProvider();
@@ -386,6 +454,7 @@ const useProvideGameData = (): GameDataContextValue => {
   const [attributes, setAttributes] = useState<any>({});
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [experienceLedger, setExperienceLedger] = useState<ExperienceLedgerEntry[]>([]);
+  const [xpWallet, setXpWallet] = useState<PlayerXpWallet | null>(null);
   const [currentCity, setCurrentCity] = useState<Tables<"cities"> | null>(null);
   const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [charactersLoading, setCharactersLoading] = useState(false);
@@ -399,6 +468,7 @@ const useProvideGameData = (): GameDataContextValue => {
     setAttributes(null);
     setActivities([]);
     setExperienceLedger([]);
+    setXpWallet(null);
     setCurrentCity(null);
     setFreshWeeklyBonusAvailable(false);
   }, []);
@@ -509,6 +579,30 @@ const useProvideGameData = (): GameDataContextValue => {
 
       setProfile(character);
       await resolveCurrentCity(character.current_city_id ?? null);
+
+      let walletData: PlayerXpWallet | null = null;
+      let walletResponse = await supabase
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", selectedCharacterId)
+        .maybeSingle();
+
+      if (walletResponse.error) {
+        if (isMissingTableError(walletResponse.error)) {
+          walletData = null;
+        } else if (
+          isMissingColumnError(walletResponse.error, "profile_id") ||
+          walletResponse.status === 406
+        ) {
+          walletData = null;
+        } else {
+          throw walletResponse.error;
+        }
+      } else {
+        walletData = (walletResponse.data as PlayerXpWallet | null) ?? null;
+      }
+
+      setXpWallet(walletData);
 
       let skillsResponse: PostgrestMaybeSingleResponse<PlayerSkills> | undefined;
 
@@ -900,6 +994,62 @@ const useProvideGameData = (): GameDataContextValue => {
     clearGameState();
   }, [clearGameState]);
 
+  const applyProgressionResult = useCallback(
+    (response: ProgressionResponse) => {
+      if (response?.profile && typeof response.profile === "object") {
+        const patch = response.profile as Partial<PlayerProfile>;
+        setProfile(prev => (prev ? { ...prev, ...patch } : (patch as PlayerProfile)));
+      }
+
+      if ("wallet" in response) {
+        setXpWallet(prev => {
+          const wallet = response.wallet as PlayerXpWallet | null | undefined;
+          if (wallet === undefined) {
+            return prev;
+          }
+          if (wallet === null) {
+            return null;
+          }
+          return { ...(prev ?? {}), ...wallet } as PlayerXpWallet;
+        });
+      }
+
+      if (response.attributes && typeof response.attributes === "object") {
+        setAttributes((prev: PlayerAttributes | null) => ({
+          ...(prev ?? {}),
+          ...(response.attributes as PlayerAttributes),
+        }));
+      }
+
+      const ledgerEntries = extractLedgerEntriesFromResult(response.result);
+      if (ledgerEntries.length > 0) {
+        setExperienceLedger(prev => {
+          const byId = new Map<string, ExperienceLedgerEntry>();
+          for (const entry of ledgerEntries) {
+            if (entry?.id) {
+              byId.set(entry.id, entry);
+            }
+          }
+
+          for (const entry of prev) {
+            if (entry?.id && !byId.has(entry.id)) {
+              byId.set(entry.id, entry);
+            }
+          }
+
+          const combined = Array.from(byId.values()).sort((a, b) => {
+            const aTime = a.recorded_at ? new Date(a.recorded_at).getTime() : 0;
+            const bTime = b.recorded_at ? new Date(b.recorded_at).getTime() : 0;
+            return bTime - aTime;
+          });
+
+          return combined.slice(0, 20);
+        });
+      }
+    },
+    [],
+  );
+
   const updateProfile = useCallback(
     async (updates: Partial<PlayerProfile>) => {
       if (!user || !selectedCharacterId) {
@@ -947,6 +1097,24 @@ const useProvideGameData = (): GameDataContextValue => {
       return profile ?? undefined;
     },
     [profile, selectedCharacterId, user]
+  );
+
+  const awardActionXp = useCallback(
+    async (input: AwardActionXpInput) => {
+      const response = await progressionClient.awardActionXp(input);
+      applyProgressionResult(response);
+      return response;
+    },
+    [applyProgressionResult]
+  );
+
+  const buyAttributeStar = useCallback(
+    async (input: BuyAttributeStarInput) => {
+      const response = await progressionClient.buyAttributeStar(input);
+      applyProgressionResult(response);
+      return response;
+    },
+    [applyProgressionResult]
   );
 
   const updateSkills = useCallback(
@@ -1355,6 +1523,7 @@ const useProvideGameData = (): GameDataContextValue => {
     attributes,
     activities,
     experienceLedger,
+    xpWallet,
     currentCity,
     loading,
     error,
@@ -1366,6 +1535,8 @@ const useProvideGameData = (): GameDataContextValue => {
     updateSkills,
     updateAttributes,
     addActivity,
+    awardActionXp,
+    buyAttributeStar,
     acknowledgeWeeklyBonus,
     createCharacter,
     refreshCharacters,

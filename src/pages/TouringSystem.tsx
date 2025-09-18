@@ -113,7 +113,7 @@ type TourRecord = TourRow & {
 
 const TouringSystem: React.FC = () => {
   const { user } = useAuth();
-  const { profile, attributes, updateProfile, addActivity } = useGameData();
+  const { profile, attributes, updateProfile, addActivity, awardActionXp } = useGameData();
   const [tours, setTours] = useState<Tour[]>([]);
   const [availableVenues, setAvailableVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -371,10 +371,27 @@ const TouringSystem: React.FC = () => {
       const experienceResult = applyAttributeToValue(baseExperienceGain, attributes, TOUR_EXPERIENCE_ATTRIBUTES);
       const experienceGain = experienceResult.value;
 
+      if (experienceGain > 0) {
+        await awardActionXp({
+          amount: experienceGain,
+          category: "performance",
+          actionKey: "tour_show",
+          uniqueEventId: `${tour.id}:${venue.id}`,
+          metadata: {
+            tour_id: tour.id,
+            tour_venue_id: venue.id,
+            show_type: showType,
+            tickets_sold: ticketsSold,
+            net_earnings: netEarnings,
+            fame_gained: fameGain,
+            performance_score: performanceScore,
+          },
+        });
+      }
+
       await updateProfile({
         cash: profile.cash + netEarnings,
         fame: profile.fame + fameGain,
-        experience: profile.experience + experienceGain
       });
 
       await addActivity(
