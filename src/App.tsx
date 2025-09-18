@@ -49,13 +49,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<Layout />}>
+        <GameDataProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<Layout />}>
                 <Route index element={<Index />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="band" element={<BandManager />} />
@@ -92,10 +93,11 @@ function App() {
                 <Route path="statistics" element={<PlayerStatistics />} />
                 <Route path="character/create" element={<CharacterCreation />} />
               </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </GameDataProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
