@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth-context";
 import {
   useGameData,
+  type PlayerProfile,
   type SkillDefinition,
   type SkillProgressUpsertInput,
   type SkillUnlockUpsertInput,
@@ -755,6 +756,23 @@ const CharacterCreation = () => {
       if (!upsertedProfile) {
         throw new Error("Profile save did not return any data.");
       }
+
+      const ensuredLoadout = await ensureDefaultWardrobe(
+        upsertedProfile.id,
+        user.id,
+        parseClothingLoadout(
+          (existingProfile ?? upsertedProfile)?.equipped_clothing,
+        ),
+      );
+
+      if (ensuredLoadout) {
+        upsertedProfile = {
+          ...upsertedProfile,
+          equipped_clothing: ensuredLoadout as PlayerProfile["equipped_clothing"],
+        };
+      }
+
+      setExistingProfile(upsertedProfile);
 
       const attributePoints = existingAttributesRow?.attribute_points ?? 0;
       const normalizedSkillsPayload = (Object.keys(defaultSkills) as SkillKey[]).reduce<
