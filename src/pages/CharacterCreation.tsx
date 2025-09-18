@@ -164,7 +164,6 @@ const sanitizePayloadForLogging = (
 
   return sanitized;
 };
-
 const ensureNonEmptyString = (value: unknown): string | null => {
   if (typeof value !== "string") {
     return null;
@@ -531,6 +530,7 @@ const CharacterCreation = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<SaveErrorState | null>(null);
+
   const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
   const [age, setAge] = useState<string>("16");
   const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
@@ -878,6 +878,7 @@ const CharacterCreation = () => {
     let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
     let attemptedAttributesPayload: Record<string, unknown> | null = null;
     let currentStage: SaveFailureStage = "profile-upsert";
+
 
     try {
       const skippedProfileColumns = new Set<string>();
