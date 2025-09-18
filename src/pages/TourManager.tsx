@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { checkTourRequirements } from "@/pages/tourRequirementValidation";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
 import {
+  calculateDistanceBetweenLocations,
   calculateTravelEstimates,
   describeComfort,
   getTravelModeConfig,
@@ -153,61 +154,10 @@ type SupabaseTour = TourRow & {
   >;
 };
 
-const LOCATION_COORDINATES: Record<string, { lat: number; lng: number }> = {
-  "downtown": { lat: 40.7128, lng: -74.006 },
-  "downtown district": { lat: 40.7138, lng: -74.001 },
-  "arts district": { lat: 34.043, lng: -118.235 },
-  "arts quarter": { lat: 34.05, lng: -118.247 },
-  "stadium district": { lat: 39.760, lng: -104.987 },
-  "cultural center": { lat: 41.881, lng: -87.623 },
-  "city park": { lat: 39.756, lng: -104.966 },
-  "suburbs": { lat: 41.0, lng: -87.9 },
-  "uptown": { lat: 41.894, lng: -87.634 },
-  "sports district": { lat: 34.043, lng: -118.267 },
-  "outskirts": { lat: 36.1699, lng: -115.1398 },
-  "central": { lat: 39.0997, lng: -94.5786 },
-};
-
-const DEFAULT_COORDINATE = { lat: 39.5, lng: -98.35 };
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
-const EARTH_RADIUS_KM = 6371;
 const DEFAULT_TRAVEL_MODE: TravelMode = 'coach';
 const TRAVEL_MODE_VALUES: TravelMode[] = ['coach', 'taxi', 'air', 'ferry'];
 const ALL_CITIES_VALUE = 'all';
-
-const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
-
-const getCoordinateForLocation = (location?: string | null) => {
-  if (!location) return DEFAULT_COORDINATE;
-  const normalized = location.trim().toLowerCase();
-  if (LOCATION_COORDINATES[normalized]) {
-    return LOCATION_COORDINATES[normalized];
-  }
-
-  let hash = 0;
-  for (const char of normalized) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  }
-
-  const lat = ((hash % 180000) / 1000) - 90;
-  const lng = (((Math.floor(hash / 180000)) % 360000) / 1000) - 180;
-  return { lat, lng };
-};
-
-const calculateDistanceKm = (fromLocation?: string | null, toLocation?: string | null) => {
-  const from = getCoordinateForLocation(fromLocation);
-  const to = getCoordinateForLocation(toLocation);
-
-  const dLat = toRadians(to.lat - from.lat);
-  const dLng = toRadians(to.lng - from.lng);
-  const lat1 = toRadians(from.lat);
-  const lat2 = toRadians(to.lat);
-
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
-
-  return Math.round(EARTH_RADIUS_KM * c * 100) / 100;
-};
 
 const calculateRestDaysFromDistance = (distanceKm: number, comfort: number) => {
   const distance = Math.max(0, distanceKm || 0);
@@ -364,7 +314,7 @@ const computeDistanceForLeg = (
     return 0;
   }
   const previousLocation = getPreviousLocationForTour(tour, targetDate);
-  return calculateDistanceKm(previousLocation, venueLocation);
+  return calculateDistanceBetweenLocations(previousLocation, venueLocation);
 };
 
 const calculateOptimalRoute = (tourVenues: TourVenue[]): RouteSuggestion => {
@@ -388,7 +338,10 @@ const calculateOptimalRoute = (tourVenues: TourVenue[]): RouteSuggestion => {
     let bestDistance = Number.POSITIVE_INFINITY;
 
     remaining.forEach((candidate, index) => {
-      const distance = calculateDistanceKm(lastStop.venue?.location, candidate.venue?.location);
+      const distance = calculateDistanceBetweenLocations(
+        lastStop.venue?.location,
+        candidate.venue?.location,
+      );
       if (distance < bestDistance) {
         bestDistance = distance;
         bestIndex = index;
