@@ -69,7 +69,6 @@ const parseRewardPayload = (rewards: unknown, profile: PlayerProfile | null): Re
 
     updates[rewardField] = nextValue;
     messageDetails.push(`${formatKey(String(rewardField))} ${numericValue > 0 ? "+" : ""}${numericValue}`);
-
     if (rewardField === "cash") {
       cashDelta += numericValue;
     }

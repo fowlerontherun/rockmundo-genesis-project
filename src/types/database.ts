@@ -1,5 +1,19 @@
 // Working database types to override the problematic generated types
 
+export type RequirementValue = number | string | boolean | null;
+
+export type RequirementRecord = Record<string, RequirementValue>;
+
+export type AchievementValue = number | string;
+
+export type AchievementRequirements = Record<string, AchievementValue>;
+
+export type AchievementRewards = Record<string, AchievementValue>;
+
+export type AchievementProgress = Record<string, AchievementValue>;
+
+export type EquipmentStatBoosts = Record<string, number>;
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -46,7 +60,7 @@ export interface Venue {
   base_payment: number;
   venue_type: string | null;
   prestige_level: number;
-  requirements: any;
+  requirements: RequirementRecord;
   created_at: string;
 }
 
@@ -104,8 +118,8 @@ export interface Achievement {
   icon: string | null;
   category: string | null;
   rarity: string;
-  requirements: any;
-  rewards: any;
+  requirements: AchievementRequirements;
+  rewards: AchievementRewards;
   created_at: string;
 }
 
@@ -113,7 +127,7 @@ export interface PlayerAchievement {
   id: string;
   user_id: string;
   achievement_id: string;
-  progress: any;
+  progress: AchievementProgress;
   unlocked_at: string;
 }
 
@@ -132,7 +146,7 @@ export interface EquipmentItem {
   subcategory: string | null;
   price: number;
   rarity: string;
-  stat_boosts: any;
+  stat_boosts: EquipmentStatBoosts;
   image_url: string | null;
   created_at: string;
 }
