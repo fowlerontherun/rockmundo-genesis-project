@@ -79,7 +79,7 @@ const backgrounds = [
 
 const TOTAL_SKILL_POINTS = 0;
 const MIN_SKILL_VALUE = 0;
-const MAX_SKILL_VALUE = 10;
+const MAX_SKILL_VALUE = 100;
 const ATTRIBUTE_MIN_VALUE = 0;
 const ATTRIBUTE_MAX_VALUE = 3;
 const ATTRIBUTE_SLIDER_STEP = 0.1;
@@ -190,6 +190,19 @@ const defaultSkills = {
   technical: 0,
 };
 
+const normalizeSkillValue = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return MIN_SKILL_VALUE;
+  }
+
+  return Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, numeric));
+};
+
 const ATTRIBUTE_KEYS = [
   "mental_focus",
   "physical_endurance",
@@ -219,13 +232,8 @@ const buildSkillState = (
   }
 
   (Object.keys(defaultSkills) as SkillKey[]).forEach((key) => {
-    const value = record[key];
-
-    if (typeof value === "number") {
-      resolved[key] = Math.max(
-        MIN_SKILL_VALUE,
-        Math.min(MAX_SKILL_VALUE, value),
-      );
+    if (key in record) {
+      resolved[key] = normalizeSkillValue(record[key]);
     }
   });
 
@@ -248,6 +256,7 @@ type CityOption = {
 
 type CharacterCreationLocationState = {
   fromProfile?: boolean;
+  profileId?: string | null;
 };
 
 const genderOptions: { value: ProfileGender; label: string }[] = [
@@ -277,6 +286,8 @@ const CharacterCreation = () => {
     upsertSkillUnlocks,
     refreshCharacters,
     setActiveCharacter,
+    selectedCharacterId,
+    profile: activeProfile,
   } = useGameData();
 
   const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinition[]>([]);
@@ -284,6 +295,14 @@ const CharacterCreation = () => {
 
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
+  const locationProfileId =
+    typeof locationState?.profileId === "string" && locationState.profileId.length > 0
+      ? locationState.profileId
+      : null;
+  const activeProfileId = activeProfile?.id ?? null;
+  const targetProfileId = useMemo(() => {
+    return locationProfileId ?? selectedCharacterId ?? activeProfileId ?? null;
+  }, [locationProfileId, selectedCharacterId, activeProfileId]);
 
   const [nameSuggestion, setNameSuggestion] = useState<string>(() => generateRandomName());
   const [displayName, setDisplayName] = useState<string>(nameSuggestion);
@@ -385,46 +404,69 @@ const CharacterCreation = () => {
       setIsLoading(true);
       setLoadError(null);
 
+      const scopedProfileId = targetProfileId;
+      const shouldUseProfileScope = Boolean(scopedProfileId);
+
       try {
         const [profileResponse, skillsResponse, attributesResponse] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase
-            .from("player_skills")
-            .select(
-              "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
-            )
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase
-            .from("player_attributes")
-            .select("*")
-            .eq("user_id", user.id)
-            .maybeSingle(),
+          shouldUseProfileScope
+            ? supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", scopedProfileId)
+                .maybeSingle()
+            : supabase
+                .from("profiles")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle(),
+          shouldUseProfileScope
+            ? supabase
+                .from("player_skills")
+                .select(
+                  "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
+                )
+                .eq("profile_id", scopedProfileId)
+                .maybeSingle()
+            : supabase
+                .from("player_skills")
+                .select(
+                  "id, guitar, vocals, drums, bass, performance, songwriting, composition, business, marketing, creativity, technical",
+                )
+                .eq("user_id", user.id)
+                .maybeSingle(),
+          shouldUseProfileScope
+            ? supabase
+                .from("player_attributes")
+                .select("*")
+                .eq("profile_id", scopedProfileId)
+                .maybeSingle()
+            : supabase
+                .from("player_attributes")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle(),
         ]);
 
-        if (profileResponse.error) {
+        if (profileResponse.error && profileResponse.status !== 406) {
           throw profileResponse.error;
         }
 
-        if (skillsResponse.error) {
+        if (skillsResponse.error && skillsResponse.status !== 406) {
           throw skillsResponse.error;
         }
 
-        if (attributesResponse.error) {
+        if (attributesResponse.error && attributesResponse.status !== 406) {
           throw attributesResponse.error;
         }
-
         const profileData = (profileResponse.data as ProfileRow | null) ?? null;
         const skillsData = skillsResponse.data;
         const attributesRow =
           (attributesResponse.data as Tables<"player_attributes"> | null) ?? null;
 
+        setExistingProfile(profileData);
+
         if (profileData) {
-          setExistingProfile(profileData);
           if (profileData.display_name) {
             setDisplayName(profileData.display_name);
             setNameSuggestion(profileData.display_name);
@@ -443,7 +485,7 @@ const CharacterCreation = () => {
           setCityOfBirth(profileData.city_of_birth ?? null);
 
           if (profileData.avatar_url) {
-            const storedSelection = getStoredAvatarSelection(profileResponse.data.avatar_url);
+            const storedSelection = getStoredAvatarSelection(profileResponse.data?.avatar_url);
 
             if (storedSelection) {
               if (avatarStyles.some((style) => style.id === storedSelection.styleId)) {
@@ -482,7 +524,7 @@ const CharacterCreation = () => {
           });
         }
 
-        setSkills(mergedSkills);
+        setSkills(buildSkillState(mergedSkills));
 
         setExistingAttributesRow(attributesRow);
         setAttributes(buildAttributeState(attributesRow));
@@ -498,7 +540,7 @@ const CharacterCreation = () => {
     if (user) {
       void fetchExistingData();
     }
-  }, [user]);
+  }, [user, targetProfileId]);
 
   useEffect(() => {
     if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
@@ -576,7 +618,7 @@ const CharacterCreation = () => {
   const handleSkillChange = (key: SkillKey, value: number) => {
     setSkills((prev) => {
       const currentValue = prev[key];
-      const clampedValue = Math.max(MIN_SKILL_VALUE, Math.min(MAX_SKILL_VALUE, value));
+      const clampedValue = normalizeSkillValue(value);
 
       if (clampedValue === currentValue) {
         return prev;
@@ -785,14 +827,7 @@ const CharacterCreation = () => {
         Record<string, number>
       >((accumulator, key) => {
         const rawValue = skills[key];
-        const numericValue = Math.max(
-          MIN_SKILL_VALUE,
-          Math.min(
-            MAX_SKILL_VALUE,
-            Number.isFinite(rawValue) ? Number(rawValue) : MIN_SKILL_VALUE,
-          ),
-        );
-        accumulator[key] = numericValue;
+        accumulator[key] = normalizeSkillValue(rawValue);
         return accumulator;
       }, {});
 
@@ -809,7 +844,7 @@ const CharacterCreation = () => {
       while (Object.keys(attemptedSkillsPayload).length > 0) {
         const { data: upsertedSkills, error: skillsError } = await supabase
           .from("player_skills")
-          .upsert(attemptedSkillsPayload as PlayerSkillsInsert, { onConflict: "user_id" })
+          .upsert(attemptedSkillsPayload as PlayerSkillsInsert, { onConflict: "profile_id" })
           .select()
           .maybeSingle();
 
@@ -823,7 +858,8 @@ const CharacterCreation = () => {
           if (
             missingColumn &&
             !skippedSkillsColumns.has(missingColumn) &&
-            missingColumn in attemptedSkillsPayload
+            missingColumn in attemptedSkillsPayload &&
+            missingColumn !== "profile_id"
           ) {
             skippedSkillsColumns.add(missingColumn);
             attemptedSkillsPayload = omitFromRecord(attemptedSkillsPayload, missingColumn);
@@ -902,7 +938,7 @@ const CharacterCreation = () => {
       while (Object.keys(attemptedAttributesPayload).length > 0) {
         const { data: upsertedAttributes, error: attributesError } = await supabase
           .from("player_attributes")
-          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "user_id" })
+          .upsert(attemptedAttributesPayload as PlayerAttributesInsert, { onConflict: "profile_id" })
           .select()
           .maybeSingle();
 
@@ -916,7 +952,8 @@ const CharacterCreation = () => {
         if (
           missingColumn &&
           !skippedAttributeColumns.has(missingColumn) &&
-          missingColumn in attemptedAttributesPayload
+          missingColumn in attemptedAttributesPayload &&
+          missingColumn !== "profile_id"
         ) {
           skippedAttributeColumns.add(missingColumn);
           attemptedAttributesPayload = omitFromRecord(attemptedAttributesPayload, missingColumn);
@@ -1323,7 +1360,7 @@ const CharacterCreation = () => {
               Skill Distribution
             </CardTitle>
             <CardDescription>
-              Allocate your starting strengths across musical and career disciplines. Every skill ranges from 0-10 and influences early gameplay systems.
+              Allocate your starting strengths across musical and career disciplines. Every skill ranges from 0-100 and influences early gameplay systems.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

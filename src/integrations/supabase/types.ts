@@ -639,60 +639,131 @@ export type Database = {
           },
         ]
       }
+      player_daily_cats: {
+        Row: {
+          activity_count: number
+          activity_date: string
+          category: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          profile_id: string
+          updated_at: string
+          xp_earned: number
+          xp_spent: number
+        }
+        Insert: {
+          activity_count?: number
+          activity_date: string
+          category: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          profile_id: string
+          updated_at?: string
+          xp_earned?: number
+          xp_spent?: number
+        }
+        Update: {
+          activity_count?: number
+          activity_date?: string
+          category?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          profile_id?: string
+          updated_at?: string
+          xp_earned?: number
+          xp_spent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_daily_cats_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_attributes: {
         Row: {
           attribute_points: number | null
+          attribute_points_spent: number | null
           business: number | null
+          business_acumen: number | null
           composition: number | null
           created_at: string | null
+          creative_insight: number | null
           creativity: number | null
           crowd_engagement: number | null
           id: string
           marketing: number | null
+          marketing_savvy: number | null
           mental_focus: number | null
+          musical_ability: number | null
           physical_endurance: number | null
           profile_id: string | null
+          rhythm_sense: number | null
           social_reach: number | null
           stage_presence: number | null
           technical: number | null
+          technical_mastery: number | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
+          vocal_talent: number | null
         }
         Insert: {
           attribute_points?: number | null
+          attribute_points_spent?: number | null
           business?: number | null
+          business_acumen?: number | null
           composition?: number | null
           created_at?: string | null
+          creative_insight?: number | null
           creativity?: number | null
           crowd_engagement?: number | null
           id?: string
           marketing?: number | null
+          marketing_savvy?: number | null
           mental_focus?: number | null
+          musical_ability?: number | null
           physical_endurance?: number | null
           profile_id?: string | null
+          rhythm_sense?: number | null
           social_reach?: number | null
           stage_presence?: number | null
           technical?: number | null
+          technical_mastery?: number | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
+          vocal_talent?: number | null
         }
         Update: {
           attribute_points?: number | null
+          attribute_points_spent?: number | null
           business?: number | null
+          business_acumen?: number | null
           composition?: number | null
           created_at?: string | null
+          creative_insight?: number | null
           creativity?: number | null
           crowd_engagement?: number | null
           id?: string
           marketing?: number | null
+          marketing_savvy?: number | null
           mental_focus?: number | null
+          musical_ability?: number | null
           physical_endurance?: number | null
           profile_id?: string | null
+          rhythm_sense?: number | null
           social_reach?: number | null
           stage_presence?: number | null
           technical?: number | null
+          technical_mastery?: number | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
+          vocal_talent?: number | null
         }
         Relationships: [
           {
@@ -810,6 +881,255 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "player_skills_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_weekly_activity: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          quests_completed: number
+          rehearsals_logged: number
+          sessions_completed: number
+          updated_at: string
+          week_start: string
+          xp_earned: number
+          xp_spent: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          quests_completed?: number
+          rehearsals_logged?: number
+          sessions_completed?: number
+          updated_at?: string
+          week_start: string
+          xp_earned?: number
+          xp_spent?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          quests_completed?: number
+          rehearsals_logged?: number
+          sessions_completed?: number
+          updated_at?: string
+          week_start?: string
+          xp_earned?: number
+          xp_spent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_weekly_activity_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_xp_wallet: {
+        Row: {
+          attribute_points_earned: number
+          lifetime_xp: number
+          profile_id: string
+          skill_points_earned: number
+          xp_balance: number
+          xp_spent: number
+          last_recalculated: string
+        }
+        Insert: {
+          attribute_points_earned?: number
+          lifetime_xp?: number
+          profile_id: string
+          skill_points_earned?: number
+          xp_balance?: number
+          xp_spent?: number
+          last_recalculated?: string
+        }
+        Update: {
+          attribute_points_earned?: number
+          lifetime_xp?: number
+          profile_id?: string
+          skill_points_earned?: number
+          xp_balance?: number
+          xp_spent?: number
+          last_recalculated?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_xp_wallet_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_action_xp_events: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          profile_id: string
+          xp_amount: number
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          profile_id: string
+          xp_amount: number
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          profile_id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_action_xp_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_attribute_transactions: {
+        Row: {
+          attribute_key: string | null
+          attribute_value_delta: number
+          created_at: string
+          id: string
+          metadata: Json
+          points_delta: number
+          profile_id: string
+          transaction_type: string
+          xp_delta: number
+        }
+        Insert: {
+          attribute_key?: string | null
+          attribute_value_delta?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points_delta: number
+          profile_id: string
+          transaction_type: string
+          xp_delta?: number
+        }
+        Update: {
+          attribute_key?: string | null
+          attribute_value_delta?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points_delta?: number
+          profile_id?: string
+          transaction_type?: string
+          xp_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_attribute_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_respec_events: {
+        Row: {
+          attribute_points_refunded: number
+          created_at: string
+          id: string
+          initiated_by: string | null
+          metadata: Json
+          profile_id: string
+          reset_reason: string | null
+          skill_points_refunded: number
+          xp_refunded: number
+        }
+        Insert: {
+          attribute_points_refunded?: number
+          created_at?: string
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json
+          profile_id: string
+          reset_reason?: string | null
+          skill_points_refunded?: number
+          xp_refunded?: number
+        }
+        Update: {
+          attribute_points_refunded?: number
+          created_at?: string
+          id?: string
+          initiated_by?: string | null
+          metadata?: Json
+          profile_id?: string
+          reset_reason?: string | null
+          skill_points_refunded?: number
+          xp_refunded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_respec_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_weekly_bonus_claims: {
+        Row: {
+          bonus_type: string
+          claimed_at: string
+          id: string
+          metadata: Json
+          profile_id: string
+          week_start: string
+          xp_awarded: number
+        }
+        Insert: {
+          bonus_type: string
+          claimed_at?: string
+          id?: string
+          metadata?: Json
+          profile_id: string
+          week_start: string
+          xp_awarded?: number
+        }
+        Update: {
+          bonus_type?: string
+          claimed_at?: string
+          id?: string
+          metadata?: Json
+          profile_id?: string
+          week_start?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_weekly_bonus_claims_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1214,6 +1534,50 @@ export type Database = {
           },
         ]
       }
+      xp_ledger: {
+        Row: {
+          attribute_points_delta: number
+          balance_after: number
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          profile_id: string
+          skill_points_delta: number
+          xp_delta: number
+        }
+        Insert: {
+          attribute_points_delta?: number
+          balance_after: number
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          profile_id: string
+          skill_points_delta?: number
+          xp_delta: number
+        }
+        Update: {
+          attribute_points_delta?: number
+          balance_after?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          profile_id?: string
+          skill_points_delta?: number
+          xp_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xp_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1284,12 +1648,52 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profile_action_xp_daily_totals: {
+        Row: {
+          action_type: string
+          activity_date: string | null
+          event_count: number | null
+          profile_id: string
+          total_xp: number | null
+        }
+        Relationships: []
+      }
+      profile_action_xp_weekly_totals: {
+        Row: {
+          action_type: string
+          event_count: number | null
+          profile_id: string
+          total_xp: number | null
+          week_start: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_profile_action_xp_totals: {
+        Args: {
+          p_profile_id: string
+          p_action: string
+          p_reference?: string
+        }
+        Returns: {
+          day_events: number | null
+          day_xp: number | null
+          week_events: number | null
+          week_xp: number | null
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_claimed_weekly_bonus: {
+        Args: {
+          p_profile_id: string
+          p_week_start: string
+          p_bonus_type: string
+        }
+        Returns: boolean
       }
       has_role: {
         Args: {
