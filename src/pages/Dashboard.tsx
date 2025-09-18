@@ -21,6 +21,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
 
 const genderLabels: Record<string, string> = {
   female: "Female",
@@ -583,6 +584,11 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           </div>
+          <RealtimeChatPanel
+            channelKey="general"
+            title="Live Chat"
+            className="bg-card/80 backdrop-blur-sm border-primary/20"
+          />
         </div>
       </div>
     </div>

@@ -261,27 +261,13 @@ const RealtimeCommunication: React.FC = () => {
   }, [destroyAudioMeter]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">RockMundo Live</h1>
           <p className="text-muted-foreground">
             Real-time communication and collaboration
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-2 px-3 py-1 rounded-full ${
-              isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}
-          >
-            <div
-              className={`w-2 h-2 rounded-full ${
-                isConnected ? 'bg-green-500' : 'bg-red-500'
-              }`}
-            />
-            {isConnected ? 'Connected' : 'Connecting...'}
-          </div>
         </div>
       </div>
 
@@ -427,7 +413,7 @@ const RealtimeCommunication: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Music className="w-5 h-5" />
+              <Music className="h-5 w-5" />
               <span>Jam Sessions</span>
             </CardTitle>
           </CardHeader>

@@ -38,7 +38,6 @@ const AdvancedGigSystem = lazy(() => import("./pages/AdvancedGigSystem"));
 const CompetitiveCharts = lazy(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazy(() => import("./pages/TouringSystem"));
 const Admin = lazy(() => import("./pages/Admin"));
-const RealtimeCommunication = lazy(() => import("./pages/RealtimeCommunication"));
 const WorldEnvironment = lazy(() => import("./pages/WorldEnvironment"));
 const SongManager = lazy(() => import("./pages/SongManager"));
 const InventoryManager = lazy(() => import("./pages/InventoryManager"));
@@ -95,7 +94,6 @@ function App() {
                     <Route path="charts-competitive" element={<CompetitiveCharts />} />
                     <Route path="tours-system" element={<TouringSystem />} />
                     <Route path="admin" element={<Admin />} />
-                    <Route path="communication" element={<RealtimeCommunication />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
