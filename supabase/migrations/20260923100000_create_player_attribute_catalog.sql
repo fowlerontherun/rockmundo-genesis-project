@@ -1,11 +1,11 @@
--- Create attribute catalog and player attributes tables with baseline seeding
+-- Create attribute catalog and player attribute stars tables with baseline seeding
 CREATE TABLE IF NOT EXISTS public.attribute_catalog (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   key text UNIQUE NOT NULL,
   name text NOT NULL,
   description text,
-  base_value numeric(6,3) NOT NULL DEFAULT 1.0,
-  max_value numeric(6,3) NOT NULL DEFAULT 3.0,
+  base_value numeric(6,3) NOT NULL DEFAULT 0,
+  max_value numeric(6,3) NOT NULL DEFAULT 5,
   category text NOT NULL DEFAULT 'core',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -13,18 +13,19 @@ CREATE TABLE IF NOT EXISTS public.attribute_catalog (
 
 CREATE TABLE IF NOT EXISTS public.player_attributes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  physical_endurance numeric(6,3) NOT NULL DEFAULT 1.0,
-  mental_focus numeric(6,3) NOT NULL DEFAULT 1.0,
-  attribute_points integer NOT NULL DEFAULT 0,
+  attribute_key text NOT NULL REFERENCES public.attribute_catalog(key) ON DELETE CASCADE,
+  stars integer NOT NULL DEFAULT 0 CHECK (stars >= 0),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  CONSTRAINT player_attributes_unique_profile UNIQUE (profile_id)
+  CONSTRAINT player_attributes_unique_profile_attr UNIQUE (profile_id, attribute_key)
 );
 
-CREATE INDEX IF NOT EXISTS idx_player_attributes_user_id
-  ON public.player_attributes (user_id);
+CREATE INDEX IF NOT EXISTS idx_player_attributes_profile_id
+  ON public.player_attributes (profile_id);
+
+CREATE INDEX IF NOT EXISTS idx_player_attributes_attribute_key
+  ON public.player_attributes (attribute_key);
 
 ALTER TABLE public.attribute_catalog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.player_attributes ENABLE ROW LEVEL SECURITY;
@@ -37,17 +38,46 @@ CREATE POLICY IF NOT EXISTS "Attribute catalog is public"
 CREATE POLICY IF NOT EXISTS "Players can view their attributes"
   ON public.player_attributes
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.profiles AS p
+      WHERE p.id = player_attributes.profile_id
+        AND p.user_id = auth.uid()
+    )
+  );
 
 CREATE POLICY IF NOT EXISTS "Players can insert their attributes"
   ON public.player_attributes
   FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.profiles AS p
+      WHERE p.id = player_attributes.profile_id
+        AND p.user_id = auth.uid()
+    )
+  );
 
 CREATE POLICY IF NOT EXISTS "Players can update their attributes"
   ON public.player_attributes
   FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.profiles AS p
+      WHERE p.id = player_attributes.profile_id
+        AND p.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.profiles AS p
+      WHERE p.id = player_attributes.profile_id
+        AND p.user_id = auth.uid()
+    )
+  );
 
 CREATE TRIGGER update_attribute_catalog_updated_at
   BEFORE UPDATE ON public.attribute_catalog
@@ -62,20 +92,68 @@ CREATE TRIGGER update_player_attributes_updated_at
 INSERT INTO public.attribute_catalog (key, name, description, base_value, max_value, category)
 VALUES
   (
-    'physical_endurance',
-    'Physical Endurance',
-    'Represents stamina and resilience. Reduces energy costs and accelerates recovery windows.',
-    1.0,
-    3.0,
+    'musical_ability',
+    'Musical Ability',
+    'Overall instrumental precision, tone, and fretboard mastery.',
+    0,
+    5,
     'core'
   ),
   (
-    'mental_focus',
-    'Mental Focus',
-    'Measures discipline and concentration. Improves the effectiveness of skill training and preparation.',
-    1.0,
-    3.0,
+    'vocal_talent',
+    'Voice',
+    'Pitch control, range, and the nuances that make performances soar.',
+    0,
+    5,
     'core'
+  ),
+  (
+    'rhythm_sense',
+    'Rhythm Sense',
+    'Timing, groove, and percussive instincts that anchor a band.',
+    0,
+    5,
+    'core'
+  ),
+  (
+    'stage_presence',
+    'Stage Presence',
+    'Charisma, confidence, and crowd engagement during live shows.',
+    0,
+    5,
+    'performance'
+  ),
+  (
+    'creative_insight',
+    'Creative Insight',
+    'Songwriting intuition, lyrical storytelling, and innovative ideas.',
+    0,
+    5,
+    'creative'
+  ),
+  (
+    'technical_mastery',
+    'Technical Mastery',
+    'Studio expertise, production prowess, and sound engineering instincts.',
+    0,
+    5,
+    'technical'
+  ),
+  (
+    'business_acumen',
+    'Business Acumen',
+    'Negotiation savvy, strategic planning, and deal-making confidence.',
+    0,
+    5,
+    'business'
+  ),
+  (
+    'marketing_savvy',
+    'Marketing Savvy',
+    'Brand vision, campaign insight, and community-building instincts.',
+    0,
+    5,
+    'business'
   )
 ON CONFLICT (key) DO UPDATE
 SET
@@ -86,11 +164,11 @@ SET
   category = EXCLUDED.category,
   updated_at = now();
 
-INSERT INTO public.player_attributes (user_id, profile_id, physical_endurance, mental_focus)
-SELECT p.user_id, p.id, 1.0, 1.0
+INSERT INTO public.player_attributes (profile_id, attribute_key, stars)
+SELECT p.id, ac.key, 0
 FROM public.profiles AS p
-ON CONFLICT (profile_id) DO UPDATE
-SET user_id = EXCLUDED.user_id;
+CROSS JOIN public.attribute_catalog AS ac
+ON CONFLICT (profile_id, attribute_key) DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.ensure_player_attributes()
 RETURNS TRIGGER
@@ -98,10 +176,48 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  wallet_inserted boolean := false;
 BEGIN
-  INSERT INTO public.player_attributes (user_id, profile_id)
-  VALUES (NEW.user_id, NEW.id)
-  ON CONFLICT (profile_id) DO NOTHING;
+  INSERT INTO public.player_attributes (profile_id, attribute_key, stars)
+  SELECT NEW.id, ac.key, 0
+  FROM public.attribute_catalog AS ac
+  ON CONFLICT (profile_id, attribute_key) DO NOTHING;
+
+  IF to_regclass('public.player_xp_wallet') IS NOT NULL THEN
+    INSERT INTO public.player_xp_wallet (profile_id)
+    VALUES (NEW.id)
+    ON CONFLICT (profile_id) DO NOTHING;
+
+    wallet_inserted := FOUND;
+
+    IF wallet_inserted AND to_regclass('public.xp_ledger') IS NOT NULL THEN
+      BEGIN
+        INSERT INTO public.xp_ledger (
+          profile_id,
+          event_type,
+          xp_delta,
+          balance_after,
+          attribute_points_delta,
+          skill_points_delta,
+          metadata
+        )
+        VALUES (
+          NEW.id,
+          'wallet_initialized',
+          0,
+          0,
+          0,
+          0,
+          jsonb_build_object('source', 'ensure_player_attributes')
+        );
+      EXCEPTION
+        WHEN check_violation THEN
+          NULL;
+      END;
+    END IF;
+  END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -118,6 +234,9 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = 'public'
 AS $function$
+DECLARE
+  new_profile public.profiles%ROWTYPE;
+  wallet_inserted boolean := false;
 BEGIN
   INSERT INTO public.profiles (
     user_id,
@@ -140,7 +259,8 @@ BEGIN
     DEFAULT,
     DEFAULT,
     DEFAULT
-  );
+  )
+  RETURNING * INTO new_profile;
 
   INSERT INTO public.user_roles (user_id, role)
   VALUES (NEW.id, 'user');
@@ -154,13 +274,44 @@ BEGIN
   INSERT INTO public.activity_feed (user_id, activity_type, message)
   VALUES (NEW.id, 'join', 'Welcome to Rockmundo! Your musical journey begins now.');
 
-  INSERT INTO public.player_attributes (user_id, profile_id)
-  SELECT p.user_id, p.id
-  FROM public.profiles AS p
-  WHERE p.user_id = NEW.id
-  ORDER BY p.created_at DESC
-  LIMIT 1
-  ON CONFLICT (profile_id) DO NOTHING;
+  INSERT INTO public.player_attributes (profile_id, attribute_key, stars)
+  SELECT new_profile.id, ac.key, 0
+  FROM public.attribute_catalog AS ac
+  ON CONFLICT (profile_id, attribute_key) DO NOTHING;
+
+  IF to_regclass('public.player_xp_wallet') IS NOT NULL THEN
+    INSERT INTO public.player_xp_wallet (profile_id)
+    VALUES (new_profile.id)
+    ON CONFLICT (profile_id) DO NOTHING;
+
+    wallet_inserted := FOUND;
+
+    IF wallet_inserted AND to_regclass('public.xp_ledger') IS NOT NULL THEN
+      BEGIN
+        INSERT INTO public.xp_ledger (
+          profile_id,
+          event_type,
+          xp_delta,
+          balance_after,
+          attribute_points_delta,
+          skill_points_delta,
+          metadata
+        )
+        VALUES (
+          new_profile.id,
+          'wallet_initialized',
+          0,
+          0,
+          0,
+          0,
+          jsonb_build_object('source', 'handle_new_user')
+        );
+      EXCEPTION
+        WHEN check_violation THEN
+          NULL;
+      END;
+    END IF;
+  END IF;
 
   INSERT INTO public.player_achievements (user_id, achievement_id)
   SELECT NEW.id, id FROM public.achievements WHERE name = 'First Steps';
@@ -182,15 +333,22 @@ AS $$
 DECLARE
   current_user_id uuid := auth.uid();
   generated_username text;
+  profile_ids uuid[];
   new_profile public.profiles%ROWTYPE;
   new_skills public.player_skills%ROWTYPE;
   new_attributes public.player_attributes%ROWTYPE;
+  wallet_inserted boolean := false;
 BEGIN
   IF current_user_id IS NULL THEN
     RAISE EXCEPTION 'Authentication required to reset character' USING ERRCODE = '42501';
   END IF;
 
   generated_username := 'Player' || substr(current_user_id::text, 1, 8);
+
+  SELECT array_agg(id)
+  INTO profile_ids
+  FROM public.profiles
+  WHERE user_id = current_user_id;
 
   DELETE FROM public.social_comments WHERE user_id = current_user_id;
   DELETE FROM public.social_reposts WHERE user_id = current_user_id;
@@ -211,7 +369,16 @@ BEGIN
   DELETE FROM public.activity_feed WHERE user_id = current_user_id;
   DELETE FROM public.fan_demographics WHERE user_id = current_user_id;
   DELETE FROM public.band_members WHERE user_id = current_user_id;
-  DELETE FROM public.player_attributes WHERE user_id = current_user_id;
+
+  IF profile_ids IS NOT NULL THEN
+    IF to_regclass('public.xp_ledger') IS NOT NULL THEN
+      DELETE FROM public.xp_ledger WHERE profile_id = ANY(profile_ids);
+    END IF;
+    IF to_regclass('public.player_xp_wallet') IS NOT NULL THEN
+      DELETE FROM public.player_xp_wallet WHERE profile_id = ANY(profile_ids);
+    END IF;
+    DELETE FROM public.player_attributes WHERE profile_id = ANY(profile_ids);
+  END IF;
 
   DELETE FROM public.band_conflicts
     WHERE band_id IN (
@@ -252,9 +419,44 @@ BEGIN
   VALUES (current_user_id)
   RETURNING * INTO new_skills;
 
-  INSERT INTO public.player_attributes (user_id, profile_id)
-  VALUES (current_user_id, new_profile.id)
-  RETURNING * INTO new_attributes;
+  INSERT INTO public.player_attributes (profile_id, attribute_key, stars)
+  SELECT new_profile.id, ac.key, 0
+  FROM public.attribute_catalog AS ac
+  ON CONFLICT (profile_id, attribute_key) DO NOTHING;
+
+  IF to_regclass('public.player_xp_wallet') IS NOT NULL THEN
+    INSERT INTO public.player_xp_wallet (profile_id)
+    VALUES (new_profile.id)
+    ON CONFLICT (profile_id) DO NOTHING;
+
+    wallet_inserted := FOUND;
+
+    IF wallet_inserted AND to_regclass('public.xp_ledger') IS NOT NULL THEN
+      BEGIN
+        INSERT INTO public.xp_ledger (
+          profile_id,
+          event_type,
+          xp_delta,
+          balance_after,
+          attribute_points_delta,
+          skill_points_delta,
+          metadata
+        )
+        VALUES (
+          new_profile.id,
+          'wallet_initialized',
+          0,
+          0,
+          0,
+          0,
+          jsonb_build_object('source', 'reset_player_character')
+        );
+      EXCEPTION
+        WHEN check_violation THEN
+          NULL;
+      END;
+    END IF;
+  END IF;
 
   INSERT INTO public.fan_demographics (user_id)
   VALUES (current_user_id);
@@ -265,6 +467,8 @@ BEGIN
     'reset',
     'Your journey has been reset. Time to create a new legend!'
   );
+
+  new_attributes := NULL;
 
   RETURN QUERY SELECT new_profile, new_skills, new_attributes;
 END;
