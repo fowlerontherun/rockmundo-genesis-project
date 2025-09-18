@@ -91,6 +91,30 @@ export type Database = {
           },
         ]
       }
+      chat_participants: {
+        Row: {
+          channel: string
+          id: string
+          status: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       experience_ledger: {
         Row: {
           amount: number
@@ -135,6 +159,33 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string | null
+          id: string
+          requester_id: string
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string | null
+          id?: string
+          requester_id: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string | null
+          id?: string
+          requester_id?: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       band_members: {
         Row: {
@@ -1704,6 +1755,8 @@ export type Database = {
       }
     }
     Enums: {
+      chat_participant_status: "muted" | "online" | "typing"
+      friendship_status: "accepted" | "blocked" | "declined" | "pending"
       app_role: "admin" | "moderator" | "user"
       profile_gender:
         | "female"
