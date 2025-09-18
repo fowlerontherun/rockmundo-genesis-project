@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import WorldPulse from "./pages/WorldPulse";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import WorldPulsePage from "./pages/WorldPulse";
+import CharacterCreation from "./pages/CharacterCreation";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
@@ -18,7 +19,6 @@ const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const BandManager = lazyWithRetry(() => import("./pages/BandManager"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 const Profile = lazyWithRetry(() => import("./pages/Profile"));
-const CharacterCreation = lazyWithRetry(() => import("./pages/CharacterCreation"));
 const MusicStudio = lazyWithRetry(() => import("./pages/MusicStudio"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
