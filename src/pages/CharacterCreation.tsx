@@ -154,6 +154,8 @@ const genderOptions: { value: ProfileGender; label: string }[] = [
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
+const NO_CITY_SELECTED_VALUE = "__no_city_selected__";
+
 const sanitizeHandle = (value: string) =>
   value
     .toLowerCase()
@@ -1043,8 +1045,10 @@ const CharacterCreation = () => {
                   City of Birth
                 </label>
                 <Select
-                  value={cityOfBirth ?? ""}
-                  onValueChange={(value) => setCityOfBirth(value || null)}
+                  value={cityOfBirth ?? NO_CITY_SELECTED_VALUE}
+                  onValueChange={(value) =>
+                    setCityOfBirth(value === NO_CITY_SELECTED_VALUE ? null : value)
+                  }
                   disabled={citiesLoading}
                 >
                   <SelectTrigger id="city-of-birth">
@@ -1053,7 +1057,7 @@ const CharacterCreation = () => {
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No listed city</SelectItem>
+                    <SelectItem value={NO_CITY_SELECTED_VALUE}>No listed city</SelectItem>
                     {cities.map((city) => (
                       <SelectItem key={city.id} value={city.id}>
                         {city.name ?? "Unnamed City"}

@@ -83,6 +83,8 @@ const genderOptions: { value: ProfileGender; label: string }[] = [
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
+const NO_CITY_SELECTED_VALUE = "__no_city_selected__";
+
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -630,9 +632,12 @@ const Profile = () => {
                       <div className="space-y-2">
                         <Label htmlFor="city-of-birth">City of Birth</Label>
                         <Select
-                          value={formData.city_of_birth ?? ""}
+                          value={formData.city_of_birth ?? NO_CITY_SELECTED_VALUE}
                           onValueChange={(value) =>
-                            setFormData((prev) => ({ ...prev, city_of_birth: value || null }))
+                            setFormData((prev) => ({
+                              ...prev,
+                              city_of_birth: value === NO_CITY_SELECTED_VALUE ? null : value,
+                            }))
                           }
                           disabled={!isEditing || cityLoading}
                         >
@@ -645,7 +650,7 @@ const Profile = () => {
                             />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">No listed city</SelectItem>
+                            <SelectItem value={NO_CITY_SELECTED_VALUE}>No listed city</SelectItem>
                             {cityOptions.map((city) => (
                               <SelectItem key={city.id} value={city.id}>
                                 {city.name ?? "Unnamed City"}
