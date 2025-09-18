@@ -9,6 +9,7 @@ import {
   type ReactNode
 } from "react";
 
+import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
   progressionClient,
@@ -124,6 +125,68 @@ const toSafeNumber = (value: unknown, fallback = 0) => {
   }
 
   return fallback;
+};
+
+const resolveSkillKey = (row: Record<string, unknown> | null | undefined) => {
+  if (!row || typeof row !== "object") {
+    return null;
+  }
+
+  const candidate = (row["skill_id"] ?? row["skillId"]) as unknown;
+
+  if (typeof candidate === "string" || typeof candidate === "number") {
+    return String(candidate);
+  }
+
+  return null;
+};
+
+const mergeRowsBySkillId = <T extends Record<string, unknown>>(
+  existingRows: T[] | null | undefined,
+  updatedRows: T[] | null | undefined
+) => {
+  const base: T[] = Array.isArray(existingRows) ? [...existingRows] : [];
+
+  const indexByKey = new Map<string, number>();
+
+  base.forEach((row, index) => {
+    const key = resolveSkillKey(row);
+    if (key) {
+      indexByKey.set(key, index);
+    }
+  });
+
+  if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+    return base;
+  }
+
+  updatedRows.forEach(row => {
+    if (!row || typeof row !== "object") {
+      return;
+    }
+
+    const key = resolveSkillKey(row);
+    if (!key) {
+      base.push(row);
+      return;
+    }
+
+    const existingIndex = indexByKey.get(key);
+
+    if (existingIndex === undefined) {
+      indexByKey.set(key, base.length);
+      base.push(row);
+      return;
+    }
+
+    const existingRow = base[existingIndex];
+    base[existingIndex] = {
+      ...(typeof existingRow === "object" && existingRow ? existingRow : {}),
+      ...row
+    } as T;
+  });
+
+  return base;
 };
 
 const isMissingColumnError = (
@@ -2014,13 +2077,127 @@ const useProvideGameData = (): GameDataContextValue => {
     [applyCooldownState, fetchProgressionSnapshot, loadXpLedger, profile, selectedCharacterId]
   );
 
-  const upsertSkillProgress = useCallback(async (profileId: string, entries: SkillProgressUpsertInput[]) => {
-    return [];
-  }, []);
+  const upsertSkillProgress = useCallback(
+    async (profileId: string, entries: SkillProgressUpsertInput[]) => {
+      if (!profileId) {
+        throw new Error("A profile ID is required to save skill progress.");
+      }
 
-  const upsertSkillUnlocks = useCallback(async (profileId: string, entries: SkillUnlockUpsertInput[]) => {
-    return [];
-  }, []);
+      const sanitizedEntries = (Array.isArray(entries) ? entries : [])
+        .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+        .map(entry => ({
+          ...entry,
+          profile_id: profileId
+        }))
+        .filter(entry => {
+          const skillId = entry["skill_id"] ?? entry["skillId"];
+          return typeof skillId === "string" || typeof skillId === "number";
+        }) as Record<string, unknown>[];
+
+      if (sanitizedEntries.length === 0) {
+        if (Array.isArray(entries) && entries.length > 0) {
+          console.warn("No valid skill progress entries provided for upsert.", entries);
+        }
+        return [];
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("profile_skill_progress")
+          .upsert(sanitizedEntries, { onConflict: "profile_id,skill_id" })
+          .select();
+
+        if (error) {
+          throw error;
+        }
+
+        const upsertedRows = ((data ?? sanitizedEntries) as SkillProgressRow[]) ?? [];
+
+        setSkillProgress(prev =>
+          mergeRowsBySkillId(
+            (Array.isArray(prev) ? prev : []) as SkillProgressRow[],
+            upsertedRows as SkillProgressRow[]
+          )
+        );
+
+        return upsertedRows;
+      } catch (err) {
+        console.error("Failed to upsert skill progress:", err);
+        const message =
+          err && typeof err === "object" && "message" in err && typeof err.message === "string"
+            ? err.message
+            : "An unexpected error occurred while saving skill progress.";
+        toast({
+          title: "Failed to save skill progress",
+          description: message,
+          variant: "destructive"
+        });
+        throw err;
+      }
+    },
+    []
+  );
+
+  const upsertSkillUnlocks = useCallback(
+    async (profileId: string, entries: SkillUnlockUpsertInput[]) => {
+      if (!profileId) {
+        throw new Error("A profile ID is required to save skill unlocks.");
+      }
+
+      const sanitizedEntries = (Array.isArray(entries) ? entries : [])
+        .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+        .map(entry => ({
+          ...entry,
+          profile_id: profileId
+        }))
+        .filter(entry => {
+          const skillId = entry["skill_id"] ?? entry["skillId"];
+          return typeof skillId === "string" || typeof skillId === "number";
+        }) as Record<string, unknown>[];
+
+      if (sanitizedEntries.length === 0) {
+        if (Array.isArray(entries) && entries.length > 0) {
+          console.warn("No valid skill unlock entries provided for upsert.", entries);
+        }
+        return [];
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("profile_skill_unlocks")
+          .upsert(sanitizedEntries, { onConflict: "profile_id,skill_id" })
+          .select();
+
+        if (error) {
+          throw error;
+        }
+
+        const upsertedRows = ((data ?? sanitizedEntries) as SkillUnlockRow[]) ?? [];
+
+        setSkillUnlockRows(prev =>
+          mergeRowsBySkillId(
+            (Array.isArray(prev) ? prev : []) as SkillUnlockRow[],
+            upsertedRows as SkillUnlockRow[]
+          )
+        );
+
+        return upsertedRows;
+      } catch (err) {
+        console.error("Failed to upsert skill unlocks:", err);
+        const message =
+          err && typeof err === "object" && "message" in err && typeof err.message === "string"
+            ? err.message
+            : "An unexpected error occurred while saving skill unlocks.";
+        toast({
+          title: "Failed to save skill unlocks",
+          description: message,
+          variant: "destructive"
+        });
+        throw err;
+      }
+    },
+    []
+  );
 
   const hasCharacters = useMemo(() => characters.length > 0, [characters]);
   const loading = useMemo(
