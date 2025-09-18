@@ -154,6 +154,7 @@ const AdvancedGigSystem: React.FC = () => {
     skillProgress,
     skillDefinitions,
     updateProfile,
+    awardActionXp,
     addActivity,
     refreshProgressionState,
   } = useGameData();
@@ -662,25 +663,22 @@ const AdvancedGigSystem: React.FC = () => {
           fan_gain: fameDelta > 0 ? fameDelta : 0
         })
         .eq('id', gig.id);
-
-      await awardActionXp({
-        amount: Math.max(0, experienceGain),
-        actionKey: 'advanced_gig_performance',
-        metadata: {
-          gig_id: gig.id,
-          show_type: currentShowType,
-          show_duration_seconds: Math.round(totalShowDurationMs / 1000),
-          venue_tier: gig.venue.prestige_level,
-          final_score: Number(averageScore.toFixed(2)),
-          attendance,
-          collaboration_size: performanceStages.length,
-          professionalism: professionalismIndicators,
-          failure: isFailure,
-        },
-        uniqueEventId: gig.id,
-      });
-
-      await refreshProgressionState();
+      if (experienceGain > 0) {
+        await awardActionXp({
+          amount: experienceGain,
+          category: "performance",
+          actionKey: "advanced_gig",
+          uniqueEventId: gig.id,
+          metadata: {
+            gig_id: gig.id,
+            show_type: currentShowType,
+            success: !isFailure,
+            earnings: totalEarningsValue,
+            fame_delta: fameDelta,
+            performance_score: Math.round(averageScore),
+          },
+        });
+      }
 
       await updateProfile({
         cash: profile.cash + totalEarningsValue,

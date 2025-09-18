@@ -959,7 +959,12 @@ const MusicCreation = () => {
       const recordingFocus: AttributeFocus = "songwriting";
       const experienceGain = Math.max(
         0,
-        calculateExperienceReward(session.quality_gain * 5, attributeScores, recordingFocus)
+        calculateExperienceReward(
+          session.quality_gain * 5,
+          attributeScores,
+          recordingFocus,
+          progressionSnapshot
+        )
       );
 
       const sessionDurationMinutes = (() => {

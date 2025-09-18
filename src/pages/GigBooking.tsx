@@ -186,9 +186,18 @@ const GigBooking = () => {
     updateProfile,
     updateAttributes,
     addActivity,
-    refreshProgressionState,
+    xpWallet,
+    attributeStarTotal
   } = useGameData();
   const attributeScores = useMemo(() => extractAttributeScores(attributes), [attributes]);
+  const progressionSnapshot = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
   const [venues, setVenues] = useState<Venue[]>([]);
   const [playerGigs, setPlayerGigs] = useState<Gig[]>([]);
   const [selectedGig, setSelectedGig] = useState<string | null>(null);
@@ -717,46 +726,10 @@ const GigBooking = () => {
       const newCash = (profile.cash || 0) + actualPayment;
       const newFame = (profile.fame || 0) + fanGain;
       const baseExperience = (attendance / 10) * showTypeDetails.experienceModifier;
-      const expGain = Math.max(1, calculateExperienceReward(baseExperience, attributeScores, "performance"));
-      const performanceRatio = Math.max(0, Math.min(1, isSuccess ? successBase : failureBase));
-      const finalScore = Number((performanceRatio * 100).toFixed(2));
-      const showDurationSeconds = SHOW_TYPE_DURATION_SECONDS[showType] ?? SHOW_TYPE_DURATION_SECONDS[DEFAULT_SHOW_TYPE];
-      const collaborationSize = SHOW_TYPE_COLLABORATION_SIZE[showType] ?? SHOW_TYPE_COLLABORATION_SIZE[DEFAULT_SHOW_TYPE];
-      const attendanceCapacityRatio = capacity > 0 ? Number((attendance / capacity).toFixed(3)) : null;
-      const professionalismIndicators = {
-        crowd_engagement: performanceRatio >= 0.65,
-        technical_precision: moraleMultiplier >= 1,
-        stayed_on_schedule: true,
-      };
-
-      const xpMetadata: Record<string, unknown> = {
-        gig_id: gig.id,
-        show_type: showType,
-        show_duration_seconds: showDurationSeconds,
-        venue_tier: gig.venue.prestige_level ?? 0,
-        final_score: finalScore,
-        attendance,
-        collaboration_size: collaborationSize,
-        professionalism: professionalismIndicators,
-        success: isSuccess,
-      };
-
-      if (attendanceCapacityRatio !== null) {
-        xpMetadata.attendance_capacity_ratio = attendanceCapacityRatio;
-      }
-
-      if (environmentModifiers?.applied) {
-        xpMetadata.environment_modifiers_applied = environmentModifiers.applied.length;
-      }
-
-      await awardActionXp({
-        amount: expGain,
-        actionKey: "gig_booking_performance",
-        metadata: xpMetadata,
-        uniqueEventId: gig.id,
-      });
-
-      await refreshProgressionState();
+      const expGain = Math.max(
+        1,
+        calculateExperienceReward(baseExperience, attributeScores, "performance", progressionSnapshot)
+      );
 
       await updateProfile({
         cash: newCash,

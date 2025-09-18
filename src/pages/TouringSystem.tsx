@@ -125,7 +125,7 @@ type TourRecord = TourRow & {
 
 const TouringSystem: React.FC = () => {
   const { user } = useAuth();
-  const { profile, attributes, updateProfile, addActivity, refreshProgressionState } = useGameData();
+  const { profile, attributes, updateProfile, addActivity, awardActionXp } = useGameData();
   const [tours, setTours] = useState<Tour[]>([]);
   const [availableVenues, setAvailableVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -384,36 +384,27 @@ const TouringSystem: React.FC = () => {
       const experienceResult = applyAttributeToValue(baseExperienceGain, attributes, TOUR_EXPERIENCE_ATTRIBUTES);
       const experienceGain = experienceResult.value;
 
-      const finalScorePercentage = Number((performanceScore * 100).toFixed(2));
-      const professionalismIndicators = {
-        smooth_logistics: expenses <= revenue,
-        morale_high: performanceScore >= 0.65,
-        on_time_arrival: true,
-      };
-
-      await awardActionXp({
-        amount: Math.max(0, experienceGain),
-        actionKey: 'tour_show',
-        metadata: {
-          tour_id: tour.id,
-          tour_stop_id: venue.id,
-          show_type: showType,
-          show_duration_seconds: TOUR_SHOW_DURATION_SECONDS[showType] ?? TOUR_SHOW_DURATION_SECONDS[DEFAULT_SHOW_TYPE],
-          venue_tier: venue.venue_prestige_level,
-          final_score: finalScorePercentage,
-          attendance: ticketsSold,
-          collaboration_size: TOUR_COLLABORATION_SIZE[showType] ?? TOUR_COLLABORATION_SIZE[DEFAULT_SHOW_TYPE],
-          professionalism: professionalismIndicators,
-          distance_from_previous: venue.distance_from_previous,
-        },
-        uniqueEventId: venue.id,
-      });
-
-      await refreshProgressionState();
+      if (experienceGain > 0) {
+        await awardActionXp({
+          amount: experienceGain,
+          category: "performance",
+          actionKey: "tour_show",
+          uniqueEventId: `${tour.id}:${venue.id}`,
+          metadata: {
+            tour_id: tour.id,
+            tour_venue_id: venue.id,
+            show_type: showType,
+            tickets_sold: ticketsSold,
+            net_earnings: netEarnings,
+            fame_gained: fameGain,
+            performance_score: performanceScore,
+          },
+        });
+      }
 
       await updateProfile({
         cash: profile.cash + netEarnings,
-        fame: profile.fame + fameGain
+        fame: profile.fame + fameGain,
       });
 
       await addActivity(

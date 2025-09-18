@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchWorldEnvironmentSnapshot, type WeatherCondition } from "@/utils/worldEnvironment";
+import type { ProgressionActionSuccessResponse } from "@/types/progression";
 import { resolveAttributeValue } from "@/utils/attributeModifiers";
 import {
   AttributeFocus,
@@ -558,12 +559,16 @@ const Busking = () => {
     attributes,
     xpWallet,
     updateProfile,
+    awardActionXp,
     updateAttributes,
     refreshProgressionState,
     addActivity,
     loading: gameLoading,
     currentCity,
-    selectedCharacterId
+    selectedCharacterId,
+    xpWallet,
+    refreshProgressionState,
+    applyProgressionUpdate
   } = useGameData();
   const { toast } = useToast();
   const [locations, setLocations] = useState<BuskingLocation[]>([]);
@@ -580,6 +585,10 @@ const Busking = () => {
   const [environmentLoading, setEnvironmentLoading] = useState(true);
   const [environmentError, setEnvironmentError] = useState<string | null>(null);
   const [cachedAttributes, setCachedAttributes] = useState<PlayerAttributes | null>(null);
+  const xpDisplay = useMemo(
+    () => xpWallet?.xp_balance ?? profile?.experience ?? 0,
+    [xpWallet?.xp_balance, profile?.experience]
+  );
   const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
     const source = cachedAttributes as unknown as Record<string, unknown> | null;
     return {
@@ -589,6 +598,15 @@ const Busking = () => {
     };
   }, [cachedAttributes]);
   const totalExperience = Number(xpWallet?.lifetime_xp ?? 0);
+
+  const baseProgression = useMemo(
+    () => ({
+      wallet: xpWallet ?? null,
+      attributeStars: attributeStarTotal,
+      legacyExperience: profile?.experience ?? null
+    }),
+    [xpWallet, attributeStarTotal, profile?.experience]
+  );
 
   const cityBuskingValue = useMemo(() => {
     if (!currentCity) return 1;
@@ -881,8 +899,11 @@ const Busking = () => {
     const expectancy = successChance / 100;
     const baseExperience =
       (selectedLocation.experience_reward + modifierBonus) * environmentMultiplier * (0.6 + expectancy * 0.4);
-    return Math.max(0, calculateExperienceReward(baseExperience, attributeScores, "performance"));
-  }, [attributeScores, environmentDetails, selectedLocation, selectedModifier, successChance]);
+    return Math.max(
+      0,
+      calculateExperienceReward(baseExperience, attributeScores, "performance", baseProgression)
+    );
+  }, [attributeScores, baseProgression, environmentDetails, selectedLocation, selectedModifier, successChance]);
 
   const WeatherIcon = environmentDetails.weather
     ? getWeatherIcon(environmentDetails.weather.condition)
@@ -1025,7 +1046,10 @@ const Busking = () => {
         environmentDetails.combined.experienceMultiplier *
         cityMultiplier;
       const rawExperience = baseExperience * (success ? (0.9 + Math.random() * 0.5) : 0.5 * (0.7 + Math.random() * 0.3));
-      const experienceGained = Math.max(0, calculateExperienceReward(rawExperience, attributeScores, "performance"));
+      const experienceGained = Math.max(
+        0,
+        calculateExperienceReward(rawExperience, attributeScores, "performance", baseProgression)
+      );
 
       const crowdReactionsSuccess = [
         "The crowd formed a circle and started cheering!",
@@ -1314,7 +1338,7 @@ const Busking = () => {
               <Award className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{totalExperience}</div>
+              <div className="text-2xl font-bold text-accent">{xpDisplay.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Every street set sharpens your craft.</p>
             </CardContent>
           </Card>
