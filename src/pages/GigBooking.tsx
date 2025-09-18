@@ -22,6 +22,7 @@ import {
 } from "@/utils/gameBalance";
 import { applyEquipmentWear } from "@/utils/equipmentWear";
 import { fetchEnvironmentModifiers, type EnvironmentModifierSummary, type AppliedEnvironmentEffect } from "@/utils/worldEnvironment";
+import { awardActionXp } from "@/utils/progression";
 import type { Database, Json } from "@/integrations/supabase/types";
 
 type VenueRow = Database["public"]["Tables"]["venues"]["Row"];
@@ -69,6 +70,16 @@ const SHOW_TYPE_DETAILS: Record<ShowType, {
     fanMultiplier: 1.2,
     experienceModifier: 1.15,
   },
+};
+
+const SHOW_TYPE_DURATION_SECONDS: Record<ShowType, number> = {
+  standard: 7200,
+  acoustic: 5400,
+};
+
+const SHOW_TYPE_COLLABORATION_SIZE: Record<ShowType, number> = {
+  standard: 5,
+  acoustic: 3,
 };
 
 const SHOW_TYPE_OPTIONS: Array<{ value: ShowType; label: string; description: string }> = Object.entries(SHOW_TYPE_DETAILS).map(([value, detail]) => ({
@@ -723,7 +734,6 @@ const GigBooking = () => {
       await updateProfile({
         cash: newCash,
         fame: newFame,
-        experience: (profile.experience || 0) + expGain
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};

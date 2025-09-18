@@ -556,8 +556,8 @@ const Busking = () => {
     skills,
     attributes,
     xpWallet,
-    attributeStarTotal,
     updateProfile,
+    awardActionXp,
     updateAttributes,
     addActivity,
     loading: gameLoading,
@@ -587,6 +587,7 @@ const Busking = () => {
       socialReach: resolveAttributeValue(source, "social_reach", 1),
     };
   }, [cachedAttributes]);
+  const totalExperience = Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0);
 
   const baseProgression = useMemo(
     () => ({
@@ -1124,12 +1125,27 @@ const Busking = () => {
 
       const nextCash = (profile.cash ?? 0) + cashEarned;
       const nextFame = (profile.fame ?? 0) + fameGained;
-      const nextExperience = (profile.experience ?? 0) + experienceGained;
+      if (experienceGained > 0) {
+        await awardActionXp({
+          amount: experienceGained,
+          category: "performance",
+          actionKey: "busking_session",
+          uniqueEventId: sessionRecord.id,
+          metadata: {
+            session_id: sessionRecord.id,
+            location_id: selectedLocation.id,
+            modifier_id: modifier?.id ?? null,
+            success,
+            cash_earned: cashEarned,
+            fame_gained: fameGained,
+            experience_gained: experienceGained,
+          },
+        });
+      }
 
       await updateProfile({
         cash: nextCash,
         fame: nextFame,
-        experience: nextExperience,
       });
 
       const attributeUpdates: Partial<Record<AttributeKey, number>> = {};
@@ -1308,7 +1324,7 @@ const Busking = () => {
               <Award className="h-4 w-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-accent">{profile.experience ?? 0}</div>
+              <div className="text-2xl font-bold text-accent">{totalExperience}</div>
               <p className="text-xs text-muted-foreground">Every street set sharpens your craft.</p>
             </CardContent>
           </Card>

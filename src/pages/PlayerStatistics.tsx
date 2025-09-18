@@ -1425,7 +1425,7 @@ const PlayerStatistics = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Experience:</span>
-                    <span className="font-bold text-blue-600">{profile.experience.toLocaleString()}</span>
+                    <span className="font-bold text-blue-600">{totalExperience.toLocaleString()}</span>
                   </div>
                 </CardContent>
               </Card>

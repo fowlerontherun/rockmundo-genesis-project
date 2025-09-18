@@ -1,10 +1,8 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import {
-  createClient,
-  type PostgrestError,
-  type SupabaseClient,
-  type User,
-} from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import type {
+  PostgrestError,
+  SupabaseClient,
+  User,
+} from "@supabase/supabase-js";
 
 import type { Database } from "../../../src/lib/supabase-types.ts";
 
@@ -13,6 +11,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Cache-Control": "no-store",
 };
+
+type SupabaseModule = typeof import("@supabase/supabase-js");
+
+let supabaseModulePromise: Promise<SupabaseModule> | null = null;
+
+async function resolveSupabaseModule(): Promise<SupabaseModule> {
+  if (!supabaseModulePromise) {
+    const specifier = import.meta.main
+      ? "https://esm.sh/@supabase/supabase-js@2.57.4"
+      : "@supabase/supabase-js";
+    supabaseModulePromise = import(specifier) as Promise<SupabaseModule>;
+  }
+
+  return supabaseModulePromise;
+}
 
 type ProgressionAction =
   | "award_action_xp"
@@ -39,28 +52,43 @@ type ProfileSummary = {
   user_id: string;
   username: string;
   display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
   level: number;
   experience: number;
-  attribute_points_available: number;
-  skill_points_available: number;
-  last_point_conversion_at: string | null;
+  experience_at_last_weekly_bonus: number;
+  cash: number;
+  fame: number;
+  fans: number;
+  last_weekly_bonus_at: string | null;
+  weekly_bonus_streak: number;
+  weekly_bonus_metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-  is_active?: boolean | null;
 };
 
-type WalletSummary = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+type WalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"];
+
+type WalletSummary = WalletRow | null;
 
 type AttributeSummary = Database["public"]["Tables"]["player_attributes"]["Row"] | null;
+
+type PointAvailability = {
+  attribute_points_available: number;
+  skill_points_available: number;
+};
 
 type NormalizedResponse = {
   success: true;
   action: ProgressionAction;
   message?: string;
-  profile: ProfileSummary;
-  wallet: WalletSummary;
+  profile: ProfileSummary & PointAvailability;
+  wallet: (WalletRow & PointAvailability) | null;
   attributes: AttributeSummary;
   cooldowns: Record<string, number>;
+  point_availability: PointAvailability;
   result?: unknown;
 };
 
@@ -90,7 +118,7 @@ const LEDGER_EVENT_TYPES: Record<ProgressionAction, string> = {
   award_special_xp: "special_xp",
 };
 
-serve(async (req) => {
+async function progressionHandler(req: Request): Promise<Response> {
   try {
     if (req.method === "OPTIONS") {
       return new Response("ok", { headers: corsHeaders });
@@ -123,6 +151,7 @@ serve(async (req) => {
       throw new HttpError(400, "Unable to resolve progression action from request");
     }
 
+    const { createClient } = await resolveSupabaseModule();
     const client = createClient<Database>(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { headers: { Authorization: authHeader } },
@@ -148,17 +177,25 @@ serve(async (req) => {
 
     const handlerResult = await handler(context, payload);
 
-    const { profile, wallet, attributes } = await fetchProfileState(client, profileState.profile.id);
+    const { profile, wallet, attributes, pointAvailability } = await fetchProfileState(client, profileState.profile.id);
+    const profileWithAvailability: ProfileSummary & PointAvailability = {
+      ...profile,
+      ...pointAvailability,
+    };
+    const walletWithAvailability = wallet
+      ? ({ ...wallet, ...pointAvailability } as WalletRow & PointAvailability)
+      : null;
     const cooldowns = await computeActionCooldowns(client, profileState.profile.id);
 
     const responseBody: NormalizedResponse = {
       success: true,
       action,
       message: handlerResult.message,
-      profile,
-      wallet,
+      profile: profileWithAvailability,
+      wallet: walletWithAvailability,
       attributes,
       cooldowns,
+      point_availability: pointAvailability,
       result: handlerResult.result,
     };
 
@@ -180,7 +217,12 @@ serve(async (req) => {
       message: "Internal server error",
     }, 500);
   }
-});
+}
+
+if (import.meta.main) {
+  const { serve } = await import("https://deno.land/std@0.224.0/http/server.ts");
+  serve(progressionHandler);
+}
 
 const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: JsonRecord) => Promise<HandlerResult>> = {
   award_action_xp: async (ctx, payload) => {
@@ -367,29 +409,14 @@ function isProgressionAction(action: string): action is ProgressionAction {
 }
 
 async function loadActiveProfile(client: SupabaseClient<Database>, userId: string) {
-  let profileQuery = client
+  const { data: profiles, error } = await client
     .from("profiles")
     .select(
-      "id, user_id, username, display_name, level, experience, attribute_points_available, skill_points_available, last_point_conversion_at, created_at, updated_at, is_active",
+      "id, user_id, username, display_name, avatar_url, bio, level, experience, experience_at_last_weekly_bonus, cash, fame, fans, last_weekly_bonus_at, weekly_bonus_streak, weekly_bonus_metadata, created_at, updated_at",
     )
     .eq("user_id", userId)
-    .order("is_active", { ascending: false, nullsFirst: true })
     .order("created_at", { ascending: true })
     .limit(1);
-
-  let { data: profiles, error } = await profileQuery;
-
-  if (error && error.code === "42703") {
-    profileQuery = client
-      .from("profiles")
-      .select(
-        "id, user_id, username, display_name, level, experience, attribute_points_available, skill_points_available, last_point_conversion_at, created_at, updated_at",
-      )
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    ({ data: profiles, error } = await profileQuery);
-  }
 
   if (error) {
     throw new HttpError(500, "Failed to load active profile", error);
@@ -400,14 +427,14 @@ async function loadActiveProfile(client: SupabaseClient<Database>, userId: strin
     throw new HttpError(404, "Active profile not found for user");
   }
 
-  return { profile: profile as ProfileSummary };
+  return { profile: normalizeProfileRow(profile as ProfileRow) };
 }
 
 async function fetchProfileState(client: SupabaseClient<Database>, profileId: string) {
   const profilePromise = client
     .from("profiles")
     .select(
-      "id, user_id, username, display_name, level, experience, attribute_points_available, skill_points_available, last_point_conversion_at, created_at, updated_at, is_active",
+      "id, user_id, username, display_name, avatar_url, bio, level, experience, experience_at_last_weekly_bonus, cash, fame, fans, last_weekly_bonus_at, weekly_bonus_streak, weekly_bonus_metadata, created_at, updated_at",
     )
     .eq("id", profileId)
     .maybeSingle();
@@ -446,11 +473,62 @@ async function fetchProfileState(client: SupabaseClient<Database>, profileId: st
     throw new HttpError(500, "Failed to load attribute state", attributesResult.error);
   }
 
+  const wallet = walletResult.data ? walletResult.data as WalletRow : null;
+  const attributes = attributesResult.data ?? null;
+  const pointAvailability = calculatePointAvailability(wallet, attributes);
+
   return {
-    profile: profileResult.data as ProfileSummary,
-    wallet: walletResult.data ?? null,
-    attributes: attributesResult.data ?? null,
+    profile: normalizeProfileRow(profileResult.data as ProfileRow),
+    wallet,
+    attributes,
+    pointAvailability,
   };
+}
+
+function normalizeProfileRow(row: ProfileRow): ProfileSummary {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    username: row.username,
+    display_name: row.display_name,
+    avatar_url: row.avatar_url,
+    bio: row.bio,
+    level: row.level,
+    experience: row.experience,
+    experience_at_last_weekly_bonus: row.experience_at_last_weekly_bonus ?? 0,
+    cash: row.cash ?? 0,
+    fame: row.fame ?? 0,
+    fans: row.fans ?? 0,
+    last_weekly_bonus_at: row.last_weekly_bonus_at,
+    weekly_bonus_streak: row.weekly_bonus_streak ?? 0,
+    weekly_bonus_metadata: coerceJsonRecord(row.weekly_bonus_metadata),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function calculatePointAvailability(wallet: WalletSummary, attributes: AttributeSummary): PointAvailability {
+  const attributePointsBanked = attributes?.attribute_points;
+  const attributePointsSpent = attributes?.attribute_points_spent ?? 0;
+  const attributePointsFromWallet = (wallet?.attribute_points_earned ?? 0) - attributePointsSpent;
+  const attributePointsAvailable = Math.max(
+    0,
+    Math.trunc(attributePointsBanked ?? attributePointsFromWallet),
+  );
+
+  const skillPointsAvailable = Math.max(0, Math.trunc(wallet?.skill_points_earned ?? 0));
+
+  return {
+    attribute_points_available: attributePointsAvailable,
+    skill_points_available: skillPointsAvailable,
+  };
+}
+
+function coerceJsonRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
 }
 
 async function computeActionCooldowns(client: SupabaseClient<Database>, profileId: string) {
@@ -656,3 +734,6 @@ function jsonResponse(body: NormalizedResponse | ErrorResponse, status: number) 
     },
   });
 }
+
+export { progressionHandler, loadActiveProfile, fetchProfileState };
+export type { PointAvailability, ProfileSummary };
