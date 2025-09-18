@@ -104,10 +104,30 @@ interface CampaignFormState {
 const campaignStatusOptions: CampaignStatus[] = ["Active", "Completed"];
 
 const extractMissingColumn = (error: PostgrestError | null | undefined) => {
-  const match = error?.message?.match(
-    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i,
+  if (!error) {
+    return null;
+  }
+
+  const haystacks = [error.message, error.details, error.hint].filter(
+    (value): value is string => typeof value === "string" && value.length > 0,
   );
-  return match?.[1] ?? null;
+
+  const patterns = [
+    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i,
+    /could not find the '([\w]+)' column/i,
+    /'([\w]+)'\s+column/i,
+  ];
+
+  for (const haystack of haystacks) {
+    for (const pattern of patterns) {
+      const match = haystack.match(pattern);
+      if (match?.[1]) {
+        return match[1];
+      }
+    }
+  }
+
+  return null;
 };
 
 const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
@@ -605,7 +625,8 @@ const SocialMedia = () => {
           .maybeSingle();
 
         if (error) {
-          if (error.code === "42703") {
+          const missingColumn = extractMissingColumn(error);
+          if (missingColumn) {
             setFollowers(0);
             setEngagementRate(0);
             return;
@@ -928,13 +949,12 @@ const SocialMedia = () => {
           break;
         }
 
-        if (error.code === "42703") {
-          const missingColumn = extractMissingColumn(error);
-          if (!missingColumn || skippedColumns.has(missingColumn)) {
-            updateError = error;
-            break;
-          }
-
+        const missingColumn = extractMissingColumn(error);
+        if (
+          missingColumn &&
+          !skippedColumns.has(missingColumn) &&
+          missingColumn in attemptedPayload
+        ) {
           skippedColumns.add(missingColumn);
           attemptedPayload = omitFromRecord(attemptedPayload, missingColumn);
           continue;
@@ -944,7 +964,11 @@ const SocialMedia = () => {
         break;
       }
 
-      if (Object.keys(attemptedPayload).length === 0 && updateError?.code === "42703") {
+      if (
+        Object.keys(attemptedPayload).length === 0 &&
+        updateError &&
+        extractMissingColumn(updateError)
+      ) {
         updateError = null;
       }
 
