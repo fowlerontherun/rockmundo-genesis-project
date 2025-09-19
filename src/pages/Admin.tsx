@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { AdminRoute } from "@/components/AdminRoute";
 
 const UNIVERSITY_PAGE_SIZE = 10;
 
@@ -61,7 +62,6 @@ const universitySchema = z.object({
 });
 
 type UniversityFormValues = z.infer<typeof universitySchema>;
-
 type UniversitiesTable = Database["public"]["Tables"] extends { universities: infer T }
   ? T
   : {
@@ -343,7 +343,8 @@ export default function Admin() {
   );
 
   return (
-    <div className="container mx-auto max-w-6xl p-6 space-y-6">
+    <AdminRoute>
+      <div className="container mx-auto max-w-6xl p-6 space-y-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Admin Panel</h1>
         <p className="text-muted-foreground">Configure world data and manage gameplay balancing parameters.</p>
@@ -649,6 +650,7 @@ export default function Admin() {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </AdminRoute>
   );
 }

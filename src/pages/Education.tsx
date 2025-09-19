@@ -1,6 +1,6 @@
-import { BookOpen, GraduationCap, PlaySquare, Users, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { BookOpen, GraduationCap, PlaySquare, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -9,135 +9,134 @@ const tabs = [
     value: "books",
     label: "Books",
     icon: BookOpen,
-    description: "Build a foundational library for musicianship, songwriting, and career growth."
+    description: "Curated reading lists for every stage of your journey."
   },
   {
     value: "university",
     label: "University",
     icon: GraduationCap,
-    description: "Map out formal education paths and micro-credentials that align with your goals."
+    description: "Formal programs, certificates, and semester planners."
   },
   {
     value: "videos",
     label: "YouTube Videos",
     icon: PlaySquare,
-    description: "Curated playlists and channels that deliver high-impact lessons on demand."
+    description: "High-impact playlists and channels ready to stream."
   },
   {
     value: "mentors",
     label: "Mentors",
     icon: Users,
-    description: "Connect with experts for personalized feedback, coaching, and accountability."
+    description: "Personalized coaching pods and expert office hours."
   },
   {
     value: "band",
     label: "Band Learning",
     icon: Sparkles,
-    description: "Structured learning plans designed to level up your entire band together."
+    description: "Level up together with intensives and rotating focus cycles."
   }
 ];
 
-const bookCollections = [
+const bookTracks = [
   {
-    title: "Foundational Musicianship",
+    title: "Build the Fundamentals",
     description:
-      "Master the essentials of music theory, ear training, and instrument technique to build confident performance skills.",
-    items: [
+      "Lay a strong musical foundation with resources that strengthen theory, rhythm, and listening skills.",
+    books: [
       {
-        name: "The Musician's Handbook",
-        author: "Bobby Borg",
-        focus: "Career Fundamentals",
-        takeaway: "Establish a rock-solid foundation for navigating the industry and building sustainable habits."
+        title: "The Musician's Way",
+        author: "Gerald Klickstein",
+        focus: "Technique & Habits",
+        takeaway: "Daily practice frameworks for staying injury-free and motivated."
       },
       {
-        name: "Music Theory for Guitarists",
+        title: "Music Theory for Guitarists",
         author: "Tom Kolb",
-        focus: "Theory Essentials",
-        takeaway: "Translate theory concepts directly onto the fretboard with modern practice drills."
+        focus: "Applied Theory",
+        takeaway: "Translate theory concepts directly to the fretboard with modern drills."
       },
       {
-        name: "Effortless Mastery",
+        title: "Effortless Mastery",
         author: "Kenny Werner",
-        focus: "Mindset & Practice",
-        takeaway: "Unlock flow-state practicing with techniques that balance discipline and creativity."
+        focus: "Mindset",
+        takeaway: "Unlock confident performances by rewiring how you approach the stage."
       }
     ]
   },
   {
-    title: "Songwriting & Creativity",
+    title: "Write & Produce",
     description:
-      "Upgrade your writing toolkit with books that unpack lyricism, storytelling, and arranging for modern audiences.",
-    items: [
+      "Move from inspiration to finished songs with books that demystify lyric writing, arranging, and production.",
+    books: [
       {
-        name: "Writing Better Lyrics",
+        title: "Writing Better Lyrics",
         author: "Pat Pattison",
-        focus: "Lyric Craft",
-        takeaway: "A semester-style guide to turning song ideas into compelling narratives."
+        focus: "Story Craft",
+        takeaway: "Semester-style assignments that transform loose ideas into lyrical hooks."
       },
       {
-        name: "Tunesmith",
+        title: "Tunesmith",
         author: "Jimmy Webb",
         focus: "Composition",
-        takeaway: "Legendary songwriting lessons from a Grammy-winning composer with exercises you can apply immediately."
+        takeaway: "Behind-the-scenes lessons from a Grammy-winning songwriter."
       },
       {
-        name: "Songwriters On Songwriting",
-        author: "Paul Zollo",
-        focus: "Creative Process",
-        takeaway: "Dozens of interviews with iconic writers that reveal breakthrough moments and creative systems."
+        title: "Mixing Secrets for the Small Studio",
+        author: "Mike Senior",
+        focus: "Production",
+        takeaway: "Break down pro-level mixes using accessible home-studio workflows."
       }
     ]
   },
   {
-    title: "Music Business & Branding",
+    title: "Grow the Business",
     description:
-      "Navigate the modern music economy with guides that demystify contracts, marketing, and independent releases.",
-    items: [
+      "Navigate the modern music economy with resources that cover branding, release strategy, and finances.",
+    books: [
       {
-        name: "All You Need to Know About the Music Business",
-        author: "Donald Passman",
-        focus: "Industry",
-        takeaway: "Understand contracts, royalties, and negotiation tactics before your next big opportunity."
-      },
-      {
-        name: "Creative Quest",
-        author: "Questlove",
-        focus: "Creative Leadership",
-        takeaway: "Blend artistry and entrepreneurship through stories from one of music's most inventive minds."
-      },
-      {
-        name: "How to Make It in the New Music Business",
+        title: "How to Make It in the New Music Business",
         author: "Ari Herstand",
         focus: "Indie Strategy",
-        takeaway: "A modern blueprint for self-managed releases, touring, and audience growth."
+        takeaway: "Plan sustainable releases, tours, and fan funnels without a major label."
+      },
+      {
+        title: "All You Need to Know About the Music Business",
+        author: "Donald Passman",
+        focus: "Legal & Deals",
+        takeaway: "Understand royalties, contracts, and negotiations before you sign anything."
+      },
+      {
+        title: "Creative Quest",
+        author: "Questlove",
+        focus: "Creative Leadership",
+        takeaway: "Blend artistry, collaboration, and entrepreneurship through real-world stories."
       }
     ]
   }
 ];
 
-const universityTracks = [
+const universityRoutes = [
   {
-    title: "Degree Pathways",
-    description:
-      "Explore accredited programs that combine performance, technology, and music business training.",
+    title: "Degree Programs",
+    description: "Performance-first degrees that mix ensemble work with industry labs.",
     highlights: [
       {
-        name: "BFA in Contemporary Performance",
+        program: "BFA in Contemporary Performance",
         school: "Berklee College of Music",
-        focus: "Performance Major",
-        details: "Focus on live performance labs, ensemble work, and songwriting collaborations."
+        format: "4-year",
+        detail: "Ensemble collaborations, songwriting bootcamps, and touring simulations."
       },
       {
-        name: "BA in Music Business",
+        program: "BA in Music Business",
         school: "Middle Tennessee State University",
-        focus: "Industry Leadership",
-        details: "Blend legal, marketing, and management courses with internship placements in Nashville."
+        format: "4-year",
+        detail: "Blend marketing, law, and management courses with internship placements."
       },
       {
-        name: "BS in Music Production",
+        program: "BS in Music Production",
         school: "Full Sail University",
-        focus: "Studio Technology",
-        details: "Hands-on studio time with DAW mastery, audio engineering, and mixing for release."
+        format: "Accelerated",
+        detail: "Hands-on DAW labs, engineering practicums, and release-ready projects."
       }
     ],
     action: {
@@ -146,27 +145,26 @@ const universityTracks = [
     }
   },
   {
-    title: "Micro-Credentials & Certificates",
-    description:
-      "Stack short-form credentials to sharpen niche skills while staying active in the scene.",
+    title: "Certificates & Bootcamps",
+    description: "Stack micro-credentials that keep you road-ready while you tour.",
     highlights: [
       {
-        name: "Modern Music Production",
+        program: "Modern Music Production",
         school: "Coursera x Berklee",
-        focus: "12-Week Certificate",
-        details: "Project-based program covering beat design, mixing, and mastering workflows."
+        format: "12-week",
+        detail: "Project-based course with mentor feedback on mixes and arrangements."
       },
       {
-        name: "Music Marketing Accelerator",
+        program: "Music Marketing Accelerator",
         school: "Soundfly",
-        focus: "Mentor-Guided",
-        details: "Learn digital strategy, branding, and fan funnels with 1:1 mentor feedback."
+        format: "Mentor-Led",
+        detail: "Design fan funnels, campaigns, and EPK updates with weekly coaching."
       },
       {
-        name: "Live Event Production",
+        program: "Live Event Production",
         school: "Point Blank Music School",
-        focus: "Hybrid",
-        details: "Develop stage management and tour logistics skills with live practicum opportunities."
+        format: "Hybrid",
+        detail: "Stage management, advancing, and crew coordination drills."
       }
     ],
     action: {
@@ -176,26 +174,25 @@ const universityTracks = [
   },
   {
     title: "Semester Planner",
-    description:
-      "Balance academic study with band commitments using this repeatable 15-week structure.",
+    description: "Balance credit loads with rehearsal, writing, and release cadences.",
     highlights: [
       {
-        name: "Weeks 1-5",
+        program: "Weeks 1-5",
         school: "Skill Ramp-Up",
-        focus: "Technique & Theory",
-        details: "Double down on practice labs and music theory intensives while scheduling songwriting sprints."
+        format: "Technique",
+        detail: "Lock in practice labs, theory refreshers, and sectionals."
       },
       {
-        name: "Weeks 6-10",
+        program: "Weeks 6-10",
         school: "Creative Production",
-        focus: "Studio & Writing",
-        details: "Shift toward arranging, collaboration projects, and recording sessions for portfolio tracks."
+        format: "Studio",
+        detail: "Cut demos, arrange collabs, and prep for showcase submissions."
       },
       {
-        name: "Weeks 11-15",
+        program: "Weeks 11-15",
         school: "Career Launch",
-        focus: "Showcase & Networking",
-        details: "Secure live showcases, meet with advisors, and prepare EPK updates ahead of finals."
+        format: "Industry",
+        detail: "Secure gigs, polish your EPK, and rehearse live sets for juries."
       }
     ],
     action: {
@@ -207,86 +204,74 @@ const universityTracks = [
 
 const videoPlaylists = [
   {
-    title: "Technique & Theory Channels",
-    description:
-      "Weekly uploads from trusted educators to keep your chops sharp and your theory knowledge fresh.",
-    resources: [
+    title: "Technique Channels",
+    description: "Consistent uploads that sharpen chops and keep practice fun.",
+    videos: [
       {
         name: "Rick Beato",
-        format: "Deep-Dive Lessons",
-        focus: "Ear Training & Analysis",
-        link: "https://www.youtube.com/user/pegzch",
-        summary: "Break down legendary songs, chord progressions, and arrangement secrets in long-form videos."
+        format: "Deep Dive Lessons",
+        focus: "Ear Training",
+        url: "https://www.youtube.com/user/pegzch"
       },
       {
         name: "Marty Music",
         format: "Guitar Tutorials",
         focus: "Technique",
-        link: "https://www.youtube.com/c/martyschwartz",
-        summary: "Accessible guitar lessons covering riffs, tone tips, and style-specific workouts."
+        url: "https://www.youtube.com/c/martyschwartz"
       },
       {
         name: "Nahre Sol",
         format: "Creative Exercises",
         focus: "Composition",
-        link: "https://www.youtube.com/c/nahresol",
-        summary: "Hybrid classical & electronic explorations for players who love experimentation."
+        url: "https://www.youtube.com/c/nahresol"
       }
     ]
   },
   {
-    title: "Structured Playlists",
-    description:
-      "Follow curated playlists that simulate guided courses complete with homework prompts.",
-    resources: [
+    title: "Guided Playlists",
+    description: "Structured series that function like mini-courses with homework.",
+    videos: [
       {
         name: "30-Day Songwriting Bootcamp",
         format: "Playlist",
         focus: "Daily Prompts",
-        link: "https://www.youtube.com/playlist?list=PL1A2F2A3",
-        summary: "Short daily assignments that move from lyric sketches to full demos in a month."
+        url: "https://www.youtube.com/playlist?list=PL1A2F2A3"
       },
       {
         name: "Mixing Essentials in Logic Pro",
         format: "Playlist",
         focus: "Home Studio",
-        link: "https://www.youtube.com/playlist?list=PL2F3G4H5",
-        summary: "Step-by-step walkthroughs on EQ, compression, and mix bus processing for indie releases."
+        url: "https://www.youtube.com/playlist?list=PL2F3G4H5"
       },
       {
         name: "Stage Presence Fundamentals",
         format: "Mini-Series",
         focus: "Performance",
-        link: "https://www.youtube.com/playlist?list=PL7K8L9M0",
-        summary: "Learn crowd engagement, mic control, and dynamic movement in live settings."
+        url: "https://www.youtube.com/playlist?list=PL7K8L9M0"
       }
     ]
   },
   {
-    title: "Practice Accountability",
-    description:
-      "Use these formats to keep consistent practice logs and track incremental progress.",
-    resources: [
+    title: "Accountability Formats",
+    description: "Join co-practice rooms and track incremental wins together.",
+    videos: [
       {
         name: "Practice With Me Streams",
-        format: "Co-Practice",
-        focus: "Routine Building",
-        link: "https://www.youtube.com/results?search_query=music+practice+with+me",
-        summary: "Join real-time practice rooms that mimic study halls for musicians working on technique."
+        format: "Live Streams",
+        focus: "Routine",
+        url: "https://www.youtube.com/results?search_query=music+practice+with+me"
       },
       {
         name: "Looped Backing Tracks",
         format: "Play-Along",
         focus: "Improvisation",
-        link: "https://www.youtube.com/results?search_query=backing+tracks+for+guitar",
-        summary: "Select tempo-specific jam tracks to develop improvisation vocabulary and stage endurance."
+        url: "https://www.youtube.com/results?search_query=backing+tracks+for+guitar"
       },
       {
         name: "Ear Training Drills",
         format: "Interactive",
         focus: "Listening Skills",
-        link: "https://www.youtube.com/results?search_query=ear+training+intervals",
-        summary: "Build interval recognition speed with call-and-response exercises and on-screen quizzes."
+        url: "https://www.youtube.com/results?search_query=ear+training+intervals"
       }
     ]
   }
@@ -294,27 +279,23 @@ const videoPlaylists = [
 
 const mentorPrograms = [
   {
-    title: "Mentorship Tracks",
-    description:
-      "Choose a pathway that matches your current career phase and desired feedback style.",
+    title: "Mentorship Pods",
+    description: "Small cohorts that deliver consistent feedback and accountability.",
     cohorts: [
       {
         name: "Songwriting Lab",
-        focus: "Co-Writing Circle",
         cadence: "Bi-weekly",
-        support: "Collaborative feedback on drafts, melody rewrites, and lyric polish." 
+        focus: "Co-writing & lyric review"
       },
       {
         name: "Stagecraft Intensive",
-        focus: "Performance Coaching",
         cadence: "Monthly",
-        support: "Virtual showcase critiques with movement and mic technique guidance."
+        focus: "Movement, mic technique, and live critique"
       },
       {
         name: "Indie Release Accelerator",
-        focus: "Launch Strategy",
         cadence: "Weekly",
-        support: "Release calendar planning, marketing funnels, and analytics reviews."
+        focus: "Launch roadmaps, marketing funnels, and analytics"
       }
     ],
     action: {
@@ -324,26 +305,22 @@ const mentorPrograms = [
   },
   {
     title: "Expert Network",
-    description:
-      "Tap into a curated roster of industry veterans for one-off consultations or recurring coaching.",
+    description: "Tap specialists for focused office hours or project-based consults.",
     cohorts: [
       {
         name: "Creative Director",
-        focus: "Visual Branding",
         cadence: "On-Demand",
-        support: "Refine album art, stage visuals, and social media style guides."
+        focus: "Visual branding & storytelling"
       },
       {
         name: "Music Attorney",
-        focus: "Contract Review",
         cadence: "Retainer",
-        support: "Protect intellectual property, negotiate deals, and review licensing opportunities."
+        focus: "Contract review and negotiation"
       },
       {
         name: "Tour Manager",
-        focus: "Live Logistics",
         cadence: "Consulting",
-        support: "Route tours, manage advancing, and streamline crew coordination."
+        focus: "Routing, advancing, and crew coordination"
       }
     ],
     action: {
@@ -353,26 +330,22 @@ const mentorPrograms = [
   },
   {
     title: "Accountability Systems",
-    description:
-      "Stay consistent with structured check-ins, progress dashboards, and peer support.",
+    description: "Keep momentum with daily logs, progress dashboards, and quarterly audits.",
     cohorts: [
       {
         name: "Weekly Standups",
-        focus: "Goal Tracking",
         cadence: "15 min",
-        support: "Share wins, blockers, and next actions with your mentor pod."
+        focus: "Goal tracking & blockers"
       },
       {
         name: "Progress Journals",
-        focus: "Reflection",
         cadence: "Daily",
-        support: "Log practice stats, gig insights, and mindset notes inside Rockmundo."
+        focus: "Practice stats and mindset notes"
       },
       {
         name: "Quarterly Audits",
-        focus: "Career Review",
         cadence: "Seasonal",
-        support: "Assess KPIs, adjust roadmaps, and celebrate milestones with your coach."
+        focus: "KPI reviews and roadmap resets"
       }
     ],
     action: {
@@ -384,50 +357,48 @@ const mentorPrograms = [
 
 const bandLearningTracks = [
   {
-    title: "Band Intensives",
-    description:
-      "Plan immersive weekends that combine rehearsal, songwriting, and branding workshops.",
+    title: "Immersive Weekends",
+    description: "Three-day intensives that tighten the band on and off the stage.",
     sessions: [
       {
         name: "Day 1: Groove Lab",
-        focus: "Tighten Rhythmic Chemistry",
-        deliverable: "Record a live rehearsal take with click + crowd cues."
+        focus: "Lock rhythmic chemistry",
+        deliverable: "Record a tight rehearsal take"
       },
       {
         name: "Day 2: Story & Stage",
-        focus: "Brand Alignment",
-        deliverable: "Craft a unified band bio, stage plot, and social hook."
+        focus: "Align brand and visuals",
+        deliverable: "Produce a stage plot and visual mood board"
       },
       {
         name: "Day 3: Release Sprint",
-        focus: "Content Production",
-        deliverable: "Capture video + photo assets for upcoming release cycle."
+        focus: "Content production",
+        deliverable: "Capture photos and live clips for rollout"
       }
     ],
     action: {
-      label: "Download Weekend Agenda",
+      label: "Download Agenda",
       href: "https://docs.google.com"
     }
   },
   {
-    title: "Ongoing Band Curriculum",
-    description:
-      "Rotate focus areas each month to keep the whole group evolving in sync.",
+    title: "Monthly Focus Cycles",
+    description: "Rotate priorities to keep growth steady across the whole band.",
     sessions: [
       {
         name: "Month 1: Arrangement Lab",
-        focus: "Reimagine Setlist",
-        deliverable: "New live transitions, medleys, and crowd participation cues."
+        focus: "Reimagine the set",
+        deliverable: "Design new transitions and medleys"
       },
       {
         name: "Month 2: Business HQ",
-        focus: "Operational Systems",
-        deliverable: "Shared budget tracker, merch inventory log, and task board."
+        focus: "Operations",
+        deliverable: "Shared budget tracker and merch plan"
       },
       {
         name: "Month 3: Audience Engine",
-        focus: "Growth Experiments",
-        deliverable: "Launch fan challenges, collect emails, and test paid promotion."
+        focus: "Fan growth",
+        deliverable: "Launch challenges and capture emails"
       }
     ],
     action: {
@@ -437,23 +408,22 @@ const bandLearningTracks = [
   },
   {
     title: "Performance Feedback Loops",
-    description:
-      "Capture data from every show to iterate faster as a unit.",
+    description: "Treat every show like a learning sprint with structured debriefs.",
     sessions: [
       {
         name: "Show Debrief",
-        focus: "Immediate Reflection",
-        deliverable: "Rate crowd energy, set pacing, and technical stability within 24 hours."
+        focus: "Immediate reflection",
+        deliverable: "Rate energy, pacing, and tech notes"
       },
       {
         name: "Fan Pulse",
-        focus: "Community Insights",
-        deliverable: "Survey attendees, review social mentions, and note merch conversion."
+        focus: "Community insights",
+        deliverable: "Survey attendees and review mentions"
       },
       {
         name: "Iterate & Implement",
-        focus: "Action Plan",
-        deliverable: "Assign next-step experiments for setlist, visuals, and engagement."
+        focus: "Action plan",
+        deliverable: "Assign experiments for next gig"
       }
     ],
     action: {
@@ -465,19 +435,19 @@ const bandLearningTracks = [
 
 const Education = () => {
   return (
-    <div className="space-y-8 pb-16">
-      <div className="space-y-3 text-center">
+    <div className="space-y-10 pb-16">
+      <header className="space-y-3 text-center">
         <Badge variant="outline" className="mx-auto w-fit px-4 py-1 text-sm font-semibold">
           Education Hub
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Level Up Your Musical Journey</h1>
         <p className="mx-auto max-w-3xl text-base text-muted-foreground sm:text-lg">
-          Discover the best resources for self-paced learning, formal education, and collaborative growth. Pick a
-          pathway, follow the curated plan, and keep your skills—and your band—constantly evolving.
+          Tap into curated learning paths—from foundational study to collaborative band growth—to keep your skills
+          sharp and your career momentum steady.
         </p>
-      </div>
+      </header>
 
-      <Tabs defaultValue="books" className="space-y-6">
+      <Tabs defaultValue="books" className="space-y-8">
         <TabsList className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -498,32 +468,29 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Curated Reading Tracks</CardTitle>
               <CardDescription>
-                Start with foundational skills, then branch into creative mastery and business strategy as you grow.
+                Move through themed reading sprints to balance skill-building, creativity, and business know-how.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {bookCollections.map((collection) => (
-                <Card key={collection.title} className="border-dashed">
+              {bookTracks.map((track) => (
+                <Card key={track.title} className="border-dashed">
                   <CardHeader className="space-y-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <CardTitle className="text-lg">{collection.title}</CardTitle>
-                      <Badge variant="secondary">3 titles</Badge>
-                    </div>
-                    <CardDescription>{collection.description}</CardDescription>
+                    <CardTitle className="text-lg">{track.title}</CardTitle>
+                    <CardDescription>{track.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {collection.items.map((item) => (
-                      <div key={item.name} className="rounded-lg border bg-muted/30 p-4">
+                    {track.books.map((book) => (
+                      <div key={book.title} className="rounded-lg border bg-muted/30 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.author}</p>
+                            <p className="text-sm font-semibold">{book.title}</p>
+                            <p className="text-xs text-muted-foreground">{book.author}</p>
                           </div>
                           <Badge variant="outline" className="whitespace-nowrap text-xs">
-                            {item.focus}
+                            {book.focus}
                           </Badge>
                         </div>
-                        <p className="mt-3 text-xs text-muted-foreground">{item.takeaway}</p>
+                        <p className="mt-3 text-xs text-muted-foreground">{book.takeaway}</p>
                       </div>
                     ))}
                   </CardContent>
@@ -538,37 +505,38 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Academic Pathways</CardTitle>
               <CardDescription>
-                Blend formal study with real-world experience using programs designed for modern performers.
+                Blend formal study with real-world practice using degree programs, certificates, and planners built for
+                working musicians.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 lg:grid-cols-3">
-              {universityTracks.map((track) => (
-                <Card key={track.title} className="border-dashed">
+              {universityRoutes.map((route) => (
+                <Card key={route.title} className="border-dashed">
                   <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{track.title}</CardTitle>
-                    <CardDescription>{track.description}</CardDescription>
+                    <CardTitle className="text-lg">{route.title}</CardTitle>
+                    <CardDescription>{route.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
-                      {track.highlights.map((highlight) => (
-                        <div key={highlight.name} className="rounded-lg border bg-muted/30 p-4">
+                      {route.highlights.map((highlight) => (
+                        <div key={`${highlight.program}-${highlight.school}`} className="rounded-lg border bg-muted/30 p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-sm font-semibold">{highlight.name}</p>
+                              <p className="text-sm font-semibold">{highlight.program}</p>
                               <p className="text-xs text-muted-foreground">{highlight.school}</p>
                             </div>
                             <Badge variant="outline" className="text-xs">
-                              {highlight.focus}
+                              {highlight.format}
                             </Badge>
                           </div>
-                          <p className="mt-3 text-xs text-muted-foreground">{highlight.details}</p>
+                          <p className="mt-3 text-xs text-muted-foreground">{highlight.detail}</p>
                         </div>
                       ))}
                     </div>
-                    {track.action ? (
+                    {route.action ? (
                       <Button asChild variant="secondary" className="w-full">
-                        <a href={track.action.href} target="_blank" rel="noreferrer">
-                          {track.action.label}
+                        <a href={route.action.href} target="_blank" rel="noreferrer">
+                          {route.action.label}
                         </a>
                       </Button>
                     ) : null}
@@ -584,7 +552,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Stream Your Lessons</CardTitle>
               <CardDescription>
-                Mix binge-worthy channels with structured playlists so every practice session has purpose.
+                Mix quick wins with deep dives using playlists that pair perfectly with practice sessions.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -595,20 +563,19 @@ const Education = () => {
                     <CardDescription>{playlist.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {playlist.resources.map((resource) => (
-                      <div key={resource.name} className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                    {playlist.videos.map((video) => (
+                      <div key={video.name} className="space-y-3 rounded-lg border bg-muted/30 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold">{resource.name}</p>
-                            <p className="text-xs text-muted-foreground">{resource.format}</p>
+                            <p className="text-sm font-semibold">{video.name}</p>
+                            <p className="text-xs text-muted-foreground">{video.format}</p>
                           </div>
                           <Badge variant="outline" className="text-xs">
-                            {resource.focus}
+                            {video.focus}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground">{resource.summary}</p>
                         <Button asChild variant="link" className="h-auto px-0 text-xs font-semibold">
-                          <a href={resource.link} target="_blank" rel="noreferrer">
+                          <a href={video.url} target="_blank" rel="noreferrer">
                             Watch now
                           </a>
                         </Button>
@@ -626,7 +593,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Guided Mentorship</CardTitle>
               <CardDescription>
-                Partner with mentors who accelerate your growth with actionable feedback and steady accountability.
+                Connect with mentors for accountability, expert advice, and structured career growth.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -649,7 +616,6 @@ const Education = () => {
                               {cohort.cadence}
                             </Badge>
                           </div>
-                          <p className="mt-3 text-xs text-muted-foreground">{cohort.support}</p>
                         </div>
                       ))}
                     </div>
@@ -672,7 +638,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Band Learning Lab</CardTitle>
               <CardDescription>
-                Align your entire crew with immersive intensives, monthly focus cycles, and actionable feedback loops.
+                Sync the entire crew with shared intensives, monthly focus cycles, and data-driven retros.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
