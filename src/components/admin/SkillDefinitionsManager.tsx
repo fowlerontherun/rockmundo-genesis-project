@@ -13,14 +13,21 @@ interface SkillDefinition {
   slug: string;
   display_name: string;
   description: string | null;
-  tier_caps: any;
+  tier_caps: TierCaps | null;
   created_at: string;
   updated_at: string;
 }
 
+type TierCaps = Record<string, number | null>;
+
 export function SkillDefinitionsManager() {
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
-  const [newSkill, setNewSkill] = useState({
+  const [newSkill, setNewSkill] = useState<{
+    slug: string;
+    display_name: string;
+    description: string;
+    tier_caps: TierCaps;
+  }>({
     slug: '',
     display_name: '',
     description: '',

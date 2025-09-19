@@ -1,27 +1,44 @@
-import React, { createContext, useContext, useState } from 'react';
+import { useCallback, useMemo, type PropsWithChildren } from "react";
 
-interface SkillSystemContextType {
-  skills: any[];
-  loading: boolean;
-  error: string | null;
-}
+import { SkillSystemContext } from "./SkillSystemContext";
+import {
+  type SkillDefinitionRecord,
+  type SkillProgressRecord,
+  type SkillRelationshipRecord,
+  type SkillSystemContextValue,
+} from "./useSkillSystem.types";
 
-const SkillSystemContext = createContext<SkillSystemContextType>({
-  skills: [],
-  loading: false,
-  error: null,
-});
+export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Element => {
+  const definitions = useMemo<SkillDefinitionRecord[]>(() => [], []);
+  const relationships = useMemo<SkillRelationshipRecord[]>(() => [], []);
+  const progress = useMemo<SkillProgressRecord[]>(() => [], []);
+  const loading = false;
+  const error: string | null = null;
 
-export const useSkillSystem = () => useContext(SkillSystemContext);
+  const refreshProgress = useCallback<SkillSystemContextValue["refreshProgress"]>(async () => {
+    // The progression system is not yet implemented.
+  }, []);
 
-export const SkillSystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [skills] = useState([]);
-  const [loading] = useState(false);
-  const [error] = useState(null);
-
-  return (
-    <SkillSystemContext.Provider value={{ skills, loading, error }}>
-      {children}
-    </SkillSystemContext.Provider>
+  const updateSkillProgress = useCallback<SkillSystemContextValue["updateSkillProgress"]>(
+    async (_input) => {
+      // The progression system is not yet implemented.
+      return null;
+    },
+    [],
   );
+
+  const value = useMemo<SkillSystemContextValue>(
+    () => ({
+      definitions,
+      relationships,
+      progress,
+      loading,
+      error,
+      refreshProgress,
+      updateSkillProgress,
+    }),
+    [definitions, relationships, progress, loading, error, refreshProgress, updateSkillProgress],
+  );
+
+  return <SkillSystemContext.Provider value={value}>{children}</SkillSystemContext.Provider>;
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,9 +21,9 @@ export default function ChatWindow() {
   const [message, setMessage] = useState('');
   const [selectedChannel] = useState('general');
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       const { data: messageData, error: messageError } = await supabase
         .from('global_chat')
@@ -44,7 +44,7 @@ export default function ChatWindow() {
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  };
+  }, [user, selectedChannel]);
 
   const sendMessage = async () => {
     if (!user || !message.trim()) return;
@@ -61,7 +61,7 @@ export default function ChatWindow() {
       if (error) throw error;
       
       setMessage('');
-      fetchMessages();
+      await fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
@@ -70,9 +70,9 @@ export default function ChatWindow() {
 
   useEffect(() => {
     if (user) {
-      fetchMessages();
+      void fetchMessages();
     }
-  }, [user, selectedChannel]);
+  }, [user, fetchMessages]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

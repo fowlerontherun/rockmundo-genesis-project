@@ -1,8 +1,7 @@
 // Simplified progression client - disabled until progression system is implemented
-export interface ProgressionAction {
+export type ProgressionAction = {
   type: string;
-  [key: string]: any;
-}
+} & Record<string, unknown>;
 
 export interface ProgressionErrorResponse {
   success: false;
@@ -14,6 +13,9 @@ export interface ProgressionSuccessResponse<T> {
   data: T;
 }
 
-export const executeProgressionAction = async (action: ProgressionAction) => {
-  return { success: false, error: 'Progression system not implemented' } as ProgressionErrorResponse;
+export const executeProgressionAction = async <T = never>(
+  action: ProgressionAction
+): Promise<ProgressionErrorResponse | ProgressionSuccessResponse<T>> => {
+  console.warn('Progression action attempted before implementation:', action);
+  return { success: false, error: 'Progression system not implemented' };
 };

@@ -29,6 +29,23 @@ import { deriveCityChannel } from "@/utils/chat";
 
 type ChatScope = "general" | "city";
 
+interface ActivityEntry {
+  id: string;
+  activity_type: string;
+  message: string;
+  created_at: string;
+  earnings: number;
+  metadata?: Record<string, unknown> | null;
+}
+
+interface XpLedgerEntry {
+  id: string;
+  event_type: string;
+  xp_delta?: number | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
 const genderLabels: Record<string, string> = {
   female: "Female",
   male: "Male",
@@ -47,10 +64,10 @@ const Dashboard = () => {
     loading,
     error
   } = useGameData();
-  
+
   // Simplified - these features not yet implemented
-  const activities: any[] = [];
-  const xpLedger: any[] = [];
+  const activities: ActivityEntry[] = [];
+  const xpLedger: XpLedgerEntry[] = [];
   const freshWeeklyBonusAvailable = false;
   const currentCity = null;
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
