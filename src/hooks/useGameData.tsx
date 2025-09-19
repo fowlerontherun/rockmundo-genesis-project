@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -125,6 +125,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const assigningDefaultCityRef = useRef(false);
   const loadCharacterDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
       if (!user || !activeProfile) {
@@ -137,6 +138,56 @@ export const useGameData = (): UseGameDataReturn => {
         setActivities([]);
         setCurrentCity(null);
         return;
+      }
+
+      let effectiveProfile = activeProfile;
+
+      if (!effectiveProfile.current_city_id && !assigningDefaultCityRef.current) {
+        assigningDefaultCityRef.current = true;
+        try {
+          const { data: londonCity, error: londonCityError } = await supabase
+            .from("cities")
+            .select("id")
+            .eq("name", "London")
+            .maybeSingle();
+
+          if (londonCityError) {
+            console.error("Failed to load default London city", londonCityError);
+          } else if (londonCity?.id) {
+            const { data: updatedProfileData, error: updateError } = await supabase
+              .from("profiles")
+              .update({ current_city_id: londonCity.id })
+              .eq("id", effectiveProfile.id)
+              .select("*")
+              .single();
+
+            if (updateError) {
+              console.error("Failed to assign London as default city", updateError);
+            } else if (updatedProfileData) {
+              const updatedProfile = updatedProfileData as PlayerProfile;
+              effectiveProfile = updatedProfile;
+              setProfile((previous) => {
+                if (previous && previous.id !== updatedProfile.id) {
+                  return previous;
+                }
+                return updatedProfile;
+              });
+              setCharacters((previous) => {
+                const hasMatch = previous.some((character) => character.id === updatedProfile.id);
+                if (!hasMatch) {
+                  return previous;
+                }
+                return previous.map((character) =>
+                  character.id === updatedProfile.id ? updatedProfile : character,
+                );
+              });
+            }
+          }
+        } catch (cityAssignmentError) {
+          console.error("Unexpected error assigning default city", cityAssignmentError);
+        } finally {
+          assigningDefaultCityRef.current = false;
+        }
       }
 
       const [
@@ -155,21 +206,21 @@ export const useGameData = (): UseGameDataReturn => {
         supabase
           .from("player_attributes")
           .select("*")
-          .eq("profile_id", activeProfile.id)
+          .eq("profile_id", effectiveProfile.id)
           .maybeSingle(),
         supabase
           .from("player_xp_wallet")
           .select("*")
-          .eq("profile_id", activeProfile.id)
+          .eq("profile_id", effectiveProfile.id)
           .maybeSingle(),
         supabase
           .from("experience_ledger")
           .select("*")
-          .eq("profile_id", activeProfile.id)
+          .eq("profile_id", effectiveProfile.id)
           .order("created_at", { ascending: false })
           .limit(XP_LEDGER_FETCH_LIMIT),
-        activeProfile.current_city_id
-          ? supabase.from("cities").select("*").eq("id", activeProfile.current_city_id).maybeSingle()
+        effectiveProfile.current_city_id
+          ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         supabase
           .from("activity_feed")
