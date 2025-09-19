@@ -32,6 +32,7 @@ const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatform
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const MusicCreation = lazyWithRetry(() => import("./pages/MusicCreation"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
+const City = lazyWithRetry(() => import("./pages/City"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
@@ -80,6 +81,7 @@ function App() {
                     <Route path="equipment" element={<EquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
                     <Route path="achievements" element={<Achievements />} />
+                    <Route path="city" element={<City />} />
                     <Route path="tours" element={<TourManager />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
