@@ -468,6 +468,120 @@ export type Database = {
         }
         Relationships: []
       }
+      festival_lineups: {
+        Row: {
+          band_id: string
+          created_at: string
+          duration_minutes: number | null
+          festival_id: string
+          id: string
+          is_headliner: boolean
+          performance_day: string | null
+          set_time: string | null
+          stage_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          duration_minutes?: number | null
+          festival_id: string
+          id?: string
+          is_headliner?: boolean
+          performance_day?: string | null
+          set_time?: string | null
+          stage_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          duration_minutes?: number | null
+          festival_id?: string
+          id?: string
+          is_headliner?: boolean
+          performance_day?: string | null
+          set_time?: string | null
+          stage_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_lineups_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_lineups_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      festivals: {
+        Row: {
+          city_id: string
+          created_at: string
+          end_date: string
+          expected_attendance: number | null
+          id: string
+          metadata: Json
+          name: string
+          start_date: string
+          ticket_price_high: number | null
+          ticket_price_low: number | null
+          updated_at: string
+          venue_id: string | null
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          end_date: string
+          expected_attendance?: number | null
+          id?: string
+          metadata?: Json
+          name: string
+          start_date: string
+          ticket_price_high?: number | null
+          ticket_price_low?: number | null
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          end_date?: string
+          expected_attendance?: number | null
+          id?: string
+          metadata?: Json
+          name?: string
+          start_date?: string
+          ticket_price_high?: number | null
+          ticket_price_low?: number | null
+          updated_at?: string
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festivals_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festivals_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       game_events: {
         Row: {
           created_at: string | null
