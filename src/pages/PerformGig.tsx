@@ -118,6 +118,7 @@ export default function PerformGig() {
     }
   }, [gigId, user, navigate, toast]);
 
+
   useEffect(() => {
     void loadGig();
   }, [loadGig]);

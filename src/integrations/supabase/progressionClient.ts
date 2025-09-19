@@ -1,8 +1,9 @@
 // Simplified progression client - disabled until progression system is implemented
-export interface ProgressionAction {
+export type ProgressionAction = {
   type: string;
   [key: string]: unknown;
 }
+
 
 export interface ProgressionErrorResponse {
   success: false;

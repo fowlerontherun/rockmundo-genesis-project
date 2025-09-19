@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
-
 type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
 type SkillDefinitionInsert = Database['public']['Tables']['skill_definitions']['Insert'];
+
+
+type TierCaps = Record<string, number | null>;
 
 export function SkillDefinitionsManager() {
   const [skills, setSkills] = useState<SkillDefinition[]>([]);

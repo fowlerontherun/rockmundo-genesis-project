@@ -9,11 +9,12 @@ interface SkillSystemContextType {
   error: string | null;
 }
 
-const SkillSystemContext = createContext<SkillSystemContextType>({
-  skills: [],
-  loading: false,
-  error: null,
-});
+export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Element => {
+  const definitions = useMemo<SkillDefinitionRecord[]>(() => [], []);
+  const relationships = useMemo<SkillRelationshipRecord[]>(() => [], []);
+  const progress = useMemo<SkillProgressRecord[]>(() => [], []);
+  const loading = false;
+  const error: string | null = null;
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useSkillSystem = () => useContext(SkillSystemContext);
@@ -23,9 +24,19 @@ export const SkillSystemProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [loading] = useState(false);
   const [error] = useState<string | null>(null);
 
-  return (
-    <SkillSystemContext.Provider value={{ skills, loading, error }}>
-      {children}
-    </SkillSystemContext.Provider>
+
+  const value = useMemo<SkillSystemContextValue>(
+    () => ({
+      definitions,
+      relationships,
+      progress,
+      loading,
+      error,
+      refreshProgress,
+      updateSkillProgress,
+    }),
+    [definitions, relationships, progress, loading, error, refreshProgress, updateSkillProgress],
   );
+
+  return <SkillSystemContext.Provider value={value}>{children}</SkillSystemContext.Provider>;
 };

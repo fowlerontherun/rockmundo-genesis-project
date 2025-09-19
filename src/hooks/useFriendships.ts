@@ -220,6 +220,7 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
       await refresh();
     },
     [refresh, userId],
+ 
   );
 
   const declineFriendship = useCallback(

@@ -74,7 +74,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [freshWeeklyBonusAvailable, setFreshWeeklyBonusAvailable] = useState(false);
   const loadCharacterDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
       if (!user || !activeProfile) {

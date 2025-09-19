@@ -30,6 +30,23 @@ type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 
 type ChatScope = "general" | "city";
 
+interface ActivityEntry {
+  id: string;
+  activity_type: string;
+  message: string;
+  created_at: string;
+  earnings: number;
+  metadata?: Record<string, unknown> | null;
+}
+
+interface XpLedgerEntry {
+  id: string;
+  event_type: string;
+  xp_delta?: number | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
 const genderLabels: Record<string, string> = {
   female: "Female",
   male: "Male",
@@ -48,10 +65,11 @@ const Dashboard = () => {
     xpLedger,
     freshWeeklyBonusAvailable,
     currentCity,
+
     loading,
     error
   } = useGameData();
-  
+
   // Simplified - these features not yet implemented
   const activities: ActivityFeedRow[] = [];
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
