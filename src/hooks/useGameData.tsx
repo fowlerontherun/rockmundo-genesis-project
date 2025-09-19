@@ -30,6 +30,43 @@ const ATTRIBUTE_COLUMN_MAP: Record<AttributeCategory, keyof PlayerAttributesRow>
   technical: "technical_mastery",
 };
 
+const XP_LEDGER_FETCH_LIMIT = 20;
+const WEEKLY_WINDOW_ANCHOR_UTC_HOUR = 5;
+const WEEKLY_WINDOW_ANCHOR_UTC_MINUTE = 15;
+
+const getCurrentWeeklyWindowStart = (referenceDate: Date): Date => {
+  const result = new Date(referenceDate);
+  const utcDay = result.getUTCDay();
+  const daysSinceMonday = (utcDay + 6) % 7;
+  result.setUTCDate(result.getUTCDate() - daysSinceMonday);
+  result.setUTCHours(WEEKLY_WINDOW_ANCHOR_UTC_HOUR, WEEKLY_WINDOW_ANCHOR_UTC_MINUTE, 0, 0);
+
+  if (result > referenceDate) {
+    result.setUTCDate(result.getUTCDate() - 7);
+  }
+
+  return result;
+};
+
+const isWeeklyBonusFresh = (ledger: ExperienceLedgerRow[]): boolean => {
+  if (!Array.isArray(ledger) || ledger.length === 0) {
+    return false;
+  }
+
+  const latestWeeklyBonus = ledger.find((entry) => entry.event_type === "weekly_bonus");
+  if (!latestWeeklyBonus || !latestWeeklyBonus.created_at) {
+    return false;
+  }
+
+  const recordedAt = new Date(latestWeeklyBonus.created_at);
+  if (Number.isNaN(recordedAt.getTime())) {
+    return false;
+  }
+
+  const windowStart = getCurrentWeeklyWindowStart(new Date());
+  return recordedAt >= windowStart;
+};
+
 interface UseGameDataReturn {
   profile: PlayerProfile | null;
   skills: PlayerSkills;
@@ -88,7 +125,6 @@ export const useGameData = (): UseGameDataReturn => {
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [freshWeeklyBonusAvailable, setFreshWeeklyBonusAvailable] = useState(false);
   const loadCharacterDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
       if (!user || !activeProfile) {
@@ -103,7 +139,7 @@ export const useGameData = (): UseGameDataReturn => {
         return;
       }
 
-      const [skillsResult, attributesResult, walletResult, cityResult, activitiesResult] = await Promise.all([
+      const [skillsResult, attributesResult, walletResult, ledgerResult, cityResult] = await Promise.all([
         supabase
           .from("player_skills")
           .select("*")
@@ -119,6 +155,12 @@ export const useGameData = (): UseGameDataReturn => {
           .select("*")
           .eq("profile_id", activeProfile.id)
           .maybeSingle(),
+        supabase
+          .from("experience_ledger")
+          .select("*")
+          .eq("profile_id", activeProfile.id)
+          .order("created_at", { ascending: false })
+          .limit(XP_LEDGER_FETCH_LIMIT),
         activeProfile.current_city_id
           ? supabase.from("cities").select("*").eq("id", activeProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -139,6 +181,9 @@ export const useGameData = (): UseGameDataReturn => {
       if (walletResult.error) {
         console.error("Failed to load XP wallet", walletResult.error);
       }
+      if (ledgerResult.error) {
+        console.error("Failed to load XP ledger", ledgerResult.error);
+      }
       if (cityResult && cityResult.error) {
         console.error("Failed to load city", cityResult.error);
       }
@@ -149,9 +194,8 @@ export const useGameData = (): UseGameDataReturn => {
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
+      setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
-      setActivities(((activitiesResult.data ?? []) as ActivityFeedRow[]).slice(0, 20));
-      setXpLedger([]);
       setSkillProgress([]);
       setUnlockedSkills({});
     },
@@ -420,6 +464,8 @@ export const useGameData = (): UseGameDataReturn => {
     },
     [],
   );
+
+  const freshWeeklyBonusAvailable = useMemo(() => isWeeklyBonusFresh(xpLedger), [xpLedger]);
 
   const value: UseGameDataReturn = useMemo(
     () => ({
