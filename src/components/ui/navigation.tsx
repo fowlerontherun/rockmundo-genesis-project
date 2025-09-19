@@ -28,7 +28,8 @@ import {
   Mic,
   GraduationCap,
   DollarSign,
-  Plane
+  Plane,
+  ListMusic
 } from "lucide-react";
 
 const Navigation = () => {
@@ -68,6 +69,7 @@ const Navigation = () => {
       items: [
         { icon: Calendar, label: "Gig Booking", path: "/gigs" },
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
+        { icon: ListMusic, label: "Setlist Designer", path: "/setlists" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: MapPin, label: "Venue Management", path: "/venues" },
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
@@ -124,6 +126,7 @@ const Navigation = () => {
   const mobileShortcuts = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Calendar, label: "Gigs", path: "/gigs" },
+    { icon: ListMusic, label: "Setlists", path: "/setlists" },
     { icon: Mic, label: "Busking", path: "/busking" },
     { icon: Plane, label: "Travel", path: "/travel" },
     { icon: User, label: "Profile", path: "/profile" },
