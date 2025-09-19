@@ -24,6 +24,7 @@ interface UseGameDataReturn {
   setActiveCharacter: (id: string) => void;
   createCharacter: (data: any) => Promise<void>;
   refreshCharacters: () => Promise<void>;
+  resetCharacter: () => Promise<void>;
 }
 
 export const useGameData = (): UseGameDataReturn => {
@@ -125,7 +126,7 @@ export const useGameData = (): UseGameDataReturn => {
 
   const createCharacter = async (data: any) => {
     if (!user) return;
-    
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -139,6 +140,47 @@ export const useGameData = (): UseGameDataReturn => {
       await fetchData();
     } catch (err) {
       console.error('Error creating character:', err);
+      throw err;
+    }
+  };
+
+  const resetCharacter = async () => {
+    if (!user) {
+      throw new Error('Authentication required to reset character');
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('reset_player_character');
+
+      if (error) {
+        throw error;
+      }
+
+      const [result] = (data ?? []) as Array<{
+        profile: PlayerProfile;
+        skills: PlayerSkills;
+      }>;
+
+      if (result?.profile) {
+        setProfile(result.profile);
+        setSelectedCharacterId(result.profile.id);
+        setCharacters([result.profile]);
+      } else {
+        setProfile(null);
+        setSelectedCharacterId(null);
+        setCharacters([]);
+      }
+
+      if (result?.skills) {
+        setSkills(result.skills);
+      } else {
+        setSkills(null);
+      }
+
+      setAttributes(null);
+      setXpWallet(null);
+    } catch (err) {
+      console.error('Error resetting character:', err);
       throw err;
     }
   };
@@ -160,7 +202,8 @@ export const useGameData = (): UseGameDataReturn => {
     refetch: fetchData,
     setActiveCharacter,
     createCharacter,
-    refreshCharacters: fetchData
+    refreshCharacters: fetchData,
+    resetCharacter
   };
 };
 

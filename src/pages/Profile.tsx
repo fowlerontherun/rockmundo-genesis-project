@@ -120,7 +120,17 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, attributes, updateProfile, freshWeeklyBonusAvailable, xpLedger, xpWallet } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    updateProfile,
+    freshWeeklyBonusAvailable,
+    xpLedger,
+    xpWallet,
+    resetCharacter,
+    refetch,
+  } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
   type MusicalSkill = { key: keyof PlayerSkills; value: number };
