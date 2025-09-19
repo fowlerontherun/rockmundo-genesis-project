@@ -13,13 +13,50 @@ const SKILL_KEYS = [
 
 type SkillKey = (typeof SKILL_KEYS)[number];
 
+type ProfileFields = Pick<
+  Tables<"profiles">,
+  "id" | "username" | "display_name" | "avatar_url" | "bio"
+>;
+
+type SkillFields = Pick<Tables<"player_skills">, "id" | SkillKey>;
+
 export interface ProfileCompletionResult {
   isComplete: boolean;
-  profile: Pick<
-    Tables<"profiles">,
-    "id" | "username" | "display_name" | "avatar_url" | "bio"
-  > | null;
-  skills: Pick<Tables<"player_skills">, "id" | SkillKey> | null;
+  profile: ProfileFields | null;
+  skills: SkillFields | null;
+}
+
+export function evaluateProfileCompletion(
+  userId: string,
+  profile: ProfileFields | null,
+  skills: SkillFields | null,
+): ProfileCompletionResult {
+  const trimmedDisplayName = profile?.display_name?.trim() ?? "";
+  const hasCustomDisplayName =
+    trimmedDisplayName.length > 0 && trimmedDisplayName.toLowerCase() !== "new player";
+
+  const normalizedUsername = profile?.username?.trim().toLowerCase() ?? "";
+  const normalizedUserId = userId.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const defaultUsernameSuffix = normalizedUserId.slice(0, 8);
+  const defaultUsername = defaultUsernameSuffix ? `player${defaultUsernameSuffix}` : null;
+  const hasCustomUsername =
+    normalizedUsername.length > 0 && (!defaultUsername || normalizedUsername !== defaultUsername);
+
+  const hasAvatar =
+    typeof profile?.avatar_url === "string" && profile.avatar_url.trim().length > 0;
+  const hasBio = typeof profile?.bio === "string" && profile.bio.trim().length > 0;
+
+  const profileComplete =
+    Boolean(profile) && hasCustomDisplayName && hasCustomUsername && hasAvatar && hasBio;
+
+  const hasSkillsRecord =
+    Boolean(skills) && SKILL_KEYS.every((key) => typeof skills?.[key] === "number");
+
+  return {
+    isComplete: profileComplete && hasSkillsRecord,
+    profile,
+    skills,
+  };
 }
 
 export async function checkProfileCompletion(userId: string): Promise<ProfileCompletionResult> {
@@ -47,44 +84,5 @@ export async function checkProfileCompletion(userId: string): Promise<ProfileCom
   const profile = profileResponse.data;
   const skills = skillsResponse.data;
 
-  const trimmedDisplayName = profile?.display_name?.trim() ?? "";
-  const hasCustomDisplayName =
-    trimmedDisplayName.length > 0 && trimmedDisplayName.toLowerCase() !== "new player";
-
-  const normalizedUsername = profile?.username?.trim().toLowerCase() ?? "";
-  const normalizedUserId = userId.replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const defaultUsernameSuffix = normalizedUserId.slice(0, 8);
-  const defaultUsername = defaultUsernameSuffix ? `player${defaultUsernameSuffix}` : null;
-  const hasCustomUsername =
-    normalizedUsername.length > 0 && (!defaultUsername || normalizedUsername !== defaultUsername);
-
-  const hasAvatar =
-    typeof profile?.avatar_url === "string" && profile.avatar_url.trim().length > 0;
-  const hasBio = typeof profile?.bio === "string" && profile.bio.trim().length > 0;
-
-  const skillValues = SKILL_KEYS.map((key) => {
-    const value = skills?.[key];
-    return typeof value === "number" ? value : null;
-  }).filter((value): value is number => value !== null);
-
-  const hasAllSkillValues =
-    Boolean(skills) &&
-    SKILL_KEYS.every((key) => {
-      const value = skills?.[key];
-      return typeof value === "number" && value > 0;
-    });
-
-  const areSkillsUniform =
-    skillValues.length > 0 && skillValues.every((value) => value === skillValues[0]);
-
-  const hasCustomSkills = hasAllSkillValues && !areSkillsUniform;
-
-  const profileComplete =
-    Boolean(profile) && hasCustomDisplayName && hasCustomUsername && hasAvatar && hasBio;
-
-  return {
-    isComplete: profileComplete && hasCustomSkills,
-    profile,
-    skills,
-  };
+  return evaluateProfileCompletion(userId, profile, skills);
 }

@@ -29,8 +29,12 @@ const Index = () => {
       setError(null);
 
       try {
-        const { isComplete } = await checkProfileCompletion(user.id);
+        const { isComplete, profile } = await checkProfileCompletion(user.id);
         if (!isActive) {
+          return;
+        }
+        if (!profile) {
+          navigate("/character-create");
           return;
         }
         navigate(isComplete ? "/dashboard" : "/character-create");
