@@ -411,6 +411,9 @@ const videoCollections = [
         link: "https://www.youtube.com/results?search_query=ear+training+intervals",
         summary: "Speed up interval recognition with call-and-response challenges."
       }
+    ]
+  }
+];
 
 const skillLessons: SkillLesson[] = [
   {
@@ -1356,33 +1359,35 @@ const Education = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 lg:grid-cols-3">
-              {universityTracks.map((track) => (
-                <Card key={track.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{track.title}</CardTitle>
-                    <CardDescription>{track.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      {track.highlights.map((highlight) => (
-                        <div key={highlight.name} className="rounded-lg border bg-muted/40 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold">{highlight.name}</p>
-                              <p className="text-xs text-muted-foreground">{highlight.school}</p>
+              {group.skills.length > 0 ? (
+                universityTracks.map((track) => (
+                  <Card key={track.title} className="border-dashed">
+                    <CardHeader className="space-y-2">
+                      <CardTitle className="text-lg">{track.title}</CardTitle>
+                      <CardDescription>{track.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        {track.highlights.map((highlight) => (
+                          <div key={highlight.name} className="rounded-lg border bg-muted/40 p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold">{highlight.name}</p>
+                                <p className="text-xs text-muted-foreground">{highlight.school}</p>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {highlight.focus}
+                              </Badge>
                             </div>
-                            <Badge variant="outline" className="text-xs">
-                              {highlight.focus}
-                            </Badge>
+                            <p className="mt-3 text-xs text-muted-foreground">{highlight.details}</p>
                           </div>
-                          <p className="mt-3 text-xs text-muted-foreground">{highlight.details}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {group.skills.map((definition) => renderSkillCard(definition))}
-                    </div>
-                  </div>
+                        ))}
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {group.skills.map((definition) => renderSkillCard(definition))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">
