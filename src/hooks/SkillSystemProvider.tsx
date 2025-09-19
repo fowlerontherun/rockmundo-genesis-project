@@ -1,12 +1,13 @@
-import { useCallback, useMemo, type PropsWithChildren } from "react";
+import React, { createContext, useContext, useState } from 'react';
+import type { Database } from '@/integrations/supabase/types';
 
-import { SkillSystemContext } from "./SkillSystemContext";
-import {
-  type SkillDefinitionRecord,
-  type SkillProgressRecord,
-  type SkillRelationshipRecord,
-  type SkillSystemContextValue,
-} from "./useSkillSystem.types";
+type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
+
+interface SkillSystemContextType {
+  skills: SkillDefinition[];
+  loading: boolean;
+  error: string | null;
+}
 
 export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Element => {
   const definitions = useMemo<SkillDefinitionRecord[]>(() => [], []);
@@ -15,17 +16,14 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
   const loading = false;
   const error: string | null = null;
 
-  const refreshProgress = useCallback<SkillSystemContextValue["refreshProgress"]>(async () => {
-    // The progression system is not yet implemented.
-  }, []);
+// eslint-disable-next-line react-refresh/only-export-components
+export const useSkillSystem = () => useContext(SkillSystemContext);
 
-  const updateSkillProgress = useCallback<SkillSystemContextValue["updateSkillProgress"]>(
-    async (_input) => {
-      // The progression system is not yet implemented.
-      return null;
-    },
-    [],
-  );
+export const SkillSystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [skills] = useState<SkillDefinition[]>([]);
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
+
 
   const value = useMemo<SkillSystemContextValue>(
     () => ({

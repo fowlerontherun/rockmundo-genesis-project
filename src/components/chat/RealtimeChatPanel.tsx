@@ -56,7 +56,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     }
   }, [user, channelKey]);
 
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!user || !message.trim()) return;
 
     try {
@@ -71,18 +71,18 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       if (error) throw error;
       
       setMessage('');
-      fetchMessages();
+      await fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     }
-  };
+  }, [channelKey, fetchMessages, message, user]);
 
   useEffect(() => {
     if (user) {
       void fetchMessages();
     }
-  }, [user, fetchMessages]);
+  }, [user, channelKey, fetchMessages]);
 
   useEffect(() => {
     if (!user) return;
@@ -111,7 +111,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   };
 

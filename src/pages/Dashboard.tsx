@@ -23,9 +23,10 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
-import ChatWindow from "@/components/realtime/ChatWindow";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
-import { deriveCityChannel } from "@/utils/chat";
+import type { Database } from "@/integrations/supabase/types";
+
+type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 
 type ChatScope = "general" | "city";
 
@@ -63,15 +64,14 @@ const Dashboard = () => {
     xpWallet,
     xpLedger,
     freshWeeklyBonusAvailable,
+    currentCity,
+
     loading,
     error
   } = useGameData();
 
   // Simplified - these features not yet implemented
-  const activities: ActivityEntry[] = [];
-  const xpLedger: XpLedgerEntry[] = [];
-  const freshWeeklyBonusAvailable = false;
-  const currentCity = null;
+  const activities: ActivityFeedRow[] = [];
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
   const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
   const [chatOnlineCounts, setChatOnlineCounts] = useState<Record<ChatScope, number>>({
@@ -123,19 +123,20 @@ const Dashboard = () => {
   const cityChannel = null;
 
   const cityNameLabel = useMemo(() => {
-    if (!currentCity?.name) {
+    if (!currentCity || !currentCity.name) {
       return null;
     }
 
     return currentCity.country ? `${currentCity.name}, ${currentCity.country}` : currentCity.name;
-  }, [currentCity?.country, currentCity?.name]);
+  }, [currentCity]);
 
-  // Chat labels simplified - current_city_id not in schema
-  const cityTabLabel = "General Chat";
+  const cityTabLabel = cityNameLabel ? `${cityNameLabel} Chat` : "City Chat";
   const activeOnlineCount = chatOnlineCounts[activeChatTab];
   const activeConnection = chatConnections[activeChatTab];
   const cityChatPlaceholder = "Say hello to fellow musicians...";
-  const chatCardDescription = "Chat with the global community of musicians.";
+  const chatCardDescription = activeChatTab === "city"
+    ? "Connect with performers in your current city."
+    : "Chat with the global community of musicians.";
 
   const toNumber = (value: unknown, fallback = 0) => {
     if (typeof value === "number" && Number.isFinite(value)) {
@@ -217,9 +218,47 @@ const Dashboard = () => {
     };
   }, []); // Simplified - city_of_birth not in schema
 
-  // Gender label simplified - gender not in schema
-  const profileGenderLabel = genderLabels.prefer_not_to_say;
+  useEffect(() => {
+    let isMounted = true;
 
+    const loadCity = async (cityId: string) => {
+      try {
+        const { data, error: queryError } = await supabase
+          .from("cities")
+          .select("name, country")
+          .eq("id", cityId)
+          .maybeSingle();
+
+        if (queryError) throw queryError;
+        if (!isMounted) return;
+
+        if (data) {
+          const cityName = data.name ?? "Unnamed City";
+          const label = data.country ? `${cityName}, ${data.country}` : cityName;
+          setBirthCityLabel(label ?? null);
+        } else {
+          setBirthCityLabel(null);
+        }
+      } catch (caughtError) {
+        console.error("Error loading birth city:", caughtError);
+        if (isMounted) {
+          setBirthCityLabel(null);
+        }
+      }
+    };
+
+    const birthCityId = profile?.city_of_birth ?? null;
+
+    if (birthCityId) {
+      void loadCity(birthCityId);
+    } else {
+      setBirthCityLabel(null);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.city_of_birth]);
 
   if (loading) {
     return (
@@ -250,6 +289,8 @@ const Dashboard = () => {
   if (!profile || !skills) {
     return null;
   }
+
+  const profileGenderLabel = genderLabels[profile.gender ?? "prefer_not_to_say"] ?? genderLabels.prefer_not_to_say;
 
   const parseDate = (value?: string | null) => {
     if (!value) return null;

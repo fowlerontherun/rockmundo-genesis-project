@@ -116,7 +116,8 @@ export default function PerformGig() {
       });
       navigate('/gig-booking');
     }
-  }, [gigId, navigate, toast, user]);
+  }, [gigId, user, navigate, toast]);
+
 
   useEffect(() => {
     void loadGig();
