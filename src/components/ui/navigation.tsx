@@ -13,7 +13,6 @@ import {
   TrendingUp,
   Settings,
   LogOut,
-  Guitar,
   ShoppingCart,
   Trophy,
   MapPin,
@@ -25,7 +24,8 @@ import {
   Menu,
   X,
   Globe,
-  Mic
+  Mic,
+  GraduationCap
 } from "lucide-react";
 
 const Navigation = () => {
@@ -51,7 +51,7 @@ const Navigation = () => {
         { icon: Music, label: "Music Studio", path: "/music" },
         { icon: Play, label: "Music Creation", path: "/create" },
         { icon: Music, label: "Song Manager", path: "/songs" },
-        { icon: TrendingUp, label: "Skill Training", path: "/training" },
+        { icon: GraduationCap, label: "Education", path: "/education" },
       ]
     },
     {

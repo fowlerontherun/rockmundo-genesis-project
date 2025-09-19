@@ -31,7 +31,7 @@ const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
-const SkillTraining = lazyWithRetry(() => import("./pages/SkillTraining"));
+const Education = lazyWithRetry(() => import("./pages/Education"));
 const MusicCreation = lazyWithRetry(() => import("./pages/MusicCreation"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
@@ -87,7 +87,8 @@ function App() {
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
-                    <Route path="training" element={<SkillTraining />} />
+                    <Route path="education" element={<Education />} />
+                    <Route path="training" element={<Education />} />
                     <Route path="create" element={<MusicCreation />} />
                     <Route path="band-enhanced" element={<EnhancedBandManager />} />
                     <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
