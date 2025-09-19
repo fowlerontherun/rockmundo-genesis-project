@@ -20,10 +20,12 @@ const InventoryManager = () => {
   const [bookInventory, setBookInventory] = useState<
     (PlayerSkillBookRow & { skill_books: SkillBookRow | null })[]
   >([]);
+  const [isBookInventorySupported, setIsBookInventorySupported] = useState(true);
 
   const loadBookInventory = useCallback(
     async (currentProfileId: string) => {
       setIsLoadingBooks(true);
+      setIsBookInventorySupported(true);
       try {
         const { data, error } = await supabase
           .from("player_skill_books")
@@ -31,8 +33,17 @@ const InventoryManager = () => {
           .eq("profile_id", currentProfileId)
           .order("acquired_at", { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          if (typeof error === "object" && error && "code" in error && error.code === "PGRST205") {
+            console.info("Book inventory table is not available yet; falling back to empty inventory.");
+            setIsBookInventorySupported(false);
+            setBookInventory([]);
+            return;
+          }
+          throw error;
+        }
 
+        setIsBookInventorySupported(true);
         setBookInventory((data as (PlayerSkillBookRow & { skill_books: SkillBookRow | null })[] | null) ?? []);
       } catch (error) {
         console.error("Failed to load book inventory", error);
@@ -52,6 +63,7 @@ const InventoryManager = () => {
     if (!user) {
       setProfileId(null);
       setBookInventory([]);
+      setIsBookInventorySupported(true);
       return;
     }
 
@@ -136,6 +148,10 @@ const InventoryManager = () => {
             </div>
           ) : !profileId ? (
             <p className="text-sm text-muted-foreground">Create a character profile to start collecting books.</p>
+          ) : !isBookInventorySupported ? (
+            <p className="text-sm text-muted-foreground">
+              Book tracking is being rolled out. Check back soon to see your purchased education books here.
+            </p>
           ) : isLoadingBooks ? (
             <div className="flex items-center gap-3 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
