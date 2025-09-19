@@ -70,7 +70,6 @@ export const useGameData = (): UseGameDataReturn => {
   const [xpLedger, setXpLedger] = useState<ExperienceLedgerRow[]>([]);
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
   const [unlockedSkills, setUnlockedSkills] = useState<UnlockedSkillsMap>({});
-  const [freshWeeklyBonusAvailable] = useState(false);
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
