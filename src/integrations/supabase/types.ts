@@ -1221,6 +1221,39 @@ export type Database = {
           },
         ]
       }
+      universities: {
+        Row: {
+          city: string
+          course_cost: number
+          created_at: string
+          id: string
+          name: string
+          prestige: number
+          quality_of_learning: number
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          course_cost?: number
+          created_at?: string
+          id?: string
+          name: string
+          prestige?: number
+          quality_of_learning?: number
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          course_cost?: number
+          created_at?: string
+          id?: string
+          name?: string
+          prestige?: number
+          quality_of_learning?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
