@@ -225,10 +225,24 @@ const CharacterCreation = () => {
     setIsSaving(true);
     setSaveError(null);
 
+    console.log("[CharacterCreation] Starting save", {
+      userId: user.id,
+      existingProfileId: existingProfile?.id ?? null,
+      targetProfileId,
+      hasExistingAttributes,
+      gender,
+      cityOfBirth,
+      trimmedName,
+      trimmedStageName,
+    });
+
     try {
       let savedProfile: ProfileRow | null = null;
 
       if (existingProfile) {
+        console.log("[CharacterCreation] Updating existing profile", {
+          profileId: existingProfile.id,
+        });
         const { data, error } = await supabase
           .from("profiles")
           .update({
@@ -244,11 +258,16 @@ const CharacterCreation = () => {
           .single();
 
         if (error) {
+          console.error("[CharacterCreation] Error updating profile", error);
           throw error;
         }
 
+        console.log("[CharacterCreation] Updated profile response", data);
         savedProfile = (data as ProfileRow | null) ?? null;
       } else {
+        console.log("[CharacterCreation] Creating new profile", {
+          userId: user.id,
+        });
         const insertPayload: TablesInsert<"profiles"> = {
           user_id: user.id,
           username: trimmedName,
@@ -265,19 +284,25 @@ const CharacterCreation = () => {
           .single();
 
         if (error) {
+          console.error("[CharacterCreation] Error inserting profile", error);
           throw error;
         }
 
+        console.log("[CharacterCreation] Inserted profile response", data);
         savedProfile = (data as ProfileRow | null) ?? null;
       }
 
       if (!savedProfile) {
+        console.error("[CharacterCreation] No profile returned after save");
         throw new Error("The profile could not be saved.");
       }
 
       setExistingProfile(savedProfile);
 
       if (!hasExistingAttributes && savedProfile.id) {
+        console.log("[CharacterCreation] Creating default attributes", {
+          profileId: savedProfile.id,
+        });
         const attributePayload: PlayerAttributesInsert = {
           user_id: user.id,
           profile_id: savedProfile.id,
@@ -291,13 +316,18 @@ const CharacterCreation = () => {
           .maybeSingle();
 
         if (attributesError) {
+          console.error("[CharacterCreation] Error upserting attributes", attributesError);
           throw attributesError;
         }
 
         setHasExistingAttributes(true);
       }
 
+      console.log("[CharacterCreation] Refreshing characters after save");
       await refreshCharacters();
+      console.log("[CharacterCreation] Setting active character", {
+        profileId: savedProfile.id,
+      });
       setActiveCharacter(savedProfile.id);
 
       toast({
@@ -308,7 +338,7 @@ const CharacterCreation = () => {
       window.dispatchEvent(new CustomEvent("profile-updated"));
       navigate("/dashboard");
     } catch (error) {
-      console.error("Failed to save character:", error);
+      console.error("[CharacterCreation] Failed to save character", error);
       const message =
         typeof error === "string"
           ? error
