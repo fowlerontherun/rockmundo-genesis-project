@@ -36,30 +36,7 @@ const universitySchema = z.object({
 
 type UniversityFormValues = z.infer<typeof universitySchema>;
 
-type UniversitiesTable = Database["public"]["Tables"] extends { universities: infer T }
-  ? T
-  : {
-      Row: {
-        id: string;
-        city: string;
-        prestige: number | null;
-        quality_of_learning: number | null;
-        course_cost: number | null;
-        created_at: string | null;
-      };
-      Insert: {
-        city: string;
-        prestige?: number | null;
-        quality_of_learning?: number | null;
-        course_cost?: number | null;
-      };
-      Update: {
-        city?: string;
-        prestige?: number | null;
-        quality_of_learning?: number | null;
-        course_cost?: number | null;
-      };
-    };
+type UniversitiesTable = Database["public"]["Tables"]["universities"];
 
 type UniversityRow = UniversitiesTable extends { Row: infer R } ? R : never;
 type UniversityInsert = UniversitiesTable extends { Insert: infer I } ? I : never;
@@ -88,12 +65,25 @@ export default function Admin() {
     try {
       const { data, error } = await supabase
         .from("universities")
-        .select("*")
-        .order("city", { ascending: true });
+        .select("id, name, city, prestige, quality_of_learning, course_cost, created_at, updated_at")
+        .order("city", { ascending: true })
+        .order("name", { ascending: true });
 
       if (error) throw error;
 
-      setUniversities((data as UniversityRow[] | null) ?? []);
+      type UniversityQueryRow = Omit<UniversityRow, "course_cost"> & {
+        course_cost: UniversityRow["course_cost"] | string;
+      };
+
+      const typedUniversities = ((data as UniversityQueryRow[] | null) ?? []).map((university) => ({
+        ...university,
+        course_cost:
+          typeof university.course_cost === "string"
+            ? Number.parseFloat(university.course_cost)
+            : university.course_cost,
+      }));
+
+      setUniversities(typedUniversities);
     } catch (error) {
       console.error("Failed to load universities", error);
       toast({

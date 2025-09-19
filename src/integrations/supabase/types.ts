@@ -1715,33 +1715,33 @@ export type Database = {
       }
       universities: {
         Row: {
-          city: string
-          course_cost: number
-          created_at: string
           id: string
           name: string
+          city: string
           prestige: number
           quality_of_learning: number
+          course_cost: number
+          created_at: string
           updated_at: string
         }
         Insert: {
-          city: string
-          course_cost?: number
-          created_at?: string
           id?: string
           name: string
+          city: string
           prestige?: number
           quality_of_learning?: number
+          course_cost?: number
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          city?: string
-          course_cost?: number
-          created_at?: string
           id?: string
           name?: string
+          city?: string
           prestige?: number
           quality_of_learning?: number
+          course_cost?: number
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
