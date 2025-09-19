@@ -120,7 +120,14 @@ const CharacterCreation = () => {
 
   useEffect(() => {
     const fetchExistingData = async () => {
+      console.log("[CharacterCreation] Starting fetchExistingData", {
+        hasUser: Boolean(user),
+        userId: user?.id ?? null,
+        targetProfileId,
+      });
+
       if (!user) {
+        console.log("[CharacterCreation] Aborting fetchExistingData because no user is present");
         setIsLoading(false);
         return;
       }
@@ -131,6 +138,11 @@ const CharacterCreation = () => {
       const scopedProfileId = targetProfileId;
       const shouldUseProfileScope = Boolean(scopedProfileId);
 
+      console.log("[CharacterCreation] Loading profile data", {
+        scopedProfileId,
+        shouldUseProfileScope,
+      });
+
       try {
         const profileQuery = shouldUseProfileScope
           ? supabase.from("profiles").select("*").eq("id", scopedProfileId!)
@@ -139,10 +151,24 @@ const CharacterCreation = () => {
         const { data: profileData, error: profileError, status: profileStatus } = await profileQuery.maybeSingle();
 
         if (profileError && profileStatus !== 406) {
+          console.error("[CharacterCreation] Error retrieving profile", {
+            profileError,
+            profileStatus,
+          });
           throw profileError;
         }
 
+        if (profileStatus === 406) {
+          console.warn("[CharacterCreation] Multiple profile rows detected for user scope; ignoring results", {
+            profileStatus,
+          });
+        }
+
         const profileRecord = (profileData as ProfileRow | null) ?? null;
+        console.log("[CharacterCreation] Profile load result", {
+          hasProfile: Boolean(profileRecord),
+          profileId: profileRecord?.id ?? null,
+        });
         setExistingProfile(profileRecord);
 
         if (profileRecord) {
@@ -153,6 +179,9 @@ const CharacterCreation = () => {
           setCityOfBirth(profileRecord.city_of_birth ?? null);
 
           if (profileRecord.id) {
+            console.log("[CharacterCreation] Loading existing attributes", {
+              profileId: profileRecord.id,
+            });
             const { data: attributesData, error: attributesError, status: attributesStatus } = await supabase
               .from("player_attributes")
               .select("id")
@@ -160,14 +189,28 @@ const CharacterCreation = () => {
               .maybeSingle();
 
             if (attributesError && attributesStatus !== 406) {
+              console.error("[CharacterCreation] Error retrieving attributes", {
+                attributesError,
+                attributesStatus,
+              });
               throw attributesError;
             }
 
-            setHasExistingAttributes(Boolean(attributesData));
+            if (attributesStatus === 406) {
+              console.warn("[CharacterCreation] Multiple attribute rows detected; using first result");
+            }
+
+            const hasAttributes = Boolean(attributesData);
+            console.log("[CharacterCreation] Attribute load result", {
+              hasAttributes,
+            });
+            setHasExistingAttributes(hasAttributes);
           } else {
+            console.warn("[CharacterCreation] Loaded profile without an id; skipping attribute check");
             setHasExistingAttributes(false);
           }
         } else {
+          console.log("[CharacterCreation] No existing profile found; resetting form fields");
           setName("");
           setStageName("");
           setBio("");
@@ -176,12 +219,13 @@ const CharacterCreation = () => {
           setHasExistingAttributes(false);
         }
       } catch (error) {
-        console.error("Failed to load character data:", error);
+        console.error("[CharacterCreation] Failed to load character data", error);
         setLoadError("We couldn't load your character details. You can still create a new persona.");
         setExistingProfile(null);
         setHasExistingAttributes(false);
       } finally {
         setIsLoading(false);
+        console.log("[CharacterCreation] Finished fetchExistingData");
       }
     };
 
@@ -205,6 +249,7 @@ const CharacterCreation = () => {
     const trimmedBio = bio.trim();
 
     if (!trimmedName) {
+      console.warn("[CharacterCreation] Preventing save due to missing name");
       toast({
         title: "Name required",
         description: "Enter a unique name for your artist persona.",
@@ -214,6 +259,7 @@ const CharacterCreation = () => {
     }
 
     if (!trimmedStageName) {
+      console.warn("[CharacterCreation] Preventing save due to missing stage name");
       toast({
         title: "Stage name required",
         description: "Enter the stage name you want other players to see.",
@@ -321,14 +367,19 @@ const CharacterCreation = () => {
         }
 
         setHasExistingAttributes(true);
+        console.log("[CharacterCreation] Default attributes created successfully");
+      } else if (hasExistingAttributes) {
+        console.log("[CharacterCreation] Skipping default attribute creation because attributes already exist");
       }
 
       console.log("[CharacterCreation] Refreshing characters after save");
       await refreshCharacters();
+      console.log("[CharacterCreation] Characters refreshed successfully");
       console.log("[CharacterCreation] Setting active character", {
         profileId: savedProfile.id,
       });
       setActiveCharacter(savedProfile.id);
+      console.log("[CharacterCreation] Active character updated");
 
       toast({
         title: "Character saved",
@@ -336,6 +387,7 @@ const CharacterCreation = () => {
       });
 
       window.dispatchEvent(new CustomEvent("profile-updated"));
+      console.log("[CharacterCreation] Emitted profile-updated event and navigating to dashboard");
       navigate("/dashboard");
     } catch (error) {
       console.error("[CharacterCreation] Failed to save character", error);
