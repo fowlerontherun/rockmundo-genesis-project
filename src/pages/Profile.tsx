@@ -1294,7 +1294,7 @@ const Profile = () => {
                     className="bg-primary text-primary-foreground hover:bg-primary/90"
                     size="sm"
                   >
-                    Explore Education Hub
+                    Launch Education Lab
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>

@@ -22,10 +22,11 @@ export interface SkillProgressRecord {
   id: string;
   profile_id: string;
   skill_slug: string;
-  current_value?: number | null;
-  total_xp?: number | null;
-  last_trained_at?: string | null;
-  unlocked_at?: string | null;
+  current_level?: number | null;
+  current_xp?: number | null;
+  required_xp?: number | null;
+  last_practiced_at?: string | null;
+  created_at?: string | null;
   updated_at?: string | null;
   metadata?: Record<string, unknown> | null;
 }
