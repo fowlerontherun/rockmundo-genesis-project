@@ -1,36 +1,121 @@
-
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AlertCircle,
-  BookOpen,
-  BookOpenCheck,
-  GraduationCap,
-  Loader2,
-  PlaySquare,
-  RefreshCcw,
-  ShoppingCart,
-  Sparkles,
-  Users,
-} from "lucide-react";
-
+import { BookOpen, GraduationCap, Loader2, PlaySquare, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
-import { SKILL_TREE_DEFINITIONS, type TierName } from "@/data/skillTree";
+import { type TierName } from "@/data/skillTree";
+import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
+import { useSkillSystem } from "@/hooks/useSkillSystem";
+import { type SkillDefinitionRecord, type SkillProgressRecord } from "@/hooks/useSkillSystem.types";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ATTRIBUTE_METADATA,
+  type AttributeKey,
+  applyAttributeToValue
+} from "@/utils/attributeProgression";
 
-const DEFAULT_BOOK_XP = 10;
+type SkillMetadata = SkillDefinitionRecord["metadata"];
 
-type SkillBookRow = Database["public"]["Tables"]["skill_books"]["Row"];
-type PlayerSkillBookRow = Database["public"]["Tables"]["player_skill_books"]["Row"];
-type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
+const TIER_SETTINGS: Record<
+  TierName,
+  {
+    durationMinutes: number;
+    difficultyMultiplier: number;
+  }
+> = {
+  Basic: { durationMinutes: 30, difficultyMultiplier: 1 },
+  Professional: { durationMinutes: 45, difficultyMultiplier: 1.5 },
+  Mastery: { durationMinutes: 60, difficultyMultiplier: 2 }
+};
 
-interface PlayerSkillBookWithDetails extends PlayerSkillBookRow {
-  skill_books: SkillBookRow | null;
-}
+const WATCH_BONUS_INCREMENT = 0.1;
+const MAX_WATCH_BONUS_STACKS = 5;
+const MIN_COOLDOWN_PORTION = 0.45;
+const MIN_COOLDOWN_MINUTES = 15;
+
+const ATTRIBUTE_MATCHERS: Array<{ match: RegExp; keys: AttributeKey[] }> = [
+  { match: /(songwriting|lyrics|compos|arrang|melody)/i, keys: ["creative_insight"] },
+  { match: /(production|mix|engineer|studio|record)/i, keys: ["technical_mastery"] },
+  { match: /(performance|stage|tour|crowd|show)/i, keys: ["stage_presence"] },
+  { match: /(marketing|promo|brand|social)/i, keys: ["marketing_savvy"] },
+  { match: /(business|manager|finance|deal)/i, keys: ["business_acumen"] },
+  { match: /(rhythm|drum|groove|percussion)/i, keys: ["rhythm_sense"] },
+  { match: /(vocal|sing|voice)/i, keys: ["vocal_talent"] },
+  { match: /(guitar|bass|instrument|technique|musician)/i, keys: ["musical_ability"] }
+];
+
+const ensureTier = (tierValue: unknown): TierName => {
+  if (tierValue === "Professional" || tierValue === "Mastery") {
+    return tierValue;
+  }
+  return "Basic";
+};
+
+const inferAttributeKeys = (slug: string, metadata: SkillMetadata): AttributeKey[] => {
+  const haystack = `${slug} ${(metadata?.track as string | undefined) ?? ""} ${(metadata?.category as string | undefined) ?? ""}`;
+  for (const entry of ATTRIBUTE_MATCHERS) {
+    if (entry.match.test(haystack)) {
+      return entry.keys;
+    }
+  }
+  return ["musical_ability"];
+};
+
+const buildVideoUrl = (definition: SkillDefinitionRecord) => {
+  const searchTerm = definition.display_name ?? definition.slug.replace(/_/g, " ");
+  const query = encodeURIComponent(`${searchTerm} music lesson`);
+  return `https://www.youtube.com/results?search_query=${query}`;
+};
+
+const computeCooldownMinutes = (durationMinutes: number, watchCount: number) => {
+  const stacks = Math.max(0, Math.min(MAX_WATCH_BONUS_STACKS, watchCount - 1));
+  const reductionRatio = Math.max(MIN_COOLDOWN_PORTION, 1 - stacks * 0.1);
+  const computed = Math.round(durationMinutes * reductionRatio);
+  return Math.max(MIN_COOLDOWN_MINUTES, computed);
+};
+
+type TrainingPreview = {
+  xpGain: number;
+  durationMinutes: number;
+  tier: TierName;
+  attributeMultiplier: number;
+  averageAttributeValue: number;
+  attributeKeys: AttributeKey[];
+  watchBonus: number;
+  difficultyMultiplier: number;
+};
+
+const computeTrainingPreview = (
+  definition: SkillDefinitionRecord,
+  attributes: PlayerAttributes,
+  nextWatchCount: number
+): TrainingPreview => {
+  const tier = ensureTier(definition.metadata?.tier);
+  const settings = TIER_SETTINGS[tier];
+  const baseXp = Math.max(1, Number(definition.base_xp_gain ?? 6));
+  const stacks = Math.max(0, Math.min(MAX_WATCH_BONUS_STACKS, nextWatchCount - 1));
+  const watchBonus = 1 + stacks * WATCH_BONUS_INCREMENT;
+  const attributeKeys = inferAttributeKeys(definition.slug, definition.metadata);
+  const rawXp = Math.round(baseXp * settings.difficultyMultiplier * watchBonus);
+  const { value: xpGain, multiplier: attributeMultiplier, averageValue } = applyAttributeToValue(
+    rawXp,
+    attributes,
+    attributeKeys
+  );
+
+  return {
+    xpGain,
+    durationMinutes: settings.durationMinutes,
+    tier,
+    attributeMultiplier,
+    averageAttributeValue: averageValue,
+    attributeKeys,
+    watchBonus,
+    difficultyMultiplier: settings.difficultyMultiplier
+  };
+};
 
 const tabs = [
   {
@@ -488,7 +573,6 @@ export default function Education() {
           title: "Skill unlocked",
           description: "Reading " + metadata.name + " granted " + xpReward + " XP.",
         });
-
         await Promise.all([loadOwnedBooks(), loadSkillProgress()]);
       } catch (error) {
         console.error("Failed to mark book as read", error);
@@ -517,6 +601,387 @@ export default function Education() {
   const ownedBooksWithDetails = useMemo(
     () => ownedBooks.filter((entry) => entry.skill_books !== null),
     [ownedBooks],
+  );
+
+const Education = () => {
+  const { toast } = useToast();
+  const {
+    definitions,
+    progress,
+    loading: skillsLoading,
+    error: skillsError,
+    refreshProgress,
+    updateSkillProgress
+  } = useSkillSystem();
+  const { attributes, skills, addActivity } = useGameData();
+
+  const [videoWatchCounts, setVideoWatchCounts] = useState<Record<string, number>>({});
+  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  const [activeSkill, setActiveSkill] = useState<string | null>(null);
+  const [lastWatchedAt, setLastWatchedAt] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    void refreshProgress();
+  }, [refreshProgress]);
+
+  const progressBySlug = useMemo(() => {
+    const map = new Map<string, SkillProgressRecord>();
+    for (const record of progress ?? []) {
+      if (record?.skill_slug) {
+        map.set(record.skill_slug, record);
+      }
+    }
+    return map;
+  }, [progress]);
+
+  const skillsRecord = useMemo(() => {
+    return (skills as PlayerSkills | null) ?? null;
+  }, [skills]);
+
+  const getSkillValue = useCallback(
+    (slug: string) => {
+      const progressRecord = progressBySlug.get(slug);
+      if (progressRecord) {
+        const numeric = Number(progressRecord.current_value ?? progressRecord.total_xp ?? 0);
+        if (Number.isFinite(numeric)) {
+          return numeric;
+        }
+      }
+
+      const fallback = skillsRecord?.[slug];
+      if (typeof fallback === "number" && Number.isFinite(fallback)) {
+        return fallback;
+      }
+
+      return 0;
+    },
+    [progressBySlug, skillsRecord]
+  );
+
+  const getCooldownRemaining = useCallback(
+    (slug: string) => {
+      const readyAt = cooldowns[slug];
+      if (!readyAt) {
+        return 0;
+      }
+
+      const remainingMs = readyAt - Date.now();
+      if (remainingMs <= 0) {
+        return 0;
+      }
+
+      return Math.ceil(remainingMs / 60000);
+    },
+    [cooldowns]
+  );
+
+  const groupedSkills = useMemo(() => {
+    if (!definitions || definitions.length === 0) {
+      return [] as Array<{ category: string; skills: SkillDefinitionRecord[] }>;
+    }
+
+    const map = new Map<string, SkillDefinitionRecord[]>();
+    for (const definition of definitions) {
+      const category = (definition.metadata?.category as string | undefined) ?? "General";
+      if (!map.has(category)) {
+        map.set(category, []);
+      }
+      map.get(category)?.push(definition);
+    }
+
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([category, list]) => ({
+        category,
+        skills: list.sort((a, b) => {
+          const tierA = ensureTier(a.metadata?.tier);
+          const tierB = ensureTier(b.metadata?.tier);
+          if (tierA === tierB) {
+            return (a.display_name ?? a.slug).localeCompare(b.display_name ?? b.slug);
+          }
+          const order: Record<TierName, number> = { Basic: 0, Professional: 1, Mastery: 2 };
+          return order[tierA] - order[tierB];
+        })
+      }));
+  }, [definitions]);
+
+  const startTrainingSession = useCallback(
+    async (
+      payload: {
+        skillSlug: string;
+        skillName: string;
+        durationMinutes: number;
+        xpGain: number;
+        videoUrl: string;
+        watchCount: number;
+        tier: TierName;
+        attributeMultiplier: number;
+        attributeKeys: AttributeKey[];
+      }
+    ) => {
+      try {
+        await addActivity(
+          "skill_training",
+          `Watched a ${payload.skillName} YouTube lesson`,
+          undefined,
+          {
+            source: "youtube_video",
+            skill_slug: payload.skillSlug,
+            duration_minutes: payload.durationMinutes,
+            xp_gain: payload.xpGain,
+            watch_count: payload.watchCount,
+            tier: payload.tier,
+            attribute_multiplier: payload.attributeMultiplier,
+            attribute_keys: payload.attributeKeys,
+            video_url: payload.videoUrl
+          }
+        );
+      } catch (error) {
+        console.error("Failed to log training session", error);
+      }
+    },
+    [addActivity]
+  );
+
+  const handleWatchVideo = useCallback(
+    async (definition: SkillDefinitionRecord) => {
+      const slug = definition.slug;
+      const skillValue = getSkillValue(slug);
+
+      if (skillValue <= 0) {
+        toast({
+          title: "Skill locked",
+          description: "Unlock this skill by reaching level 1 before training with videos.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const remainingCooldown = getCooldownRemaining(slug);
+      if (remainingCooldown > 0) {
+        toast({
+          title: "Cooldown active",
+          description: `Come back in ${remainingCooldown} minute${remainingCooldown === 1 ? "" : "s"} to gain full rewards.`,
+          variant: "default"
+        });
+        return;
+      }
+
+      const videoUrl = buildVideoUrl(definition);
+      let pendingWindow: Window | null = null;
+      if (typeof window !== "undefined") {
+        pendingWindow = window.open(videoUrl, "_blank", "noopener,noreferrer");
+      }
+
+      setActiveSkill(slug);
+
+      try {
+        const watchCount = videoWatchCounts[slug] ?? 0;
+        const nextWatchCount = watchCount + 1;
+        const preview = computeTrainingPreview(definition, attributes, nextWatchCount);
+
+        await startTrainingSession({
+          skillSlug: slug,
+          skillName: definition.display_name ?? slug,
+          durationMinutes: preview.durationMinutes,
+          xpGain: preview.xpGain,
+          videoUrl,
+          watchCount: nextWatchCount,
+          tier: preview.tier,
+          attributeMultiplier: preview.attributeMultiplier,
+          attributeKeys: preview.attributeKeys
+        });
+
+        const newSkillValue = Math.min(1000, Math.round(skillValue + preview.xpGain));
+        await updateSkillProgress({
+          skillSlug: slug,
+          newSkillValue,
+          xpGain: preview.xpGain,
+          timestamp: new Date().toISOString(),
+          markUnlocked: true
+        });
+
+        setVideoWatchCounts((prev) => ({
+          ...prev,
+          [slug]: nextWatchCount
+        }));
+
+        const cooldownMinutes = computeCooldownMinutes(preview.durationMinutes, nextWatchCount);
+        setCooldowns((prev) => ({
+          ...prev,
+          [slug]: Date.now() + cooldownMinutes * 60000
+        }));
+
+        setLastWatchedAt((prev) => ({
+          ...prev,
+          [slug]: Date.now()
+        }));
+
+        toast({
+          title: "Session completed",
+          description: `You earned ${preview.xpGain} XP from ${definition.display_name ?? slug}.`
+        });
+
+        void refreshProgress();
+      } catch (error) {
+        console.error("Failed to process training session", error);
+        if (pendingWindow && !pendingWindow.closed) {
+          pendingWindow.close();
+        }
+        toast({
+          title: "Training failed",
+          description: error instanceof Error ? error.message : "Something went wrong while awarding XP.",
+          variant: "destructive"
+        });
+      } finally {
+        setActiveSkill(null);
+      }
+    },
+    [
+      attributes,
+      getCooldownRemaining,
+      getSkillValue,
+      refreshProgress,
+      startTrainingSession,
+      toast,
+      updateSkillProgress,
+      videoWatchCounts
+    ]
+  );
+
+  const renderSkillCard = useCallback(
+    (definition: SkillDefinitionRecord) => {
+      const slug = definition.slug;
+      const displayName = definition.display_name ?? slug;
+      const watchCount = videoWatchCounts[slug] ?? 0;
+      const nextPreview = computeTrainingPreview(definition, attributes, watchCount + 1);
+      const tier = nextPreview.tier;
+      const cooldownRemaining = getCooldownRemaining(slug);
+      const skillValue = getSkillValue(slug);
+      const progressValue = Number.isFinite(skillValue) ? Math.min(100, (skillValue / 1000) * 100) : 0;
+      const attributeLabels = nextPreview.attributeKeys.map((key) => ATTRIBUTE_METADATA[key]?.label ?? key).join(", ");
+      const lastWatched = lastWatchedAt[slug];
+
+      return (
+        <Card key={slug} className="h-full border-dashed">
+          <CardHeader className="space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold">{displayName}</CardTitle>
+                {definition.description ? (
+                  <CardDescription className="text-xs">{definition.description}</CardDescription>
+                ) : null}
+              </div>
+              <Badge variant="secondary" className="text-xs font-semibold">
+                {tier}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{(definition.metadata?.track as string | undefined) ?? "Skill Training"}</span>
+              <span className="hidden sm:inline">•</span>
+              <span>{(definition.metadata?.category as string | undefined) ?? "General"}</span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Progress value={progressValue} className="h-2" />
+              <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground">
+                <span>Skill value</span>
+                <span>{Math.round(skillValue)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span>Next XP reward</span>
+                <span className="font-semibold">+{nextPreview.xpGain}</span>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Duration</span>
+                <span>{nextPreview.durationMinutes} minutes</span>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Attribute boost</span>
+                <span>
+                  ×{nextPreview.attributeMultiplier.toFixed(2)}
+                  {attributeLabels ? ` (${attributeLabels})` : ""}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Watch bonus</span>
+                <span>{((nextPreview.watchBonus - 1) * 100).toFixed(0)}%</span>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Cooldown after session</span>
+                <span>{computeCooldownMinutes(nextPreview.durationMinutes, watchCount + 1)} min</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>Watch count: {watchCount}</span>
+              {lastWatched ? (
+                <span>Last watched {new Date(lastWatched).toLocaleTimeString()}</span>
+              ) : (
+                <span>Not watched yet</span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={() => handleWatchVideo(definition)}
+                disabled={activeSkill === slug || skillValue <= 0}
+                className="w-full sm:flex-1"
+              >
+                {activeSkill === slug ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing
+                  </>
+                ) : (
+                  <>
+                    <PlaySquare className="mr-2 h-4 w-4" />
+                    Watch & Train
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  const url = buildVideoUrl(definition);
+                  if (typeof window !== "undefined") {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  }
+                }}
+              >
+                Open Playlist
+              </Button>
+            </div>
+
+            {skillValue <= 0 ? (
+              <p className="text-xs font-medium text-destructive">
+                Unlock this skill by progressing to level 1 before training with YouTube resources.
+              </p>
+            ) : cooldownRemaining > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Cooldown active — ready in {cooldownRemaining} minute{cooldownRemaining === 1 ? "" : "s"}.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Ready to train now.</p>
+            )}
+          </CardContent>
+        </Card>
+      );
+    },
+    [
+      activeSkill,
+      attributes,
+      getCooldownRemaining,
+      getSkillValue,
+      handleWatchVideo,
+      lastWatchedAt,
+      videoWatchCounts
+    ]
   );
 
   return (
@@ -698,7 +1163,6 @@ export default function Education() {
                     const metadata = getSkillMetadata(book.skill_slug);
                     const ownedDate = entry.owned_at ? new Date(entry.owned_at) : null;
                     const consumedDate = entry.consumed_at ? new Date(entry.consumed_at) : null;
-
                     return (
                       <div key={entry.id} className="space-y-2 rounded-lg border p-4">
                         <div className="flex flex-wrap items-center gap-2">
@@ -724,7 +1188,6 @@ export default function Education() {
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="university" className="space-y-6">
           {universityRoutes.map((route) => (
             <Card key={route.title}>
@@ -756,9 +1219,56 @@ export default function Education() {
         <TabsContent value="videos">
           <Card>
             <CardHeader>
-              <CardTitle>Curated YouTube Playlists</CardTitle>
+              <CardTitle>YouTube Skill Training</CardTitle>
               <CardDescription>
-                Jump into high-impact practice routines and production walkthroughs from trusted creators.
+                Pick a skill, watch a curated lesson, and earn XP scaled by your mastery tier and attribute strengths.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {skillsError ? (
+                <p className="text-sm text-destructive">
+                  Unable to load skill data right now. Refresh the page or try again later.
+                </p>
+              ) : null}
+
+              {skillsLoading ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-64 animate-pulse rounded-lg border border-dashed bg-muted/40"
+                    />
+                  ))}
+                </div>
+              ) : groupedSkills.length > 0 ? (
+                groupedSkills.map((group) => (
+                  <div key={group.category} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.category}
+                      </h3>
+                      <Badge variant="outline" className="text-xs">
+                        {group.skills.length} skills
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {group.skills.map((definition) => renderSkillCard(definition))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No trainable skills are available yet. Unlock skills in your profile to see tailored lessons.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Supplemental Playlists</CardTitle>
+              <CardDescription>
+                Keep learning between training sessions with curated channels and playlists covering every discipline.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
