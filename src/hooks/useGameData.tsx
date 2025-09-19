@@ -139,7 +139,14 @@ export const useGameData = (): UseGameDataReturn => {
         return;
       }
 
-      const [skillsResult, attributesResult, walletResult, ledgerResult, cityResult] = await Promise.all([
+      const [
+        skillsResult,
+        attributesResult,
+        walletResult,
+        ledgerResult,
+        cityResult,
+        activitiesResult,
+      ] = await Promise.all([
         supabase
           .from("player_skills")
           .select("*")
@@ -167,7 +174,7 @@ export const useGameData = (): UseGameDataReturn => {
         supabase
           .from("activity_feed")
           .select("*")
-          .eq("profile_id", activeProfile.id)
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(20),
       ]);
@@ -196,6 +203,7 @@ export const useGameData = (): UseGameDataReturn => {
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
       setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
+      setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress([]);
       setUnlockedSkills({});
     },
@@ -253,20 +261,20 @@ export const useGameData = (): UseGameDataReturn => {
   }, [fetchData]);
 
   useEffect(() => {
-    if (!selectedCharacterId) {
+    if (!selectedCharacterId || !user) {
       setActivities([]);
       return;
     }
 
     const channel = supabase
-      .channel(`activity_feed:profile:${selectedCharacterId}`)
+      .channel(`activity_feed:user:${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "activity_feed",
-          filter: `profile_id=eq.${selectedCharacterId}`,
+          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           const newRow = payload.new as ActivityFeedRow;
@@ -281,7 +289,7 @@ export const useGameData = (): UseGameDataReturn => {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [selectedCharacterId]);
+  }, [selectedCharacterId, user]);
 
   const setActiveCharacter = useCallback(
     async (id: string) => {
