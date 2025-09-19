@@ -20,4 +20,7 @@ FROM public.profiles;
 
 GRANT SELECT ON public.public_profiles TO authenticated;
 
+-- Ensure PostgREST becomes aware of the new column immediately
+NOTIFY pgrst, 'reload schema';
+
 COMMIT;
