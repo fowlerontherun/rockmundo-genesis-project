@@ -7,7 +7,7 @@ export type PlayerProfile = Database['public']['Tables']['profiles']['Row'];
 export type PlayerSkills = { [key: string]: any } | null;
 export type PlayerAttributes = { [key: string]: any } | null;
 export type PlayerXpWallet = { [key: string]: any } | null;
-export type ActivityItem = Database['public']['Tables']['activity_feed']['Row'];
+export type ActivityItem = { [key: string]: any };
 
 interface UseGameDataReturn {
   profile: PlayerProfile | null;
@@ -163,6 +163,10 @@ export const useGameData = (): UseGameDataReturn => {
     refreshCharacters: fetchData
   };
 };
+
+// Add missing exports for compatibility
+export type SkillDefinition = { [key: string]: any };
+export type SkillProgressRow = { [key: string]: any };
 
 // Add a dummy GameDataProvider for compatibility
 export const GameDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
