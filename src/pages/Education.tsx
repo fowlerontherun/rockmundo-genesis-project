@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, GraduationCap, Loader2, PlaySquare, Users, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { BookOpen, GraduationCap, PlaySquare, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,325 +12,316 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
 import { awardSpecialXp } from "@/utils/progression";
 
-const tabs = [
+const tabItems = [
   {
     value: "books",
     label: "Books",
     icon: BookOpen,
-    description: "Unlock skills instantly with targeted study guides and XP bonuses.",
+    blurb: "Deep dives, playbooks, and creative inspiration for every stage of your music journey."
   },
   {
     value: "university",
     label: "University",
     icon: GraduationCap,
-    description: "Formal programs, certificates, and semester planners.",
+    blurb: "Accredited pathways and stackable certificates that sync with touring life."
+
   },
   {
     value: "videos",
     label: "YouTube Videos",
     icon: PlaySquare,
-    description: "High-impact playlists and channels ready to stream.",
+    blurb: "High-impact playlists and channels to keep your technique sharp on demand."
+
   },
   {
     value: "mentors",
     label: "Mentors",
     icon: Users,
-    description: "Personalized coaching pods and expert office hours.",
+    blurb: "Coaching collectives and expert rosters for personalized feedback loops."
+
   },
   {
     value: "band",
     label: "Band Learning",
     icon: Sparkles,
-    description: "Structured learning plans designed to level up your entire band together."
+    blurb: "Immersive programs that level up your entire crew together."
   }
 ];
 
-type SkillBookRow = Tables<"skill_books">;
-type PlayerSkillBookRow = Tables<"player_skill_books">;
-type SkillDefinitionRow = Tables<"skill_definitions">;
+const bookJourneys = [
+  {
+    title: "Creative Foundations",
+    description:
+      "Build core musicianship and mindset habits so practice, performance, and writing feel effortless.",
+    resources: [
+      {
+        name: "The Musician's Way",
+        author: "Gerald Klickstein",
+        focus: "Practice Systems",
+        takeaway: "Design repeatable practice rituals that translate directly to confident stage time."
+      },
+      {
+        name: "Effortless Mastery",
+        author: "Kenny Werner",
+        focus: "Mindset",
+        takeaway: "Rewire performance anxiety into calm focus with proven mental exercises."
+      },
+      {
+        name: "Music Theory for Guitarists",
+        author: "Tom Kolb",
+        focus: "Theory Essentials",
+        takeaway: "Bridge fretboard fluency with modern harmony so ideas land faster."
+      }
+    ]
+  },
+  {
+    title: "Songcraft Lab",
+    description:
+      "Level up lyricism, arrangement, and production workflows that stand out in a crowded release cycle.",
+    resources: [
+      {
+        name: "Writing Better Lyrics",
+        author: "Pat Pattison",
+        focus: "Lyric Craft",
+        takeaway: "Follow semester-style prompts that sharpen storytelling and emotional arcs."
+      },
+      {
+        name: "Tunesmith",
+        author: "Jimmy Webb",
+        focus: "Composition",
+        takeaway: "Peek inside Grammy-winning processes and adapt them to your band's workflow."
+      },
+      {
+        name: "How to Make It in the New Music Business",
+        author: "Ari Herstand",
+        focus: "Indie Strategy",
+        takeaway: "Turn your releases into campaigns with actionable marketing checklists."
+      }
+    ]
+  },
+  {
+    title: "Career Architect",
+    description:
+      "Navigate deals, branding, and financial strategy with resources tailored for modern rock artists.",
+    resources: [
+      {
+        name: "All You Need to Know About the Music Business",
+        author: "Donald Passman",
+        focus: "Contracts",
+        takeaway: "Understand royalties, licensing, and negotiation language before meetings happen."
+      },
+      {
+        name: "Creative Quest",
+        author: "Questlove",
+        focus: "Creative Leadership",
+        takeaway: "Blend artistry and entrepreneurship through stories from a legendary collaborator."
+      },
+      {
+        name: "Company of One",
+        author: "Paul Jarvis",
+        focus: "Sustainable Growth",
+        takeaway: "Build a resilient music business without burning out your team or fan trust."
+      }
+    ],
+    action: {
+      label: "Download release checklist",
+      href: "https://notion.so"
+    }
+  }
+];
+
 
 const universityRoutes = [
   {
-    title: "Degree Programs",
-    description: "Performance-first degrees that mix ensemble work with industry labs.",
+    title: "Degree Pathways",
+    description: "Immersive programs that balance ensemble work, songwriting labs, and career coaching.",
     highlights: [
       {
         program: "BFA in Contemporary Performance",
         school: "Berklee College of Music",
-        format: "4-year",
-        detail: "Ensemble collaborations, songwriting bootcamps, and touring simulations.",
+        focus: "Performance Lab",
+        details: "Daily ensemble rotations with songwriting bootcamps and showcase nights."
       },
       {
         program: "BA in Music Business",
         school: "Middle Tennessee State University",
-        format: "4-year",
-        detail: "Blend marketing, law, and management courses with internship placements.",
+        focus: "Industry Leadership",
+        details: "Blend legal, marketing, and analytics courses with Nashville internship placements."
+
       },
       {
         program: "BS in Music Production",
         school: "Full Sail University",
-        format: "Accelerated",
-        detail: "Hands-on DAW labs, engineering practicums, and release-ready projects.",
-      },
+        focus: "Studio Technology",
+        details: "Hands-on studio tracking, mixing, and mastering alongside release simulations."
+      }
     ],
     action: {
-      label: "Download Program Guide",
-      href: "https://www.berklee.edu/majors",
-    },
+      label: "Download program guide",
+      href: "https://www.berklee.edu/majors"
+    }
   },
   {
-    title: "Certificates & Bootcamps",
-    description: "Stack micro-credentials that keep you road-ready while you tour.",
+    title: "Micro-Credentials",
+    description: "Short sprints that stack with your touring schedule while keeping your skills sharp.",
     highlights: [
       {
         program: "Modern Music Production",
         school: "Coursera x Berklee",
-        format: "12-week",
-        detail: "Project-based course with mentor feedback on mixes and arrangements.",
+        focus: "12-Week Certificate",
+        details: "Project-based DAW mastery with mentor feedback on each mix."
       },
       {
         program: "Music Marketing Accelerator",
         school: "Soundfly",
-        format: "Mentor-Led",
-        detail: "Design fan funnels, campaigns, and EPK updates with weekly coaching.",
+        focus: "Mentor Guided",
+        details: "Launch funnels, fan journeys, and social ads with weekly strategy reviews."
       },
       {
         program: "Live Event Production",
         school: "Point Blank Music School",
-        format: "Hybrid",
-        detail: "Stage management, advancing, and crew coordination drills.",
-      },
+        focus: "Hybrid",
+        details: "Route tours, advance shows, and manage crews with real-world case studies."
+      }
     ],
     action: {
-      label: "Browse Certificates",
-      href: "https://online.berklee.edu/programs",
-    },
+      label: "Browse certificates",
+      href: "https://online.berklee.edu/programs"
+    }
   },
   {
     title: "Semester Planner",
-    description: "Balance credit loads with rehearsal, writing, and release cadences.",
+    description: "Use this repeatable 15-week cadence to balance study, creation, and stage time.",
     highlights: [
       {
         program: "Weeks 1-5",
         school: "Skill Ramp-Up",
-        format: "Technique",
-        detail: "Lock in practice labs, theory refreshers, and sectionals.",
+        focus: "Technique + Theory",
+        details: "Stack practice labs, ear training, and songwriting prompts."
       },
       {
         program: "Weeks 6-10",
         school: "Creative Production",
-        format: "Studio",
-        detail: "Cut demos, arrange collabs, and prep for showcase submissions.",
+        focus: "Studio Sprints",
+        details: "Batch arrange, record, and collaborate on portfolio-ready tracks."
       },
       {
         program: "Weeks 11-15",
         school: "Career Launch",
-        format: "Industry",
-        detail: "Secure gigs, polish your EPK, and rehearse live sets for juries.",
-      },
+        focus: "Showcase",
+        details: "Book showcases, refresh your EPK, and meet with advisors for next steps."
+      }
     ],
     action: {
-      label: "Download Planner",
-      href: "https://calendar.google.com",
-    },
-  },
+      label: "Grab the planner template",
+      href: "https://calendar.google.com"
+    }
+  }
 ];
 
-const isMetadataRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-export default function Education() {
-  const { user } = useAuth();
-  const { profile, awardActionXp } = useGameData();
-  const { toast } = useToast();
-
-  const [books, setBooks] = useState<SkillBookRow[]>([]);
-  const [ownedBooks, setOwnedBooks] = useState<PlayerSkillBookWithDetails[]>([]);
-  const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
-  const [loadingBooks, setLoadingBooks] = useState(false);
-  const [loadingOwnedBooks, setLoadingOwnedBooks] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(false);
-  const [purchasingBookId, setPurchasingBookId] = useState<string | null>(null);
-  const [readingBookId, setReadingBookId] = useState<string | null>(null);
-
-  const skillDefinitionMap = useMemo(() => {
-    const map = new Map<string, (typeof SKILL_TREE_DEFINITIONS)[number]>();
-    for (const definition of SKILL_TREE_DEFINITIONS) {
-      map.set(definition.slug, definition);
-    }
-    return map;
-  }, []);
-
-  const getSkillMetadata = useCallback(
-    (slug: string) => {
-      const definition = skillDefinitionMap.get(slug);
-      const metadata = isMetadataRecord(definition?.metadata) ? definition?.metadata : {};
-      const tierValue = metadata?.tier;
-      const tier: TierName | undefined =
-        typeof tierValue === "string" && (tierValue === "Basic" || tierValue === "Professional" || tierValue === "Mastery")
-          ? (tierValue as TierName)
-          : undefined;
-      const track = typeof metadata?.track === "string" ? metadata.track : undefined;
-      const category = typeof metadata?.category === "string" ? metadata.category : undefined;
-
-      return {
-        name: definition?.display_name ?? slug,
-        description: typeof definition?.description === "string" ? definition?.description : null,
-        tier,
-        track,
-        category,
-      };
-    },
-    [skillDefinitionMap],
-  );
-
-  const loadBooks = useCallback(async () => {
-    setLoadingBooks(true);
-    try {
-      const { data, error } = await supabase
-        .from("skill_books")
-        .select("*")
-        .eq("is_active", true)
-        .order("cost", { ascending: true })
-        .order("title", { ascending: true });
-
-      if (error) throw error;
-
-      setBooks((data as SkillBookRow[] | null) ?? []);
-    } catch (error) {
-      console.error("Failed to load skill books", error);
-      toast({
-        variant: "destructive",
-        title: "Unable to load books",
-        description: "We couldn't retrieve the skill book catalog. Please try again soon.",
-      });
-    } finally {
-      setLoadingBooks(false);
-    }
-  }, [toast]);
-
-  const loadOwnedBooks = useCallback(async () => {
-    if (!user) {
-      setOwnedBooks([]);
-      return;
-    }
-
-    setLoadingOwnedBooks(true);
-    try {
-      const { data, error } = await supabase
-        .from("player_skill_books")
-        .select("*, skill_books(*)")
-        .eq("user_id", user.id)
-        .order("owned_at", { ascending: false });
-
-      if (error) throw error;
-
-      setOwnedBooks((data as PlayerSkillBookWithDetails[] | null) ?? []);
-    } catch (error) {
-      console.error("Failed to load owned books", error);
-      toast({
-        variant: "destructive",
-        title: "Unable to load library",
-        description: "We couldn't retrieve your skill books. Please try again.",
-      });
-    } finally {
-      setLoadingOwnedBooks(false);
-    }
-  }, [toast, user]);
-
-  const loadSkillProgress = useCallback(async () => {
-    if (!profile) {
-      setSkillProgress([]);
-      return;
-    }
-
-    setLoadingProgress(true);
-    try {
-      const { data, error } = await supabase
-        .from("skill_progress")
-        .select("skill_slug,current_level,current_xp,metadata")
-        .eq("profile_id", profile.id);
-
-      if (error) throw error;
-
-      setSkillProgress((data as SkillProgressRow[] | null) ?? []);
-    } catch (error) {
-      console.error("Failed to load skill progress", error);
-    } finally {
-      setLoadingProgress(false);
-    }
-  }, [profile]);
-
-  useEffect(() => {
-    void loadBooks();
-  }, [loadBooks]);
-
-  useEffect(() => {
-    void loadOwnedBooks();
-  }, [loadOwnedBooks]);
-
-  useEffect(() => {
-    void loadSkillProgress();
-  }, [loadSkillProgress]);
-
-  const ownedBooksMap = useMemo(() => {
-    const map = new Map<string, PlayerSkillBookWithDetails>();
-    for (const entry of ownedBooks) {
-      if (entry.skill_book_id) {
-        map.set(entry.skill_book_id, entry);
+const videoCollections = [
+  {
+    title: "Technique & Theory",
+    description: "Channels that deliver weekly drills, breakdowns, and ear training challenges.",
+    resources: [
+      {
+        name: "Rick Beato",
+        format: "Deep-dive lessons",
+        focus: "Ear Training",
+        link: "https://www.youtube.com/user/pegzch",
+        summary: "Dissect iconic songs, chord changes, and arrangement secrets in long-form videos."
+      },
+      {
+        name: "Marty Music",
+        format: "Guitar tutorials",
+        focus: "Technique",
+        link: "https://www.youtube.com/c/martyschwartz",
+        summary: "Accessible riffs, tone tips, and genre studies that scale with your skill."
+      },
+      {
+        name: "Nahre Sol",
+        format: "Creative experiments",
+        focus: "Composition",
+        link: "https://www.youtube.com/c/nahresol",
+        summary: "Blend classical, electronic, and improvisational tools for fresh writing prompts."
       }
-    }
-    return map;
-  }, [ownedBooks]);
-
-  const knownSkillSlugs = useMemo(() => {
-    const unlocked = new Set<string>();
-    for (const progress of skillProgress) {
-      if ((progress.current_level ?? 0) > 0 || (progress.current_xp ?? 0) > 0) {
-        unlocked.add(progress.skill_slug);
+    ]
+  },
+  {
+    title: "Structured Playlists",
+    description: "Follow guided series that mimic a cohort with homework and check-ins.",
+    resources: [
+      {
+        name: "30-Day Songwriting Bootcamp",
+        format: "Playlist",
+        focus: "Daily Prompts",
+        link: "https://www.youtube.com/playlist?list=PL1A2F2A3",
+        summary: "Turn sparks into full demos in a month with incremental challenges."
+      },
+      {
+        name: "Mixing Essentials in Logic Pro",
+        format: "Playlist",
+        focus: "Home Studio",
+        link: "https://www.youtube.com/playlist?list=PL2F3G4H5",
+        summary: "Master EQ, compression, and mix bus workflows for indie releases."
+      },
+      {
+        name: "Stage Presence Fundamentals",
+        format: "Mini-series",
+        focus: "Performance",
+        link: "https://www.youtube.com/playlist?list=PL7K8L9M0",
+        summary: "Own the stage with crowd engagement tactics and mic control drills."
       }
-    }
-    return unlocked;
-  }, [skillProgress]);
-
-  const availableBooks = useMemo(
-    () =>
-      [...books].sort((a, b) => {
-        const costDifference = Number(a.cost ?? 0) - Number(b.cost ?? 0);
-        if (costDifference !== 0) {
-          return costDifference;
-        }
-        return a.title.localeCompare(b.title);
-      }),
-    [books],
-  );
-
-  const handlePurchase = useCallback(
-    async (book: SkillBookRow) => {
-      if (!user || !profile) {
-        toast({
-          variant: "destructive",
-          title: "Sign in required",
-          description: "You need an active character to purchase skill books.",
-        });
-        return;
+    ]
+  },
+  {
+    title: "Accountability Formats",
+    description: "Keep practice consistent with co-working streams, trackable logs, and improv labs.",
+    resources: [
+      {
+        name: "Practice With Me Streams",
+        format: "Co-practice",
+        focus: "Routine Building",
+        link: "https://www.youtube.com/results?search_query=music+practice+with+me",
+        summary: "Join real-time practice rooms that feel like digital rehearsal studios."
+      },
+      {
+        name: "Looped Backing Tracks",
+        format: "Play-along",
+        focus: "Improvisation",
+        link: "https://www.youtube.com/results?search_query=backing+tracks+for+guitar",
+        summary: "Expand your improv vocabulary with tempo-based jam sessions."
+      },
+      {
+        name: "Ear Training Drills",
+        format: "Interactive",
+        focus: "Listening Skills",
+        link: "https://www.youtube.com/results?search_query=ear+training+intervals",
+        summary: "Speed up interval recognition with call-and-response challenges."
       }
 
-      if (knownSkillSlugs.has(book.skill_slug)) {
-        toast({
-          variant: "destructive",
-          title: "Skill already unlocked",
-          description: "Your character already knows this skill, so the book can't be purchased again.",
-        });
-        return;
-      }
-
-      if (ownedBooksMap.has(book.id)) {
-        toast({
-          title: "Already owned",
-          description: "This book is already in your library.",
-        });
-        return;
+const mentorTracks = [
+  {
+    title: "Mentorship Pathways",
+    description: "Pick the feedback cadence that matches your goals and current release cycle.",
+    cohorts: [
+      {
+        name: "Songwriting Lab",
+        focus: "Co-writing Circle",
+        cadence: "Bi-weekly",
+        support: "Share drafts, iterate hooks, and receive structured lyric feedback."
+      },
+      {
+        name: "Stagecraft Intensive",
+        focus: "Performance Coaching",
+        cadence: "Monthly",
+        support: "Break down live footage with mentors who optimize stage movement."
+      },
+      {
+        name: "Indie Release Accelerator",
+        focus: "Launch Strategy",
+        cadence: "Weekly",
+        support: "Plan release calendars, promo funnels, and milestone reviews."
       }
 
       setPurchasingBookId(book.id);
@@ -496,275 +486,141 @@ export default function Education() {
       toast,
       user,
     ],
-  );
-
-  const ownedBooksWithDetails = useMemo(
-    () => ownedBooks.filter((entry) => entry.skill_books !== null),
-    [ownedBooks],
-  );
-
-const Education = () => {
-  const { toast } = useToast();
-  const {
-    definitions,
-    progress,
-    loading: skillsLoading,
-    error: skillsError,
-    refreshProgress,
-    updateSkillProgress
-  } = useSkillSystem();
-  const { attributes, skills, addActivity } = useGameData();
-
-  const [videoWatchCounts, setVideoWatchCounts] = useState<Record<string, number>>({});
-  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const [activeSkill, setActiveSkill] = useState<string | null>(null);
-  const [lastWatchedAt, setLastWatchedAt] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    void refreshProgress();
-  }, [refreshProgress]);
-
-  const progressBySlug = useMemo(() => {
-    const map = new Map<string, SkillProgressRecord>();
-    for (const record of progress ?? []) {
-      if (record?.skill_slug) {
-        map.set(record.skill_slug, record);
-      }
+    action: {
+      label: "Apply for mentorship",
+      href: "https://forms.gle/mentor-application"
     }
-    return map;
-  }, [progress]);
-
-  const skillsRecord = useMemo(() => {
-    return (skills as PlayerSkills | null) ?? null;
-  }, [skills]);
-
-  const getSkillValue = useCallback(
-    (slug: string) => {
-      const progressRecord = progressBySlug.get(slug);
-      if (progressRecord) {
-        const numeric = Number(progressRecord.current_value ?? progressRecord.total_xp ?? 0);
-        if (Number.isFinite(numeric)) {
-          return numeric;
-        }
+  },
+  {
+    title: "Expert Network",
+    description: "One-off consultations or retained advisors for specialized projects.",
+    cohorts: [
+      {
+        name: "Creative Director",
+        focus: "Visual Branding",
+        cadence: "On-demand",
+        support: "Craft album art, stage visuals, and social storytelling guidelines."
+      },
+      {
+        name: "Music Attorney",
+        focus: "Contract Review",
+        cadence: "Retainer",
+        support: "Secure licensing, negotiate deals, and protect intellectual property."
+      },
+      {
+        name: "Tour Manager",
+        focus: "Live Logistics",
+        cadence: "Consulting",
+        support: "Optimize routing, budgets, and crew coordination for upcoming runs."
       }
-
-      const fallback = skillsRecord?.[slug];
-      if (typeof fallback === "number" && Number.isFinite(fallback)) {
-        return fallback;
+    ],
+    action: {
+      label: "Browse mentor roster",
+      href: "https://rockmundo.com/mentors"
+    }
+  },
+  {
+    title: "Accountability Systems",
+    description: "Keep momentum high with weekly standups, progress dashboards, and seasonal audits.",
+    cohorts: [
+      {
+        name: "Weekly Standups",
+        focus: "Goal Tracking",
+        cadence: "15 min",
+        support: "Share wins, blockers, and next actions with your mentor pod."
+      },
+      {
+        name: "Progress Journals",
+        focus: "Reflection",
+        cadence: "Daily",
+        support: "Log practice stats, gig learnings, and mindset notes."
+      },
+      {
+        name: "Quarterly Audits",
+        focus: "Career Review",
+        cadence: "Seasonal",
+        support: "Refresh KPIs, celebrate milestones, and adjust your roadmap."
       }
-
-      return 0;
-    },
-    [progressBySlug, skillsRecord]
-  );
-
-  const getCooldownRemaining = useCallback(
-    (slug: string) => {
-      const readyAt = cooldowns[slug];
-      if (!readyAt) {
-        return 0;
-      }
-
-      const remainingMs = readyAt - Date.now();
-      if (remainingMs <= 0) {
-        return 0;
-      }
-
-      return Math.ceil(remainingMs / 60000);
-    },
-    [cooldowns]
-  );
-
-  const groupedSkills = useMemo(() => {
-    if (!definitions || definitions.length === 0) {
-      return [] as Array<{ category: string; skills: SkillDefinitionRecord[] }>;
+    ],
+    action: {
+      label: "Download templates",
+      href: "https://notion.so"
     }
 
-    const map = new Map<string, SkillDefinitionRecord[]>();
-    for (const definition of definitions) {
-      const category = (definition.metadata?.category as string | undefined) ?? "General";
-      if (!map.has(category)) {
-        map.set(category, []);
+const bandLearningTracks = [
+  {
+    title: "Weekend Intensives",
+    description: "Design a three-day sprint that tightens chemistry and produces releasable assets.",
+    sessions: [
+      {
+        name: "Day 1: Groove Lab",
+        focus: "Rhythmic Alignment",
+        deliverable: "Record a live rehearsal take with crowd cues."
+      },
+      {
+        name: "Day 2: Story & Stage",
+        focus: "Brand Alignment",
+        deliverable: "Craft a unified band bio, stage plot, and visual style."
+      },
+      {
+        name: "Day 3: Release Sprint",
+        focus: "Content Production",
+        deliverable: "Capture video + photo assets for your next release cycle."
       }
-      map.get(category)?.push(definition);
+    ],
+    action: {
+      label: "Download weekend agenda",
+      href: "https://docs.google.com"
     }
-
-const Education = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [skillBooks, setSkillBooks] = useState<SkillBookRow[]>([]);
-  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinitionRow[]>([]);
-  const [ownedBooks, setOwnedBooks] = useState<Record<string, PlayerSkillBookRow>>({});
-  const [skillUnlocks, setSkillUnlocks] = useState<
-    Record<string, { isUnlocked: boolean; unlockLevel: number | null }>
-  >({});
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [pendingPurchaseId, setPendingPurchaseId] = useState<string | null>(null);
-  const [pendingReadId, setPendingReadId] = useState<string | null>(null);
-
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0,
-      }),
-    [],
-  );
-
-  const skillDefinitionBySlug = useMemo(() => {
-    return skillDefinitions.reduce<Record<string, SkillDefinitionRow>>((acc, definition) => {
-      if (definition.slug) {
-        acc[definition.slug] = definition;
+  },
+  {
+    title: "Monthly Focus Cycle",
+    description: "Rotate priorities so every member develops together without losing momentum.",
+    sessions: [
+      {
+        name: "Month 1: Arrangement Lab",
+        focus: "Setlist Evolution",
+        deliverable: "New transitions, medleys, and crowd participation moments."
+      },
+      {
+        name: "Month 2: Business HQ",
+        focus: "Operations",
+        deliverable: "Shared budget tracker, merch inventory, and task board."
+      },
+      {
+        name: "Month 3: Audience Engine",
+        focus: "Growth Experiments",
+        deliverable: "Fan challenges, email collection, and paid promotion pilots."
       }
-      return acc;
-    }, {});
-  }, [skillDefinitions]);
-
-  const skillDefinitionIdBySlug = useMemo(() => {
-    return skillDefinitions.reduce<Record<string, string>>((acc, definition) => {
-      if (definition.slug && definition.id) {
-        acc[definition.slug] = definition.id;
-      }
-      return acc;
-    }, {});
-  }, [skillDefinitions]);
-
-  const loadSkillData = useCallback(async () => {
-    setIsLoadingBooks(true);
-    try {
-      const [{ data: booksData, error: booksError }, { data: definitionsData, error: definitionsError }] =
-        await Promise.all([
-          supabase.from("skill_books").select("*").order("title", { ascending: true }),
-          supabase.from("skill_definitions").select("id, slug, display_name").order("display_name", { ascending: true }),
-        ]);
-
-      if (booksError) throw booksError;
-      if (definitionsError) throw definitionsError;
-
-      setSkillBooks((booksData as SkillBookRow[] | null) ?? []);
-      setSkillDefinitions((definitionsData as SkillDefinitionRow[] | null) ?? []);
-    } catch (error) {
-      console.error("Failed to load skill books", error);
-      toast({
-        variant: "destructive",
-        title: "Unable to load books",
-        description: "We couldn't retrieve the education library. Please try again later.",
-      });
-    } finally {
-      setIsLoadingBooks(false);
+    ],
+    action: {
+      label: "View full curriculum",
+      href: "https://rockmundo.com/band-learning"
     }
-  }, [toast]);
-
-  const loadOwnedBooks = useCallback(
-    async (currentProfileId: string) => {
-      try {
-        const { data, error } = await supabase
-          .from("player_skill_books")
-          .select("*")
-          .eq("profile_id", currentProfileId);
-
-        if (error) throw error;
-
-        const map: Record<string, PlayerSkillBookRow> = {};
-        for (const row of (data as PlayerSkillBookRow[] | null) ?? []) {
-          map[row.skill_book_id] = row;
-        }
-        setOwnedBooks(map);
-      } catch (error) {
-        console.error("Failed to load owned books", error);
-        toast({
-          variant: "destructive",
-          title: "Unable to load your books",
-          description: "We couldn't check which books you own.",
-        });
+  },
+  {
+    title: "Performance Feedback Loop",
+    description: "Capture data from every show to iterate faster as a unit.",
+    sessions: [
+      {
+        name: "Soundcheck Surveys",
+        focus: "Crew Feedback",
+        deliverable: "Document mix notes, monitor requests, and stage adjustments."
+      },
+      {
+        name: "Post-Show Retro",
+        focus: "Team Debrief",
+        deliverable: "Score energy, crowd engagement, and set pacing within 24 hours."
+      },
+      {
+        name: "Fan Pulse",
+        focus: "Audience Signals",
+        deliverable: "Collect QR-based feedback and merge it into your fan CRM."
       }
-    },
-    [toast],
-  );
-
-  const loadSkillUnlocks = useCallback(
-    async (currentProfileId: string) => {
-      try {
-        const { data, error } = await supabase
-          .from("profile_skill_unlocks")
-          .select("skill_id, is_unlocked, unlock_level")
-          .eq("profile_id", currentProfileId);
-
-        if (error) throw error;
-
-        const map: Record<string, { isUnlocked: boolean; unlockLevel: number | null }> = {};
-        for (const entry of (data as { skill_id: string; is_unlocked: boolean | null; unlock_level: number | null }[] | null) ?? []) {
-          if (entry.skill_id) {
-            map[entry.skill_id] = {
-              isUnlocked: Boolean(entry.is_unlocked),
-              unlockLevel: entry.unlock_level,
-            };
-          }
-        }
-        setSkillUnlocks(map);
-      } catch (error) {
-        console.error("Failed to load skill unlocks", error);
-        toast({
-          variant: "destructive",
-          title: "Unable to check skill unlocks",
-          description: "We couldn't determine which skills are already unlocked.",
-        });
-      }
-    },
-    [toast],
-  );
-
-  useEffect(() => {
-    void loadSkillData();
-  }, [loadSkillData]);
-
-  useEffect(() => {
-    if (!user) {
-      setProfileId(null);
-      setOwnedBooks({});
-      setSkillUnlocks({});
-      return;
-    }
-
-    let isCurrent = true;
-    setIsLoadingProfile(true);
-    const fetchProfile = async () => {
-      try {
-        const profile = await fetchPrimaryProfileForUser(user.id);
-        if (!isCurrent) return;
-        setProfileId(profile?.id ?? null);
-      } catch (error) {
-        console.error("Failed to load active profile", error);
-        if (isCurrent) {
-          toast({
-            variant: "destructive",
-            title: "Unable to load your character",
-            description: "We couldn't find an active profile. Create a character to unlock books.",
-          });
-        }
-        setProfileId(null);
-      } finally {
-        if (isCurrent) {
-          setIsLoadingProfile(false);
-        }
-      }
-    };
-
-    void fetchProfile();
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [toast, user]);
-
-  useEffect(() => {
-    if (!profileId) {
-      setOwnedBooks({});
-      setSkillUnlocks({});
-      return;
+    ],
+    action: {
+      label: "Set up reporting sheet",
+      href: "https://notion.so/templates"
     }
 
     void loadOwnedBooks(profileId);
@@ -929,154 +785,89 @@ const Education = () => {
   const isAuthenticated = Boolean(user);
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Education Hub</h1>
-        <p className="text-muted-foreground">
-          Mix self-study, formal programs, and collaborative mentorship to grow faster every week.
+    <div className="space-y-10 px-4 pb-16 pt-8 md:px-8 lg:px-16">
+      <div className="text-center">
+        <Badge variant="secondary" className="mb-3">Learning Engine</Badge>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Education</h1>
+        <p className="mx-auto mt-3 max-w-3xl text-base text-muted-foreground sm:text-lg">
+          Craft a learning roadmap that keeps your artistry, business savvy, and band cohesion in sync. Dive into
+          curated resources, structured programs, and real mentors tailored for the Rockmundo universe.
         </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Button asChild>
+            <a href="https://rockmundo.com/education" target="_blank" rel="noreferrer">
+              Start a learning sprint
+            </a>
+          </Button>
+          <Button asChild variant="outline">
+            <a href="https://notion.so" target="_blank" rel="noreferrer">
+              Download study planner
+            </a>
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="books" className="space-y-6">
-        <TabsList className="flex flex-wrap gap-2">
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="flex items-center gap-2">
-              <tab.icon className="h-4 w-4" />
-              <span>{tab.label}</span>
-            </TabsTrigger>
-          ))}
+        <TabsList className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {tabItems.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col gap-1 py-3">
+                <span className="flex items-center justify-center gap-2 text-sm font-semibold">
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </span>
+                <span className="hidden text-xs text-muted-foreground lg:block">{tab.blurb}</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         <TabsContent value="books" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Skill Book Library</CardTitle>
+              <CardTitle>Curated Reading Journeys</CardTitle>
               <CardDescription>
-                Purchase books to unlock foundational skills and earn a one-time 10 XP reward when you read them.
+                Progress from foundational chops to advanced career strategy with books we keep in every Rockmundo locker.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {!isAuthenticated ? (
-                <p className="text-sm text-muted-foreground">
-                  Sign in to start collecting books and unlocking skills.
-                </p>
-              ) : isLoadingProfile ? (
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading your character...
-                </div>
-              ) : !profileId ? (
-                <p className="text-sm text-muted-foreground">
-                  Create a character profile to track your book progress.
-                </p>
-              ) : null}
-              {isLoadingBooks ? (
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading books...
-                </div>
-              ) : skillBooks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No books have been published yet. Check back soon for new study material.
-                </p>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {skillBooks.map((book) => {
-                    const ownership = ownedBooks[book.id];
-                    const isOwned = Boolean(ownership);
-                    const isCompleted = Boolean(ownership?.xp_awarded_at);
-                    const skillLabel = skillDefinitionBySlug[book.skill_slug]?.display_name ?? book.skill_slug;
-                    const skillId = skillDefinitionIdBySlug[book.skill_slug];
-                    const unlockInfo = skillId ? skillUnlocks[skillId] : undefined;
-                    const alreadyUnlocked = Boolean(unlockInfo?.isUnlocked);
-                    return (
-                      <Card key={book.id} className="border-dashed">
-                        <CardHeader className="space-y-2">
-                          <div className="flex items-start justify-between gap-4">
-                            <CardTitle className="text-lg">{book.title}</CardTitle>
-                            <Badge variant={isCompleted ? "default" : isOwned ? "outline" : "secondary"}>
-                              {isCompleted ? "Completed" : isOwned ? "Owned" : "New"}
-                            </Badge>
+            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {bookJourneys.map((journey) => (
+                <Card key={journey.title} className="border-dashed">
+                  <CardHeader className="space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <CardTitle className="text-lg">{journey.title}</CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        {journey.resources.length} picks
+                      </Badge>
+                    </div>
+                    <CardDescription>{journey.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {journey.resources.map((resource) => (
+                      <div key={resource.name} className="rounded-lg border bg-muted/40 p-4 text-left">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">{resource.name}</p>
+                            <p className="text-xs text-muted-foreground">{resource.author}</p>
                           </div>
-                          <CardDescription>{book.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="space-y-1 text-sm">
-                            {book.author ? (
-                              <p className="text-muted-foreground">by {book.author}</p>
-                            ) : null}
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant="outline">{skillLabel}</Badge>
-                              <Badge variant="outline">{currencyFormatter.format(book.cost ?? 0)}</Badge>
-                              <Badge variant="outline">+{book.xp_reward ?? 0} XP</Badge>
-                              {alreadyUnlocked ? (
-                                <Badge variant="destructive">Skill already unlocked</Badge>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            {isOwned ? (
-                              <Button
-                                className="sm:flex-1"
-                                onClick={() => void handleRead(book)}
-                                disabled={isCompleted || pendingReadId === book.id || !profileId}
-                                variant={isCompleted ? "secondary" : "default"}
-                              >
-                                {isCompleted ? (
-                                  <>
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                    Mastered
-                                  </>
-                                ) : pendingReadId === book.id ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Unlocking...
-                                  </>
-                                ) : (
-                                  <>
-                                    <BookOpen className="mr-2 h-4 w-4" />
-                                    Read & Unlock
-                                  </>
-                                )}
-                              </Button>
-                            ) : (
-                              <Button
-                                className="sm:flex-1"
-                                onClick={() => void handlePurchase(book)}
-                                disabled={pendingPurchaseId === book.id || !profileId}
-                              >
-                                {pendingPurchaseId === book.id ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Purchasing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                    Purchase & Learn
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                            {isCompleted ? (
-                              <Button variant="outline" className="sm:w-auto" disabled>
-                                Completed
-                              </Button>
-                            ) : isOwned ? (
-                              <Button variant="outline" className="sm:w-auto" disabled>
-                                Owned
-                              </Button>
-                            ) : null}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Books provide a single 10 XP boost the first time you read them. Track your collection in the Inventory Manager.
-              </p>
+                          <Badge variant="outline" className="text-xs">
+                            {resource.focus}
+                          </Badge>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">{resource.takeaway}</p>
+                      </div>
+                    ))}
+                    {journey.action ? (
+                      <Button asChild variant="secondary" className="w-full">
+                        <a href={journey.action.href} target="_blank" rel="noreferrer">
+                          {journey.action.label}
+                        </a>
+                      </Button>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1113,35 +904,32 @@ const Education = () => {
             <CardHeader>
               <CardTitle>YouTube Skill Training</CardTitle>
               <CardDescription>
-                Pick a skill, watch a curated lesson, and earn XP scaled by your mastery tier and attribute strengths.
+                Blend formal study with real-world shows, mentorship, and portfolio milestones.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {skillsError ? (
-                <p className="text-sm text-destructive">
-                  Unable to load skill data right now. Refresh the page or try again later.
-                </p>
-              ) : null}
-
-              {skillsLoading ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="h-64 animate-pulse rounded-lg border border-dashed bg-muted/40"
-                    />
-                  ))}
-                </div>
-              ) : groupedSkills.length > 0 ? (
-                groupedSkills.map((group) => (
-                  <div key={group.category} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        {group.category}
-                      </h3>
-                      <Badge variant="outline" className="text-xs">
-                        {group.skills.length} skills
-                      </Badge>
+            <CardContent className="grid gap-6 lg:grid-cols-3">
+              {universityTracks.map((track) => (
+                <Card key={track.title} className="border-dashed">
+                  <CardHeader className="space-y-2">
+                    <CardTitle className="text-lg">{track.title}</CardTitle>
+                    <CardDescription>{track.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      {track.highlights.map((highlight) => (
+                        <div key={highlight.name} className="rounded-lg border bg-muted/40 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">{highlight.name}</p>
+                              <p className="text-xs text-muted-foreground">{highlight.school}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {highlight.focus}
+                            </Badge>
+                          </div>
+                          <p className="mt-3 text-xs text-muted-foreground">{highlight.details}</p>
+                        </div>
+                      ))}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {group.skills.map((definition) => renderSkillCard(definition))}
@@ -1158,23 +946,41 @@ const Education = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Supplemental Playlists</CardTitle>
+              <CardTitle>Streamable Curriculum</CardTitle>
               <CardDescription>
-                Keep learning between training sessions with curated channels and playlists covering every discipline.
+                Save these playlists and channels so every practice session has guidance and accountability.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border p-4">
-                  <h3 className="font-semibold">Daily Technique Lab</h3>
-                  <p className="text-sm text-muted-foreground">Warmups and drills from Berklee Online faculty.</p>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <h3 className="font-semibold">Mixing in the Box</h3>
-                  <p className="text-sm text-muted-foreground">Step-by-step mixes using stock plugins and free tools.</p>
-                </div>
-              </div>
-              <Button variant="outline">Explore Video Library</Button>
+            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {videoCollections.map((collection) => (
+                <Card key={collection.title} className="border-dashed">
+                  <CardHeader className="space-y-2">
+                    <CardTitle className="text-lg">{collection.title}</CardTitle>
+                    <CardDescription>{collection.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {collection.resources.map((resource) => (
+                      <div key={resource.name} className="space-y-3 rounded-lg border bg-muted/40 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">{resource.name}</p>
+                            <p className="text-xs text-muted-foreground">{resource.format}</p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {resource.focus}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{resource.summary}</p>
+                        <Button asChild variant="link" className="h-auto px-0 text-xs font-semibold">
+                          <a href={resource.link} target="_blank" rel="noreferrer">
+                            Watch now
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1184,18 +990,43 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Mentor Pods</CardTitle>
               <CardDescription>
-                Join rotating pods of experts to review your mixes, stagecraft, and release plans every week.
+                Surround your project with experts who provide clarity, accountability, and momentum.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold">Song Doctor Sessions</h3>
-                <p className="text-sm text-muted-foreground">Lyric and structure feedback from charting writers.</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold">Stagecraft Intensive</h3>
-                <p className="text-sm text-muted-foreground">Weekly run-throughs with live show directors and choreographers.</p>
-              </div>
+            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {mentorTracks.map((track) => (
+                <Card key={track.title} className="border-dashed">
+                  <CardHeader className="space-y-2">
+                    <CardTitle className="text-lg">{track.title}</CardTitle>
+                    <CardDescription>{track.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      {track.cohorts.map((cohort) => (
+                        <div key={cohort.name} className="rounded-lg border bg-muted/40 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">{cohort.name}</p>
+                              <p className="text-xs text-muted-foreground">{cohort.focus}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {cohort.cadence}
+                            </Badge>
+                          </div>
+                          <p className="mt-3 text-xs text-muted-foreground">{cohort.support}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {track.action ? (
+                      <Button asChild variant="secondary" className="w-full">
+                        <a href={track.action.href} target="_blank" rel="noreferrer">
+                          {track.action.label}
+                        </a>
+                      </Button>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1205,20 +1036,40 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Band Learning Circles</CardTitle>
               <CardDescription>
-                Coordinate practice quests, crowd-work drills, and release sprints with your bandmates.
+                Keep the whole crew aligned with intensives, monthly focus cycles, and data-informed retros.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold">Four-Week Focus Cycle</h3>
-                <p className="text-sm text-muted-foreground">
-                  Rotate through songwriting, production, and live polish weeks with shared scoreboards.
-                </p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold">Tour-Ready Checklist</h3>
-                <p className="text-sm text-muted-foreground">Lock in merch, setlists, and travel rehearsals before you hit the road.</p>
-              </div>
+            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {bandLearningTracks.map((track) => (
+                <Card key={track.title} className="border-dashed">
+                  <CardHeader className="space-y-2">
+                    <CardTitle className="text-lg">{track.title}</CardTitle>
+                    <CardDescription>{track.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {track.sessions.map((session) => (
+                      <div key={session.name} className="rounded-lg border bg-muted/40 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">{session.name}</p>
+                            <p className="text-xs text-muted-foreground">{session.focus}</p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {session.deliverable}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                    {track.action ? (
+                      <Button asChild variant="secondary" className="w-full">
+                        <a href={track.action.href} target="_blank" rel="noreferrer">
+                          {track.action.label}
+                        </a>
+                      </Button>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
