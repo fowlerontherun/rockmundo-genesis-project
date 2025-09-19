@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookOpen, GraduationCap, Loader2, PlaySquare, Users, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,25 +18,25 @@ const tabs = [
     value: "books",
     label: "Books",
     icon: BookOpen,
-    description: "Build a foundational library for musicianship, songwriting, and career growth."
+    description: "Unlock skills instantly with targeted study guides and XP bonuses.",
   },
   {
     value: "university",
     label: "University",
     icon: GraduationCap,
-    description: "Map out formal education paths and micro-credentials that align with your goals."
+    description: "Formal programs, certificates, and semester planners.",
   },
   {
     value: "videos",
     label: "YouTube Videos",
     icon: PlaySquare,
-    description: "Curated playlists and channels that deliver high-impact lessons on demand."
+    description: "High-impact playlists and channels ready to stream.",
   },
   {
     value: "mentors",
     label: "Mentors",
     icon: Users,
-    description: "Connect with experts for personalized feedback, coaching, and accountability."
+    description: "Personalized coaching pods and expert office hours.",
   },
   {
     value: "band",
@@ -48,353 +50,544 @@ type SkillBookRow = Tables<"skill_books">;
 type PlayerSkillBookRow = Tables<"player_skill_books">;
 type SkillDefinitionRow = Tables<"skill_definitions">;
 
-const universityTracks = [
+const universityRoutes = [
   {
-    title: "Degree Pathways",
-    description:
-      "Explore accredited programs that combine performance, technology, and music business training.",
+    title: "Degree Programs",
+    description: "Performance-first degrees that mix ensemble work with industry labs.",
     highlights: [
       {
-        name: "BFA in Contemporary Performance",
+        program: "BFA in Contemporary Performance",
         school: "Berklee College of Music",
-        focus: "Performance Major",
-        details: "Focus on live performance labs, ensemble work, and songwriting collaborations."
+        format: "4-year",
+        detail: "Ensemble collaborations, songwriting bootcamps, and touring simulations.",
       },
       {
-        name: "BA in Music Business",
+        program: "BA in Music Business",
         school: "Middle Tennessee State University",
-        focus: "Industry Leadership",
-        details: "Blend legal, marketing, and management courses with internship placements in Nashville."
+        format: "4-year",
+        detail: "Blend marketing, law, and management courses with internship placements.",
       },
       {
-        name: "BS in Music Production",
+        program: "BS in Music Production",
         school: "Full Sail University",
-        focus: "Studio Technology",
-        details: "Hands-on studio time with DAW mastery, audio engineering, and mixing for release."
-      }
+        format: "Accelerated",
+        detail: "Hands-on DAW labs, engineering practicums, and release-ready projects.",
+      },
     ],
     action: {
       label: "Download Program Guide",
-      href: "https://www.berklee.edu/majors"
-    }
+      href: "https://www.berklee.edu/majors",
+    },
   },
   {
-    title: "Micro-Credentials & Certificates",
-    description:
-      "Stack short-form credentials to sharpen niche skills while staying active in the scene.",
+    title: "Certificates & Bootcamps",
+    description: "Stack micro-credentials that keep you road-ready while you tour.",
     highlights: [
       {
-        name: "Modern Music Production",
+        program: "Modern Music Production",
         school: "Coursera x Berklee",
-        focus: "12-Week Certificate",
-        details: "Project-based program covering beat design, mixing, and mastering workflows."
+        format: "12-week",
+        detail: "Project-based course with mentor feedback on mixes and arrangements.",
       },
       {
-        name: "Music Marketing Accelerator",
+        program: "Music Marketing Accelerator",
         school: "Soundfly",
-        focus: "Mentor-Guided",
-        details: "Learn digital strategy, branding, and fan funnels with 1:1 mentor feedback."
+        format: "Mentor-Led",
+        detail: "Design fan funnels, campaigns, and EPK updates with weekly coaching.",
       },
       {
-        name: "Live Event Production",
+        program: "Live Event Production",
         school: "Point Blank Music School",
-        focus: "Hybrid",
-        details: "Develop stage management and tour logistics skills with live practicum opportunities."
-      }
+        format: "Hybrid",
+        detail: "Stage management, advancing, and crew coordination drills.",
+      },
     ],
     action: {
       label: "Browse Certificates",
-      href: "https://online.berklee.edu/programs"
-    }
+      href: "https://online.berklee.edu/programs",
+    },
   },
   {
     title: "Semester Planner",
-    description:
-      "Balance academic study with band commitments using this repeatable 15-week structure.",
+    description: "Balance credit loads with rehearsal, writing, and release cadences.",
     highlights: [
       {
-        name: "Weeks 1-5",
+        program: "Weeks 1-5",
         school: "Skill Ramp-Up",
-        focus: "Technique & Theory",
-        details: "Double down on practice labs and music theory intensives while scheduling songwriting sprints."
+        format: "Technique",
+        detail: "Lock in practice labs, theory refreshers, and sectionals.",
       },
       {
-        name: "Weeks 6-10",
+        program: "Weeks 6-10",
         school: "Creative Production",
-        focus: "Studio & Writing",
-        details: "Shift toward arranging, collaboration projects, and recording sessions for portfolio tracks."
+        format: "Studio",
+        detail: "Cut demos, arrange collabs, and prep for showcase submissions.",
       },
       {
-        name: "Weeks 11-15",
+        program: "Weeks 11-15",
         school: "Career Launch",
-        focus: "Showcase & Networking",
-        details: "Secure live showcases, meet with advisors, and prepare EPK updates ahead of finals."
-      }
+        format: "Industry",
+        detail: "Secure gigs, polish your EPK, and rehearse live sets for juries.",
+      },
     ],
     action: {
       label: "Download Planner",
-      href: "https://calendar.google.com"
-    }
-  }
+      href: "https://calendar.google.com",
+    },
+  },
 ];
 
-const videoPlaylists = [
-  {
-    title: "Technique & Theory Channels",
-    description:
-      "Weekly uploads from trusted educators to keep your chops sharp and your theory knowledge fresh.",
-    resources: [
-      {
-        name: "Rick Beato",
-        format: "Deep-Dive Lessons",
-        focus: "Ear Training & Analysis",
-        link: "https://www.youtube.com/user/pegzch",
-        summary: "Break down legendary songs, chord progressions, and arrangement secrets in long-form videos."
-      },
-      {
-        name: "Marty Music",
-        format: "Guitar Tutorials",
-        focus: "Technique",
-        link: "https://www.youtube.com/c/martyschwartz",
-        summary: "Accessible guitar lessons covering riffs, tone tips, and style-specific workouts."
-      },
-      {
-        name: "Nahre Sol",
-        format: "Creative Exercises",
-        focus: "Composition",
-        link: "https://www.youtube.com/c/nahresol",
-        summary: "Hybrid classical & electronic explorations for players who love experimentation."
-      }
-    ]
-  },
-  {
-    title: "Structured Playlists",
-    description:
-      "Follow curated playlists that simulate guided courses complete with homework prompts.",
-    resources: [
-      {
-        name: "30-Day Songwriting Bootcamp",
-        format: "Playlist",
-        focus: "Daily Prompts",
-        link: "https://www.youtube.com/playlist?list=PL1A2F2A3",
-        summary: "Short daily assignments that move from lyric sketches to full demos in a month."
-      },
-      {
-        name: "Mixing Essentials in Logic Pro",
-        format: "Playlist",
-        focus: "Home Studio",
-        link: "https://www.youtube.com/playlist?list=PL2F3G4H5",
-        summary: "Step-by-step walkthroughs on EQ, compression, and mix bus processing for indie releases."
-      },
-      {
-        name: "Stage Presence Fundamentals",
-        format: "Mini-Series",
-        focus: "Performance",
-        link: "https://www.youtube.com/playlist?list=PL7K8L9M0",
-        summary: "Learn crowd engagement, mic control, and dynamic movement in live settings."
-      }
-    ]
-  },
-  {
-    title: "Practice Accountability",
-    description:
-      "Use these formats to keep consistent practice logs and track incremental progress.",
-    resources: [
-      {
-        name: "Practice With Me Streams",
-        format: "Co-Practice",
-        focus: "Routine Building",
-        link: "https://www.youtube.com/results?search_query=music+practice+with+me",
-        summary: "Join real-time practice rooms that mimic study halls for musicians working on technique."
-      },
-      {
-        name: "Looped Backing Tracks",
-        format: "Play-Along",
-        focus: "Improvisation",
-        link: "https://www.youtube.com/results?search_query=backing+tracks+for+guitar",
-        summary: "Select tempo-specific jam tracks to develop improvisation vocabulary and stage endurance."
-      },
-      {
-        name: "Ear Training Drills",
-        format: "Interactive",
-        focus: "Listening Skills",
-        link: "https://www.youtube.com/results?search_query=ear+training+intervals",
-        summary: "Build interval recognition speed with call-and-response exercises and on-screen quizzes."
-      }
-    ]
-  }
-];
+const isMetadataRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
-const mentorPrograms = [
-  {
-    title: "Mentorship Tracks",
-    description:
-      "Choose a pathway that matches your current career phase and desired feedback style.",
-    cohorts: [
-      {
-        name: "Songwriting Lab",
-        focus: "Co-Writing Circle",
-        cadence: "Bi-weekly",
-        support: "Collaborative feedback on drafts, melody rewrites, and lyric polish." 
-      },
-      {
-        name: "Stagecraft Intensive",
-        focus: "Performance Coaching",
-        cadence: "Monthly",
-        support: "Virtual showcase critiques with movement and mic technique guidance."
-      },
-      {
-        name: "Indie Release Accelerator",
-        focus: "Launch Strategy",
-        cadence: "Weekly",
-        support: "Release calendar planning, marketing funnels, and analytics reviews."
-      }
-    ],
-    action: {
-      label: "Apply for Mentorship",
-      href: "https://forms.gle/mentor-application"
-    }
-  },
-  {
-    title: "Expert Network",
-    description:
-      "Tap into a curated roster of industry veterans for one-off consultations or recurring coaching.",
-    cohorts: [
-      {
-        name: "Creative Director",
-        focus: "Visual Branding",
-        cadence: "On-Demand",
-        support: "Refine album art, stage visuals, and social media style guides."
-      },
-      {
-        name: "Music Attorney",
-        focus: "Contract Review",
-        cadence: "Retainer",
-        support: "Protect intellectual property, negotiate deals, and review licensing opportunities."
-      },
-      {
-        name: "Tour Manager",
-        focus: "Live Logistics",
-        cadence: "Consulting",
-        support: "Route tours, manage advancing, and streamline crew coordination."
-      }
-    ],
-    action: {
-      label: "Browse Mentor Roster",
-      href: "https://rockmundo.com/mentors"
-    }
-  },
-  {
-    title: "Accountability Systems",
-    description:
-      "Stay consistent with structured check-ins, progress dashboards, and peer support.",
-    cohorts: [
-      {
-        name: "Weekly Standups",
-        focus: "Goal Tracking",
-        cadence: "15 min",
-        support: "Share wins, blockers, and next actions with your mentor pod."
-      },
-      {
-        name: "Progress Journals",
-        focus: "Reflection",
-        cadence: "Daily",
-        support: "Log practice stats, gig insights, and mindset notes inside Rockmundo."
-      },
-      {
-        name: "Quarterly Audits",
-        focus: "Career Review",
-        cadence: "Seasonal",
-        support: "Assess KPIs, adjust roadmaps, and celebrate milestones with your coach."
-      }
-    ],
-    action: {
-      label: "Download Templates",
-      href: "https://notion.so"
-    }
-  }
-];
+export default function Education() {
+  const { user } = useAuth();
+  const { profile, awardActionXp } = useGameData();
+  const { toast } = useToast();
 
-const bandLearningTracks = [
-  {
-    title: "Band Intensives",
-    description:
-      "Plan immersive weekends that combine rehearsal, songwriting, and branding workshops.",
-    sessions: [
-      {
-        name: "Day 1: Groove Lab",
-        focus: "Tighten Rhythmic Chemistry",
-        deliverable: "Record a live rehearsal take with click + crowd cues."
-      },
-      {
-        name: "Day 2: Story & Stage",
-        focus: "Brand Alignment",
-        deliverable: "Craft a unified band bio, stage plot, and social hook."
-      },
-      {
-        name: "Day 3: Release Sprint",
-        focus: "Content Production",
-        deliverable: "Capture video + photo assets for upcoming release cycle."
-      }
-    ],
-    action: {
-      label: "Download Weekend Agenda",
-      href: "https://docs.google.com"
+  const [books, setBooks] = useState<SkillBookRow[]>([]);
+  const [ownedBooks, setOwnedBooks] = useState<PlayerSkillBookWithDetails[]>([]);
+  const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
+  const [loadingBooks, setLoadingBooks] = useState(false);
+  const [loadingOwnedBooks, setLoadingOwnedBooks] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(false);
+  const [purchasingBookId, setPurchasingBookId] = useState<string | null>(null);
+  const [readingBookId, setReadingBookId] = useState<string | null>(null);
+
+  const skillDefinitionMap = useMemo(() => {
+    const map = new Map<string, (typeof SKILL_TREE_DEFINITIONS)[number]>();
+    for (const definition of SKILL_TREE_DEFINITIONS) {
+      map.set(definition.slug, definition);
     }
-  },
-  {
-    title: "Ongoing Band Curriculum",
-    description:
-      "Rotate focus areas each month to keep the whole group evolving in sync.",
-    sessions: [
-      {
-        name: "Month 1: Arrangement Lab",
-        focus: "Reimagine Setlist",
-        deliverable: "New live transitions, medleys, and crowd participation cues."
-      },
-      {
-        name: "Month 2: Business HQ",
-        focus: "Operational Systems",
-        deliverable: "Shared budget tracker, merch inventory log, and task board."
-      },
-      {
-        name: "Month 3: Audience Engine",
-        focus: "Growth Experiments",
-        deliverable: "Launch fan challenges, collect emails, and test paid promotion."
-      }
-    ],
-    action: {
-      label: "View Curriculum",
-      href: "https://rockmundo.com/band-learning"
+    return map;
+  }, []);
+
+  const getSkillMetadata = useCallback(
+    (slug: string) => {
+      const definition = skillDefinitionMap.get(slug);
+      const metadata = isMetadataRecord(definition?.metadata) ? definition?.metadata : {};
+      const tierValue = metadata?.tier;
+      const tier: TierName | undefined =
+        typeof tierValue === "string" && (tierValue === "Basic" || tierValue === "Professional" || tierValue === "Mastery")
+          ? (tierValue as TierName)
+          : undefined;
+      const track = typeof metadata?.track === "string" ? metadata.track : undefined;
+      const category = typeof metadata?.category === "string" ? metadata.category : undefined;
+
+      return {
+        name: definition?.display_name ?? slug,
+        description: typeof definition?.description === "string" ? definition?.description : null,
+        tier,
+        track,
+        category,
+      };
+    },
+    [skillDefinitionMap],
+  );
+
+  const loadBooks = useCallback(async () => {
+    setLoadingBooks(true);
+    try {
+      const { data, error } = await supabase
+        .from("skill_books")
+        .select("*")
+        .eq("is_active", true)
+        .order("cost", { ascending: true })
+        .order("title", { ascending: true });
+
+      if (error) throw error;
+
+      setBooks((data as SkillBookRow[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load skill books", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load books",
+        description: "We couldn't retrieve the skill book catalog. Please try again soon.",
+      });
+    } finally {
+      setLoadingBooks(false);
     }
-  },
-  {
-    title: "Performance Feedback Loops",
-    description:
-      "Capture data from every show to iterate faster as a unit.",
-    sessions: [
-      {
-        name: "Show Debrief",
-        focus: "Immediate Reflection",
-        deliverable: "Rate crowd energy, set pacing, and technical stability within 24 hours."
-      },
-      {
-        name: "Fan Pulse",
-        focus: "Community Insights",
-        deliverable: "Survey attendees, review social mentions, and note merch conversion."
-      },
-      {
-        name: "Iterate & Implement",
-        focus: "Action Plan",
-        deliverable: "Assign next-step experiments for setlist, visuals, and engagement."
-      }
-    ],
-    action: {
-      label: "Create Feedback Form",
-      href: "https://forms.gle/band-feedback"
+  }, [toast]);
+
+  const loadOwnedBooks = useCallback(async () => {
+    if (!user) {
+      setOwnedBooks([]);
+      return;
     }
-  }
-];
+
+    setLoadingOwnedBooks(true);
+    try {
+      const { data, error } = await supabase
+        .from("player_skill_books")
+        .select("*, skill_books(*)")
+        .eq("user_id", user.id)
+        .order("owned_at", { ascending: false });
+
+      if (error) throw error;
+
+      setOwnedBooks((data as PlayerSkillBookWithDetails[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load owned books", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load library",
+        description: "We couldn't retrieve your skill books. Please try again.",
+      });
+    } finally {
+      setLoadingOwnedBooks(false);
+    }
+  }, [toast, user]);
+
+  const loadSkillProgress = useCallback(async () => {
+    if (!profile) {
+      setSkillProgress([]);
+      return;
+    }
+
+    setLoadingProgress(true);
+    try {
+      const { data, error } = await supabase
+        .from("skill_progress")
+        .select("skill_slug,current_level,current_xp,metadata")
+        .eq("profile_id", profile.id);
+
+      if (error) throw error;
+
+      setSkillProgress((data as SkillProgressRow[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load skill progress", error);
+    } finally {
+      setLoadingProgress(false);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    void loadBooks();
+  }, [loadBooks]);
+
+  useEffect(() => {
+    void loadOwnedBooks();
+  }, [loadOwnedBooks]);
+
+  useEffect(() => {
+    void loadSkillProgress();
+  }, [loadSkillProgress]);
+
+  const ownedBooksMap = useMemo(() => {
+    const map = new Map<string, PlayerSkillBookWithDetails>();
+    for (const entry of ownedBooks) {
+      if (entry.skill_book_id) {
+        map.set(entry.skill_book_id, entry);
+      }
+    }
+    return map;
+  }, [ownedBooks]);
+
+  const knownSkillSlugs = useMemo(() => {
+    const unlocked = new Set<string>();
+    for (const progress of skillProgress) {
+      if ((progress.current_level ?? 0) > 0 || (progress.current_xp ?? 0) > 0) {
+        unlocked.add(progress.skill_slug);
+      }
+    }
+    return unlocked;
+  }, [skillProgress]);
+
+  const availableBooks = useMemo(
+    () =>
+      [...books].sort((a, b) => {
+        const costDifference = Number(a.cost ?? 0) - Number(b.cost ?? 0);
+        if (costDifference !== 0) {
+          return costDifference;
+        }
+        return a.title.localeCompare(b.title);
+      }),
+    [books],
+  );
+
+  const handlePurchase = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user || !profile) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "You need an active character to purchase skill books.",
+        });
+        return;
+      }
+
+      if (knownSkillSlugs.has(book.skill_slug)) {
+        toast({
+          variant: "destructive",
+          title: "Skill already unlocked",
+          description: "Your character already knows this skill, so the book can't be purchased again.",
+        });
+        return;
+      }
+
+      if (ownedBooksMap.has(book.id)) {
+        toast({
+          title: "Already owned",
+          description: "This book is already in your library.",
+        });
+        return;
+      }
+
+      setPurchasingBookId(book.id);
+      try {
+        const { error } = await supabase.from("player_skill_books").insert({
+          user_id: user.id,
+          profile_id: profile.id,
+          skill_book_id: book.id,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Book added to library",
+          description: book.title + " is ready to read from your inventory.",
+        });
+
+        await loadOwnedBooks();
+      } catch (error) {
+        console.error("Failed to purchase skill book", error);
+        toast({
+          variant: "destructive",
+          title: "Purchase failed",
+          description: "We couldn't process the purchase. Please try again.",
+        });
+      } finally {
+        setPurchasingBookId(null);
+      }
+    },
+    [knownSkillSlugs, loadOwnedBooks, ownedBooksMap, profile, toast, user],
+  );
+
+  const handleRead = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user || !profile) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "You need an active character to read skill books.",
+        });
+        return;
+      }
+
+      if (knownSkillSlugs.has(book.skill_slug)) {
+        toast({
+          variant: "destructive",
+          title: "Skill already unlocked",
+          description: "Your character already knows this skill from another source.",
+        });
+        return;
+      }
+
+      const owned = ownedBooksMap.get(book.id);
+      if (!owned) {
+        toast({
+          variant: "destructive",
+          title: "Book not owned",
+          description: "Purchase the book first before reading it.",
+        });
+        return;
+      }
+
+      if (owned.is_consumed) {
+        toast({
+          title: "Already completed",
+          description: "You've already claimed the reward from this book.",
+        });
+        return;
+      }
+
+      const metadata = getSkillMetadata(book.skill_slug);
+      const xpReward = book.xp_value ?? DEFAULT_BOOK_XP;
+
+      setReadingBookId(book.id);
+      try {
+        const { error } = await supabase
+          .from("player_skill_books")
+          .update({ is_consumed: true, consumed_at: new Date().toISOString() })
+          .eq("id", owned.id);
+
+        if (error) throw error;
+
+        try {
+          await awardActionXp({
+            amount: xpReward,
+            actionKey: "read_skill_book",
+            metadata: { skill_slug: book.skill_slug, skill_book_id: book.id },
+          });
+        } catch (xpError) {
+          console.error("Failed to award XP from book", xpError);
+          toast({
+            variant: "destructive",
+            title: "XP grant failed",
+            description: "The book was marked as read, but the experience boost could not be applied.",
+          });
+        }
+
+        try {
+          const { data: existingProgress, error: progressError } = await supabase
+            .from("skill_progress")
+            .select("current_level,current_xp,required_xp,metadata")
+            .eq("profile_id", profile.id)
+            .eq("skill_slug", book.skill_slug)
+            .maybeSingle();
+
+          if (progressError) {
+            throw progressError;
+          }
+
+          const existingMetadata = isMetadataRecord(existingProgress?.metadata)
+            ? (existingProgress?.metadata as Record<string, unknown>)
+            : {};
+
+          const progressPayload: Database["public"]["Tables"]["skill_progress"]["Insert"] = {
+            profile_id: profile.id,
+            skill_slug: book.skill_slug,
+            current_level: Math.max(existingProgress?.current_level ?? 0, 1),
+            current_xp: (existingProgress?.current_xp ?? 0) + xpReward,
+            required_xp: existingProgress?.required_xp ?? xpReward,
+            metadata: {
+              ...existingMetadata,
+              unlocked_by: existingMetadata?.unlocked_by ?? "skill_book",
+              last_book_reward: xpReward,
+            },
+          };
+
+          const { error: upsertError } = await supabase
+            .from("skill_progress")
+            .upsert(progressPayload, { onConflict: "profile_id,skill_slug" });
+
+          if (upsertError) {
+            throw upsertError;
+          }
+        } catch (progressError) {
+          console.error("Failed to update skill progress from book", progressError);
+        }
+
+        toast({
+          title: "Skill unlocked",
+          description: "Reading " + metadata.name + " granted " + xpReward + " XP.",
+        });
+        await Promise.all([loadOwnedBooks(), loadSkillProgress()]);
+      } catch (error) {
+        console.error("Failed to mark book as read", error);
+        toast({
+          variant: "destructive",
+          title: "Reading failed",
+          description: "We couldn't complete the read action. Please try again.",
+        });
+      } finally {
+        setReadingBookId(null);
+      }
+    },
+    [
+      awardActionXp,
+      getSkillMetadata,
+      knownSkillSlugs,
+      loadOwnedBooks,
+      loadSkillProgress,
+      ownedBooksMap,
+      profile,
+      toast,
+      user,
+    ],
+  );
+
+  const ownedBooksWithDetails = useMemo(
+    () => ownedBooks.filter((entry) => entry.skill_books !== null),
+    [ownedBooks],
+  );
+
+const Education = () => {
+  const { toast } = useToast();
+  const {
+    definitions,
+    progress,
+    loading: skillsLoading,
+    error: skillsError,
+    refreshProgress,
+    updateSkillProgress
+  } = useSkillSystem();
+  const { attributes, skills, addActivity } = useGameData();
+
+  const [videoWatchCounts, setVideoWatchCounts] = useState<Record<string, number>>({});
+  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  const [activeSkill, setActiveSkill] = useState<string | null>(null);
+  const [lastWatchedAt, setLastWatchedAt] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    void refreshProgress();
+  }, [refreshProgress]);
+
+  const progressBySlug = useMemo(() => {
+    const map = new Map<string, SkillProgressRecord>();
+    for (const record of progress ?? []) {
+      if (record?.skill_slug) {
+        map.set(record.skill_slug, record);
+      }
+    }
+    return map;
+  }, [progress]);
+
+  const skillsRecord = useMemo(() => {
+    return (skills as PlayerSkills | null) ?? null;
+  }, [skills]);
+
+  const getSkillValue = useCallback(
+    (slug: string) => {
+      const progressRecord = progressBySlug.get(slug);
+      if (progressRecord) {
+        const numeric = Number(progressRecord.current_value ?? progressRecord.total_xp ?? 0);
+        if (Number.isFinite(numeric)) {
+          return numeric;
+        }
+      }
+
+      const fallback = skillsRecord?.[slug];
+      if (typeof fallback === "number" && Number.isFinite(fallback)) {
+        return fallback;
+      }
+
+      return 0;
+    },
+    [progressBySlug, skillsRecord]
+  );
+
+  const getCooldownRemaining = useCallback(
+    (slug: string) => {
+      const readyAt = cooldowns[slug];
+      if (!readyAt) {
+        return 0;
+      }
+
+      const remainingMs = readyAt - Date.now();
+      if (remainingMs <= 0) {
+        return 0;
+      }
+
+      return Math.ceil(remainingMs / 60000);
+    },
+    [cooldowns]
+  );
+
+  const groupedSkills = useMemo(() => {
+    if (!definitions || definitions.length === 0) {
+      return [] as Array<{ category: string; skills: SkillDefinitionRecord[] }>;
+    }
+
+    const map = new Map<string, SkillDefinitionRecord[]>();
+    for (const definition of definitions) {
+      const category = (definition.metadata?.category as string | undefined) ?? "General";
+      if (!map.has(category)) {
+        map.set(category, []);
+      }
+      map.get(category)?.push(definition);
+    }
 
 const Education = () => {
   const { user } = useAuth();
@@ -736,32 +929,22 @@ const Education = () => {
   const isAuthenticated = Boolean(user);
 
   return (
-    <div className="space-y-8 pb-16">
-      <div className="space-y-3 text-center">
-        <Badge variant="outline" className="mx-auto w-fit px-4 py-1 text-sm font-semibold">
-          Education Hub
-        </Badge>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Level Up Your Musical Journey</h1>
-        <p className="mx-auto max-w-3xl text-base text-muted-foreground sm:text-lg">
-          Discover the best resources for self-paced learning, formal education, and collaborative growth. Pick a
-          pathway, follow the curated plan, and keep your skills—and your band—constantly evolving.
+    <div className="container mx-auto space-y-6 p-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight">Education Hub</h1>
+        <p className="text-muted-foreground">
+          Mix self-study, formal programs, and collaborative mentorship to grow faster every week.
         </p>
       </div>
 
       <Tabs defaultValue="books" className="space-y-6">
-        <TabsList className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col gap-1 py-3">
-                <span className="flex items-center justify-center gap-2 text-sm font-semibold">
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </span>
-                <span className="hidden text-xs font-normal text-muted-foreground lg:block">{tab.description}</span>
-              </TabsTrigger>
-            );
-          })}
+        <TabsList className="flex flex-wrap gap-2">
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value} className="flex items-center gap-2">
+              <tab.icon className="h-4 w-4" />
+              <span>{tab.label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="books" className="space-y-6">
@@ -897,186 +1080,150 @@ const Education = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="university" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Academic Pathways</CardTitle>
-              <CardDescription>
-                Blend formal study with real-world experience using programs designed for modern performers.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 lg:grid-cols-3">
-              {universityTracks.map((track) => (
-                <Card key={track.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{track.title}</CardTitle>
-                    <CardDescription>{track.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      {track.highlights.map((highlight) => (
-                        <div key={highlight.name} className="rounded-lg border bg-muted/30 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold">{highlight.name}</p>
-                              <p className="text-xs text-muted-foreground">{highlight.school}</p>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {highlight.focus}
-                            </Badge>
-                          </div>
-                          <p className="mt-3 text-xs text-muted-foreground">{highlight.details}</p>
-                        </div>
-                      ))}
+          {universityRoutes.map((route) => (
+            <Card key={route.title}>
+              <CardHeader>
+                <CardTitle>{route.title}</CardTitle>
+                <CardDescription>{route.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  {route.highlights.map((item) => (
+                    <div key={item.program} className="space-y-1 rounded-lg border p-4">
+                      <div className="font-semibold">{item.program}</div>
+                      <div className="text-sm text-muted-foreground">{item.school}</div>
+                      <div className="text-sm text-muted-foreground">{item.format}</div>
+                      <p className="text-sm">{item.detail}</p>
                     </div>
-                    {track.action ? (
-                      <Button asChild variant="secondary" className="w-full">
-                        <a href={track.action.href} target="_blank" rel="noreferrer">
-                          {track.action.label}
-                        </a>
-                      </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+                <Button variant="outline" asChild>
+                  <a href={route.action.href} target="_blank" rel="noreferrer">
+                    {route.action.label}
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </TabsContent>
 
-        <TabsContent value="videos" className="space-y-6">
+        <TabsContent value="videos">
           <Card>
             <CardHeader>
-              <CardTitle>Stream Your Lessons</CardTitle>
+              <CardTitle>YouTube Skill Training</CardTitle>
               <CardDescription>
-                Mix binge-worthy channels with structured playlists so every practice session has purpose.
+                Pick a skill, watch a curated lesson, and earn XP scaled by your mastery tier and attribute strengths.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {videoPlaylists.map((playlist) => (
-                <Card key={playlist.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{playlist.title}</CardTitle>
-                    <CardDescription>{playlist.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {playlist.resources.map((resource) => (
-                      <div key={resource.name} className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold">{resource.name}</p>
-                            <p className="text-xs text-muted-foreground">{resource.format}</p>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {resource.focus}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{resource.summary}</p>
-                        <Button asChild variant="link" className="h-auto px-0 text-xs font-semibold">
-                          <a href={resource.link} target="_blank" rel="noreferrer">
-                            Watch now
-                          </a>
-                        </Button>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <CardContent className="space-y-6">
+              {skillsError ? (
+                <p className="text-sm text-destructive">
+                  Unable to load skill data right now. Refresh the page or try again later.
+                </p>
+              ) : null}
 
-        <TabsContent value="mentors" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Guided Mentorship</CardTitle>
-              <CardDescription>
-                Partner with mentors who accelerate your growth with actionable feedback and steady accountability.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {mentorPrograms.map((program) => (
-                <Card key={program.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{program.title}</CardTitle>
-                    <CardDescription>{program.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      {program.cohorts.map((cohort) => (
-                        <div key={cohort.name} className="rounded-lg border bg-muted/30 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold">{cohort.name}</p>
-                              <p className="text-xs text-muted-foreground">{cohort.focus}</p>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {cohort.cadence}
-                            </Badge>
-                          </div>
-                          <p className="mt-3 text-xs text-muted-foreground">{cohort.support}</p>
-                        </div>
-                      ))}
+              {skillsLoading ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-64 animate-pulse rounded-lg border border-dashed bg-muted/40"
+                    />
+                  ))}
+                </div>
+              ) : groupedSkills.length > 0 ? (
+                groupedSkills.map((group) => (
+                  <div key={group.category} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.category}
+                      </h3>
+                      <Badge variant="outline" className="text-xs">
+                        {group.skills.length} skills
+                      </Badge>
                     </div>
-                    {program.action ? (
-                      <Button asChild variant="secondary" className="w-full">
-                        <a href={program.action.href} target="_blank" rel="noreferrer">
-                          {program.action.label}
-                        </a>
-                      </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {group.skills.map((definition) => renderSkillCard(definition))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No trainable skills are available yet. Unlock skills in your profile to see tailored lessons.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Supplemental Playlists</CardTitle>
+              <CardDescription>
+                Keep learning between training sessions with curated channels and playlists covering every discipline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border p-4">
+                  <h3 className="font-semibold">Daily Technique Lab</h3>
+                  <p className="text-sm text-muted-foreground">Warmups and drills from Berklee Online faculty.</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <h3 className="font-semibold">Mixing in the Box</h3>
+                  <p className="text-sm text-muted-foreground">Step-by-step mixes using stock plugins and free tools.</p>
+                </div>
+              </div>
+              <Button variant="outline">Explore Video Library</Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="band" className="space-y-6">
+        <TabsContent value="mentors">
           <Card>
             <CardHeader>
-              <CardTitle>Band Learning Lab</CardTitle>
+              <CardTitle>Mentor Pods</CardTitle>
               <CardDescription>
-                Align your entire crew with immersive intensives, monthly focus cycles, and actionable feedback loops.
+                Join rotating pods of experts to review your mixes, stagecraft, and release plans every week.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {bandLearningTracks.map((track) => (
-                <Card key={track.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{track.title}</CardTitle>
-                    <CardDescription>{track.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {track.sessions.map((session) => (
-                      <div key={session.name} className="rounded-lg border bg-muted/30 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold">{session.name}</p>
-                            <p className="text-xs text-muted-foreground">{session.focus}</p>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {session.deliverable}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                    {track.action ? (
-                      <Button asChild variant="secondary" className="w-full">
-                        <a href={track.action.href} target="_blank" rel="noreferrer">
-                          {track.action.label}
-                        </a>
-                      </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold">Song Doctor Sessions</h3>
+                <p className="text-sm text-muted-foreground">Lyric and structure feedback from charting writers.</p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold">Stagecraft Intensive</h3>
+                <p className="text-sm text-muted-foreground">Weekly run-throughs with live show directors and choreographers.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="band">
+          <Card>
+            <CardHeader>
+              <CardTitle>Band Learning Circles</CardTitle>
+              <CardDescription>
+                Coordinate practice quests, crowd-work drills, and release sprints with your bandmates.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold">Four-Week Focus Cycle</h3>
+                <p className="text-sm text-muted-foreground">
+                  Rotate through songwriting, production, and live polish weeks with shared scoreboards.
+                </p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold">Tour-Ready Checklist</h3>
+                <p className="text-sm text-muted-foreground">Lock in merch, setlists, and travel rehearsals before you hit the road.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
   );
-};
+}
 
-export default Education;

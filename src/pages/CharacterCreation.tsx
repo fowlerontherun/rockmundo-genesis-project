@@ -1,526 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  SparklesIcon,
-  Wand2,
-  CheckCircle2,
-  AlertCircle,
-  Palette,
-  Gauge,
-  User,
-  Move3d,
-  Camera,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import AvatarPreview3D from "@/components/avatar/AvatarPreview3D";
-import {
-  avatarStyles,
-  avatarPoses,
-  avatarCameras,
-  defaultAvatarSelection,
-} from "@/data/avatarPresets";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
-import { supabase } from "@/integrations/supabase/client";
-import { ensureDefaultWardrobe, parseClothingLoadout } from "@/utils/wardrobe";
-import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
-import type { PostgrestError } from "@supabase/supabase-js";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { generateRandomName, generateHandleFromName } from "@/utils/nameGenerator";
-import { getStoredAvatarSelection, serializeAvatarData } from "@/utils/avatar";
-import {
-  ATTRIBUTE_KEYS,
-  ATTRIBUTE_METADATA,
-  ATTRIBUTE_MAX_VALUE,
-  type AttributeKey,
-} from "@/utils/attributeProgression";
+import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData } from "@/hooks/useGameData";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
+import { ATTRIBUTE_KEYS, type AttributeKey } from "@/utils/attributeProgression";
 
-const backgrounds = [
-  {
-    id: "street",
-    label: "Street Performer",
-    description:
-      "You honed your sound battling city noise and turning sidewalks into stages.",
+const NO_CITY_SELECTED_VALUE = "__no_city_selected__";
+const DEFAULT_ATTRIBUTE_VALUE = 5;
+
+const DEFAULT_ATTRIBUTE_DISTRIBUTION: Record<AttributeKey, number> = ATTRIBUTE_KEYS.reduce(
+  (accumulator, key) => {
+    accumulator[key] = DEFAULT_ATTRIBUTE_VALUE;
+    return accumulator;
   },
-  {
-    id: "classical",
-    label: "Classically Trained",
-    description:
-      "Years of formal training forged your technique—now you bend the rules to your will.",
-  },
-  {
-    id: "producer",
-    label: "Bedroom Producer",
-    description:
-      "From humble bedroom studios, you sculpted sounds that resonate across the world.",
-  },
-  {
-    id: "wildcard",
-    label: "Wildcard", 
-    description:
-      "A mystery wrapped in feedback and stage fog. Your story is still being written.",
-  },
-];
-
-const MIN_ATTRIBUTE_VALUE = 0;
-const MAX_ATTRIBUTE_VALUE = ATTRIBUTE_MAX_VALUE;
-
-const extractMissingColumn = (error: PostgrestError | null | undefined) => {
-  if (!error) {
-    return null;
-  }
-
-  const haystacks = [error.message, error.details, error.hint].filter(
-    (value): value is string => typeof value === "string" && value.length > 0,
-  );
-
-  const patterns = [
-    /column\s+(?:"?[\w]+"?\.)?"?([\w]+)"?\s+does not exist/i,
-    /'([\w]+)'\s+column/i,
-  ];
-
-  for (const haystack of haystacks) {
-    for (const pattern of patterns) {
-      const match = haystack.match(pattern);
-      if (match?.[1]) {
-        return match[1];
-      }
-    }
-  }
-
-  if (error.code === "PGRST204") {
-    // PostgREST may return this error before its schema cache refreshes.
-    const fallbackMatch = error.message?.match(/'([\w]+)'/);
-    if (fallbackMatch?.[1]) {
-      return fallbackMatch[1];
-    }
-  }
-
-  return null;
-};
-
-const isPostgrestError = (error: unknown): error is PostgrestError => {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const candidate = error as Partial<PostgrestError>;
-  return typeof candidate.code === "string" && typeof candidate.message === "string";
-};
-
-const buildSaveErrorMessage = (error: unknown) => {
-  if (isPostgrestError(error)) {
-    const parts = [error.message, error.details, error.hint].filter(
-      (value): value is string => typeof value === "string" && value.trim().length > 0,
-    );
-
-    if (parts.length > 0) {
-      return parts.join(" ");
-    }
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  if (typeof error === "string" && error.trim().length > 0) {
-    return error;
-  }
-
-  return "An unknown error occurred while saving your character.";
-};
-
-const sanitizePayloadForLogging = (
-  payload: Record<string, unknown> | null | undefined,
-): Record<string, unknown> | null | undefined => {
-  if (!payload) {
-    return payload ?? null;
-  }
-
-  const sanitized: Record<string, unknown> = { ...payload };
-
-  if ("avatar_url" in sanitized) {
-    sanitized.avatar_url = "[omitted]";
-  }
-
-  if ("bio" in sanitized && typeof sanitized.bio === "string") {
-    const bio = sanitized.bio as string;
-    sanitized.bio = bio.length > 120 ? `${bio.slice(0, 117)}...` : bio;
-  }
-
-  return sanitized;
-};
-
-const ensureNonEmptyString = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const extractConstraintName = (error: PostgrestError): string | null => {
-  const haystacks = [error.message, error.details, error.hint].filter(
-    (value): value is string => typeof value === "string" && value.length > 0,
-  );
-
-  for (const haystack of haystacks) {
-    const match = haystack.match(/constraint\s+"([^"]+)"/i);
-    if (match?.[1]) {
-      return match[1];
-    }
-  }
-
-  return null;
-};
-
-const extractDuplicateKeyDetail = (
-  source: string | null | undefined,
-): { field: string; value: string } | null => {
-  if (!source) {
-    return null;
-  }
-
-  const match = source.match(/Key \(([^)]+)\)=\(([^)]+)\) already exists\.?/i);
-  if (match?.[1] && match?.[2]) {
-    return { field: match[1], value: match[2] };
-  }
-
-  return null;
-};
-
-type ForeignKeyDetail = {
-  fields: string[];
-  values: string[];
-  foreignTable?: string | null;
-};
-
-const extractForeignKeyDetail = (
-  source: string | null | undefined,
-): ForeignKeyDetail | null => {
-  if (!source) {
-    return null;
-  }
-
-  const match = source.match(
-    /Key \(([^)]+)\)=\(([^)]+)\) is not present(?: in table "?([^"]+)"?)?/i,
-  );
-
-  if (!match?.[1] || !match?.[2]) {
-    return null;
-  }
-
-  const rawFields = match[1].split(",").map((field) => field.trim().replace(/^"|"$/g, ""));
-  const rawValues = match[2].split(",").map((value) => value.trim().replace(/^"|"$/g, ""));
-
-  return {
-    fields: rawFields,
-    values: rawValues,
-    foreignTable: match[3]?.trim() ?? null,
-  };
-};
-
-
-type SaveFailureStage =
-  | "profile-upsert"
-  | "ensure-wardrobe"
-  | "attribute-upsert"
-  | "refresh-characters"
-  | "activate-character"
-  | "unknown";
-
-const SAVE_ERROR_STAGE_LABELS: Record<SaveFailureStage, string> = {
-  "profile-upsert": "Saving your profile details",
-  "ensure-wardrobe": "Ensuring your wardrobe is initialized",
-  "attribute-upsert": "Saving your attribute distribution",
-  "refresh-characters": "Refreshing your character list",
-  "activate-character": "Activating your saved character",
-  unknown: "Completing the character save",
-};
-
-type SaveErrorState = {
-  message: string;
-  stage: SaveFailureStage;
-  code?: string;
-  details?: string;
-  hint?: string;
-  friendlyMessage?: string;
-  duplicateField?: string;
-  duplicateValue?: string;
-  constraint?: string;
-
-  foreignKeyFields?: string[];
-  foreignKeyValues?: string[];
-  foreignTable?: string | null;
-
-  profilePayload?: Record<string, unknown> | null;
-  attributesPayload?: Record<string, unknown> | null;
-};
-
-const getFriendlySaveErrorMessage = (
-  error: unknown,
-  stage: SaveFailureStage,
-  duplicateDetail?: { field: string; value: string } | null,
-  constraint?: string | null,
-  foreignKeyDetail?: ForeignKeyDetail | null,
-
-): string | null => {
-  if (isPostgrestError(error)) {
-    if (error.code === "23505") {
-      if (duplicateDetail?.field === "username") {
-        return `The artist handle "${duplicateDetail.value}" is already taken. Try a different handle.`;
-      }
-
-      if (duplicateDetail?.field === "display_name") {
-        return `The stage name "${duplicateDetail.value}" is already in use. Pick something more unique.`;
-      }
-
-      if (duplicateDetail) {
-        return `Another record already uses the ${duplicateDetail.field} value "${duplicateDetail.value}". Try updating that value.`;
-      }
-
-      if (constraint) {
-        return `This save conflicts with the constraint "${constraint}". Try changing any values that must be unique.`;
-      }
-
-      return "One of the values you entered must be unique. Try choosing different details.";
-    }
-
-    if (error.code === "23503") {
-      if (foreignKeyDetail?.fields?.length && foreignKeyDetail.values?.length) {
-        const [primaryField] = foreignKeyDetail.fields;
-        const [primaryValue] = foreignKeyDetail.values;
-
-        if (primaryField === "slot_number") {
-          return `We couldn't find character slot ${primaryValue} for your profile. Unlock that slot or choose another before saving again.`;
-        }
-
-        const formattedField = primaryField.replace(/_/g, " ");
-        return `We couldn't find a related ${formattedField} record with the value "${primaryValue}". Refresh and try again.`;
-      }
-
-
-      return "We couldn't link this save to the related records it expects. Refresh the page and try again.";
-    }
-
-    if (error.code === "42501" || /row-level security/i.test(error.message)) {
-      return "Your account doesn't have permission to save this character. Make sure you're logged in with the right profile.";
-    }
-
-    if (error.code === "22P02") {
-      return "One of the values sent to the server had the wrong format. Double-check any numbers or selections and try again.";
-    }
-
-    if (error.code === "42703") {
-      return "The server rejected one of the fields we sent. Refresh the page to make sure you have the latest form.";
-    }
-  }
-
-  if (error instanceof Error) {
-    if (/did not return any data/i.test(error.message)) {
-      return "The server didn't confirm the save. Please try again in a moment.";
-    }
-  }
-
-  if (stage === "ensure-wardrobe") {
-    return "We couldn't prepare your wardrobe after saving. Try again so we can finish setting up your look.";
-  }
-
-  return null;
-};
-
-const buildSaveErrorState = (
-  error: unknown,
-  stage: SaveFailureStage,
-  attemptedProfilePayload: Record<string, unknown> | null | undefined,
-  attemptedAttributesPayload: Record<string, unknown> | null | undefined,
-): SaveErrorState => {
-  const sanitizedProfilePayload = sanitizePayloadForLogging(attemptedProfilePayload) ?? null;
-  const sanitizedAttributesPayload = sanitizePayloadForLogging(attemptedAttributesPayload) ?? null;
-
-  const baseState: SaveErrorState = {
-    message: buildSaveErrorMessage(error),
-    stage,
-    profilePayload: sanitizedProfilePayload,
-    attributesPayload: sanitizedAttributesPayload,
-  };
-
-  if (isPostgrestError(error)) {
-    const code = ensureNonEmptyString(error.code);
-    if (code) {
-      baseState.code = code;
-    }
-
-    const details = ensureNonEmptyString(error.details);
-    if (details) {
-      baseState.details = details;
-    }
-
-    const hint = ensureNonEmptyString(error.hint);
-    if (hint) {
-      baseState.hint = hint;
-    }
-
-    const duplicateDetail =
-      extractDuplicateKeyDetail(details) || extractDuplicateKeyDetail(error.message);
-    if (duplicateDetail) {
-      baseState.duplicateField = duplicateDetail.field;
-      baseState.duplicateValue = duplicateDetail.value;
-    }
-
-    const constraint = extractConstraintName(error);
-    if (constraint) {
-      baseState.constraint = constraint;
-    }
-
-    const foreignKeyDetail =
-      extractForeignKeyDetail(details) ||
-      extractForeignKeyDetail(error.message) ||
-      extractForeignKeyDetail(error.hint);
-    if (foreignKeyDetail) {
-      baseState.foreignKeyFields = foreignKeyDetail.fields;
-      baseState.foreignKeyValues = foreignKeyDetail.values;
-      baseState.foreignTable = foreignKeyDetail.foreignTable ?? null;
-    }
-
-    const friendlyMessage = getFriendlySaveErrorMessage(
-      error,
-      stage,
-      duplicateDetail,
-      constraint,
-      foreignKeyDetail,
-    );
-
-    if (friendlyMessage) {
-      baseState.friendlyMessage = friendlyMessage;
-    }
-
-    return baseState;
-  }
-
-  const friendlyMessage = getFriendlySaveErrorMessage(error, stage);
-  if (friendlyMessage) {
-    baseState.friendlyMessage = friendlyMessage;
-  }
-
-  return baseState;
-};
-
-const omitFromRecord = <T extends Record<string, unknown>>(source: T, key: string) => {
-  if (!(key in source)) {
-    return source;
-  }
-
-  const { [key]: _omitted, ...rest } = source;
-  return rest as T;
-};
-
-const extractNumericField = (source: unknown, key: string): number | null => {
-  if (!source || typeof source !== "object") {
-    return null;
-  }
-
-  const value = (source as Record<string, unknown>)[key];
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string" && value.trim().length > 0) {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric)) {
-      return numeric;
-    }
-  }
-
-  return null;
-};
-
-const formatDisplayName = (slug: string): string =>
-  slug
-    .replace(/[-_]/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-
-const coerceNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
-  return undefined;
-};
-
-const buildAttributeStateFromRecord = (
-  record: Record<string, unknown> | null | undefined,
-  keys: AttributeKey[],
-  previousState?: Record<AttributeKey, number>,
-): Record<AttributeKey, number> => {
-  const next = {} as Record<AttributeKey, number>;
-  const source = record ?? {};
-
-  keys.forEach((key) => {
-    const directValue = coerceNumber((source as Record<string, unknown>)[key]);
-
-    if (typeof directValue === "number") {
-      next[key] = normalizeAttributeValue(directValue);
-      return;
-    }
-
-    if (previousState && typeof previousState[key] === "number") {
-      next[key] = normalizeAttributeValue(previousState[key]);
-      return;
-    }
-
-    next[key] = MIN_ATTRIBUTE_VALUE;
-  });
-
-  return next;
-};
-
-const normalizeAttributeValue = (value: unknown): number => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.max(MIN_ATTRIBUTE_VALUE, Math.min(MAX_ATTRIBUTE_VALUE, Math.round(value)));
-  }
-
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return MIN_ATTRIBUTE_VALUE;
-  }
-
-  return Math.max(MIN_ATTRIBUTE_VALUE, Math.min(MAX_ATTRIBUTE_VALUE, Math.round(numeric)));
-};
+  {} as Record<AttributeKey, number>,
+);
 
 type ProfileRow = Tables<"profiles">;
-
-type ProfileInsert = TablesInsert<"profiles">;
-type PlayerAttributesRow = Tables<"player_attributes">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
-
-// ProfileGender enum removed - not in current schema
+type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
 type CityOption = {
   id: string;
@@ -533,8 +40,7 @@ type CharacterCreationLocationState = {
   profileId?: string | null;
 };
 
-// Gender options simplified - removed ProfileGender type
-const genderOptions = [
+const genderOptions: Array<{ value: ProfileGender; label: string }> = [
   { value: "female", label: "Female" },
   { value: "male", label: "Male" },
   { value: "non_binary", label: "Non-binary" },
@@ -542,25 +48,12 @@ const genderOptions = [
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
-const NO_CITY_SELECTED_VALUE = "__no_city_selected__";
-
-const sanitizeHandle = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-
 const CharacterCreation = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const {
-    refreshCharacters,
-    setActiveCharacter,
-    selectedCharacterId,
-    profile: activeProfile,
-  } = useGameData();
+  const { refreshCharacters, setActiveCharacter, selectedCharacterId, profile: activeProfile } = useGameData();
 
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
@@ -573,201 +66,28 @@ const CharacterCreation = () => {
     return locationProfileId ?? selectedCharacterId ?? activeProfileId ?? null;
   }, [locationProfileId, selectedCharacterId, activeProfileId]);
 
-  const [nameSuggestion, setNameSuggestion] = useState<string>(() => generateRandomName());
-  const [displayName, setDisplayName] = useState<string>(nameSuggestion);
-  const [username, setUsername] = useState<string>(() => {
-    const base = sanitizeHandle(nameSuggestion);
-    return base || generateHandleFromName(nameSuggestion);
-  });
-  const [usernameEdited, setUsernameEdited] = useState<boolean>(false);
-  const [bio, setBio] = useState<string>(backgrounds[0].description);
-  const [selectedBackground, setSelectedBackground] = useState<string>(backgrounds[0].id);
-  const [selectedAvatarStyle, setSelectedAvatarStyle] = useState<string>(
-    defaultAvatarSelection.styleId,
-  );
-  const [selectedAvatarPose, setSelectedAvatarPose] = useState<string>(defaultAvatarSelection.poseId);
-  const [selectedAvatarCamera, setSelectedAvatarCamera] = useState<string>(
-    defaultAvatarSelection.cameraId,
-  );
-  const [attributes, setAttributes] = useState<Record<AttributeKey, number>>(() =>
-    ATTRIBUTE_KEYS.reduce<Record<AttributeKey, number>>((accumulator, key) => {
-      accumulator[key] = MIN_ATTRIBUTE_VALUE;
-      return accumulator;
-    }, {} as Record<AttributeKey, number>),
-  );
-  const [existingAttributes, setExistingAttributes] = useState<PlayerAttributesRow | null>(null);
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [hasExistingAttributes, setHasExistingAttributes] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<SaveErrorState | null>(null);
-  const [gender, setGender] = useState("prefer_not_to_say");
-  const [age, setAge] = useState<string>("16");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [stageName, setStageName] = useState("");
+  const [bio, setBio] = useState("");
+  const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
   const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
+
   const [cities, setCities] = useState<CityOption[]>([]);
-  const [citiesLoading, setCitiesLoading] = useState<boolean>(false);
+  const [citiesLoading, setCitiesLoading] = useState(false);
   const [citiesError, setCitiesError] = useState<string | null>(null);
-
-  const attributeEntries = useMemo(
-    () =>
-      ATTRIBUTE_KEYS.map((key) => ({
-        key,
-        metadata: ATTRIBUTE_METADATA[key],
-      })),
-    [],
-  );
-
-  // Slot management simplified - fields not in current schema
-  const slotNumber = 1;
-  const unlockCost = 0;
-  const isActive = true;
-
-  const selectedStyleDefinition = useMemo(
-    () => avatarStyles.find((style) => style.id === selectedAvatarStyle) ?? avatarStyles[0],
-    [selectedAvatarStyle],
-  );
-
-  const selectedPoseDefinition = useMemo(
-    () => avatarPoses.find((pose) => pose.id === selectedAvatarPose) ?? avatarPoses[0],
-    [selectedAvatarPose],
-  );
-
-  const selectedCameraDefinition = useMemo(
-    () => avatarCameras.find((angle) => angle.id === selectedAvatarCamera) ?? avatarCameras[0],
-    [selectedAvatarCamera],
-  );
 
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
     }
   }, [loading, user, navigate]);
-
-  useEffect(() => {
-    const fetchExistingData = async () => {
-      if (!user) return;
-
-      setIsLoading(true);
-      setLoadError(null);
-
-      const scopedProfileId = targetProfileId;
-      const shouldUseProfileScope = Boolean(scopedProfileId);
-
-      try {
-        const attributeSelect = [
-          "id",
-          "attribute_points",
-          "attribute_points_spent",
-          ...ATTRIBUTE_KEYS,
-        ].join(", ");
-
-        const [profileResponse, attributesResponse] = await Promise.all([
-          shouldUseProfileScope
-            ? supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", scopedProfileId)
-                .maybeSingle()
-            : supabase
-                .from("profiles")
-                .select("*")
-                .eq("user_id", user.id)
-                .maybeSingle(),
-          shouldUseProfileScope
-            ? supabase
-                .from("player_attributes")
-                .select(attributeSelect)
-                .eq("profile_id", scopedProfileId)
-                .maybeSingle()
-            : supabase
-                .from("player_attributes")
-                .select(attributeSelect)
-                .eq("user_id", user.id)
-                .maybeSingle(),
-        ]);
-
-        if (profileResponse.error && profileResponse.status !== 406) {
-          throw profileResponse.error;
-        }
-
-        if (attributesResponse.error && attributesResponse.status !== 406) {
-          throw attributesResponse.error;
-        }
-
-        const profileData = (profileResponse.data as ProfileRow | null) ?? null;
-        const attributesData = attributesResponse.data || null;
-
-        setExistingProfile(profileData);
-        if (attributesData && typeof attributesData === 'object') {
-          setExistingAttributes(attributesData);
-        }
-
-        if (profileData) {
-          if (profileData.display_name) {
-            setDisplayName(profileData.display_name);
-            setNameSuggestion(profileData.display_name);
-          }
-          if (profileData.username) {
-            setUsername(profileData.username);
-            setUsernameEdited(true);
-          }
-          setBio(profileData.bio ?? backgrounds[0].description);
-          // Gender, age, and city_of_birth not in current schema - using defaults
-
-          if (profileData.avatar_url) {
-            const storedSelection = getStoredAvatarSelection(profileResponse.data?.avatar_url);
-
-            if (storedSelection) {
-              if (avatarStyles.some((style) => style.id === storedSelection.styleId)) {
-                setSelectedAvatarStyle(storedSelection.styleId);
-              }
-
-              if (avatarPoses.some((pose) => pose.id === storedSelection.poseId)) {
-                setSelectedAvatarPose(storedSelection.poseId);
-              }
-
-              if (avatarCameras.some((angle) => angle.id === storedSelection.cameraId)) {
-                setSelectedAvatarCamera(storedSelection.cameraId);
-              }
-            } else {
-              const match = avatarStyles.find((style) =>
-                profileResponse.data?.avatar_url?.includes(`/7.x/${style.id}/`)
-              );
-              if (match) {
-                setSelectedAvatarStyle(match.id);
-              }
-            }
-          }
-        } else {
-          setBio(backgrounds[0].description);
-          setUsernameEdited(false);
-        }
-
-        const normalizedAttributesRow = null; // Simplified for now
-
-        setAttributes((previous) =>
-          buildAttributeStateFromRecord(normalizedAttributesRow, ATTRIBUTE_KEYS, previous),
-        );
-      } catch (error) {
-        console.error("Failed to load character data:", error);
-        setLoadError("We couldn't load your character data. You can still create a new persona.");
-        setExistingProfile(null);
-        setExistingAttributes(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (user) {
-      void fetchExistingData();
-    }
-  }, [user, targetProfileId]);
-
-  useEffect(() => {
-    if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
-      navigate("/profile", { replace: true });
-    }
-  }, [loading, isLoading, existingProfile, fromProfileFlow, navigate]);
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -798,83 +118,105 @@ const CharacterCreation = () => {
     void fetchCities();
   }, []);
 
-  const avatarPreviewUrl = (styleId: string) => {
-    const seed = encodeURIComponent(
-      username || displayName || nameSuggestion || user?.id || "rockmundo"
-    );
-    return `https://api.dicebear.com/7.x/${styleId}/svg?seed=${seed}`;
-  };
-
-  const handleRegenerateName = () => {
-    const suggestion = generateRandomName();
-    setNameSuggestion(suggestion);
-    if (!displayName) {
-      setDisplayName(suggestion);
-    }
-    if (!usernameEdited) {
-      setUsername(generateHandleFromName(suggestion));
-      setUsernameEdited(false);
-    }
-  };
-
-  const handleAcceptName = () => {
-    setDisplayName(nameSuggestion);
-    setUsername(generateHandleFromName(nameSuggestion));
-    setUsernameEdited(false);
-  };
-
-  const handleDisplayNameChange = (value: string) => {
-    setDisplayName(value);
-    if (!usernameEdited) {
-      const sanitized = sanitizeHandle(value);
-      setUsername(sanitized || generateHandleFromName(value));
-    }
-  };
-
-  const handleUsernameChange = (value: string) => {
-    setUsername(value);
-    setUsernameEdited(true);
-  };
-
-  const handleAttributeChange = (key: AttributeKey, value: number) => {
-    setAttributes((prev) => {
-      const clampedValue = normalizeAttributeValue(value);
-
-      if (prev[key] === clampedValue) {
-        return prev;
+  useEffect(() => {
+    const fetchExistingData = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
       }
 
-      return {
-        ...prev,
-        [key]: clampedValue,
-      };
-    });
-  };
+      setIsLoading(true);
+      setLoadError(null);
 
-  const totalAttributePoints = useMemo(
-    () => Object.values(attributes).reduce((acc, val) => acc + val, 0),
-    [attributes],
-  );
+      const scopedProfileId = targetProfileId;
+      const shouldUseProfileScope = Boolean(scopedProfileId);
+
+      try {
+        const profileQuery = shouldUseProfileScope
+          ? supabase.from("profiles").select("*").eq("id", scopedProfileId!)
+          : supabase.from("profiles").select("*").eq("user_id", user.id);
+
+        const { data: profileData, error: profileError, status: profileStatus } = await profileQuery.maybeSingle();
+
+        if (profileError && profileStatus !== 406) {
+          throw profileError;
+        }
+
+        const profileRecord = (profileData as ProfileRow | null) ?? null;
+        setExistingProfile(profileRecord);
+
+        if (profileRecord) {
+          setName(profileRecord.username ?? "");
+          setStageName(profileRecord.display_name ?? "");
+          setBio(profileRecord.bio ?? "");
+          setGender(profileRecord.gender ?? "prefer_not_to_say");
+          setCityOfBirth(profileRecord.city_of_birth ?? null);
+
+          if (profileRecord.id) {
+            const { data: attributesData, error: attributesError, status: attributesStatus } = await supabase
+              .from("player_attributes")
+              .select("id")
+              .eq("profile_id", profileRecord.id)
+              .maybeSingle();
+
+            if (attributesError && attributesStatus !== 406) {
+              throw attributesError;
+            }
+
+            setHasExistingAttributes(Boolean(attributesData));
+          } else {
+            setHasExistingAttributes(false);
+          }
+        } else {
+          setName("");
+          setStageName("");
+          setBio("");
+          setGender("prefer_not_to_say");
+          setCityOfBirth(null);
+          setHasExistingAttributes(false);
+        }
+      } catch (error) {
+        console.error("Failed to load character data:", error);
+        setLoadError("We couldn't load your character details. You can still create a new persona.");
+        setExistingProfile(null);
+        setHasExistingAttributes(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void fetchExistingData();
+  }, [user, targetProfileId]);
+
+  useEffect(() => {
+    if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
+      navigate("/profile", { replace: true });
+    }
+  }, [loading, isLoading, existingProfile, fromProfileFlow, navigate]);
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
 
-    const trimmedDisplayName = displayName.trim() || nameSuggestion;
-    const trimmedUsername = username.trim();
+    const trimmedName = name.trim();
+    const trimmedStageName = stageName.trim();
+    const trimmedBio = bio.trim();
 
-    if (!trimmedDisplayName) {
+    if (!trimmedName) {
       toast({
-        title: "Display name required",
-        description: "Choose a stage name for your artist persona.",
+        title: "Name required",
+        description: "Enter a unique name for your artist persona.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!trimmedUsername) {
+    if (!trimmedStageName) {
       toast({
-        title: "Artist handle required",
-        description: "Create a handle so other players can find you.",
+        title: "Stage name required",
+        description: "Enter the stage name you want other players to see.",
         variant: "destructive",
       });
       return;
@@ -883,529 +225,100 @@ const CharacterCreation = () => {
     setIsSaving(true);
     setSaveError(null);
 
-    console.info("[CharacterCreation] Starting character save", {
-      userId: user.id,
-      existingProfileId: existingProfile?.id ?? null,
-      targetProfileId,
-    });
-
-    const selectedBackgroundDetails =
-      backgrounds.find((bg) => bg.id === selectedBackground) ?? backgrounds[0];
-    const finalBio = bio?.trim() || selectedBackgroundDetails.description;
-
-    // Age parsing simplified - field not in current schema
-    const parsedAge = 25; // Default age
-
-    const activeStyle = selectedStyleDefinition ?? avatarStyles[0];
-    const activePose = selectedPoseDefinition ?? avatarPoses[0];
-    const activeCamera = selectedCameraDefinition ?? avatarCameras[0];
-
-    // Slot management simplified - fields not in current schema
-    const slotNumber = 1;
-    const unlockCost = 0;
-    const isActive = true;
-
-    const avatarSelection = {
-      styleId: activeStyle?.id ?? defaultAvatarSelection.styleId,
-      poseId: activePose?.id ?? defaultAvatarSelection.poseId,
-      cameraId: activeCamera?.id ?? defaultAvatarSelection.cameraId,
-    };
-
-    const serializedAvatar = serializeAvatarData(
-      avatarSelection,
-      avatarPreviewUrl(avatarSelection.styleId),
-    );
-
-    const baseProfilePayload: Record<string, unknown> = {
-      user_id: user.id,
-      username: trimmedUsername,
-      display_name: trimmedDisplayName,
-      bio: finalBio,
-      avatar_url: serializedAvatar,
-      level: existingProfile?.level ?? 1,
-      experience: existingProfile?.experience ?? 0,
-      cash: existingProfile?.cash ?? 500,
-      fans: existingProfile?.fans ?? 0,
-      fame: existingProfile?.fame ?? 0,
-      // Fields not in current schema removed: followers, engagement_rate, gender, age, city_of_birth, slot_number, unlock_cost, is_active
-    };
-
-    let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
-    let attemptedAttributesPayload: Record<string, unknown> | null = null;
-    let currentStage: SaveFailureStage = "profile-upsert";
-
-    let profileConflictColumns: string[] = ["user_id", "slot_number"];
-
-
     try {
-      const skippedProfileColumns = new Set<string>();
-      let upsertedProfile: PlayerProfile | null = null;
+      let savedProfile: ProfileRow | null = null;
 
-      while (!upsertedProfile) {
-        const conflictTarget = profileConflictColumns.join(",");
-        console.debug("[CharacterCreation] Attempting profile upsert", {
-          payload: sanitizePayloadForLogging(attemptedProfilePayload),
-          skippedColumns: [...skippedProfileColumns],
-          conflictTarget,
-        });
-        const { data, error: profileError } = await supabase
+      if (existingProfile) {
+        const { data, error } = await supabase
           .from("profiles")
-          .upsert(attemptedProfilePayload as ProfileInsert, {
-            onConflict: conflictTarget,
+          .update({
+            username: trimmedName,
+            display_name: trimmedStageName,
+            bio: trimmedBio.length > 0 ? trimmedBio : null,
+            gender,
+            city_of_birth: cityOfBirth,
+            updated_at: new Date().toISOString(),
           })
+          .eq("id", existingProfile.id)
           .select()
           .single();
 
-        if (!profileError) {
-          upsertedProfile = data as PlayerProfile | null;
-          break;
+        if (error) {
+          throw error;
         }
 
-        console.warn("[CharacterCreation] Profile upsert failed", {
-          error: buildSaveErrorMessage(profileError),
-          code: profileError.code,
-          details: profileError.details,
-          hint: profileError.hint,
-          attemptedKeys: Object.keys(attemptedProfilePayload),
-          conflictTarget,
-        });
+        savedProfile = (data as ProfileRow | null) ?? null;
+      } else {
+        const insertPayload: TablesInsert<"profiles"> = {
+          user_id: user.id,
+          username: trimmedName,
+          display_name: trimmedStageName,
+          bio: trimmedBio.length > 0 ? trimmedBio : null,
+          gender,
+          city_of_birth: cityOfBirth,
+        };
 
-        const missingColumn = extractMissingColumn(profileError);
-        if (missingColumn) {
-          let handledMissingColumn = false;
-
-          if (missingColumn === "slot_number" && profileConflictColumns.includes("slot_number")) {
-            profileConflictColumns = profileConflictColumns
-              .filter((column) => column !== "slot_number")
-              .filter((column, index, array) => array.indexOf(column) === index);
-
-            if (profileConflictColumns.length === 0) {
-              profileConflictColumns = ["user_id"];
-            } else if (!profileConflictColumns.includes("user_id")) {
-              profileConflictColumns.unshift("user_id");
-            }
-
-            if (!skippedProfileColumns.has(missingColumn)) {
-              skippedProfileColumns.add(missingColumn);
-            }
-
-            if (missingColumn in attemptedProfilePayload) {
-              attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
-            }
-
-            console.warn(
-              "[CharacterCreation] Falling back to legacy profile conflict target",
-              {
-                missingColumn,
-                nextConflictTarget: profileConflictColumns.join(","),
-                remainingKeys: Object.keys(attemptedProfilePayload),
-              },
-            );
-
-            handledMissingColumn = true;
-          }
-
-          if (!handledMissingColumn && missingColumn in attemptedProfilePayload) {
-            if (!skippedProfileColumns.has(missingColumn)) {
-              skippedProfileColumns.add(missingColumn);
-            }
-            attemptedProfilePayload = omitFromRecord(attemptedProfilePayload, missingColumn);
-            console.warn("[CharacterCreation] Retrying profile upsert without column", {
-              missingColumn,
-              remainingKeys: Object.keys(attemptedProfilePayload),
-            });
-            handledMissingColumn = true;
-          }
-
-          if (handledMissingColumn) {
-            continue;
-          }
-        }
-
-        throw profileError;
-      }
-
-      if (!upsertedProfile) {
-        throw new Error("Profile save did not return any data.");
-      }
-
-      currentStage = "ensure-wardrobe";
-
-      // Wardrobe system simplified - equipped_clothing not in current schema
-      // Skip wardrobe initialization for now
-
-      setExistingProfile(upsertedProfile);
-
-      currentStage = "attribute-upsert";
-
-      const normalizedAttributes = ATTRIBUTE_KEYS.reduce<Record<AttributeKey, number>>(
-        (accumulator, key) => {
-          const rawValue = attributes[key];
-          accumulator[key] = normalizeAttributeValue(rawValue);
-          return accumulator;
-        },
-        {} as Record<AttributeKey, number>,
-      );
-
-      const totalAllocatedAttributePoints = Object.values(normalizedAttributes).reduce(
-        (acc, val) => acc + val,
-        0,
-      );
-
-      const existingAttributePoints = Math.max(
-        0,
-        Math.round(coerceNumber(existingAttributes?.attribute_points) ?? 0),
-      );
-      const existingAttributePointsSpent = coerceNumber(
-        existingAttributes?.attribute_points_spent,
-      );
-      const resolvedAttributePointsSpent = Math.max(
-        0,
-        Math.round(
-          typeof existingAttributePointsSpent === "number"
-            ? existingAttributePointsSpent
-            : totalAllocatedAttributePoints,
-        ),
-      );
-
-      const baseAttributesPayload: Record<string, unknown> = {
-        user_id: user.id,
-        profile_id: upsertedProfile.id,
-        attribute_points: existingAttributePoints,
-        attribute_points_spent: resolvedAttributePointsSpent,
-        ...normalizedAttributes,
-      };
-
-      attemptedAttributesPayload = { ...baseAttributesPayload };
-      const skippedAttributeColumns = new Set<string>();
-      let finalAttributesRow: PlayerAttributesRow | null = null;
-      let attributeConflictColumns = ["profile_id"];
-      const invalidAttributeConflictColumns = new Set<string>();
-
-      const persistAttributesManually = async (
-        lookupColumn: "profile_id" | "user_id",
-        payload: Record<string, unknown>,
-      ): Promise<PlayerAttributesRow | null> => {
-        const lookupValue = ensureNonEmptyString(payload[lookupColumn]);
-
-        if (!lookupValue) {
-          return null;
-        }
-
-        console.warn(
-          "[CharacterCreation] Falling back to manual attribute persistence",
-          {
-            lookupColumn,
-            lookupValue,
-          },
-        );
-
-        const { data: existingRow, error: fetchError } = await supabase
-          .from("player_attributes")
-          .select("id")
-          .eq(lookupColumn, lookupValue)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        if (fetchError) {
-          console.error(
-            "[CharacterCreation] Unable to locate existing attribute row for manual persistence",
-            {
-              lookupColumn,
-              lookupValue,
-              error: buildSaveErrorMessage(fetchError),
-              code: fetchError.code,
-              details: fetchError.details,
-              hint: fetchError.hint,
-            },
-          );
-          return null;
-        }
-
-        if (existingRow?.id) {
-          const { data: updatedRow, error: updateError } = await supabase
-            .from("player_attributes")
-            .update(payload as PlayerAttributesInsert)
-            .eq("id", existingRow.id)
-            .select()
-            .single();
-
-          if (!updateError) {
-            return (updatedRow as PlayerAttributesRow | null) ?? null;
-          }
-
-          console.error("[CharacterCreation] Manual attribute update failed", {
-            lookupColumn,
-            lookupValue,
-            error: buildSaveErrorMessage(updateError),
-            code: updateError.code,
-            details: updateError.details,
-            hint: updateError.hint,
-          });
-
-          return null;
-        }
-
-        const { data: insertedRow, error: insertError } = await supabase
-          .from("player_attributes")
-          .insert(payload as PlayerAttributesInsert)
+        const { data, error } = await supabase
+          .from("profiles")
+          .insert(insertPayload)
           .select()
           .single();
 
-        if (!insertError) {
-          return (insertedRow as PlayerAttributesRow | null) ?? null;
+        if (error) {
+          throw error;
         }
 
-        console.error("[CharacterCreation] Manual attribute insert failed", {
-          lookupColumn,
-          lookupValue,
-          error: buildSaveErrorMessage(insertError),
-          code: insertError.code,
-          details: insertError.details,
-          hint: insertError.hint,
-        });
+        savedProfile = (data as ProfileRow | null) ?? null;
+      }
 
-        return null;
-      };
+      if (!savedProfile) {
+        throw new Error("The profile could not be saved.");
+      }
 
-      while (Object.keys(attemptedAttributesPayload).length > 0) {
-        const conflictTarget =
-          attributeConflictColumns.length > 0
-            ? attributeConflictColumns.join(",")
-            : undefined;
-        console.debug("[CharacterCreation] Attempting attribute upsert", {
-          payload: sanitizePayloadForLogging(attemptedAttributesPayload),
-          skippedColumns: [...skippedAttributeColumns],
-          conflictTarget,
-        });
-        const { data: upsertedAttributes, error: attributesError } = await supabase
+      setExistingProfile(savedProfile);
+
+      if (!hasExistingAttributes && savedProfile.id) {
+        const attributePayload: PlayerAttributesInsert = {
+          user_id: user.id,
+          profile_id: savedProfile.id,
+          ...DEFAULT_ATTRIBUTE_DISTRIBUTION,
+        };
+
+        const { error: attributesError } = await supabase
           .from("player_attributes")
-          .upsert(
-            attemptedAttributesPayload as PlayerAttributesInsert,
-            conflictTarget ? { onConflict: conflictTarget } : undefined,
-          )
+          .upsert(attributePayload, { onConflict: "profile_id" })
           .select()
           .maybeSingle();
 
-        if (!attributesError) {
-          finalAttributesRow = (upsertedAttributes as PlayerAttributesRow | null) ?? null;
-          break;
-        }
-
-        if (attributesError.code === "42703" || attributesError.code === "PGRST204") {
-          const missingColumn = extractMissingColumn(attributesError);
-          if (
-            missingColumn &&
-            !skippedAttributeColumns.has(missingColumn)
-          ) {
-            let handledMissingColumn = false;
-
-            if (attributeConflictColumns.includes(missingColumn)) {
-              attributeConflictColumns = attributeConflictColumns.filter(
-                column => column !== missingColumn,
-              );
-
-              if (attributeConflictColumns.length === 0) {
-                if (missingColumn === "profile_id" && "user_id" in attemptedAttributesPayload) {
-                  attributeConflictColumns = ["user_id"];
-                } else if (missingColumn === "user_id" && "profile_id" in attemptedAttributesPayload) {
-                  attributeConflictColumns = ["profile_id"];
-                }
-              } else if (
-                missingColumn === "profile_id" &&
-                !attributeConflictColumns.includes("user_id") &&
-                "user_id" in attemptedAttributesPayload
-              ) {
-                attributeConflictColumns.unshift("user_id");
-              }
-
-              if (missingColumn in attemptedAttributesPayload) {
-                skippedAttributeColumns.add(missingColumn);
-                attemptedAttributesPayload = omitFromRecord(
-                  attemptedAttributesPayload,
-                  missingColumn,
-                );
-              }
-
-              console.warn(
-                "[CharacterCreation] Falling back to legacy attribute conflict target",
-                {
-                  missingColumn,
-                  nextConflictTarget: attributeConflictColumns.join(","),
-                  remainingKeys: Object.keys(attemptedAttributesPayload),
-                },
-              );
-
-              handledMissingColumn = true;
-            }
-
-            if (
-              !handledMissingColumn &&
-              missingColumn in attemptedAttributesPayload &&
-              missingColumn !== "profile_id"
-            ) {
-              skippedAttributeColumns.add(missingColumn);
-              attemptedAttributesPayload = omitFromRecord(
-                attemptedAttributesPayload,
-                missingColumn,
-              );
-              console.warn("[CharacterCreation] Retrying attribute upsert without column", {
-                missingColumn,
-                remainingKeys: Object.keys(attemptedAttributesPayload),
-              });
-              handledMissingColumn = true;
-            }
-
-            if (handledMissingColumn) {
-              if (
-                attributeConflictColumns.length === 0 &&
-                "user_id" in attemptedAttributesPayload
-              ) {
-                attributeConflictColumns = ["user_id"];
-              }
-              continue;
-            }
-          }
-        }
-
-        if (attributesError.code === "42P10") {
-          const attemptedColumns = (conflictTarget ?? "")
-            .split(",")
-            .map((column) => column.trim())
-            .filter((column) => column.length > 0);
-
-          attemptedColumns.forEach((column) => {
-            invalidAttributeConflictColumns.add(column as "profile_id" | "user_id");
-          });
-
-          console.warn(
-            "[CharacterCreation] Attribute upsert conflict target missing unique constraint",
-            {
-              conflictTarget,
-              attemptedColumns,
-              payload: sanitizePayloadForLogging(attemptedAttributesPayload),
-            },
-          );
-
-          const hasProfileId =
-            !invalidAttributeConflictColumns.has("profile_id") &&
-            ensureNonEmptyString(attemptedAttributesPayload.profile_id);
-          const hasUserId =
-            !invalidAttributeConflictColumns.has("user_id") &&
-            ensureNonEmptyString(attemptedAttributesPayload.user_id);
-
-          if (hasProfileId) {
-            attributeConflictColumns = ["profile_id"];
-            continue;
-          }
-
-          if (hasUserId) {
-            attributeConflictColumns = ["user_id"];
-            continue;
-          }
-
-          const manualLookupColumn = ensureNonEmptyString(
-            attemptedAttributesPayload.profile_id,
-          )
-            ? "profile_id"
-            : ensureNonEmptyString(attemptedAttributesPayload.user_id)
-              ? "user_id"
-              : null;
-
-          if (manualLookupColumn) {
-            const manualResult = await persistAttributesManually(
-              manualLookupColumn,
-              attemptedAttributesPayload,
-            );
-
-            if (manualResult) {
-              finalAttributesRow = manualResult;
-              break;
-            }
-          }
-
+        if (attributesError) {
           throw attributesError;
         }
 
-        throw attributesError;
+        setHasExistingAttributes(true);
       }
 
-      const persistedAttributesRecord = finalAttributesRow
-        ? { ...(finalAttributesRow as Record<string, unknown>) }
-        : { ...attemptedAttributesPayload };
-
-      setExistingAttributes((previous) => ({
-        ...(previous ?? {}) as PlayerAttributesRow,
-        ...(persistedAttributesRecord as Partial<PlayerAttributesRow>),
-      }));
-
-      setAttributes((previous) =>
-        buildAttributeStateFromRecord(persistedAttributesRecord, ATTRIBUTE_KEYS, previous),
-      );
-
-      currentStage = "refresh-characters";
       await refreshCharacters();
-
-      currentStage = "activate-character";
-      await setActiveCharacter(upsertedProfile.id);
-
-      console.info("[CharacterCreation] Character save complete", {
-        profileId: upsertedProfile.id,
-        userId: user.id,
-        skippedProfileColumns: [...skippedProfileColumns],
-        profileConflictColumns,
-        skippedAttributeColumns: [...skippedAttributeColumns],
-        attributeConflictColumns,
-      });
+      setActiveCharacter(savedProfile.id);
 
       toast({
-        title: "Character ready!",
-        description: "Your artist profile has been saved. Time to take the stage.",
+        title: "Character saved",
+        description: "Your artist profile has been updated.",
       });
 
       window.dispatchEvent(new CustomEvent("profile-updated"));
-
       navigate("/dashboard");
     } catch (error) {
-      const errorState = buildSaveErrorState(
-        error,
-        currentStage,
-        attemptedProfilePayload,
-        attemptedAttributesPayload,
-      );
-
-      console.error("[CharacterCreation] Failed to save character", {
-        stage: currentStage,
-        stageLabel: SAVE_ERROR_STAGE_LABELS[currentStage] ?? SAVE_ERROR_STAGE_LABELS.unknown,
-        errorState,
-        rawError: error,
-        userId: user.id,
-      });
-
-      setSaveError(errorState);
-
-      const toastDescriptionParts = [
-        errorState.friendlyMessage ?? errorState.message,
-        errorState.code ? `Error code: ${errorState.code}` : null,
-        `Step: ${SAVE_ERROR_STAGE_LABELS[currentStage] ?? SAVE_ERROR_STAGE_LABELS.unknown}`,
-        errorState.duplicateField && errorState.duplicateValue
-          ? `${errorState.duplicateField}: ${errorState.duplicateValue}`
-          : null,
-        errorState.foreignKeyFields?.length
-          ? `Missing relation: ${errorState.foreignKeyFields
-              .map((field, index) =>
-                `${field}=${
-                  errorState.foreignKeyValues?.[index] ?? errorState.foreignKeyValues?.[0] ?? "unknown"
-                }`,
-              )
-              .join(", ")}${errorState.foreignTable ? ` → ${errorState.foreignTable}` : ""}`
-          : null,
-      ].filter((part): part is string => Boolean(part));
-
+      console.error("Failed to save character:", error);
+      const message =
+        typeof error === "string"
+          ? error
+          : error instanceof Error
+          ? error.message
+          : "An unknown error occurred while saving.";
+      setSaveError(message);
       toast({
         title: "Could not save character",
-        description: toastDescriptionParts.join(" — "),
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -1419,516 +332,144 @@ const CharacterCreation = () => {
 
   if (loading || isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
-        <div className="text-center space-y-4">
-          <div className="mx-auto h-16 w-16 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p className="text-lg font-oswald text-foreground/80">
-            Crafting your Rockmundo persona...
-          </p>
-        </div>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Loading character creator…</CardTitle>
+            <CardDescription>Preparing your artist profile.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
+
   if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-background">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="space-y-3 text-center">
-          <Badge variant="outline" className="px-3 py-1 text-xs uppercase tracking-widest">
-            Character Creation
-          </Badge>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Design Your Stage Persona
-          </h1>
-          <p className="text-base text-muted-foreground">
-            Shape your artist identity, pick a backstory, and define the attributes that set your playstyle in motion.
-          </p>
-        </div>
+    <div className="container mx-auto max-w-3xl py-10">
+      <Card>
+        <CardHeader>
+          <CardTitle>Create Your Character</CardTitle>
+          <CardDescription>
+            Provide the essentials for your artist persona. Attributes will start at 5/1000 and can grow through play.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {loadError && (
+            <Alert variant="destructive">
+              <AlertTitle>Heads up</AlertTitle>
+              <AlertDescription>{loadError}</AlertDescription>
+            </Alert>
+          )}
 
-        {loadError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-5 w-5" />
-            <AlertTitle>Heads up!</AlertTitle>
-            <AlertDescription>{loadError}</AlertDescription>
-          </Alert>
-        )}
+          {saveError && (
+            <Alert variant="destructive">
+              <AlertTitle>Save failed</AlertTitle>
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          )}
 
-        {saveError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-5 w-5" />
-            <AlertTitle>Unable to save</AlertTitle>
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Enter your artist name"
+            />
+            <p className="text-sm text-muted-foreground">
+              This is your unique handle within Rockmundo. It must be distinct from other players.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="stage-name">Stage Name</Label>
+            <Input
+              id="stage-name"
+              value={stageName}
+              onChange={(event) => setStageName(event.target.value)}
+              placeholder="What do fans call you on stage?"
+            />
+            <p className="text-sm text-muted-foreground">Displayed publicly across leaderboards and venues.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea
+              id="bio"
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              placeholder="Share a short backstory for your artist persona."
+              rows={4}
+            />
+            <p className="text-sm text-muted-foreground">Let the world know who you are and what drives your sound.</p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <Select value={gender} onValueChange={(value) => setGender(value as ProfileGender)}>
+                <SelectTrigger id="gender">
+                  <SelectValue placeholder="Select a gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  {genderOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="city-of-birth">City of Birth</Label>
+              <Select
+                value={cityOfBirth ?? NO_CITY_SELECTED_VALUE}
+                onValueChange={(value) =>
+                  setCityOfBirth(value === NO_CITY_SELECTED_VALUE ? null : value)
+                }
+                disabled={citiesLoading}
+              >
+                <SelectTrigger id="city-of-birth">
+                  <SelectValue
+                    placeholder={citiesLoading ? "Loading cities…" : "Select a city"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_CITY_SELECTED_VALUE}>No listed city</SelectItem>
+                  {cities.map((city) => (
+                    <SelectItem key={city.id} value={city.id}>
+                      {city.name ?? "Unnamed City"}
+                      {city.country ? `, ${city.country}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {citiesError && <p className="text-sm text-destructive">{citiesError}</p>}
+            </div>
+          </div>
+
+          <Alert>
+            <AlertTitle>Attribute defaults</AlertTitle>
             <AlertDescription>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-destructive-foreground">
-                  {saveError.friendlyMessage ?? saveError.message}
-                </p>
-                <div className="space-y-1 text-xs text-destructive-foreground opacity-90">
-                  <div>
-                    <span className="font-semibold text-destructive-foreground">Step:</span>{" "}
-                    {SAVE_ERROR_STAGE_LABELS[saveError.stage] ?? SAVE_ERROR_STAGE_LABELS.unknown}
-                  </div>
-                  {saveError.code && (
-                    <div>
-                      <span className="font-semibold text-destructive-foreground">Supabase code:</span>{" "}
-                      {saveError.code}
-                    </div>
-                  )}
-                  {saveError.duplicateField && saveError.duplicateValue && (
-                    <div>
-                      <span className="font-semibold text-destructive-foreground">Conflict:</span>{" "}
-                      {saveError.duplicateField} = {saveError.duplicateValue}
-                    </div>
-                  )}
-                  {saveError.constraint && (
-                    <div>
-                      <span className="font-semibold text-destructive-foreground">Constraint:</span>{" "}
-                      {saveError.constraint}
-                    </div>
-                  )}
-                  {saveError.foreignKeyFields?.length && (
-                    <div>
-                      <span className="font-semibold text-destructive-foreground">Missing relation:</span>{" "}
-                      {saveError.foreignKeyFields
-                        .map((field, index) =>
-                          `${field} = ${
-                            saveError.foreignKeyValues?.[index] ??
-                            saveError.foreignKeyValues?.[0] ??
-                            "unknown"
-                          }`,
-                        )
-                        .join(", ")}
-                      {saveError.foreignTable ? ` (expected in ${saveError.foreignTable})` : ""}
-                    </div>
-                  )}
-                  {saveError.details && (
-                    <div>
-                      <span className="font-semibold text-destructive-foreground">Details:</span>{" "}
-                      {saveError.details}
-                    </div>
-                  )}
-                  {saveError.hint && (
-                    <div>
-                      <span className="font-semibold text-destructive-foreground">Hint:</span>{" "}
-                      {saveError.hint}
-                    </div>
-                  )}
-                  {saveError.friendlyMessage && saveError.friendlyMessage !== saveError.message && (
-                    <div>
-                      <span className="font-semibold text-destructive-foreground">Server message:</span>{" "}
-                      {saveError.message}
-                    </div>
-                  )}
-                </div>
-                {(saveError.profilePayload || saveError.attributesPayload) && (
-                  <details className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive-foreground">
-                    <summary className="cursor-pointer font-semibold">
-                      View data we attempted to save
-                    </summary>
-                    <div className="space-y-2">
-                      {saveError.profilePayload && (
-                        <div className="space-y-1">
-                          <div className="font-semibold">Profile payload</div>
-                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-destructive/20 p-2 text-[11px] leading-relaxed">
-                            {JSON.stringify(saveError.profilePayload, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                      {saveError.attributesPayload && (
-                        <div className="space-y-1">
-                          <div className="font-semibold">Attribute payload</div>
-                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-destructive/20 p-2 text-[11px] leading-relaxed">
-                            {JSON.stringify(saveError.attributesPayload, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                )}
-              </div>
+              All performance attributes start at 5 out of 1000. Grow them by practicing, performing, and progressing in the
+              world.
             </AlertDescription>
           </Alert>
-        )}
 
-        <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
-          <CardHeader className="flex flex-col gap-2 text-center sm:text-left sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-2xl font-semibold">Your Signature Sound</CardTitle>
-              <CardDescription>
-                Start with a bold alias and tailor it until it feels unmistakably yours.
-              </CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="secondary" onClick={handleRegenerateName}>
-                <Wand2 className="mr-2 h-4 w-4" />
-                New Suggestion
-              </Button>
-              <Button variant="outline" onClick={handleAcceptName}>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Use Suggestion
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Stage Name</label>
-                  <Input
-                    placeholder="Your iconic display name"
-                    value={displayName}
-                    onChange={(event) => handleDisplayNameChange(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Artist Handle</label>
-                  <Input
-                    placeholder="unique-handle-123"
-                    value={username}
-                    onChange={(event) => handleUsernameChange(event.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Handles help friends find you across the Rockmundo universe. Use letters, numbers, and dashes.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Signature Bio</label>
-                  <Textarea
-                    rows={4}
-                    value={bio}
-                    onChange={(event) => setBio(event.target.value)}
-                    placeholder="Tell the world who you are, what drives your music, and the vibes you bring to every stage."
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-primary/10 bg-muted/40 p-6">
-                <AvatarPreview3D
-                  style={selectedStyleDefinition ?? avatarStyles[0]}
-                  pose={selectedPoseDefinition ?? avatarPoses[0]}
-                  camera={selectedCameraDefinition ?? avatarCameras[0]}
-                  className="h-44 w-44"
-                />
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    {selectedStyleDefinition?.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedPoseDefinition?.label} • {selectedCameraDefinition?.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    This preview updates as you tweak style, pose, and camera.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Palette className="h-5 w-5 text-primary" />
-              Choose Your Look
-            </CardTitle>
-            <CardDescription>
-              Select the vibe that best represents your persona. You can change it later as your story evolves.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-3">
-              {avatarStyles.map((style) => {
-                const isActive = selectedAvatarStyle === style.id;
-                return (
-                  <button
-                    key={style.id}
-                    type="button"
-                    onClick={() => setSelectedAvatarStyle(style.id)}
-                    className={cn(
-                      "group relative flex h-full flex-col gap-3 overflow-hidden rounded-lg border bg-gradient-to-br p-4 text-left transition shadow-sm",
-                      style.gradient,
-                      isActive
-                        ? "border-primary shadow-lg"
-                        : "border-transparent opacity-90 hover:opacity-100",
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-background drop-shadow-sm">
-                        {style.label}
-                      </h3>
-                      {isActive && (
-                        <span className="rounded-full bg-background/80 px-2 py-1 text-xs font-medium text-foreground">
-                          Selected
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-background/80 group-hover:text-background">
-                      {style.description}
-                    </p>
-                    <div className="mt-auto flex items-center gap-1 rounded-md border border-background/40 bg-background/40 p-2">
-                      <div className="h-2 flex-1 rounded-full bg-gradient-to-r from-background/50 to-background/20">
-                        <div
-                          className="h-full w-full rounded-full"
-                          style={{
-                            background: `linear-gradient(90deg, ${style.palette.primary}, ${style.palette.accent}, ${style.palette.secondary})`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  <Move3d className="h-4 w-4 text-primary" /> Pose
-                </div>
-                <div className="space-y-2">
-                  {avatarPoses.map((poseOption) => {
-                    const isActive = selectedAvatarPose === poseOption.id;
-                    return (
-                      <button
-                        key={poseOption.id}
-                        type="button"
-                        onClick={() => setSelectedAvatarPose(poseOption.id)}
-                        className={cn(
-                          "w-full rounded-md border px-4 py-3 text-left transition",
-                          isActive
-                            ? "border-primary bg-primary/10 shadow"
-                            : "border-border bg-background/60 hover:border-primary/60",
-                        )}
-                      >
-                        <p className="text-sm font-semibold text-foreground">{poseOption.label}</p>
-                        <p className="text-xs text-muted-foreground">{poseOption.description}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  <Camera className="h-4 w-4 text-primary" /> Camera
-                </div>
-                <div className="space-y-2">
-                  {avatarCameras.map((cameraOption) => {
-                    const isActive = selectedAvatarCamera === cameraOption.id;
-                    return (
-                      <button
-                        key={cameraOption.id}
-                        type="button"
-                        onClick={() => setSelectedAvatarCamera(cameraOption.id)}
-                        className={cn(
-                          "w-full rounded-md border px-4 py-3 text-left transition",
-                          isActive
-                            ? "border-primary bg-primary/10 shadow"
-                            : "border-border bg-background/60 hover:border-primary/60",
-                        )}
-                      >
-                        <p className="text-sm font-semibold text-foreground">{cameraOption.label}</p>
-                        <p className="text-xs text-muted-foreground">{cameraOption.description}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <SparklesIcon className="h-5 w-5 text-primary" />
-              Backstory & Motivation
-            </CardTitle>
-            <CardDescription>
-              Your origin sets the tone for in-game narrative moments and fan expectations.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              {backgrounds.map((background) => (
-                <button
-                  key={background.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedBackground(background.id);
-                    if (!bio || bio === backgrounds[0].description) {
-                      setBio(background.description);
-                    }
-                  }}
-                  className={cn(
-                    "flex h-full flex-col gap-2 rounded-lg border p-4 text-left transition",
-                    selectedBackground === background.id
-                      ? "border-primary bg-primary/5 shadow"
-                      : "border-border hover:border-primary/50"
-                  )}
-                >
-                  <h3 className="text-base font-semibold flex items-center gap-2">
-                    {background.label}
-                    {selectedBackground === background.id && (
-                      <Badge variant="secondary" className="text-xs">
-                        Active
-                      </Badge>
-                    )}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{background.description}</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5 text-primary" />
-              Identity Details
-            </CardTitle>
-            <CardDescription>
-              A few personal touches to give your artist a grounded origin story.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground" htmlFor="gender">
-                  Gender
-                </label>
-                <Select value={gender} onValueChange={setGender}>
-                  <SelectTrigger id="gender">
-                    <SelectValue placeholder="Select a gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {genderOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground" htmlFor="age">
-                  Age
-                </label>
-                <Input
-                  id="age"
-                  type="number"
-                  min={13}
-                  max={120}
-                  value={age}
-                  onChange={(event) => setAge(event.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Default starting age is 16.</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground" htmlFor="city-of-birth">
-                  City of Birth
-                </label>
-                <Select
-                  value={cityOfBirth ?? NO_CITY_SELECTED_VALUE}
-                  onValueChange={(value) =>
-                    setCityOfBirth(value === NO_CITY_SELECTED_VALUE ? null : value)
-                  }
-                  disabled={citiesLoading}
-                >
-                  <SelectTrigger id="city-of-birth">
-                    <SelectValue
-                      placeholder={citiesLoading ? "Loading cities..." : "Select a city"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_CITY_SELECTED_VALUE}>No listed city</SelectItem>
-                    {cities.map((city) => (
-                      <SelectItem key={city.id} value={city.id}>
-                        {city.name ?? "Unnamed City"}
-                        {city.country ? `, ${city.country}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {citiesError && (
-                  <p className="text-xs text-destructive">{citiesError}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-primary/20 bg-background/80 shadow-lg backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Gauge className="h-5 w-5 text-primary" />
-              Attribute Distribution
-            </CardTitle>
-            <CardDescription>
-              Invest your starting attribute strengths. These values influence performance, creativity, and career growth and can be trained further in-game.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary space-y-2">
-              <div className="flex items-center justify-between">
-                <span>Total Attribute Investment</span>
-                <span className="font-semibold">{totalAttributePoints}</span>
-              </div>
-              <p className="text-xs text-primary/80">
-                Attributes range from {MIN_ATTRIBUTE_VALUE} to {MAX_ATTRIBUTE_VALUE}. Your starting distribution sets the tone for your artist&apos;s playstyle.
-              </p>
-            </div>
-            <div className="grid gap-5 md:grid-cols-2">
-              {attributeEntries.map(({ key, metadata }) => {
-                const currentValue = attributes[key] ?? MIN_ATTRIBUTE_VALUE;
-
-                return (
-                  <div key={key} className="space-y-3 rounded-lg border border-border/70 bg-muted/40 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <span className="text-sm font-medium">{metadata.label}</span>
-                        <p className="text-xs text-muted-foreground leading-snug">{metadata.description}</p>
-                      </div>
-                      <span className="text-sm font-semibold text-primary">{currentValue}</span>
-                    </div>
-                    <Slider
-                      min={MIN_ATTRIBUTE_VALUE}
-                      max={MAX_ATTRIBUTE_VALUE}
-                      step={1}
-                      value={[currentValue]}
-                      onValueChange={([value]) => handleAttributeChange(key, value ?? currentValue)}
-                    />
-                    {metadata.relatedSkills.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {metadata.relatedSkills.map((skill) => (
-                          <Badge
-                            key={`${key}-${skill}`}
-                            variant="outline"
-                            className="text-[10px] uppercase tracking-wider"
-                          >
-                            {formatDisplayName(skill)}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <Button variant="ghost" onClick={handleCancel} disabled={isSaving}>
-            Skip for now
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Confirm Character"}
-          </Button>
-        </div>
-      </div>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Button onClick={handleSave} disabled={isSaving} className="bg-gradient-primary">
+              {isSaving ? "Saving…" : "Save Character"}
+            </Button>
+            <Button onClick={handleCancel} variant="outline" disabled={isSaving}>
+              Cancel
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
