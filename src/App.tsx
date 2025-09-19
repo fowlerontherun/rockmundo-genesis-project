@@ -31,6 +31,7 @@ const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const MusicCreation = lazyWithRetry(() => import("./pages/MusicCreation"));
+const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
@@ -94,6 +95,7 @@ function App() {
                     <Route path="festivals" element={<Festivals />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
+                    <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="create" element={<MusicCreation />} />
