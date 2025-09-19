@@ -341,6 +341,47 @@ export const useGameData = (): UseGameDataReturn => {
     [profile?.id, user]
   );
 
+  const resetCharacter = async () => {
+    if (!user) {
+      throw new Error('Authentication required to reset character');
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('reset_player_character');
+
+      if (error) {
+        throw error;
+      }
+
+      const [result] = (data ?? []) as Array<{
+        profile: PlayerProfile;
+        skills: PlayerSkills;
+      }>;
+
+      if (result?.profile) {
+        setProfile(result.profile);
+        setSelectedCharacterId(result.profile.id);
+        setCharacters([result.profile]);
+      } else {
+        setProfile(null);
+        setSelectedCharacterId(null);
+        setCharacters([]);
+      }
+
+      if (result?.skills) {
+        setSkills(result.skills);
+      } else {
+        setSkills(null);
+      }
+
+      setAttributes(null);
+      setXpWallet(null);
+    } catch (err) {
+      console.error('Error resetting character:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
