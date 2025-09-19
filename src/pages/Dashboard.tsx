@@ -128,6 +128,7 @@ const Dashboard = () => {
   }, [currentCity]);
 
   const cityTabLabel = cityNameLabel ? `${cityNameLabel} Chat` : "City Chat";
+  const currentCityDisplay = `Current City: ${cityNameLabel ?? "London"}`;
   const activeOnlineCount = chatOnlineCounts[activeChatTab];
   const activeConnection = chatConnections[activeChatTab];
   const cityChatPlaceholder = "Say hello to fellow musicians...";
@@ -334,6 +335,9 @@ const Dashboard = () => {
               </Badge>
               <Badge variant="outline" className="border-border text-foreground/80">
                 Rising Artist
+              </Badge>
+              <Badge variant="outline" className="border-border text-foreground/80">
+                {currentCityDisplay}
               </Badge>
             </div>
           </div>
