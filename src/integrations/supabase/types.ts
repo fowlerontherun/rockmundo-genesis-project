@@ -58,7 +58,6 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
-          profile_id: string | null
           user_id: string
         }
         Insert: {
@@ -68,7 +67,6 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
-          profile_id?: string | null
           user_id: string
         }
         Update: {
@@ -78,112 +76,7 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
-          profile_id?: string | null
           user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_feed_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chat_participants: {
-        Row: {
-          channel: string
-          id: string
-          status: Database["public"]["Enums"]["chat_participant_status"]
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          channel?: string
-          id?: string
-          status?: Database["public"]["Enums"]["chat_participant_status"]
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          channel?: string
-          id?: string
-          status?: Database["public"]["Enums"]["chat_participant_status"]
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      experience_ledger: {
-        Row: {
-          amount: number
-          id: string
-          metadata: Json
-          profile_id: string
-          reason: string
-          recorded_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          id?: string
-          metadata?: Json
-          profile_id: string
-          reason: string
-          recorded_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          id?: string
-          metadata?: Json
-          profile_id?: string
-          reason?: string
-          recorded_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "experience_ledger_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "experience_ledger_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      friendships: {
-        Row: {
-          addressee_id: string
-          created_at: string | null
-          id: string
-          requester_id: string
-          status: Database["public"]["Enums"]["friendship_status"]
-          updated_at: string | null
-        }
-        Insert: {
-          addressee_id: string
-          created_at?: string | null
-          id?: string
-          requester_id: string
-          status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string | null
-        }
-        Update: {
-          addressee_id?: string
-          created_at?: string | null
-          id?: string
-          requester_id?: string
-          status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -304,6 +197,30 @@ export type Database = {
           trend?: string | null
           trend_change?: number | null
           weeks_on_chart?: number | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          channel: string
+          created_at: string | null
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string | null
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          id?: string
+          message?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -483,58 +400,6 @@ export type Database = {
           weekly_growth?: number | null
         }
         Relationships: []
-      }
-      friend_requests: {
-        Row: {
-          created_at: string
-          id: string
-          message: string | null
-          pair_key: string
-          recipient_profile_id: string
-          recipient_user_id: string
-          responded_at: string | null
-          sender_profile_id: string
-          sender_user_id: string
-          status: Database["public"]["Enums"]["friend_request_status"]
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          message?: string | null
-          recipient_profile_id: string
-          recipient_user_id: string
-          responded_at?: string | null
-          sender_profile_id: string
-          sender_user_id: string
-          status?: Database["public"]["Enums"]["friend_request_status"]
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          message?: string | null
-          recipient_profile_id?: string
-          recipient_user_id?: string
-          responded_at?: string | null
-          sender_profile_id?: string
-          sender_user_id?: string
-          status?: Database["public"]["Enums"]["friend_request_status"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "friend_requests_recipient_profile_id_fkey"
-            columns: ["recipient_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friend_requests_sender_profile_id_fkey"
-            columns: ["sender_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       game_events: {
         Row: {
@@ -742,130 +607,77 @@ export type Database = {
           },
         ]
       }
-      player_daily_cats: {
-        Row: {
-          activity_count: number
-          activity_date: string
-          category: string
-          created_at: string
-          id: string
-          metadata: Json | null
-          profile_id: string
-          updated_at: string
-          xp_earned: number
-          xp_spent: number
-        }
-        Insert: {
-          activity_count?: number
-          activity_date: string
-          category: string
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          profile_id: string
-          updated_at?: string
-          xp_earned?: number
-          xp_spent?: number
-        }
-        Update: {
-          activity_count?: number
-          activity_date?: string
-          category?: string
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          profile_id?: string
-          updated_at?: string
-          xp_earned?: number
-          xp_spent?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_daily_cats_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       player_attributes: {
         Row: {
           attribute_points: number | null
           attribute_points_spent: number | null
-          business: number | null
           business_acumen: number | null
-          composition: number | null
+          charisma: number | null
           created_at: string | null
           creative_insight: number | null
-          creativity: number | null
           crowd_engagement: number | null
           id: string
-          marketing: number | null
+          looks: number | null
           marketing_savvy: number | null
           mental_focus: number | null
           musical_ability: number | null
+          musicality: number | null
           physical_endurance: number | null
           profile_id: string | null
           rhythm_sense: number | null
           social_reach: number | null
           stage_presence: number | null
-          technical: number | null
           technical_mastery: number | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
           vocal_talent: number | null
         }
         Insert: {
           attribute_points?: number | null
           attribute_points_spent?: number | null
-          business?: number | null
           business_acumen?: number | null
-          composition?: number | null
+          charisma?: number | null
           created_at?: string | null
           creative_insight?: number | null
-          creativity?: number | null
           crowd_engagement?: number | null
           id?: string
-          marketing?: number | null
+          looks?: number | null
           marketing_savvy?: number | null
           mental_focus?: number | null
           musical_ability?: number | null
+          musicality?: number | null
           physical_endurance?: number | null
           profile_id?: string | null
           rhythm_sense?: number | null
           social_reach?: number | null
           stage_presence?: number | null
-          technical?: number | null
           technical_mastery?: number | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
           vocal_talent?: number | null
         }
         Update: {
           attribute_points?: number | null
           attribute_points_spent?: number | null
-          business?: number | null
           business_acumen?: number | null
-          composition?: number | null
+          charisma?: number | null
           created_at?: string | null
           creative_insight?: number | null
-          creativity?: number | null
           crowd_engagement?: number | null
           id?: string
-          marketing?: number | null
+          looks?: number | null
           marketing_savvy?: number | null
           mental_focus?: number | null
           musical_ability?: number | null
+          musicality?: number | null
           physical_endurance?: number | null
           profile_id?: string | null
           rhythm_sense?: number | null
           social_reach?: number | null
           stage_presence?: number | null
-          technical?: number | null
           technical_mastery?: number | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
           vocal_talent?: number | null
         }
         Relationships: [
@@ -937,7 +749,6 @@ export type Database = {
           guitar: number | null
           id: string
           marketing: number | null
-          profile_id: string | null
           performance: number | null
           songwriting: number | null
           technical: number | null
@@ -955,7 +766,6 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
-          profile_id?: string | null
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -973,7 +783,6 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
-          profile_id?: string | null
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -981,264 +790,7 @@ export type Database = {
           user_id?: string
           vocals?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "player_skills_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      player_weekly_activity: {
-        Row: {
-          created_at: string
-          id: string
-          profile_id: string
-          quests_completed: number
-          rehearsals_logged: number
-          sessions_completed: number
-          updated_at: string
-          week_start: string
-          xp_earned: number
-          xp_spent: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          profile_id: string
-          quests_completed?: number
-          rehearsals_logged?: number
-          sessions_completed?: number
-          updated_at?: string
-          week_start: string
-          xp_earned?: number
-          xp_spent?: number
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          profile_id?: string
-          quests_completed?: number
-          rehearsals_logged?: number
-          sessions_completed?: number
-          updated_at?: string
-          week_start?: string
-          xp_earned?: number
-          xp_spent?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_weekly_activity_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      player_xp_wallet: {
-        Row: {
-          attribute_points_earned: number
-          lifetime_xp: number
-          profile_id: string
-          skill_points_earned: number
-          xp_balance: number
-          xp_spent: number
-          last_recalculated: string
-        }
-        Insert: {
-          attribute_points_earned?: number
-          lifetime_xp?: number
-          profile_id: string
-          skill_points_earned?: number
-          xp_balance?: number
-          xp_spent?: number
-          last_recalculated?: string
-        }
-        Update: {
-          attribute_points_earned?: number
-          lifetime_xp?: number
-          profile_id?: string
-          skill_points_earned?: number
-          xp_balance?: number
-          xp_spent?: number
-          last_recalculated?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_xp_wallet_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profile_action_xp_events: {
-        Row: {
-          action_type: string
-          created_at: string
-          id: string
-          metadata: Json
-          occurred_at: string
-          profile_id: string
-          xp_amount: number
-        }
-        Insert: {
-          action_type: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          occurred_at?: string
-          profile_id: string
-          xp_amount: number
-        }
-        Update: {
-          action_type?: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          occurred_at?: string
-          profile_id?: string
-          xp_amount?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_action_xp_events_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profile_attribute_transactions: {
-        Row: {
-          attribute_key: string | null
-          attribute_value_delta: number
-          created_at: string
-          id: string
-          metadata: Json
-          points_delta: number
-          profile_id: string
-          transaction_type: string
-          xp_delta: number
-        }
-        Insert: {
-          attribute_key?: string | null
-          attribute_value_delta?: number
-          created_at?: string
-          id?: string
-          metadata?: Json
-          points_delta: number
-          profile_id: string
-          transaction_type: string
-          xp_delta?: number
-        }
-        Update: {
-          attribute_key?: string | null
-          attribute_value_delta?: number
-          created_at?: string
-          id?: string
-          metadata?: Json
-          points_delta?: number
-          profile_id?: string
-          transaction_type?: string
-          xp_delta?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_attribute_transactions_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profile_respec_events: {
-        Row: {
-          attribute_points_refunded: number
-          created_at: string
-          id: string
-          initiated_by: string | null
-          metadata: Json
-          profile_id: string
-          reset_reason: string | null
-          skill_points_refunded: number
-          xp_refunded: number
-        }
-        Insert: {
-          attribute_points_refunded?: number
-          created_at?: string
-          id?: string
-          initiated_by?: string | null
-          metadata?: Json
-          profile_id: string
-          reset_reason?: string | null
-          skill_points_refunded?: number
-          xp_refunded?: number
-        }
-        Update: {
-          attribute_points_refunded?: number
-          created_at?: string
-          id?: string
-          initiated_by?: string | null
-          metadata?: Json
-          profile_id?: string
-          reset_reason?: string | null
-          skill_points_refunded?: number
-          xp_refunded?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_respec_events_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profile_weekly_bonus_claims: {
-        Row: {
-          bonus_type: string
-          claimed_at: string
-          id: string
-          metadata: Json
-          profile_id: string
-          week_start: string
-          xp_awarded: number
-        }
-        Insert: {
-          bonus_type: string
-          claimed_at?: string
-          id?: string
-          metadata?: Json
-          profile_id: string
-          week_start: string
-          xp_awarded?: number
-        }
-        Update: {
-          bonus_type?: string
-          claimed_at?: string
-          id?: string
-          metadata?: Json
-          profile_id?: string
-          week_start?: string
-          xp_awarded?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_weekly_bonus_claims_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       player_streaming_accounts: {
         Row: {
@@ -1291,93 +843,86 @@ export type Database = {
           },
         ]
       }
+      player_xp_wallet: {
+        Row: {
+          attribute_points_earned: number | null
+          last_recalculated: string | null
+          lifetime_xp: number | null
+          profile_id: string
+          skill_points_earned: number | null
+          xp_balance: number | null
+          xp_spent: number | null
+        }
+        Insert: {
+          attribute_points_earned?: number | null
+          last_recalculated?: string | null
+          lifetime_xp?: number | null
+          profile_id: string
+          skill_points_earned?: number | null
+          xp_balance?: number | null
+          xp_spent?: number | null
+        }
+        Update: {
+          attribute_points_earned?: number | null
+          last_recalculated?: string | null
+          lifetime_xp?: number | null
+          profile_id?: string
+          skill_points_earned?: number | null
+          xp_balance?: number | null
+          xp_spent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_xp_wallet_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
-          age: number | null
           avatar_url: string | null
           bio: string | null
-          equipped_clothing: Json | null
           cash: number | null
-          city_of_birth: string | null
-          current_city_id: string | null
           created_at: string | null
           display_name: string | null
-          engagement_rate: number | null
           experience: number | null
-          experience_at_last_weekly_bonus: number
           fame: number | null
           fans: number | null
-          followers: number | null
-          gender: Database["public"]["Enums"]["profile_gender"] | null
-          health: number | null
           id: string
-          is_active: boolean
-          last_weekly_bonus_at: string | null
           level: number | null
-          weekly_bonus_metadata: Json
-          weekly_bonus_streak: number
-          slot_number: number
-          unlock_cost: number
           updated_at: string | null
           user_id: string
           username: string
         }
         Insert: {
-          age?: number | null
           avatar_url?: string | null
           bio?: string | null
-          equipped_clothing?: Json | null
           cash?: number | null
-          city_of_birth?: string | null
-          current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
-          engagement_rate?: number | null
           experience?: number | null
-          experience_at_last_weekly_bonus?: number
           fame?: number | null
           fans?: number | null
-          followers?: number | null
-          gender?: Database["public"]["Enums"]["profile_gender"] | null
-          health?: number | null
           id?: string
-          is_active?: boolean
-          last_weekly_bonus_at?: string | null
           level?: number | null
-          weekly_bonus_metadata?: Json
-          weekly_bonus_streak?: number
-          slot_number?: number
-          unlock_cost?: number
           updated_at?: string | null
           user_id: string
           username: string
         }
         Update: {
-          age?: number | null
           avatar_url?: string | null
           bio?: string | null
-          equipped_clothing?: Json | null
           cash?: number | null
-          city_of_birth?: string | null
-          current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
-          engagement_rate?: number | null
           experience?: number | null
-          experience_at_last_weekly_bonus?: number
           fame?: number | null
           fans?: number | null
-          followers?: number | null
-          gender?: Database["public"]["Enums"]["profile_gender"] | null
-          health?: number | null
           id?: string
-          is_active?: boolean
-          last_weekly_bonus_at?: string | null
           level?: number | null
-          weekly_bonus_metadata?: Json
-          weekly_bonus_streak?: number
-          slot_number?: number
-          unlock_cost?: number
           updated_at?: string | null
           user_id?: string
           username?: string
@@ -1413,6 +958,45 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      skill_parent_links: {
+        Row: {
+          created_at: string | null
+          id: string
+          parent_skill_id: string
+          skill_id: string
+          unlock_threshold: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          parent_skill_id: string
+          skill_id: string
+          unlock_threshold?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          parent_skill_id?: string
+          skill_id?: string
+          unlock_threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_parent_links_parent_skill_id_fkey"
+            columns: ["parent_skill_id"]
+            isOneToOne: false
+            referencedRelation: "skill_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_parent_links_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skill_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_posts: {
         Row: {
@@ -1637,50 +1221,6 @@ export type Database = {
           },
         ]
       }
-      xp_ledger: {
-        Row: {
-          attribute_points_delta: number
-          balance_after: number
-          created_at: string
-          event_type: string
-          id: string
-          metadata: Json | null
-          profile_id: string
-          skill_points_delta: number
-          xp_delta: number
-        }
-        Insert: {
-          attribute_points_delta?: number
-          balance_after: number
-          created_at?: string
-          event_type: string
-          id?: string
-          metadata?: Json | null
-          profile_id: string
-          skill_points_delta?: number
-          xp_delta: number
-        }
-        Update: {
-          attribute_points_delta?: number
-          balance_after?: number
-          created_at?: string
-          event_type?: string
-          id?: string
-          metadata?: Json | null
-          profile_id?: string
-          skill_points_delta?: number
-          xp_delta?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "xp_ledger_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1706,7 +1246,6 @@ export type Database = {
         Row: {
           base_payment: number | null
           capacity: number | null
-          city: string | null
           created_at: string | null
           id: string
           location: string | null
@@ -1718,7 +1257,6 @@ export type Database = {
         Insert: {
           base_payment?: number | null
           capacity?: number | null
-          city?: string | null
           created_at?: string | null
           id?: string
           location?: string | null
@@ -1730,7 +1268,6 @@ export type Database = {
         Update: {
           base_payment?: number | null
           capacity?: number | null
-          city?: string | null
           created_at?: string | null
           id?: string
           location?: string | null
@@ -1739,88 +1276,16 @@ export type Database = {
           requirements?: Json | null
           venue_type?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "venues_city_fkey"
-            columns: ["city"]
-            isOneToOne: false
-            referencedRelation: "cities"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
     }
     Views: {
-      accepted_friendships: {
-        Row: {
-          addressee_id: string
-          created_at: string
-          id: string
-          requester_id: string
-          responded_at: string | null
-          status: Database["public"]["Enums"]["friendship_status"]
-          updated_at: string
-        }
-        Relationships: []
-      }
-      pending_friendships: {
-        Row: {
-          addressee_id: string
-          created_at: string
-          id: string
-          requester_id: string
-          responded_at: string | null
-          status: Database["public"]["Enums"]["friendship_status"]
-          updated_at: string
-        }
-        Relationships: []
-      }
-      profile_action_xp_daily_totals: {
-        Row: {
-          action_type: string
-          activity_date: string | null
-          event_count: number | null
-          profile_id: string
-          total_xp: number | null
-        }
-        Relationships: []
-      }
-      profile_action_xp_weekly_totals: {
-        Row: {
-          action_type: string
-          event_count: number | null
-          profile_id: string
-          total_xp: number | null
-          week_start: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      get_profile_action_xp_totals: {
-        Args: {
-          p_profile_id: string
-          p_action: string
-          p_reference?: string
-        }
-        Returns: {
-          day_events: number | null
-          day_xp: number | null
-          week_events: number | null
-          week_xp: number | null
-        }[]
-      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
-      }
-      has_claimed_weekly_bonus: {
-        Args: {
-          p_profile_id: string
-          p_week_start: string
-          p_bonus_type: string
-        }
-        Returns: boolean
       }
       has_role: {
         Args: {
@@ -1829,36 +1294,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      search_public_profiles: {
-        Args: {
-          search_term: string
-          result_limit?: number
-        }
-        Returns: {
-          profile_id: string
-          user_id: string
-          email: string
-          username: string
-          display_name: string | null
-          avatar_url: string | null
-          bio: string | null
-          gender: Database["public"]["Enums"]["profile_gender"]
-          city_of_birth: string | null
-          age: number
-        }[]
-      }
     }
     Enums: {
-      chat_participant_status: "muted" | "online" | "typing"
-      friendship_status: "accepted" | "blocked" | "declined" | "pending"
       app_role: "admin" | "moderator" | "user"
-      friend_request_status: "accepted" | "cancelled" | "declined" | "pending"
-      profile_gender:
-        | "female"
-        | "male"
-        | "non_binary"
-        | "other"
-        | "prefer_not_to_say"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
     CompositeTypes: {

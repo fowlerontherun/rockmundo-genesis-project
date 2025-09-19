@@ -115,8 +115,8 @@ const CharacterSelect = () => {
             <span>{Number(character.fame ?? 0).toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span>Unlock Cost</span>
-            <span>${Number(character.unlock_cost ?? 0).toLocaleString()}</span>
+            <span>Starting Cash</span>
+            <span>${Number(character.cash ?? 0).toLocaleString()}</span>
           </div>
         </CardContent>
         <CardFooter>

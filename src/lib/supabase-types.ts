@@ -609,6 +609,52 @@ export interface Database {
           created_at?: string
         }
       }
+      chat_messages: {
+        Row: {
+          id: string
+          user_id: string
+          channel: string
+          message: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          channel?: string
+          message: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          channel?: string
+          message?: string
+          created_at?: string
+        }
+      }
+      skill_parent_links: {
+        Row: {
+          id: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          skill_id: string
+          parent_skill_id: string
+          unlock_threshold?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          skill_id?: string
+          parent_skill_id?: string
+          unlock_threshold?: number
+          created_at?: string
+        }
+      }
     }
     Views: {
       profile_action_xp_daily_totals: {
