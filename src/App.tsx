@@ -33,6 +33,7 @@ const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const MusicCreation = lazyWithRetry(() => import("./pages/MusicCreation"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const City = lazyWithRetry(() => import("./pages/City"));
+const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
@@ -87,6 +88,7 @@ function App() {
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
                     <Route path="venues" element={<VenueManagement />} />
+                    <Route path="festivals" element={<Festivals />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
                     <Route path="education" element={<Education />} />

@@ -66,6 +66,7 @@ const Navigation = () => {
       items: [
         { icon: Calendar, label: "Gig Booking", path: "/gigs" },
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
+        { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: MapPin, label: "Venue Management", path: "/venues" },
         { icon: Building2, label: "City Overview", path: "/city" },
         { icon: Mic, label: "Street Busking", path: "/busking" },
