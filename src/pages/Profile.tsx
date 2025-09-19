@@ -1280,11 +1280,11 @@ const Profile = () => {
                 )}
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => navigate("/training")}
+                    onClick={() => navigate("/education")}
                     className="bg-primary text-primary-foreground hover:bg-primary/90"
                     size="sm"
                   >
-                    Plan training
+                    Explore Education Hub
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
