@@ -51,7 +51,7 @@ const Navigation = () => {
         { icon: Music, label: "Music Studio", path: "/music" },
         { icon: Play, label: "Music Creation", path: "/create" },
         { icon: Music, label: "Song Manager", path: "/songs" },
-        { icon: GraduationCap, label: "Education Hub", path: "/education" },
+        { icon: GraduationCap, label: "Education", path: "/education" },
       ]
     },
     {
