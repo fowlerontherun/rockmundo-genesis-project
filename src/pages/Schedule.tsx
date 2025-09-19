@@ -843,7 +843,25 @@ const Schedule = () => {
         .order("date", { ascending: true })
         .order("time", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        if (typeof error === "object" && error !== null && "code" in error) {
+          const errorCode = (error as { code?: string }).code;
+          if (errorCode === "PGRST205") {
+            console.error(
+              "Schedule events table is missing. Ensure the latest Supabase migrations have been applied.",
+              error
+            );
+            toast({
+              title: "Schedule database not ready",
+              description: "Apply the latest Supabase migrations to create the schedule events table.",
+              variant: "destructive",
+            });
+            setEvents([]);
+            return;
+          }
+        }
+        throw error;
+      }
 
       const normalizedEvents: ScheduleEvent[] = (data ?? []).map((event) => ({
         id: event.id,

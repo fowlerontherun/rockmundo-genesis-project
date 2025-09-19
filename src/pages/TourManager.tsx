@@ -39,7 +39,7 @@ import {
   TRAVEL_MODES,
   type TravelMode,
 } from "@/utils/worldTravel";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 interface Tour {
   id: string;
@@ -757,18 +757,36 @@ const TourManager = () => {
           ? `${scheduleDescriptionBase} • Env: ${environmentNotes}`
           : scheduleDescriptionBase;
 
+        const scheduleStart = new Date(createdVenue.date);
+        const scheduleIso = scheduleStart.toISOString();
+        const scheduleDate = scheduleIso.slice(0, 10);
+        const scheduleTime = scheduleIso.slice(11, 19);
+        const durationMinutes = Math.max(
+          60,
+          Math.round((eventEnd.getTime() - scheduleStart.getTime()) / 60000)
+        );
+
+        const scheduleMetadata: Json = {
+          tour_venue_id: createdVenue.id,
+          tour_id: createdVenue.tour_id,
+          venue_id: createdVenue.venue_id,
+        };
+
         const { error: scheduleError } = await supabase
           .from('schedule_events')
           .insert({
             user_id: user.id,
-            event_type: 'tour',
-            title: `${selectedTour?.name ?? 'Tour Show'}${venueDetails ? ` - ${venueDetails.name}` : ''}`,
-            description: scheduleDescription,
-            start_time: createdVenue.date,
-            end_time: eventEnd.toISOString(),
+            title: `${selectedTour?.name ?? 'Tour Show'}${
+              venueDetails ? ` - ${venueDetails.name}` : ''
+            }`,
+            type: 'tour',
+            date: scheduleDate,
+            time: scheduleTime,
             location: venueDetails?.location ?? 'TBA',
-            status: 'scheduled',
-            tour_venue_id: createdVenue.id
+            status: 'upcoming',
+            description: scheduleDescription,
+            duration_minutes: durationMinutes,
+            metadata: scheduleMetadata,
           });
 
         if (scheduleError) {
