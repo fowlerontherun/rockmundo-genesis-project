@@ -39,6 +39,7 @@ const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanMan
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
+const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
@@ -86,6 +87,7 @@ function App() {
                     <Route path="achievements" element={<Achievements />} />
                     <Route path="city" element={<City />} />
                     <Route path="tours" element={<TourManager />} />
+                    <Route path="travel" element={<Travel />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
                     <Route path="venues" element={<VenueManagement />} />

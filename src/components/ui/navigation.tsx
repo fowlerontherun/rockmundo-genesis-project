@@ -27,7 +27,8 @@ import {
   Globe,
   Mic,
   GraduationCap,
-  DollarSign
+  DollarSign,
+  Plane
 } from "lucide-react";
 
 const Navigation = () => {
@@ -71,6 +72,7 @@ const Navigation = () => {
         { icon: MapPin, label: "Venue Management", path: "/venues" },
         { icon: Building2, label: "City Overview", path: "/city" },
         { icon: Mic, label: "Street Busking", path: "/busking" },
+        { icon: Plane, label: "Travel Planner", path: "/travel" },
       ]
     },
     {
@@ -122,6 +124,7 @@ const Navigation = () => {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Calendar, label: "Gigs", path: "/gigs" },
     { icon: Mic, label: "Busking", path: "/busking" },
+    { icon: Plane, label: "Travel", path: "/travel" },
     { icon: User, label: "Profile", path: "/profile" },
     { icon: DollarSign, label: "Underworld", path: "/underworld" },
   ];
