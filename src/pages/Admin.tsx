@@ -662,20 +662,16 @@ export default function Admin() {
 
         if (error) throw error;
 
-        const isLastItemOnPage = universities.length <= 1;
-        const nextTotal = Math.max(totalUniversities - 1, 0);
-
         setUniversities((prev) => prev.filter((item) => item.id !== id));
-        setTotalUniversities(nextTotal);
+        setTotalUniversities((prev) => Math.max(prev - 1, 0));
         if (editingUniversity?.id === id) {
           resetFormState();
         }
         await handleFetchUniversities();
         toast({
           title: "University deleted",
-          description: `${label} has been removed from the roster.`,
+          description: `${city || "the selected university"} has been removed from the roster.`,
         });
-        await handleFetchUniversities();
       } catch (error) {
         console.error("Failed to delete university", error);
         toast({
@@ -687,14 +683,7 @@ export default function Admin() {
         setDeletingUniversityId(null);
       }
     },
-    [
-      editingUniversity?.id,
-      handleFetchUniversities,
-      resetFormState,
-      toast,
-      totalUniversities,
-      universities.length,
-    ],
+    [editingUniversity?.id, handleFetchUniversities, resetFormState, toast],
   );
 
   const handleDeleteSkillBook = useCallback(
