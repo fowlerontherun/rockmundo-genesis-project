@@ -29,19 +29,34 @@ type ProfileRow = Tables<"profiles">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
-const sanitizeCityOfBirth = (value: string | null): string | null => {
+type CityOption = {
+  id: string;
+  name: string | null;
+  country: string | null;
+};
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const sanitizeCityOfBirth = (
+  value: string | null,
+  validCities?: CityOption[] | null,
+): string | null => {
   if (typeof value !== "string") {
     return null;
   }
 
   const trimmedValue = value.trim();
-  return trimmedValue.length > 0 ? trimmedValue : null;
-};
 
-type CityOption = {
-  id: string;
-  name: string | null;
-  country: string | null;
+  if (trimmedValue.length === 0) {
+    return null;
+  }
+
+  const isUuid = UUID_REGEX.test(trimmedValue);
+  const isKnownCity =
+    Array.isArray(validCities) && validCities.some((city) => city.id === trimmedValue);
+
+  return isUuid || isKnownCity ? trimmedValue : null;
 };
 
 type CharacterCreationLocationState = {
@@ -174,34 +189,29 @@ const CharacterCreation = () => {
         }
 
         const profileRecord = (profileData as ProfileRow | null) ?? null;
-        const sanitizedProfileRecord = profileRecord
-          ? {
-              ...profileRecord,
-              city_of_birth: sanitizeCityOfBirth(profileRecord.city_of_birth),
-            }
-          : null;
+        const sanitizedCityId = sanitizeCityOfBirth(profileRecord?.city_of_birth ?? null);
 
         console.log("[CharacterCreation] Profile load result", {
-          hasProfile: Boolean(sanitizedProfileRecord),
-          profileId: sanitizedProfileRecord?.id ?? null,
+          hasProfile: Boolean(profileRecord),
+          profileId: profileRecord?.id ?? null,
         });
-        setExistingProfile(sanitizedProfileRecord);
+        setExistingProfile(profileRecord);
 
-        if (sanitizedProfileRecord) {
-          setName(sanitizedProfileRecord.username ?? "");
-          setStageName(sanitizedProfileRecord.display_name ?? "");
-          setBio(sanitizedProfileRecord.bio ?? "");
-          setGender(sanitizedProfileRecord.gender ?? "prefer_not_to_say");
-          setCityOfBirth(sanitizedProfileRecord.city_of_birth ?? null);
+        if (profileRecord) {
+          setName(profileRecord.username ?? "");
+          setStageName(profileRecord.display_name ?? "");
+          setBio(profileRecord.bio ?? "");
+          setGender(profileRecord.gender ?? "prefer_not_to_say");
+          setCityOfBirth(sanitizedCityId);
 
-          if (sanitizedProfileRecord.id) {
+          if (profileRecord.id) {
             console.log("[CharacterCreation] Loading existing attributes", {
-              profileId: sanitizedProfileRecord.id,
+              profileId: profileRecord.id,
             });
             const { data: attributesData, error: attributesError, status: attributesStatus } = await supabase
               .from("player_attributes")
               .select("id")
-              .eq("profile_id", sanitizedProfileRecord.id)
+              .eq("profile_id", profileRecord.id)
               .maybeSingle();
 
             if (attributesError && attributesStatus !== 406) {
@@ -247,6 +257,28 @@ const CharacterCreation = () => {
 
     void fetchExistingData();
   }, [user, targetProfileId]);
+
+  useEffect(() => {
+    if (isLoading || citiesLoading) {
+      return;
+    }
+
+    const storedCityId = existingProfile?.city_of_birth ?? null;
+    const normalizedCityId = sanitizeCityOfBirth(storedCityId, cities);
+
+    if (normalizedCityId) {
+      setCityOfBirth((current) => (current === normalizedCityId ? current : normalizedCityId));
+      return;
+    }
+
+    if (storedCityId) {
+      console.warn("[CharacterCreation] Clearing invalid city_of_birth reference", {
+        storedCityId,
+      });
+    }
+
+    setCityOfBirth((current) => (current === null ? current : null));
+  }, [isLoading, citiesLoading, existingProfile, cities]);
 
   useEffect(() => {
     if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
@@ -300,7 +332,7 @@ const CharacterCreation = () => {
 
     try {
       let savedProfile: ProfileRow | null = null;
-      const sanitizedCityOfBirth = sanitizeCityOfBirth(cityOfBirth);
+      const sanitizedCityOfBirth = sanitizeCityOfBirth(cityOfBirth, cities);
 
       if (existingProfile) {
         console.log("[CharacterCreation] Updating existing profile", {
