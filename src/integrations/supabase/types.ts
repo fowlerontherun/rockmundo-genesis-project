@@ -120,6 +120,13 @@ export type Database = {
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "band_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       bands: {
@@ -1799,9 +1806,115 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_bookings: {
+        Row: {
+          created_at: string | null
+          event_date: string | null
+          expected_attendance: number | null
+          id: string
+          notes: string | null
+          status: string
+          ticket_price: number | null
+          tickets_sold: number
+          updated_at: string | null
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_date?: string | null
+          expected_attendance?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          ticket_price?: number | null
+          tickets_sold?: number
+          updated_at?: string | null
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_date?: string | null
+          expected_attendance?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          ticket_price?: number | null
+          tickets_sold?: number
+          updated_at?: string | null
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "venue_bookings_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      venue_relationships: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_interaction: string | null
+          notes: string | null
+          relationship_score: number
+          updated_at: string | null
+          user_id: string
+          venue_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_interaction?: string | null
+          notes?: string | null
+          relationship_score?: number
+          updated_at?: string | null
+          user_id: string
+          venue_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_interaction?: string | null
+          notes?: string | null
+          relationship_score?: number
+          updated_at?: string | null
+          user_id?: string
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_relationships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "venue_relationships_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       venues: {
         Row: {
           base_payment: number | null
+          city: string | null
           capacity: number | null
           created_at: string | null
           id: string
@@ -1813,6 +1926,7 @@ export type Database = {
         }
         Insert: {
           base_payment?: number | null
+          city?: string | null
           capacity?: number | null
           created_at?: string | null
           id?: string
@@ -1824,6 +1938,7 @@ export type Database = {
         }
         Update: {
           base_payment?: number | null
+          city?: string | null
           capacity?: number | null
           created_at?: string | null
           id?: string
@@ -1833,7 +1948,15 @@ export type Database = {
           requirements?: Json | null
           venue_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "venues_city_fkey"
+            columns: ["city"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
