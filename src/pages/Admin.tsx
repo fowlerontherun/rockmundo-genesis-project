@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowUpDown, BookOpen, Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { BookOpen, GraduationCap, Loader2, Pencil, RefreshCcw, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -20,6 +20,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -50,6 +52,12 @@ const sortDirectionLabels: Record<SortDirection, string> = {
   asc: "Ascending",
   desc: "Descending",
 };
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
 
 const universitySchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -104,22 +112,22 @@ type UniversityInsert = UniversitiesTable extends { Insert: infer I } ? I : neve
 type UniversityUpdate = UniversitiesTable extends { Update: infer U } ? U : never;
 
 const skillBookSchema = z.object({
-  skillSlug: z.string().min(1, "Skill selection is required"),
-  title: z.string().min(1, "Title is required"),
-  description: z
+  slug: z
     .string()
-    .max(500, "Description cannot exceed 500 characters")
-    .optional()
-    .or(z.literal("")),
+    .min(1, "Slug is required")
+    .regex(/^[a-z0-9-]+$/, "Slug may only include lowercase letters, numbers, and hyphens"),
+  title: z.string().min(1, "Title is required"),
+  author: z.string().min(1, "Author is required"),
+  description: z.string().min(1, "Description is required"),
+  skillSlug: z.string().min(1, "Skill selection is required"),
   cost: z
     .coerce
     .number({ invalid_type_error: "Cost must be a number" })
     .min(0, "Cost cannot be negative"),
-  xpValue: z
+  xpReward: z
     .coerce
-    .number({ invalid_type_error: "XP value must be a number" })
-    .min(0, "XP value cannot be negative"),
-  isActive: z.boolean(),
+    .number({ invalid_type_error: "XP reward must be a number" })
+    .refine((value) => value === 10, "XP reward is fixed at 10"),
 });
 
 type SkillBookFormValues = z.infer<typeof skillBookSchema>;
@@ -129,37 +137,50 @@ type SkillBooksTable = Database["public"]["Tables"] extends { skill_books: infer
   : {
       Row: {
         id: string;
-        skill_slug: string;
+        slug: string;
         title: string;
+        author: string | null;
         description: string | null;
+        skill_slug: string;
         cost: number;
-        xp_value: number;
-        is_active: boolean;
+        xp_reward: number;
         created_at: string | null;
         updated_at: string | null;
       };
       Insert: {
-        skill_slug: string;
+        slug: string;
         title: string;
+        author?: string | null;
         description?: string | null;
-        cost?: number;
-        xp_value?: number;
-        is_active?: boolean;
+        skill_slug: string;
+        cost: number;
+        xp_reward?: number;
       };
       Update: {
-        skill_slug?: string;
+        slug?: string;
         title?: string;
+        author?: string | null;
         description?: string | null;
+        skill_slug?: string;
         cost?: number;
-        xp_value?: number;
-        is_active?: boolean;
+        xp_reward?: number;
       };
     };
 
 type SkillBookRow = SkillBooksTable extends { Row: infer R } ? R : never;
 type SkillBookInsert = SkillBooksTable extends { Insert: infer I } ? I : never;
 type SkillBookUpdate = SkillBooksTable extends { Update: infer U } ? U : never;
+type SkillDefinitionsTable = Database["public"]["Tables"] extends { skill_definitions: infer T }
+  ? T
+  : {
+      Row: {
+        id: string;
+        slug: string;
+        display_name: string;
+      };
+    };
 
+type SkillDefinitionRow = SkillDefinitionsTable extends { Row: infer R } ? R : never;
 export default function Admin() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"universities" | "books">("universities");
@@ -169,17 +190,17 @@ export default function Admin() {
   const [sortColumn, setSortColumn] = useState<SortColumn>("city");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [isLoadingUniversities, setIsLoadingUniversities] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingUniversity, setIsSubmittingUniversity] = useState(false);
   const [editingUniversity, setEditingUniversity] = useState<UniversityRow | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingUniversityId, setDeletingUniversityId] = useState<string | null>(null);
   const [skillBooks, setSkillBooks] = useState<SkillBookRow[]>([]);
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinitionRow[]>([]);
   const [isLoadingSkillBooks, setIsLoadingSkillBooks] = useState(false);
-  const [isSubmittingSkillBook, setIsSubmittingSkillBook] = useState(false);
+  const [isSubmittingBook, setIsSubmittingBook] = useState(false);
   const [editingSkillBook, setEditingSkillBook] = useState<SkillBookRow | null>(null);
-  const [deletingSkillBookId, setDeletingSkillBookId] = useState<string | null>(null);
-  const [isSeedingBooks, setIsSeedingBooks] = useState(false);
+  const [deletingBookId, setDeletingBookId] = useState<string | null>(null);
+  const universityForm = useForm<UniversityFormValues>({
 
-  const form = useForm<UniversityFormValues>({
     resolver: zodResolver(universitySchema),
     defaultValues: {
       name: "",
@@ -193,64 +214,15 @@ export default function Admin() {
   const skillBookForm = useForm<SkillBookFormValues>({
     resolver: zodResolver(skillBookSchema),
     defaultValues: {
-      skillSlug: "",
+      slug: "",
       title: "",
+      author: "",
       description: "",
+      skillSlug: "",
       cost: 0,
-      xpValue: BOOK_XP_VALUE,
-      isActive: true,
+      xpReward: 10,
     },
   });
-
-  const skillDefinitionMap = useMemo(() => {
-    const map = new Map<string, SkillDefinitionRecord>();
-    for (const definition of SKILL_TREE_DEFINITIONS) {
-      map.set(definition.slug, definition);
-    }
-    return map;
-  }, []);
-
-  const skillOptions = useMemo(
-    () =>
-      Array.from(skillDefinitionMap.values())
-        .sort((a, b) => (a.display_name ?? a.slug).localeCompare(b.display_name ?? b.slug))
-        .map((definition) => {
-          const metadata = (definition.metadata ?? {}) as Record<string, unknown>;
-          const tierValue = metadata.tier;
-          const tier: TierName | undefined =
-            typeof tierValue === "string" && (tierValue === "Basic" || tierValue === "Professional" || tierValue === "Mastery")
-              ? (tierValue as TierName)
-              : undefined;
-          return {
-            value: definition.slug,
-            label: definition.display_name ?? definition.slug,
-            tier,
-          };
-        }),
-    [skillDefinitionMap],
-  );
-
-  const getSkillMetadata = useCallback(
-    (slug: string) => {
-      const definition = skillDefinitionMap.get(slug);
-      const metadata = (definition?.metadata ?? {}) as Record<string, unknown>;
-      const tierValue = metadata.tier;
-      const tier: TierName | undefined =
-        typeof tierValue === "string" && (tierValue === "Basic" || tierValue === "Professional" || tierValue === "Mastery")
-          ? (tierValue as TierName)
-          : undefined;
-      const track = typeof metadata.track === "string" ? metadata.track : undefined;
-      const category = typeof metadata.category === "string" ? metadata.category : undefined;
-      return {
-        name: definition?.display_name ?? slug,
-        tier,
-        track,
-        category,
-        description: definition?.description ?? null,
-      };
-    },
-    [skillDefinitionMap],
-  );
 
   const handleFetchUniversities = useCallback(async () => {
     setIsLoadingUniversities(true);
@@ -318,13 +290,57 @@ export default function Admin() {
     }
   }, [toast]);
 
+  const handleFetchSkillDefinitions = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("skill_definitions")
+        .select("id, slug, display_name")
+        .order("display_name", { ascending: true });
+
+      if (error) throw error;
+
+      setSkillDefinitions((data as SkillDefinitionRow[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load skill definitions", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load skills",
+        description: "We couldn't fetch the skill catalog. Refresh and try again.",
+      });
+    }
+  }, [toast]);
+
+  const handleFetchSkillBooks = useCallback(async () => {
+    setIsLoadingSkillBooks(true);
+    try {
+      const { data, error } = await supabase
+        .from("skill_books")
+        .select("*")
+        .order("title", { ascending: true });
+
+      if (error) throw error;
+
+      setSkillBooks((data as SkillBookRow[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load skill books", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load books",
+        description: "We couldn't retrieve the skill books list. Please try again later.",
+      });
+    } finally {
+      setIsLoadingSkillBooks(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     void handleFetchUniversities();
   }, [handleFetchUniversities]);
 
   useEffect(() => {
+    void handleFetchSkillDefinitions();
     void handleFetchSkillBooks();
-  }, [handleFetchSkillBooks]);
+  }, [handleFetchSkillDefinitions, handleFetchSkillBooks]);
 
   const formTitle = useMemo(() => (editingUniversity ? "Update University" : "Create University"), [editingUniversity]);
   const formDescription = useMemo(
@@ -373,16 +389,49 @@ export default function Admin() {
     [page, totalPages],
   );
 
+  const skillBookFormTitle = useMemo(
+    () => (editingSkillBook ? "Update Skill Book" : "Create Skill Book"),
+    [editingSkillBook],
+  );
+  const skillBookFormDescription = useMemo(
+    () =>
+      editingSkillBook
+        ? "Adjust the selected book's details or align it with a different skill unlock."
+        : "Add a new book that players can purchase to unlock skills with a 10 XP reward.",
+    [editingSkillBook],
+  );
+
+  const skillDefinitionBySlug = useMemo(() => {
+    return skillDefinitions.reduce<Record<string, SkillDefinitionRow>>((acc, definition) => {
+      if (definition.slug) {
+        acc[definition.slug] = definition;
+      }
+      return acc;
+    }, {});
+  }, [skillDefinitions]);
+
   const resetFormState = useCallback(() => {
-    form.reset({
-      name: "",
+    universityForm.reset({
       city: "",
       prestige: 50,
       qualityOfLearning: 50,
       courseCost: 0,
     });
     setEditingUniversity(null);
-  }, [form]);
+  }, [universityForm]);
+
+  const resetSkillBookForm = useCallback(() => {
+    skillBookForm.reset({
+      slug: "",
+      title: "",
+      author: "",
+      description: "",
+      skillSlug: "",
+      cost: 0,
+      xpReward: 10,
+    });
+    setEditingSkillBook(null);
+  }, [skillBookForm]);
 
   const resetSkillBookForm = useCallback(() => {
     skillBookForm.reset({
@@ -398,7 +447,7 @@ export default function Admin() {
 
   const onSubmit = useCallback(
     async (values: UniversityFormValues) => {
-      setIsSubmitting(true);
+      setIsSubmittingUniversity(true);
       try {
         const payload: UniversityInsert = {
           name: values.name,
@@ -446,7 +495,7 @@ export default function Admin() {
           description: "We couldn't save the university. Please review the details and try again.",
         });
       } finally {
-        setIsSubmitting(false);
+        setIsSubmittingUniversity(false);
       }
     },
     [editingUniversity, handleFetchUniversities, page, resetFormState, toast],
@@ -505,18 +554,87 @@ export default function Admin() {
     [editingSkillBook, handleFetchSkillBooks, resetSkillBookForm, toast],
   );
 
+  const onSubmitSkillBook = useCallback(
+    async (values: SkillBookFormValues) => {
+      setIsSubmittingBook(true);
+      try {
+        const payload: SkillBookInsert = {
+          slug: values.slug,
+          title: values.title,
+          author: values.author,
+          description: values.description,
+          skill_slug: values.skillSlug,
+          cost: values.cost,
+          xp_reward: values.xpReward,
+        };
+
+        if (editingSkillBook) {
+          const updatePayload: SkillBookUpdate = { ...payload };
+          const { error } = await supabase
+            .from("skill_books")
+            .update(updatePayload)
+            .eq("id", editingSkillBook.id);
+
+          if (error) throw error;
+
+          toast({
+            title: "Book updated",
+            description: `${values.title} has been updated successfully.`,
+          });
+        } else {
+          const { error } = await supabase.from("skill_books").insert(payload);
+
+          if (error) throw error;
+
+          toast({
+            title: "Book created",
+            description: `${values.title} is now available for purchase.`,
+          });
+        }
+
+        resetSkillBookForm();
+        await handleFetchSkillBooks();
+      } catch (error) {
+        console.error("Failed to submit skill book", error);
+        toast({
+          variant: "destructive",
+          title: "Save failed",
+          description: "We couldn't save the book. Please review the details and try again.",
+        });
+      } finally {
+        setIsSubmittingBook(false);
+      }
+    },
+    [editingSkillBook, handleFetchSkillBooks, resetSkillBookForm, toast],
+  );
+
   const handleEdit = useCallback(
     (university: UniversityRow) => {
       setEditingUniversity(university);
-      form.reset({
-        name: university.name ?? "",
+      universityForm.reset({
         city: university.city ?? "",
         prestige: university.prestige ?? 50,
         qualityOfLearning: university.quality_of_learning ?? 50,
         courseCost: university.course_cost ?? 0,
       });
     },
-    [form],
+    [universityForm],
+  );
+
+  const handleEditSkillBook = useCallback(
+    (book: SkillBookRow) => {
+      setEditingSkillBook(book);
+      skillBookForm.reset({
+        slug: book.slug ?? "",
+        title: book.title ?? "",
+        author: book.author ?? "",
+        description: book.description ?? "",
+        skillSlug: book.skill_slug ?? "",
+        cost: book.cost ?? 0,
+        xpReward: book.xp_reward ?? 10,
+      });
+    },
+    [skillBookForm],
   );
 
   const handleEditSkillBook = useCallback(
@@ -535,8 +653,9 @@ export default function Admin() {
   );
 
   const handleDelete = useCallback(
-    async (id: string, label: string) => {
-      setDeletingId(id);
+    async (id: string, city: string) => {
+      setDeletingUniversityId(id);
+
       try {
         const { error } = await supabase.from("universities").delete().eq("id", id);
 
@@ -563,89 +682,41 @@ export default function Admin() {
           description: "We couldn't remove the university. Please try again.",
         });
       } finally {
-        setDeletingId(null);
+        setDeletingUniversityId(null);
       }
     },
     [editingUniversity?.id, handleFetchUniversities, resetFormState, toast],
   );
 
   const handleDeleteSkillBook = useCallback(
-    async (id: string, label: string) => {
-      setDeletingSkillBookId(id);
+    async (id: string, title: string) => {
+      setDeletingBookId(id);
       try {
         const { error } = await supabase.from("skill_books").delete().eq("id", id);
 
         if (error) throw error;
-
-        setSkillBooks((previous) => previous.filter((book) => book.id !== id));
+        setSkillBooks((prev) => prev.filter((item) => item.id !== id));
         if (editingSkillBook?.id === id) {
           resetSkillBookForm();
         }
 
         toast({
-          title: "Skill book deleted",
-          description: `${label} has been removed.`,
+          title: "Book deleted",
+          description: `${title} has been removed from the catalog.`,
         });
       } catch (error) {
         console.error("Failed to delete skill book", error);
         toast({
           variant: "destructive",
           title: "Delete failed",
-          description: "We couldn't remove the skill book. Please try again.",
+          description: "We couldn't remove the book. Please try again.",
         });
       } finally {
-        setDeletingSkillBookId(null);
+        setDeletingBookId(null);
       }
     },
     [editingSkillBook?.id, resetSkillBookForm, toast],
   );
-
-  const handleSeedSkillBooks = useCallback(async () => {
-    setIsSeedingBooks(true);
-    try {
-      const inserts: SkillBookInsert[] = Array.from(skillDefinitionMap.entries()).map(([slug, definition]) => {
-        const metadata = (definition.metadata ?? {}) as Record<string, unknown>;
-        const tierValue = metadata.tier;
-        const tier: TierName | undefined =
-          typeof tierValue === "string" && (tierValue === "Basic" || tierValue === "Professional" || tierValue === "Mastery")
-            ? (tierValue as TierName)
-            : undefined;
-        const description =
-          typeof definition.description === "string" && definition.description.trim().length > 0
-            ? definition.description
-            : `Unlock the ${definition.display_name ?? slug} skill instantly.`;
-
-        return {
-          skill_slug: slug,
-          title: definition.display_name ?? slug,
-          description,
-          cost: tier ? BOOK_SEED_COSTS[tier] : BOOK_SEED_COSTS.Basic,
-          xp_value: BOOK_XP_VALUE,
-          is_active: true,
-        } satisfies SkillBookInsert;
-      });
-
-      const { error } = await supabase.from("skill_books").upsert(inserts, { onConflict: "skill_slug" });
-
-      if (error) throw error;
-
-      toast({
-        title: "Skill books synced",
-        description: "The catalog now matches the latest skill tree definitions.",
-      });
-
-      await handleFetchSkillBooks();
-    } catch (error) {
-      console.error("Failed to seed skill books", error);
-      toast({
-        variant: "destructive",
-        title: "Seeding failed",
-        description: "We couldn't generate the skill books from the skill tree.",
-      });
-    } finally {
-      setIsSeedingBooks(false);
-    }
-  }, [handleFetchSkillBooks, skillDefinitionMap, toast]);
 
   return (
     <AdminRoute>
@@ -661,57 +732,37 @@ export default function Admin() {
           <CardDescription>Maintain reference data that powers the game world.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as "universities" | "books")}
-            className="space-y-6"
-          >
-            <TabsList className="grid w-full max-w-sm grid-cols-2 gap-2">
+          <Tabs defaultValue="books" className="space-y-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="books" className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4" /> Books
               </TabsTrigger>
               <TabsTrigger value="universities" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Universities
+                <GraduationCap className="h-4 w-4" /> Universities
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="books" className="space-y-6">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center justify-between text-xl">
-                    {editingSkillBook ? "Update Skill Book" : "Create Skill Book"}
+                  <CardTitle className="text-xl flex items-center justify-between">
+                    {skillBookFormTitle}
                     {editingSkillBook ? <Badge variant="secondary">Editing</Badge> : null}
                   </CardTitle>
-                  <CardDescription>
-                    Define purchasable books that unlock and accelerate skill tree progress.
-                  </CardDescription>
+                  <CardDescription>{skillBookFormDescription}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...skillBookForm}>
-                    <form onSubmit={skillBookForm.handleSubmit(handleSubmitSkillBook)} className="grid gap-6 md:grid-cols-2">
+                    <form onSubmit={skillBookForm.handleSubmit(onSubmitSkillBook)} className="grid gap-6 md:grid-cols-2">
                       <FormField
                         control={skillBookForm.control}
-                        name="skillSlug"
+                        name="slug"
                         render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Linked Skill</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <FormControl>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Choose a skill" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {skillOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span>{option.label}</span>
-                                      {option.tier ? <Badge variant="outline">{option.tier}</Badge> : null}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <FormItem>
+                            <FormLabel>Slug</FormLabel>
+                            <FormControl>
+                              <Input placeholder="unique-book-slug" {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -721,10 +772,10 @@ export default function Admin() {
                         control={skillBookForm.control}
                         name="title"
                         render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Book Title</FormLabel>
+                          <FormItem>
+                            <FormLabel>Title</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter the display title" {...field} />
+                              <Input placeholder="Enter book title" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -733,17 +784,38 @@ export default function Admin() {
 
                       <FormField
                         control={skillBookForm.control}
-                        name="description"
+                        name="author"
                         render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Description</FormLabel>
+                          <FormItem>
+                            <FormLabel>Author</FormLabel>
                             <FormControl>
-                              <Textarea
-                                placeholder="Optional blurb shown to players"
-                                rows={3}
-                                {...field}
-                              />
+                              <Input placeholder="Author name" {...field} />
                             </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={skillBookForm.control}
+                        name="skillSlug"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Associated Skill</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a skill" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {skillDefinitions.map((definition) => (
+                                  <SelectItem key={definition.id} value={definition.slug}>
+                                    {definition.display_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -759,7 +831,7 @@ export default function Admin() {
                               <Input
                                 type="number"
                                 min={0}
-                                step={50}
+                                step={10}
                                 value={Number.isFinite(field.value) ? field.value : ""}
                                 onChange={(event) => field.onChange(event.target.valueAsNumber)}
                               />
@@ -771,18 +843,12 @@ export default function Admin() {
 
                       <FormField
                         control={skillBookForm.control}
-                        name="xpValue"
+                        name="xpReward"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>XP Reward</FormLabel>
                             <FormControl>
-                              <Input
-                                type="number"
-                                min={0}
-                                step={1}
-                                value={Number.isFinite(field.value) ? field.value : ""}
-                                onChange={(event) => field.onChange(event.target.valueAsNumber)}
-                              />
+                              <Input type="number" {...field} disabled />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -791,14 +857,13 @@ export default function Admin() {
 
                       <FormField
                         control={skillBookForm.control}
-                        name="isActive"
+                        name="description"
                         render={({ field }) => (
-                          <FormItem className="md:col-span-2 flex flex-col gap-2">
-                            <FormLabel>Status</FormLabel>
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Description</FormLabel>
                             <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              <Textarea placeholder="Provide a short summary" className="min-h-[120px]" {...field} />
                             </FormControl>
-                            <FormDescription>Inactive books will be hidden from players.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -806,19 +871,18 @@ export default function Admin() {
 
                       <div className="md:col-span-2 flex items-center justify-end gap-2">
                         {editingSkillBook ? (
-                          <Button type="button" variant="outline" onClick={resetSkillBookForm} disabled={isSubmittingSkillBook}>
-                            Reset
+                          <Button type="button" variant="outline" onClick={resetSkillBookForm} disabled={isSubmittingBook}>
+                            Cancel
                           </Button>
                         ) : null}
-                        <Button type="submit" disabled={isSubmittingSkillBook}>
-                          {isSubmittingSkillBook ? (
+                        <Button type="submit" disabled={isSubmittingBook}>
+                          {isSubmittingBook ? (
                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving
                             </>
-                          ) : editingSkillBook ? (
-                            "Update Skill Book"
                           ) : (
-                            "Create Skill Book"
+                            skillBookFormTitle
                           )}
                         </Button>
                       </div>
@@ -829,110 +893,86 @@ export default function Admin() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-xl">
+                  <CardTitle className="text-xl flex items-center gap-2">
                     Skill Books
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleSeedSkillBooks()}
-                        disabled={isSeedingBooks || isLoadingSkillBooks}
-                      >
-                        {isSeedingBooks ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        {isSeedingBooks ? "Syncing" : "Seed from skill tree"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => void handleFetchSkillBooks()}
-                        disabled={isLoadingSkillBooks}
-                        title="Refresh skill books"
-                      >
-                        <RefreshCcw className={`h-4 w-4 ${isLoadingSkillBooks ? "animate-spin" : ""}`} />
-                        <span className="sr-only">Refresh skill books</span>
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => void handleFetchSkillBooks()}
+                      disabled={isLoadingSkillBooks}
+                    >
+                      <RefreshCcw className={`h-4 w-4 ${isLoadingSkillBooks ? "animate-spin" : ""}`} />
+                      <span className="sr-only">Refresh books</span>
+                    </Button>
                   </CardTitle>
-                  <CardDescription>Review which books are purchasable in the Education hub.</CardDescription>
+                  <CardDescription>Manage purchasable skill books and their rewards.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                   {isLoadingSkillBooks ? (
                     <div className="flex items-center gap-3 text-muted-foreground">
-                      <Loader2 className="h-5 w-5 animate-spin" /> Loading skill books...
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Loading books...
                     </div>
                   ) : skillBooks.length === 0 ? (
-                    <div className="flex flex-col gap-3 text-muted-foreground">
-                      <p>No skill books are defined yet. Generate them from the skill tree to get started.</p>
-                      <div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => void handleSeedSkillBooks()}
-                          disabled={isSeedingBooks}
-                        >
-                          {isSeedingBooks ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          {isSeedingBooks ? "Syncing" : "Generate skill books"}
-                        </Button>
-                      </div>
-                    </div>
+                    <p className="text-muted-foreground">No books have been created yet. Add one using the form above.</p>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Skill</TableHead>
-                          <TableHead className="hidden lg:table-cell">Track</TableHead>
-                          <TableHead>Cost</TableHead>
-                          <TableHead>XP</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead className="hidden lg:table-cell">Skill</TableHead>
+                          <TableHead className="hidden sm:table-cell">Cost</TableHead>
+                          <TableHead className="hidden sm:table-cell">XP Unlock</TableHead>
+                          <TableHead className="hidden md:table-cell">Updated</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {skillBooks.map((book) => {
-                          const metadata = getSkillMetadata(book.skill_slug);
+                          const skillLabel = skillDefinitionBySlug[book.skill_slug]?.display_name ?? book.skill_slug;
+                          const timestamp = book.updated_at ?? book.created_at;
                           return (
                             <TableRow key={book.id}>
-                              <TableCell>
+                              <TableCell className="font-medium">
                                 <div className="flex flex-col">
-                                  <span className="font-medium">{book.title}</span>
-                                  <span className="text-xs text-muted-foreground">{metadata.name}</span>
-                                  {metadata.tier ? (
-                                    <Badge variant="outline" className="mt-1 w-max">{metadata.tier}</Badge>
+                                  <span>{book.title}</span>
+                                  {book.author ? (
+                                    <span className="text-xs text-muted-foreground">by {book.author}</span>
                                   ) : null}
                                 </div>
                               </TableCell>
-                              <TableCell className="hidden lg:table-cell">
-                                <span className="text-sm text-muted-foreground">
-                                  {metadata.track ?? metadata.category ?? "-"}
-                                </span>
+                              <TableCell className="hidden lg:table-cell">{skillLabel}</TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                {currencyFormatter.format(book.cost ?? 0)}
                               </TableCell>
-                              <TableCell>{`$${Number(book.cost ?? 0).toLocaleString()}`}</TableCell>
-                              <TableCell>{book.xp_value}</TableCell>
-                              <TableCell>
-                                <Badge variant={book.is_active ? "default" : "secondary"}>
-                                  {book.is_active ? "Active" : "Hidden"}
-                                </Badge>
+                              <TableCell className="hidden sm:table-cell">+{book.xp_reward ?? 0} XP</TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {timestamp ? new Date(timestamp).toLocaleDateString() : "—"}
                               </TableCell>
                               <TableCell className="flex justify-end gap-2">
-                                <Button type="button" variant="outline" size="icon" onClick={() => handleEditSkillBook(book)}>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => handleEditSkillBook(book)}
+                                  title="Edit book"
+                                >
                                   <Pencil className="h-4 w-4" />
-                                  <span className="sr-only">Edit {book.title}</span>
                                 </Button>
                                 <Button
                                   type="button"
                                   variant="destructive"
                                   size="icon"
                                   onClick={() => handleDeleteSkillBook(book.id, book.title)}
-                                  disabled={deletingSkillBookId === book.id}
+                                  disabled={deletingBookId === book.id}
+                                  title="Delete book"
                                 >
-                                  {deletingSkillBookId === book.id ? (
+                                  {deletingBookId === book.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <Trash2 className="h-4 w-4" />
                                   )}
-                                  <span className="sr-only">Delete {book.title}</span>
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -955,24 +995,10 @@ export default function Admin() {
                   <CardDescription>{formDescription}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 md:grid-cols-2">
+                  <Form {...universityForm}>
+                    <form onSubmit={universityForm.handleSubmit(onSubmit)} className="grid gap-6 md:grid-cols-2">
                       <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>University Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter university name" autoComplete="organization" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
+                        control={universityForm.control}
                         name="city"
                         render={({ field }) => (
                           <FormItem className="md:col-span-2">
@@ -986,7 +1012,7 @@ export default function Admin() {
                       />
 
                       <FormField
-                        control={form.control}
+                        control={universityForm.control}
                         name="prestige"
                         render={({ field }) => (
                           <FormItem>
@@ -1007,7 +1033,7 @@ export default function Admin() {
                       />
 
                       <FormField
-                        control={form.control}
+                        control={universityForm.control}
                         name="qualityOfLearning"
                         render={({ field }) => (
                           <FormItem>
@@ -1028,7 +1054,7 @@ export default function Admin() {
                       />
 
                       <FormField
-                        control={form.control}
+                        control={universityForm.control}
                         name="courseCost"
                         render={({ field }) => (
                           <FormItem>
@@ -1049,12 +1075,12 @@ export default function Admin() {
 
                       <div className="md:col-span-2 flex items-center justify-end gap-2">
                         {editingUniversity ? (
-                          <Button type="button" variant="outline" onClick={resetFormState} disabled={isSubmitting}>
+                          <Button type="button" variant="outline" onClick={resetFormState} disabled={isSubmittingUniversity}>
                             Reset
                           </Button>
                         ) : null}
-                        <Button type="submit" disabled={isSubmitting}>
-                          {isSubmitting ? (
+                        <Button type="submit" disabled={isSubmittingUniversity}>
+                          {isSubmittingUniversity ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Saving
@@ -1064,126 +1090,80 @@ export default function Admin() {
                           )}
                         />
 
-                        <FormField
-                          control={form.control}
-                          name="prestige"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Prestige (0-100)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  step={1}
-                                  value={Number.isFinite(field.value) ? field.value : ""}
-                                  onChange={(event) => field.onChange(event.target.valueAsNumber)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="qualityOfLearning"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Quality of Learning (0-100)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  step={1}
-                                  value={Number.isFinite(field.value) ? field.value : ""}
-                                  onChange={(event) => field.onChange(event.target.valueAsNumber)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="courseCost"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Average Course Cost</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step={100}
-                                  value={Number.isFinite(field.value) ? field.value : ""}
-                                  onChange={(event) => field.onChange(event.target.valueAsNumber)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="md:col-span-2 flex items-center justify-end gap-2">
-                          {editingUniversity ? (
-                            <Button type="button" variant="outline" onClick={resetFormState} disabled={isSubmitting}>
-                              Reset
-                            </Button>
-                          ) : null}
-                          <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Saving
-                              </>
-                            ) : (
-                              formTitle
-                            )}
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2">
-                      Universities
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => void handleFetchUniversities()}
-                        disabled={isLoadingUniversities}
-                      >
-                        <RefreshCcw className={`h-4 w-4 ${isLoadingUniversities ? "animate-spin" : ""}`} />
-                        <span className="sr-only">Refresh universities</span>
-                      </Button>
-                    </CardTitle>
-                    <CardDescription>Review, edit or remove universities available to players.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingUniversities ? (
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Loading universities...
-                      </div>
-                    ) : universities.length === 0 ? (
-                      <p className="text-muted-foreground">
-                        No universities have been defined yet. Create one using the form above.
-                      </p>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>City</TableHead>
-                            <TableHead className="hidden sm:table-cell">Prestige</TableHead>
-                            <TableHead className="hidden sm:table-cell">Quality</TableHead>
-                            <TableHead className="hidden md:table-cell">Course Cost</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    Universities
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => void handleFetchUniversities()}
+                      disabled={isLoadingUniversities}
+                    >
+                      <RefreshCcw className={`h-4 w-4 ${isLoadingUniversities ? "animate-spin" : ""}`} />
+                      <span className="sr-only">Refresh universities</span>
+                    </Button>
+                  </CardTitle>
+                  <CardDescription>Review, edit or remove universities available to players.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingUniversities ? (
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Loading universities...
+                    </div>
+                  ) : universities.length === 0 ? (
+                    <p className="text-muted-foreground">No universities have been defined yet. Create one using the form above.</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>City</TableHead>
+                          <TableHead className="hidden sm:table-cell">Prestige</TableHead>
+                          <TableHead className="hidden sm:table-cell">Quality</TableHead>
+                          <TableHead className="hidden md:table-cell">Course Cost</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {universities.map((university) => (
+                          <TableRow key={university.id}>
+                            <TableCell className="font-medium">{university.city}</TableCell>
+                            <TableCell className="hidden sm:table-cell">{university.prestige ?? "-"}</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {university.quality_of_learning ?? "-"}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {typeof university.course_cost === "number"
+                                ? currencyFormatter.format(university.course_cost)
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleEdit(university)}
+                                title="Edit university"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => handleDelete(university.id, university.city ?? "this university")}
+                                disabled={deletingUniversityId === university.id}
+                                title="Delete university"
+                              >
+                                {deletingUniversityId === university.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

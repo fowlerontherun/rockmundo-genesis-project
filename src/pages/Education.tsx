@@ -1,121 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, GraduationCap, Loader2, PlaySquare, Sparkles, Users } from "lucide-react";
+import { BookOpen, GraduationCap, Loader2, PlaySquare, Users, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type TierName } from "@/data/skillTree";
-import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
-import { useSkillSystem } from "@/hooks/useSkillSystem";
-import { type SkillDefinitionRecord, type SkillProgressRecord } from "@/hooks/useSkillSystem.types";
-import { useToast } from "@/hooks/use-toast";
-import {
-  ATTRIBUTE_METADATA,
-  type AttributeKey,
-  applyAttributeToValue
-} from "@/utils/attributeProgression";
-
-type SkillMetadata = SkillDefinitionRecord["metadata"];
-
-const TIER_SETTINGS: Record<
-  TierName,
-  {
-    durationMinutes: number;
-    difficultyMultiplier: number;
-  }
-> = {
-  Basic: { durationMinutes: 30, difficultyMultiplier: 1 },
-  Professional: { durationMinutes: 45, difficultyMultiplier: 1.5 },
-  Mastery: { durationMinutes: 60, difficultyMultiplier: 2 }
-};
-
-const WATCH_BONUS_INCREMENT = 0.1;
-const MAX_WATCH_BONUS_STACKS = 5;
-const MIN_COOLDOWN_PORTION = 0.45;
-const MIN_COOLDOWN_MINUTES = 15;
-
-const ATTRIBUTE_MATCHERS: Array<{ match: RegExp; keys: AttributeKey[] }> = [
-  { match: /(songwriting|lyrics|compos|arrang|melody)/i, keys: ["creative_insight"] },
-  { match: /(production|mix|engineer|studio|record)/i, keys: ["technical_mastery"] },
-  { match: /(performance|stage|tour|crowd|show)/i, keys: ["stage_presence"] },
-  { match: /(marketing|promo|brand|social)/i, keys: ["marketing_savvy"] },
-  { match: /(business|manager|finance|deal)/i, keys: ["business_acumen"] },
-  { match: /(rhythm|drum|groove|percussion)/i, keys: ["rhythm_sense"] },
-  { match: /(vocal|sing|voice)/i, keys: ["vocal_talent"] },
-  { match: /(guitar|bass|instrument|technique|musician)/i, keys: ["musical_ability"] }
-];
-
-const ensureTier = (tierValue: unknown): TierName => {
-  if (tierValue === "Professional" || tierValue === "Mastery") {
-    return tierValue;
-  }
-  return "Basic";
-};
-
-const inferAttributeKeys = (slug: string, metadata: SkillMetadata): AttributeKey[] => {
-  const haystack = `${slug} ${(metadata?.track as string | undefined) ?? ""} ${(metadata?.category as string | undefined) ?? ""}`;
-  for (const entry of ATTRIBUTE_MATCHERS) {
-    if (entry.match.test(haystack)) {
-      return entry.keys;
-    }
-  }
-  return ["musical_ability"];
-};
-
-const buildVideoUrl = (definition: SkillDefinitionRecord) => {
-  const searchTerm = definition.display_name ?? definition.slug.replace(/_/g, " ");
-  const query = encodeURIComponent(`${searchTerm} music lesson`);
-  return `https://www.youtube.com/results?search_query=${query}`;
-};
-
-const computeCooldownMinutes = (durationMinutes: number, watchCount: number) => {
-  const stacks = Math.max(0, Math.min(MAX_WATCH_BONUS_STACKS, watchCount - 1));
-  const reductionRatio = Math.max(MIN_COOLDOWN_PORTION, 1 - stacks * 0.1);
-  const computed = Math.round(durationMinutes * reductionRatio);
-  return Math.max(MIN_COOLDOWN_MINUTES, computed);
-};
-
-type TrainingPreview = {
-  xpGain: number;
-  durationMinutes: number;
-  tier: TierName;
-  attributeMultiplier: number;
-  averageAttributeValue: number;
-  attributeKeys: AttributeKey[];
-  watchBonus: number;
-  difficultyMultiplier: number;
-};
-
-const computeTrainingPreview = (
-  definition: SkillDefinitionRecord,
-  attributes: PlayerAttributes,
-  nextWatchCount: number
-): TrainingPreview => {
-  const tier = ensureTier(definition.metadata?.tier);
-  const settings = TIER_SETTINGS[tier];
-  const baseXp = Math.max(1, Number(definition.base_xp_gain ?? 6));
-  const stacks = Math.max(0, Math.min(MAX_WATCH_BONUS_STACKS, nextWatchCount - 1));
-  const watchBonus = 1 + stacks * WATCH_BONUS_INCREMENT;
-  const attributeKeys = inferAttributeKeys(definition.slug, definition.metadata);
-  const rawXp = Math.round(baseXp * settings.difficultyMultiplier * watchBonus);
-  const { value: xpGain, multiplier: attributeMultiplier, averageValue } = applyAttributeToValue(
-    rawXp,
-    attributes,
-    attributeKeys
-  );
-
-  return {
-    xpGain,
-    durationMinutes: settings.durationMinutes,
-    tier,
-    attributeMultiplier,
-    averageAttributeValue: averageValue,
-    attributeKeys,
-    watchBonus,
-    difficultyMultiplier: settings.difficultyMultiplier
-  };
-};
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/use-auth-context";
+import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
+import { awardSpecialXp } from "@/utils/progression";
 
 const tabs = [
   {
@@ -146,9 +42,13 @@ const tabs = [
     value: "band",
     label: "Band Learning",
     icon: Sparkles,
-    description: "Level up together with intensives and rotating focus cycles.",
-  },
+    description: "Structured learning plans designed to level up your entire band together."
+  }
 ];
+
+type SkillBookRow = Tables<"skill_books">;
+type PlayerSkillBookRow = Tables<"player_skill_books">;
+type SkillDefinitionRow = Tables<"skill_definitions">;
 
 const universityRoutes = [
   {
@@ -689,300 +589,344 @@ const Education = () => {
       map.get(category)?.push(definition);
     }
 
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([category, list]) => ({
-        category,
-        skills: list.sort((a, b) => {
-          const tierA = ensureTier(a.metadata?.tier);
-          const tierB = ensureTier(b.metadata?.tier);
-          if (tierA === tierB) {
-            return (a.display_name ?? a.slug).localeCompare(b.display_name ?? b.slug);
-          }
-          const order: Record<TierName, number> = { Basic: 0, Professional: 1, Mastery: 2 };
-          return order[tierA] - order[tierB];
-        })
-      }));
-  }, [definitions]);
+const Education = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [skillBooks, setSkillBooks] = useState<SkillBookRow[]>([]);
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinitionRow[]>([]);
+  const [ownedBooks, setOwnedBooks] = useState<Record<string, PlayerSkillBookRow>>({});
+  const [skillUnlocks, setSkillUnlocks] = useState<
+    Record<string, { isUnlocked: boolean; unlockLevel: number | null }>
+  >({});
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [pendingPurchaseId, setPendingPurchaseId] = useState<string | null>(null);
+  const [pendingReadId, setPendingReadId] = useState<string | null>(null);
 
-  const startTrainingSession = useCallback(
-    async (
-      payload: {
-        skillSlug: string;
-        skillName: string;
-        durationMinutes: number;
-        xpGain: number;
-        videoUrl: string;
-        watchCount: number;
-        tier: TierName;
-        attributeMultiplier: number;
-        attributeKeys: AttributeKey[];
-      }
-    ) => {
-      try {
-        await addActivity(
-          "skill_training",
-          `Watched a ${payload.skillName} YouTube lesson`,
-          undefined,
-          {
-            source: "youtube_video",
-            skill_slug: payload.skillSlug,
-            duration_minutes: payload.durationMinutes,
-            xp_gain: payload.xpGain,
-            watch_count: payload.watchCount,
-            tier: payload.tier,
-            attribute_multiplier: payload.attributeMultiplier,
-            attribute_keys: payload.attributeKeys,
-            video_url: payload.videoUrl
-          }
-        );
-      } catch (error) {
-        console.error("Failed to log training session", error);
-      }
-    },
-    [addActivity]
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }),
+    [],
   );
 
-  const handleWatchVideo = useCallback(
-    async (definition: SkillDefinitionRecord) => {
-      const slug = definition.slug;
-      const skillValue = getSkillValue(slug);
-
-      if (skillValue <= 0) {
-        toast({
-          title: "Skill locked",
-          description: "Unlock this skill by reaching level 1 before training with videos.",
-          variant: "destructive"
-        });
-        return;
+  const skillDefinitionBySlug = useMemo(() => {
+    return skillDefinitions.reduce<Record<string, SkillDefinitionRow>>((acc, definition) => {
+      if (definition.slug) {
+        acc[definition.slug] = definition;
       }
+      return acc;
+    }, {});
+  }, [skillDefinitions]);
 
-      const remainingCooldown = getCooldownRemaining(slug);
-      if (remainingCooldown > 0) {
-        toast({
-          title: "Cooldown active",
-          description: `Come back in ${remainingCooldown} minute${remainingCooldown === 1 ? "" : "s"} to gain full rewards.`,
-          variant: "default"
-        });
-        return;
+  const skillDefinitionIdBySlug = useMemo(() => {
+    return skillDefinitions.reduce<Record<string, string>>((acc, definition) => {
+      if (definition.slug && definition.id) {
+        acc[definition.slug] = definition.id;
       }
+      return acc;
+    }, {});
+  }, [skillDefinitions]);
 
-      const videoUrl = buildVideoUrl(definition);
-      let pendingWindow: Window | null = null;
-      if (typeof window !== "undefined") {
-        pendingWindow = window.open(videoUrl, "_blank", "noopener,noreferrer");
-      }
+  const loadSkillData = useCallback(async () => {
+    setIsLoadingBooks(true);
+    try {
+      const [{ data: booksData, error: booksError }, { data: definitionsData, error: definitionsError }] =
+        await Promise.all([
+          supabase.from("skill_books").select("*").order("title", { ascending: true }),
+          supabase.from("skill_definitions").select("id, slug, display_name").order("display_name", { ascending: true }),
+        ]);
 
-      setActiveSkill(slug);
+      if (booksError) throw booksError;
+      if (definitionsError) throw definitionsError;
 
+      setSkillBooks((booksData as SkillBookRow[] | null) ?? []);
+      setSkillDefinitions((definitionsData as SkillDefinitionRow[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load skill books", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load books",
+        description: "We couldn't retrieve the education library. Please try again later.",
+      });
+    } finally {
+      setIsLoadingBooks(false);
+    }
+  }, [toast]);
+
+  const loadOwnedBooks = useCallback(
+    async (currentProfileId: string) => {
       try {
-        const watchCount = videoWatchCounts[slug] ?? 0;
-        const nextWatchCount = watchCount + 1;
-        const preview = computeTrainingPreview(definition, attributes, nextWatchCount);
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .select("*")
+          .eq("profile_id", currentProfileId);
 
-        await startTrainingSession({
-          skillSlug: slug,
-          skillName: definition.display_name ?? slug,
-          durationMinutes: preview.durationMinutes,
-          xpGain: preview.xpGain,
-          videoUrl,
-          watchCount: nextWatchCount,
-          tier: preview.tier,
-          attributeMultiplier: preview.attributeMultiplier,
-          attributeKeys: preview.attributeKeys
-        });
+        if (error) throw error;
 
-        const newSkillValue = Math.min(1000, Math.round(skillValue + preview.xpGain));
-        await updateSkillProgress({
-          skillSlug: slug,
-          newSkillValue,
-          xpGain: preview.xpGain,
-          timestamp: new Date().toISOString(),
-          markUnlocked: true
-        });
-
-        setVideoWatchCounts((prev) => ({
-          ...prev,
-          [slug]: nextWatchCount
-        }));
-
-        const cooldownMinutes = computeCooldownMinutes(preview.durationMinutes, nextWatchCount);
-        setCooldowns((prev) => ({
-          ...prev,
-          [slug]: Date.now() + cooldownMinutes * 60000
-        }));
-
-        setLastWatchedAt((prev) => ({
-          ...prev,
-          [slug]: Date.now()
-        }));
-
-        toast({
-          title: "Session completed",
-          description: `You earned ${preview.xpGain} XP from ${definition.display_name ?? slug}.`
-        });
-
-        void refreshProgress();
-      } catch (error) {
-        console.error("Failed to process training session", error);
-        if (pendingWindow && !pendingWindow.closed) {
-          pendingWindow.close();
+        const map: Record<string, PlayerSkillBookRow> = {};
+        for (const row of (data as PlayerSkillBookRow[] | null) ?? []) {
+          map[row.skill_book_id] = row;
         }
+        setOwnedBooks(map);
+      } catch (error) {
+        console.error("Failed to load owned books", error);
         toast({
-          title: "Training failed",
-          description: error instanceof Error ? error.message : "Something went wrong while awarding XP.",
-          variant: "destructive"
+          variant: "destructive",
+          title: "Unable to load your books",
+          description: "We couldn't check which books you own.",
+        });
+      }
+    },
+    [toast],
+  );
+
+  const loadSkillUnlocks = useCallback(
+    async (currentProfileId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("profile_skill_unlocks")
+          .select("skill_id, is_unlocked, unlock_level")
+          .eq("profile_id", currentProfileId);
+
+        if (error) throw error;
+
+        const map: Record<string, { isUnlocked: boolean; unlockLevel: number | null }> = {};
+        for (const entry of (data as { skill_id: string; is_unlocked: boolean | null; unlock_level: number | null }[] | null) ?? []) {
+          if (entry.skill_id) {
+            map[entry.skill_id] = {
+              isUnlocked: Boolean(entry.is_unlocked),
+              unlockLevel: entry.unlock_level,
+            };
+          }
+        }
+        setSkillUnlocks(map);
+      } catch (error) {
+        console.error("Failed to load skill unlocks", error);
+        toast({
+          variant: "destructive",
+          title: "Unable to check skill unlocks",
+          description: "We couldn't determine which skills are already unlocked.",
+        });
+      }
+    },
+    [toast],
+  );
+
+  useEffect(() => {
+    void loadSkillData();
+  }, [loadSkillData]);
+
+  useEffect(() => {
+    if (!user) {
+      setProfileId(null);
+      setOwnedBooks({});
+      setSkillUnlocks({});
+      return;
+    }
+
+    let isCurrent = true;
+    setIsLoadingProfile(true);
+    const fetchProfile = async () => {
+      try {
+        const profile = await fetchPrimaryProfileForUser(user.id);
+        if (!isCurrent) return;
+        setProfileId(profile?.id ?? null);
+      } catch (error) {
+        console.error("Failed to load active profile", error);
+        if (isCurrent) {
+          toast({
+            variant: "destructive",
+            title: "Unable to load your character",
+            description: "We couldn't find an active profile. Create a character to unlock books.",
+          });
+        }
+        setProfileId(null);
+      } finally {
+        if (isCurrent) {
+          setIsLoadingProfile(false);
+        }
+      }
+    };
+
+    void fetchProfile();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (!profileId) {
+      setOwnedBooks({});
+      setSkillUnlocks({});
+      return;
+    }
+
+    void loadOwnedBooks(profileId);
+    void loadSkillUnlocks(profileId);
+  }, [loadOwnedBooks, loadSkillUnlocks, profileId]);
+
+  const handlePurchase = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "Create an account or sign in to purchase books.",
+        });
+        return;
+      }
+
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "You need an active character profile to collect books.",
+        });
+        return;
+      }
+
+      if (ownedBooks[book.id]) {
+        toast({
+          title: "Already owned",
+          description: "This book is already in your library.",
+        });
+        return;
+      }
+
+      setPendingPurchaseId(book.id);
+      try {
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .insert({ profile_id: profileId, skill_book_id: book.id })
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const inserted = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: inserted }));
+        toast({
+          title: "Book purchased",
+          description: `${book.title} is now in your inventory.`,
+        });
+      } catch (error) {
+        console.error("Failed to purchase book", error);
+        toast({
+          variant: "destructive",
+          title: "Purchase failed",
+          description: "We couldn't complete that purchase. Please try again.",
         });
       } finally {
-        setActiveSkill(null);
+        setPendingPurchaseId(null);
       }
     },
-    [
-      attributes,
-      getCooldownRemaining,
-      getSkillValue,
-      refreshProgress,
-      startTrainingSession,
-      toast,
-      updateSkillProgress,
-      videoWatchCounts
-    ]
+    [ownedBooks, profileId, toast, user],
   );
 
-  const renderSkillCard = useCallback(
-    (definition: SkillDefinitionRecord) => {
-      const slug = definition.slug;
-      const displayName = definition.display_name ?? slug;
-      const watchCount = videoWatchCounts[slug] ?? 0;
-      const nextPreview = computeTrainingPreview(definition, attributes, watchCount + 1);
-      const tier = nextPreview.tier;
-      const cooldownRemaining = getCooldownRemaining(slug);
-      const skillValue = getSkillValue(slug);
-      const progressValue = Number.isFinite(skillValue) ? Math.min(100, (skillValue / 1000) * 100) : 0;
-      const attributeLabels = nextPreview.attributeKeys.map((key) => ATTRIBUTE_METADATA[key]?.label ?? key).join(", ");
-      const lastWatched = lastWatchedAt[slug];
+  const handleRead = useCallback(
+    async (book: SkillBookRow) => {
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "Create or select a character before reading books.",
+        });
+        return;
+      }
 
-      return (
-        <Card key={slug} className="h-full border-dashed">
-          <CardHeader className="space-y-2">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="text-base font-semibold">{displayName}</CardTitle>
-                {definition.description ? (
-                  <CardDescription className="text-xs">{definition.description}</CardDescription>
-                ) : null}
-              </div>
-              <Badge variant="secondary" className="text-xs font-semibold">
-                {tier}
-              </Badge>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>{(definition.metadata?.track as string | undefined) ?? "Skill Training"}</span>
-              <span className="hidden sm:inline">•</span>
-              <span>{(definition.metadata?.category as string | undefined) ?? "General"}</span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Progress value={progressValue} className="h-2" />
-              <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground">
-                <span>Skill value</span>
-                <span>{Math.round(skillValue)}</span>
-              </div>
-            </div>
+      const ownership = ownedBooks[book.id];
+      if (!ownership) {
+        toast({
+          variant: "destructive",
+          title: "Purchase required",
+          description: "Buy the book before attempting to read it.",
+        });
+        return;
+      }
 
-            <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-xs">
-              <div className="flex items-center justify-between">
-                <span>Next XP reward</span>
-                <span className="font-semibold">+{nextPreview.xpGain}</span>
-              </div>
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>Duration</span>
-                <span>{nextPreview.durationMinutes} minutes</span>
-              </div>
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>Attribute boost</span>
-                <span>
-                  ×{nextPreview.attributeMultiplier.toFixed(2)}
-                  {attributeLabels ? ` (${attributeLabels})` : ""}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>Watch bonus</span>
-                <span>{((nextPreview.watchBonus - 1) * 100).toFixed(0)}%</span>
-              </div>
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>Cooldown after session</span>
-                <span>{computeCooldownMinutes(nextPreview.durationMinutes, watchCount + 1)} min</span>
-              </div>
-            </div>
+      if (ownership.xp_awarded_at) {
+        toast({
+          title: "Already completed",
+          description: "You've already gained the XP from this book.",
+        });
+        return;
+      }
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>Watch count: {watchCount}</span>
-              {lastWatched ? (
-                <span>Last watched {new Date(lastWatched).toLocaleTimeString()}</span>
-              ) : (
-                <span>Not watched yet</span>
-              )}
-            </div>
+      setPendingReadId(book.id);
+      const xpAmount = book.xp_reward ?? 10;
+      const metadata = {
+        book_id: book.id,
+        book_slug: book.slug,
+        skill_slug: book.skill_slug,
+      };
+      const now = new Date().toISOString();
+      try {
+        await awardSpecialXp({ amount: xpAmount, reason: `skill_book:${book.slug}`, metadata });
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                onClick={() => handleWatchVideo(definition)}
-                disabled={activeSkill === slug || skillValue <= 0}
-                className="w-full sm:flex-1"
-              >
-                {activeSkill === slug ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing
-                  </>
-                ) : (
-                  <>
-                    <PlaySquare className="mr-2 h-4 w-4" />
-                    Watch & Train
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  const url = buildVideoUrl(definition);
-                  if (typeof window !== "undefined") {
-                    window.open(url, "_blank", "noopener,noreferrer");
-                  }
-                }}
-              >
-                Open Playlist
-              </Button>
-            </div>
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .update({ consumed_at: now, xp_awarded_at: now })
+          .eq("id", ownership.id)
+          .select("*")
+          .single();
 
-            {skillValue <= 0 ? (
-              <p className="text-xs font-medium text-destructive">
-                Unlock this skill by progressing to level 1 before training with YouTube resources.
-              </p>
-            ) : cooldownRemaining > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Cooldown active — ready in {cooldownRemaining} minute{cooldownRemaining === 1 ? "" : "s"}.
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Ready to train now.</p>
-            )}
-          </CardContent>
-        </Card>
-      );
+        if (error) throw error;
+
+        const updated = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: updated }));
+
+        const skillId = skillDefinitionIdBySlug[book.skill_slug];
+        if (skillId) {
+          const { error: unlockError } = await supabase
+            .from("profile_skill_unlocks")
+            .upsert(
+              {
+                profile_id: profileId,
+                skill_id: skillId,
+                is_unlocked: true,
+                unlocked_at: now,
+                unlock_level: Math.max(10, skillUnlocks[skillId]?.unlockLevel ?? 0),
+                unlock_source: `book:${book.slug}`,
+              },
+              { onConflict: "profile_id,skill_id" },
+            );
+
+          if (unlockError) throw unlockError;
+
+          setSkillUnlocks((prev) => ({
+            ...prev,
+            [skillId]: {
+              isUnlocked: true,
+              unlockLevel: Math.max(10, prev[skillId]?.unlockLevel ?? 0),
+            },
+          }));
+        }
+
+        toast({
+          title: "Skill unlocked",
+          description: `Reading ${book.title} granted +${xpAmount} XP.`,
+        });
+      } catch (error) {
+        console.error("Failed to process book read", error);
+        toast({
+          variant: "destructive",
+          title: "Progress not saved",
+          description: "We couldn't record that reading session. Please try again.",
+        });
+      } finally {
+        setPendingReadId(null);
+      }
     },
-    [
-      activeSkill,
-      attributes,
-      getCooldownRemaining,
-      getSkillValue,
-      handleWatchVideo,
-      lastWatchedAt,
-      videoWatchCounts
-    ]
+    [ownedBooks, profileId, skillDefinitionIdBySlug, skillUnlocks, toast],
   );
+
+  const isAuthenticated = Boolean(user);
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -1005,186 +949,134 @@ const Education = () => {
 
         <TabsContent value="books" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                <CardTitle>Skill Book Marketplace</CardTitle>
-                <CardDescription>
-                  Purchase focused study guides to unlock skill tree branches instantly and earn bonus XP.
-                </CardDescription>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => void loadBooks()}
-                disabled={loadingBooks}
-                title="Refresh available books"
-              >
-                <RefreshCcw className={`h-4 w-4 ${loadingBooks ? "animate-spin" : ""}`} />
-                <span className="sr-only">Refresh books</span>
-              </Button>
+            <CardHeader>
+              <CardTitle>Skill Book Library</CardTitle>
+              <CardDescription>
+                Purchase books to unlock foundational skills and earn a one-time 10 XP reward when you read them.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {!user || !profile ? (
-                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Sign in and choose a character to buy or read skill books.
-                </div>
-              ) : null}
-
-              {loadingBooks ? (
+            <CardContent className="space-y-6">
+              {!isAuthenticated ? (
+                <p className="text-sm text-muted-foreground">
+                  Sign in to start collecting books and unlocking skills.
+                </p>
+              ) : isLoadingProfile ? (
                 <div className="flex items-center gap-3 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Loading books...
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading your character...
                 </div>
-              ) : availableBooks.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No books are currently available. Check back soon for new study materials.
+              ) : !profileId ? (
+                <p className="text-sm text-muted-foreground">
+                  Create a character profile to track your book progress.
+                </p>
+              ) : null}
+              {isLoadingBooks ? (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading books...
+                </div>
+              ) : skillBooks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No books have been published yet. Check back soon for new study material.
                 </p>
               ) : (
-                <div className="space-y-4">
-                  {availableBooks.map((book) => {
-                    const skillMetadata = getSkillMetadata(book.skill_slug);
-                    const ownedEntry = ownedBooksMap.get(book.id);
-                    const alreadyUnlocked = knownSkillSlugs.has(book.skill_slug);
-                    const alreadyOwned = Boolean(ownedEntry);
-                    const alreadyRead = ownedEntry?.is_consumed ?? false;
-                    const purchaseDisabled = !user || !profile || alreadyUnlocked || alreadyOwned;
-                    const readDisabled =
-                      !user ||
-                      !profile ||
-                      alreadyUnlocked ||
-                      !alreadyOwned ||
-                      alreadyRead;
-
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {skillBooks.map((book) => {
+                    const ownership = ownedBooks[book.id];
+                    const isOwned = Boolean(ownership);
+                    const isCompleted = Boolean(ownership?.xp_awarded_at);
+                    const skillLabel = skillDefinitionBySlug[book.skill_slug]?.display_name ?? book.skill_slug;
+                    const skillId = skillDefinitionIdBySlug[book.skill_slug];
+                    const unlockInfo = skillId ? skillUnlocks[skillId] : undefined;
+                    const alreadyUnlocked = Boolean(unlockInfo?.isUnlocked);
                     return (
-                      <div key={book.id} className="space-y-3 rounded-lg border p-4 shadow-sm">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-lg font-semibold">{book.title}</h3>
-                            {skillMetadata.tier ? <Badge variant="outline">{skillMetadata.tier}</Badge> : null}
-                            {alreadyRead ? <Badge>Completed</Badge> : alreadyOwned ? <Badge variant="secondary">Owned</Badge> : null}
-                            {alreadyUnlocked ? <Badge variant="destructive">Skill Known</Badge> : null}
+                      <Card key={book.id} className="border-dashed">
+                        <CardHeader className="space-y-2">
+                          <div className="flex items-start justify-between gap-4">
+                            <CardTitle className="text-lg">{book.title}</CardTitle>
+                            <Badge variant={isCompleted ? "default" : isOwned ? "outline" : "secondary"}>
+                              {isCompleted ? "Completed" : isOwned ? "Owned" : "New"}
+                            </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {book.description ??
-                              skillMetadata.description ??
-                              "Unlock this skill instantly and gain a burst of progression XP."}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <Badge variant="secondary">${Number(book.cost ?? 0).toLocaleString()}</Badge>
-                            <Badge variant="secondary">{(book.xp_value ?? DEFAULT_BOOK_XP) + " XP"}</Badge>
-                            {skillMetadata.track ? (
-                              <Badge variant="outline">{skillMetadata.track}</Badge>
-                            ) : skillMetadata.category ? (
-                              <Badge variant="outline">{skillMetadata.category}</Badge>
+                          <CardDescription>{book.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-1 text-sm">
+                            {book.author ? (
+                              <p className="text-muted-foreground">by {book.author}</p>
+                            ) : null}
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="outline">{skillLabel}</Badge>
+                              <Badge variant="outline">{currencyFormatter.format(book.cost ?? 0)}</Badge>
+                              <Badge variant="outline">+{book.xp_reward ?? 0} XP</Badge>
+                              {alreadyUnlocked ? (
+                                <Badge variant="destructive">Skill already unlocked</Badge>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            {isOwned ? (
+                              <Button
+                                className="sm:flex-1"
+                                onClick={() => void handleRead(book)}
+                                disabled={isCompleted || pendingReadId === book.id || !profileId}
+                                variant={isCompleted ? "secondary" : "default"}
+                              >
+                                {isCompleted ? (
+                                  <>
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    Mastered
+                                  </>
+                                ) : pendingReadId === book.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Unlocking...
+                                  </>
+                                ) : (
+                                  <>
+                                    <BookOpen className="mr-2 h-4 w-4" />
+                                    Read & Unlock
+                                  </>
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                className="sm:flex-1"
+                                onClick={() => void handlePurchase(book)}
+                                disabled={pendingPurchaseId === book.id || !profileId}
+                              >
+                                {pendingPurchaseId === book.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Purchasing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    Purchase & Learn
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            {isCompleted ? (
+                              <Button variant="outline" className="sm:w-auto" disabled>
+                                Completed
+                              </Button>
+                            ) : isOwned ? (
+                              <Button variant="outline" className="sm:w-auto" disabled>
+                                Owned
+                              </Button>
                             ) : null}
                           </div>
-                          {alreadyUnlocked ? (
-                            <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
-                              <AlertCircle className="h-4 w-4" />
-                              Your character already mastered this skill. Books can only be consumed once per skill.
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            onClick={() => void handlePurchase(book)}
-                            disabled={purchaseDisabled || purchasingBookId === book.id}
-                          >
-                            {purchasingBookId === book.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Purchasing
-                              </>
-                            ) : (
-                              <>
-                                <ShoppingCart className="mr-2 h-4 w-4" /> Purchase
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => void handleRead(book)}
-                            disabled={readDisabled || readingBookId === book.id}
-                          >
-                            {readingBookId === book.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Reading
-                              </>
-                            ) : (
-                              <>
-                                <BookOpenCheck className="mr-2 h-4 w-4" /> Read & Unlock
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                <CardTitle>Your Library</CardTitle>
-                <CardDescription>Review the books you own and track which skills they unlocked.</CardDescription>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => void loadOwnedBooks()}
-                disabled={loadingOwnedBooks}
-                title="Refresh your library"
-              >
-                <RefreshCcw className={`h-4 w-4 ${loadingOwnedBooks ? "animate-spin" : ""}`} />
-                <span className="sr-only">Refresh library</span>
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {loadingOwnedBooks || loadingProgress ? (
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Loading your library...
-                </div>
-              ) : ownedBooksWithDetails.length === 0 ? (
-                <p className="text-muted-foreground">
-                  You haven't collected any skill books yet. Visit the marketplace above to grab your first guide.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {ownedBooksWithDetails.map((entry) => {
-                    const book = entry.skill_books;
-                    if (!book) {
-                      return null;
-                    }
-                    const metadata = getSkillMetadata(book.skill_slug);
-                    const ownedDate = entry.owned_at ? new Date(entry.owned_at) : null;
-                    const consumedDate = entry.consumed_at ? new Date(entry.consumed_at) : null;
-                    return (
-                      <div key={entry.id} className="space-y-2 rounded-lg border p-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{book.title}</span>
-                          <Badge variant={entry.is_consumed ? "default" : "secondary"}>
-                            {entry.is_consumed ? "Read" : "Unread"}
-                          </Badge>
-                          {metadata.tier ? <Badge variant="outline">{metadata.tier}</Badge> : null}
-                        </div>
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                          <span>{metadata.name}</span>
-                          {ownedDate ? <span>Acquired {ownedDate.toLocaleDateString()}</span> : null}
-                          {entry.is_consumed && consumedDate ? (
-                            <span>Finished {consumedDate.toLocaleDateString()}</span>
-                          ) : null}
-                          <span>Reward {book.xp_value ?? DEFAULT_BOOK_XP} XP</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Books provide a single 10 XP boost the first time you read them. Track your collection in the Inventory Manager.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

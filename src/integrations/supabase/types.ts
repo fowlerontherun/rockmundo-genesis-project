@@ -798,6 +798,54 @@ export type Database = {
           },
         ]
       }
+      player_skill_books: {
+        Row: {
+          acquired_at: string
+          consumed_at: string | null
+          id: string
+          notes: string | null
+          profile_id: string
+          skill_book_id: string
+          updated_at: string
+          xp_awarded_at: string | null
+        }
+        Insert: {
+          acquired_at?: string
+          consumed_at?: string | null
+          id?: string
+          notes?: string | null
+          profile_id: string
+          skill_book_id: string
+          updated_at?: string
+          xp_awarded_at?: string | null
+        }
+        Update: {
+          acquired_at?: string
+          consumed_at?: string | null
+          id?: string
+          notes?: string | null
+          profile_id?: string
+          skill_book_id?: string
+          updated_at?: string
+          xp_awarded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_skill_books_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_skill_books_skill_book_id_fkey"
+            columns: ["skill_book_id"]
+            isOneToOne: false
+            referencedRelation: "skill_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_skills: {
         Row: {
           bass: number | null
@@ -1358,155 +1406,50 @@ export type Database = {
         }
         Relationships: []
       }
-      random_events: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          rarity: string | null
-          category: string | null
-          effects: Json | null
-          expiry: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          rarity?: string | null
-          category?: string | null
-          effects?: Json | null
-          expiry?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          rarity?: string | null
-          category?: string | null
-          effects?: Json | null
-          expiry?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      weather: {
-        Row: {
-          id: string
-          city_id: string | null
-          condition: string | null
-          temperature: number | null
-          humidity: number | null
-          wind_speed: number | null
-          updated_at: string | null
-          forecast: Json | null
-        }
-        Insert: {
-          id?: string
-          city_id?: string | null
-          condition?: string | null
-          temperature?: number | null
-          humidity?: number | null
-          wind_speed?: number | null
-          updated_at?: string | null
-          forecast?: Json | null
-        }
-        Update: {
-          id?: string
-          city_id?: string | null
-          condition?: string | null
-          temperature?: number | null
-          humidity?: number | null
-          wind_speed?: number | null
-          updated_at?: string | null
-          forecast?: Json | null
-        }
-        Relationships: []
-      }
-      world_events: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          event_type: string | null
-          city_id: string | null
-          impact: Json | null
-          start_date: string | null
-          end_date: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          event_type?: string | null
-          city_id?: string | null
-          impact?: Json | null
-          start_date?: string | null
-          end_date?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          event_type?: string | null
-          city_id?: string | null
-          impact?: Json | null
-          start_date?: string | null
-          end_date?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       skill_books: {
         Row: {
+          author: string | null
           cost: number
-          created_at: string | null
+          created_at: string
           description: string | null
           id: string
-          is_active: boolean
           skill_slug: string
+          slug: string
           title: string
-          updated_at: string | null
-          xp_value: number
+          updated_at: string
+          xp_reward: number
         }
         Insert: {
-          cost?: number
-          created_at?: string | null
+          author?: string | null
+          cost: number
+          created_at?: string
           description?: string | null
           id?: string
-          is_active?: boolean
           skill_slug: string
+          slug: string
           title: string
-          updated_at?: string | null
-          xp_value?: number
+          updated_at?: string
+          xp_reward?: number
         }
         Update: {
+          author?: string | null
           cost?: number
-          created_at?: string | null
+          created_at?: string
           description?: string | null
           id?: string
-          is_active?: boolean
           skill_slug?: string
+          slug?: string
           title?: string
-          updated_at?: string | null
-          xp_value?: number
+          updated_at?: string
+          xp_reward?: number
         }
         Relationships: [
           {
             foreignKeyName: "skill_books_skill_slug_fkey"
             columns: ["skill_slug"]
             isOneToOne: false
-            referencedRelation: "skills"
-            referencedColumns: ["skill_id"]
+            referencedRelation: "skill_definitions"
+            referencedColumns: ["slug"]
           },
         ]
       }
