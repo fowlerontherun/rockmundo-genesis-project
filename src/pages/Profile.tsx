@@ -120,7 +120,17 @@ const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, skills, attributes, updateProfile, freshWeeklyBonusAvailable, xpLedger, xpWallet } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    updateProfile,
+    freshWeeklyBonusAvailable,
+    xpLedger,
+    xpWallet,
+    resetCharacter,
+    refetch,
+  } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
 
   type MusicalSkill = { key: keyof PlayerSkills; value: number };
@@ -1280,11 +1290,11 @@ const Profile = () => {
                 )}
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => navigate("/training")}
+                    onClick={() => navigate("/education")}
                     className="bg-primary text-primary-foreground hover:bg-primary/90"
                     size="sm"
                   >
-                    Plan training
+                    Explore Education Hub
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>

@@ -18,6 +18,13 @@ export interface Database {
           cash: number
           fame: number
           fans: number
+          current_city_id: string | null
+          current_location: string
+          health: number
+          gender: "female" | "male" | "non_binary" | "other" | "prefer_not_to_say"
+          city_of_birth: string | null
+          age: number
+          equipped_clothing: Json | null
           last_weekly_bonus_at: string | null
           weekly_bonus_streak: number
           weekly_bonus_metadata: Json
@@ -37,6 +44,13 @@ export interface Database {
           cash?: number
           fame?: number
           fans?: number
+          current_city_id?: string | null
+          current_location?: string
+          health?: number
+          gender?: "female" | "male" | "non_binary" | "other" | "prefer_not_to_say"
+          city_of_birth?: string | null
+          age?: number
+          equipped_clothing?: Json | null
           last_weekly_bonus_at?: string | null
           weekly_bonus_streak?: number
           weekly_bonus_metadata?: Json
@@ -56,9 +70,54 @@ export interface Database {
           cash?: number
           fame?: number
           fans?: number
+          current_city_id?: string | null
+          current_location?: string
+          health?: number
+          gender?: "female" | "male" | "non_binary" | "other" | "prefer_not_to_say"
+          city_of_birth?: string | null
+          age?: number
+          equipped_clothing?: Json | null
           last_weekly_bonus_at?: string | null
           weekly_bonus_streak?: number
           weekly_bonus_metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      record_labels: {
+        Row: {
+          id: string
+          name: string
+          prestige: number
+          advance_payment: number
+          royalty_rate: number
+          description: string
+          requirements: Json
+          benefits: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          prestige: number
+          advance_payment?: number
+          royalty_rate?: number
+          description: string
+          requirements?: Json
+          benefits?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          prestige?: number
+          advance_payment?: number
+          royalty_rate?: number
+          description?: string
+          requirements?: Json
+          benefits?: string[]
           created_at?: string
           updated_at?: string
         }
