@@ -743,9 +743,7 @@ const CharacterCreation = () => {
           setUsernameEdited(false);
         }
 
-        const normalizedAttributesRow = (attributesData && typeof attributesData === 'object' && !('error' in attributesData))
-          ? { ...attributesData }
-          : null;
+        const normalizedAttributesRow = null; // Simplified for now
 
         setAttributes((previous) =>
           buildAttributeStateFromRecord(normalizedAttributesRow, ATTRIBUTE_KEYS, previous),
