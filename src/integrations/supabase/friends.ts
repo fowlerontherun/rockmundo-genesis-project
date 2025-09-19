@@ -1,7 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-export type SendFriendRequestParams = {
 
+type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
+type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
+type FriendProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+export interface SendFriendRequestParams {
   senderProfileId: string;
   senderUserId: string;
   recipientProfileId: string;
@@ -10,26 +14,6 @@ export type SendFriendRequestParams = {
 }
 
 const PROFILE_SELECTION = "id, user_id, username, display_name, avatar_url, bio, level, fame";
-
-export const sendFriendRequest = async (
-  params: SendFriendRequestParams,
-): Promise<FriendshipRow> => {
-  const { data, error } = await supabase
-    .from("friendships")
-    .insert({
-      requester_id: params.senderProfileId,
-      addressee_id: params.recipientProfileId,
-      status: "pending",
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as FriendshipRow;
-};
 
 export const fetchPrimaryProfileForUser = async (
   userId: string,
@@ -54,8 +38,10 @@ export const fetchFriendshipsForProfile = async (
 ): Promise<FriendshipRow[]> => {
   const { data, error } = await supabase
     .from("friendships")
-    .select("id, requester_id, addressee_id, status, created_at, updated_at, responded_at")
-    .or(`requester_id.eq.${profileId},addressee_id.eq.${profileId}`)
+    .select(
+      "id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at",
+    )
+    .or(`user_profile_id.eq.${profileId},friend_profile_id.eq.${profileId}`)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -73,7 +59,9 @@ export const updateFriendshipStatus = async (
     .from("friendships")
     .update({ status })
     .eq("id", friendshipId)
-    .select("id, requester_id, addressee_id, status, created_at, updated_at, responded_at")
+    .select(
+      "id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at",
+    )
     .single();
 
   if (error) {
@@ -105,12 +93,13 @@ export const fetchProfilesByIds = async (
     return accumulator;
   }, {});
 };
+
 export const sendFriendRequest = async ({
   senderProfileId,
   senderUserId,
   recipientProfileId,
   recipientUserId,
-}: SendFriendRequestParams) => {
+}: SendFriendRequestParams): Promise<FriendshipRow> => {
   const payload: Database["public"]["Tables"]["friendships"]["Insert"] = {
     user_id: senderUserId,
     friend_user_id: recipientUserId,
@@ -119,9 +108,15 @@ export const sendFriendRequest = async ({
     status: "pending",
   };
 
-  const { error } = await supabase.from("friendships").insert(payload);
+  const { data, error } = await supabase
+    .from("friendships")
+    .insert(payload)
+    .select()
+    .single();
 
   if (error) {
     throw error;
   }
+
+  return data as FriendshipRow;
 };
