@@ -9,36 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Music, DollarSign, Users, Star, Play, TrendingUp, Calendar, MapPin } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
 
-type GigRow = {
-  id: string;
-  band_id: string;
-  venue_id: string;
-  scheduled_date: string;
-  status: string;
-  payment: number;
-  attendance: number;
-  fan_gain: number;
-  show_type: string;
-  created_at: string;
-  updated_at: string;
+type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
+  venues: Database['public']['Tables']['venues']['Row'] | null;
 };
-
-type VenueRow = {
-  id: string;
-  name: string;
-  capacity: number;
-  prestige_level: number;
-  base_payment: number;
-  location: string;
-  venue_type: string;
-  requirements: any;
-  created_at: string;
-};
-
-interface GigWithVenue extends GigRow {
-  venues: VenueRow;
-}
 
 interface PerformanceStageConfig {
   name: string;
@@ -127,9 +102,10 @@ export default function PerformGig() {
       }
 
       if (data) {
-        setGig(data as GigWithVenue);
-        setCurrentShowType(data.show_type);
-        setStageSequence(getStagePreset(data.show_type));
+        const showType = data.show_type ?? 'concert';
+        setGig(data);
+        setCurrentShowType(showType);
+        setStageSequence(getStagePreset(showType));
       }
     } catch (error) {
       console.error('Unexpected error loading gig:', error);
@@ -197,12 +173,12 @@ export default function PerformGig() {
     const modifiers = SHOW_TYPE_RESULT_MODIFIERS[currentShowType];
 
     // Calculate earnings based on venue payment, performance score, and show type
-    const basePayment = gig.venues.base_payment || gig.payment || 1000;
+    const basePayment = gig.venues?.base_payment ?? gig.payment ?? 1000;
     const performanceMultiplier = 0.5 + (finalScore / 100) * 1.0; // 50% to 150% of base
     const calculatedEarnings = Math.round(basePayment * performanceMultiplier * modifiers.payment);
 
     // Calculate fan gain based on venue capacity and performance
-    const venueCapacity = gig.venues.capacity || 100;
+    const venueCapacity = gig.venues?.capacity ?? 100;
     const baseFanGain = Math.round(venueCapacity * 0.01 * (finalScore / 100));
     const calculatedFanGain = Math.round(baseFanGain * modifiers.fanGain);
 
@@ -243,10 +219,10 @@ export default function PerformGig() {
         .insert({
           user_id: user.id,
           activity_type: 'gig_performance',
-          message: `Performed at ${gig.venues.name} and earned $${calculatedEarnings.toLocaleString()}`,
+          message: `Performed at ${gig.venues?.name ?? 'a venue'} and earned $${calculatedEarnings.toLocaleString()}`,
           earnings: calculatedEarnings,
           metadata: {
-            venue_name: gig.venues.name,
+            venue_name: gig.venues?.name ?? 'Unknown Venue',
             performance_score: Math.round(finalScore),
             show_type: currentShowType,
             fan_gain: calculatedFanGain
@@ -298,6 +274,15 @@ export default function PerformGig() {
       </div>
     );
   }
+
+  const venueName = gig.venues?.name ?? 'Unknown Venue';
+  const displayCapacity = gig.venues?.capacity ?? 'N/A';
+  const prestigeDisplay =
+    gig.venues?.prestige_level != null ? `${gig.venues.prestige_level}/10` : 'N/A';
+  const displayBasePayment = gig.venues?.base_payment ?? gig.payment;
+  const basePaymentDisplay =
+    displayBasePayment != null ? `$${displayBasePayment.toLocaleString()}` : 'N/A';
+  const displayLocation = gig.venues?.location ?? 'N/A';
 
   if (showResults) {
     const avgScore = (performance.crowd_energy + performance.technical_skill + performance.stage_presence) / 3;
@@ -410,7 +395,7 @@ export default function PerformGig() {
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Performing at {gig.venues.name}</CardTitle>
+            <CardTitle className="text-center">Performing at {venueName}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
@@ -468,26 +453,26 @@ export default function PerformGig() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            {gig.venues.name}
+            {venueName}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Capacity</p>
-              <p className="font-semibold">{gig.venues.capacity}</p>
+              <p className="font-semibold">{displayCapacity}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Prestige</p>
-              <p className="font-semibold">{gig.venues.prestige_level}/10</p>
+              <p className="font-semibold">{prestigeDisplay}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Base Payment</p>
-              <p className="font-semibold">${gig.venues.base_payment}</p>
+              <p className="font-semibold">{basePaymentDisplay}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Location</p>
-              <p className="font-semibold">{gig.venues.location}</p>
+              <p className="font-semibold">{displayLocation}</p>
             </div>
           </div>
 
