@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Building2, Train, Plane, Music } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { upcomingCityFestivals } from "@/data/festivals";
+import { MapPin, Building2, Train, Plane, Music, Sparkles } from "lucide-react";
 
 interface VenuePlaceholder {
   name: string;
@@ -24,7 +26,7 @@ interface TransportPlaceholder {
 
 const cityName = "Placeholder City";
 const cityDescription =
-  "A vibrant hub for aspiring musicians with a mix of legendary venues, intimate studios, and easy transport links.";
+  "A vibrant hub for aspiring musicians with a mix of legendary venues, intimate studios, an electric festival circuit, and easy transport links.";
 
 const venuePlaceholders: VenuePlaceholder[] = [
   {
@@ -184,6 +186,50 @@ export default function City() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Festival Circuit Highlights
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {upcomingCityFestivals.map((festival) => (
+              <div key={festival.name} className="flex flex-col justify-between rounded-lg border border-border/60 p-4">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-semibold leading-snug">{festival.name}</h3>
+                      <p className="text-sm text-muted-foreground">{festival.location}</p>
+                    </div>
+                    <Badge variant="outline">{festival.dateRange}</Badge>
+                  </div>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>
+                      <span className="font-semibold text-foreground">Headliners:</span> {festival.headliners.join(", ")}
+                    </p>
+                    <p className="flex flex-wrap gap-x-2">
+                      <span className="font-semibold text-foreground">Attendance:</span>
+                      <span>{festival.attendance}</span>
+                    </p>
+                    <p className="flex flex-wrap gap-x-2">
+                      <span className="font-semibold text-foreground">Tickets:</span>
+                      <span>{festival.ticketPrice}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <Button asChild className="w-full" variant="secondary">
+                    <a href={festival.lineupUrl} target="_blank" rel="noreferrer">
+                      View Full Lineup
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
