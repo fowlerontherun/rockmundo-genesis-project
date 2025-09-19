@@ -61,6 +61,7 @@ const CharacterCreation = () => {
 
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
   const [hasExistingAttributes, setHasExistingAttributes] = useState(false);
+  const [needsAttributeBackfill, setNeedsAttributeBackfill] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -140,9 +141,10 @@ const CharacterCreation = () => {
             console.log("[CharacterCreation] Loading existing attributes", {
               profileId: profileRecord.id,
             });
+            const attributeColumns = ["id", ...ATTRIBUTE_KEYS] as const;
             const { data: attributesData, error: attributesError, status: attributesStatus } = await supabase
               .from("player_attributes")
-              .select("id")
+              .select(attributeColumns.join(", "))
               .eq("profile_id", profileRecord.id)
               .maybeSingle();
 
@@ -159,13 +161,21 @@ const CharacterCreation = () => {
             }
 
             const hasAttributes = Boolean(attributesData);
+            const attributeSnapshot = attributesData as Tables<"player_attributes"> | null;
+            const isZeroDistribution = ATTRIBUTE_KEYS.every((key) => {
+              const value = attributeSnapshot?.[key];
+              return typeof value !== "number" || value <= 0;
+            });
             console.log("[CharacterCreation] Attribute load result", {
               hasAttributes,
+              isZeroDistribution,
             });
             setHasExistingAttributes(hasAttributes);
+            setNeedsAttributeBackfill(hasAttributes && isZeroDistribution);
           } else {
             console.warn("[CharacterCreation] Loaded profile without an id; skipping attribute check");
             setHasExistingAttributes(false);
+            setNeedsAttributeBackfill(false);
           }
         } else {
           console.log("[CharacterCreation] No existing profile found; resetting form fields");
@@ -174,12 +184,14 @@ const CharacterCreation = () => {
           setBio("");
           setGender("prefer_not_to_say");
           setHasExistingAttributes(false);
+          setNeedsAttributeBackfill(false);
         }
       } catch (error) {
         console.error("[CharacterCreation] Failed to load character data", error);
         setLoadError("We couldn't load your character details. You can still create a new persona.");
         setExistingProfile(null);
         setHasExistingAttributes(false);
+        setNeedsAttributeBackfill(false);
       } finally {
         setIsLoading(false);
         console.log("[CharacterCreation] Finished fetchExistingData");
@@ -233,6 +245,7 @@ const CharacterCreation = () => {
       existingProfileId: existingProfile?.id ?? null,
       targetProfileId,
       hasExistingAttributes,
+      needsAttributeBackfill,
       gender,
       trimmedName,
       trimmedStageName,
@@ -299,9 +312,13 @@ const CharacterCreation = () => {
 
       setExistingProfile(savedProfile);
 
-      if (!hasExistingAttributes && savedProfile.id) {
-        console.log("[CharacterCreation] Creating default attributes", {
+      const shouldEnsureAttributes = Boolean(savedProfile.id) && (!hasExistingAttributes || needsAttributeBackfill);
+
+      if (shouldEnsureAttributes && savedProfile.id) {
+        console.log("[CharacterCreation] Ensuring default attributes", {
           profileId: savedProfile.id,
+          hadExistingAttributes: hasExistingAttributes,
+          needsAttributeBackfill,
         });
         const attributePayload: PlayerAttributesInsert = {
           user_id: user.id,
@@ -321,9 +338,12 @@ const CharacterCreation = () => {
         }
 
         setHasExistingAttributes(true);
-        console.log("[CharacterCreation] Default attributes created successfully");
+        setNeedsAttributeBackfill(false);
+        console.log("[CharacterCreation] Default attributes ensured successfully");
       } else if (hasExistingAttributes) {
-        console.log("[CharacterCreation] Skipping default attribute creation because attributes already exist");
+        console.log("[CharacterCreation] Skipping default attribute creation because attributes already exist", {
+          needsAttributeBackfill,
+        });
       }
 
       console.log("[CharacterCreation] Refreshing characters after save");
