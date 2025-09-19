@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,15 +16,28 @@ interface Message {
   created_at: string;
 }
 
-export default function ChatWindow() {
+interface ChatWindowProps {
+  channel?: string;
+  hideHeader?: boolean;
+  onOnlineCountChange?: (count: number) => void;
+  onConnectionStatusChange?: (connected: boolean) => void;
+}
+
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  channel,
+  hideHeader = false,
+  onOnlineCountChange,
+  onConnectionStatusChange,
+}) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
-  const [selectedChannel] = useState('general');
+  const selectedChannel = channel ?? 'general';
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       const { data: messageData, error: messageError } = await supabase
         .from('global_chat')
@@ -44,7 +58,7 @@ export default function ChatWindow() {
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  };
+  }, [selectedChannel, user]);
 
   const sendMessage = async () => {
     if (!user || !message.trim()) return;
@@ -61,7 +75,7 @@ export default function ChatWindow() {
       if (error) throw error;
       
       setMessage('');
-      fetchMessages();
+      await fetchMessages();
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
@@ -72,7 +86,72 @@ export default function ChatWindow() {
     if (user) {
       fetchMessages();
     }
-  }, [user, selectedChannel]);
+  }, [user, selectedChannel, fetchMessages]);
+
+  useEffect(() => {
+    if (!user) {
+      channelRef.current?.unsubscribe();
+      channelRef.current = null;
+      onConnectionStatusChange?.(false);
+      onOnlineCountChange?.(0);
+      return;
+    }
+
+    const realtimeChannel = supabase.channel(`chat-${selectedChannel}`, {
+      config: {
+        presence: {
+          key: user.id,
+        },
+      },
+    });
+
+    const updatePresenceCount = () => {
+      const state = realtimeChannel.presenceState<Record<string, { user_id: string }>>();
+      const count = Object.values(state).reduce((total, users) => total + users.length, 0);
+      onOnlineCountChange?.(count);
+    };
+
+    realtimeChannel.on('presence', { event: 'sync' }, updatePresenceCount);
+    realtimeChannel.on('presence', { event: 'join' }, updatePresenceCount);
+    realtimeChannel.on('presence', { event: 'leave' }, updatePresenceCount);
+
+    realtimeChannel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'global_chat', filter: `channel=eq.${selectedChannel}` },
+      (payload) => {
+        const newMessage = payload.new as Message;
+        setMessages((current) => {
+          const exists = current.some((msg) => msg.id === newMessage.id);
+          if (exists) {
+            return current;
+          }
+          return [...current, newMessage].slice(-50);
+        });
+      }
+    );
+
+    realtimeChannel.subscribe((status) => {
+      const isConnected = status === 'SUBSCRIBED';
+      onConnectionStatusChange?.(isConnected);
+
+      if (isConnected) {
+        void realtimeChannel.track({ user_id: user.id });
+      }
+
+      if (!isConnected && status !== 'SUBSCRIBED') {
+        onOnlineCountChange?.(0);
+      }
+    });
+
+    channelRef.current = realtimeChannel;
+
+    return () => {
+      onConnectionStatusChange?.(false);
+      onOnlineCountChange?.(0);
+      realtimeChannel.unsubscribe();
+      channelRef.current = null;
+    };
+  }, [selectedChannel, user, onConnectionStatusChange, onOnlineCountChange]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -95,9 +174,11 @@ export default function ChatWindow() {
 
   return (
     <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Live Chat</CardTitle>
-      </CardHeader>
+      {!hideHeader && (
+        <CardHeader>
+          <CardTitle>Live Chat</CardTitle>
+        </CardHeader>
+      )}
       <CardContent className="p-0 h-full flex flex-col">
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-2">
@@ -129,4 +210,6 @@ export default function ChatWindow() {
       </CardContent>
     </Card>
   );
-}
+};
+
+export default ChatWindow;
