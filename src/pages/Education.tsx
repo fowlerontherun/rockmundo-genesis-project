@@ -1,360 +1,527 @@
-import { BookOpen, GraduationCap, PlaySquare, Users, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const tabs = [
+import { BookOpen, GraduationCap, PlaySquare, Sparkles, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/use-auth-context";
+import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
+import { awardSpecialXp } from "@/utils/progression";
+
+const tabItems = [
   {
     value: "books",
     label: "Books",
     icon: BookOpen,
-    description: "Build a foundational library for musicianship, songwriting, and career growth."
+    blurb: "Deep dives, playbooks, and creative inspiration for every stage of your music journey."
   },
   {
     value: "university",
     label: "University",
     icon: GraduationCap,
-    description: "Map out formal education paths and micro-credentials that align with your goals."
+    blurb: "Accredited pathways and stackable certificates that sync with touring life."
+
   },
   {
     value: "videos",
     label: "YouTube Videos",
     icon: PlaySquare,
-    description: "Curated playlists and channels that deliver high-impact lessons on demand."
+    blurb: "High-impact playlists and channels to keep your technique sharp on demand."
+
   },
   {
     value: "mentors",
     label: "Mentors",
     icon: Users,
-    description: "Connect with experts for personalized feedback, coaching, and accountability."
+    blurb: "Coaching collectives and expert rosters for personalized feedback loops."
+
   },
   {
     value: "band",
     label: "Band Learning",
     icon: Sparkles,
-    description: "Structured learning plans designed to level up your entire band together."
+    blurb: "Immersive programs that level up your entire crew together."
   }
 ];
 
-const bookCollections = [
+const bookJourneys = [
   {
-    title: "Foundational Musicianship",
+    title: "Creative Foundations",
     description:
-      "Master the essentials of music theory, ear training, and instrument technique to build confident performance skills.",
-    items: [
+      "Build core musicianship and mindset habits so practice, performance, and writing feel effortless.",
+    resources: [
       {
-        name: "The Musician's Handbook",
-        author: "Bobby Borg",
-        focus: "Career Fundamentals",
-        takeaway: "Establish a rock-solid foundation for navigating the industry and building sustainable habits."
+        name: "The Musician's Way",
+        author: "Gerald Klickstein",
+        focus: "Practice Systems",
+        takeaway: "Design repeatable practice rituals that translate directly to confident stage time."
+      },
+      {
+        name: "Effortless Mastery",
+        author: "Kenny Werner",
+        focus: "Mindset",
+        takeaway: "Rewire performance anxiety into calm focus with proven mental exercises."
       },
       {
         name: "Music Theory for Guitarists",
         author: "Tom Kolb",
         focus: "Theory Essentials",
-        takeaway: "Translate theory concepts directly onto the fretboard with modern practice drills."
-      },
-      {
-        name: "Effortless Mastery",
-        author: "Kenny Werner",
-        focus: "Mindset & Practice",
-        takeaway: "Unlock flow-state practicing with techniques that balance discipline and creativity."
+        takeaway: "Bridge fretboard fluency with modern harmony so ideas land faster."
       }
     ]
   },
   {
-    title: "Songwriting & Creativity",
+    title: "Songcraft Lab",
     description:
-      "Upgrade your writing toolkit with books that unpack lyricism, storytelling, and arranging for modern audiences.",
-    items: [
+      "Level up lyricism, arrangement, and production workflows that stand out in a crowded release cycle.",
+    resources: [
       {
         name: "Writing Better Lyrics",
         author: "Pat Pattison",
         focus: "Lyric Craft",
-        takeaway: "A semester-style guide to turning song ideas into compelling narratives."
+        takeaway: "Follow semester-style prompts that sharpen storytelling and emotional arcs."
       },
       {
         name: "Tunesmith",
         author: "Jimmy Webb",
         focus: "Composition",
-        takeaway: "Legendary songwriting lessons from a Grammy-winning composer with exercises you can apply immediately."
-      },
-      {
-        name: "Songwriters On Songwriting",
-        author: "Paul Zollo",
-        focus: "Creative Process",
-        takeaway: "Dozens of interviews with iconic writers that reveal breakthrough moments and creative systems."
-      }
-    ]
-  },
-  {
-    title: "Music Business & Branding",
-    description:
-      "Navigate the modern music economy with guides that demystify contracts, marketing, and independent releases.",
-    items: [
-      {
-        name: "All You Need to Know About the Music Business",
-        author: "Donald Passman",
-        focus: "Industry",
-        takeaway: "Understand contracts, royalties, and negotiation tactics before your next big opportunity."
-      },
-      {
-        name: "Creative Quest",
-        author: "Questlove",
-        focus: "Creative Leadership",
-        takeaway: "Blend artistry and entrepreneurship through stories from one of music's most inventive minds."
+        takeaway: "Peek inside Grammy-winning processes and adapt them to your band's workflow."
       },
       {
         name: "How to Make It in the New Music Business",
         author: "Ari Herstand",
         focus: "Indie Strategy",
-        takeaway: "A modern blueprint for self-managed releases, touring, and audience growth."
+        takeaway: "Turn your releases into campaigns with actionable marketing checklists."
       }
     ]
-  }
-];
-
-const universityTracks = [
+  },
   {
-    title: "Degree Pathways",
+    title: "Career Architect",
     description:
-      "Explore accredited programs that combine performance, technology, and music business training.",
-    highlights: [
+      "Navigate deals, branding, and financial strategy with resources tailored for modern rock artists.",
+    resources: [
       {
-        name: "BFA in Contemporary Performance",
-        school: "Berklee College of Music",
-        focus: "Performance Major",
-        details: "Focus on live performance labs, ensemble work, and songwriting collaborations."
+        name: "All You Need to Know About the Music Business",
+        author: "Donald Passman",
+        focus: "Contracts",
+        takeaway: "Understand royalties, licensing, and negotiation language before meetings happen."
       },
       {
-        name: "BA in Music Business",
-        school: "Middle Tennessee State University",
-        focus: "Industry Leadership",
-        details: "Blend legal, marketing, and management courses with internship placements in Nashville."
+        name: "Creative Quest",
+        author: "Questlove",
+        focus: "Creative Leadership",
+        takeaway: "Blend artistry and entrepreneurship through stories from a legendary collaborator."
       },
       {
-        name: "BS in Music Production",
-        school: "Full Sail University",
-        focus: "Studio Technology",
-        details: "Hands-on studio time with DAW mastery, audio engineering, and mixing for release."
+        name: "Company of One",
+        author: "Paul Jarvis",
+        focus: "Sustainable Growth",
+        takeaway: "Build a resilient music business without burning out your team or fan trust."
       }
     ],
     action: {
-      label: "Download Program Guide",
+      label: "Download release checklist",
+      href: "https://notion.so"
+    }
+  }
+];
+
+
+const universityRoutes = [
+  {
+    title: "Degree Pathways",
+    description: "Immersive programs that balance ensemble work, songwriting labs, and career coaching.",
+    highlights: [
+      {
+        program: "BFA in Contemporary Performance",
+        school: "Berklee College of Music",
+        focus: "Performance Lab",
+        details: "Daily ensemble rotations with songwriting bootcamps and showcase nights."
+      },
+      {
+        program: "BA in Music Business",
+        school: "Middle Tennessee State University",
+        focus: "Industry Leadership",
+        details: "Blend legal, marketing, and analytics courses with Nashville internship placements."
+
+      },
+      {
+        program: "BS in Music Production",
+        school: "Full Sail University",
+        focus: "Studio Technology",
+        details: "Hands-on studio tracking, mixing, and mastering alongside release simulations."
+      }
+    ],
+    action: {
+      label: "Download program guide",
       href: "https://www.berklee.edu/majors"
     }
   },
   {
-    title: "Micro-Credentials & Certificates",
-    description:
-      "Stack short-form credentials to sharpen niche skills while staying active in the scene.",
+    title: "Micro-Credentials",
+    description: "Short sprints that stack with your touring schedule while keeping your skills sharp.",
     highlights: [
       {
-        name: "Modern Music Production",
+        program: "Modern Music Production",
         school: "Coursera x Berklee",
         focus: "12-Week Certificate",
-        details: "Project-based program covering beat design, mixing, and mastering workflows."
+        details: "Project-based DAW mastery with mentor feedback on each mix."
       },
       {
-        name: "Music Marketing Accelerator",
+        program: "Music Marketing Accelerator",
         school: "Soundfly",
-        focus: "Mentor-Guided",
-        details: "Learn digital strategy, branding, and fan funnels with 1:1 mentor feedback."
+        focus: "Mentor Guided",
+        details: "Launch funnels, fan journeys, and social ads with weekly strategy reviews."
       },
       {
-        name: "Live Event Production",
+        program: "Live Event Production",
         school: "Point Blank Music School",
         focus: "Hybrid",
-        details: "Develop stage management and tour logistics skills with live practicum opportunities."
+        details: "Route tours, advance shows, and manage crews with real-world case studies."
       }
     ],
     action: {
-      label: "Browse Certificates",
+      label: "Browse certificates",
       href: "https://online.berklee.edu/programs"
     }
   },
   {
     title: "Semester Planner",
-    description:
-      "Balance academic study with band commitments using this repeatable 15-week structure.",
+    description: "Use this repeatable 15-week cadence to balance study, creation, and stage time.",
     highlights: [
       {
-        name: "Weeks 1-5",
+        program: "Weeks 1-5",
         school: "Skill Ramp-Up",
-        focus: "Technique & Theory",
-        details: "Double down on practice labs and music theory intensives while scheduling songwriting sprints."
+        focus: "Technique + Theory",
+        details: "Stack practice labs, ear training, and songwriting prompts."
       },
       {
-        name: "Weeks 6-10",
+        program: "Weeks 6-10",
         school: "Creative Production",
-        focus: "Studio & Writing",
-        details: "Shift toward arranging, collaboration projects, and recording sessions for portfolio tracks."
+        focus: "Studio Sprints",
+        details: "Batch arrange, record, and collaborate on portfolio-ready tracks."
       },
       {
-        name: "Weeks 11-15",
+        program: "Weeks 11-15",
         school: "Career Launch",
-        focus: "Showcase & Networking",
-        details: "Secure live showcases, meet with advisors, and prepare EPK updates ahead of finals."
+        focus: "Showcase",
+        details: "Book showcases, refresh your EPK, and meet with advisors for next steps."
       }
     ],
     action: {
-      label: "Download Planner",
+      label: "Grab the planner template",
       href: "https://calendar.google.com"
     }
   }
 ];
 
-const videoPlaylists = [
+const videoCollections = [
   {
-    title: "Technique & Theory Channels",
-    description:
-      "Weekly uploads from trusted educators to keep your chops sharp and your theory knowledge fresh.",
+    title: "Technique & Theory",
+    description: "Channels that deliver weekly drills, breakdowns, and ear training challenges.",
     resources: [
       {
         name: "Rick Beato",
-        format: "Deep-Dive Lessons",
-        focus: "Ear Training & Analysis",
+        format: "Deep-dive lessons",
+        focus: "Ear Training",
         link: "https://www.youtube.com/user/pegzch",
-        summary: "Break down legendary songs, chord progressions, and arrangement secrets in long-form videos."
+        summary: "Dissect iconic songs, chord changes, and arrangement secrets in long-form videos."
       },
       {
         name: "Marty Music",
-        format: "Guitar Tutorials",
+        format: "Guitar tutorials",
         focus: "Technique",
         link: "https://www.youtube.com/c/martyschwartz",
-        summary: "Accessible guitar lessons covering riffs, tone tips, and style-specific workouts."
+        summary: "Accessible riffs, tone tips, and genre studies that scale with your skill."
       },
       {
         name: "Nahre Sol",
-        format: "Creative Exercises",
+        format: "Creative experiments",
         focus: "Composition",
         link: "https://www.youtube.com/c/nahresol",
-        summary: "Hybrid classical & electronic explorations for players who love experimentation."
+        summary: "Blend classical, electronic, and improvisational tools for fresh writing prompts."
       }
     ]
   },
   {
     title: "Structured Playlists",
-    description:
-      "Follow curated playlists that simulate guided courses complete with homework prompts.",
+    description: "Follow guided series that mimic a cohort with homework and check-ins.",
     resources: [
       {
         name: "30-Day Songwriting Bootcamp",
         format: "Playlist",
         focus: "Daily Prompts",
         link: "https://www.youtube.com/playlist?list=PL1A2F2A3",
-        summary: "Short daily assignments that move from lyric sketches to full demos in a month."
+        summary: "Turn sparks into full demos in a month with incremental challenges."
       },
       {
         name: "Mixing Essentials in Logic Pro",
         format: "Playlist",
         focus: "Home Studio",
         link: "https://www.youtube.com/playlist?list=PL2F3G4H5",
-        summary: "Step-by-step walkthroughs on EQ, compression, and mix bus processing for indie releases."
+        summary: "Master EQ, compression, and mix bus workflows for indie releases."
       },
       {
         name: "Stage Presence Fundamentals",
-        format: "Mini-Series",
+        format: "Mini-series",
         focus: "Performance",
         link: "https://www.youtube.com/playlist?list=PL7K8L9M0",
-        summary: "Learn crowd engagement, mic control, and dynamic movement in live settings."
+        summary: "Own the stage with crowd engagement tactics and mic control drills."
       }
     ]
   },
   {
-    title: "Practice Accountability",
-    description:
-      "Use these formats to keep consistent practice logs and track incremental progress.",
+    title: "Accountability Formats",
+    description: "Keep practice consistent with co-working streams, trackable logs, and improv labs.",
     resources: [
       {
         name: "Practice With Me Streams",
-        format: "Co-Practice",
+        format: "Co-practice",
         focus: "Routine Building",
         link: "https://www.youtube.com/results?search_query=music+practice+with+me",
-        summary: "Join real-time practice rooms that mimic study halls for musicians working on technique."
+        summary: "Join real-time practice rooms that feel like digital rehearsal studios."
       },
       {
         name: "Looped Backing Tracks",
-        format: "Play-Along",
+        format: "Play-along",
         focus: "Improvisation",
         link: "https://www.youtube.com/results?search_query=backing+tracks+for+guitar",
-        summary: "Select tempo-specific jam tracks to develop improvisation vocabulary and stage endurance."
+        summary: "Expand your improv vocabulary with tempo-based jam sessions."
       },
       {
         name: "Ear Training Drills",
         format: "Interactive",
         focus: "Listening Skills",
         link: "https://www.youtube.com/results?search_query=ear+training+intervals",
-        summary: "Build interval recognition speed with call-and-response exercises and on-screen quizzes."
+        summary: "Speed up interval recognition with call-and-response challenges."
       }
-    ]
-  }
-];
 
-const mentorPrograms = [
+const mentorTracks = [
   {
-    title: "Mentorship Tracks",
-    description:
-      "Choose a pathway that matches your current career phase and desired feedback style.",
+    title: "Mentorship Pathways",
+    description: "Pick the feedback cadence that matches your goals and current release cycle.",
     cohorts: [
       {
         name: "Songwriting Lab",
-        focus: "Co-Writing Circle",
+        focus: "Co-writing Circle",
         cadence: "Bi-weekly",
-        support: "Collaborative feedback on drafts, melody rewrites, and lyric polish." 
+        support: "Share drafts, iterate hooks, and receive structured lyric feedback."
       },
       {
         name: "Stagecraft Intensive",
         focus: "Performance Coaching",
         cadence: "Monthly",
-        support: "Virtual showcase critiques with movement and mic technique guidance."
+        support: "Break down live footage with mentors who optimize stage movement."
       },
       {
         name: "Indie Release Accelerator",
         focus: "Launch Strategy",
         cadence: "Weekly",
-        support: "Release calendar planning, marketing funnels, and analytics reviews."
+        support: "Plan release calendars, promo funnels, and milestone reviews."
       }
+
+      setPurchasingBookId(book.id);
+      try {
+        const { error } = await supabase.from("player_skill_books").insert({
+          user_id: user.id,
+          profile_id: profile.id,
+          skill_book_id: book.id,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Book added to library",
+          description: book.title + " is ready to read from your inventory.",
+        });
+
+        await loadOwnedBooks();
+      } catch (error) {
+        console.error("Failed to purchase skill book", error);
+        toast({
+          variant: "destructive",
+          title: "Purchase failed",
+          description: "We couldn't process the purchase. Please try again.",
+        });
+      } finally {
+        setPurchasingBookId(null);
+      }
+    },
+    [knownSkillSlugs, loadOwnedBooks, ownedBooksMap, profile, toast, user],
+  );
+
+  const handleRead = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user || !profile) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "You need an active character to read skill books.",
+        });
+        return;
+      }
+
+      if (knownSkillSlugs.has(book.skill_slug)) {
+        toast({
+          variant: "destructive",
+          title: "Skill already unlocked",
+          description: "Your character already knows this skill from another source.",
+        });
+        return;
+      }
+
+      const owned = ownedBooksMap.get(book.id);
+      if (!owned) {
+        toast({
+          variant: "destructive",
+          title: "Book not owned",
+          description: "Purchase the book first before reading it.",
+        });
+        return;
+      }
+
+      if (owned.is_consumed) {
+        toast({
+          title: "Already completed",
+          description: "You've already claimed the reward from this book.",
+        });
+        return;
+      }
+
+      const metadata = getSkillMetadata(book.skill_slug);
+      const xpReward = book.xp_value ?? DEFAULT_BOOK_XP;
+
+      setReadingBookId(book.id);
+      try {
+        const { error } = await supabase
+          .from("player_skill_books")
+          .update({ is_consumed: true, consumed_at: new Date().toISOString() })
+          .eq("id", owned.id);
+
+        if (error) throw error;
+
+        try {
+          await awardActionXp({
+            amount: xpReward,
+            actionKey: "read_skill_book",
+            metadata: { skill_slug: book.skill_slug, skill_book_id: book.id },
+          });
+        } catch (xpError) {
+          console.error("Failed to award XP from book", xpError);
+          toast({
+            variant: "destructive",
+            title: "XP grant failed",
+            description: "The book was marked as read, but the experience boost could not be applied.",
+          });
+        }
+
+        try {
+          const { data: existingProgress, error: progressError } = await supabase
+            .from("skill_progress")
+            .select("current_level,current_xp,required_xp,metadata")
+            .eq("profile_id", profile.id)
+            .eq("skill_slug", book.skill_slug)
+            .maybeSingle();
+
+          if (progressError) {
+            throw progressError;
+          }
+
+          const existingMetadata = isMetadataRecord(existingProgress?.metadata)
+            ? (existingProgress?.metadata as Record<string, unknown>)
+            : {};
+
+          const progressPayload: Database["public"]["Tables"]["skill_progress"]["Insert"] = {
+            profile_id: profile.id,
+            skill_slug: book.skill_slug,
+            current_level: Math.max(existingProgress?.current_level ?? 0, 1),
+            current_xp: (existingProgress?.current_xp ?? 0) + xpReward,
+            required_xp: existingProgress?.required_xp ?? xpReward,
+            metadata: {
+              ...existingMetadata,
+              unlocked_by: existingMetadata?.unlocked_by ?? "skill_book",
+              last_book_reward: xpReward,
+            },
+          };
+
+          const { error: upsertError } = await supabase
+            .from("skill_progress")
+            .upsert(progressPayload, { onConflict: "profile_id,skill_slug" });
+
+          if (upsertError) {
+            throw upsertError;
+          }
+        } catch (progressError) {
+          console.error("Failed to update skill progress from book", progressError);
+        }
+
+        toast({
+          title: "Skill unlocked",
+          description: "Reading " + metadata.name + " granted " + xpReward + " XP.",
+        });
+        await Promise.all([loadOwnedBooks(), loadSkillProgress()]);
+      } catch (error) {
+        console.error("Failed to mark book as read", error);
+        toast({
+          variant: "destructive",
+          title: "Reading failed",
+          description: "We couldn't complete the read action. Please try again.",
+        });
+      } finally {
+        setReadingBookId(null);
+      }
+    },
+    [
+      awardActionXp,
+      getSkillMetadata,
+      knownSkillSlugs,
+      loadOwnedBooks,
+      loadSkillProgress,
+      ownedBooksMap,
+      profile,
+      toast,
+      user,
     ],
     action: {
-      label: "Apply for Mentorship",
+      label: "Apply for mentorship",
       href: "https://forms.gle/mentor-application"
     }
   },
   {
     title: "Expert Network",
-    description:
-      "Tap into a curated roster of industry veterans for one-off consultations or recurring coaching.",
+    description: "One-off consultations or retained advisors for specialized projects.",
     cohorts: [
       {
         name: "Creative Director",
         focus: "Visual Branding",
-        cadence: "On-Demand",
-        support: "Refine album art, stage visuals, and social media style guides."
+        cadence: "On-demand",
+        support: "Craft album art, stage visuals, and social storytelling guidelines."
       },
       {
         name: "Music Attorney",
         focus: "Contract Review",
         cadence: "Retainer",
-        support: "Protect intellectual property, negotiate deals, and review licensing opportunities."
+        support: "Secure licensing, negotiate deals, and protect intellectual property."
       },
       {
         name: "Tour Manager",
         focus: "Live Logistics",
         cadence: "Consulting",
-        support: "Route tours, manage advancing, and streamline crew coordination."
+        support: "Optimize routing, budgets, and crew coordination for upcoming runs."
       }
     ],
     action: {
-      label: "Browse Mentor Roster",
+      label: "Browse mentor roster",
       href: "https://rockmundo.com/mentors"
     }
   },
   {
     title: "Accountability Systems",
-    description:
-      "Stay consistent with structured check-ins, progress dashboards, and peer support.",
+    description: "Keep momentum high with weekly standups, progress dashboards, and seasonal audits.",
     cohorts: [
       {
         name: "Weekly Standups",
@@ -366,120 +533,283 @@ const mentorPrograms = [
         name: "Progress Journals",
         focus: "Reflection",
         cadence: "Daily",
-        support: "Log practice stats, gig insights, and mindset notes inside Rockmundo."
+        support: "Log practice stats, gig learnings, and mindset notes."
       },
       {
         name: "Quarterly Audits",
         focus: "Career Review",
         cadence: "Seasonal",
-        support: "Assess KPIs, adjust roadmaps, and celebrate milestones with your coach."
+        support: "Refresh KPIs, celebrate milestones, and adjust your roadmap."
       }
     ],
     action: {
-      label: "Download Templates",
+      label: "Download templates",
       href: "https://notion.so"
     }
-  }
-];
 
 const bandLearningTracks = [
   {
-    title: "Band Intensives",
-    description:
-      "Plan immersive weekends that combine rehearsal, songwriting, and branding workshops.",
+    title: "Weekend Intensives",
+    description: "Design a three-day sprint that tightens chemistry and produces releasable assets.",
     sessions: [
       {
         name: "Day 1: Groove Lab",
-        focus: "Tighten Rhythmic Chemistry",
-        deliverable: "Record a live rehearsal take with click + crowd cues."
+        focus: "Rhythmic Alignment",
+        deliverable: "Record a live rehearsal take with crowd cues."
       },
       {
         name: "Day 2: Story & Stage",
         focus: "Brand Alignment",
-        deliverable: "Craft a unified band bio, stage plot, and social hook."
+        deliverable: "Craft a unified band bio, stage plot, and visual style."
       },
       {
         name: "Day 3: Release Sprint",
         focus: "Content Production",
-        deliverable: "Capture video + photo assets for upcoming release cycle."
+        deliverable: "Capture video + photo assets for your next release cycle."
       }
     ],
     action: {
-      label: "Download Weekend Agenda",
+      label: "Download weekend agenda",
       href: "https://docs.google.com"
     }
   },
   {
-    title: "Ongoing Band Curriculum",
-    description:
-      "Rotate focus areas each month to keep the whole group evolving in sync.",
+    title: "Monthly Focus Cycle",
+    description: "Rotate priorities so every member develops together without losing momentum.",
     sessions: [
       {
         name: "Month 1: Arrangement Lab",
-        focus: "Reimagine Setlist",
-        deliverable: "New live transitions, medleys, and crowd participation cues."
+        focus: "Setlist Evolution",
+        deliverable: "New transitions, medleys, and crowd participation moments."
       },
       {
         name: "Month 2: Business HQ",
-        focus: "Operational Systems",
-        deliverable: "Shared budget tracker, merch inventory log, and task board."
+        focus: "Operations",
+        deliverable: "Shared budget tracker, merch inventory, and task board."
       },
       {
         name: "Month 3: Audience Engine",
         focus: "Growth Experiments",
-        deliverable: "Launch fan challenges, collect emails, and test paid promotion."
+        deliverable: "Fan challenges, email collection, and paid promotion pilots."
       }
     ],
     action: {
-      label: "View Curriculum",
+      label: "View full curriculum",
       href: "https://rockmundo.com/band-learning"
     }
   },
   {
-    title: "Performance Feedback Loops",
-    description:
-      "Capture data from every show to iterate faster as a unit.",
+    title: "Performance Feedback Loop",
+    description: "Capture data from every show to iterate faster as a unit.",
     sessions: [
       {
-        name: "Show Debrief",
-        focus: "Immediate Reflection",
-        deliverable: "Rate crowd energy, set pacing, and technical stability within 24 hours."
+        name: "Soundcheck Surveys",
+        focus: "Crew Feedback",
+        deliverable: "Document mix notes, monitor requests, and stage adjustments."
+      },
+      {
+        name: "Post-Show Retro",
+        focus: "Team Debrief",
+        deliverable: "Score energy, crowd engagement, and set pacing within 24 hours."
       },
       {
         name: "Fan Pulse",
-        focus: "Community Insights",
-        deliverable: "Survey attendees, review social mentions, and note merch conversion."
-      },
-      {
-        name: "Iterate & Implement",
-        focus: "Action Plan",
-        deliverable: "Assign next-step experiments for setlist, visuals, and engagement."
+        focus: "Audience Signals",
+        deliverable: "Collect QR-based feedback and merge it into your fan CRM."
       }
     ],
     action: {
-      label: "Create Feedback Form",
-      href: "https://forms.gle/band-feedback"
+      label: "Set up reporting sheet",
+      href: "https://notion.so/templates"
     }
-  }
-];
 
-const Education = () => {
+    void loadOwnedBooks(profileId);
+    void loadSkillUnlocks(profileId);
+  }, [loadOwnedBooks, loadSkillUnlocks, profileId]);
+
+  const handlePurchase = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "Create an account or sign in to purchase books.",
+        });
+        return;
+      }
+
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "You need an active character profile to collect books.",
+        });
+        return;
+      }
+
+      if (ownedBooks[book.id]) {
+        toast({
+          title: "Already owned",
+          description: "This book is already in your library.",
+        });
+        return;
+      }
+
+      setPendingPurchaseId(book.id);
+      try {
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .insert({ profile_id: profileId, skill_book_id: book.id })
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const inserted = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: inserted }));
+        toast({
+          title: "Book purchased",
+          description: `${book.title} is now in your inventory.`,
+        });
+      } catch (error) {
+        console.error("Failed to purchase book", error);
+        toast({
+          variant: "destructive",
+          title: "Purchase failed",
+          description: "We couldn't complete that purchase. Please try again.",
+        });
+      } finally {
+        setPendingPurchaseId(null);
+      }
+    },
+    [ownedBooks, profileId, toast, user],
+  );
+
+  const handleRead = useCallback(
+    async (book: SkillBookRow) => {
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "Create or select a character before reading books.",
+        });
+        return;
+      }
+
+      const ownership = ownedBooks[book.id];
+      if (!ownership) {
+        toast({
+          variant: "destructive",
+          title: "Purchase required",
+          description: "Buy the book before attempting to read it.",
+        });
+        return;
+      }
+
+      if (ownership.xp_awarded_at) {
+        toast({
+          title: "Already completed",
+          description: "You've already gained the XP from this book.",
+        });
+        return;
+      }
+
+      setPendingReadId(book.id);
+      const xpAmount = book.xp_reward ?? 10;
+      const metadata = {
+        book_id: book.id,
+        book_slug: book.slug,
+        skill_slug: book.skill_slug,
+      };
+      const now = new Date().toISOString();
+      try {
+        await awardSpecialXp({ amount: xpAmount, reason: `skill_book:${book.slug}`, metadata });
+
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .update({ consumed_at: now, xp_awarded_at: now })
+          .eq("id", ownership.id)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const updated = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: updated }));
+
+        const skillId = skillDefinitionIdBySlug[book.skill_slug];
+        if (skillId) {
+          const { error: unlockError } = await supabase
+            .from("profile_skill_unlocks")
+            .upsert(
+              {
+                profile_id: profileId,
+                skill_id: skillId,
+                is_unlocked: true,
+                unlocked_at: now,
+                unlock_level: Math.max(10, skillUnlocks[skillId]?.unlockLevel ?? 0),
+                unlock_source: `book:${book.slug}`,
+              },
+              { onConflict: "profile_id,skill_id" },
+            );
+
+          if (unlockError) throw unlockError;
+
+          setSkillUnlocks((prev) => ({
+            ...prev,
+            [skillId]: {
+              isUnlocked: true,
+              unlockLevel: Math.max(10, prev[skillId]?.unlockLevel ?? 0),
+            },
+          }));
+        }
+
+        toast({
+          title: "Skill unlocked",
+          description: `Reading ${book.title} granted +${xpAmount} XP.`,
+        });
+      } catch (error) {
+        console.error("Failed to process book read", error);
+        toast({
+          variant: "destructive",
+          title: "Progress not saved",
+          description: "We couldn't record that reading session. Please try again.",
+        });
+      } finally {
+        setPendingReadId(null);
+      }
+    },
+    [ownedBooks, profileId, skillDefinitionIdBySlug, skillUnlocks, toast],
+  );
+
+  const isAuthenticated = Boolean(user);
+
   return (
-    <div className="space-y-8 pb-16">
-      <div className="space-y-3 text-center">
-        <Badge variant="outline" className="mx-auto w-fit px-4 py-1 text-sm font-semibold">
-          Education Hub
-        </Badge>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Level Up Your Musical Journey</h1>
-        <p className="mx-auto max-w-3xl text-base text-muted-foreground sm:text-lg">
-          Discover the best resources for self-paced learning, formal education, and collaborative growth. Pick a
-          pathway, follow the curated plan, and keep your skills—and your band—constantly evolving.
+    <div className="space-y-10 px-4 pb-16 pt-8 md:px-8 lg:px-16">
+      <div className="text-center">
+        <Badge variant="secondary" className="mb-3">Learning Engine</Badge>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Education</h1>
+        <p className="mx-auto mt-3 max-w-3xl text-base text-muted-foreground sm:text-lg">
+          Craft a learning roadmap that keeps your artistry, business savvy, and band cohesion in sync. Dive into
+          curated resources, structured programs, and real mentors tailored for the Rockmundo universe.
         </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Button asChild>
+            <a href="https://rockmundo.com/education" target="_blank" rel="noreferrer">
+              Start a learning sprint
+            </a>
+          </Button>
+          <Button asChild variant="outline">
+            <a href="https://notion.so" target="_blank" rel="noreferrer">
+              Download study planner
+            </a>
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="books" className="space-y-6">
         <TabsList className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          {tabs.map((tab) => {
+          {tabItems.map((tab) => {
             const Icon = tab.icon;
             return (
               <TabsTrigger key={tab.value} value={tab.value} className="flex flex-col gap-1 py-3">
@@ -487,7 +817,7 @@ const Education = () => {
                   <Icon className="h-4 w-4" />
                   {tab.label}
                 </span>
-                <span className="hidden text-xs font-normal text-muted-foreground lg:block">{tab.description}</span>
+                <span className="hidden text-xs text-muted-foreground lg:block">{tab.blurb}</span>
               </TabsTrigger>
             );
           })}
@@ -496,49 +826,85 @@ const Education = () => {
         <TabsContent value="books" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Curated Reading Tracks</CardTitle>
+              <CardTitle>Curated Reading Journeys</CardTitle>
               <CardDescription>
-                Start with foundational skills, then branch into creative mastery and business strategy as you grow.
+                Progress from foundational chops to advanced career strategy with books we keep in every Rockmundo locker.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {bookCollections.map((collection) => (
-                <Card key={collection.title} className="border-dashed">
+              {bookJourneys.map((journey) => (
+                <Card key={journey.title} className="border-dashed">
                   <CardHeader className="space-y-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <CardTitle className="text-lg">{collection.title}</CardTitle>
-                      <Badge variant="secondary">3 titles</Badge>
+                    <div className="flex items-start justify-between gap-3">
+                      <CardTitle className="text-lg">{journey.title}</CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        {journey.resources.length} picks
+                      </Badge>
                     </div>
-                    <CardDescription>{collection.description}</CardDescription>
+                    <CardDescription>{journey.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {collection.items.map((item) => (
-                      <div key={item.name} className="rounded-lg border bg-muted/30 p-4">
+                    {journey.resources.map((resource) => (
+                      <div key={resource.name} className="rounded-lg border bg-muted/40 p-4 text-left">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.author}</p>
+                            <p className="text-sm font-semibold">{resource.name}</p>
+                            <p className="text-xs text-muted-foreground">{resource.author}</p>
                           </div>
-                          <Badge variant="outline" className="whitespace-nowrap text-xs">
-                            {item.focus}
+                          <Badge variant="outline" className="text-xs">
+                            {resource.focus}
                           </Badge>
                         </div>
-                        <p className="mt-3 text-xs text-muted-foreground">{item.takeaway}</p>
+                        <p className="mt-3 text-xs text-muted-foreground">{resource.takeaway}</p>
                       </div>
                     ))}
+                    {journey.action ? (
+                      <Button asChild variant="secondary" className="w-full">
+                        <a href={journey.action.href} target="_blank" rel="noreferrer">
+                          {journey.action.label}
+                        </a>
+                      </Button>
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="university" className="space-y-6">
+          {universityRoutes.map((route) => (
+            <Card key={route.title}>
+              <CardHeader>
+                <CardTitle>{route.title}</CardTitle>
+                <CardDescription>{route.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  {route.highlights.map((item) => (
+                    <div key={item.program} className="space-y-1 rounded-lg border p-4">
+                      <div className="font-semibold">{item.program}</div>
+                      <div className="text-sm text-muted-foreground">{item.school}</div>
+                      <div className="text-sm text-muted-foreground">{item.format}</div>
+                      <p className="text-sm">{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="outline" asChild>
+                  <a href={route.action.href} target="_blank" rel="noreferrer">
+                    {route.action.label}
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="videos">
           <Card>
             <CardHeader>
-              <CardTitle>Academic Pathways</CardTitle>
+              <CardTitle>YouTube Skill Training</CardTitle>
               <CardDescription>
-                Blend formal study with real-world experience using programs designed for modern performers.
+                Blend formal study with real-world shows, mentorship, and portfolio milestones.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 lg:grid-cols-3">
@@ -551,7 +917,7 @@ const Education = () => {
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
                       {track.highlights.map((highlight) => (
-                        <div key={highlight.name} className="rounded-lg border bg-muted/30 p-4">
+                        <div key={highlight.name} className="rounded-lg border bg-muted/40 p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-sm font-semibold">{highlight.name}</p>
@@ -565,38 +931,36 @@ const Education = () => {
                         </div>
                       ))}
                     </div>
-                    {track.action ? (
-                      <Button asChild variant="secondary" className="w-full">
-                        <a href={track.action.href} target="_blank" rel="noreferrer">
-                          {track.action.label}
-                        </a>
-                      </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {group.skills.map((definition) => renderSkillCard(definition))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No trainable skills are available yet. Unlock skills in your profile to see tailored lessons.
+                </p>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="videos" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Stream Your Lessons</CardTitle>
+              <CardTitle>Streamable Curriculum</CardTitle>
               <CardDescription>
-                Mix binge-worthy channels with structured playlists so every practice session has purpose.
+                Save these playlists and channels so every practice session has guidance and accountability.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {videoPlaylists.map((playlist) => (
-                <Card key={playlist.title} className="border-dashed">
+              {videoCollections.map((collection) => (
+                <Card key={collection.title} className="border-dashed">
                   <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{playlist.title}</CardTitle>
-                    <CardDescription>{playlist.description}</CardDescription>
+                    <CardTitle className="text-lg">{collection.title}</CardTitle>
+                    <CardDescription>{collection.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {playlist.resources.map((resource) => (
-                      <div key={resource.name} className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                    {collection.resources.map((resource) => (
+                      <div key={resource.name} className="space-y-3 rounded-lg border bg-muted/40 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-semibold">{resource.name}</p>
@@ -621,25 +985,25 @@ const Education = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="mentors" className="space-y-6">
+        <TabsContent value="mentors">
           <Card>
             <CardHeader>
-              <CardTitle>Guided Mentorship</CardTitle>
+              <CardTitle>Mentor Pods</CardTitle>
               <CardDescription>
-                Partner with mentors who accelerate your growth with actionable feedback and steady accountability.
+                Surround your project with experts who provide clarity, accountability, and momentum.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {mentorPrograms.map((program) => (
-                <Card key={program.title} className="border-dashed">
+              {mentorTracks.map((track) => (
+                <Card key={track.title} className="border-dashed">
                   <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{program.title}</CardTitle>
-                    <CardDescription>{program.description}</CardDescription>
+                    <CardTitle className="text-lg">{track.title}</CardTitle>
+                    <CardDescription>{track.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
-                      {program.cohorts.map((cohort) => (
-                        <div key={cohort.name} className="rounded-lg border bg-muted/30 p-4">
+                      {track.cohorts.map((cohort) => (
+                        <div key={cohort.name} className="rounded-lg border bg-muted/40 p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-sm font-semibold">{cohort.name}</p>
@@ -653,10 +1017,10 @@ const Education = () => {
                         </div>
                       ))}
                     </div>
-                    {program.action ? (
+                    {track.action ? (
                       <Button asChild variant="secondary" className="w-full">
-                        <a href={program.action.href} target="_blank" rel="noreferrer">
-                          {program.action.label}
+                        <a href={track.action.href} target="_blank" rel="noreferrer">
+                          {track.action.label}
                         </a>
                       </Button>
                     ) : null}
@@ -667,12 +1031,12 @@ const Education = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="band" className="space-y-6">
+        <TabsContent value="band">
           <Card>
             <CardHeader>
-              <CardTitle>Band Learning Lab</CardTitle>
+              <CardTitle>Band Learning Circles</CardTitle>
               <CardDescription>
-                Align your entire crew with immersive intensives, monthly focus cycles, and actionable feedback loops.
+                Keep the whole crew aligned with intensives, monthly focus cycles, and data-informed retros.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -684,7 +1048,7 @@ const Education = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {track.sessions.map((session) => (
-                      <div key={session.name} className="rounded-lg border bg-muted/30 p-4">
+                      <div key={session.name} className="rounded-lg border bg-muted/40 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-semibold">{session.name}</p>
@@ -712,6 +1076,5 @@ const Education = () => {
       </Tabs>
     </div>
   );
-};
+}
 
-export default Education;

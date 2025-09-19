@@ -1,30 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+export type SendFriendRequestParams = {
 
-export type FriendshipStatus = "pending" | "accepted" | "declined" | "blocked";
-export type FriendPresenceStatus = "online" | "typing" | "muted";
-
-export interface FriendshipRow {
-  id: string;
-  requester_id: string;
-  addressee_id: string;
-  status: FriendshipStatus;
-  created_at: string;
-  updated_at: string;
-  responded_at: string | null;
-}
-
-export interface FriendProfileRow {
-  id: string;
-  user_id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  level: number | null;
-  fame: number | null;
-}
-
-export interface SendFriendRequestParams {
   senderProfileId: string;
   senderUserId: string;
   recipientProfileId: string;
@@ -128,33 +105,23 @@ export const fetchProfilesByIds = async (
     return accumulator;
   }, {});
 };
+export const sendFriendRequest = async ({
+  senderProfileId,
+  senderUserId,
+  recipientProfileId,
+  recipientUserId,
+}: SendFriendRequestParams) => {
+  const payload: Database["public"]["Tables"]["friendships"]["Insert"] = {
+    user_id: senderUserId,
+    friend_user_id: recipientUserId,
+    user_profile_id: senderProfileId,
+    friend_profile_id: recipientProfileId,
+    status: "pending",
+  };
 
-export const fetchPresenceByUserIds = async (
-  userIds: string[],
-): Promise<Record<string, FriendPresenceStatus>> => {
-  if (userIds.length === 0) {
-    return {};
-  }
+  const { error } = await supabase.from("friendships").insert(payload);
 
-  try {
-    const { data, error } = await supabase
-      .from("chat_participants")
-      .select("user_id, status")
-      .in("user_id", userIds);
-
-    if (error) {
-      throw error;
-    }
-
-    const rows = (data as { user_id: string; status: string }[]) ?? [];
-    return rows.reduce<Record<string, FriendPresenceStatus>>((accumulator, row) => {
-      if (row.user_id && (row.status === "online" || row.status === "typing" || row.status === "muted")) {
-        accumulator[row.user_id] = row.status;
-      }
-      return accumulator;
-    }, {});
-  } catch (presenceError) {
-    console.error("Failed to load presence information", presenceError);
-    return {};
+  if (error) {
+    throw error;
   }
 };

@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,7 +57,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  }, [selectedChannel, user]);
+  }, [user, selectedChannel]);
 
   const sendMessage = async () => {
     if (!user || !message.trim()) return;
@@ -84,74 +83,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
   useEffect(() => {
     if (user) {
-      fetchMessages();
+      void fetchMessages();
     }
-  }, [user, selectedChannel, fetchMessages]);
-
-  useEffect(() => {
-    if (!user) {
-      channelRef.current?.unsubscribe();
-      channelRef.current = null;
-      onConnectionStatusChange?.(false);
-      onOnlineCountChange?.(0);
-      return;
-    }
-
-    const realtimeChannel = supabase.channel(`chat-${selectedChannel}`, {
-      config: {
-        presence: {
-          key: user.id,
-        },
-      },
-    });
-
-    const updatePresenceCount = () => {
-      const state = realtimeChannel.presenceState<Record<string, { user_id: string }>>();
-      const count = Object.values(state).reduce((total, users) => total + users.length, 0);
-      onOnlineCountChange?.(count);
-    };
-
-    realtimeChannel.on('presence', { event: 'sync' }, updatePresenceCount);
-    realtimeChannel.on('presence', { event: 'join' }, updatePresenceCount);
-    realtimeChannel.on('presence', { event: 'leave' }, updatePresenceCount);
-
-    realtimeChannel.on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'global_chat', filter: `channel=eq.${selectedChannel}` },
-      (payload) => {
-        const newMessage = payload.new as Message;
-        setMessages((current) => {
-          const exists = current.some((msg) => msg.id === newMessage.id);
-          if (exists) {
-            return current;
-          }
-          return [...current, newMessage].slice(-50);
-        });
-      }
-    );
-
-    realtimeChannel.subscribe((status) => {
-      const isConnected = status === 'SUBSCRIBED';
-      onConnectionStatusChange?.(isConnected);
-
-      if (isConnected) {
-        void realtimeChannel.track({ user_id: user.id });
-      }
-
-      if (!isConnected && status !== 'SUBSCRIBED') {
-        onOnlineCountChange?.(0);
-      }
-    });
-
-    channelRef.current = realtimeChannel;
-
-    return () => {
-      onConnectionStatusChange?.(false);
-      onOnlineCountChange?.(0);
-      realtimeChannel.unsubscribe();
-      channelRef.current = null;
-    };
-  }, [selectedChannel, user, onConnectionStatusChange, onOnlineCountChange]);
+  }, [user, fetchMessages]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
