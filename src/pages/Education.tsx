@@ -160,7 +160,7 @@ interface BandMemberWithProfile {
   };
 }
 
-const bookCollections = [
+const bookJourneys = [
   {
     title: "Creative Foundations",
     description:
