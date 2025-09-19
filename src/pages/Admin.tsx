@@ -10,7 +10,6 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -21,11 +20,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { AdminRoute } from "@/components/AdminRoute";
 import { SKILL_TREE_DEFINITIONS, type TierName } from "@/data/skillTree";
 import type { SkillDefinitionRecord } from "@/hooks/useSkillSystem.types";
 
@@ -762,21 +758,10 @@ export default function Admin() {
                               <FormControl>
                                 <Input placeholder="Enter city name" autoComplete="address-level2" {...field} />
                               </FormControl>
-                              <SelectContent>
-                                {skillOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span>{option.label}</span>
-                                      {option.tier ? <Badge variant="outline">{option.tier}</Badge> : null}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                       <FormField
                         control={skillBookForm.control}
