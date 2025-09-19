@@ -23,7 +23,7 @@ interface Message extends SupabaseMessage {
 }
 
 interface ProfileRecord {
-  id: string;
+  user_id: string;
   display_name: string | null;
   username: string | null;
 }
@@ -81,25 +81,27 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
 
       if (missingUserIds.length > 0) {
         const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, display_name, username')
-          .in('id', missingUserIds);
+          .from('public_profiles')
+          .select('user_id, display_name, username')
+          .in('user_id', missingUserIds);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Error fetching profiles:', profileError);
+        }
 
         const newCacheEntries: Record<string, string> = {};
 
         const typedProfileData = (profileData || []) as ProfileRecord[];
 
         typedProfileData.forEach((profile) => {
-          if (!profile?.id) return;
+          if (!profile?.user_id) return;
 
           const displayName =
             (typeof profile.display_name === 'string' && profile.display_name.trim()) ||
             (typeof profile.username === 'string' && profile.username.trim()) ||
-            profile.id.slice(0, 8);
+            profile.user_id.slice(0, 8);
 
-          newCacheEntries[profile.id] = displayName;
+          newCacheEntries[profile.user_id] = displayName;
         });
 
         missingUserIds.forEach((id) => {
