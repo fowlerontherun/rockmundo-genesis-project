@@ -14,7 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "@/utils/attributeProgression";
 
-const NO_CITY_SELECTED_VALUE = "__no_city_selected__";
 const DEFAULT_ATTRIBUTE_VALUE = 5;
 
 const DEFAULT_ATTRIBUTE_DISTRIBUTION: Record<AttributeKey, number> = ATTRIBUTE_KEYS.reduce(
@@ -28,36 +27,6 @@ const DEFAULT_ATTRIBUTE_DISTRIBUTION: Record<AttributeKey, number> = ATTRIBUTE_K
 type ProfileRow = Tables<"profiles">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
-
-type CityOption = {
-  id: string;
-  name: string | null;
-  country: string | null;
-};
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const sanitizeCityOfBirth = (
-  value: string | null,
-  validCities?: CityOption[] | null,
-): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmedValue = value.trim();
-
-  if (trimmedValue.length === 0) {
-    return null;
-  }
-
-  const isUuid = UUID_REGEX.test(trimmedValue);
-  const isKnownCity =
-    Array.isArray(validCities) && validCities.some((city) => city.id === trimmedValue);
-
-  return isUuid || isKnownCity ? trimmedValue : null;
-};
 
 type CharacterCreationLocationState = {
   fromProfile?: boolean;
@@ -101,46 +70,12 @@ const CharacterCreation = () => {
   const [stageName, setStageName] = useState("");
   const [bio, setBio] = useState("");
   const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
-  const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
-
-  const [cities, setCities] = useState<CityOption[]>([]);
-  const [citiesLoading, setCitiesLoading] = useState(false);
-  const [citiesError, setCitiesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
     }
   }, [loading, user, navigate]);
-
-  useEffect(() => {
-    const fetchCities = async () => {
-      try {
-        setCitiesLoading(true);
-        setCitiesError(null);
-
-        const { data, error } = await supabase
-          .from("cities")
-          .select("id, name, country")
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-
-        const sanitizedCities = ((data as CityOption[] | null) ?? []).filter(
-          (city): city is CityOption => typeof city.id === "string" && city.id.trim().length > 0,
-        );
-
-        setCities(sanitizedCities);
-      } catch (error) {
-        console.error("Failed to load cities:", error);
-        setCitiesError("We couldn't load cities right now. You can update this later in your profile.");
-      } finally {
-        setCitiesLoading(false);
-      }
-    };
-
-    void fetchCities();
-  }, []);
 
   useEffect(() => {
     const fetchExistingData = async () => {
@@ -189,8 +124,6 @@ const CharacterCreation = () => {
         }
 
         const profileRecord = (profileData as ProfileRow | null) ?? null;
-        const sanitizedCityId = sanitizeCityOfBirth(profileRecord?.city_of_birth ?? null);
-
         console.log("[CharacterCreation] Profile load result", {
           hasProfile: Boolean(profileRecord),
           profileId: profileRecord?.id ?? null,
@@ -202,7 +135,6 @@ const CharacterCreation = () => {
           setStageName(profileRecord.display_name ?? "");
           setBio(profileRecord.bio ?? "");
           setGender(profileRecord.gender ?? "prefer_not_to_say");
-          setCityOfBirth(sanitizedCityId);
 
           if (profileRecord.id) {
             console.log("[CharacterCreation] Loading existing attributes", {
@@ -241,7 +173,6 @@ const CharacterCreation = () => {
           setStageName("");
           setBio("");
           setGender("prefer_not_to_say");
-          setCityOfBirth(null);
           setHasExistingAttributes(false);
         }
       } catch (error) {
@@ -257,28 +188,6 @@ const CharacterCreation = () => {
 
     void fetchExistingData();
   }, [user, targetProfileId]);
-
-  useEffect(() => {
-    if (isLoading || citiesLoading) {
-      return;
-    }
-
-    const storedCityId = existingProfile?.city_of_birth ?? null;
-    const normalizedCityId = sanitizeCityOfBirth(storedCityId, cities);
-
-    if (normalizedCityId) {
-      setCityOfBirth((current) => (current === normalizedCityId ? current : normalizedCityId));
-      return;
-    }
-
-    if (storedCityId) {
-      console.warn("[CharacterCreation] Clearing invalid city_of_birth reference", {
-        storedCityId,
-      });
-    }
-
-    setCityOfBirth((current) => (current === null ? current : null));
-  }, [isLoading, citiesLoading, existingProfile, cities]);
 
   useEffect(() => {
     if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
@@ -325,14 +234,12 @@ const CharacterCreation = () => {
       targetProfileId,
       hasExistingAttributes,
       gender,
-      cityOfBirth,
       trimmedName,
       trimmedStageName,
     });
 
     try {
       let savedProfile: ProfileRow | null = null;
-      const sanitizedCityOfBirth = sanitizeCityOfBirth(cityOfBirth, cities);
 
       if (existingProfile) {
         console.log("[CharacterCreation] Updating existing profile", {
@@ -345,7 +252,6 @@ const CharacterCreation = () => {
             display_name: trimmedStageName,
             bio: trimmedBio.length > 0 ? trimmedBio : null,
             gender,
-            city_of_birth: sanitizedCityOfBirth,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingProfile.id)
@@ -369,7 +275,6 @@ const CharacterCreation = () => {
           display_name: trimmedStageName,
           bio: trimmedBio.length > 0 ? trimmedBio : null,
           gender,
-          city_of_birth: sanitizedCityOfBirth,
         };
 
         const { data, error } = await supabase
@@ -553,33 +458,6 @@ const CharacterCreation = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="city-of-birth">City of Birth</Label>
-              <Select
-                value={cityOfBirth ?? NO_CITY_SELECTED_VALUE}
-                onValueChange={(value) =>
-                  setCityOfBirth(value === NO_CITY_SELECTED_VALUE ? null : value)
-                }
-                disabled={citiesLoading}
-              >
-                <SelectTrigger id="city-of-birth">
-                  <SelectValue
-                    placeholder={citiesLoading ? "Loading cities…" : "Select a city"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_CITY_SELECTED_VALUE}>No listed city</SelectItem>
-                  {cities.map((city) => (
-                    <SelectItem key={city.id} value={city.id}>
-                      {city.name ?? "Unnamed City"}
-                      {city.country ? `, ${city.country}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {citiesError && <p className="text-sm text-destructive">{citiesError}</p>}
             </div>
           </div>
 

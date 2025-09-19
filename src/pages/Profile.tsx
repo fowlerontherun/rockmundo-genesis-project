@@ -74,19 +74,12 @@ interface FanMetrics {
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 type FriendPresenceStatus = Database["public"]["Enums"]["chat_participant_status"];
 
-type CityOption = {
-  id: string;
-  name: string | null;
-  country: string | null;
-};
-
 type ProfileFormState = {
   display_name: string;
   username: string;
   bio: string;
   gender: ProfileGender;
   age: string;
-  city_of_birth: string | null;
 };
 
 const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -113,8 +106,6 @@ const genderOptions: { value: ProfileGender; label: string }[] = [
   { value: "other", label: "Other" },
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
-
-const NO_CITY_SELECTED_VALUE = "__no_city_selected__";
 
 const Profile = () => {
   const { toast } = useToast();
@@ -160,11 +151,7 @@ const Profile = () => {
     bio: "",
     gender: "prefer_not_to_say",
     age: "16",
-    city_of_birth: null,
   });
-  const [cityOptions, setCityOptions] = useState<CityOption[]>([]);
-  const [cityLoading, setCityLoading] = useState(false);
-  const [cityError, setCityError] = useState<string | null>(null);
   const [friendSearchTerm, setFriendSearchTerm] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState<SearchProfilesRow[]>([]);
   const [friendSearchLoading, setFriendSearchLoading] = useState(false);
@@ -444,47 +431,9 @@ const Profile = () => {
         bio: profile.bio || "",
         gender: (profile.gender as ProfileGender) || "prefer_not_to_say",
         age: typeof profile.age === "number" ? String(profile.age) : "16",
-        city_of_birth: profile.city_of_birth ?? null,
       });
     }
   }, [profile]);
-
-  useEffect(() => {
-    const fetchCities = async () => {
-      try {
-        setCityLoading(true);
-        setCityError(null);
-
-        const { data, error } = await supabase
-          .from("cities")
-          .select("id, name, country")
-          .order("name", { ascending: true });
-
-        if (error) throw error;
-
-        const sanitizedCities = ((data as CityOption[] | null) ?? []).filter(
-          (city): city is CityOption => typeof city.id === "string" && city.id.trim().length > 0,
-        );
-
-        setCityOptions(sanitizedCities);
-      } catch (error) {
-        console.error("Error loading cities:", error);
-        setCityError("We couldn't load cities right now. You can try again later.");
-      } finally {
-        setCityLoading(false);
-      }
-    };
-
-    void fetchCities();
-  }, []);
-
-  const birthCityLabel = useMemo(() => {
-    if (!profile?.city_of_birth) return null;
-    const match = cityOptions.find((city) => city.id === profile.city_of_birth);
-    if (!match) return null;
-    const cityName = match.name ?? "Unnamed City";
-    return match.country ? `${cityName}, ${match.country}` : cityName;
-  }, [profile?.city_of_birth, cityOptions]);
 
   const profileGenderLabel = useMemo(() => {
     if (!profile?.gender) return "Prefer not to say";
@@ -590,7 +539,6 @@ const Profile = () => {
         bio: formData.bio,
         gender: formData.gender,
         age: parsedAge,
-        city_of_birth: formData.city_of_birth,
       });
       setIsEditing(false);
       toast({
@@ -848,11 +796,6 @@ const Profile = () => {
                         <Badge variant="outline" className="border-border text-foreground/80">
                           {profileGenderLabel}
                         </Badge>
-                        <Badge variant="outline" className="border-border text-foreground/80">
-                          {profile.city_of_birth
-                            ? birthCityLabel ?? "Loading birth city..."
-                            : "Birth city not set"}
-                        </Badge>
                       </div>
                       <AlertDialog
                         open={isResetDialogOpen}
@@ -989,38 +932,6 @@ const Profile = () => {
                           className={!isEditing ? "bg-secondary/50" : ""}
                         />
                         <p className="text-xs text-muted-foreground">Age helps us tailor narrative beats.</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="city-of-birth">City of Birth</Label>
-                        <Select
-                          value={formData.city_of_birth ?? NO_CITY_SELECTED_VALUE}
-                          onValueChange={(value) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              city_of_birth: value === NO_CITY_SELECTED_VALUE ? null : value,
-                            }))
-                          }
-                          disabled={!isEditing || cityLoading}
-                        >
-                          <SelectTrigger
-                            id="city-of-birth"
-                            className={!isEditing ? "bg-secondary/50" : ""}
-                          >
-                            <SelectValue
-                              placeholder={cityLoading ? "Loading cities..." : "Select a city"}
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NO_CITY_SELECTED_VALUE}>No listed city</SelectItem>
-                            {cityOptions.map((city) => (
-                              <SelectItem key={city.id} value={city.id}>
-                                {city.name ?? "Unnamed City"}
-                                {city.country ? `, ${city.country}` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {cityError && <p className="text-xs text-destructive">{cityError}</p>}
                       </div>
                     </div>
                     {isEditing && (
