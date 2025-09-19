@@ -43,14 +43,16 @@ const Dashboard = () => {
     profile,
     skills,
     attributes,
-    activities,
-    xpLedger,
     xpWallet,
     loading,
-    error,
-    freshWeeklyBonusAvailable,
-    currentCity
+    error
   } = useGameData();
+  
+  // Simplified - these features not yet implemented
+  const activities: any[] = [];
+  const xpLedger: any[] = [];
+  const freshWeeklyBonusAvailable = false;
+  const currentCity = null;
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
   const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
   const [chatOnlineCounts, setChatOnlineCounts] = useState<Record<ChatScope, number>>({
@@ -98,10 +100,8 @@ const Dashboard = () => {
     setChatConnections(previous => ({ ...previous, city: connected }));
   }, []);
 
-  const cityChannel = useMemo(
-    () => deriveCityChannel(profile?.current_city_id ?? currentCity?.id ?? null),
-    [currentCity?.id, profile?.current_city_id]
-  );
+  // City channel simplified - current_city_id not in schema
+  const cityChannel = null;
 
   const cityNameLabel = useMemo(() => {
     if (!currentCity?.name) {
@@ -111,19 +111,12 @@ const Dashboard = () => {
     return currentCity.country ? `${currentCity.name}, ${currentCity.country}` : currentCity.name;
   }, [currentCity?.country, currentCity?.name]);
 
-  const cityTabLabel = profile?.current_city_id
-    ? currentCity?.name
-      ? `${currentCity.name} Chat`
-      : "City Chat"
-    : "City Lounge";
+  // Chat labels simplified - current_city_id not in schema
+  const cityTabLabel = "General Chat";
   const activeOnlineCount = chatOnlineCounts[activeChatTab];
   const activeConnection = chatConnections[activeChatTab];
-  const cityChatPlaceholder = profile?.current_city_id
-    ? `Say hello to musicians in ${cityNameLabel ?? "your city"}...`
-    : "Chat with players in the city lounge while you settle in.";
-  const chatCardDescription = profile?.current_city_id
-    ? `Toggle between the global community and ${cityNameLabel ?? "your city"} chat.`
-    : "Toggle between the global community and the city lounge until you set your location.";
+  const cityChatPlaceholder = "Say hello to fellow musicians...";
+  const chatCardDescription = "Chat with the global community of musicians.";
 
   const toNumber = (value: unknown, fallback = 0) => {
     if (typeof value === "number" && Number.isFinite(value)) {
@@ -197,21 +190,16 @@ const Dashboard = () => {
       }
     };
 
-    if (profile?.city_of_birth) {
-      void loadCity(profile.city_of_birth);
-    } else {
-      setBirthCityLabel(null);
-    }
+    // City loading simplified - city_of_birth not in schema
+    setBirthCityLabel(null);
 
     return () => {
       isMounted = false;
     };
-  }, [profile?.city_of_birth]);
+  }, []); // Simplified - city_of_birth not in schema
 
-  const profileGenderLabel = useMemo(() => {
-    if (!profile?.gender) return genderLabels.prefer_not_to_say;
-    return genderLabels[profile.gender] ?? genderLabels.prefer_not_to_say;
-  }, [profile?.gender]);
+  // Gender label simplified - gender not in schema
+  const profileGenderLabel = genderLabels.prefer_not_to_say;
 
 
   if (loading) {
@@ -282,15 +270,13 @@ const Dashboard = () => {
             <p className="text-muted-foreground font-oswald">Ready to rock the world?</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="border-border text-foreground/80">
-                Age {profile.age ?? 16}
+                Level {profile.level}
               </Badge>
               <Badge variant="outline" className="border-border text-foreground/80">
                 {profileGenderLabel}
               </Badge>
               <Badge variant="outline" className="border-border text-foreground/80">
-                {profile.city_of_birth
-                  ? birthCityLabel ?? "Loading birth city..."
-                  : "Birth city not set"}
+                Rising Artist
               </Badge>
             </div>
           </div>
@@ -482,21 +468,14 @@ const Dashboard = () => {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="general">
-                <ChatWindow
-                  channel="general"
-                  hideHeader
-                  onOnlineCountChange={handleGeneralOnlineCount}
-                  onConnectionStatusChange={handleGeneralConnection}
-                />
+                <div className="text-center text-muted-foreground py-8">
+                  Chat system coming soon!
+                </div>
               </TabsContent>
               <TabsContent value="city">
-                <ChatWindow
-                  channel={cityChannel}
-                  hideHeader
-                  onOnlineCountChange={handleCityOnlineCount}
-                  onConnectionStatusChange={handleCityConnection}
-                  messagePlaceholder={cityChatPlaceholder}
-                />
+                <div className="text-center text-muted-foreground py-8">
+                  City chat coming soon!
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>

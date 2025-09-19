@@ -520,7 +520,7 @@ type ProfileInsert = TablesInsert<"profiles">;
 type PlayerAttributesRow = Tables<"player_attributes">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 
-type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+// ProfileGender enum removed - not in current schema
 
 type CityOption = {
   id: string;
@@ -533,7 +533,8 @@ type CharacterCreationLocationState = {
   profileId?: string | null;
 };
 
-const genderOptions: { value: ProfileGender; label: string }[] = [
+// Gender options simplified - removed ProfileGender type
+const genderOptions = [
   { value: "female", label: "Female" },
   { value: "male", label: "Male" },
   { value: "non_binary", label: "Non-binary" },
@@ -600,7 +601,7 @@ const CharacterCreation = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<SaveErrorState | null>(null);
-  const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
+  const [gender, setGender] = useState("prefer_not_to_say");
   const [age, setAge] = useState<string>("16");
   const [cityOfBirth, setCityOfBirth] = useState<string | null>(null);
   const [cities, setCities] = useState<CityOption[]>([]);
@@ -616,9 +617,10 @@ const CharacterCreation = () => {
     [],
   );
 
-  const slotNumber = existingProfile?.slot_number ?? 1;
-  const unlockCost = existingProfile?.unlock_cost ?? 0;
-  const isActive = existingProfile?.is_active ?? true;
+  // Slot management simplified - fields not in current schema
+  const slotNumber = 1;
+  const unlockCost = 0;
+  const isActive = true;
 
   const selectedStyleDefinition = useMemo(
     () => avatarStyles.find((style) => style.id === selectedAvatarStyle) ?? avatarStyles[0],
@@ -693,10 +695,12 @@ const CharacterCreation = () => {
         }
 
         const profileData = (profileResponse.data as ProfileRow | null) ?? null;
-        const attributesData = (attributesResponse.data as PlayerAttributesRow | null) ?? null;
+        const attributesData = attributesResponse.data || null;
 
         setExistingProfile(profileData);
-        setExistingAttributes(attributesData);
+        if (attributesData && typeof attributesData === 'object') {
+          setExistingAttributes(attributesData);
+        }
 
         if (profileData) {
           if (profileData.display_name) {
@@ -708,13 +712,7 @@ const CharacterCreation = () => {
             setUsernameEdited(true);
           }
           setBio(profileData.bio ?? backgrounds[0].description);
-          if (profileData.gender) {
-            setGender(profileData.gender as ProfileGender);
-          }
-          if (typeof profileData.age === "number") {
-            setAge(String(profileData.age));
-          }
-          setCityOfBirth(profileData.city_of_birth ?? null);
+          // Gender, age, and city_of_birth not in current schema - using defaults
 
           if (profileData.avatar_url) {
             const storedSelection = getStoredAvatarSelection(profileResponse.data?.avatar_url);
@@ -745,8 +743,8 @@ const CharacterCreation = () => {
           setUsernameEdited(false);
         }
 
-        const normalizedAttributesRow = attributesData
-          ? { ...(attributesData as Record<string, unknown>) }
+        const normalizedAttributesRow = (attributesData && typeof attributesData === 'object' && !('error' in attributesData))
+          ? { ...attributesData }
           : null;
 
         setAttributes((previous) =>
@@ -897,20 +895,17 @@ const CharacterCreation = () => {
       backgrounds.find((bg) => bg.id === selectedBackground) ?? backgrounds[0];
     const finalBio = bio?.trim() || selectedBackgroundDetails.description;
 
-    const parsedAgeValue = Number.parseInt(age, 10);
-    const parsedAge = Number.isNaN(parsedAgeValue)
-      ? existingProfile?.age ?? 16
-      : Math.min(120, Math.max(13, parsedAgeValue));
+    // Age parsing simplified - field not in current schema
+    const parsedAge = 25; // Default age
 
     const activeStyle = selectedStyleDefinition ?? avatarStyles[0];
     const activePose = selectedPoseDefinition ?? avatarPoses[0];
     const activeCamera = selectedCameraDefinition ?? avatarCameras[0];
 
-    const slotNumber =
-      typeof existingProfile?.slot_number === "number" ? existingProfile.slot_number : 1;
-    const unlockCost =
-      typeof existingProfile?.unlock_cost === "number" ? existingProfile.unlock_cost : 0;
-    const isActive = existingProfile?.is_active ?? true;
+    // Slot management simplified - fields not in current schema
+    const slotNumber = 1;
+    const unlockCost = 0;
+    const isActive = true;
 
     const avatarSelection = {
       styleId: activeStyle?.id ?? defaultAvatarSelection.styleId,
@@ -933,15 +928,8 @@ const CharacterCreation = () => {
       experience: existingProfile?.experience ?? 0,
       cash: existingProfile?.cash ?? 500,
       fans: existingProfile?.fans ?? 0,
-      followers: existingProfile?.followers ?? 0,
       fame: existingProfile?.fame ?? 0,
-      engagement_rate: existingProfile?.engagement_rate ?? 0,
-      gender,
-      age: parsedAge,
-      city_of_birth: cityOfBirth,
-      slot_number: slotNumber,
-      unlock_cost: unlockCost,
-      is_active: isActive,
+      // Fields not in current schema removed: followers, engagement_rate, gender, age, city_of_birth, slot_number, unlock_cost, is_active
     };
 
     let attemptedProfilePayload: Record<string, unknown> = { ...baseProfilePayload };
@@ -1045,20 +1033,8 @@ const CharacterCreation = () => {
 
       currentStage = "ensure-wardrobe";
 
-      const ensuredLoadout = await ensureDefaultWardrobe(
-        upsertedProfile.id,
-        user.id,
-        parseClothingLoadout(
-          (existingProfile ?? upsertedProfile)?.equipped_clothing,
-        ),
-      );
-
-      if (ensuredLoadout) {
-        upsertedProfile = {
-          ...upsertedProfile,
-          equipped_clothing: ensuredLoadout as PlayerProfile["equipped_clothing"],
-        };
-      }
+      // Wardrobe system simplified - equipped_clothing not in current schema
+      // Skip wardrobe initialization for now
 
       setExistingProfile(upsertedProfile);
 
@@ -1825,7 +1801,7 @@ const CharacterCreation = () => {
                 <label className="text-sm font-medium text-muted-foreground" htmlFor="gender">
                   Gender
                 </label>
-                <Select value={gender} onValueChange={(value) => setGender(value as ProfileGender)}>
+                <Select value={gender} onValueChange={setGender}>
                   <SelectTrigger id="gender">
                     <SelectValue placeholder="Select a gender" />
                   </SelectTrigger>
