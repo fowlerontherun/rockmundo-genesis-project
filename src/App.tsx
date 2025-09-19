@@ -34,6 +34,7 @@ const MusicCreation = lazyWithRetry(() => import("./pages/MusicCreation"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
+const SetlistDesigner = lazyWithRetry(() => import("./pages/SetlistDesigner"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
@@ -87,6 +88,7 @@ function App() {
                     <Route path="achievements" element={<Achievements />} />
                     <Route path="city" element={<City />} />
                     <Route path="tours" element={<TourManager />} />
+                    <Route path="setlists" element={<SetlistDesigner />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
