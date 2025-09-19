@@ -7,29 +7,25 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
+type SkillDefinitionInsert = Database['public']['Tables']['skill_definitions']['Insert'];
 
-interface SkillDefinition {
-  id: string;
-  slug: string;
-  display_name: string;
-  description: string | null;
-  tier_caps: any;
-  created_at: string;
-  updated_at: string;
-}
+
+type TierCaps = Record<string, number | null>;
 
 export function SkillDefinitionsManager() {
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
-  const [newSkill, setNewSkill] = useState({
+  const [newSkill, setNewSkill] = useState<SkillDefinitionInsert>({
     slug: '',
     display_name: '',
     description: '',
-    tier_caps: {}
+    tier_caps: {} as SkillDefinitionInsert['tier_caps'],
   });
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchSkills();
+    void fetchSkills();
   }, []);
 
   const fetchSkills = async () => {
@@ -67,8 +63,8 @@ export function SkillDefinitionsManager() {
       if (error) throw error;
       
       toast.success('Skill created successfully');
-      setNewSkill({ slug: '', display_name: '', description: '', tier_caps: {} });
-      fetchSkills();
+      setNewSkill({ slug: '', display_name: '', description: '', tier_caps: {} as SkillDefinitionInsert['tier_caps'] });
+      void fetchSkills();
     } catch (error) {
       console.error('Error creating skill:', error);
       toast.error('Failed to create skill');

@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
-
+import { ArrowUpDown, Loader2, Pencil, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,8 +14,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { AdminRoute } from "@/components/AdminRoute";
+
+const UNIVERSITY_PAGE_SIZE = 10;
+
+type SortColumn = "name" | "city" | "prestige" | "quality_of_learning" | "course_cost";
+type SortDirection = "asc" | "desc";
+
+const sortColumnOptions: { value: SortColumn; label: string }[] = [
+  { value: "city", label: "City" },
+  { value: "name", label: "Name" },
+  { value: "prestige", label: "Prestige" },
+  { value: "quality_of_learning", label: "Quality of Learning" },
+  { value: "course_cost", label: "Course Cost" },
+];
+
+const sortDirectionLabels: Record<SortDirection, string> = {
+  asc: "Ascending",
+  desc: "Descending",
+};
 
 const universitySchema = z.object({
+  name: z.string().min(1, "Name is required"),
   city: z.string().min(1, "City is required"),
   prestige: z
     .coerce
@@ -35,12 +54,12 @@ const universitySchema = z.object({
 });
 
 type UniversityFormValues = z.infer<typeof universitySchema>;
-
 type UniversitiesTable = Database["public"]["Tables"] extends { universities: infer T }
   ? T
   : {
       Row: {
         id: string;
+        name: string;
         city: string;
         prestige: number | null;
         quality_of_learning: number | null;
@@ -48,12 +67,14 @@ type UniversitiesTable = Database["public"]["Tables"] extends { universities: in
         created_at: string | null;
       };
       Insert: {
+        name: string;
         city: string;
         prestige?: number | null;
         quality_of_learning?: number | null;
         course_cost?: number | null;
       };
       Update: {
+        name?: string;
         city?: string;
         prestige?: number | null;
         quality_of_learning?: number | null;
@@ -68,6 +89,10 @@ type UniversityUpdate = UniversitiesTable extends { Update: infer U } ? U : neve
 export default function Admin() {
   const { toast } = useToast();
   const [universities, setUniversities] = useState<UniversityRow[]>([]);
+  const [totalUniversities, setTotalUniversities] = useState(0);
+  const [page, setPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("city");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [isLoadingUniversities, setIsLoadingUniversities] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingUniversity, setEditingUniversity] = useState<UniversityRow | null>(null);
@@ -76,6 +101,7 @@ export default function Admin() {
   const form = useForm<UniversityFormValues>({
     resolver: zodResolver(universitySchema),
     defaultValues: {
+      name: "",
       city: "",
       prestige: 50,
       qualityOfLearning: 50,
@@ -86,14 +112,33 @@ export default function Admin() {
   const handleFetchUniversities = useCallback(async () => {
     setIsLoadingUniversities(true);
     try {
-      const { data, error } = await supabase
+      const from = (page - 1) * UNIVERSITY_PAGE_SIZE;
+      const to = from + UNIVERSITY_PAGE_SIZE - 1;
+
+      const { data, error, count } = await supabase
         .from("universities")
-        .select("*")
-        .order("city", { ascending: true });
+        .select("*", { count: "exact" })
+        .order(sortColumn, { ascending: sortDirection === "asc" })
+        .range(from, to);
 
       if (error) throw error;
 
       setUniversities((data as UniversityRow[] | null) ?? []);
+      if (typeof count === "number") {
+        setTotalUniversities(count);
+        if (count === 0) {
+          if (page !== 1) {
+            setPage(1);
+          }
+        } else if (from >= count) {
+          const lastPage = Math.max(Math.ceil(count / UNIVERSITY_PAGE_SIZE), 1);
+          if (lastPage !== page) {
+            setPage(lastPage);
+          }
+        }
+      } else {
+        setTotalUniversities(0);
+      }
     } catch (error) {
       console.error("Failed to load universities", error);
       toast({
@@ -104,7 +149,7 @@ export default function Admin() {
     } finally {
       setIsLoadingUniversities(false);
     }
-  }, [toast]);
+  }, [page, sortColumn, sortDirection, toast]);
 
   useEffect(() => {
     void handleFetchUniversities();
@@ -118,9 +163,48 @@ export default function Admin() {
         : "Define a new university hub, including its prestige and learning quality.",
     [editingUniversity],
   );
+  const totalPages = useMemo(
+    () => (totalUniversities > 0 ? Math.ceil(totalUniversities / UNIVERSITY_PAGE_SIZE) : 1),
+    [totalUniversities],
+  );
+  const showingRangeStart =
+    totalUniversities === 0 || universities.length === 0
+      ? 0
+      : (page - 1) * UNIVERSITY_PAGE_SIZE + 1;
+  const showingRangeEnd =
+    totalUniversities === 0 || universities.length === 0
+      ? 0
+      : Math.min(showingRangeStart + universities.length - 1, totalUniversities);
+  const hasUniversities = totalUniversities > 0;
+
+  const handleSortColumnChange = useCallback(
+    (value: SortColumn) => {
+      if (sortColumn !== value) {
+        setSortColumn(value);
+        if (page !== 1) {
+          setPage(1);
+        }
+      }
+    },
+    [page, sortColumn],
+  );
+
+  const handleToggleSortDirection = useCallback(() => {
+    setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+  }, []);
+
+  const handlePageChange = useCallback(
+    (nextPage: number) => {
+      if (nextPage >= 1 && nextPage <= totalPages && nextPage !== page) {
+        setPage(nextPage);
+      }
+    },
+    [page, totalPages],
+  );
 
   const resetFormState = useCallback(() => {
     form.reset({
+      name: "",
       city: "",
       prestige: 50,
       qualityOfLearning: 50,
@@ -134,6 +218,7 @@ export default function Admin() {
       setIsSubmitting(true);
       try {
         const payload: UniversityInsert = {
+          name: values.name,
           city: values.city,
           prestige: values.prestige,
           quality_of_learning: values.qualityOfLearning,
@@ -151,7 +236,7 @@ export default function Admin() {
 
           toast({
             title: "University updated",
-            description: `${values.city} has been updated successfully.`,
+            description: `${values.name} has been updated successfully.`,
           });
         } else {
           const { error } = await supabase.from("universities").insert(payload);
@@ -160,12 +245,16 @@ export default function Admin() {
 
           toast({
             title: "University created",
-            description: `${values.city} is now available in the world.`,
+            description: `${values.name} is now available in the world.`,
           });
         }
 
         resetFormState();
-        await handleFetchUniversities();
+        if (!editingUniversity && page !== 1) {
+          setPage(1);
+        } else {
+          await handleFetchUniversities();
+        }
       } catch (error) {
         console.error("Failed to submit university", error);
         toast({
@@ -177,13 +266,14 @@ export default function Admin() {
         setIsSubmitting(false);
       }
     },
-    [editingUniversity, handleFetchUniversities, resetFormState, toast],
+    [editingUniversity, handleFetchUniversities, page, resetFormState, toast],
   );
 
   const handleEdit = useCallback(
     (university: UniversityRow) => {
       setEditingUniversity(university);
       form.reset({
+        name: university.name ?? "",
         city: university.city ?? "",
         prestige: university.prestige ?? 50,
         qualityOfLearning: university.quality_of_learning ?? 50,
@@ -194,21 +284,25 @@ export default function Admin() {
   );
 
   const handleDelete = useCallback(
-    async (id: string, city: string) => {
+    async (id: string, label: string) => {
       setDeletingId(id);
       try {
         const { error } = await supabase.from("universities").delete().eq("id", id);
 
         if (error) throw error;
 
+        const isLastItemOnPage = universities.length <= 1;
+        const nextTotal = Math.max(totalUniversities - 1, 0);
+
         setUniversities((prev) => prev.filter((item) => item.id !== id));
+        setTotalUniversities(nextTotal);
         if (editingUniversity?.id === id) {
           resetFormState();
         }
         await handleFetchUniversities();
         toast({
           title: "University deleted",
-          description: `${city} has been removed from the roster.`,
+          description: `${label} has been removed from the roster.`,
         });
       } catch (error) {
         console.error("Failed to delete university", error);

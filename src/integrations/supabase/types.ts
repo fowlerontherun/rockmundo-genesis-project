@@ -293,6 +293,42 @@ export type Database = {
         }
         Relationships: []
       }
+      city_metadata: {
+        Row: {
+          id: string
+          city_id: string
+          highlights: Json | null
+          districts: Json | null
+          travel_options: Json | null
+          economy: Json | null
+          culture: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          city_id: string
+          highlights?: Json | null
+          districts?: Json | null
+          travel_options?: Json | null
+          economy?: Json | null
+          culture?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          city_id?: string
+          highlights?: Json | null
+          districts?: Json | null
+          travel_options?: Json | null
+          economy?: Json | null
+          culture?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       equipment_items: {
         Row: {
           category: string
@@ -905,6 +941,258 @@ export type Database = {
           },
         ]
       }
+      promotion_campaigns: {
+        Row: {
+          id: string
+          user_id: string
+          profile_id: string | null
+          song_id: string | null
+          platform_id: string | null
+          platform_name: string | null
+          name: string | null
+          status: string | null
+          budget: number | null
+          spend: number | null
+          start_date: string | null
+          end_date: string | null
+          stream_increase: number | null
+          playlists_targeted: number | null
+          new_placements: number | null
+          metadata: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          profile_id?: string | null
+          song_id?: string | null
+          platform_id?: string | null
+          platform_name?: string | null
+          name?: string | null
+          status?: string | null
+          budget?: number | null
+          spend?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          stream_increase?: number | null
+          playlists_targeted?: number | null
+          new_placements?: number | null
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          profile_id?: string | null
+          song_id?: string | null
+          platform_id?: string | null
+          platform_name?: string | null
+          name?: string | null
+          status?: string | null
+          budget?: number | null
+          spend?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          stream_increase?: number | null
+          playlists_targeted?: number | null
+          new_placements?: number | null
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      schedule_events: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          type: string
+          date: string
+          time: string | null
+          location: string | null
+          status: string | null
+          description: string | null
+          reminder_minutes: number | null
+          recurrence_rule: string | null
+          duration_minutes: number | null
+          energy_cost: number | null
+          last_notified: string | null
+          metadata: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          type: string
+          date: string
+          time?: string | null
+          location?: string | null
+          status?: string | null
+          description?: string | null
+          reminder_minutes?: number | null
+          recurrence_rule?: string | null
+          duration_minutes?: number | null
+          energy_cost?: number | null
+          last_notified?: string | null
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          type?: string
+          date?: string
+          time?: string | null
+          location?: string | null
+          status?: string | null
+          description?: string | null
+          reminder_minutes?: number | null
+          recurrence_rule?: string | null
+          duration_minutes?: number | null
+          energy_cost?: number | null
+          last_notified?: string | null
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      skill_progress: {
+        Row: {
+          id: string
+          profile_id: string
+          skill_slug: string
+          current_level: number | null
+          current_xp: number | null
+          required_xp: number | null
+          last_practiced_at: string | null
+          created_at: string | null
+          updated_at: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          skill_slug: string
+          current_level?: number | null
+          current_xp?: number | null
+          required_xp?: number | null
+          last_practiced_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          skill_slug?: string
+          current_level?: number | null
+          current_xp?: number | null
+          required_xp?: number | null
+          last_practiced_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      skill_unlocks: {
+        Row: {
+          id: string
+          profile_id: string
+          skill_slug: string
+          unlocked_at: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          skill_slug: string
+          unlocked_at?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          skill_slug?: string
+          unlocked_at?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      experience_ledger: {
+        Row: {
+          id: string
+          profile_id: string
+          user_id: string
+          event_type: string
+          xp_delta: number
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          user_id: string
+          event_type: string
+          xp_delta: number
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          user_id?: string
+          event_type?: string
+          xp_delta?: number
+          metadata?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          id: string
+          user_id: string
+          friend_user_id: string
+          user_profile_id: string | null
+          friend_profile_id: string | null
+          status: Database["public"]["Enums"]["friendship_status"]
+          metadata: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          friend_user_id: string
+          user_profile_id?: string | null
+          friend_profile_id?: string | null
+          status?: Database["public"]["Enums"]["friendship_status"]
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          friend_user_id?: string
+          user_profile_id?: string | null
+          friend_profile_id?: string | null
+          status?: Database["public"]["Enums"]["friendship_status"]
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number
@@ -1022,6 +1310,114 @@ export type Database = {
           requirements?: Json
           royalty_rate?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      random_events: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          rarity: string | null
+          category: string | null
+          effects: Json | null
+          expiry: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          rarity?: string | null
+          category?: string | null
+          effects?: Json | null
+          expiry?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          rarity?: string | null
+          category?: string | null
+          effects?: Json | null
+          expiry?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      weather: {
+        Row: {
+          id: string
+          city_id: string | null
+          condition: string | null
+          temperature: number | null
+          humidity: number | null
+          wind_speed: number | null
+          updated_at: string | null
+          forecast: Json | null
+        }
+        Insert: {
+          id?: string
+          city_id?: string | null
+          condition?: string | null
+          temperature?: number | null
+          humidity?: number | null
+          wind_speed?: number | null
+          updated_at?: string | null
+          forecast?: Json | null
+        }
+        Update: {
+          id?: string
+          city_id?: string | null
+          condition?: string | null
+          temperature?: number | null
+          humidity?: number | null
+          wind_speed?: number | null
+          updated_at?: string | null
+          forecast?: Json | null
+        }
+        Relationships: []
+      }
+      world_events: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          event_type: string | null
+          city_id: string | null
+          impact: Json | null
+          start_date: string | null
+          end_date: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          event_type?: string | null
+          city_id?: string | null
+          impact?: Json | null
+          start_date?: string | null
+          end_date?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          event_type?: string | null
+          city_id?: string | null
+          impact?: Json | null
+          start_date?: string | null
+          end_date?: string | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1319,33 +1715,33 @@ export type Database = {
       }
       universities: {
         Row: {
-          city: string
-          course_cost: number
-          created_at: string
           id: string
           name: string
+          city: string
           prestige: number
           quality_of_learning: number
+          course_cost: number
+          created_at: string
           updated_at: string
         }
         Insert: {
-          city: string
-          course_cost?: number
-          created_at?: string
           id?: string
           name: string
+          city: string
           prestige?: number
           quality_of_learning?: number
+          course_cost?: number
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          city?: string
-          course_cost?: number
-          created_at?: string
           id?: string
           name?: string
+          city?: string
           prestige?: number
           quality_of_learning?: number
+          course_cost?: number
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
@@ -1434,6 +1830,8 @@ export type Database = {
         | "other"
         | "prefer_not_to_say"
       show_type_enum: "concert" | "festival" | "private" | "street"
+      show_type: "concert" | "festival" | "private" | "street"
+      friendship_status: "pending" | "accepted" | "declined" | "blocked"
     }
     CompositeTypes: {
       [_ in never]: never
