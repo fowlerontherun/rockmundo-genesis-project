@@ -6,7 +6,9 @@ import { awardActionXp as awardActionXpUtility, type AwardActionXpInput } from "
 
 export type PlayerProfile = Database["public"]["Tables"]["profiles"]["Row"];
 export type PlayerSkills = Database["public"]["Tables"]["player_skills"]["Row"] | null;
-export type PlayerAttributes = Record<string, number> | null;
+type AttributeCategory = "creativity" | "business" | "marketing" | "technical";
+
+export type PlayerAttributes = Record<AttributeCategory, number>;
 export type PlayerXpWallet = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
 export type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
 export type ExperienceLedgerRow = Database["public"]["Tables"]["experience_ledger"]["Row"];
@@ -14,15 +16,23 @@ export type UnlockedSkillsMap = Record<string, boolean>;
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type SkillsUpdate = Database["public"]["Tables"]["player_skills"]["Update"];
-type AttributesUpdate = Partial<Record<string, number>>;
+type AttributesUpdate = Partial<PlayerAttributes>;
 type ActivityInsert = Database["public"]["Tables"]["activity_feed"]["Insert"];
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
-type RawAttributes = Database["public"]["Tables"]["player_attributes"]["Row"] | null;
+type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
+type RawAttributes = PlayerAttributesRow | null;
+
+const ATTRIBUTE_COLUMN_MAP: Record<AttributeCategory, keyof PlayerAttributesRow> = {
+  creativity: "creative_insight",
+  business: "business_acumen",
+  marketing: "marketing_savvy",
+  technical: "technical_mastery",
+};
 
 interface UseGameDataReturn {
   profile: PlayerProfile | null;
   skills: PlayerSkills;
-  attributes: PlayerAttributes;
+  attributes: PlayerAttributes | null;
   xpWallet: PlayerXpWallet;
   xpLedger: ExperienceLedgerRow[];
   skillProgress: SkillProgressRow[];
@@ -41,22 +51,24 @@ interface UseGameDataReturn {
   resetCharacter: () => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<PlayerProfile>;
   updateSkills: (updates: SkillsUpdate) => Promise<PlayerSkills>;
-  updateAttributes: (updates: AttributesUpdate) => Promise<PlayerAttributes>;
+  updateAttributes: (updates: AttributesUpdate) => Promise<PlayerAttributes | null>;
   addActivity: (type: string, message: string, earnings?: number, metadata?: ActivityInsert["metadata"]) => Promise<void>;
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
 }
 
-const mapAttributes = (row: RawAttributes): PlayerAttributes => {
+const mapAttributes = (row: RawAttributes): PlayerAttributes | null => {
   if (!row) {
     return null;
   }
 
-  return {
-    creativity: row.creative_insight ?? 0,
-    business: row.business_acumen ?? 0,
-    marketing: row.marketing_savvy ?? 0,
-    technical: row.technical_mastery ?? 0,
-  };
+  return (Object.entries(ATTRIBUTE_COLUMN_MAP) as Array<[AttributeCategory, keyof PlayerAttributesRow]>).reduce(
+    (accumulator, [category, column]) => {
+      const rawValue = row[column];
+      accumulator[category] = typeof rawValue === "number" && Number.isFinite(rawValue) ? rawValue : 0;
+      return accumulator;
+    },
+    {} as Record<AttributeCategory, number>,
+  );
 };
 
 export const useGameData = (): UseGameDataReturn => {
@@ -65,7 +77,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [characters, setCharacters] = useState<PlayerProfile[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [skills, setSkills] = useState<PlayerSkills>(null);
-  const [attributes, setAttributes] = useState<PlayerAttributes>(null);
+  const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet>(null);
   const [xpLedger, setXpLedger] = useState<ExperienceLedgerRow[]>([]);
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
@@ -96,7 +108,7 @@ export const useGameData = (): UseGameDataReturn => {
         supabase
           .from("player_attributes")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("profile_id", activeProfile.id)
           .maybeSingle(),
         supabase
           .from("player_xp_wallet")
@@ -285,17 +297,28 @@ export const useGameData = (): UseGameDataReturn => {
         throw new Error("Authentication required to update attributes");
       }
 
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
       const payload: Database["public"]["Tables"]["player_attributes"]["Insert"] = {
         user_id: user.id,
-        creative_insight: updates.creativity,
-        business_acumen: updates.business,
-        marketing_savvy: updates.marketing,
-        technical_mastery: updates.technical,
+        profile_id: profile.id,
       };
+
+      for (const [category, column] of Object.entries(ATTRIBUTE_COLUMN_MAP) as Array<[
+        AttributeCategory,
+        keyof PlayerAttributesRow,
+      ]>) {
+        const value = updates[category];
+        if (typeof value === "number" && Number.isFinite(value)) {
+          payload[column] = value;
+        }
+      }
 
       const { data, error: upsertError } = await supabase
         .from("player_attributes")
-        .upsert(payload, { onConflict: "user_id" })
+        .upsert(payload, { onConflict: "profile_id" })
         .select("*")
         .maybeSingle();
 
@@ -307,7 +330,7 @@ export const useGameData = (): UseGameDataReturn => {
       setAttributes(mapped);
       return mapped;
     },
-    [user],
+    [profile, user],
   );
 
   const addActivity = useCallback(
