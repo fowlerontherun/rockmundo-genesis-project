@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -10,12 +10,22 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-interface Message {
+interface SupabaseMessage {
   id: string;
   user_id: string;
   channel: string;
   message: string;
   created_at: string;
+}
+
+interface Message extends SupabaseMessage {
+  displayName: string;
+}
+
+interface ProfileRecord {
+  id: string;
+  display_name: string | null;
+  username: string | null;
 }
 
 interface RealtimeChatPanelProps {
@@ -38,6 +48,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   const [message, setMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
+  const profileCacheRef = useRef<Record<string, string>>({});
 
   const fetchMessages = useCallback(async () => {
     if (!user) return;
@@ -58,7 +69,68 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
 
       if (messageError) throw messageError;
 
-      setMessages(messageData || []);
+      const typedMessageData = (messageData || []) as SupabaseMessage[];
+
+      const uniqueUserIds = Array.from(
+        new Set(typedMessageData.map((msg) => msg.user_id))
+      );
+
+      const missingUserIds = uniqueUserIds.filter(
+        (id) => !profileCacheRef.current[id]
+      );
+
+      if (missingUserIds.length > 0) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, display_name, username')
+          .in('id', missingUserIds);
+
+        if (profileError) throw profileError;
+
+        const newCacheEntries: Record<string, string> = {};
+
+        const typedProfileData = (profileData || []) as ProfileRecord[];
+
+        typedProfileData.forEach((profile) => {
+          if (!profile?.id) return;
+
+          const displayName =
+            (typeof profile.display_name === 'string' && profile.display_name.trim()) ||
+            (typeof profile.username === 'string' && profile.username.trim()) ||
+            profile.id.slice(0, 8);
+
+          newCacheEntries[profile.id] = displayName;
+        });
+
+        missingUserIds.forEach((id) => {
+          if (!newCacheEntries[id]) {
+            newCacheEntries[id] = id.slice(0, 8);
+          }
+        });
+
+        if (Object.keys(newCacheEntries).length > 0) {
+          profileCacheRef.current = {
+            ...profileCacheRef.current,
+            ...newCacheEntries
+          };
+        }
+      }
+
+      const hydratedMessages: Message[] = typedMessageData.map((msg) => {
+        const cachedDisplayName = profileCacheRef.current[msg.user_id];
+        const displayName = cachedDisplayName || msg.user_id.slice(0, 8);
+
+        if (!cachedDisplayName) {
+          profileCacheRef.current[msg.user_id] = displayName;
+        }
+
+        return {
+          ...msg,
+          displayName
+        };
+      });
+
+      setMessages(hydratedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
@@ -235,7 +307,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
             {messages.map((msg) => (
               <div key={msg.id} className="rounded-md bg-muted/60 p-2">
                 <div className="text-xs font-semibold text-muted-foreground">
-                  User {msg.user_id.slice(0, 8)}
+                  {msg.displayName}
                 </div>
                 <div className="text-sm text-foreground">{msg.message}</div>
                 <div className="text-[10px] text-muted-foreground/80">
