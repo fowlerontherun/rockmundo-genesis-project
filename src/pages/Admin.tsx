@@ -1047,22 +1047,23 @@ export default function Admin() {
                         )}
                       />
 
-                      <div className="md:col-span-2 flex items-center justify-end gap-2">
-                        {editingUniversity ? (
-                          <Button type="button" variant="outline" onClick={resetFormState} disabled={isSubmitting}>
-                            Reset
+                        <div className="md:col-span-2 flex items-center justify-end gap-2">
+                          {editingUniversity ? (
+                            <Button type="button" variant="outline" onClick={resetFormState} disabled={isSubmitting}>
+                              Reset
+                            </Button>
+                          ) : null}
+                          <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving
+                              </>
+                            ) : (
+                              formTitle
+                            )}
                           </Button>
-                        ) : null}
-                        <Button type="submit" disabled={isSubmitting}>
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Saving
-                            </>
-                          ) : (
-                            formTitle
-                          )}
-                        />
+                        </div>
 
                         <FormField
                           control={form.control}

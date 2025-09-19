@@ -12,16 +12,16 @@ type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
 type SkillDefinitionInsert = Database['public']['Tables']['skill_definitions']['Insert'];
 
 
-type TierCaps = Record<string, number | null>;
+const createInitialSkill = (): SkillDefinitionInsert => ({
+  slug: '',
+  display_name: '',
+  description: '',
+  tier_caps: {} satisfies SkillDefinitionInsert['tier_caps'],
+});
 
 export function SkillDefinitionsManager() {
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
-  const [newSkill, setNewSkill] = useState<SkillDefinitionInsert>({
-    slug: '',
-    display_name: '',
-    description: '',
-    tier_caps: {} as SkillDefinitionInsert['tier_caps'],
-  });
+  const [newSkill, setNewSkill] = useState<SkillDefinitionInsert>(createInitialSkill());
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export function SkillDefinitionsManager() {
       if (error) throw error;
       
       toast.success('Skill created successfully');
-      setNewSkill({ slug: '', display_name: '', description: '', tier_caps: {} as SkillDefinitionInsert['tier_caps'] });
+      setNewSkill(createInitialSkill());
       void fetchSkills();
     } catch (error) {
       console.error('Error creating skill:', error);

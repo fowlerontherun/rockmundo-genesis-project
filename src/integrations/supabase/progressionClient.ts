@@ -2,7 +2,7 @@
 export type ProgressionAction = {
   type: string;
   [key: string]: unknown;
-}
+};
 
 
 export interface ProgressionErrorResponse {
@@ -16,7 +16,7 @@ export interface ProgressionSuccessResponse<T> {
 }
 
 export const executeProgressionAction = async (
-  _action: ProgressionAction
+  _action: ProgressionAction,
 ): Promise<ProgressionErrorResponse> => {
   return { success: false, error: 'Progression system not implemented' };
 };
