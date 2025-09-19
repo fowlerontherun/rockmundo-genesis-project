@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -969,6 +968,9 @@ const Education = () => {
 
   const bandCooldownLookup = bandCooldowns[activeBandKey] ?? {};
   const bandSize = bandMembers.length;
+  const availableSkillKeys = (Object.keys(SKILL_LABELS) as PrimarySkill[]).filter(
+    (skillKey) => (lessonGroups[skillKey]?.length ?? 0) > 0
+  );
 
   const handleWatchLesson = async (lesson: SkillLesson) => {
     if (!profile) {
@@ -1359,36 +1361,66 @@ const Education = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 lg:grid-cols-3">
-              {group.skills.length > 0 ? (
-                universityTracks.map((track) => (
-                  <Card key={track.title} className="border-dashed">
-                    <CardHeader className="space-y-2">
-                      <CardTitle className="text-lg">{track.title}</CardTitle>
-                      <CardDescription>{track.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        {track.highlights.map((highlight) => (
-                          <div key={highlight.name} className="rounded-lg border bg-muted/40 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-semibold">{highlight.name}</p>
-                                <p className="text-xs text-muted-foreground">{highlight.school}</p>
-                              </div>
-                              <Badge variant="outline" className="text-xs">
-                                {highlight.focus}
-                              </Badge>
-                            </div>
-                            <p className="mt-3 text-xs text-muted-foreground">{highlight.details}</p>
+              {availableSkillKeys.length > 0 ? (
+                availableSkillKeys.map((skillKey) => {
+                  const lessons = lessonGroups[skillKey] ?? [];
+                  const featuredLesson = lessons[0];
+                  const highestRequirement = lessons.reduce(
+                    (max, lesson) => Math.max(max, lesson.requiredSkillValue ?? 0),
+                    0
+                  );
+                  const requirementTarget = Math.max(highestRequirement, 1);
+                  const unlocked = isSkillUnlocked(skillKey, requirementTarget);
+                  const reward = featuredLesson ? computeLessonReward(featuredLesson) : null;
+                  const viewCount = viewCounts[skillKey] ?? 0;
+
+                  return (
+                    <div key={skillKey} className="space-y-3 rounded-lg border bg-muted/40 p-4 text-left">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">{SKILL_LABELS[skillKey]}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {lessons.length} curated lesson{lessons.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <Badge variant={unlocked ? "secondary" : "outline"} className="text-xs">
+                          {unlocked ? "Ready" : `Needs ${requirementTarget}+`}
+                        </Badge>
+                      </div>
+                      {featuredLesson ? (
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-semibold">{featuredLesson.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {featuredLesson.focus} • {featuredLesson.channel}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {group.skills.map((definition) => renderSkillCard(definition))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="text-xs">
+                              {LESSON_DIFFICULTY_CONFIG[featuredLesson.difficulty].label}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {featuredLesson.durationMinutes} min
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Views: {viewCount}
+                            </Badge>
+                          </div>
+                          {reward ? (
+                            <p className="text-xs text-muted-foreground">
+                              Next reward: {reward.effectiveXp} XP • Skill gain ≈ {reward.skillGain}
+                            </p>
+                          ) : null}
+                          <Button asChild size="sm" variant="secondary" className="w-full">
+                            <a href={featuredLesson.url} target="_blank" rel="noreferrer">
+                              Watch featured lesson
+                            </a>
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
               ) : (
                 <p className="text-sm text-muted-foreground">
                   No trainable skills are available yet. Unlock skills in your profile to see tailored lessons.
