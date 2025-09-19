@@ -972,11 +972,9 @@ export default function Admin() {
                       <span>Universities</span>
                       <div className="flex items-center gap-2">
                         <Select value={sortColumn} onValueChange={(value) => handleSortColumnChange(value as SortColumn)}>
-                          <FormControl>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="Sort by" />
-                            </SelectTrigger>
-                          </FormControl>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Sort by" />
+                          </SelectTrigger>
                           <SelectContent>
                             {sortColumnOptions.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
