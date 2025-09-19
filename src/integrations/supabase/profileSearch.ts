@@ -28,10 +28,17 @@ const normalizeResult = (row: ProfileRow): SearchProfilesRow => ({
   fame: row.fame ?? null,
 });
 
-const sanitizeQuery = (term: string) => term.trim().replace(/\s+/g, " ");
+const sanitizeQuery = (term: string): string => term.trim().replace(/\s+/g, " ");
 
-const buildFilter = (term: string) => {
-  const escaped = term.replace(/%/g, "\\%" ).replace(/_/g, "\\_");
+const escapeForIlike = (term: string): string => {
+  return term
+    .replaceAll("\\", "\\\\")
+    .replaceAll("%", "\\\\%")
+    .replaceAll("_", "\\\\_");
+};
+
+const buildFilter = (term: string): string => {
+  const escaped = escapeForIlike(term);
   return `username.ilike.%${escaped}%,display_name.ilike.%${escaped}%`;
 };
 
@@ -52,7 +59,8 @@ export const searchProfiles = async (query: string): Promise<SearchProfilesRow[]
     throw error;
   }
 
-  return (data ?? []).map((row) => normalizeResult(row as ProfileRow));
+  const rows: ProfileRow[] = Array.isArray(data) ? data : [];
+  return rows.map(normalizeResult);
 };
 
 export const searchPublicProfiles = async (query: string): Promise<SearchProfilesRow[]> => {

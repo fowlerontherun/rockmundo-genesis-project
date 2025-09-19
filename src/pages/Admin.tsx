@@ -762,10 +762,369 @@ export default function Admin() {
                               <FormControl>
                                 <Input placeholder="Enter city name" autoComplete="address-level2" {...field} />
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
+                              <SelectContent>
+                                {skillOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span>{option.label}</span>
+                                      {option.tier ? <Badge variant="outline">{option.tier}</Badge> : null}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={skillBookForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Book Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter the display title" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={skillBookForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Optional blurb shown to players"
+                                rows={3}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={skillBookForm.control}
+                        name="cost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cost</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={50}
+                                value={Number.isFinite(field.value) ? field.value : ""}
+                                onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={skillBookForm.control}
+                        name="xpValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>XP Reward</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={Number.isFinite(field.value) ? field.value : ""}
+                                onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={skillBookForm.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2 flex flex-col gap-2">
+                            <FormLabel>Status</FormLabel>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <FormDescription>Inactive books will be hidden from players.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="md:col-span-2 flex items-center justify-end gap-2">
+                        {editingSkillBook ? (
+                          <Button type="button" variant="outline" onClick={resetSkillBookForm} disabled={isSubmittingSkillBook}>
+                            Reset
+                          </Button>
+                        ) : null}
+                        <Button type="submit" disabled={isSubmittingSkillBook}>
+                          {isSubmittingSkillBook ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving
+                            </>
+                          ) : editingSkillBook ? (
+                            "Update Skill Book"
+                          ) : (
+                            "Create Skill Book"
                           )}
-                        />
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-xl">
+                    Skill Books
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleSeedSkillBooks()}
+                        disabled={isSeedingBooks || isLoadingSkillBooks}
+                      >
+                        {isSeedingBooks ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isSeedingBooks ? "Syncing" : "Seed from skill tree"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => void handleFetchSkillBooks()}
+                        disabled={isLoadingSkillBooks}
+                        title="Refresh skill books"
+                      >
+                        <RefreshCcw className={`h-4 w-4 ${isLoadingSkillBooks ? "animate-spin" : ""}`} />
+                        <span className="sr-only">Refresh skill books</span>
+                      </Button>
+                    </div>
+                  </CardTitle>
+                  <CardDescription>Review which books are purchasable in the Education hub.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isLoadingSkillBooks ? (
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin" /> Loading skill books...
+                    </div>
+                  ) : skillBooks.length === 0 ? (
+                    <div className="flex flex-col gap-3 text-muted-foreground">
+                      <p>No skill books are defined yet. Generate them from the skill tree to get started.</p>
+                      <div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => void handleSeedSkillBooks()}
+                          disabled={isSeedingBooks}
+                        >
+                          {isSeedingBooks ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          {isSeedingBooks ? "Syncing" : "Generate skill books"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Skill</TableHead>
+                          <TableHead className="hidden lg:table-cell">Track</TableHead>
+                          <TableHead>Cost</TableHead>
+                          <TableHead>XP</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {skillBooks.map((book) => {
+                          const metadata = getSkillMetadata(book.skill_slug);
+                          return (
+                            <TableRow key={book.id}>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{book.title}</span>
+                                  <span className="text-xs text-muted-foreground">{metadata.name}</span>
+                                  {metadata.tier ? (
+                                    <Badge variant="outline" className="mt-1 w-max">{metadata.tier}</Badge>
+                                  ) : null}
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell">
+                                <span className="text-sm text-muted-foreground">
+                                  {metadata.track ?? metadata.category ?? "-"}
+                                </span>
+                              </TableCell>
+                              <TableCell>{`$${Number(book.cost ?? 0).toLocaleString()}`}</TableCell>
+                              <TableCell>{book.xp_value}</TableCell>
+                              <TableCell>
+                                <Badge variant={book.is_active ? "default" : "secondary"}>
+                                  {book.is_active ? "Active" : "Hidden"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="flex justify-end gap-2">
+                                <Button type="button" variant="outline" size="icon" onClick={() => handleEditSkillBook(book)}>
+                                  <Pencil className="h-4 w-4" />
+                                  <span className="sr-only">Edit {book.title}</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  onClick={() => handleDeleteSkillBook(book.id, book.title)}
+                                  disabled={deletingSkillBookId === book.id}
+                                >
+                                  {deletingSkillBookId === book.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                  <span className="sr-only">Delete {book.title}</span>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="universities" className="space-y-6">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl flex items-center justify-between">
+                    {formTitle}
+                    {editingUniversity ? <Badge variant="secondary">Editing</Badge> : null}
+                  </CardTitle>
+                  <CardDescription>{formDescription}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>University Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter university name" autoComplete="organization" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter city name" autoComplete="address-level2" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="prestige"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prestige (0-100)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={Number.isFinite(field.value) ? field.value : ""}
+                                onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="qualityOfLearning"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quality of Learning (0-100)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={Number.isFinite(field.value) ? field.value : ""}
+                                onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="courseCost"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Average Course Cost</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={100}
+                                value={Number.isFinite(field.value) ? field.value : ""}
+                                onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                        <div className="md:col-span-2 flex items-center justify-end gap-2">
+                          {editingUniversity ? (
+                            <Button type="button" variant="outline" onClick={resetFormState} disabled={isSubmitting}>
+                              Reset
+                            </Button>
+                          ) : null}
+                          <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving
+                              </>
+                            ) : (
+                              formTitle
+                            )}
+                          </Button>
+                        </div>
 
                         <FormField
                           control={form.control}
