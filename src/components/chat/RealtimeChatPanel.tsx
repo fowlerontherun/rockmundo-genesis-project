@@ -49,6 +49,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [participantCount, setParticipantCount] = useState(0);
   const profileCacheRef = useRef<Record<string, string>>({});
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!user) return;
@@ -166,6 +167,16 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       void fetchMessages();
     }
   }, [user, channelKey, fetchMessages]);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLDivElement | null;
+
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (!user) {
@@ -304,7 +315,10 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
         <p className="text-xs text-muted-foreground">Channel: {channelKey}</p>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 p-4">
-        <ScrollArea className="flex-1 rounded-md border border-border/50 bg-muted/20 p-3">
+        <ScrollArea
+          ref={scrollAreaRef}
+          className="flex-1 max-h-64 rounded-md border border-border/50 bg-muted/20 p-3"
+        >
           <div className="space-y-2">
             {messages.map((msg) => (
               <div key={msg.id} className="rounded-md bg-muted/60 p-2">
