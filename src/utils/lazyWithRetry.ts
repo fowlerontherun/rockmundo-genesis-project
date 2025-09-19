@@ -48,7 +48,9 @@ export const lazyWithRetry = <T extends ComponentType<unknown>>(
         }
 
         if (typeof window !== "undefined") {
-          window.location.reload();
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set("forceReload", Date.now().toString());
+          window.location.replace(currentUrl.toString());
         }
       }
     }
