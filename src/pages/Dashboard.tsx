@@ -65,13 +65,10 @@ const Dashboard = () => {
     xpLedger,
     freshWeeklyBonusAvailable,
     currentCity,
-
+    activities,
     loading,
     error
   } = useGameData();
-
-  // Simplified - these features not yet implemented
-  const activities: ActivityFeedRow[] = [];
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
   const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
   const [chatOnlineCounts, setChatOnlineCounts] = useState<Record<ChatScope, number>>({

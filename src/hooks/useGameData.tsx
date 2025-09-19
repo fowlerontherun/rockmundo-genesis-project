@@ -13,6 +13,7 @@ export type PlayerXpWallet = Database["public"]["Tables"]["player_xp_wallet"]["R
 export type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
 export type ExperienceLedgerRow = Database["public"]["Tables"]["experience_ledger"]["Row"];
 export type UnlockedSkillsMap = Record<string, boolean>;
+export type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type SkillsUpdate = Database["public"]["Tables"]["player_skills"]["Update"];
@@ -37,6 +38,7 @@ interface UseGameDataReturn {
   xpLedger: ExperienceLedgerRow[];
   skillProgress: SkillProgressRow[];
   unlockedSkills: UnlockedSkillsMap;
+  activities: ActivityFeedRow[];
   freshWeeklyBonusAvailable: boolean;
   currentCity: CityRow | null;
   loading: boolean;
@@ -82,6 +84,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [xpLedger, setXpLedger] = useState<ExperienceLedgerRow[]>([]);
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
   const [unlockedSkills, setUnlockedSkills] = useState<UnlockedSkillsMap>({});
+  const [activities, setActivities] = useState<ActivityFeedRow[]>([]);
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,11 +98,12 @@ export const useGameData = (): UseGameDataReturn => {
         setXpLedger([]);
         setSkillProgress([]);
         setUnlockedSkills({});
+        setActivities([]);
         setCurrentCity(null);
         return;
       }
 
-      const [skillsResult, attributesResult, walletResult, cityResult] = await Promise.all([
+      const [skillsResult, attributesResult, walletResult, cityResult, activitiesResult] = await Promise.all([
         supabase
           .from("player_skills")
           .select("*")
@@ -118,6 +122,12 @@ export const useGameData = (): UseGameDataReturn => {
         activeProfile.current_city_id
           ? supabase.from("cities").select("*").eq("id", activeProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from("activity_feed")
+          .select("*")
+          .eq("profile_id", activeProfile.id)
+          .order("created_at", { ascending: false })
+          .limit(20),
       ]);
 
       if (skillsResult.error) {
@@ -132,11 +142,15 @@ export const useGameData = (): UseGameDataReturn => {
       if (cityResult && cityResult.error) {
         console.error("Failed to load city", cityResult.error);
       }
+      if (activitiesResult.error) {
+        console.error("Failed to load activities", activitiesResult.error);
+      }
 
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
+      setActivities(((activitiesResult.data ?? []) as ActivityFeedRow[]).slice(0, 20));
       setXpLedger([]);
       setSkillProgress([]);
       setUnlockedSkills({});
@@ -155,6 +169,7 @@ export const useGameData = (): UseGameDataReturn => {
       setXpLedger([]);
       setSkillProgress([]);
       setUnlockedSkills({});
+      setActivities([]);
       setCurrentCity(null);
       return;
     }
@@ -192,6 +207,37 @@ export const useGameData = (): UseGameDataReturn => {
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!selectedCharacterId) {
+      setActivities([]);
+      return;
+    }
+
+    const channel = supabase
+      .channel(`activity_feed:profile:${selectedCharacterId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "activity_feed",
+          filter: `profile_id=eq.${selectedCharacterId}`,
+        },
+        (payload) => {
+          const newRow = payload.new as ActivityFeedRow;
+          setActivities((previous) => {
+            const withoutDuplicate = previous.filter((activity) => activity.id !== newRow.id);
+            return [newRow, ...withoutDuplicate].slice(0, 20);
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [selectedCharacterId]);
 
   const setActiveCharacter = useCallback(
     async (id: string) => {
@@ -384,6 +430,7 @@ export const useGameData = (): UseGameDataReturn => {
       xpLedger,
       skillProgress,
       unlockedSkills,
+      activities,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
@@ -410,6 +457,7 @@ export const useGameData = (): UseGameDataReturn => {
       xpLedger,
       skillProgress,
       unlockedSkills,
+      activities,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
