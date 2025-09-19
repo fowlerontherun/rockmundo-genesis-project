@@ -88,7 +88,6 @@ function App() {
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
                     <Route path="education" element={<Education />} />
-                    <Route path="training" element={<Education />} />
                     <Route path="create" element={<MusicCreation />} />
                     <Route path="band-enhanced" element={<EnhancedBandManager />} />
                     <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
