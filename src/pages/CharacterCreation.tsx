@@ -29,6 +29,15 @@ type ProfileRow = Tables<"profiles">;
 type PlayerAttributesInsert = TablesInsert<"player_attributes">;
 type ProfileGender = Database["public"]["Enums"]["profile_gender"];
 
+const sanitizeCityOfBirth = (value: string | null): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length > 0 ? trimmedValue : null;
+};
+
 type CityOption = {
   id: string;
   name: string | null;
@@ -165,27 +174,34 @@ const CharacterCreation = () => {
         }
 
         const profileRecord = (profileData as ProfileRow | null) ?? null;
+        const sanitizedProfileRecord = profileRecord
+          ? {
+              ...profileRecord,
+              city_of_birth: sanitizeCityOfBirth(profileRecord.city_of_birth),
+            }
+          : null;
+
         console.log("[CharacterCreation] Profile load result", {
-          hasProfile: Boolean(profileRecord),
-          profileId: profileRecord?.id ?? null,
+          hasProfile: Boolean(sanitizedProfileRecord),
+          profileId: sanitizedProfileRecord?.id ?? null,
         });
-        setExistingProfile(profileRecord);
+        setExistingProfile(sanitizedProfileRecord);
 
-        if (profileRecord) {
-          setName(profileRecord.username ?? "");
-          setStageName(profileRecord.display_name ?? "");
-          setBio(profileRecord.bio ?? "");
-          setGender(profileRecord.gender ?? "prefer_not_to_say");
-          setCityOfBirth(profileRecord.city_of_birth ?? null);
+        if (sanitizedProfileRecord) {
+          setName(sanitizedProfileRecord.username ?? "");
+          setStageName(sanitizedProfileRecord.display_name ?? "");
+          setBio(sanitizedProfileRecord.bio ?? "");
+          setGender(sanitizedProfileRecord.gender ?? "prefer_not_to_say");
+          setCityOfBirth(sanitizedProfileRecord.city_of_birth ?? null);
 
-          if (profileRecord.id) {
+          if (sanitizedProfileRecord.id) {
             console.log("[CharacterCreation] Loading existing attributes", {
-              profileId: profileRecord.id,
+              profileId: sanitizedProfileRecord.id,
             });
             const { data: attributesData, error: attributesError, status: attributesStatus } = await supabase
               .from("player_attributes")
               .select("id")
-              .eq("profile_id", profileRecord.id)
+              .eq("profile_id", sanitizedProfileRecord.id)
               .maybeSingle();
 
             if (attributesError && attributesStatus !== 406) {
@@ -284,6 +300,7 @@ const CharacterCreation = () => {
 
     try {
       let savedProfile: ProfileRow | null = null;
+      const sanitizedCityOfBirth = sanitizeCityOfBirth(cityOfBirth);
 
       if (existingProfile) {
         console.log("[CharacterCreation] Updating existing profile", {
@@ -296,7 +313,7 @@ const CharacterCreation = () => {
             display_name: trimmedStageName,
             bio: trimmedBio.length > 0 ? trimmedBio : null,
             gender,
-            city_of_birth: cityOfBirth,
+            city_of_birth: sanitizedCityOfBirth,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingProfile.id)
@@ -320,7 +337,7 @@ const CharacterCreation = () => {
           display_name: trimmedStageName,
           bio: trimmedBio.length > 0 ? trimmedBio : null,
           gender,
-          city_of_birth: cityOfBirth,
+          city_of_birth: sanitizedCityOfBirth,
         };
 
         const { data, error } = await supabase
