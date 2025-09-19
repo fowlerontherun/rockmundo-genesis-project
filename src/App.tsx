@@ -45,6 +45,7 @@ const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"))
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
+const Health = lazyWithRetry(() => import("./pages/Health"));
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,7 @@ function App() {
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
+                    <Route path="health" element={<Health />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />

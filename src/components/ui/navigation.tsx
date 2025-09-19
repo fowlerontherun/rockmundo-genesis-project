@@ -20,6 +20,7 @@ import {
   Building2,
   Share2,
   Heart,
+  HeartPulse,
   Play,
   Menu,
   X,
@@ -43,6 +44,12 @@ const Navigation = () => {
         { icon: User, label: "Profile", path: "/profile" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
         { icon: Trophy, label: "Achievements", path: "/achievements" },
+      ]
+    },
+    {
+      title: "Wellness",
+      items: [
+        { icon: HeartPulse, label: "Health", path: "/health" },
       ]
     },
     {
