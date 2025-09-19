@@ -762,6 +762,54 @@ export type Database = {
           },
         ]
       }
+      player_skill_books: {
+        Row: {
+          acquired_at: string
+          consumed_at: string | null
+          id: string
+          notes: string | null
+          profile_id: string
+          skill_book_id: string
+          updated_at: string
+          xp_awarded_at: string | null
+        }
+        Insert: {
+          acquired_at?: string
+          consumed_at?: string | null
+          id?: string
+          notes?: string | null
+          profile_id: string
+          skill_book_id: string
+          updated_at?: string
+          xp_awarded_at?: string | null
+        }
+        Update: {
+          acquired_at?: string
+          consumed_at?: string | null
+          id?: string
+          notes?: string | null
+          profile_id?: string
+          skill_book_id?: string
+          updated_at?: string
+          xp_awarded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_skill_books_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_skill_books_skill_book_id_fkey"
+            columns: ["skill_book_id"]
+            isOneToOne: false
+            referencedRelation: "skill_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_skills: {
         Row: {
           bass: number | null
@@ -1024,6 +1072,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      skill_books: {
+        Row: {
+          author: string | null
+          cost: number
+          created_at: string
+          description: string | null
+          id: string
+          skill_slug: string
+          slug: string
+          title: string
+          updated_at: string
+          xp_reward: number
+        }
+        Insert: {
+          author?: string | null
+          cost: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          skill_slug: string
+          slug: string
+          title: string
+          updated_at?: string
+          xp_reward?: number
+        }
+        Update: {
+          author?: string | null
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          skill_slug?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_books_skill_slug_fkey"
+            columns: ["skill_slug"]
+            isOneToOne: false
+            referencedRelation: "skill_definitions"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       skill_definitions: {
         Row: {

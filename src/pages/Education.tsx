@@ -1,8 +1,15 @@
-import { BookOpen, GraduationCap, PlaySquare, Users, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BookOpen, GraduationCap, Loader2, PlaySquare, Users, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/use-auth-context";
+import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
+import { awardSpecialXp } from "@/utils/progression";
 
 const tabs = [
   {
@@ -37,83 +44,9 @@ const tabs = [
   }
 ];
 
-const bookCollections = [
-  {
-    title: "Foundational Musicianship",
-    description:
-      "Master the essentials of music theory, ear training, and instrument technique to build confident performance skills.",
-    items: [
-      {
-        name: "The Musician's Handbook",
-        author: "Bobby Borg",
-        focus: "Career Fundamentals",
-        takeaway: "Establish a rock-solid foundation for navigating the industry and building sustainable habits."
-      },
-      {
-        name: "Music Theory for Guitarists",
-        author: "Tom Kolb",
-        focus: "Theory Essentials",
-        takeaway: "Translate theory concepts directly onto the fretboard with modern practice drills."
-      },
-      {
-        name: "Effortless Mastery",
-        author: "Kenny Werner",
-        focus: "Mindset & Practice",
-        takeaway: "Unlock flow-state practicing with techniques that balance discipline and creativity."
-      }
-    ]
-  },
-  {
-    title: "Songwriting & Creativity",
-    description:
-      "Upgrade your writing toolkit with books that unpack lyricism, storytelling, and arranging for modern audiences.",
-    items: [
-      {
-        name: "Writing Better Lyrics",
-        author: "Pat Pattison",
-        focus: "Lyric Craft",
-        takeaway: "A semester-style guide to turning song ideas into compelling narratives."
-      },
-      {
-        name: "Tunesmith",
-        author: "Jimmy Webb",
-        focus: "Composition",
-        takeaway: "Legendary songwriting lessons from a Grammy-winning composer with exercises you can apply immediately."
-      },
-      {
-        name: "Songwriters On Songwriting",
-        author: "Paul Zollo",
-        focus: "Creative Process",
-        takeaway: "Dozens of interviews with iconic writers that reveal breakthrough moments and creative systems."
-      }
-    ]
-  },
-  {
-    title: "Music Business & Branding",
-    description:
-      "Navigate the modern music economy with guides that demystify contracts, marketing, and independent releases.",
-    items: [
-      {
-        name: "All You Need to Know About the Music Business",
-        author: "Donald Passman",
-        focus: "Industry",
-        takeaway: "Understand contracts, royalties, and negotiation tactics before your next big opportunity."
-      },
-      {
-        name: "Creative Quest",
-        author: "Questlove",
-        focus: "Creative Leadership",
-        takeaway: "Blend artistry and entrepreneurship through stories from one of music's most inventive minds."
-      },
-      {
-        name: "How to Make It in the New Music Business",
-        author: "Ari Herstand",
-        focus: "Indie Strategy",
-        takeaway: "A modern blueprint for self-managed releases, touring, and audience growth."
-      }
-    ]
-  }
-];
+type SkillBookRow = Tables<"skill_books">;
+type PlayerSkillBookRow = Tables<"player_skill_books">;
+type SkillDefinitionRow = Tables<"skill_definitions">;
 
 const universityTracks = [
   {
@@ -464,6 +397,344 @@ const bandLearningTracks = [
 ];
 
 const Education = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [skillBooks, setSkillBooks] = useState<SkillBookRow[]>([]);
+  const [skillDefinitions, setSkillDefinitions] = useState<SkillDefinitionRow[]>([]);
+  const [ownedBooks, setOwnedBooks] = useState<Record<string, PlayerSkillBookRow>>({});
+  const [skillUnlocks, setSkillUnlocks] = useState<
+    Record<string, { isUnlocked: boolean; unlockLevel: number | null }>
+  >({});
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [pendingPurchaseId, setPendingPurchaseId] = useState<string | null>(null);
+  const [pendingReadId, setPendingReadId] = useState<string | null>(null);
+
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }),
+    [],
+  );
+
+  const skillDefinitionBySlug = useMemo(() => {
+    return skillDefinitions.reduce<Record<string, SkillDefinitionRow>>((acc, definition) => {
+      if (definition.slug) {
+        acc[definition.slug] = definition;
+      }
+      return acc;
+    }, {});
+  }, [skillDefinitions]);
+
+  const skillDefinitionIdBySlug = useMemo(() => {
+    return skillDefinitions.reduce<Record<string, string>>((acc, definition) => {
+      if (definition.slug && definition.id) {
+        acc[definition.slug] = definition.id;
+      }
+      return acc;
+    }, {});
+  }, [skillDefinitions]);
+
+  const loadSkillData = useCallback(async () => {
+    setIsLoadingBooks(true);
+    try {
+      const [{ data: booksData, error: booksError }, { data: definitionsData, error: definitionsError }] =
+        await Promise.all([
+          supabase.from("skill_books").select("*").order("title", { ascending: true }),
+          supabase.from("skill_definitions").select("id, slug, display_name").order("display_name", { ascending: true }),
+        ]);
+
+      if (booksError) throw booksError;
+      if (definitionsError) throw definitionsError;
+
+      setSkillBooks((booksData as SkillBookRow[] | null) ?? []);
+      setSkillDefinitions((definitionsData as SkillDefinitionRow[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load skill books", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load books",
+        description: "We couldn't retrieve the education library. Please try again later.",
+      });
+    } finally {
+      setIsLoadingBooks(false);
+    }
+  }, [toast]);
+
+  const loadOwnedBooks = useCallback(
+    async (currentProfileId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .select("*")
+          .eq("profile_id", currentProfileId);
+
+        if (error) throw error;
+
+        const map: Record<string, PlayerSkillBookRow> = {};
+        for (const row of (data as PlayerSkillBookRow[] | null) ?? []) {
+          map[row.skill_book_id] = row;
+        }
+        setOwnedBooks(map);
+      } catch (error) {
+        console.error("Failed to load owned books", error);
+        toast({
+          variant: "destructive",
+          title: "Unable to load your books",
+          description: "We couldn't check which books you own.",
+        });
+      }
+    },
+    [toast],
+  );
+
+  const loadSkillUnlocks = useCallback(
+    async (currentProfileId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("profile_skill_unlocks")
+          .select("skill_id, is_unlocked, unlock_level")
+          .eq("profile_id", currentProfileId);
+
+        if (error) throw error;
+
+        const map: Record<string, { isUnlocked: boolean; unlockLevel: number | null }> = {};
+        for (const entry of (data as { skill_id: string; is_unlocked: boolean | null; unlock_level: number | null }[] | null) ?? []) {
+          if (entry.skill_id) {
+            map[entry.skill_id] = {
+              isUnlocked: Boolean(entry.is_unlocked),
+              unlockLevel: entry.unlock_level,
+            };
+          }
+        }
+        setSkillUnlocks(map);
+      } catch (error) {
+        console.error("Failed to load skill unlocks", error);
+        toast({
+          variant: "destructive",
+          title: "Unable to check skill unlocks",
+          description: "We couldn't determine which skills are already unlocked.",
+        });
+      }
+    },
+    [toast],
+  );
+
+  useEffect(() => {
+    void loadSkillData();
+  }, [loadSkillData]);
+
+  useEffect(() => {
+    if (!user) {
+      setProfileId(null);
+      setOwnedBooks({});
+      setSkillUnlocks({});
+      return;
+    }
+
+    let isCurrent = true;
+    setIsLoadingProfile(true);
+    const fetchProfile = async () => {
+      try {
+        const profile = await fetchPrimaryProfileForUser(user.id);
+        if (!isCurrent) return;
+        setProfileId(profile?.id ?? null);
+      } catch (error) {
+        console.error("Failed to load active profile", error);
+        if (isCurrent) {
+          toast({
+            variant: "destructive",
+            title: "Unable to load your character",
+            description: "We couldn't find an active profile. Create a character to unlock books.",
+          });
+        }
+        setProfileId(null);
+      } finally {
+        if (isCurrent) {
+          setIsLoadingProfile(false);
+        }
+      }
+    };
+
+    void fetchProfile();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (!profileId) {
+      setOwnedBooks({});
+      setSkillUnlocks({});
+      return;
+    }
+
+    void loadOwnedBooks(profileId);
+    void loadSkillUnlocks(profileId);
+  }, [loadOwnedBooks, loadSkillUnlocks, profileId]);
+
+  const handlePurchase = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "Create an account or sign in to purchase books.",
+        });
+        return;
+      }
+
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "You need an active character profile to collect books.",
+        });
+        return;
+      }
+
+      if (ownedBooks[book.id]) {
+        toast({
+          title: "Already owned",
+          description: "This book is already in your library.",
+        });
+        return;
+      }
+
+      setPendingPurchaseId(book.id);
+      try {
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .insert({ profile_id: profileId, skill_book_id: book.id })
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const inserted = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: inserted }));
+        toast({
+          title: "Book purchased",
+          description: `${book.title} is now in your inventory.`,
+        });
+      } catch (error) {
+        console.error("Failed to purchase book", error);
+        toast({
+          variant: "destructive",
+          title: "Purchase failed",
+          description: "We couldn't complete that purchase. Please try again.",
+        });
+      } finally {
+        setPendingPurchaseId(null);
+      }
+    },
+    [ownedBooks, profileId, toast, user],
+  );
+
+  const handleRead = useCallback(
+    async (book: SkillBookRow) => {
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "Create or select a character before reading books.",
+        });
+        return;
+      }
+
+      const ownership = ownedBooks[book.id];
+      if (!ownership) {
+        toast({
+          variant: "destructive",
+          title: "Purchase required",
+          description: "Buy the book before attempting to read it.",
+        });
+        return;
+      }
+
+      if (ownership.xp_awarded_at) {
+        toast({
+          title: "Already completed",
+          description: "You've already gained the XP from this book.",
+        });
+        return;
+      }
+
+      setPendingReadId(book.id);
+      const xpAmount = book.xp_reward ?? 10;
+      const metadata = {
+        book_id: book.id,
+        book_slug: book.slug,
+        skill_slug: book.skill_slug,
+      };
+      const now = new Date().toISOString();
+      try {
+        await awardSpecialXp({ amount: xpAmount, reason: `skill_book:${book.slug}`, metadata });
+
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .update({ consumed_at: now, xp_awarded_at: now })
+          .eq("id", ownership.id)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const updated = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: updated }));
+
+        const skillId = skillDefinitionIdBySlug[book.skill_slug];
+        if (skillId) {
+          const { error: unlockError } = await supabase
+            .from("profile_skill_unlocks")
+            .upsert(
+              {
+                profile_id: profileId,
+                skill_id: skillId,
+                is_unlocked: true,
+                unlocked_at: now,
+                unlock_level: Math.max(10, skillUnlocks[skillId]?.unlockLevel ?? 0),
+                unlock_source: `book:${book.slug}`,
+              },
+              { onConflict: "profile_id,skill_id" },
+            );
+
+          if (unlockError) throw unlockError;
+
+          setSkillUnlocks((prev) => ({
+            ...prev,
+            [skillId]: {
+              isUnlocked: true,
+              unlockLevel: Math.max(10, prev[skillId]?.unlockLevel ?? 0),
+            },
+          }));
+        }
+
+        toast({
+          title: "Skill unlocked",
+          description: `Reading ${book.title} granted +${xpAmount} XP.`,
+        });
+      } catch (error) {
+        console.error("Failed to process book read", error);
+        toast({
+          variant: "destructive",
+          title: "Progress not saved",
+          description: "We couldn't record that reading session. Please try again.",
+        });
+      } finally {
+        setPendingReadId(null);
+      }
+    },
+    [ownedBooks, profileId, skillDefinitionIdBySlug, skillUnlocks, toast],
+  );
+
+  const isAuthenticated = Boolean(user);
+
   return (
     <div className="space-y-8 pb-16">
       <div className="space-y-3 text-center">
@@ -496,39 +767,133 @@ const Education = () => {
         <TabsContent value="books" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Curated Reading Tracks</CardTitle>
+              <CardTitle>Skill Book Library</CardTitle>
               <CardDescription>
-                Start with foundational skills, then branch into creative mastery and business strategy as you grow.
+                Purchase books to unlock foundational skills and earn a one-time 10 XP reward when you read them.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {bookCollections.map((collection) => (
-                <Card key={collection.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <CardTitle className="text-lg">{collection.title}</CardTitle>
-                      <Badge variant="secondary">3 titles</Badge>
-                    </div>
-                    <CardDescription>{collection.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {collection.items.map((item) => (
-                      <div key={item.name} className="rounded-lg border bg-muted/30 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.author}</p>
+            <CardContent className="space-y-6">
+              {!isAuthenticated ? (
+                <p className="text-sm text-muted-foreground">
+                  Sign in to start collecting books and unlocking skills.
+                </p>
+              ) : isLoadingProfile ? (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading your character...
+                </div>
+              ) : !profileId ? (
+                <p className="text-sm text-muted-foreground">
+                  Create a character profile to track your book progress.
+                </p>
+              ) : null}
+              {isLoadingBooks ? (
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading books...
+                </div>
+              ) : skillBooks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No books have been published yet. Check back soon for new study material.
+                </p>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {skillBooks.map((book) => {
+                    const ownership = ownedBooks[book.id];
+                    const isOwned = Boolean(ownership);
+                    const isCompleted = Boolean(ownership?.xp_awarded_at);
+                    const skillLabel = skillDefinitionBySlug[book.skill_slug]?.display_name ?? book.skill_slug;
+                    const skillId = skillDefinitionIdBySlug[book.skill_slug];
+                    const unlockInfo = skillId ? skillUnlocks[skillId] : undefined;
+                    const alreadyUnlocked = Boolean(unlockInfo?.isUnlocked);
+                    return (
+                      <Card key={book.id} className="border-dashed">
+                        <CardHeader className="space-y-2">
+                          <div className="flex items-start justify-between gap-4">
+                            <CardTitle className="text-lg">{book.title}</CardTitle>
+                            <Badge variant={isCompleted ? "default" : isOwned ? "outline" : "secondary"}>
+                              {isCompleted ? "Completed" : isOwned ? "Owned" : "New"}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="whitespace-nowrap text-xs">
-                            {item.focus}
-                          </Badge>
-                        </div>
-                        <p className="mt-3 text-xs text-muted-foreground">{item.takeaway}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))}
+                          <CardDescription>{book.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-1 text-sm">
+                            {book.author ? (
+                              <p className="text-muted-foreground">by {book.author}</p>
+                            ) : null}
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="outline">{skillLabel}</Badge>
+                              <Badge variant="outline">{currencyFormatter.format(book.cost ?? 0)}</Badge>
+                              <Badge variant="outline">+{book.xp_reward ?? 0} XP</Badge>
+                              {alreadyUnlocked ? (
+                                <Badge variant="destructive">Skill already unlocked</Badge>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            {isOwned ? (
+                              <Button
+                                className="sm:flex-1"
+                                onClick={() => void handleRead(book)}
+                                disabled={isCompleted || pendingReadId === book.id || !profileId}
+                                variant={isCompleted ? "secondary" : "default"}
+                              >
+                                {isCompleted ? (
+                                  <>
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    Mastered
+                                  </>
+                                ) : pendingReadId === book.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Unlocking...
+                                  </>
+                                ) : (
+                                  <>
+                                    <BookOpen className="mr-2 h-4 w-4" />
+                                    Read & Unlock
+                                  </>
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                className="sm:flex-1"
+                                onClick={() => void handlePurchase(book)}
+                                disabled={pendingPurchaseId === book.id || !profileId}
+                              >
+                                {pendingPurchaseId === book.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Purchasing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    Purchase & Learn
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            {isCompleted ? (
+                              <Button variant="outline" className="sm:w-auto" disabled>
+                                Completed
+                              </Button>
+                            ) : isOwned ? (
+                              <Button variant="outline" className="sm:w-auto" disabled>
+                                Owned
+                              </Button>
+                            ) : null}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Books provide a single 10 XP boost the first time you read them. Track your collection in the Inventory Manager.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
