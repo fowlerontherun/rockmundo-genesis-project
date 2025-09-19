@@ -60,6 +60,30 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Skills data pipeline
+
+The Supabase schema now includes a `public.skills` table that stores the canonical skill tree used by the game. The table is
+managed by the `20261201090000_create_skills_table.sql` migration and contains the following columns:
+
+- `skill_id`: primary key that matches the slug defined in the frontend skill tree data
+- `skill_name`: human-readable name sourced from the definition `display_name`
+- `skill_child_id`: array of direct child skill slugs for traversing the tree
+- `skill_parent_id`: nullable reference to the immediate prerequisite tier
+- Impact columns (`learning_impact`, `performance_impact`, `xp_impact`, `recording_impact`, `writing_impact`, `fame_impact`, `sales_impact`)
+
+Seed data is generated automatically from the frontend definitions:
+
+```sh
+# Rebuild the deterministic seed SQL after editing src/data/skillTree.ts
+bun run scripts/seedSkillsTable.ts
+
+# Apply the schema and seed data locally
+supabase db reset
+```
+
+The migration pulls in the generated `supabase/seed/skills_seed.sql` file, so running the script keeps migrations and runtime data
+in sync.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/c3d67299-48a1-4744-a78e-1169f70eea31) and click on Share -> Publish.
