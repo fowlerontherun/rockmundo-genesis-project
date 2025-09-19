@@ -60,6 +60,7 @@ export interface Venue {
   id: string;
   name: string;
   location: string | null;
+  city: string | null;
   capacity: number | null;
   base_payment: number;
   venue_type: string | null;
