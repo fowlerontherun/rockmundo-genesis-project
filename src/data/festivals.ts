@@ -43,6 +43,79 @@ export interface CityFestivalGuide {
   festivals: FestivalEntry[];
 }
 
+export interface CityFestivalHighlight {
+  name: string;
+  location: string;
+  dateRange: string;
+  headliners: string[];
+  attendance: string;
+  ticketPrice: string;
+  description: string;
+}
+
+export const upcomingCityFestivals: CityFestivalHighlight[] = [
+  {
+    name: "Desert Dawn Fest",
+    location: "Sunset Flats Park • New Austin, TX",
+    dateRange: "Apr 11-13, 2025",
+    headliners: ["The Ember Lights", "Neon Dunes", "Aurora Grey"],
+    attendance: "Capped at 50,000 per day",
+    ticketPrice: "$189 GA • $429 VIP",
+    description:
+      "Sunrise-to-midnight desert immersion with art camps and sand-swept stages designed for wandering fan stories.",
+  },
+  {
+    name: "Tidal Harmony Summit",
+    location: "Harborfront Commons • Harbor City, WA",
+    dateRange: "Jun 20-22, 2025",
+    headliners: ["Harborline", "Paper Coast", "Celeste Flux"],
+    attendance: "12,500 fans each day",
+    ticketPrice: "$175 GA • $365 VIP",
+    description:
+      "Fog-soaked harbor cruises pair with floating night stages and chillwave textures carried across the waterfront.",
+  },
+  {
+    name: "Lumen Sessions",
+    location: "Aurora Soundscape Park • Aurora Bay, ON",
+    dateRange: "Jul 4-6, 2025",
+    headliners: ["Pale Meridian", "Signal Fires", "Vast Cartography"],
+    attendance: "10,000 guests per day",
+    ticketPrice: "$159 GA • $349 VIP",
+    description:
+      "Extended sunset sets and projection domes create a slow-bloom experience for instrumental and ambient storytellers.",
+  },
+  {
+    name: "Mesa Muse Weekender",
+    location: "Old Quarry Amphitheater • New Austin, TX",
+    dateRange: "Oct 3-5, 2025",
+    headliners: ["Pulse Array", "Saffron City", "Novae"],
+    attendance: "8,000 capacity each night",
+    ticketPrice: "$149 GA • $329 VIP",
+    description:
+      "Twilight performances framed by canyon walls with projection-mapped installations reacting to crowd movement.",
+  },
+  {
+    name: "Skyline Echo Nights",
+    location: "Union Skyline Rooftops • Harbor City, WA",
+    dateRange: "Sep 12-14, 2025",
+    headliners: ["Aerial Circuit", "Silver Causeway", "Night Glyph"],
+    attendance: "6,500 attendees per night",
+    ticketPrice: "$165 GA • $399 VIP",
+    description:
+      "Multiple rooftop pods sync across the skyline for a progressive listening journey tracked by mobile beacons.",
+  },
+  {
+    name: "Aurora Rise Rally",
+    location: "Harbor Ice Forum • Aurora Bay, ON",
+    dateRange: "Feb 14-16, 2026",
+    headliners: ["Glowcase", "Riverheart", "Signal Bloom"],
+    attendance: "6,000 fans per session",
+    ticketPrice: "$139 GA • $315 VIP",
+    description:
+      "A winter indoor/outdoor mashup with heated domes, projection ice paths, and collaborative dance troupes.",
+  },
+];
+
 export const festivalCatalog: Record<string, CityFestivalGuide> = {
   "new-austin": {
     cityName: "New Austin, TX",
