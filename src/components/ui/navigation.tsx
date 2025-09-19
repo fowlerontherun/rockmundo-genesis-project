@@ -70,6 +70,7 @@ const Navigation = () => {
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: MapPin, label: "Venue Management", path: "/venues" },
+        { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
         { icon: Building2, label: "City Overview", path: "/city" },
         { icon: Mic, label: "Street Busking", path: "/busking" },
         { icon: Plane, label: "Travel Planner", path: "/travel" },
