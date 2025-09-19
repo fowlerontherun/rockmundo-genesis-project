@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import { BandLearningTab } from "@/features/education/components/BandLearningTab";
 import { BooksTab } from "@/features/education/components/BooksTab";
 import { MentorsTab } from "@/features/education/components/MentorsTab";
@@ -12,19 +11,19 @@ const Education = () => {
   const tabs = useEducationTabs();
 
   return (
-    <div className="space-y-8 pb-16">
-      <div className="space-y-3 text-center">
+    <div className="space-y-10 pb-16">
+      <header className="space-y-3 text-center">
         <Badge variant="outline" className="mx-auto w-fit px-4 py-1 text-sm font-semibold">
           Education Hub
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Level Up Your Musical Journey</h1>
         <p className="mx-auto max-w-3xl text-base text-muted-foreground sm:text-lg">
-          Discover the best resources for self-paced learning, formal education, and collaborative growth. Pick a
-          pathway, follow the curated plan, and keep your skills—and your band—constantly evolving.
+          Tap into curated learning paths—from foundational study to collaborative band growth—to keep your skills
+          sharp and your career momentum steady.
         </p>
-      </div>
+      </header>
 
-      <Tabs defaultValue="books" className="space-y-6">
+      <Tabs defaultValue="books" className="space-y-8">
         <TabsList className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
