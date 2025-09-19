@@ -61,6 +61,8 @@ const Dashboard = () => {
     skills,
     attributes,
     xpWallet,
+    xpLedger,
+    freshWeeklyBonusAvailable,
     loading,
     error
   } = useGameData();

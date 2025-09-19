@@ -200,6 +200,30 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_participants: {
+        Row: {
+          channel: string
+          id: string
+          status: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           channel: string
@@ -883,49 +907,121 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          city_of_birth: string | null
           created_at: string | null
+          current_city_id: string | null
+          current_location: string
           display_name: string | null
+          equipped_clothing: Json | null
           experience: number | null
+          experience_at_last_weekly_bonus: number
           fame: number | null
           fans: number | null
+          gender: Database["public"]["Enums"]["profile_gender"]
+          health: number
           id: string
+          last_weekly_bonus_at: string | null
           level: number | null
           updated_at: string | null
           user_id: string
           username: string
+          weekly_bonus_metadata: Json
+          weekly_bonus_streak: number
         }
         Insert: {
+          age?: number
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          city_of_birth?: string | null
           created_at?: string | null
+          current_city_id?: string | null
+          current_location?: string
           display_name?: string | null
+          equipped_clothing?: Json | null
           experience?: number | null
+          experience_at_last_weekly_bonus?: number
           fame?: number | null
           fans?: number | null
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          health?: number
           id?: string
+          last_weekly_bonus_at?: string | null
           level?: number | null
           updated_at?: string | null
           user_id: string
           username: string
+          weekly_bonus_metadata?: Json
+          weekly_bonus_streak?: number
         }
         Update: {
+          age?: number
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          city_of_birth?: string | null
           created_at?: string | null
+          current_city_id?: string | null
+          current_location?: string
           display_name?: string | null
+          equipped_clothing?: Json | null
           experience?: number | null
+          experience_at_last_weekly_bonus?: number
           fame?: number | null
           fans?: number | null
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          health?: number
           id?: string
+          last_weekly_bonus_at?: string | null
           level?: number | null
           updated_at?: string | null
           user_id?: string
           username?: string
+          weekly_bonus_metadata?: Json
+          weekly_bonus_streak?: number
+        }
+        Relationships: []
+      }
+      record_labels: {
+        Row: {
+          advance_payment: number
+          benefits: string[]
+          created_at: string
+          description: string
+          id: string
+          name: string
+          prestige: number
+          requirements: Json
+          royalty_rate: number
+          updated_at: string
+        }
+        Insert: {
+          advance_payment?: number
+          benefits?: string[]
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          prestige: number
+          requirements?: Json
+          royalty_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          advance_payment?: number
+          benefits?: string[]
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          prestige?: number
+          requirements?: Json
+          royalty_rate?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1330,6 +1426,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      chat_participant_status: "muted" | "online" | "typing"
+      profile_gender:
+        | "female"
+        | "male"
+        | "non_binary"
+        | "other"
+        | "prefer_not_to_say"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
     CompositeTypes: {
@@ -1459,6 +1562,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      chat_participant_status: ["online", "typing", "muted"],
+      profile_gender: [
+        "female",
+        "male",
+        "non_binary",
+        "other",
+        "prefer_not_to_say",
+      ],
       show_type_enum: ["concert", "festival", "private", "street"],
     },
   },

@@ -15,11 +15,24 @@ interface Message {
   created_at: string;
 }
 
-export default function ChatWindow() {
+interface ChatWindowProps {
+  channel?: string;
+  hideHeader?: boolean;
+  onOnlineCountChange?: (count: number) => void;
+  onConnectionStatusChange?: (connected: boolean) => void;
+}
+
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  channel,
+  hideHeader = false,
+  onOnlineCountChange,
+  onConnectionStatusChange,
+}) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
-  const [selectedChannel] = useState('general');
+  const selectedChannel = channel ?? 'general';
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!user) return;
@@ -95,9 +108,11 @@ export default function ChatWindow() {
 
   return (
     <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Live Chat</CardTitle>
-      </CardHeader>
+      {!hideHeader && (
+        <CardHeader>
+          <CardTitle>Live Chat</CardTitle>
+        </CardHeader>
+      )}
       <CardContent className="p-0 h-full flex flex-col">
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-2">
@@ -129,4 +144,6 @@ export default function ChatWindow() {
       </CardContent>
     </Card>
   );
-}
+};
+
+export default ChatWindow;
