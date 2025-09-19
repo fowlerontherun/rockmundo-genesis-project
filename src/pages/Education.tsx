@@ -1,8 +1,16 @@
+
 import { BookOpen, GraduationCap, PlaySquare, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/use-auth-context";
+import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
+import { awardSpecialXp } from "@/utils/progression";
 
 const tabItems = [
   {
@@ -16,18 +24,21 @@ const tabItems = [
     label: "University",
     icon: GraduationCap,
     blurb: "Accredited pathways and stackable certificates that sync with touring life."
+
   },
   {
     value: "videos",
     label: "YouTube Videos",
     icon: PlaySquare,
     blurb: "High-impact playlists and channels to keep your technique sharp on demand."
+
   },
   {
     value: "mentors",
     label: "Mentors",
     icon: Users,
     blurb: "Coaching collectives and expert rosters for personalized feedback loops."
+
   },
   {
     value: "band",
@@ -119,25 +130,27 @@ const bookJourneys = [
   }
 ];
 
-const universityTracks = [
+
+const universityRoutes = [
   {
     title: "Degree Pathways",
     description: "Immersive programs that balance ensemble work, songwriting labs, and career coaching.",
     highlights: [
       {
-        name: "BFA in Contemporary Performance",
+        program: "BFA in Contemporary Performance",
         school: "Berklee College of Music",
         focus: "Performance Lab",
         details: "Daily ensemble rotations with songwriting bootcamps and showcase nights."
       },
       {
-        name: "BA in Music Business",
+        program: "BA in Music Business",
         school: "Middle Tennessee State University",
         focus: "Industry Leadership",
         details: "Blend legal, marketing, and analytics courses with Nashville internship placements."
+
       },
       {
-        name: "BS in Music Production",
+        program: "BS in Music Production",
         school: "Full Sail University",
         focus: "Studio Technology",
         details: "Hands-on studio tracking, mixing, and mastering alongside release simulations."
@@ -153,19 +166,19 @@ const universityTracks = [
     description: "Short sprints that stack with your touring schedule while keeping your skills sharp.",
     highlights: [
       {
-        name: "Modern Music Production",
+        program: "Modern Music Production",
         school: "Coursera x Berklee",
         focus: "12-Week Certificate",
         details: "Project-based DAW mastery with mentor feedback on each mix."
       },
       {
-        name: "Music Marketing Accelerator",
+        program: "Music Marketing Accelerator",
         school: "Soundfly",
         focus: "Mentor Guided",
         details: "Launch funnels, fan journeys, and social ads with weekly strategy reviews."
       },
       {
-        name: "Live Event Production",
+        program: "Live Event Production",
         school: "Point Blank Music School",
         focus: "Hybrid",
         details: "Route tours, advance shows, and manage crews with real-world case studies."
@@ -181,19 +194,19 @@ const universityTracks = [
     description: "Use this repeatable 15-week cadence to balance study, creation, and stage time.",
     highlights: [
       {
-        name: "Weeks 1-5",
+        program: "Weeks 1-5",
         school: "Skill Ramp-Up",
         focus: "Technique + Theory",
         details: "Stack practice labs, ear training, and songwriting prompts."
       },
       {
-        name: "Weeks 6-10",
+        program: "Weeks 6-10",
         school: "Creative Production",
         focus: "Studio Sprints",
         details: "Batch arrange, record, and collaborate on portfolio-ready tracks."
       },
       {
-        name: "Weeks 11-15",
+        program: "Weeks 11-15",
         school: "Career Launch",
         focus: "Showcase",
         details: "Book showcases, refresh your EPK, and meet with advisors for next steps."
@@ -286,9 +299,6 @@ const videoCollections = [
         link: "https://www.youtube.com/results?search_query=ear+training+intervals",
         summary: "Speed up interval recognition with call-and-response challenges."
       }
-    ]
-  }
-];
 
 const mentorTracks = [
   {
@@ -313,6 +323,168 @@ const mentorTracks = [
         cadence: "Weekly",
         support: "Plan release calendars, promo funnels, and milestone reviews."
       }
+
+      setPurchasingBookId(book.id);
+      try {
+        const { error } = await supabase.from("player_skill_books").insert({
+          user_id: user.id,
+          profile_id: profile.id,
+          skill_book_id: book.id,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Book added to library",
+          description: book.title + " is ready to read from your inventory.",
+        });
+
+        await loadOwnedBooks();
+      } catch (error) {
+        console.error("Failed to purchase skill book", error);
+        toast({
+          variant: "destructive",
+          title: "Purchase failed",
+          description: "We couldn't process the purchase. Please try again.",
+        });
+      } finally {
+        setPurchasingBookId(null);
+      }
+    },
+    [knownSkillSlugs, loadOwnedBooks, ownedBooksMap, profile, toast, user],
+  );
+
+  const handleRead = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user || !profile) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "You need an active character to read skill books.",
+        });
+        return;
+      }
+
+      if (knownSkillSlugs.has(book.skill_slug)) {
+        toast({
+          variant: "destructive",
+          title: "Skill already unlocked",
+          description: "Your character already knows this skill from another source.",
+        });
+        return;
+      }
+
+      const owned = ownedBooksMap.get(book.id);
+      if (!owned) {
+        toast({
+          variant: "destructive",
+          title: "Book not owned",
+          description: "Purchase the book first before reading it.",
+        });
+        return;
+      }
+
+      if (owned.is_consumed) {
+        toast({
+          title: "Already completed",
+          description: "You've already claimed the reward from this book.",
+        });
+        return;
+      }
+
+      const metadata = getSkillMetadata(book.skill_slug);
+      const xpReward = book.xp_value ?? DEFAULT_BOOK_XP;
+
+      setReadingBookId(book.id);
+      try {
+        const { error } = await supabase
+          .from("player_skill_books")
+          .update({ is_consumed: true, consumed_at: new Date().toISOString() })
+          .eq("id", owned.id);
+
+        if (error) throw error;
+
+        try {
+          await awardActionXp({
+            amount: xpReward,
+            actionKey: "read_skill_book",
+            metadata: { skill_slug: book.skill_slug, skill_book_id: book.id },
+          });
+        } catch (xpError) {
+          console.error("Failed to award XP from book", xpError);
+          toast({
+            variant: "destructive",
+            title: "XP grant failed",
+            description: "The book was marked as read, but the experience boost could not be applied.",
+          });
+        }
+
+        try {
+          const { data: existingProgress, error: progressError } = await supabase
+            .from("skill_progress")
+            .select("current_level,current_xp,required_xp,metadata")
+            .eq("profile_id", profile.id)
+            .eq("skill_slug", book.skill_slug)
+            .maybeSingle();
+
+          if (progressError) {
+            throw progressError;
+          }
+
+          const existingMetadata = isMetadataRecord(existingProgress?.metadata)
+            ? (existingProgress?.metadata as Record<string, unknown>)
+            : {};
+
+          const progressPayload: Database["public"]["Tables"]["skill_progress"]["Insert"] = {
+            profile_id: profile.id,
+            skill_slug: book.skill_slug,
+            current_level: Math.max(existingProgress?.current_level ?? 0, 1),
+            current_xp: (existingProgress?.current_xp ?? 0) + xpReward,
+            required_xp: existingProgress?.required_xp ?? xpReward,
+            metadata: {
+              ...existingMetadata,
+              unlocked_by: existingMetadata?.unlocked_by ?? "skill_book",
+              last_book_reward: xpReward,
+            },
+          };
+
+          const { error: upsertError } = await supabase
+            .from("skill_progress")
+            .upsert(progressPayload, { onConflict: "profile_id,skill_slug" });
+
+          if (upsertError) {
+            throw upsertError;
+          }
+        } catch (progressError) {
+          console.error("Failed to update skill progress from book", progressError);
+        }
+
+        toast({
+          title: "Skill unlocked",
+          description: "Reading " + metadata.name + " granted " + xpReward + " XP.",
+        });
+        await Promise.all([loadOwnedBooks(), loadSkillProgress()]);
+      } catch (error) {
+        console.error("Failed to mark book as read", error);
+        toast({
+          variant: "destructive",
+          title: "Reading failed",
+          description: "We couldn't complete the read action. Please try again.",
+        });
+      } finally {
+        setReadingBookId(null);
+      }
+    },
+    [
+      awardActionXp,
+      getSkillMetadata,
+      knownSkillSlugs,
+      loadOwnedBooks,
+      loadSkillProgress,
+      ownedBooksMap,
+      profile,
+      toast,
+      user,
     ],
     action: {
       label: "Apply for mentorship",
@@ -374,8 +546,6 @@ const mentorTracks = [
       label: "Download templates",
       href: "https://notion.so"
     }
-  }
-];
 
 const bandLearningTracks = [
   {
@@ -452,10 +622,168 @@ const bandLearningTracks = [
       label: "Set up reporting sheet",
       href: "https://notion.so/templates"
     }
-  }
-];
 
-const Education = () => {
+    void loadOwnedBooks(profileId);
+    void loadSkillUnlocks(profileId);
+  }, [loadOwnedBooks, loadSkillUnlocks, profileId]);
+
+  const handlePurchase = useCallback(
+    async (book: SkillBookRow) => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Sign in required",
+          description: "Create an account or sign in to purchase books.",
+        });
+        return;
+      }
+
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "You need an active character profile to collect books.",
+        });
+        return;
+      }
+
+      if (ownedBooks[book.id]) {
+        toast({
+          title: "Already owned",
+          description: "This book is already in your library.",
+        });
+        return;
+      }
+
+      setPendingPurchaseId(book.id);
+      try {
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .insert({ profile_id: profileId, skill_book_id: book.id })
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const inserted = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: inserted }));
+        toast({
+          title: "Book purchased",
+          description: `${book.title} is now in your inventory.`,
+        });
+      } catch (error) {
+        console.error("Failed to purchase book", error);
+        toast({
+          variant: "destructive",
+          title: "Purchase failed",
+          description: "We couldn't complete that purchase. Please try again.",
+        });
+      } finally {
+        setPendingPurchaseId(null);
+      }
+    },
+    [ownedBooks, profileId, toast, user],
+  );
+
+  const handleRead = useCallback(
+    async (book: SkillBookRow) => {
+      if (!profileId) {
+        toast({
+          variant: "destructive",
+          title: "Select a character",
+          description: "Create or select a character before reading books.",
+        });
+        return;
+      }
+
+      const ownership = ownedBooks[book.id];
+      if (!ownership) {
+        toast({
+          variant: "destructive",
+          title: "Purchase required",
+          description: "Buy the book before attempting to read it.",
+        });
+        return;
+      }
+
+      if (ownership.xp_awarded_at) {
+        toast({
+          title: "Already completed",
+          description: "You've already gained the XP from this book.",
+        });
+        return;
+      }
+
+      setPendingReadId(book.id);
+      const xpAmount = book.xp_reward ?? 10;
+      const metadata = {
+        book_id: book.id,
+        book_slug: book.slug,
+        skill_slug: book.skill_slug,
+      };
+      const now = new Date().toISOString();
+      try {
+        await awardSpecialXp({ amount: xpAmount, reason: `skill_book:${book.slug}`, metadata });
+
+        const { data, error } = await supabase
+          .from("player_skill_books")
+          .update({ consumed_at: now, xp_awarded_at: now })
+          .eq("id", ownership.id)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const updated = data as PlayerSkillBookRow;
+        setOwnedBooks((prev) => ({ ...prev, [book.id]: updated }));
+
+        const skillId = skillDefinitionIdBySlug[book.skill_slug];
+        if (skillId) {
+          const { error: unlockError } = await supabase
+            .from("profile_skill_unlocks")
+            .upsert(
+              {
+                profile_id: profileId,
+                skill_id: skillId,
+                is_unlocked: true,
+                unlocked_at: now,
+                unlock_level: Math.max(10, skillUnlocks[skillId]?.unlockLevel ?? 0),
+                unlock_source: `book:${book.slug}`,
+              },
+              { onConflict: "profile_id,skill_id" },
+            );
+
+          if (unlockError) throw unlockError;
+
+          setSkillUnlocks((prev) => ({
+            ...prev,
+            [skillId]: {
+              isUnlocked: true,
+              unlockLevel: Math.max(10, prev[skillId]?.unlockLevel ?? 0),
+            },
+          }));
+        }
+
+        toast({
+          title: "Skill unlocked",
+          description: `Reading ${book.title} granted +${xpAmount} XP.`,
+        });
+      } catch (error) {
+        console.error("Failed to process book read", error);
+        toast({
+          variant: "destructive",
+          title: "Progress not saved",
+          description: "We couldn't record that reading session. Please try again.",
+        });
+      } finally {
+        setPendingReadId(null);
+      }
+    },
+    [ownedBooks, profileId, skillDefinitionIdBySlug, skillUnlocks, toast],
+  );
+
+  const isAuthenticated = Boolean(user);
+
   return (
     <div className="space-y-10 px-4 pb-16 pt-8 md:px-8 lg:px-16">
       <div className="text-center">
@@ -543,11 +871,38 @@ const Education = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="university" className="space-y-6">
+          {universityRoutes.map((route) => (
+            <Card key={route.title}>
+              <CardHeader>
+                <CardTitle>{route.title}</CardTitle>
+                <CardDescription>{route.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  {route.highlights.map((item) => (
+                    <div key={item.program} className="space-y-1 rounded-lg border p-4">
+                      <div className="font-semibold">{item.program}</div>
+                      <div className="text-sm text-muted-foreground">{item.school}</div>
+                      <div className="text-sm text-muted-foreground">{item.format}</div>
+                      <p className="text-sm">{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="outline" asChild>
+                  <a href={route.action.href} target="_blank" rel="noreferrer">
+                    {route.action.label}
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="videos">
           <Card>
             <CardHeader>
-              <CardTitle>Academic Pathways</CardTitle>
+              <CardTitle>YouTube Skill Training</CardTitle>
               <CardDescription>
                 Blend formal study with real-world shows, mentorship, and portfolio milestones.
               </CardDescription>
@@ -576,21 +931,19 @@ const Education = () => {
                         </div>
                       ))}
                     </div>
-                    {track.action ? (
-                      <Button asChild variant="secondary" className="w-full">
-                        <a href={track.action.href} target="_blank" rel="noreferrer">
-                          {track.action.label}
-                        </a>
-                      </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {group.skills.map((definition) => renderSkillCard(definition))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No trainable skills are available yet. Unlock skills in your profile to see tailored lessons.
+                </p>
+              )}
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="videos" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Streamable Curriculum</CardTitle>
@@ -632,10 +985,10 @@ const Education = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="mentors" className="space-y-6">
+        <TabsContent value="mentors">
           <Card>
             <CardHeader>
-              <CardTitle>Guided Mentorship</CardTitle>
+              <CardTitle>Mentor Pods</CardTitle>
               <CardDescription>
                 Surround your project with experts who provide clarity, accountability, and momentum.
               </CardDescription>
@@ -678,10 +1031,10 @@ const Education = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="band" className="space-y-6">
+        <TabsContent value="band">
           <Card>
             <CardHeader>
-              <CardTitle>Band Learning Lab</CardTitle>
+              <CardTitle>Band Learning Circles</CardTitle>
               <CardDescription>
                 Keep the whole crew aligned with intensives, monthly focus cycles, and data-informed retros.
               </CardDescription>
@@ -723,6 +1076,5 @@ const Education = () => {
       </Tabs>
     </div>
   );
-};
+}
 
-export default Education;

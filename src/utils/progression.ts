@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PlayerXpWallet } from "@/hooks/useGameData";
 
-export type ProgressionAction = "award_action_xp";
+export type ProgressionAction = "award_action_xp" | "award_special_xp";
 
 export interface ProgressionProfileSummary {
   id: string;
@@ -46,6 +46,42 @@ export const awardActionXp = async ({
     amount,
     category,
     action_key: actionKey,
+    metadata,
+    event_id: uniqueEventId,
+  };
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to award experience points");
+  }
+
+  return data;
+};
+
+export interface AwardSpecialXpInput {
+  amount: number;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  uniqueEventId?: string;
+}
+
+export const awardSpecialXp = async ({
+  amount,
+  reason = "special",
+  metadata = {},
+  uniqueEventId,
+}: AwardSpecialXpInput): Promise<ProgressionResponse> => {
+  const payload = {
+    action: "award_special_xp" as const,
+    amount,
+    bonus_type: reason,
     metadata,
     event_id: uniqueEventId,
   };
