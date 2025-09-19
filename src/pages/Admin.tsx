@@ -687,7 +687,14 @@ export default function Admin() {
         setDeletingUniversityId(null);
       }
     },
-    [editingUniversity?.id, handleFetchUniversities, resetFormState, toast],
+    [
+      editingUniversity?.id,
+      handleFetchUniversities,
+      resetFormState,
+      toast,
+      totalUniversities,
+      universities.length,
+    ],
   );
 
   const handleDeleteSkillBook = useCallback(
@@ -717,7 +724,7 @@ export default function Admin() {
         setDeletingBookId(null);
       }
     },
-    [editingUniversity?.id, handleFetchUniversities, resetFormState, toast],
+    [editingSkillBook?.id, resetSkillBookForm, toast],
   );
 
   return (
