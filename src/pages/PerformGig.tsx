@@ -1,344 +1,273 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
-import { calculateFanGain, calculateGigPayment, type PerformanceAttributeBonuses } from '@/utils/gameBalance';
-import { resolveAttributeValue } from '@/utils/attributeModifiers';
-import { awardActionXp } from '@/utils/progression';
-import {
-  Music,
-  Users,
-  Star,
-  DollarSign,
-  Clock,
-  Zap,
-  Heart,
-  Trophy
-} from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Music, DollarSign, Users, Star, Play, TrendingUp, Calendar, MapPin } from 'lucide-react';
 
-interface Venue {
+type GigRow = {
+  id: string;
+  band_id: string;
+  venue_id: string;
+  scheduled_date: string;
+  status: string;
+  payment: number;
+  attendance: number;
+  fan_gain: number;
+  show_type: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type VenueRow = {
+  id: string;
   name: string;
   capacity: number;
   prestige_level: number;
-}
+  base_payment: number;
+  location: string;
+  venue_type: string;
+  requirements: any;
+  created_at: string;
+};
 
-type ShowType = Database['public']['Enums']['show_type'];
-const DEFAULT_SHOW_TYPE: ShowType = 'standard';
+interface GigWithVenue extends GigRow {
+  venues: VenueRow;
+}
 
 interface PerformanceStageConfig {
   name: string;
+  duration: number; // in seconds
   description: string;
-  duration: number;
+  weight: number; // impact on overall performance
 }
 
-const STAGE_PRESETS: Record<ShowType, PerformanceStageConfig[]> = {
-  standard: [
-    { name: 'Opening Song', description: 'Kick off the show with energy and amplification', duration: 2000 },
-    { name: 'Getting the Crowd Going', description: 'Build hype with the full band sound', duration: 3000 },
-    { name: 'Main Set', description: 'Full production and lighting cues', duration: 4000 },
-    { name: 'Encore', description: 'High-energy finale to leave an impression', duration: 2000 },
+const STAGE_PRESETS: Record<string, PerformanceStageConfig[]> = {
+  concert: [
+    { name: "Sound Check", duration: 3, description: "Setting up equipment and checking audio", weight: 0.15 },
+    { name: "Opening", duration: 4, description: "First impression and crowd warm-up", weight: 0.25 },
+    { name: "Main Set", duration: 8, description: "Core performance with main songs", weight: 0.45 },
+    { name: "Encore", duration: 3, description: "Final impression and crowd send-off", weight: 0.15 }
   ],
-  acoustic: [
-    { name: 'Tuning & Warmth', description: 'Dial in the acoustic tones and connect with the room', duration: 1800 },
-    { name: 'Storytelling Interlude', description: 'Share intimate stories between stripped-down songs', duration: 2600 },
-    { name: 'Unplugged Spotlight', description: 'Showcase vocals and dynamics in a quieter setting', duration: 3200 },
-    { name: 'Singalong Finale', description: 'Invite the crowd into a gentle encore', duration: 2000 },
+  festival: [
+    { name: "Stage Setup", duration: 2, description: "Quick setup in festival environment", weight: 0.1 },
+    { name: "High Energy Opening", duration: 3, description: "Grabbing festival crowd attention", weight: 0.3 },
+    { name: "Festival Set", duration: 6, description: "Condensed high-energy performance", weight: 0.6 }
   ],
+  private: [
+    { name: "Intimate Setup", duration: 2, description: "Personal connection with small audience", weight: 0.2 },
+    { name: "Personal Performance", duration: 8, description: "Close, personal musical experience", weight: 0.8 }
+  ],
+  street: [
+    { name: "Crowd Gathering", duration: 5, description: "Attracting passersby with music", weight: 0.4 },
+    { name: "Street Performance", duration: 10, description: "Energetic busking performance", weight: 0.6 }
+  ]
 };
 
-const SHOW_TYPE_RESULT_MODIFIERS: Record<ShowType, { payment: number; fan: number; experience: number }> = {
-  standard: { payment: 1, fan: 1, experience: 1 },
-  acoustic: { payment: 1, fan: 1.3, experience: 1.15 },
+const SHOW_TYPE_RESULT_MODIFIERS: Record<string, { payment: number; fanGain: number; experience: number }> = {
+  concert: { payment: 1.0, fanGain: 1.0, experience: 1.0 },
+  festival: { payment: 1.5, fanGain: 2.0, experience: 1.3 },
+  private: { payment: 0.8, fanGain: 0.3, experience: 0.7 },
+  street: { payment: 0.2, fanGain: 0.8, experience: 0.5 }
 };
 
-const getStagePreset = (showType: ShowType) => STAGE_PRESETS[showType] ?? STAGE_PRESETS[DEFAULT_SHOW_TYPE];
+const getStagePreset = (showType: string): PerformanceStageConfig[] => {
+  return STAGE_PRESETS[showType] || STAGE_PRESETS.concert;
+};
 
-const PERFORMANCE_ATTRIBUTE_KEYS: AttributeKey[] = ["stage_presence", "musical_ability"];
-
-interface Gig {
-  id: string;
-  venue: Venue;
-  scheduled_date: string;
-  payment: number;
-  status: string;
-  show_type: ShowType;
-}
-
-type GigRow = Database['public']['Tables']['gigs']['Row'];
-type VenueRow = Database['public']['Tables']['venues']['Row'];
-type GigWithVenue = GigRow & { venues: VenueRow | null };
-
-interface PerformanceMetrics {
-  crowd_energy: number;
-  technical_skill: number;
-  stage_presence: number;
-  overall_score: number;
-}
-
-const PerformGig = () => {
-  const { gigId } = useParams();
+export default function PerformGig() {
+  const { gigId } = useParams<{ gigId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, skills, attributes, addActivity, updateProfile, refreshProgressionState } = useGameData();
+  const { profile, skills, attributes } = useGameData();
   const { toast } = useToast();
-  const toastRef = useRef(toast);
 
-  useEffect(() => {
-    toastRef.current = toast;
-  }, [toast]);
-  
-  const [gig, setGig] = useState<Gig | null>(null);
+  const [gig, setGig] = useState<GigWithVenue | null>(null);
   const [isPerforming, setIsPerforming] = useState(false);
-  const [stageSequence, setStageSequence] = useState<PerformanceStageConfig[]>(getStagePreset(DEFAULT_SHOW_TYPE));
-  const [currentShowType, setCurrentShowType] = useState<ShowType>(DEFAULT_SHOW_TYPE);
-  const [performance, setPerformance] = useState<PerformanceMetrics>({
-    crowd_energy: 0,
-    technical_skill: 0,
-    stage_presence: 0,
-    overall_score: 0
+  const [stageSequence, setStageSequence] = useState<PerformanceStageConfig[]>([]);
+  const [currentShowType, setCurrentShowType] = useState<string>('concert');
+  const [performance, setPerformance] = useState({
+    crowd_energy: 50,
+    technical_skill: 50,
+    stage_presence: 50
   });
   const [performanceStage, setPerformanceStage] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [earnings, setEarnings] = useState(0);
   const [fanGain, setFanGain] = useState(0);
   const [experienceGain, setExperienceGain] = useState(0);
-  const attributeBonuses = useMemo<PerformanceAttributeBonuses>(() => {
-    const source = attributes as unknown as Record<string, unknown> | null;
-    return {
-      stagePresence: resolveAttributeValue(source, 'stage_presence', 1),
-      crowdEngagement: resolveAttributeValue(source, 'crowd_engagement', 1),
-      socialReach: resolveAttributeValue(source, 'social_reach', 1),
-    };
-  }, [attributes]);
 
-  const loadGig = useCallback(async (): Promise<void> => {
-    if (!gigId) return;
+  const loadGig = async () => {
+    if (!gigId || !user) return;
 
     try {
       const { data, error } = await supabase
         .from('gigs')
         .select(`
           *,
-          venues!gigs_venue_id_fkey(name, capacity, prestige_level)
+          venues (*)
         `)
         .eq('id', gigId)
         .single();
 
-      if (error) throw error;
-      if (!data) throw new Error('Gig not found');
+      if (error) {
+        console.error('Error loading gig:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load gig details",
+          variant: "destructive"
+        });
+        navigate('/gig-booking');
+        return;
+      }
 
-      const gigData: GigWithVenue = data;
-      const venueData = gigData.venues;
-
-      if (!venueData) throw new Error('Venue details not found');
-
-      const showType = (gigData.show_type ?? DEFAULT_SHOW_TYPE) as ShowType;
-      const transformedGig: Gig = {
-        id: gigData.id,
-        venue: {
-          name: venueData.name,
-          capacity: venueData.capacity ?? 0,
-          prestige_level: venueData.prestige_level ?? 0
-        },
-        scheduled_date: gigData.scheduled_date,
-        payment: gigData.payment ?? 0,
-        status: gigData.status ?? 'scheduled',
-        show_type: showType
-      };
-
-      setGig(transformedGig);
-      setCurrentShowType(showType);
-      setStageSequence(getStagePreset(showType));
-    } catch (error: unknown) {
-      const fallbackMessage = "Failed to load gig details";
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error('Error loading gig:', errorMessage, error);
-      toastRef.current?.({
-        variant: "destructive",
+      if (data) {
+        setGig(data as GigWithVenue);
+        setCurrentShowType(data.show_type);
+        setStageSequence(getStagePreset(data.show_type));
+      }
+    } catch (error) {
+      console.error('Unexpected error loading gig:', error);
+      toast({
         title: "Error",
-        description: errorMessage === fallbackMessage ? fallbackMessage : `${fallbackMessage}: ${errorMessage}`
+        description: "An unexpected error occurred",
+        variant: "destructive"
       });
+      navigate('/gig-booking');
     }
-  }, [gigId]);
+  };
 
   useEffect(() => {
     loadGig();
-  }, [loadGig]);
+  }, [gigId, user]);
 
   const startPerformance = async () => {
     if (!stageSequence.length) return;
-
+    
     setIsPerforming(true);
-    setPerformanceStage(1);
-
-    const skillProfile = currentShowType === 'acoustic'
-      ? { baseSkill: [45, 70], crowd: [5, 18], presence: [18, 32] }
-      : { baseSkill: [40, 70], crowd: [0, 22], presence: [25, 45] };
-
+    setPerformanceStage(0);
+    
+    let currentPerformance = { ...performance };
+    
     for (let i = 0; i < stageSequence.length; i++) {
+      setPerformanceStage(i);
       const stage = stageSequence[i];
-      setPerformanceStage(i + 1);
-      await new Promise(resolve => setTimeout(resolve, stage.duration));
-
-      const baseSkill = Math.random() * (skillProfile.baseSkill[1] - skillProfile.baseSkill[0]) + skillProfile.baseSkill[0];
-      const crowdBonus = Math.random() * (skillProfile.crowd[1] - skillProfile.crowd[0]) + skillProfile.crowd[0];
-      const stagePresence = Math.random() * (skillProfile.presence[1] - skillProfile.presence[0]) + skillProfile.presence[0];
-
-      setPerformance((prev) => ({
-        crowd_energy: Math.min(100, prev.crowd_energy + crowdBonus),
-        technical_skill: Math.min(100, prev.technical_skill + baseSkill / 4),
-        stage_presence: Math.min(100, prev.stage_presence + stagePresence / 4),
-        overall_score: 0,
-      }));
+      
+      // Simulate stage duration (shortened for demo)
+      await new Promise(resolve => setTimeout(resolve, stage.duration * 500));
+      
+      // Update performance metrics based on stage and show type
+      const crowdBonus = Math.random() * 20 - 10; // -10 to +10
+      const techBonus = Math.random() * 20 - 10;
+      const presenceBonus = Math.random() * 20 - 10;
+      
+      currentPerformance = {
+        crowd_energy: Math.max(0, Math.min(100, currentPerformance.crowd_energy + crowdBonus)),
+        technical_skill: Math.max(0, Math.min(100, currentPerformance.technical_skill + techBonus)),
+        stage_presence: Math.max(0, Math.min(100, currentPerformance.stage_presence + presenceBonus))
+      };
+      
+      setPerformance(currentPerformance);
     }
-
-    calculateResults();
+    
+    setIsPerforming(false);
+    await calculateResults(currentPerformance);
   };
 
-  const calculateResults = async () => {
-    if (!gig || !user) return;
+  const calculateResults = async (finalPerformance: typeof performance) => {
+    if (!gig || !profile || !skills) return;
 
-    const finalScore = (performance.crowd_energy + performance.technical_skill + performance.stage_presence) / 3;
+    // Calculate overall performance score (0-100)
+    const avgPerformance = (
+      finalPerformance.crowd_energy + 
+      finalPerformance.technical_skill + 
+      finalPerformance.stage_presence
+    ) / 3;
 
-    const modifiers = SHOW_TYPE_RESULT_MODIFIERS[currentShowType] ?? SHOW_TYPE_RESULT_MODIFIERS[DEFAULT_SHOW_TYPE];
+    // Apply skill bonuses
+    const skillBonus = (skills.performance || 0) / 100 * 20; // Max 20% bonus
+    const finalScore = Math.min(100, avgPerformance + skillBonus);
 
-    const performanceMultiplier = finalScore / 100;
-    const attendanceResult = Math.max(
-      1,
-      Math.floor(gig.venue.capacity * performanceMultiplier * (currentShowType === 'acoustic' ? 0.8 : 1)),
-    );
-    const basePayment = Math.max(1, Math.floor((gig.payment || 500) * modifiers.payment));
-    const successRatio = Math.min(Math.max(finalScore / 100, 0), 1);
-    const baselinePayment = calculateGigPayment(
-      basePayment,
-      skills?.performance ?? finalScore * 10,
-      profile?.fame ?? 0,
-      successRatio,
-    );
-    const adjustedPayment = calculateGigPayment(
-      basePayment,
-      skills?.performance ?? finalScore * 10,
-      profile?.fame ?? 0,
-      successRatio,
-      attributeBonuses,
-    );
-    const payoutAdjustment = baselinePayment > 0 ? adjustedPayment / baselinePayment : 1;
-    const finalEarnings = Math.floor(basePayment * performanceMultiplier * payoutAdjustment);
+    // Get modifiers for show type
+    const modifiers = SHOW_TYPE_RESULT_MODIFIERS[currentShowType];
 
-    const baseFanGain = Math.floor(attendanceResult * 0.1 * modifiers.fan);
-    const stagePresenceMetric = performance.stage_presence || finalScore;
-    const baselineFanGain = calculateFanGain(
-      Math.max(1, baseFanGain),
-      skills?.performance ?? finalScore * 10,
-      stagePresenceMetric,
-    );
-    const adjustedFanGain = calculateFanGain(
-      Math.max(1, baseFanGain),
-      skills?.performance ?? finalScore * 10,
-      stagePresenceMetric,
-      attributeBonuses,
-    );
-    const fanAdjustment = baselineFanGain > 0 ? adjustedFanGain / baselineFanGain : 1;
-    const finalFanGain = Math.max(0, Math.round(baseFanGain * fanAdjustment));
-    const expGain = Math.max(1, Math.floor((50 + (finalScore * 2) + (gig.venue.prestige_level * 10)) * modifiers.experience));
+    // Calculate earnings based on venue payment, performance score, and show type
+    const basePayment = gig.venues.base_payment || gig.payment || 1000;
+    const performanceMultiplier = 0.5 + (finalScore / 100) * 1.0; // 50% to 150% of base
+    const calculatedEarnings = Math.round(basePayment * performanceMultiplier * modifiers.payment);
 
-    setPerformance(prev => ({ ...prev, overall_score: finalScore }));
-    setEarnings(finalEarnings);
-    setFanGain(finalFanGain);
-    setExperienceGain(expGain);
+    // Calculate fan gain based on venue capacity and performance
+    const venueCapacity = gig.venues.capacity || 100;
+    const baseFanGain = Math.round(venueCapacity * 0.01 * (finalScore / 100));
+    const calculatedFanGain = Math.round(baseFanGain * modifiers.fanGain);
 
-    const totalShowDurationMs = stageSequence.reduce((sum, stage) => sum + stage.duration, 0);
-    const attendanceCapacityRatio = gig.venue.capacity > 0
-      ? attendanceResult / gig.venue.capacity
-      : 0;
-    const professionalismIndicators = {
-      crowd_engagement: performance.crowd_energy >= 65,
-      technical_precision: performance.technical_skill >= 65,
-      stage_presence: performance.stage_presence >= 65,
-      stayed_on_schedule: true,
-    };
+    // Calculate experience gain
+    const baseXp = 100;
+    const calculatedXpGain = Math.round(baseXp * (finalScore / 100) * modifiers.experience);
 
-    // Update database
+    setEarnings(calculatedEarnings);
+    setFanGain(calculatedFanGain);
+    setExperienceGain(calculatedXpGain);
+
     try {
-      // Update gig status and results
+      // Update gig status to completed
       await supabase
         .from('gigs')
-        .update({
+        .update({ 
           status: 'completed',
-          attendance: attendanceResult,
-          fan_gain: Math.max(0, finalFanGain)
+          attendance: Math.round(venueCapacity * (finalScore / 100) * 0.8),
+          fan_gain: calculatedFanGain
         })
-        .eq('id', gigId);
+        .eq('id', gig.id);
 
-      await awardActionXp({
-        amount: expGain,
-        actionKey: 'gig_performance',
-        metadata: {
-          gig_id: gig.id,
-          show_type: currentShowType,
-          show_duration_seconds: Math.round(totalShowDurationMs / 1000),
-          venue_tier: gig.venue.prestige_level,
-          final_score: Number(finalScore.toFixed(2)),
-          attendance: attendanceResult,
-          attendance_capacity_ratio: Number(attendanceCapacityRatio.toFixed(3)),
-          collaboration_size: 1,
-          professionalism: professionalismIndicators,
-        },
-        uniqueEventId: gig.id,
+      // Update player profile with earnings and fans
+      const newCash = (profile.cash || 0) + calculatedEarnings;
+      const newFame = (profile.fame || 0) + calculatedFanGain;
+      
+      await supabase
+        .from('profiles')
+        .update({
+          cash: newCash,
+          fame: newFame
+        })
+        .eq('id', profile.id);
+
+      // Add activity to feed
+      await supabase
+        .from('activity_feed')
+        .insert({
+          user_id: user.id,
+          activity_type: 'gig_performance',
+          message: `Performed at ${gig.venues.name} and earned $${calculatedEarnings.toLocaleString()}`,
+          earnings: calculatedEarnings,
+          metadata: {
+            venue_name: gig.venues.name,
+            performance_score: Math.round(finalScore),
+            show_type: currentShowType,
+            fan_gain: calculatedFanGain
+          }
+        });
+
+      setShowResults(true);
+
+      toast({
+        title: "Performance Complete!",
+        description: `You earned $${calculatedEarnings.toLocaleString()} and gained ${calculatedFanGain} fans!`
       });
 
-      await refreshProgressionState();
-
-      if (profile) {
-        await updateProfile({
-          cash: profile.cash + finalEarnings,
-          fame: profile.fame + finalFanGain
-        });
-      } else {
-        const { data: profileRow } = await supabase
-          .from('profiles')
-          .select('id, cash, fame')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileRow?.id) {
-          await supabase
-            .from('profiles')
-            .update({
-              cash: profileRow.cash + finalEarnings,
-              fame: profileRow.fame + finalFanGain
-            })
-            .eq('id', profileRow.id);
-        }
-      }
-
-      // Add activity feed entry
-      await addActivity(
-        'gig_performed',
-        `Performed at ${gig.venue.name} and earned $${finalEarnings}!`,
-        finalEarnings,
-        {
-          venue: gig.venue.name,
-          score: finalScore,
-          fanGain: finalFanGain
-        }
-      );
-
-    } catch (error: unknown) {
-      const fallbackMessage = 'Failed to update performance results';
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-      console.error('Error updating performance results:', errorMessage, error);
+    } catch (error) {
+      console.error('Error updating performance results:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save performance results",
+        variant: "destructive"
+      });
     }
-
-    setIsPerforming(false);
-    setShowResults(true);
   };
 
   const getScoreColor = (score: number) => {
@@ -357,93 +286,149 @@ const PerformGig = () => {
 
   if (!gig) {
     return (
-      <div className="min-h-screen bg-gradient-stage flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-2">Loading gig details...</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (showResults) {
-    const scoreBadge = getScoreBadge(performance.overall_score);
-    const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
+    const avgScore = (performance.crowd_energy + performance.technical_skill + performance.stage_presence) / 3;
+    const scoreBadge = getScoreBadge(avgScore);
 
     return (
-      <div className="min-h-screen bg-gradient-stage p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bebas tracking-wider bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Performance Complete!
-            </h1>
-            <Badge variant={scoreBadge.variant} className="text-lg px-4 py-2">
-              {scoreBadge.label}
-            </Badge>
-            <Badge
-              variant="outline"
-              className={`mx-auto border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs uppercase tracking-wide`}
-            >
-              {showTypeLabel}
-            </Badge>
-          </div>
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold">Performance Complete!</h1>
+          <Badge variant={scoreBadge.variant} className="text-lg px-4 py-2">
+            {scoreBadge.label}
+          </Badge>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Overall Score</CardTitle>
-                <Star className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${getScoreColor(performance.overall_score)}`}>
-                  {performance.overall_score.toFixed(1)}%
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Earnings</CardTitle>
-                <DollarSign className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  ${earnings.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">New Fans</CardTitle>
-                <Heart className="h-4 w-4 text-pink-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-pink-600">
-                  +{fanGain}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Experience</CardTitle>
-                <Trophy className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">
-                  +{experienceGain} XP
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Overall Score</CardTitle>
+              <Star className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${getScoreColor(avgScore)}`}>
+                {avgScore.toFixed(1)}%
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Performance Breakdown</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Earnings</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                ${earnings.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">New Fans</CardTitle>
+              <Users className="h-4 w-4 text-pink-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-pink-600">
+                +{fanGain}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Experience</CardTitle>
+              <TrendingUp className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">
+                +{experienceGain} XP
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Crowd Energy</span>
+                <span className={getScoreColor(performance.crowd_energy)}>{performance.crowd_energy.toFixed(1)}%</span>
+              </div>
+              <Progress value={performance.crowd_energy} className="h-2" />
+            </div>
+            
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Technical Skill</span>
+                <span className={getScoreColor(performance.technical_skill)}>{performance.technical_skill.toFixed(1)}%</span>
+              </div>
+              <Progress value={performance.technical_skill} className="h-2" />
+            </div>
+            
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Stage Presence</span>
+                <span className={getScoreColor(performance.stage_presence)}>{performance.stage_presence.toFixed(1)}%</span>
+              </div>
+              <Progress value={performance.stage_presence} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-center">
+          <Button onClick={() => navigate('/dashboard')} size="lg">
+            Return to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPerforming) {
+    const currentStage = stageSequence[performanceStage];
+    const progress = ((performanceStage + 1) / stageSequence.length) * 100;
+
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">Performing at {gig.venues.name}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">{currentStage?.name}</h3>
+              <p className="text-muted-foreground">{currentStage?.description}</p>
+            </div>
+
+            <Progress value={progress} className="h-4" />
+            
+            <div className="text-center text-sm text-muted-foreground">
+              Stage {performanceStage + 1} of {stageSequence.length}
+            </div>
+
+            <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Crowd Energy</span>
-                  <span className={getScoreColor(performance.crowd_energy)}>{performance.crowd_energy.toFixed(1)}%</span>
+                  <span>{performance.crowd_energy.toFixed(1)}%</span>
                 </div>
                 <Progress value={performance.crowd_energy} className="h-2" />
               </div>
@@ -451,7 +436,7 @@ const PerformGig = () => {
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Technical Skill</span>
-                  <span className={getScoreColor(performance.technical_skill)}>{performance.technical_skill.toFixed(1)}%</span>
+                  <span>{performance.technical_skill.toFixed(1)}%</span>
                 </div>
                 <Progress value={performance.technical_skill} className="h-2" />
               </div>
@@ -459,160 +444,88 @@ const PerformGig = () => {
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Stage Presence</span>
-                  <span className={getScoreColor(performance.stage_presence)}>{performance.stage_presence.toFixed(1)}%</span>
+                  <span>{performance.stage_presence.toFixed(1)}%</span>
                 </div>
                 <Progress value={performance.stage_presence} className="h-2" />
               </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-center gap-4">
-            <Button onClick={() => navigate('/gigs')} variant="outline">
-              Book Another Gig
-            </Button>
-            <Button onClick={() => navigate('/dashboard')}>
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isPerforming) {
-    const totalStages = Math.max(1, stageSequence.length);
-    const progress = Math.min(100, (performanceStage / totalStages) * 100);
-    const currentStage = stageSequence[performanceStage - 1];
-    const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
-
-    return (
-      <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
-        <Card className="w-full max-w-2xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bebas tracking-wider">
-              Live Performance at {gig.venue.name}
-            </CardTitle>
-            <div className="flex justify-center">
-              <Badge
-                variant="outline"
-                className={`mt-2 border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs tracking-wide uppercase`}
-              >
-                {showTypeLabel}
-              </Badge>
-            </div>
-            <CardDescription>
-              {currentStage?.name ?? "Preparing..."}
-            </CardDescription>
-            {currentStage?.description && (
-              <p className="text-xs text-muted-foreground mt-1">{currentStage.description}</p>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <Progress value={progress} className="h-4" />
-
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <Zap className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-                <p className="text-sm text-muted-foreground">Crowd Energy</p>
-                <p className="text-xl font-bold">{performance.crowd_energy.toFixed(0)}%</p>
-              </div>
-              <div>
-                <Music className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-                <p className="text-sm text-muted-foreground">Technical Skill</p>
-                <p className="text-xl font-bold">{performance.technical_skill.toFixed(0)}%</p>
-              </div>
-              <div>
-                <Users className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                <p className="text-sm text-muted-foreground">Stage Presence</p>
-                <p className="text-xl font-bold">{performance.stage_presence.toFixed(0)}%</p>
-              </div>
             </div>
           </CardContent>
         </Card>
       </div>
     );
   }
-
-  const stagePlan = stageSequence;
-  const showTypeLabel = currentShowType === 'acoustic' ? 'Acoustic Set' : 'Standard Show';
-  const estimatedMinutes = Math.max(1, Math.round(stagePlan.reduce((sum, stage) => sum + stage.duration, 0) / 60000));
 
   return (
-    <div className="min-h-screen bg-gradient-stage p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center">
-          <h1 className="text-4xl font-bebas tracking-wider bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Ready to Perform
-          </h1>
-          <p className="text-muted-foreground font-oswald">Show them what you've got!</p>
-        </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Perform Gig</h1>
+        <Badge variant="outline" className="text-lg px-4 py-2">
+          {currentShowType}
+        </Badge>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Music className="h-5 w-5" />
-              {gig.venue.name}
-            </CardTitle>
-            <CardDescription>
-              {new Date(gig.scheduled_date).toLocaleDateString()} at {new Date(gig.scheduled_date).toLocaleTimeString()}
-            </CardDescription>
-            <Badge
-              variant="outline"
-              className={`mt-2 w-fit border ${currentShowType === 'acoustic' ? 'bg-amber-500/10 text-amber-500 border-amber-500/40' : 'bg-blue-500/10 text-blue-500 border-blue-500/40'} text-xs uppercase tracking-wide`}
-            >
-              {showTypeLabel}
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <Users className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-                <p className="text-sm text-muted-foreground">Capacity</p>
-                <p className="text-xl font-bold">{gig.venue.capacity}</p>
-              </div>
-              <div className="text-center">
-                <Star className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-                <p className="text-sm text-muted-foreground">Prestige</p>
-                <p className="text-xl font-bold">{gig.venue.prestige_level}/5</p>
-              </div>
-              <div className="text-center">
-                <DollarSign className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                <p className="text-sm text-muted-foreground">Payment</p>
-                <p className="text-xl font-bold">${gig.payment?.toLocaleString()}</p>
-              </div>
-              <div className="text-center">
-                <Clock className="h-8 w-8 mx-auto mb-2 text-purple-500" />
-                <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="text-xl font-bold">~{estimatedMinutes} min</p>
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            {gig.venues.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Capacity</p>
+              <p className="font-semibold">{gig.venues.capacity}</p>
             </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Prestige</p>
+              <p className="font-semibold">{gig.venues.prestige_level}/10</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Base Payment</p>
+              <p className="font-semibold">${gig.venues.base_payment}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Location</p>
+              <p className="font-semibold">{gig.venues.location}</p>
+            </div>
+          </div>
 
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">Stage Plan</h3>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                {stagePlan.map((stage, index) => (
-                  <div key={`${stage.name}-${index}`} className="flex items-start gap-2">
-                    <span className="font-medium text-foreground">Stage {index + 1}:</span>
-                    <span className="text-left">{stage.name} — {stage.description}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">Scheduled Date</p>
+            <p className="font-semibold">{new Date(gig.scheduled_date).toLocaleString()}</p>
+          </div>
+        </CardContent>
+      </Card>
 
-            <div className="text-center">
-              <Button
-                onClick={startPerformance}
-                size="lg"
-                className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
-              >
-                Start Performance
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Stage Plan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {stageSequence.map((stage, index) => (
+              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">{stage.name}</h4>
+                  <p className="text-sm text-muted-foreground">{stage.description}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">{stage.duration}s</p>
+                  <p className="text-sm font-medium">{(stage.weight * 100).toFixed(0)}% weight</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-center">
+        <Button onClick={startPerformance} size="lg" disabled={isPerforming}>
+          <Play className="h-4 w-4 mr-2" />
+          Start Performance
+        </Button>
       </div>
     </div>
   );
-};
-
-export default PerformGig;
+}
