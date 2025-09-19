@@ -1,8 +1,32 @@
-import { BookOpen, GraduationCap, PlaySquare, Users, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  BadgeDollarSign,
+  BookOpen,
+  Clock,
+  Gauge,
+  GraduationCap,
+  Play,
+  PlaySquare,
+  Sparkles,
+  Timer,
+  Trophy,
+  Users
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { useGameData } from "@/hooks/useGameData";
+import { supabase } from "@/integrations/supabase/client";
+import { awardActionXp } from "@/utils/progression";
+import {
+  applyAttributeToValue,
+  calculateAttributeMultiplier,
+  SKILL_ATTRIBUTE_MAP,
+  type AttributeKey
+} from "@/utils/attributeProgression";
+import type { Band } from "@/types/database";
 
 const tabs = [
   {
@@ -36,6 +60,100 @@ const tabs = [
     description: "Structured learning plans designed to level up your entire band together."
   }
 ];
+
+const SKILL_LABELS = {
+  guitar: "Guitar",
+  bass: "Bass",
+  drums: "Drums",
+  vocals: "Vocals",
+  performance: "Performance",
+  songwriting: "Songwriting"
+} as const;
+
+type PrimarySkill = keyof typeof SKILL_LABELS;
+
+type LessonDifficulty = "beginner" | "intermediate" | "advanced";
+
+const LESSON_DIFFICULTY_CONFIG: Record<LessonDifficulty, { label: string; multiplier: number; description: string }>
+  = {
+    beginner: { label: "Foundation", multiplier: 1, description: "Core fundamentals" },
+    intermediate: { label: "Growth", multiplier: 1.25, description: "Challenging expansions" },
+    advanced: { label: "Expert", multiplier: 1.45, description: "High-intensity mastery" }
+  };
+
+const DIFFICULTY_ORDER: Record<LessonDifficulty, number> = {
+  beginner: 0,
+  intermediate: 1,
+  advanced: 2
+};
+
+const BASE_XP_PER_MINUTE = 2.2;
+const REPEAT_STACK_BONUS = 0.07;
+const MAX_REPEAT_STACKS = 5;
+const LESSON_SKILL_GAIN_RATIO = 0.75;
+const BAND_SKILL_GAIN_RATIO = 0.85;
+const TEAM_SIZE_BONUS = 0.08;
+const SYNERGY_CAP = 0.35;
+
+const VIDEO_VIEW_STORAGE_KEY = "education_skill_view_counts_v1";
+const MENTOR_COOLDOWN_STORAGE_KEY = "education_mentor_cooldowns_v1";
+const BAND_COOLDOWN_STORAGE_KEY = "education_band_cooldowns_v1";
+
+interface SkillLesson {
+  id: string;
+  skill: PrimarySkill;
+  title: string;
+  channel: string;
+  focus: string;
+  summary: string;
+  url: string;
+  difficulty: LessonDifficulty;
+  durationMinutes: 30 | 45 | 60;
+  attributeKeys?: AttributeKey[];
+  requiredSkillValue?: number;
+}
+
+interface MentorOption {
+  id: string;
+  name: string;
+  focusSkill: PrimarySkill;
+  description: string;
+  specialty: string;
+  cost: number;
+  cooldownHours: number;
+  baseXp: number;
+  difficulty: LessonDifficulty;
+  attributeKeys: AttributeKey[];
+  requiredSkillValue: number;
+  skillGainRatio: number;
+  bonusDescription: string;
+}
+
+interface BandSession {
+  id: string;
+  title: string;
+  description: string;
+  focusSkills: PrimarySkill[];
+  attributeKeys: AttributeKey[];
+  baseXp: number;
+  durationMinutes: 60 | 75 | 90;
+  cooldownHours: number;
+  difficulty: LessonDifficulty;
+  synergyNotes: string;
+}
+
+interface BandMemberWithProfile {
+  id: string;
+  band_id: string;
+  user_id: string;
+  role: string | null;
+  joined_at: string | null;
+  salary: number | null;
+  profiles?: {
+    display_name: string | null;
+    username: string | null;
+  };
+}
 
 const bookCollections = [
   {
@@ -292,178 +410,826 @@ const videoPlaylists = [
   }
 ];
 
-const mentorPrograms = [
+const skillLessons: SkillLesson[] = [
   {
-    title: "Mentorship Tracks",
-    description:
-      "Choose a pathway that matches your current career phase and desired feedback style.",
-    cohorts: [
-      {
-        name: "Songwriting Lab",
-        focus: "Co-Writing Circle",
-        cadence: "Bi-weekly",
-        support: "Collaborative feedback on drafts, melody rewrites, and lyric polish." 
-      },
-      {
-        name: "Stagecraft Intensive",
-        focus: "Performance Coaching",
-        cadence: "Monthly",
-        support: "Virtual showcase critiques with movement and mic technique guidance."
-      },
-      {
-        name: "Indie Release Accelerator",
-        focus: "Launch Strategy",
-        cadence: "Weekly",
-        support: "Release calendar planning, marketing funnels, and analytics reviews."
-      }
-    ],
-    action: {
-      label: "Apply for Mentorship",
-      href: "https://forms.gle/mentor-application"
-    }
+    id: "guitar-modal-mastery",
+    skill: "guitar",
+    title: "Modal Lead Mastery",
+    channel: "Rick Beato",
+    focus: "Interval Mapping",
+    summary: "Drill pentatonic-to-modal transitions with live application riffs and phrasing challenges.",
+    url: "https://www.youtube.com/watch?v=wfJDUKq4HPg",
+    difficulty: "intermediate",
+    durationMinutes: 45,
+    attributeKeys: ["musical_ability", "technical_mastery"],
+    requiredSkillValue: 120
   },
   {
-    title: "Expert Network",
-    description:
-      "Tap into a curated roster of industry veterans for one-off consultations or recurring coaching.",
-    cohorts: [
-      {
-        name: "Creative Director",
-        focus: "Visual Branding",
-        cadence: "On-Demand",
-        support: "Refine album art, stage visuals, and social media style guides."
-      },
-      {
-        name: "Music Attorney",
-        focus: "Contract Review",
-        cadence: "Retainer",
-        support: "Protect intellectual property, negotiate deals, and review licensing opportunities."
-      },
-      {
-        name: "Tour Manager",
-        focus: "Live Logistics",
-        cadence: "Consulting",
-        support: "Route tours, manage advancing, and streamline crew coordination."
-      }
-    ],
-    action: {
-      label: "Browse Mentor Roster",
-      href: "https://rockmundo.com/mentors"
-    }
+    id: "guitar-polyrhythm-chops",
+    skill: "guitar",
+    title: "Polyrhythmic Chops",
+    channel: "Marty Music",
+    focus: "Rhythmic Precision",
+    summary: "Layer accent grids over groove etudes to tighten muting, timing, and pick-hand discipline.",
+    url: "https://www.youtube.com/watch?v=e4a1zYmQJy4",
+    difficulty: "advanced",
+    durationMinutes: 60,
+    attributeKeys: ["musical_ability", "rhythm_sense"],
+    requiredSkillValue: 240
   },
   {
-    title: "Accountability Systems",
-    description:
-      "Stay consistent with structured check-ins, progress dashboards, and peer support.",
-    cohorts: [
-      {
-        name: "Weekly Standups",
-        focus: "Goal Tracking",
-        cadence: "15 min",
-        support: "Share wins, blockers, and next actions with your mentor pod."
-      },
-      {
-        name: "Progress Journals",
-        focus: "Reflection",
-        cadence: "Daily",
-        support: "Log practice stats, gig insights, and mindset notes inside Rockmundo."
-      },
-      {
-        name: "Quarterly Audits",
-        focus: "Career Review",
-        cadence: "Seasonal",
-        support: "Assess KPIs, adjust roadmaps, and celebrate milestones with your coach."
-      }
-    ],
-    action: {
-      label: "Download Templates",
-      href: "https://notion.so"
-    }
+    id: "bass-syncopation-lab",
+    skill: "bass",
+    title: "Syncopation Lab",
+    channel: "Scott's Bass Lessons",
+    focus: "Groove Displacement",
+    summary: "Use ghost notes and rhythmic displacement drills to lock with kick patterns under pressure.",
+    url: "https://www.youtube.com/watch?v=QFgrKxEE0dE",
+    difficulty: "intermediate",
+    durationMinutes: 45,
+    attributeKeys: ["rhythm_sense", "musical_ability"],
+    requiredSkillValue: 110
+  },
+  {
+    id: "bass-pocket-endurance",
+    skill: "bass",
+    title: "Pocket Endurance Builder",
+    channel: "BassBuzz",
+    focus: "Stamina & Consistency",
+    summary: "Develop long-form pocket stamina with dynamic swells and subdivision tracking for tour-length sets.",
+    url: "https://www.youtube.com/watch?v=1gL8w3bQybQ",
+    difficulty: "advanced",
+    durationMinutes: 60,
+    attributeKeys: ["physical_endurance", "rhythm_sense"],
+    requiredSkillValue: 210
+  },
+  {
+    id: "drums-linear-phrasing",
+    skill: "drums",
+    title: "Linear Fills & Phrasing",
+    channel: "Drumeo",
+    focus: "Fill Fluency",
+    summary: "Stack stickings and kick ostinatos to unlock linear fills that resolve cleanly back to the groove.",
+    url: "https://www.youtube.com/watch?v=RGeyz4ZmQXw",
+    difficulty: "advanced",
+    durationMinutes: 60,
+    attributeKeys: ["rhythm_sense", "physical_endurance"],
+    requiredSkillValue: 260
+  },
+  {
+    id: "drums-dynamic-control",
+    skill: "drums",
+    title: "Dynamic Control Shed",
+    channel: "Stephen Taylor",
+    focus: "Volume Architecture",
+    summary: "Balance ghost-note grids with explosive accents to expand touch, tone, and live mix placement.",
+    url: "https://www.youtube.com/watch?v=9Uac9XqZz_c",
+    difficulty: "intermediate",
+    durationMinutes: 45,
+    attributeKeys: ["rhythm_sense", "stage_presence"],
+    requiredSkillValue: 130
+  },
+  {
+    id: "vocals-resonance-reset",
+    skill: "vocals",
+    title: "Resonance Reset",
+    channel: "Cheryl Porter Vocal Coach",
+    focus: "Tone Anchoring",
+    summary: "Layer sirens, vowel shaping, and projection drills to steady resonance throughout your range.",
+    url: "https://www.youtube.com/watch?v=KjF0YErEy3o",
+    difficulty: "beginner",
+    durationMinutes: 30,
+    attributeKeys: ["vocal_talent", "mental_focus"],
+    requiredSkillValue: 40
+  },
+  {
+    id: "vocals-belting-strategies",
+    skill: "vocals",
+    title: "Belting Strategies",
+    channel: "Madeleine Harvey",
+    focus: "Power Sustain",
+    summary: "Blend chest-to-head transitions with support drills that protect stamina during encore sets.",
+    url: "https://www.youtube.com/watch?v=1sRQnNz1U9I",
+    difficulty: "advanced",
+    durationMinutes: 60,
+    attributeKeys: ["vocal_talent", "physical_endurance"],
+    requiredSkillValue: 220
+  },
+  {
+    id: "performance-crowd-sculpt",
+    skill: "performance",
+    title: "Crowd Sculpting Essentials",
+    channel: "StageMilk",
+    focus: "Engagement Flow",
+    summary: "Design pacing arcs, silent beats, and body anchoring that modulate energy across a full set.",
+    url: "https://www.youtube.com/watch?v=ulq_MGd7ycM",
+    difficulty: "intermediate",
+    durationMinutes: 45,
+    attributeKeys: ["stage_presence", "creative_insight"],
+    requiredSkillValue: 150
+  },
+  {
+    id: "performance-micro-gestures",
+    skill: "performance",
+    title: "Micro-Gesture Masterclass",
+    channel: "Charisma on Command",
+    focus: "Stage Detail",
+    summary: "Refine hand cues, eye-line control, and crowd scanning to deepen rapport in intimate venues.",
+    url: "https://www.youtube.com/watch?v=9R_8AZWZz0A",
+    difficulty: "advanced",
+    durationMinutes: 60,
+    attributeKeys: ["stage_presence", "social_reach"],
+    requiredSkillValue: 230
+  },
+  {
+    id: "songwriting-hook-forging",
+    skill: "songwriting",
+    title: "Hook Forging Workshop",
+    channel: "Holistic Songwriting",
+    focus: "Hook Systems",
+    summary: "Deconstruct top-chart hooks and rebuild them with motif stacking and lyrical negative space.",
+    url: "https://www.youtube.com/watch?v=g3Q2bp7nY5k",
+    difficulty: "intermediate",
+    durationMinutes: 45,
+    attributeKeys: ["creative_insight", "marketing_savvy"],
+    requiredSkillValue: 140
+  },
+  {
+    id: "songwriting-cinematic-arcs",
+    skill: "songwriting",
+    title: "Cinematic Story Arcs",
+    channel: "Andrew Huang",
+    focus: "Narrative Dynamics",
+    summary: "Plot emotional peaks with harmony pivots, textural swells, and lyrical callbacks for festival sets.",
+    url: "https://www.youtube.com/watch?v=7kGS7FpC18A",
+    difficulty: "advanced",
+    durationMinutes: 60,
+    attributeKeys: ["creative_insight", "technical_mastery"],
+    requiredSkillValue: 250
   }
 ];
 
-const bandLearningTracks = [
+const mentorOptions: MentorOption[] = [
   {
-    title: "Band Intensives",
-    description:
-      "Plan immersive weekends that combine rehearsal, songwriting, and branding workshops.",
-    sessions: [
-      {
-        name: "Day 1: Groove Lab",
-        focus: "Tighten Rhythmic Chemistry",
-        deliverable: "Record a live rehearsal take with click + crowd cues."
-      },
-      {
-        name: "Day 2: Story & Stage",
-        focus: "Brand Alignment",
-        deliverable: "Craft a unified band bio, stage plot, and social hook."
-      },
-      {
-        name: "Day 3: Release Sprint",
-        focus: "Content Production",
-        deliverable: "Capture video + photo assets for upcoming release cycle."
-      }
-    ],
-    action: {
-      label: "Download Weekend Agenda",
-      href: "https://docs.google.com"
-    }
+    id: "mentor-stage-architect",
+    name: "Nova Reyes",
+    focusSkill: "performance",
+    description: "Award-winning tour director who rebuilds stage shows from the ground up with cinematic pacing.",
+    specialty: "Stagecraft Architect",
+    cost: 850,
+    cooldownHours: 72,
+    baseXp: 260,
+    difficulty: "advanced",
+    attributeKeys: ["stage_presence", "musical_ability"],
+    requiredSkillValue: 240,
+    skillGainRatio: 0.9,
+    bonusDescription: "Large stage-presence scaling and stamina drills tailored for amphitheater audiences."
   },
   {
-    title: "Ongoing Band Curriculum",
-    description:
-      "Rotate focus areas each month to keep the whole group evolving in sync.",
-    sessions: [
-      {
-        name: "Month 1: Arrangement Lab",
-        focus: "Reimagine Setlist",
-        deliverable: "New live transitions, medleys, and crowd participation cues."
-      },
-      {
-        name: "Month 2: Business HQ",
-        focus: "Operational Systems",
-        deliverable: "Shared budget tracker, merch inventory log, and task board."
-      },
-      {
-        name: "Month 3: Audience Engine",
-        focus: "Growth Experiments",
-        deliverable: "Launch fan challenges, collect emails, and test paid promotion."
-      }
-    ],
-    action: {
-      label: "View Curriculum",
-      href: "https://rockmundo.com/band-learning"
-    }
+    id: "mentor-song-catalyst",
+    name: "Avery Quinn",
+    focusSkill: "songwriting",
+    description: "Billboard-charting writer specializing in modern pop hooks and cinematic lyric arcs.",
+    specialty: "Story Catalyst",
+    cost: 620,
+    cooldownHours: 48,
+    baseXp: 210,
+    difficulty: "intermediate",
+    attributeKeys: ["creative_insight", "marketing_savvy"],
+    requiredSkillValue: 180,
+    skillGainRatio: 0.85,
+    bonusDescription: "Improves topline agility and positioning for sync placements and playlist pitches."
   },
   {
-    title: "Performance Feedback Loops",
-    description:
-      "Capture data from every show to iterate faster as a unit.",
-    sessions: [
-      {
-        name: "Show Debrief",
-        focus: "Immediate Reflection",
-        deliverable: "Rate crowd energy, set pacing, and technical stability within 24 hours."
-      },
-      {
-        name: "Fan Pulse",
-        focus: "Community Insights",
-        deliverable: "Survey attendees, review social mentions, and note merch conversion."
-      },
-      {
-        name: "Iterate & Implement",
-        focus: "Action Plan",
-        deliverable: "Assign next-step experiments for setlist, visuals, and engagement."
-      }
-    ],
-    action: {
-      label: "Create Feedback Form",
-      href: "https://forms.gle/band-feedback"
-    }
+    id: "mentor-vocal-innovator",
+    name: "Lyric Sol",
+    focusSkill: "vocals",
+    description: "Session vocalist famed for hybrid belting techniques and vocal health optimization on tour.",
+    specialty: "Vocal Innovator",
+    cost: 540,
+    cooldownHours: 36,
+    baseXp: 190,
+    difficulty: "intermediate",
+    attributeKeys: ["vocal_talent", "physical_endurance"],
+    requiredSkillValue: 160,
+    skillGainRatio: 0.8,
+    bonusDescription: "Adds sustain control exercises that accelerate range stability and nightly recovery."
+  }
+];
+
+const bandSessions: BandSession[] = [
+  {
+    id: "band-sync-lock",
+    title: "Sync Lock Intensive",
+    description: "Full-band groove lab focused on rhythmic lock, stop-time precision, and cue language.",
+    focusSkills: ["drums", "bass", "performance"],
+    attributeKeys: ["rhythm_sense", "musical_ability"],
+    baseXp: 280,
+    durationMinutes: 75,
+    cooldownHours: 24,
+    difficulty: "intermediate",
+    synergyNotes: "Higher bonuses for tight rhythm section attributes and collaborative listening drills."
+  },
+  {
+    id: "band-dynamic-story",
+    title: "Dynamic Story Rehearsal",
+    description: "Design emotional arcs, transitions, and crowd prompts that carry headline-length sets.",
+    focusSkills: ["performance", "songwriting", "vocals"],
+    attributeKeys: ["stage_presence", "creative_insight"],
+    baseXp: 300,
+    durationMinutes: 90,
+    cooldownHours: 36,
+    difficulty: "advanced",
+    synergyNotes: "Synergy scales with storytelling attributes and the band’s collective stage presence."
+  },
+  {
+    id: "band-arrangement-lab",
+    title: "Arrangement Innovation Lab",
+    description: "Rework setlist anchors with harmony swaps, drop builds, and modular intros/outros.",
+    focusSkills: ["songwriting", "guitar", "bass"],
+    attributeKeys: ["creative_insight", "technical_mastery"],
+    baseXp: 260,
+    durationMinutes: 60,
+    cooldownHours: 18,
+    difficulty: "intermediate",
+    synergyNotes: "Amplified gains when composition skills and creative insight average above 200."
   }
 ];
 
 const Education = () => {
+  const { toast } = useToast();
+  const { profile, skills, attributes, refetch, addActivity, updateProfile } = useGameData();
+
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(VIDEO_VIEW_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [mentorCooldowns, setMentorCooldowns] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(MENTOR_COOLDOWN_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as Record<string, string>;
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [bandCooldowns, setBandCooldowns] = useState<Record<string, Record<string, string>>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(BAND_COOLDOWN_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as Record<string, Record<string, string>>;
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [activeMentorId, setActiveMentorId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [band, setBand] = useState<Band | null>(null);
+  const [bandMembers, setBandMembers] = useState<BandMemberWithProfile[]>([]);
+  const [bandLoading, setBandLoading] = useState(false);
+
+  const activeBandKey = band?.id ?? "solo";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(VIDEO_VIEW_STORAGE_KEY, JSON.stringify(viewCounts));
+  }, [viewCounts]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(MENTOR_COOLDOWN_STORAGE_KEY, JSON.stringify(mentorCooldowns));
+  }, [mentorCooldowns]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(BAND_COOLDOWN_STORAGE_KEY, JSON.stringify(bandCooldowns));
+  }, [bandCooldowns]);
+
+  const resolveSkillValue = (skill: PrimarySkill | string): number => {
+    const raw = skills?.[skill];
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return raw;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const isSkillUnlocked = (skill: PrimarySkill, requiredValue = 1) => {
+    const value = resolveSkillValue(skill);
+    return Number.isFinite(value) && value >= requiredValue;
+  };
+
+  const resolveAttributeFocus = (skill: PrimarySkill, attributeKeys?: AttributeKey[]) => {
+    if (attributeKeys && attributeKeys.length > 0) {
+      return attributeKeys;
+    }
+    const mapped = SKILL_ATTRIBUTE_MAP[skill];
+    return mapped ? [mapped] : [];
+  };
+
+  const getRepeatMultiplier = (skill: PrimarySkill) => {
+    const views = viewCounts[skill] ?? 0;
+    return 1 + Math.min(views, MAX_REPEAT_STACKS) * REPEAT_STACK_BONUS;
+  };
+
+  const computeLessonReward = (lesson: SkillLesson) => {
+    const difficultyConfig = LESSON_DIFFICULTY_CONFIG[lesson.difficulty];
+    const baseXp = Math.round(lesson.durationMinutes * BASE_XP_PER_MINUTE * difficultyConfig.multiplier);
+    const attributeFocus = resolveAttributeFocus(lesson.skill, lesson.attributeKeys);
+    const attributeResult = applyAttributeToValue(baseXp, attributes, attributeFocus);
+    const repeatMultiplier = getRepeatMultiplier(lesson.skill);
+    const effectiveXp = Math.max(1, Math.round(attributeResult.value * repeatMultiplier));
+    const skillGain = Math.max(1, Math.round(effectiveXp * LESSON_SKILL_GAIN_RATIO));
+
+    return {
+      baseXp,
+      effectiveXp,
+      repeatMultiplier,
+      attributeMultiplier: attributeResult.multiplier,
+      averageAttribute: attributeResult.averageValue,
+      skillGain
+    };
+  };
+
+  const computeMentorReward = (mentor: MentorOption) => {
+    const difficultyConfig = LESSON_DIFFICULTY_CONFIG[mentor.difficulty];
+    const baseXp = Math.round(mentor.baseXp * difficultyConfig.multiplier);
+    const attributeResult = applyAttributeToValue(baseXp, attributes, mentor.attributeKeys);
+    const focusSkillValue = resolveSkillValue(mentor.focusSkill);
+    const masteryBoost = 1 + Math.min(0.25, Math.max(0, focusSkillValue - mentor.requiredSkillValue) / 800);
+    const effectiveXp = Math.max(1, Math.round(attributeResult.value * masteryBoost));
+    const skillGain = Math.max(1, Math.round(effectiveXp * mentor.skillGainRatio));
+
+    return {
+      baseXp,
+      effectiveXp,
+      attributeMultiplier: attributeResult.multiplier,
+      averageAttribute: attributeResult.averageValue,
+      masteryBoost,
+      skillGain
+    };
+  };
+
+  const computeBandReward = (session: BandSession) => {
+    const difficultyConfig = LESSON_DIFFICULTY_CONFIG[session.difficulty];
+    const baseXp = Math.round(session.baseXp * difficultyConfig.multiplier);
+    const attributeResult = applyAttributeToValue(baseXp, attributes, session.attributeKeys);
+    const rosterBonus = 1 + Math.max(0, bandMembers.length - 1) * TEAM_SIZE_BONUS;
+    const skillAverage = session.focusSkills.length
+      ? session.focusSkills.reduce((sum, skill) => sum + resolveSkillValue(skill), 0) /
+        (session.focusSkills.length * 1000)
+      : 0;
+    const synergyBonus = 1 + Math.min(SYNERGY_CAP, Math.max(0, skillAverage));
+    const effectiveXp = Math.max(1, Math.round(attributeResult.value * rosterBonus * synergyBonus));
+    const skillGainPerSkill = session.focusSkills.length
+      ? Math.max(1, Math.round((effectiveXp * BAND_SKILL_GAIN_RATIO) / session.focusSkills.length))
+      : 0;
+
+    return {
+      baseXp,
+      effectiveXp,
+      attributeMultiplier: attributeResult.multiplier,
+      averageAttribute: attributeResult.averageValue,
+      rosterBonus,
+      synergyBonus,
+      skillGainPerSkill
+    };
+  };
+
+  const formatRemainingTime = (iso: string | null | undefined) => {
+    if (!iso) return null;
+    const target = new Date(iso);
+    if (Number.isNaN(target.getTime())) return null;
+    const diff = target.getTime() - Date.now();
+    if (diff <= 0) return null;
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const minutes = Math.ceil((diff % (60 * 60 * 1000)) / (60 * 1000));
+    if (hours <= 0) {
+      return `${Math.max(minutes, 1)}m`;
+    }
+    if (minutes >= 60) {
+      return `${hours + 1}h`;
+    }
+    return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+  };
+
+  const applySkillGains = async (skillDeltas: Record<string, number>) => {
+    if (!profile) return;
+
+    const payload: Record<string, unknown> = {
+      user_id: profile.user_id,
+      updated_at: new Date().toISOString()
+    };
+
+    if (typeof skills?.id === "string") {
+      payload.id = skills.id;
+    }
+
+    const nextValues: Record<string, number> = {};
+
+    for (const [skillKey, delta] of Object.entries(skillDeltas)) {
+      const numericDelta = Number(delta ?? 0);
+      if (!Number.isFinite(numericDelta) || numericDelta <= 0) {
+        continue;
+      }
+
+      const currentValue = nextValues[skillKey] ?? resolveSkillValue(skillKey);
+      const nextValue = Math.min(1000, Math.round(currentValue + numericDelta));
+      nextValues[skillKey] = nextValue;
+      payload[skillKey] = nextValue;
+    }
+
+    if (Object.keys(nextValues).length === 0) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("player_skills")
+      .upsert(payload, { onConflict: "user_id" });
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const fetchBandContext = useCallback(async () => {
+    if (!profile?.user_id) {
+      setBand(null);
+      setBandMembers([]);
+      return;
+    }
+
+    setBandLoading(true);
+
+    try {
+      let resolvedBand: Band | null = null;
+      let resolvedBandId: string | null = null;
+
+      const { data: leaderBand, error: leaderError } = await supabase
+        .from("bands")
+        .select("*")
+        .eq("leader_id", profile.user_id)
+        .maybeSingle();
+
+      if (leaderError && leaderError.code !== "PGRST116") {
+        throw leaderError;
+      }
+
+      if (leaderBand) {
+        resolvedBand = leaderBand as Band;
+        resolvedBandId = leaderBand.id as string;
+      }
+
+      if (!resolvedBandId) {
+        const { data: membership, error: membershipError } = await supabase
+          .from("band_members")
+          .select("band_id, bands(*)")
+          .eq("user_id", profile.user_id)
+          .maybeSingle();
+
+        if (membershipError && membershipError.code !== "PGRST116") {
+          throw membershipError;
+        }
+
+        if (membership?.band_id && membership?.bands) {
+          resolvedBandId = membership.band_id as string;
+          resolvedBand = membership.bands as Band;
+        }
+      }
+
+      setBand(resolvedBand);
+
+      if (resolvedBandId) {
+        const { data: memberRows, error: membersError } = await supabase
+          .from("band_members")
+          .select("*, profiles:user_id (display_name, username)")
+          .eq("band_id", resolvedBandId);
+
+        if (membersError) {
+          throw membersError;
+        }
+
+        setBandMembers((memberRows ?? []) as BandMemberWithProfile[]);
+      } else {
+        setBandMembers([]);
+      }
+    } catch (error) {
+      console.error("Error loading band context:", error);
+      setBand(null);
+      setBandMembers([]);
+    } finally {
+      setBandLoading(false);
+    }
+  }, [profile?.user_id]);
+
+  useEffect(() => {
+    void fetchBandContext();
+  }, [fetchBandContext]);
+
+  const lessonGroups = useMemo(() => {
+    const groups: Partial<Record<PrimarySkill, SkillLesson[]>> = {};
+    for (const lesson of skillLessons) {
+      const existing = groups[lesson.skill] ?? [];
+      existing.push(lesson);
+      groups[lesson.skill] = existing;
+    }
+
+    for (const key of Object.keys(groups) as PrimarySkill[]) {
+      groups[key]?.sort((a, b) => {
+        const difficultyComparison = DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty];
+        if (difficultyComparison !== 0) {
+          return difficultyComparison;
+        }
+        return a.durationMinutes - b.durationMinutes;
+      });
+    }
+
+    return groups;
+  }, []);
+
+  const bandCooldownLookup = bandCooldowns[activeBandKey] ?? {};
+  const bandSize = bandMembers.length;
+
+  const handleWatchLesson = async (lesson: SkillLesson) => {
+    if (!profile) {
+      toast({
+        title: "Sign in to train",
+        description: "Create or select a character to record training progress.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const requirement = lesson.requiredSkillValue ?? 1;
+    if (!isSkillUnlocked(lesson.skill, requirement)) {
+      toast({
+        title: "Unlock required",
+        description: `Reach ${requirement} ${SKILL_LABELS[lesson.skill]} to access this lesson.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reward = computeLessonReward(lesson);
+    setActiveLessonId(lesson.id);
+
+    try {
+      await awardActionXp({
+        amount: reward.effectiveXp,
+        category: "practice",
+        actionKey: "education_youtube_lesson",
+        uniqueEventId: `${profile.id}:lesson:${lesson.id}:${(viewCounts[lesson.skill] ?? 0) + 1}`,
+        metadata: {
+          skill: lesson.skill,
+          duration_minutes: lesson.durationMinutes,
+          difficulty: lesson.difficulty,
+          repeat_multiplier: reward.repeatMultiplier,
+          attribute_multiplier: reward.attributeMultiplier
+        }
+      });
+
+      await applySkillGains({ [lesson.skill]: reward.skillGain });
+
+      setViewCounts((prev) => ({
+        ...prev,
+        [lesson.skill]: (prev[lesson.skill] ?? 0) + 1
+      }));
+
+      await addActivity(
+        "education_lesson",
+        `Studied ${lesson.title} (${SKILL_LABELS[lesson.skill]}) — +${reward.effectiveXp} XP`,
+        undefined,
+        {
+          lesson_id: lesson.id,
+          xp_awarded: reward.effectiveXp,
+          skill_gain: reward.skillGain
+        }
+      );
+
+      toast({
+        title: "Lesson complete",
+        description: `You earned ${reward.effectiveXp} XP and boosted ${SKILL_LABELS[lesson.skill].toLowerCase()} skills.`,
+        variant: "default"
+      });
+
+      await refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to record lesson.";
+      toast({
+        title: "Training failed",
+        description: message,
+        variant: "destructive"
+      });
+    } finally {
+      setActiveLessonId(null);
+    }
+  };
+
+  const handleBookMentor = async (mentor: MentorOption) => {
+    if (!profile) {
+      toast({
+        title: "Sign in to schedule",
+        description: "You need an active character to book mentors.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const requirementMet = isSkillUnlocked(mentor.focusSkill, mentor.requiredSkillValue);
+    if (!requirementMet) {
+      toast({
+        title: "Skill requirement",
+        description: `Reach ${mentor.requiredSkillValue} ${SKILL_LABELS[mentor.focusSkill]} to learn from ${mentor.name}.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const cooldownRemaining = formatRemainingTime(mentorCooldowns[mentor.id]);
+    if (cooldownRemaining) {
+      toast({
+        title: "Mentor on cooldown",
+        description: `${mentor.name} will be available again in ${cooldownRemaining}.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const availableCash = Number(profile.cash ?? 0);
+    if (availableCash < mentor.cost) {
+      toast({
+        title: "Insufficient funds",
+        description: `You need $${mentor.cost.toLocaleString()} to book ${mentor.name}.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reward = computeMentorReward(mentor);
+    setActiveMentorId(mentor.id);
+
+    try {
+      await awardActionXp({
+        amount: reward.effectiveXp,
+        category: "practice",
+        actionKey: "education_mentor_session",
+        uniqueEventId: `${profile.id}:mentor:${mentor.id}:${Date.now()}`,
+        metadata: {
+          mentor_id: mentor.id,
+          focus_skill: mentor.focusSkill,
+          attribute_multiplier: reward.attributeMultiplier,
+          mastery_boost: reward.masteryBoost
+        }
+      });
+
+      await applySkillGains({ [mentor.focusSkill]: reward.skillGain });
+
+      const updatedCash = Math.max(0, availableCash - mentor.cost);
+      await updateProfile({ cash: updatedCash });
+
+      const nextWindow = new Date(Date.now() + mentor.cooldownHours * 60 * 60 * 1000).toISOString();
+      setMentorCooldowns((prev) => ({
+        ...prev,
+        [mentor.id]: nextWindow
+      }));
+
+      await addActivity(
+        "education_mentor",
+        `Completed a ${mentor.specialty.toLowerCase()} with ${mentor.name} — +${reward.effectiveXp} XP`,
+        -mentor.cost,
+        {
+          mentor_id: mentor.id,
+          xp_awarded: reward.effectiveXp,
+          skill_gain: reward.skillGain
+        }
+      );
+
+      toast({
+        title: `${mentor.name} session complete`,
+        description: `You invested $${mentor.cost.toLocaleString()} and gained ${reward.effectiveXp} XP.`,
+        variant: "default"
+      });
+
+      await refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to complete mentor session.";
+      toast({
+        title: "Session failed",
+        description: message,
+        variant: "destructive"
+      });
+    } finally {
+      setActiveMentorId(null);
+    }
+  };
+
+  const handleBandSession = async (session: BandSession) => {
+    if (!profile) {
+      toast({
+        title: "Sign in to coordinate",
+        description: "Create or select a character to schedule band intensives.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!band || bandMembers.length < 2) {
+      toast({
+        title: "Bandmates required",
+        description: "Invite at least one bandmate before launching team training.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const cooldownRemaining = formatRemainingTime(bandCooldownLookup[session.id]);
+    if (cooldownRemaining) {
+      toast({
+        title: "Session on cooldown",
+        description: `Try again in ${cooldownRemaining}.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reward = computeBandReward(session);
+    setActiveSessionId(session.id);
+
+    try {
+      await awardActionXp({
+        amount: reward.effectiveXp,
+        category: "practice",
+        actionKey: "education_band_session",
+        uniqueEventId: `${profile.id}:band:${session.id}:${Date.now()}`,
+        metadata: {
+          session_id: session.id,
+          focus_skills: session.focusSkills,
+          attribute_multiplier: reward.attributeMultiplier,
+          roster_bonus: reward.rosterBonus,
+          synergy_bonus: reward.synergyBonus
+        }
+      });
+
+      const skillUpdates: Record<string, number> = {};
+      for (const skillKey of session.focusSkills) {
+        skillUpdates[skillKey] = (skillUpdates[skillKey] ?? 0) + reward.skillGainPerSkill;
+      }
+      await applySkillGains(skillUpdates);
+
+      const nextWindow = new Date(Date.now() + session.cooldownHours * 60 * 60 * 1000).toISOString();
+      setBandCooldowns((prev) => ({
+        ...prev,
+        [activeBandKey]: {
+          ...(prev[activeBandKey] ?? {}),
+          [session.id]: nextWindow
+        }
+      }));
+
+      await addActivity(
+        "education_band",
+        `Ran ${session.title} — +${reward.effectiveXp} XP shared across the band.`,
+        undefined,
+        {
+          session_id: session.id,
+          xp_awarded: reward.effectiveXp,
+          skill_gain: reward.skillGainPerSkill
+        }
+      );
+
+      toast({
+        title: "Band intensive complete",
+        description: `Collected ${reward.effectiveXp} XP with your crew.`,
+        variant: "default"
+      });
+
+      await refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to run band session.";
+      toast({
+        title: "Session failed",
+        description: message,
+        variant: "destructive"
+      });
+    } finally {
+      setActiveSessionId(null);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-16">
       <div className="space-y-3 text-center">
@@ -582,9 +1348,116 @@ const Education = () => {
         <TabsContent value="videos" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Stream Your Lessons</CardTitle>
+              <CardTitle>YouTube Skill Intensives</CardTitle>
               <CardDescription>
-                Mix binge-worthy channels with structured playlists so every practice session has purpose.
+                Unlock curated lessons per skill. Rewards scale with difficulty, repeat focus, and your attribute loadout.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {(Object.keys(SKILL_LABELS) as PrimarySkill[]).map((skillKey) => {
+                const lessons = lessonGroups[skillKey];
+                if (!lessons || lessons.length === 0) return null;
+
+                const skillLevel = resolveSkillValue(skillKey);
+                const viewCount = viewCounts[skillKey] ?? 0;
+                const highestRequirement = lessons.reduce(
+                  (max, lesson) => Math.max(max, lesson.requiredSkillValue ?? 0),
+                  0
+                );
+                const unlocked = isSkillUnlocked(skillKey, Math.max(highestRequirement, 1));
+
+                return (
+                  <Card key={skillKey} className="border-dashed">
+                    <CardHeader className="space-y-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{SKILL_LABELS[skillKey]}</CardTitle>
+                          <CardDescription>
+                            Current rating: {Math.round(skillLevel)} • Repeat stacks: {Math.min(viewCount, MAX_REPEAT_STACKS)} / {MAX_REPEAT_STACKS}
+                          </CardDescription>
+                        </div>
+                        <Badge variant={unlocked ? "secondary" : "outline"} className="whitespace-nowrap text-xs">
+                          {unlocked ? "Unlocked" : `Requires ${highestRequirement}+`}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {lessons.map((lesson) => {
+                        const reward = computeLessonReward(lesson);
+                        const locked = !isSkillUnlocked(lesson.skill, lesson.requiredSkillValue ?? 1);
+
+                        return (
+                          <div key={lesson.id} className="space-y-4 rounded-lg border bg-muted/40 p-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <p className="text-sm font-semibold">{lesson.title}</p>
+                                <p className="text-xs text-muted-foreground">{lesson.focus} • {lesson.channel}</p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {LESSON_DIFFICULTY_CONFIG[lesson.difficulty].label}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {lesson.durationMinutes} min
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  Views: {viewCounts[lesson.skill] ?? 0}
+                                </Badge>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{lesson.summary}</p>
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Clock className="h-4 w-4" />
+                                Session time: {lesson.durationMinutes} min
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Trophy className="h-4 w-4 text-primary" />
+                                Next reward: {reward.effectiveXp} XP
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Gauge className="h-4 w-4" />
+                                Attribute boost: {(Math.max(0, reward.attributeMultiplier - 1) * 100).toFixed(0)}%
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="text-xs text-muted-foreground">
+                                Repeat bonus: {((reward.repeatMultiplier - 1) * 100).toFixed(0)}% • Skill gain ≈ {reward.skillGain}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleWatchLesson(lesson)}
+                                  disabled={locked || activeLessonId === lesson.id}
+                                >
+                                  {locked
+                                    ? "Unlock skill first"
+                                    : activeLessonId === lesson.id
+                                      ? "Recording..."
+                                      : "Watch & Earn"}
+                                </Button>
+                                <Button asChild size="sm" variant="ghost">
+                                  <a href={lesson.url} target="_blank" rel="noreferrer">
+                                    <Play className="mr-2 h-4 w-4" /> Preview
+                                  </a>
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Resource Playlists</CardTitle>
+              <CardDescription>
+                Supplement your focused training with curated playlists and channels you can binge between sessions.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -624,45 +1497,77 @@ const Education = () => {
         <TabsContent value="mentors" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Guided Mentorship</CardTitle>
+              <CardTitle>Mentor Roster</CardTitle>
               <CardDescription>
-                Partner with mentors who accelerate your growth with actionable feedback and steady accountability.
+                Book targeted coaching sessions. Fees deduct from your cash balance and scale XP with your attributes.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {mentorPrograms.map((program) => (
-                <Card key={program.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{program.title}</CardTitle>
-                    <CardDescription>{program.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      {program.cohorts.map((cohort) => (
-                        <div key={cohort.name} className="rounded-lg border bg-muted/30 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold">{cohort.name}</p>
-                              <p className="text-xs text-muted-foreground">{cohort.focus}</p>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {cohort.cadence}
-                            </Badge>
-                          </div>
-                          <p className="mt-3 text-xs text-muted-foreground">{cohort.support}</p>
+              {mentorOptions.map((mentor) => {
+                const reward = computeMentorReward(mentor);
+                const cooldownRemaining = formatRemainingTime(mentorCooldowns[mentor.id]);
+                const requirementMet = isSkillUnlocked(mentor.focusSkill, mentor.requiredSkillValue);
+                const availableCash = Number(profile?.cash ?? 0);
+                const insufficientFunds = availableCash < mentor.cost;
+                const disabled =
+                  !requirementMet || Boolean(cooldownRemaining) || insufficientFunds || activeMentorId === mentor.id;
+
+                return (
+                  <Card key={mentor.id} className="border-dashed">
+                    <CardHeader className="space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="text-base font-semibold">{mentor.name}</CardTitle>
+                          <CardDescription>{mentor.specialty}</CardDescription>
                         </div>
-                      ))}
-                    </div>
-                    {program.action ? (
-                      <Button asChild variant="secondary" className="w-full">
-                        <a href={program.action.href} target="_blank" rel="noreferrer">
-                          {program.action.label}
-                        </a>
+                        <Badge variant="outline" className="text-xs">
+                          {LESSON_DIFFICULTY_CONFIG[mentor.difficulty].label}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-xs text-muted-foreground">{mentor.description}</p>
+                      <div className="grid gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <BadgeDollarSign className="h-4 w-4" />
+                          Session cost: ${mentor.cost.toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Trophy className="h-4 w-4 text-primary" />
+                          Reward: {reward.effectiveXp} XP • Skill gain ≈ {reward.skillGain}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          Attribute boost: {(Math.max(0, reward.attributeMultiplier - 1) * 100).toFixed(0)}%
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Timer className="h-4 w-4" />
+                          Cooldown: {mentor.cooldownHours}h
+                          {cooldownRemaining ? ` • ${cooldownRemaining} remaining` : ""}
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-xs text-muted-foreground">
+                        <p>
+                          Requires {mentor.requiredSkillValue}+ {SKILL_LABELS[mentor.focusSkill]} • {mentor.bonusDescription}
+                        </p>
+                      </div>
+                      <Button
+                        className="w-full"
+                        onClick={() => handleBookMentor(mentor)}
+                        disabled={disabled}
+                      >
+                        {cooldownRemaining
+                          ? `Available in ${cooldownRemaining}`
+                          : insufficientFunds
+                            ? "Not enough cash"
+                            : activeMentorId === mentor.id
+                              ? "Scheduling..."
+                              : "Book mentor session"}
                       </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </CardContent>
           </Card>
         </TabsContent>
@@ -670,42 +1575,121 @@ const Education = () => {
         <TabsContent value="band" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Band Learning Lab</CardTitle>
+              <CardTitle>Band Readiness</CardTitle>
               <CardDescription>
-                Align your entire crew with immersive intensives, monthly focus cycles, and actionable feedback loops.
+                Band intensives reuse your roster, share cooldowns, and scale with collective attributes.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {bandLearningTracks.map((track) => (
-                <Card key={track.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{track.title}</CardTitle>
-                    <CardDescription>{track.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {track.sessions.map((session) => (
-                      <div key={session.name} className="rounded-lg border bg-muted/30 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold">{session.name}</p>
-                            <p className="text-xs text-muted-foreground">{session.focus}</p>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {session.deliverable}
-                          </Badge>
+            <CardContent className="space-y-4">
+              {bandLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : band ? (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">{band.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {band.genre ?? "Genre agnostic"} • Members: {bandSize}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      Shared cooldowns active
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {bandMembers.map((member) => (
+                      <div key={member.id} className="flex items-center justify-between rounded border bg-muted/30 px-3 py-2">
+                        <div>
+                          <p className="text-xs font-semibold">
+                            {member.profiles?.display_name ?? member.profiles?.username ?? "Bandmate"}
+                          </p>
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {member.role ?? "Member"}
+                          </p>
                         </div>
+                        <Badge variant="outline" className="text-[10px]">
+                          Joined {member.joined_at ? new Date(member.joined_at).toLocaleDateString() : "--"}
+                        </Badge>
                       </div>
                     ))}
-                    {track.action ? (
-                      <Button asChild variant="secondary" className="w-full">
-                        <a href={track.action.href} target="_blank" rel="noreferrer">
-                          {track.action.label}
-                        </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+                  Create or join a band to unlock collaborative training boosts.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Band Intensives</CardTitle>
+              <CardDescription>
+                Coordinate sessions that apply attribute synergy and grant XP to the whole crew.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {bandSessions.map((session) => {
+                const reward = computeBandReward(session);
+                const cooldownRemaining = formatRemainingTime(bandCooldownLookup[session.id]);
+                const disabled =
+                  !band || bandMembers.length < 2 || Boolean(cooldownRemaining) || activeSessionId === session.id;
+
+                return (
+                  <div key={session.id} className="space-y-4 rounded-lg border bg-muted/40 p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">{session.title}</p>
+                        <p className="text-xs text-muted-foreground">{session.description}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {LESSON_DIFFICULTY_CONFIG[session.difficulty].label}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {session.durationMinutes} min
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Focus: {session.focusSkills.map((skill) => SKILL_LABELS[skill]).join(", ")}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        Reward: {reward.effectiveXp} XP • Skill gain ≈ {reward.skillGainPerSkill} each
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Roster bonus: {((reward.rosterBonus - 1) * 100).toFixed(0)}% • Synergy: {((reward.synergyBonus - 1) * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{session.synergyNotes}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs text-muted-foreground">
+                        Cooldown: {session.cooldownHours}h
+                        {cooldownRemaining ? ` • ${cooldownRemaining} remaining` : ""}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleBandSession(session)}
+                        disabled={disabled}
+                      >
+                        {cooldownRemaining
+                          ? `Available in ${cooldownRemaining}`
+                          : !band || bandMembers.length < 2
+                            ? "Bandmates needed"
+                            : activeSessionId === session.id
+                              ? "Running..."
+                              : "Run session"}
                       </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
+                    </div>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         </TabsContent>
