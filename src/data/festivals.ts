@@ -1,3 +1,4 @@
+
 export interface FestivalDaySplit {
   day: string;
   highlightActs: string[];
