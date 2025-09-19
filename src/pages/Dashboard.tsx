@@ -44,14 +44,14 @@ const Dashboard = () => {
     skills,
     attributes,
     xpWallet,
+    xpLedger,
+    freshWeeklyBonusAvailable,
     loading,
     error
   } = useGameData();
-  
+
   // Simplified - these features not yet implemented
   const activities: any[] = [];
-  const xpLedger: any[] = [];
-  const freshWeeklyBonusAvailable = false;
   const currentCity = null;
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
   const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
