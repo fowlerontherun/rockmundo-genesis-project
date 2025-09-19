@@ -524,15 +524,23 @@ const Dashboard = () => {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="general">
-                <div className="text-center text-muted-foreground py-8">
-                  Chat system coming soon!
-                </div>
+              <TabsContent value="general" className="mt-4">
+                <RealtimeChatPanel
+                  channelKey="general"
+                  title="Global Chat"
+                  className="h-[28rem] border border-primary/20 bg-card/90 backdrop-blur-sm"
+                  onConnectionStatusChange={handleGeneralConnection}
+                  onParticipantCountChange={handleGeneralOnlineCount}
+                />
               </TabsContent>
-              <TabsContent value="city">
-                <div className="text-center text-muted-foreground py-8">
-                  City chat coming soon!
-                </div>
+              <TabsContent value="city" className="mt-4">
+                <RealtimeChatPanel
+                  channelKey={`city-${currentCity?.id ?? 'lobby'}`}
+                  title={cityTabLabel}
+                  className="h-[28rem] border border-primary/20 bg-card/90 backdrop-blur-sm"
+                  onConnectionStatusChange={handleCityConnection}
+                  onParticipantCountChange={handleCityOnlineCount}
+                />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -752,11 +760,6 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           </div>
-          <RealtimeChatPanel
-            channelKey="general"
-            title="Live Chat"
-            className="bg-card/80 backdrop-blur-sm border-primary/20"
-          />
         </div>
       </div>
     </div>
