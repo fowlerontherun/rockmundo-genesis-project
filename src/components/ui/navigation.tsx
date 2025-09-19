@@ -26,7 +26,8 @@ import {
   X,
   Globe,
   Mic,
-  GraduationCap
+  GraduationCap,
+  DollarSign
 } from "lucide-react";
 
 const Navigation = () => {
@@ -86,6 +87,7 @@ const Navigation = () => {
       items: [
         { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
         { icon: ShoppingCart, label: "Inventory", path: "/inventory" },
+        { icon: DollarSign, label: "Underworld", path: "/underworld" },
         { icon: Building2, label: "Record Label", path: "/labels" },
         { icon: Play, label: "Streaming", path: "/streaming" },
       ]
@@ -121,6 +123,7 @@ const Navigation = () => {
     { icon: Calendar, label: "Gigs", path: "/gigs" },
     { icon: Mic, label: "Busking", path: "/busking" },
     { icon: User, label: "Profile", path: "/profile" },
+    { icon: DollarSign, label: "Underworld", path: "/underworld" },
   ];
 
   const handleLogout = async () => {

@@ -47,6 +47,7 @@ const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"))
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const Health = lazyWithRetry(() => import("./pages/Health"));
+const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ function App() {
                     <Route path="festivals" element={<Festivals />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
+                    <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="create" element={<MusicCreation />} />
                     <Route path="band-enhanced" element={<EnhancedBandManager />} />
