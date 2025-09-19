@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,9 +30,9 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       const { data: messageData, error: messageError } = await supabase
         .from('global_chat')
@@ -54,7 +54,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       console.error('Error fetching messages:', error);
       toast.error('Failed to load messages');
     }
-  };
+  }, [user, channelKey]);
 
   const sendMessage = async () => {
     if (!user || !message.trim()) return;
@@ -80,9 +80,9 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
 
   useEffect(() => {
     if (user) {
-      fetchMessages();
+      void fetchMessages();
     }
-  }, [user, channelKey]);
+  }, [user, fetchMessages]);
 
   useEffect(() => {
     if (!user) return;
@@ -98,7 +98,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
           filter: `channel=eq.${channelKey}`
         },
         () => {
-          fetchMessages();
+          void fetchMessages();
         }
       )
       .subscribe();
@@ -106,7 +106,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, channelKey]);
+  }, [user, channelKey, fetchMessages]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
