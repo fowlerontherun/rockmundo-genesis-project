@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
@@ -77,7 +77,7 @@ export default function PerformGig() {
   const [fanGain, setFanGain] = useState(0);
   const [experienceGain, setExperienceGain] = useState(0);
 
-  const loadGig = async () => {
+  const loadGig = useCallback(async () => {
     if (!gigId || !user) return;
 
     try {
@@ -116,11 +116,11 @@ export default function PerformGig() {
       });
       navigate('/gig-booking');
     }
-  };
+  }, [gigId, user, navigate, toast]);
 
   useEffect(() => {
-    loadGig();
-  }, [gigId, user]);
+    void loadGig();
+  }, [loadGig]);
 
   const startPerformance = async () => {
     if (!stageSequence.length) return;
