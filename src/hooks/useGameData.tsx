@@ -42,6 +42,7 @@ export interface ProfileUpsertInput {
   name: string;
   stageName: string;
   bio: string;
+  attributes?: Partial<PlayerAttributes>;
 }
 
 const ATTRIBUTE_COLUMNS: Array<keyof PlayerAttributesInsert> = [
@@ -407,8 +408,50 @@ export const useGameData = (): UseGameDataReturn => {
     };
   }, [profile?.id, user?.id]);
 
+  const updateAttributes = useCallback(
+    async (updates: AttributesUpdate) => {
+      if (!user) {
+        throw new Error("Authentication required to update attributes");
+      }
+
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      const payload: Database["public"]["Tables"]["player_attributes"]["Insert"] = {
+        user_id: user.id,
+        profile_id: profile.id,
+      };
+
+      for (const [category, column] of Object.entries(ATTRIBUTE_COLUMN_MAP) as Array<[
+        AttributeCategory,
+        keyof PlayerAttributesRow,
+      ]>) {
+        const value = updates[category];
+        if (typeof value === "number" && Number.isFinite(value)) {
+          payload[column] = value;
+        }
+      }
+
+      const { data, error: upsertError } = await supabase
+        .from("player_attributes")
+        .upsert(payload, { onConflict: "profile_id" })
+        .select("*")
+        .maybeSingle();
+
+      if (upsertError) {
+        throw upsertError;
+      }
+
+      const mapped = mapAttributes((data ?? null) as RawAttributes);
+      setAttributes(mapped);
+      return mapped;
+    },
+    [profile, user],
+  );
+
   const upsertProfileWithDefaults = useCallback(
-    async ({ name, stageName, bio }: ProfileUpsertInput) => {
+    async ({ name, stageName, bio, attributes: providedAttributes }: ProfileUpsertInput) => {
       if (!user) {
         throw new Error("Authentication required to update profile");
       }
@@ -545,50 +588,119 @@ export const useGameData = (): UseGameDataReturn => {
         });
       }
 
-      const attributePayload: PlayerAttributesInsert = {
-        user_id: user.id,
-        profile_id: nextProfile.id,
-        attribute_points: 0,
-        attribute_points_spent: 0,
-      };
-
-      for (const column of ATTRIBUTE_COLUMNS) {
-        attributePayload[column] = DEFAULT_ATTRIBUTE_SCORE;
-      }
-
-      console.info("useGameData.profileUpsert.attributeMutation.start", {
-        profileId: nextProfile.id,
-        userId: user.id,
-      });
-
-      const { data: attributeData, error: attributeError } = await supabase
+      const { data: existingAttributesRow, error: existingAttributesError } = await supabase
         .from("player_attributes")
-        .upsert(attributePayload, { onConflict: "profile_id" })
         .select("*")
+        .eq("profile_id", nextProfile.id)
         .maybeSingle();
 
-      if (attributeError) {
-        console.error("useGameData.profileUpsert.attributeMutation.error", {
+      if (existingAttributesError) {
+        console.error("useGameData.profileUpsert.attributeFetch.error", {
           profileId: nextProfile.id,
           userId: user.id,
-          error: attributeError,
+          error: existingAttributesError,
         });
-        throw attributeError;
+        throw existingAttributesError;
       }
 
-      console.info("useGameData.profileUpsert.attributeMutation.success", {
-        profileId: nextProfile.id,
-        userId: user.id,
-      });
+      const hasProvidedAttributes =
+        providedAttributes !== undefined && Object.keys(providedAttributes).length > 0;
+
+      let mappedAttributes: PlayerAttributes | null = null;
+
+      if (!existingAttributesRow) {
+        const attributePayload: PlayerAttributesInsert = {
+          user_id: user.id,
+          profile_id: nextProfile.id,
+          attribute_points: 0,
+          attribute_points_spent: 0,
+        };
+
+        for (const column of ATTRIBUTE_COLUMNS) {
+          attributePayload[column] = DEFAULT_ATTRIBUTE_SCORE;
+        }
+
+        if (providedAttributes) {
+          for (const [category, column] of Object.entries(ATTRIBUTE_COLUMN_MAP) as Array<[
+            AttributeCategory,
+            keyof PlayerAttributesRow,
+          ]>) {
+            const value = providedAttributes[category];
+            if (typeof value === "number" && Number.isFinite(value)) {
+              attributePayload[column] = value;
+            }
+          }
+        }
+
+        console.info("useGameData.profileUpsert.attributeMutation.start", {
+          profileId: nextProfile.id,
+          userId: user.id,
+          mode: "seed",
+        });
+
+        const { data: attributeData, error: attributeError } = await supabase
+          .from("player_attributes")
+          .upsert(attributePayload, { onConflict: "profile_id" })
+          .select("*")
+          .maybeSingle();
+
+        if (attributeError) {
+          console.error("useGameData.profileUpsert.attributeMutation.error", {
+            profileId: nextProfile.id,
+            userId: user.id,
+            mode: "seed",
+            error: attributeError,
+          });
+          throw attributeError;
+        }
+
+        console.info("useGameData.profileUpsert.attributeMutation.success", {
+          profileId: nextProfile.id,
+          userId: user.id,
+          mode: "seed",
+        });
+
+        mappedAttributes = mapAttributes((attributeData ?? null) as RawAttributes);
+      } else {
+        mappedAttributes = mapAttributes((existingAttributesRow ?? null) as RawAttributes);
+
+        if (hasProvidedAttributes) {
+          console.info("useGameData.profileUpsert.attributeMutation.start", {
+            profileId: nextProfile.id,
+            userId: user.id,
+            mode: "update",
+          });
+
+          try {
+            const updatedAttributes = await updateAttributes(providedAttributes);
+            if (updatedAttributes) {
+              mappedAttributes = updatedAttributes;
+            }
+
+            console.info("useGameData.profileUpsert.attributeMutation.success", {
+              profileId: nextProfile.id,
+              userId: user.id,
+              mode: "update",
+            });
+          } catch (attributeUpdateError) {
+            console.error("useGameData.profileUpsert.attributeMutation.error", {
+              profileId: nextProfile.id,
+              userId: user.id,
+              mode: "update",
+              error: attributeUpdateError,
+            });
+            throw attributeUpdateError;
+          }
+        }
+      }
 
       setProfile(nextProfile);
-      const mappedAttributes = mapAttributes((attributeData ?? null) as RawAttributes);
       setAttributes(mappedAttributes);
       await loadProfileDetails(nextProfile);
 
       return { profile: nextProfile, attributes: mappedAttributes };
     },
-    [loadProfileDetails, profile, user],
+    [loadProfileDetails, profile, updateAttributes, user],
   );
 
   const updateProfile = useCallback(
@@ -647,48 +759,6 @@ export const useGameData = (): UseGameDataReturn => {
 
       setSkills((data ?? null) as PlayerSkills);
       return (data ?? null) as PlayerSkills;
-    },
-    [profile, user],
-  );
-
-  const updateAttributes = useCallback(
-    async (updates: AttributesUpdate) => {
-      if (!user) {
-        throw new Error("Authentication required to update attributes");
-      }
-
-      if (!profile) {
-        throw new Error("No active profile selected");
-      }
-
-      const payload: Database["public"]["Tables"]["player_attributes"]["Insert"] = {
-        user_id: user.id,
-        profile_id: profile.id,
-      };
-
-      for (const [category, column] of Object.entries(ATTRIBUTE_COLUMN_MAP) as Array<[
-        AttributeCategory,
-        keyof PlayerAttributesRow,
-      ]>) {
-        const value = updates[category];
-        if (typeof value === "number" && Number.isFinite(value)) {
-          payload[column] = value;
-        }
-      }
-
-      const { data, error: upsertError } = await supabase
-        .from("player_attributes")
-        .upsert(payload, { onConflict: "profile_id" })
-        .select("*")
-        .maybeSingle();
-
-      if (upsertError) {
-        throw upsertError;
-      }
-
-      const mapped = mapAttributes((data ?? null) as RawAttributes);
-      setAttributes(mapped);
-      return mapped;
     },
     [profile, user],
   );

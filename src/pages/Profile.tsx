@@ -93,9 +93,8 @@ const parseAgeValue = (value: string) => {
 };
 
 const Profile = () => {
-  const { profile, attributes, loading, error, updateProfile, updateAttributes, currentCity } = useGameData();
+  const { profile, loading, error, attributes, upsertProfileWithDefaults, currentCity } = useGameData();
   const { toast } = useToast();
-
   const [formState, setFormState] = useState<ProfileFormState>(DEFAULT_FORM_STATE);
   const [attributeState, setAttributeState] = useState<AttributeFormState>(DEFAULT_ATTRIBUTE_FORM_STATE);
   const [saving, setSaving] = useState(false);
@@ -250,61 +249,12 @@ const Profile = () => {
 
     setSaving(true);
     try {
-      const profileUpdates: Parameters<typeof updateProfile>[0] = {};
-
-      if (nextUsername !== (profile?.username ?? "")) {
-        profileUpdates.username = nextUsername;
-      }
-
-      if (nextDisplayName !== (profile?.display_name ?? profile?.username ?? "Performer")) {
-        profileUpdates.display_name = nextDisplayName;
-      }
-
-      if (trimmedBio !== (profile?.bio ?? "")) {
-        profileUpdates.bio = trimmedBio;
-      }
-
-      if (nextAvatarUrl !== (profile?.avatar_url ?? null)) {
-        profileUpdates.avatar_url = nextAvatarUrl;
-      }
-
-      if (nextHometown !== (profile?.current_location ?? null)) {
-        profileUpdates.current_location = nextHometown;
-      }
-
-      if ((nextAge ?? null) !== currentProfileAge) {
-        profileUpdates.age = nextAge;
-      }
-
-      if (nextGender !== (profile?.gender ?? "prefer_not_to_say")) {
-        profileUpdates.gender = nextGender;
-      }
-
-      const attributePayload = EDITABLE_ATTRIBUTES.reduce((accumulator, key) => {
-        const currentValue = attributes ? clampAttributeScore(attributes[key] ?? DEFAULT_ATTRIBUTE_SCORE) : DEFAULT_ATTRIBUTE_SCORE;
-        const desiredValue = clampAttributeScore(attributeState[key]);
-        if (desiredValue !== currentValue) {
-          accumulator[key] = desiredValue;
-        }
-        return accumulator;
-      }, {} as Parameters<typeof updateAttributes>[0]);
-
-      const operations: Array<Promise<unknown>> = [];
-
-      if (Object.keys(profileUpdates).length > 0) {
-        operations.push(updateProfile(profileUpdates));
-      }
-
-      if (Object.keys(attributePayload).length > 0) {
-        operations.push(updateAttributes(attributePayload));
-      }
-
-      if (operations.length === 0) {
-        setSaveError("There are no changes to save just yet.");
-        return;
-      }
-
-      await Promise.all(operations);
+      await upsertProfileWithDefaults({
+        name: trimmedName,
+        stageName: trimmedStageName,
+        bio: trimmedBio,
+        ...(attributes ? { attributes } : {}),
+      });
 
       toast({
         title: "Profile saved",
