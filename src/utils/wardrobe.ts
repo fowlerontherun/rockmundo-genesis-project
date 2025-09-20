@@ -18,7 +18,9 @@ export const DEFAULT_OUTFIT: WardrobeDefaultPiece[] = [
   { slot: "top", name: "Rockmundo Logo Tee" }
 ];
 
-export const parseClothingLoadout = (value: ProfileRow["equipped_clothing"] | null | undefined): ClothingLoadout => {
+export const parseClothingLoadout = (
+  value: ProfileRow["equipment_loadout"] | null | undefined,
+): ClothingLoadout => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
@@ -153,7 +155,7 @@ export const ensureDefaultWardrobe = async (
 
   const { error: profileUpdateError } = await supabase
     .from("profiles")
-    .update({ equipped_clothing: currentLoadout as ProfileRow["equipped_clothing"] })
+    .update({ equipment_loadout: currentLoadout as ProfileRow["equipment_loadout"] })
     .eq("id", profileId);
 
   if (profileUpdateError) {

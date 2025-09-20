@@ -29,9 +29,11 @@ export const useEquippedClothing = (): UseEquippedClothingResult => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const equipmentLoadout = profile?.equipment_loadout ?? null;
+
   const loadout = useMemo(() => {
-    return parseClothingLoadout((profile as any)?.equipment_loadout ?? null);
-  }, [(profile as any)?.equipment_loadout]);
+    return parseClothingLoadout(equipmentLoadout);
+  }, [equipmentLoadout]);
 
   const fetchClothing = useCallback(async () => {
     if (!profile) {
