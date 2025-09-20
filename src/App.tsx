@@ -51,6 +51,7 @@ const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const Health = lazyWithRetry(() => import("./pages/Health"));
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
+const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 
 const queryClient = new QueryClient();
@@ -99,6 +100,7 @@ function App() {
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
                     <Route path="stage-setup" element={<StageSetup />} />
+                    <Route path="finances" element={<Finances />} />
                     <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="create" element={<MusicCreation />} />

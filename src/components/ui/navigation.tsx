@@ -93,6 +93,7 @@ const Navigation = () => {
       items: [
         { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
         { icon: ShoppingCart, label: "Inventory", path: "/inventory" },
+        { icon: DollarSign, label: "Finances", path: "/finances" },
         { icon: Store, label: "Merchandise", path: "/merchandise" },
         { icon: DollarSign, label: "Underworld", path: "/underworld" },
         { icon: Building2, label: "Record Label", path: "/labels" },
