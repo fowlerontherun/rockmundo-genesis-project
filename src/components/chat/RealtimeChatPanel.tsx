@@ -82,7 +82,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
 
       if (missingUserIds.length > 0) {
         const { data: profileData, error: profileError } = await supabase
-          .from('public_profiles')
+          .from('profiles')
           .select('user_id, display_name, username')
           .in('user_id', missingUserIds);
 

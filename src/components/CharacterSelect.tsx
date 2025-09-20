@@ -60,7 +60,7 @@ const CharacterSelect = () => {
       const username = normalizeUsername(trimmed);
       await createCharacter({
         username,
-        displayName: trimmed,
+        display_name: trimmed,
         slotNumber: nextSlotNumber,
         unlockCost: requiredUnlockCost,
         makeActive

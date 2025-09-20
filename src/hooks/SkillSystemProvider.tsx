@@ -89,11 +89,11 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
       const nextXp = (existing?.current_xp ?? 0) + input.xpGain;
       const lastPracticedAt = input.timestamp ?? new Date().toISOString();
 
-      const metadata: Record<string, unknown> = {
-        ...(existing?.metadata ?? {}),
+      const metadata = {
+        ...(existing?.metadata as Record<string, unknown> ?? {}),
         ...(input.markUnlocked ? { unlocked: true } : {}),
         last_update_source: "skill_system_provider",
-      };
+      } as Record<string, unknown>;
 
       const payload: SkillProgressInsert = {
         profile_id: profile.id,
@@ -102,7 +102,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
         current_xp: nextXp,
         required_xp: existing?.required_xp ?? null,
         last_practiced_at: lastPracticedAt,
-        metadata,
+        metadata: metadata as any,
       };
 
       const { data, error: upsertError } = await supabase
