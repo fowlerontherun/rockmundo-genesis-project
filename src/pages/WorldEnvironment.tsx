@@ -7,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { useGameEvents, type GameEventWithStatus } from '@/hooks/useGameEvents';
@@ -74,7 +73,7 @@ const WorldEnvironment: React.FC = () => {
       ? rawProfileLocation
       : null;
   const profileDisplayName = profile?.display_name || profile?.username || '';
-  const profileAvatarFallback = profileDisplayName.slice(0, 2).toUpperCase() || 'RM';
+  const profileInitials = profileDisplayName.slice(0, 2).toUpperCase() || 'RM';
 
   const applyCityDistances = useCallback(
     (cityList: City[]): City[] => {
@@ -753,13 +752,9 @@ const WorldEnvironment: React.FC = () => {
         <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
           <CardContent className="p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <Avatar className="h-24 w-24 border-2 border-primary/40 shadow-lg">
-                <AvatarImage
-                  src={profile.avatar_url ?? undefined}
-                  alt={profileDisplayName ? `${profileDisplayName} avatar` : 'Player avatar'}
-                />
-                <AvatarFallback>{profileAvatarFallback}</AvatarFallback>
-              </Avatar>
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-primary/40 bg-primary/10 text-3xl font-semibold uppercase shadow-lg">
+                {profileInitials}
+              </div>
             </div>
             <div className="text-center sm:text-left space-y-2">
               <div>
@@ -1125,10 +1120,9 @@ const WorldEnvironment: React.FC = () => {
                                 return (
                                   <div key={player.profileId} className="flex items-center justify-between gap-3 border rounded-lg p-3">
                                     <div className="flex items-center gap-3">
-                                      <Avatar className="h-8 w-8">
-                                        <AvatarImage src={player.avatarUrl ?? undefined} alt={displayName} />
-                                        <AvatarFallback>{displayName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                                      </Avatar>
+                                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold uppercase">
+                                        {displayName.slice(0, 2).toUpperCase() || 'RM'}
+                                      </div>
                                       <div>
                                         <div className="text-sm font-medium">{displayName}</div>
                                         <div className="text-xs text-muted-foreground">@{player.username}</div>

@@ -13,7 +13,7 @@ export interface SendFriendRequestParams {
   message?: string | null;
 }
 
-const PROFILE_SELECTION = "id, user_id, username, display_name, avatar_url, bio, level, fame";
+const PROFILE_SELECTION = "id, user_id, username, display_name, bio, level, fame";
 
 export const fetchPrimaryProfileForUser = async (
   userId: string,

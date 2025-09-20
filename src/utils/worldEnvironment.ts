@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 
 const WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy", "stormy", "snowy"] as const;
 const WORLD_EVENT_TYPES = ["festival", "competition", "disaster", "celebration", "economic"] as const;
@@ -375,7 +374,6 @@ export interface CityPlayer {
   displayName: string | null;
   level: number | null;
   fame: number | null;
-  avatarUrl: string | null;
   primaryInstrument?: string | null;
   currentActivity?: string | null;
   travelMode?: string | null;
@@ -681,13 +679,6 @@ const normalizeCityPlayerRecord = (item: Record<string, unknown>): CityPlayer =>
   const levelValue = toNumber(item.level, Number.NaN);
   const fameValue = toNumber(item.fame, Number.NaN);
 
-  const avatarRaw =
-    typeof item.avatar_url === "string"
-      ? item.avatar_url
-      : typeof item.avatarUrl === "string"
-        ? (item.avatarUrl as string)
-        : null;
-
   return {
     profileId: String(item.id ?? crypto.randomUUID()),
     userId: typeof item.user_id === "string" ? item.user_id : String(item.user_id ?? ""),
@@ -695,7 +686,6 @@ const normalizeCityPlayerRecord = (item: Record<string, unknown>): CityPlayer =>
     displayName: typeof item.display_name === "string" ? item.display_name : null,
     level: Number.isNaN(levelValue) ? null : levelValue,
     fame: Number.isNaN(fameValue) ? null : fameValue,
-    avatarUrl: getStoredAvatarPreviewUrl(avatarRaw),
     primaryInstrument: typeof item.primary_instrument === "string" ? item.primary_instrument : (
       typeof item.instrument === "string" ? item.instrument : undefined
     ),
@@ -873,7 +863,7 @@ export const fetchCityEnvironmentDetails = async (
     supabase
       .from("profiles")
       .select(
-        "id, user_id, username, display_name, level, fame, avatar_url, current_activity, primary_instrument, travel_mode, current_city_id",
+        "id, user_id, username, display_name, level, fame, current_activity, primary_instrument, travel_mode, current_city_id",
       )
       .eq("current_city_id", cityId),
     supabase

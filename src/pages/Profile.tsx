@@ -2,7 +2,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Loader2, MapPin, Sparkles } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +17,6 @@ interface ProfileFormState {
   name: string;
   stageName: string;
   bio: string;
-  avatarUrl: string;
   age: string;
   gender: ProfileGender;
   hometown: string;
@@ -28,7 +26,6 @@ const DEFAULT_FORM_STATE: ProfileFormState = {
   name: "",
   stageName: "",
   bio: "",
-  avatarUrl: "",
   age: "",
   gender: "prefer_not_to_say",
   hometown: "",
@@ -105,12 +102,11 @@ const Profile = () => {
       name: profile?.username ?? "",
       stageName: profile?.display_name ?? "",
       bio: profile?.bio ?? "",
-      avatarUrl: profile?.avatar_url ?? "",
       age: typeof profile?.age === "number" && Number.isFinite(profile?.age) ? String(profile?.age) : "",
       gender: profile?.gender ?? "prefer_not_to_say",
       hometown: profile?.current_location ?? "",
     });
-  }, [profile?.age, profile?.avatar_url, profile?.bio, profile?.current_location, profile?.display_name, profile?.gender, profile?.username]);
+  }, [profile?.age, profile?.bio, profile?.current_location, profile?.display_name, profile?.gender, profile?.username]);
 
   useEffect(() => {
     if (!attributes) {
@@ -127,7 +123,7 @@ const Profile = () => {
   }, [attributes]);
 
   const profileDisplayName = formState.stageName || profile?.display_name || profile?.username || "Performer";
-  const avatarFallback = profileDisplayName.slice(0, 2).toUpperCase() || "RM";
+  const profileInitials = profileDisplayName.slice(0, 2).toUpperCase() || "RM";
 
   const currentCityLabel = useMemo(() => {
     if (!currentCity) {
@@ -165,7 +161,6 @@ const Profile = () => {
   }, [formState.name, formState.stageName, profile?.display_name, profile?.username]);
 
   const normalizedBio = useMemo(() => sanitizeInput(formState.bio).trim(), [formState.bio]);
-  const sanitizedAvatarUrl = useMemo(() => formState.avatarUrl.trim(), [formState.avatarUrl]);
   const sanitizedHometown = useMemo(() => sanitizeInput(formState.hometown).trim(), [formState.hometown]);
   const parsedAge = useMemo(() => parseAgeValue(formState.age), [formState.age]);
   const currentProfileAge = typeof profile?.age === "number" && Number.isFinite(profile?.age) ? profile.age : null;
@@ -177,7 +172,6 @@ const Profile = () => {
 
     const displayNameUnchanged = desiredDisplayName === (profile?.display_name ?? profile?.username ?? "Performer");
     const bioUnchanged = normalizedBio === (profile?.bio ?? "");
-    const avatarUnchanged = sanitizedAvatarUrl === (profile?.avatar_url ?? "");
     const hometownUnchanged = sanitizedHometown === (profile?.current_location ?? "");
     const hasAgeInput = formState.age.trim().length > 0;
     const effectiveAge = hasAgeInput ? parsedAge ?? currentProfileAge : currentProfileAge;
@@ -188,7 +182,6 @@ const Profile = () => {
       usernameUnchanged &&
       displayNameUnchanged &&
       bioUnchanged &&
-      avatarUnchanged &&
       hometownUnchanged &&
       ageUnchanged &&
       genderUnchanged
@@ -197,13 +190,11 @@ const Profile = () => {
     normalizedUsername,
     desiredDisplayName,
     normalizedBio,
-    sanitizedAvatarUrl,
     sanitizedHometown,
     parsedAge,
     currentProfileAge,
     formState.gender,
     formState.age,
-    profile?.avatar_url,
     profile?.bio,
     profile?.current_location,
     profile?.display_name,
@@ -241,7 +232,6 @@ const Profile = () => {
     const trimmedBio = normalizedBio;
     const nextUsername = normalizedUsername.length > 0 ? normalizedUsername : profile?.username ?? "";
     const nextDisplayName = desiredDisplayName;
-    const nextAvatarUrl = sanitizedAvatarUrl.length > 0 ? sanitizedAvatarUrl : null;
     const nextHometown = sanitizedHometown.length > 0 ? sanitizedHometown : null;
     const hasAgeInput = formState.age.trim().length > 0;
     const nextAge = hasAgeInput ? parsedAge ?? currentProfileAge : currentProfileAge;
@@ -300,10 +290,9 @@ const Profile = () => {
           <div className="grid gap-6 lg:grid-cols-[220px,1fr]">
             <div className="space-y-4">
               <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                  <AvatarImage src={formState.avatarUrl || profile?.avatar_url ?? undefined} alt={`${profileDisplayName} avatar`} />
-                  <AvatarFallback>{avatarFallback}</AvatarFallback>
-                </Avatar>
+                <div className="flex h-32 w-32 items-center justify-center rounded-full border-4 border-background bg-primary/10 text-4xl font-bold uppercase shadow-lg">
+                  {profileInitials}
+                </div>
 
                 <div className="text-center space-y-1">
                   <h2 className="text-2xl font-semibold">{profileDisplayName}</h2>
@@ -416,18 +405,6 @@ const Profile = () => {
                   }
                 />
                 <p className="text-sm text-muted-foreground">Share where your story began so local fans can find you.</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="avatarUrl">Avatar image URL</Label>
-                <Input
-                  id="avatarUrl"
-                  type="url"
-                  placeholder="https://images.example/avatar.png"
-                  value={formState.avatarUrl}
-                  onChange={(event) => setFormState((previous) => ({ ...previous, avatarUrl: event.target.value }))}
-                />
-                <p className="text-sm text-muted-foreground">Paste a direct image link for a custom profile portrait.</p>
               </div>
 
               <div className="space-y-4 rounded-lg border border-primary/10 bg-muted/10 p-4">
