@@ -13,8 +13,6 @@ import { useGameData } from '@/hooks/useGameData';
 import { useGameEvents, type GameEventWithStatus } from '@/hooks/useGameEvents';
 import { toast } from '@/components/ui/sonner-toast';
 import { supabase } from '@/integrations/supabase/client';
-import AvatarWithClothing from '@/components/avatar/AvatarWithClothing';
-import { useEquippedClothing } from '@/hooks/useEquippedClothing';
 import {
   fetchWorldEnvironmentSnapshot,
   fetchCityEnvironmentDetails,
@@ -55,7 +53,6 @@ const REFRESH_INTERVAL = 60_000;
 const WorldEnvironment: React.FC = () => {
   const { user } = useAuth();
   const { profile, updateProfile, addActivity, currentCity } = useGameData();
-  const { items: equippedClothing } = useEquippedClothing();
   const [weather, setWeather] = useState<WeatherCondition[]>([]);
   const [cityRecords, setCityRecords] = useState<City[]>([]);
   const [worldEvents, setWorldEvents] = useState<WorldEvent[]>([]);
@@ -76,6 +73,8 @@ const WorldEnvironment: React.FC = () => {
     typeof rawProfileLocation === 'string' && rawProfileLocation.trim().length > 0
       ? rawProfileLocation
       : null;
+  const profileDisplayName = profile?.display_name || profile?.username || '';
+  const profileAvatarFallback = profileDisplayName.slice(0, 2).toUpperCase() || 'RM';
 
   const applyCityDistances = useCallback(
     (cityList: City[]): City[] => {
@@ -754,12 +753,13 @@ const WorldEnvironment: React.FC = () => {
         <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
           <CardContent className="p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <AvatarWithClothing
-                avatarUrl={profile.avatar_url}
-                fallbackText={profile.display_name || profile.username}
-                items={equippedClothing}
-                size={104}
-              />
+              <Avatar className="h-24 w-24 border-2 border-primary/40 shadow-lg">
+                <AvatarImage
+                  src={profile.avatar_url ?? undefined}
+                  alt={profileDisplayName ? `${profileDisplayName} avatar` : 'Player avatar'}
+                />
+                <AvatarFallback>{profileAvatarFallback}</AvatarFallback>
+              </Avatar>
             </div>
             <div className="text-center sm:text-left space-y-2">
               <div>
@@ -780,9 +780,7 @@ const WorldEnvironment: React.FC = () => {
                 </Badge>
               </div>
               <div className="text-xs text-muted-foreground">
-                {equippedClothing.length
-                  ? `Outfit synced across the world with ${equippedClothing.length} clothing piece${equippedClothing.length === 1 ? '' : 's'}.`
-                  : 'No clothing equipped yet — visit the inventory to update your look.'}
+                Keep exploring cities to discover new events and rewards.
               </div>
             </div>
           </CardContent>

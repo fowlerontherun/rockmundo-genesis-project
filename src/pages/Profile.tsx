@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CharacterSelect from "@/components/CharacterSelect";
-import AvatarWithClothing from "@/components/avatar/AvatarWithClothing";
 import {
   User,
   Camera,
@@ -39,7 +38,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
-import { useEquippedClothing } from "@/hooks/useEquippedClothing";
 import { useFriendships, type FriendProfileSummary } from "@/hooks/useFriendships";
 import { useCityOptions } from "@/hooks/useCityOptions";
 import {
@@ -141,7 +139,6 @@ const Profile = () => {
     resetCharacter,
     refetch,
   } = useGameData();
-  const { items: equippedClothing } = useEquippedClothing();
   const {
     options: cityOptions,
     loading: cityOptionsLoading,
@@ -185,6 +182,8 @@ const Profile = () => {
   const [sendingFriendRequestTo, setSendingFriendRequestTo] = useState<string | null>(null);
   const [requestedFriendUserIds, setRequestedFriendUserIds] = useState<Record<string, boolean>>({});
   const friendSearchRequestId = useRef(0);
+  const profileDisplayName = profile?.display_name || profile?.username || "";
+  const avatarFallback = profileDisplayName.slice(0, 2).toUpperCase() || "RM";
 
   const cityLabelById = useMemo(() => {
     const map = new Map<string, string>();
@@ -828,12 +827,14 @@ const Profile = () => {
               <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center space-y-4">
-                    <AvatarWithClothing
-                      avatarUrl={profile.avatar_url}
-                      fallbackText={profile.display_name || profile.username}
-                      items={equippedClothing}
-                      size={128}
-                    >
+                    <div className="relative">
+                      <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+                        <AvatarImage
+                          src={profile.avatar_url ?? undefined}
+                          alt={profileDisplayName ? `${profileDisplayName} avatar` : "Player avatar"}
+                        />
+                        <AvatarFallback>{avatarFallback}</AvatarFallback>
+                      </Avatar>
                       <div className="absolute bottom-0 right-0">
                         <label htmlFor="avatar-upload" className="cursor-pointer">
                           <div className="bg-primary hover:bg-primary/80 rounded-full p-2 border-2 border-background">
@@ -853,7 +854,7 @@ const Profile = () => {
                           />
                         </label>
                       </div>
-                    </AvatarWithClothing>
+                    </div>
                     <div className="text-center space-y-1">
                       <h2 className="text-2xl font-bold">{profile.display_name || profile.username}</h2>
                       <p className="text-muted-foreground">@{profile.username}</p>
