@@ -21,7 +21,7 @@ import {
   Bell,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes, type SkillProgressRow } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
 import type { Database } from "@/integrations/supabase/types";
@@ -89,14 +89,21 @@ const formatAttributeLabel = (attributeKey: keyof PlayerAttributes) =>
     .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
+const formatSkillName = (slug: string) =>
+  slug
+    .split(/[_-]/)
+    .filter(segment => segment.length > 0)
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
     profile,
-    skills,
     attributes,
     xpWallet,
     xpLedger,
+    skillProgress,
     freshWeeklyBonusAvailable,
     currentCity,
     activities,
@@ -114,15 +121,6 @@ const Dashboard = () => {
     city: false
   });
 
-  const instrumentSkillKeys: (keyof PlayerSkills)[] = [
-    "vocals",
-    "guitar",
-    "bass",
-    "drums",
-    "songwriting",
-    "performance",
-    "composition"
-  ];
   const attributeKeys: (keyof PlayerAttributes)[] = [
     "charisma",
     "looks",
@@ -298,6 +296,41 @@ const Dashboard = () => {
     };
   }, [profile?.city_of_birth]);
 
+  const trackedSkillProgress = useMemo<SkillProgressRow[]>(
+    () => (Array.isArray(skillProgress) ? skillProgress.filter(entry => entry && entry.skill_slug) : []),
+    [skillProgress],
+  );
+
+  const highlightedSkillProgress = useMemo(() => {
+    const sorted = [...trackedSkillProgress].sort((a, b) => {
+      const levelDifference = (b.current_level ?? 0) - (a.current_level ?? 0);
+      if (levelDifference !== 0) {
+        return levelDifference;
+      }
+
+      const aRequired = Math.max(1, Number(a.required_xp ?? 1));
+      const bRequired = Math.max(1, Number(b.required_xp ?? 1));
+      const aProgress = Math.max(0, Number(a.current_xp ?? 0)) / aRequired;
+      const bProgress = Math.max(0, Number(b.current_xp ?? 0)) / bRequired;
+      return bProgress - aProgress;
+    });
+
+    return sorted.slice(0, 6);
+  }, [trackedSkillProgress]);
+
+  const activeSkillCount = useMemo(
+    () =>
+      trackedSkillProgress.reduce((count, entry) => {
+        const level = Number(entry.current_level ?? 0);
+        const xp = Number(entry.current_xp ?? 0);
+        return level > 0 || xp > 0 ? count + 1 : count;
+      }, 0),
+    [trackedSkillProgress],
+  );
+
+  const totalTrackedSkills = trackedSkillProgress.length;
+  const skillSummaryLabel = totalTrackedSkills === 1 ? "skill" : "skills";
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-stage flex items-center justify-center p-6">
@@ -324,7 +357,7 @@ const Dashboard = () => {
     );
   }
 
-  if (!profile || !skills) {
+  if (!profile) {
     return null;
   }
 
@@ -665,30 +698,54 @@ const Dashboard = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Skills */}
+          {/* Skill Progress */}
           <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Guitar className="h-5 w-5 text-primary" />
-                Musical Skills
-              </CardTitle>
-              <CardDescription>Your musical abilities</CardDescription>
+            <CardHeader className="space-y-2">
+              <div className="flex items-center justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Guitar className="h-5 w-5 text-primary" />
+                  Skill Progress
+                </CardTitle>
+                <Badge variant="outline" className="border-primary/40 text-primary">
+                  Active {activeSkillCount}
+                </Badge>
+              </div>
+              <CardDescription>
+                {totalTrackedSkills > 0
+                  ? `Tracking ${totalTrackedSkills} ${skillSummaryLabel} across your journey.`
+                  : "Your practice sessions will appear here once you start leveling up."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {instrumentSkillKeys.map(skillKey => {
-                const value = Number(skills?.[skillKey] ?? 0);
-                const percent = Math.min(100, (value / 1000) * 100);
-                return (
-                  <div key={skillKey} className="space-y-2">
-                    <span className="capitalize font-medium text-sm">{skillKey}</span>
-                    <Progress
-                      value={percent}
-                      className="h-2"
-                      aria-label={`${skillKey} skill level ${value} out of 1000`}
-                    />
-                  </div>
-                );
-              })}
+              {highlightedSkillProgress.length > 0 ? (
+                highlightedSkillProgress.map(progressEntry => {
+                  const level = Math.max(0, Number(progressEntry.current_level ?? 0));
+                  const currentXp = Math.max(0, Number(progressEntry.current_xp ?? 0));
+                  const requiredXp = Math.max(1, Number(progressEntry.required_xp ?? 100));
+                  const percent = Math.min(100, (currentXp / requiredXp) * 100);
+                  const label = formatSkillName(progressEntry.skill_slug);
+                  const xpLabel = `${currentXp.toLocaleString()} / ${requiredXp.toLocaleString()} XP`;
+
+                  return (
+                    <div key={progressEntry.id ?? progressEntry.skill_slug} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{label}</span>
+                        <span className="text-xs text-muted-foreground">Level {level} · {xpLabel}</span>
+                      </div>
+                      <Progress
+                        value={percent}
+                        className="h-2"
+                        aria-label={`${label} progress level ${level} with ${xpLabel}`}
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Dive into practice sessions, education, and gigs to begin charting your progress. Your highlighted skills will
+                  appear here as you level up.
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card className="bg-card/80 backdrop-blur-sm border-primary/20">

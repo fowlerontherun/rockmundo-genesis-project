@@ -268,6 +268,7 @@ export const useGameData = (): UseGameDataReturn => {
         ledgerResult,
         cityResult,
         activitiesResult,
+        skillProgressResult,
       ] = await Promise.all([
         supabase
           .from("player_skills")
@@ -301,6 +302,12 @@ export const useGameData = (): UseGameDataReturn => {
           .eq("profile_id", effectiveProfile.id)
           .order("created_at", { ascending: false })
           .limit(20),
+        supabase
+          .from("skill_progress")
+          .select("*")
+          .eq("profile_id", effectiveProfile.id)
+          .order("current_level", { ascending: false, nullsFirst: false })
+          .order("current_xp", { ascending: false, nullsFirst: false }),
       ]);
 
       if (skillsResult.error) {
@@ -321,6 +328,9 @@ export const useGameData = (): UseGameDataReturn => {
       if (activitiesResult.error) {
         console.error("Failed to load activities", activitiesResult.error);
       }
+      if (skillProgressResult.error) {
+        console.error("Failed to load skill progress", skillProgressResult.error);
+      }
 
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
@@ -328,7 +338,7 @@ export const useGameData = (): UseGameDataReturn => {
       setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
-      setSkillProgress([]);
+      setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
     },
     [user],
