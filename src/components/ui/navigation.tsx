@@ -47,7 +47,7 @@ const Navigation = () => {
       title: "Overview & Wellness",
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
-        { icon: User, label: "Profile", path: "/profile" },
+        { icon: User, label: "My Character", path: "/my-character" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
         { icon: Trophy, label: "Achievements", path: "/achievements" },
         { icon: HeartPulse, label: "Health", path: "/health" },
@@ -117,7 +117,7 @@ const Navigation = () => {
     { icon: Mic, label: "Busking", path: "/busking" },
     { icon: Plane, label: "Travel", path: "/travel" },
     { icon: Megaphone, label: "PR", path: "/pr" },
-    { icon: User, label: "Profile", path: "/profile" },
+    { icon: User, label: "My Character", path: "/my-character" },
     { icon: DollarSign, label: "Underworld", path: "/underworld" },
   ];
 
