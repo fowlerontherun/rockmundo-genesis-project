@@ -8,29 +8,95 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
 
 interface ProfileFormState {
   name: string;
   stageName: string;
   bio: string;
+  avatarUrl: string;
+  age: string;
+  gender: ProfileGender;
+  hometown: string;
 }
 
 const DEFAULT_FORM_STATE: ProfileFormState = {
   name: "",
   stageName: "",
   bio: "",
+  avatarUrl: "",
+  age: "",
+  gender: "prefer_not_to_say",
+  hometown: "",
 };
 
 const sanitizeInput = (value: string) => value.replace(/\s+/g, " ");
 
+type ProfileGender = NonNullable<PlayerProfile["gender"]>;
+const GENDER_OPTIONS: Array<{ value: ProfileGender; label: string }> = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
+  { value: "non_binary", label: "Non-binary" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
+const EDITABLE_ATTRIBUTES = ["creativity", "charisma", "technical", "business", "marketing"] as const;
+type EditableAttribute = (typeof EDITABLE_ATTRIBUTES)[number];
+type AttributeFormState = Record<EditableAttribute, number>;
+
+const ATTRIBUTE_MIN = 1;
+const ATTRIBUTE_MAX = 10;
+const DEFAULT_ATTRIBUTE_SCORE = 5;
+const DEFAULT_ATTRIBUTE_FORM_STATE: AttributeFormState = EDITABLE_ATTRIBUTES.reduce(
+  (accumulator, key) => {
+    accumulator[key] = DEFAULT_ATTRIBUTE_SCORE;
+    return accumulator;
+  },
+  {} as AttributeFormState,
+);
+
+const normalizeUsername = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
+const clampAttributeScore = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_ATTRIBUTE_SCORE;
+  }
+
+  return Math.max(ATTRIBUTE_MIN, Math.min(ATTRIBUTE_MAX, Math.round(value)));
+};
+
+const parseAgeValue = (value: string) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  if (parsed < 13) {
+    return 13;
+  }
+
+  if (parsed > 120) {
+    return 120;
+  }
+
+  return parsed;
+};
+
 const Profile = () => {
   const { profile, loading, error, attributes, upsertProfileWithDefaults, currentCity } = useGameData();
   const { toast } = useToast();
-
   const [formState, setFormState] = useState<ProfileFormState>(DEFAULT_FORM_STATE);
+  const [attributeState, setAttributeState] = useState<AttributeFormState>(DEFAULT_ATTRIBUTE_FORM_STATE);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -39,10 +105,28 @@ const Profile = () => {
       name: profile?.username ?? "",
       stageName: profile?.display_name ?? "",
       bio: profile?.bio ?? "",
+      avatarUrl: profile?.avatar_url ?? "",
+      age: typeof profile?.age === "number" && Number.isFinite(profile?.age) ? String(profile?.age) : "",
+      gender: profile?.gender ?? "prefer_not_to_say",
+      hometown: profile?.current_location ?? "",
     });
-  }, [profile?.bio, profile?.display_name, profile?.username]);
+  }, [profile?.age, profile?.avatar_url, profile?.bio, profile?.current_location, profile?.display_name, profile?.gender, profile?.username]);
 
-  const profileDisplayName = profile?.display_name || profile?.username || "Performer";
+  useEffect(() => {
+    if (!attributes) {
+      setAttributeState({ ...DEFAULT_ATTRIBUTE_FORM_STATE });
+      return;
+    }
+
+    const nextState = EDITABLE_ATTRIBUTES.reduce((accumulator, key) => {
+      accumulator[key] = clampAttributeScore(attributes[key] ?? DEFAULT_ATTRIBUTE_SCORE);
+      return accumulator;
+    }, {} as AttributeFormState);
+
+    setAttributeState(nextState);
+  }, [attributes]);
+
+  const profileDisplayName = formState.stageName || profile?.display_name || profile?.username || "Performer";
   const avatarFallback = profileDisplayName.slice(0, 2).toUpperCase() || "RM";
 
   const currentCityLabel = useMemo(() => {
@@ -57,13 +141,90 @@ const Profile = () => {
     return currentCity.name ?? null;
   }, [currentCity]);
 
-  const isPristine = useMemo(() => {
+  const normalizedUsername = useMemo(() => {
+    const trimmedName = sanitizeInput(formState.name).trim();
+    if (trimmedName.length === 0) {
+      return "";
+    }
+
+    return normalizeUsername(trimmedName);
+  }, [formState.name]);
+
+  const desiredDisplayName = useMemo(() => {
+    const trimmedStageName = sanitizeInput(formState.stageName).trim();
+    if (trimmedStageName.length > 0) {
+      return trimmedStageName;
+    }
+
+    const trimmedName = sanitizeInput(formState.name).trim();
+    if (trimmedName.length > 0) {
+      return trimmedName;
+    }
+
+    return profile?.display_name ?? profile?.username ?? "Performer";
+  }, [formState.name, formState.stageName, profile?.display_name, profile?.username]);
+
+  const normalizedBio = useMemo(() => sanitizeInput(formState.bio).trim(), [formState.bio]);
+  const sanitizedAvatarUrl = useMemo(() => formState.avatarUrl.trim(), [formState.avatarUrl]);
+  const sanitizedHometown = useMemo(() => sanitizeInput(formState.hometown).trim(), [formState.hometown]);
+  const parsedAge = useMemo(() => parseAgeValue(formState.age), [formState.age]);
+  const currentProfileAge = typeof profile?.age === "number" && Number.isFinite(profile?.age) ? profile.age : null;
+
+  const isProfilePristine = useMemo(() => {
+    const currentUsername = profile?.username ?? "";
+    const usernameUnchanged =
+      normalizedUsername.length > 0 ? normalizedUsername === currentUsername : currentUsername.length === 0;
+
+    const displayNameUnchanged = desiredDisplayName === (profile?.display_name ?? profile?.username ?? "Performer");
+    const bioUnchanged = normalizedBio === (profile?.bio ?? "");
+    const avatarUnchanged = sanitizedAvatarUrl === (profile?.avatar_url ?? "");
+    const hometownUnchanged = sanitizedHometown === (profile?.current_location ?? "");
+    const hasAgeInput = formState.age.trim().length > 0;
+    const effectiveAge = hasAgeInput ? parsedAge ?? currentProfileAge : currentProfileAge;
+    const ageUnchanged = effectiveAge === currentProfileAge;
+    const genderUnchanged = (formState.gender ?? "prefer_not_to_say") === (profile?.gender ?? "prefer_not_to_say");
+
     return (
-      sanitizeInput(formState.name).trim() === (profile?.username ?? "").trim() &&
-      sanitizeInput(formState.stageName).trim() === (profile?.display_name ?? "").trim() &&
-      sanitizeInput(formState.bio).trim() === (profile?.bio ?? "").trim()
+      usernameUnchanged &&
+      displayNameUnchanged &&
+      bioUnchanged &&
+      avatarUnchanged &&
+      hometownUnchanged &&
+      ageUnchanged &&
+      genderUnchanged
     );
-  }, [formState, profile?.bio, profile?.display_name, profile?.username]);
+  }, [
+    normalizedUsername,
+    desiredDisplayName,
+    normalizedBio,
+    sanitizedAvatarUrl,
+    sanitizedHometown,
+    parsedAge,
+    currentProfileAge,
+    formState.gender,
+    formState.age,
+    profile?.avatar_url,
+    profile?.bio,
+    profile?.current_location,
+    profile?.display_name,
+    profile?.gender,
+    profile?.username,
+  ]);
+
+  const isAttributePristine = useMemo(() => {
+    if (!attributes) {
+      return EDITABLE_ATTRIBUTES.every((key) => attributeState[key] === DEFAULT_ATTRIBUTE_SCORE);
+    }
+
+    return EDITABLE_ATTRIBUTES.every((key) => attributeState[key] === clampAttributeScore(attributes[key] ?? DEFAULT_ATTRIBUTE_SCORE));
+  }, [attributeState, attributes]);
+
+  const isPristine = isProfilePristine && isAttributePristine;
+
+  const handleAttributeChange = (key: EditableAttribute, value: number[]) => {
+    const nextValue = clampAttributeScore(value[0] ?? DEFAULT_ATTRIBUTE_SCORE);
+    setAttributeState((previous) => ({ ...previous, [key]: nextValue }));
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -71,12 +232,20 @@ const Profile = () => {
 
     const trimmedName = sanitizeInput(formState.name).trim();
     const trimmedStageName = sanitizeInput(formState.stageName).trim();
-    const trimmedBio = sanitizeInput(formState.bio).trim();
 
     if (trimmedName.length === 0 && trimmedStageName.length === 0) {
       setSaveError("Enter at least a name or stage name to continue.");
       return;
     }
+
+    const trimmedBio = normalizedBio;
+    const nextUsername = normalizedUsername.length > 0 ? normalizedUsername : profile?.username ?? "";
+    const nextDisplayName = desiredDisplayName;
+    const nextAvatarUrl = sanitizedAvatarUrl.length > 0 ? sanitizedAvatarUrl : null;
+    const nextHometown = sanitizedHometown.length > 0 ? sanitizedHometown : null;
+    const hasAgeInput = formState.age.trim().length > 0;
+    const nextAge = hasAgeInput ? parsedAge ?? currentProfileAge : currentProfileAge;
+    const nextGender = formState.gender ?? "prefer_not_to_say";
 
     setSaving(true);
     try {
@@ -132,7 +301,7 @@ const Profile = () => {
             <div className="space-y-4">
               <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                  <AvatarImage src={profile?.avatar_url ?? undefined} alt={`${profileDisplayName} avatar`} />
+                  <AvatarImage src={formState.avatarUrl || profile?.avatar_url ?? undefined} alt={`${profileDisplayName} avatar`} />
                   <AvatarFallback>{avatarFallback}</AvatarFallback>
                 </Avatar>
 
@@ -191,6 +360,104 @@ const Profile = () => {
                   onChange={(event) => setFormState((previous) => ({ ...previous, bio: event.target.value }))}
                   rows={5}
                 />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    min={13}
+                    max={120}
+                    placeholder="18"
+                    value={formState.age}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      if (nextValue === "" || /^\d*$/.test(nextValue)) {
+                        setFormState((previous) => ({ ...previous, age: nextValue }));
+                      }
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground">We use this to tailor your career opportunities.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    value={formState.gender}
+                    onValueChange={(value) =>
+                      setFormState((previous) => ({ ...previous, gender: value as ProfileGender }))
+                    }
+                  >
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GENDER_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">Optional demographic details help us personalize events.</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hometown">Hometown</Label>
+                <Input
+                  id="hometown"
+                  placeholder="London, United Kingdom"
+                  value={formState.hometown}
+                  onChange={(event) =>
+                    setFormState((previous) => ({ ...previous, hometown: event.target.value }))
+                  }
+                />
+                <p className="text-sm text-muted-foreground">Share where your story began so local fans can find you.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="avatarUrl">Avatar image URL</Label>
+                <Input
+                  id="avatarUrl"
+                  type="url"
+                  placeholder="https://images.example/avatar.png"
+                  value={formState.avatarUrl}
+                  onChange={(event) => setFormState((previous) => ({ ...previous, avatarUrl: event.target.value }))}
+                />
+                <p className="text-sm text-muted-foreground">Paste a direct image link for a custom profile portrait.</p>
+              </div>
+
+              <div className="space-y-4 rounded-lg border border-primary/10 bg-muted/10 p-4">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold">Starter attribute focus</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Tune the areas where your artist shines. You can grow other skills as you progress.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  {EDITABLE_ATTRIBUTES.map((attributeKey) => (
+                    <div key={attributeKey} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium capitalize" htmlFor={`attribute-${attributeKey}`}>
+                          {attributeKey.replace(/_/g, " ")}
+                        </Label>
+                        <span className="text-sm font-semibold text-primary">{attributeState[attributeKey]}</span>
+                      </div>
+                      <Slider
+                        id={`attribute-${attributeKey}`}
+                        min={ATTRIBUTE_MIN}
+                        max={ATTRIBUTE_MAX}
+                        step={1}
+                        value={[attributeState[attributeKey]]}
+                        onValueChange={(value) => handleAttributeChange(attributeKey, value)}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {saveError && (
