@@ -158,6 +158,12 @@ export const useGameData = (): UseGameDataReturn => {
   const [error, setError] = useState<string | null>(null);
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
+  const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "PGRST204";
+
   const loadCharacterDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
       if (!user || !activeProfile) {
@@ -174,7 +180,19 @@ export const useGameData = (): UseGameDataReturn => {
 
       let effectiveProfile = activeProfile;
 
+      const profileSupportsCurrentCityId =
+        effectiveProfile !== null && Object.prototype.hasOwnProperty.call(effectiveProfile, "current_city_id");
+
+      if (!profileSupportsCurrentCityId && !defaultCityAssignmentDisabledRef.current && effectiveProfile) {
+        defaultCityAssignmentDisabledRef.current = true;
+        console.warn(
+          "Skipping default city assignment - current_city_id column missing from profile payload; ensure migrations have run.",
+          { profileId: effectiveProfile.id },
+        );
+      }
+
       if (
+        profileSupportsCurrentCityId &&
         !effectiveProfile.current_city_id &&
         !assigningDefaultCityRef.current &&
         !defaultCityAssignmentDisabledRef.current
@@ -198,7 +216,7 @@ export const useGameData = (): UseGameDataReturn => {
               .single();
 
             if (updateError) {
-              if (updateError.code === "PGRST204") {
+              if (isSchemaCacheMissingColumnError(updateError)) {
                 defaultCityAssignmentDisabledRef.current = true;
                 console.warn(
                   "Skipping default city assignment - current_city_id column missing from schema cache",
