@@ -102,7 +102,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
         current_xp: nextXp,
         required_xp: existing?.required_xp ?? null,
         last_practiced_at: lastPracticedAt,
-        metadata: metadata as any,
+        metadata: metadata as SkillProgressInsert["metadata"],
       };
 
       const { data, error: upsertError } = await supabase
