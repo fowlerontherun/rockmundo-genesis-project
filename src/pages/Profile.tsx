@@ -115,6 +115,8 @@ const formatAttributeLabel = (attributeKey: keyof PlayerAttributes) =>
     .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
+const UNSPECIFIED_SELECT_VALUE = "__unspecified__";
+
 const genderOptions: { value: ProfileGender; label: string }[] = [
   { value: "female", label: "Female" },
   { value: "male", label: "Male" },
@@ -477,6 +479,14 @@ const Profile = () => {
     [toast, user],
   );
 
+  const sanitizeCityId = useCallback((value: string | null | undefined) => {
+    if (!value) {
+      return null;
+    }
+
+    return value.trim().length > 0 ? value : null;
+  }, []);
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -485,11 +495,11 @@ const Profile = () => {
         bio: profile.bio || "",
         gender: (profile.gender as ProfileGender) || "prefer_not_to_say",
         age: typeof profile.age === "number" ? String(profile.age) : "16",
-        city_of_birth: profile.city_of_birth ?? null,
-        current_city: profile.current_city ?? profile.current_city_id ?? null,
+        city_of_birth: sanitizeCityId(profile.city_of_birth),
+        current_city: sanitizeCityId(profile.current_city ?? profile.current_city_id ?? null),
       });
     }
-  }, [profile]);
+  }, [profile, sanitizeCityId]);
 
   const profileGenderLabel = useMemo(() => {
     if (!profile?.gender) return "Prefer not to say";
@@ -1012,11 +1022,12 @@ const Profile = () => {
                       <div className="space-y-2">
                         <Label htmlFor="birth-city">City of Birth</Label>
                         <Select
-                          value={formData.city_of_birth ?? ""}
+                          value={formData.city_of_birth ?? UNSPECIFIED_SELECT_VALUE}
                           onValueChange={(value) =>
                             setFormData((prev) => ({
                               ...prev,
-                              city_of_birth: value.length > 0 ? value : null,
+                              city_of_birth:
+                                value === UNSPECIFIED_SELECT_VALUE ? null : value,
                             }))
                           }
                           disabled={!isEditing || cityOptionsLoading}
@@ -1030,7 +1041,7 @@ const Profile = () => {
                             />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Unspecified</SelectItem>
+                            <SelectItem value={UNSPECIFIED_SELECT_VALUE}>Unspecified</SelectItem>
                             {cityOptions.map((option) => (
                               <SelectItem key={option.id} value={option.id}>
                                 {option.label}
@@ -1045,11 +1056,12 @@ const Profile = () => {
                       <div className="space-y-2">
                         <Label htmlFor="current-city">Current City</Label>
                         <Select
-                          value={formData.current_city ?? ""}
+                          value={formData.current_city ?? UNSPECIFIED_SELECT_VALUE}
                           onValueChange={(value) =>
                             setFormData((prev) => ({
                               ...prev,
-                              current_city: value.length > 0 ? value : null,
+                              current_city:
+                                value === UNSPECIFIED_SELECT_VALUE ? null : value,
                             }))
                           }
                           disabled={!isEditing || cityOptionsLoading}
@@ -1063,7 +1075,7 @@ const Profile = () => {
                             />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Unspecified</SelectItem>
+                            <SelectItem value={UNSPECIFIED_SELECT_VALUE}>Unspecified</SelectItem>
                             {cityOptions.map((option) => (
                               <SelectItem key={option.id} value={option.id}>
                                 {option.label}
