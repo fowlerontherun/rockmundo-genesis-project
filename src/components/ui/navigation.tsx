@@ -43,89 +43,69 @@ const Navigation = () => {
 
   const navSections = [
     {
-      title: "Core",
+      title: "Overview & Wellness",
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: User, label: "Profile", path: "/profile" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
         { icon: Trophy, label: "Achievements", path: "/achievements" },
-      ]
-    },
-    {
-      title: "Wellness",
-      items: [
         { icon: HeartPulse, label: "Health", path: "/health" },
-      ]
+      ],
     },
     {
-      title: "Music & Creation",
+      title: "Creative Studio",
       items: [
         { icon: Music, label: "Music Studio", path: "/music" },
         { icon: Play, label: "Music Creation", path: "/create" },
-        { icon: Music, label: "Song Manager", path: "/songs" },
+        { icon: ListMusic, label: "Song Manager", path: "/songs" },
         { icon: GraduationCap, label: "Education", path: "/education" },
-      ]
+      ],
     },
     {
-      title: "Performance & Touring",
+      title: "Live Performance & Touring",
       items: [
         { icon: Calendar, label: "Gig Booking", path: "/gigs" },
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
         { icon: ListMusic, label: "Setlist Designer", path: "/setlists" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
-        { icon: MapPin, label: "Venue Management", path: "/venues" },
+        { icon: Building2, label: "Venue Management", path: "/venues" },
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
-        { icon: Building2, label: "City Overview", path: "/city" },
+        { icon: MapPin, label: "City Overview", path: "/city" },
         { icon: Mic, label: "Street Busking", path: "/busking" },
         { icon: Plane, label: "Travel Planner", path: "/travel" },
-      ]
+        { icon: Globe, label: "Tour System", path: "/tours-system" },
+      ],
     },
     {
-      title: "Band & Social",
+      title: "Community & Audience",
       items: [
         { icon: Users, label: "Band Manager", path: "/band" },
         { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
         { icon: Share2, label: "Social Media", path: "/social" },
         { icon: Megaphone, label: "Public Relations", path: "/pr" },
         { icon: Users, label: "Fan Management", path: "/fans" },
-      ]
+        { icon: TrendingUp, label: "World Pulse", path: "/charts" },
+        { icon: Trophy, label: "Competitive Charts", path: "/charts-competitive" },
+        { icon: Users, label: "Enhanced Band", path: "/band-enhanced" },
+        { icon: HeartPulse, label: "Enhanced Fans", path: "/fans-enhanced" },
+      ],
     },
     {
-      title: "Business & Economy",
+      title: "Business & Operations",
       items: [
         { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
-        { icon: ShoppingCart, label: "Inventory", path: "/inventory" },
+        { icon: Store, label: "Inventory", path: "/inventory" },
         { icon: DollarSign, label: "Finances", path: "/finances" },
-        { icon: Store, label: "Merchandise", path: "/merchandise" },
+        { icon: ShoppingCart, label: "Merchandise", path: "/merchandise" },
         { icon: DollarSign, label: "Underworld", path: "/underworld" },
         { icon: Building2, label: "Record Label", path: "/labels" },
         { icon: Play, label: "Streaming", path: "/streaming" },
-      ]
-    },
-    {
-      title: "Competition & Charts",
-      items: [
-        { icon: TrendingUp, label: "World Pulse", path: "/charts" },
-        { icon: Trophy, label: "Competitive Charts", path: "/charts-competitive" },
-      ]
-    },
-    {
-      title: "Enhanced Features",
-      items: [
-        { icon: Users, label: "Enhanced Band", path: "/band-enhanced" },
-        { icon: ShoppingCart, label: "Enhanced Store", path: "/equipment-enhanced" },
-        { icon: Users, label: "Enhanced Fans", path: "/fans-enhanced" },
-        { icon: MapPin, label: "Tour System", path: "/tours-system" },
-      ]
-    },
-    {
-      title: "Advanced Systems",
-      items: [
+        { icon: Store, label: "Enhanced Store", path: "/equipment-enhanced" },
         { icon: Globe, label: "World Events", path: "/world" },
         { icon: TrendingUp, label: "Statistics", path: "/statistics" },
         { icon: Settings, label: "Admin Panel", path: "/admin" },
-      ]
-    }
+      ],
+    },
   ];
 
   const mobileShortcuts = [
