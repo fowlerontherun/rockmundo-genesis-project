@@ -5,25 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useGameData } from '@/hooks/useGameData';
 import { Lock, Star, Trophy, Music, Users, Mic, Zap } from 'lucide-react';
 
-interface SkillDefinition {
-  id: string;
-  slug: string;
-  display_name: string;
-  description: string;
-  tier_caps: any;
-}
-
-interface SkillProgress {
-  id: string;
-  profile_id: string;
-  skill_slug: string;
-  current_level: number;
-  current_xp: number;
-  required_xp: number;
-}
+type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
+type SkillProgress = Database['public']['Tables']['skill_progress']['Row'];
 
 interface SkillCategory {
   name: string;
@@ -65,21 +52,21 @@ export const SkillTree: React.FC = () => {
       try {
         const { data: skillsData, error: skillsError } = await supabase
           .from('skill_definitions')
-          .select('*')
+          .select<SkillDefinition>('*')
           .order('display_name');
 
         if (skillsError) throw skillsError;
 
-        setSkills((skillsData || []) as SkillDefinition[]);
+        setSkills(skillsData ?? []);
 
         if (profile) {
           const { data: progressData, error: progressError } = await supabase
             .from('skill_progress')
-            .select('*')
+            .select<SkillProgress>('*')
             .eq('profile_id', profile.id);
 
           if (progressError) throw progressError;
-          setProgress(progressData || []);
+          setProgress(progressData ?? []);
         }
       } catch (error) {
         console.error('Error fetching skills:', error);

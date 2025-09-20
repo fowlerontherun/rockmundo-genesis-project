@@ -10,9 +10,12 @@ export type FriendProfileSummary = {
   avatarUrl: string | null;
 };
 
-type FriendshipRow = any; // Will be updated when types regenerate
-type FriendshipStatus = 'pending' | 'accepted' | 'declined' | 'blocked';
-type FriendPresenceStatus = 'online' | 'offline' | 'typing' | 'away';
+type ProfilesRow = Database["public"]["Tables"]["profiles"]["Row"];
+type ProfileSummaryRow = Pick<ProfilesRow, "id" | "user_id" | "username" | "display_name" | "avatar_url">;
+type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
+type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
+type FriendPresenceStatus = Database["public"]["Enums"]["chat_participant_status"];
+type ChatParticipantRow = Database["public"]["Tables"]["chat_participants"]["Row"];
 
 type FriendRelationship = {
   friendshipId: string;
@@ -28,7 +31,7 @@ const ONLINE_STATUSES: FriendPresenceStatus[] = ["online", "typing"];
 
 const DEFAULT_RELATIONSHIPS: FriendRelationship[] = [];
 
-const normalizeProfile = (row: Database["public"]["Tables"]["profiles"]["Row"]): FriendProfileSummary => ({
+const normalizeProfile = (row: ProfileSummaryRow): FriendProfileSummary => ({
   profileId: row.id,
   userId: row.user_id,
   username: row.username,
@@ -50,7 +53,7 @@ const toRelationship = (
     friendshipId: row.id,
     friendUserId,
     friendProfileId: friendProfileId ?? null,
-    status: (row.status ?? "pending") as FriendshipStatus,
+    status: row.status ?? "pending",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     profile,
@@ -85,42 +88,47 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
   const [presenceByUserId, setPresenceByUserId] = useState<Record<string, FriendPresenceStatus>>({});
 
   const fetchProfiles = useCallback(async (profileIds: string[]) => {
+    const lookup: Record<string, FriendProfileSummary> = {};
+
     if (profileIds.length === 0) {
-      return {} as Record<string, FriendProfileSummary>;
+      return lookup;
     }
 
     const { data, error: profileError } = await supabase
       .from("profiles")
-      .select("id, user_id, username, display_name, avatar_url")
+      .select<ProfileSummaryRow>(
+        "id, user_id, username, display_name, avatar_url",
+      )
       .in("id", profileIds);
 
     if (profileError) {
       throw profileError;
     }
 
-    const lookup: Record<string, FriendProfileSummary> = {};
     (data ?? []).forEach((row) => {
-      lookup[row.id] = normalizeProfile(row as Database["public"]["Tables"]["profiles"]["Row"]);
+      lookup[row.id] = normalizeProfile(row);
     });
     return lookup;
   }, []);
 
   const fetchPresence = useCallback(async (userIds: string[]) => {
+    const presenceMap: Record<string, FriendPresenceStatus> = {};
+
     if (userIds.length === 0) {
-      return {} as Record<string, FriendPresenceStatus>;
+      return presenceMap;
     }
 
-    const { data } = await (supabase as any)
+    const { data, error } = await supabase
       .from("chat_participants")
-      .select("user_id, status")
+      .select<Pick<ChatParticipantRow, "user_id" | "status">>("user_id, status")
       .in("user_id", userIds);
 
-    const presenceMap: Record<string, FriendPresenceStatus> = {};
+    if (error) {
+      throw error;
+    }
+
     (data ?? []).forEach((row) => {
-      const status = row.status as FriendPresenceStatus | null | undefined;
-      if (status) {
-        presenceMap[row.user_id] = status;
-      }
+      presenceMap[row.user_id] = row.status;
     });
     return presenceMap;
   }, []);
@@ -141,8 +149,11 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
 
     try {
       const [outgoingResult, incomingResult] = await Promise.all([
-        (supabase as any).from("friendships").select("*").eq("user_id", userId),
-        (supabase as any).from("friendships").select("*").eq("friend_user_id", userId),
+        supabase.from("friendships").select<FriendshipRow>("*").eq("user_id", userId),
+        supabase
+          .from("friendships")
+          .select<FriendshipRow>("*")
+          .eq("friend_user_id", userId),
       ]);
 
       const outgoingRows = outgoingResult.data ?? [];
@@ -156,7 +167,7 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
         throw incomingResult.error;
       }
 
-      const allRows = [...outgoingRows, ...incomingRows] as FriendshipRow[];
+      const allRows = [...outgoingRows, ...incomingRows];
       const profileIds = new Set<string>();
       const friendUserIds = new Set<string>();
 
@@ -175,12 +186,8 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
       const profileLookup = await fetchProfiles(Array.from(profileIds));
       const presence = await fetchPresence(Array.from(friendUserIds));
 
-      const mappedOutgoing = (outgoingRows as FriendshipRow[]).map((row) =>
-        toRelationship(row, userId, profileLookup),
-      );
-      const mappedIncoming = (incomingRows as FriendshipRow[]).map((row) =>
-        toRelationship(row, userId, profileLookup),
-      );
+      const mappedOutgoing = outgoingRows.map((row) => toRelationship(row, userId, profileLookup));
+      const mappedIncoming = incomingRows.map((row) => toRelationship(row, userId, profileLookup));
 
       const accepted = [...mappedOutgoing, ...mappedIncoming].filter(
         (entry) => entry.status === "accepted",
@@ -207,9 +214,9 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
         throw new Error("You need to be logged in to accept friendships");
       }
 
-      const { error: updateError } = await (supabase as any)
+      const { error: updateError } = await supabase
         .from("friendships")
-        .update({ status: "accepted" as FriendshipStatus })
+        .update({ status: "accepted" })
         .eq("id", friendshipId)
         .eq("friend_user_id", userId);
 
@@ -229,9 +236,9 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
         throw new Error("You need to be logged in to update friendships");
       }
 
-      const { error: updateError } = await (supabase as any)
+      const { error: updateError } = await supabase
         .from("friendships")
-        .update({ status: "declined" as FriendshipStatus })
+        .update({ status: "declined" })
         .eq("id", friendshipId)
         .or(`user_id.eq.${userId},friend_user_id.eq.${userId}`);
 

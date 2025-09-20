@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
+import type { CreateCharacterInput } from "@/hooks/useGameData";
 import { Sparkles, Lock, Unlock } from "lucide-react";
 
 const CHARACTER_SLOT_COST: Record<number, number> = {
@@ -58,12 +59,15 @@ const CharacterSelect = () => {
 
     try {
       const username = normalizeUsername(trimmed);
-      await createCharacter({
+      const payload: CreateCharacterInput = {
         username,
         display_name: trimmed,
-        // slotNumber and unlockCost are handled by createCharacter internally
+        slotNumber: nextSlotNumber,
+        unlockCost: requiredUnlockCost,
         makeActive
-      } as any);
+      };
+
+      await createCharacter(payload);
 
       setStageName("");
       toast({

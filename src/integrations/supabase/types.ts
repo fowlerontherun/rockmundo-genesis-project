@@ -987,6 +987,8 @@ export type Database = {
           current_city_id: string | null
           current_location: string | null
           created_at: string | null
+          current_city_id: string | null
+          current_location: string
           display_name: string | null
           equipped_clothing: Json | null
           equipment_loadout: Json | null
@@ -1017,6 +1019,8 @@ export type Database = {
           current_city_id?: string | null
           current_location?: string | null
           created_at?: string | null
+          current_city_id?: string | null
+          current_location?: string
           display_name?: string | null
           equipped_clothing?: Json | null
           equipment_loadout?: Json | null
@@ -1047,6 +1051,8 @@ export type Database = {
           current_city_id?: string | null
           current_location?: string | null
           created_at?: string | null
+          current_city_id?: string | null
+          current_location?: string
           display_name?: string | null
           equipped_clothing?: Json | null
           equipment_loadout?: Json | null
@@ -1068,7 +1074,22 @@ export type Database = {
           weekly_bonus_metadata?: Json | null
           weekly_bonus_streak?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_city_of_birth_fkey"
+            columns: ["city_of_birth"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       skill_definitions: {
         Row: {

@@ -29,6 +29,8 @@ export const useEquippedClothing = (): UseEquippedClothingResult => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const equipmentLoadout = profile?.equipment_loadout ?? null;
+
   const loadout = useMemo(() => {
     return parseClothingLoadout(profile?.equipped_clothing ?? null);
   }, [profile?.equipped_clothing]);
