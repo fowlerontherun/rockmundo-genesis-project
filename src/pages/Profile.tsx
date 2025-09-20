@@ -741,8 +741,10 @@ const Profile = () => {
 
         {showProfileDetails ? (
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-5">
               <TabsTrigger value="profile">Profile Info</TabsTrigger>
+              <TabsTrigger value="skills">Skills</TabsTrigger>
+              <TabsTrigger value="attributes">Attributes</TabsTrigger>
               <TabsTrigger value="friends">Friends</TabsTrigger>
               <TabsTrigger value="stats">Statistics</TabsTrigger>
             </TabsList>
@@ -1387,79 +1389,83 @@ const Profile = () => {
                 )}
               </CardContent>
             </Card>
+            </TabsContent>
 
-            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Music className="h-5 w-5 text-primary" />
-                  Musical Skills
-                </CardTitle>
-                <CardDescription>Your musical abilities and expertise levels</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {musicalSkills.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {musicalSkills.map(({ key: skillKey, value }) => {
+            <TabsContent value="skills" className="space-y-6">
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Music className="h-5 w-5 text-primary" />
+                    Musical Skills
+                  </CardTitle>
+                  <CardDescription>Your musical abilities and expertise levels</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {musicalSkills.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {musicalSkills.map(({ key: skillKey, value }) => {
+                        const percent = Math.min(100, (value / 1000) * 100);
+                        return (
+                          <div key={skillKey} className="space-y-2">
+                            <span className="text-sm font-medium capitalize">{skillKey}</span>
+                            <Progress
+                              value={percent}
+                              className="h-2"
+                              aria-label={`${skillKey} skill level ${value} out of 1000`}
+                            />
+                            <div className="text-xs text-muted-foreground">
+                              {value >= 800
+                                ? "Expert"
+                                : value >= 600
+                                  ? "Advanced"
+                                  : value >= 400
+                                    ? "Intermediate"
+                                    : "Beginner"}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No musical skills meet the minimum level yet. Earn at least one point to see your progress.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="attributes" className="space-y-6">
+              <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Professional Attributes
+                  </CardTitle>
+                  <CardDescription>Business, creative, and technical strengths</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {attributeKeys.map(attributeKey => {
+                      const value = Number(attributes?.[attributeKey] ?? 0);
                       const percent = Math.min(100, (value / 1000) * 100);
                       return (
-                        <div key={skillKey} className="space-y-2">
-                          <span className="text-sm font-medium capitalize">{skillKey}</span>
+                        <div key={attributeKey} className="space-y-2">
+                          <span className="text-sm font-medium capitalize">{attributeKey}</span>
                           <Progress
                             value={percent}
                             className="h-2"
-                            aria-label={`${skillKey} skill level ${value} out of 1000`}
+                            aria-label={`${attributeKey} attribute score ${value} out of 1000`}
                           />
                           <div className="text-xs text-muted-foreground">
-                            {value >= 800
-                              ? "Expert"
-                              : value >= 600
-                                ? "Advanced"
-                                : value >= 400
-                                  ? "Intermediate"
-                                  : "Beginner"}
+                            High values unlock greater opportunities and campaign performance.
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No musical skills meet the minimum level yet. Earn at least one point to see your progress.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Professional Attributes
-                </CardTitle>
-                <CardDescription>Business, creative, and technical strengths</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {attributeKeys.map(attributeKey => {
-                    const value = Number(attributes?.[attributeKey] ?? 0);
-                    const percent = Math.min(100, (value / 1000) * 100);
-                    return (
-                      <div key={attributeKey} className="space-y-2">
-                        <span className="text-sm font-medium capitalize">{attributeKey}</span>
-                        <Progress
-                          value={percent}
-                          className="h-2"
-                          aria-label={`${attributeKey} attribute score ${value} out of 1000`}
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          High values unlock greater opportunities and campaign performance.
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         ) : (
           <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
