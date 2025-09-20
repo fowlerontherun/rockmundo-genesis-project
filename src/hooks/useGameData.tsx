@@ -157,6 +157,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const assigningDefaultCityRef = useRef(false);
+  const defaultCityAssignmentDisabledRef = useRef(false);
   const loadCharacterDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
       if (!user || !activeProfile) {
@@ -173,7 +174,11 @@ export const useGameData = (): UseGameDataReturn => {
 
       let effectiveProfile = activeProfile;
 
-      if (!effectiveProfile.current_city_id && !assigningDefaultCityRef.current) {
+      if (
+        !effectiveProfile.current_city_id &&
+        !assigningDefaultCityRef.current &&
+        !defaultCityAssignmentDisabledRef.current
+      ) {
         assigningDefaultCityRef.current = true;
         try {
           const { data: londonCity, error: londonCityError } = await supabase
@@ -193,7 +198,15 @@ export const useGameData = (): UseGameDataReturn => {
               .single();
 
             if (updateError) {
-              console.error("Failed to assign London as default city", updateError);
+              if (updateError.code === "PGRST204") {
+                defaultCityAssignmentDisabledRef.current = true;
+                console.warn(
+                  "Skipping default city assignment - current_city_id column missing from schema cache",
+                  updateError,
+                );
+              } else {
+                console.error("Failed to assign London as default city", updateError);
+              }
             } else if (updatedProfileData) {
               const updatedProfile = updatedProfileData as PlayerProfile;
               effectiveProfile = updatedProfile;
