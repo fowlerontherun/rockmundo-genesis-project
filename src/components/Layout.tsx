@@ -20,10 +20,10 @@ const Layout = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    const isOnProfile = location.pathname === "/profile";
+    const isOnProfile = location.pathname === "/my-character";
 
     if (!authLoading && !dataLoading && user && !profile && !isOnProfile) {
-      navigate("/profile");
+      navigate("/my-character");
     }
   }, [authLoading, dataLoading, user, profile, location.pathname, navigate]);
 

@@ -15,7 +15,7 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
 
   const allowWithoutProfile = (() => {
     const currentPath = location.pathname;
-    return currentPath === "/" || currentPath === "/profile" || currentPath.startsWith("/profile/");
+    return currentPath === "/" || currentPath === "/my-character" || currentPath.startsWith("/my-character/");
   })();
 
   if (loading) {
@@ -39,7 +39,7 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
             <Button onClick={() => refetch()} variant="secondary">
               Retry
             </Button>
-            <Button onClick={() => navigate("/profile")}>Open profile</Button>
+            <Button onClick={() => navigate("/my-character")}>Open character</Button>
           </div>
         </Alert>
       </div>
@@ -55,7 +55,7 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
             You need an artist profile before exploring Rockmundo. Head to the profile page to name your performer and claim
             your London launch pad.
           </p>
-          <Button className="bg-gradient-primary" onClick={() => navigate("/profile")}>Go to profile</Button>
+          <Button className="bg-gradient-primary" onClick={() => navigate("/my-character")}>Go to character</Button>
         </div>
       </div>
     );

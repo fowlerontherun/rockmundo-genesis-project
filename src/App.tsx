@@ -16,7 +16,7 @@ const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const BandManager = lazyWithRetry(() => import("./pages/BandManager"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
-const Profile = lazyWithRetry(() => import("./pages/Profile"));
+const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const MusicStudio = lazyWithRetry(() => import("./pages/MusicStudio"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
@@ -82,7 +82,7 @@ function App() {
                     <Route path="gigs" element={<GigBooking />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Busking />} />
-                    <Route path="profile" element={<Profile />} />
+                    <Route path="my-character" element={<MyCharacter />} />
                     <Route path="music" element={<MusicStudio />} />
                     <Route path="charts" element={<WorldPulsePage />} />
                     <Route path="schedule" element={<Schedule />} />

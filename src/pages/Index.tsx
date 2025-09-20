@@ -20,7 +20,7 @@ const Index = () => {
 
   useEffect(() => {
     if (!authLoading && !dataLoading && user) {
-      navigate(profile ? "/dashboard" : "/profile");
+      navigate(profile ? "/dashboard" : "/my-character");
     }
   }, [authLoading, dataLoading, user, profile, navigate]);
 
@@ -41,7 +41,7 @@ const Index = () => {
             <AlertTitle>We couldn&apos;t load your profile</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Button onClick={() => navigate("/profile")}>Open profile</Button>
+          <Button onClick={() => navigate("/my-character")}>Open character</Button>
         </div>
       </div>
     );
