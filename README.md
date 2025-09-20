@@ -84,6 +84,24 @@ supabase db reset
 The migration pulls in the generated `supabase/seed/skills_seed.sql` file, so running the script keeps migrations and runtime data
 in sync.
 
+## Profile data reset for the new flow
+
+Deployments that introduce the refreshed profile flow must run the `20270431150000_reset_profile_data.sql` migration before
+serving traffic. The migration truncates all profile-linked XP, attribute, skill, wallet, and progression tables (using
+`TRUNCATE ... RESTART IDENTITY CASCADE`) and then clears `public.profiles`. This guarantees dependent sequences are reset and no
+stale profile data survives the reset.
+
+Run the Supabase migrations in your target environment prior to rollout:
+
+```sh
+supabase db push
+# or for a full local refresh
+supabase db reset
+```
+
+This data-only migration does not change the schema, so the generated Supabase TypeScript definitions stay in sync without any
+additional regeneration.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/c3d67299-48a1-4744-a78e-1169f70eea31) and click on Share -> Publish.
