@@ -1,71 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { AlertCircle, Loader2 } from "lucide-react";
+
 import { useAuth } from "@/hooks/use-auth-context";
-import { checkProfileCompletion } from "@/utils/profileCompletion";
-import { Button } from "@/components/ui/button";
+import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const [checkingProfile, setCheckingProfile] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: dataLoading, error } = useGameData();
 
   useEffect(() => {
-    let isActive = true;
-
-    const determineLandingPage = async () => {
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      if (!isActive) {
-        return;
-      }
-
-      setCheckingProfile(true);
-      setError(null);
-
-      try {
-        const { isComplete, profile } = await checkProfileCompletion(user.id);
-        if (!isActive) {
-          return;
-        }
-        if (!profile) {
-          navigate("/character-create");
-          return;
-        }
-        navigate(isComplete ? "/dashboard" : "/character-create");
-      } catch (profileError) {
-        console.error("Failed to verify profile completion:", profileError);
-        if (!isActive) {
-          return;
-        }
-        setError("We couldn't verify your profile status. You can continue to the creator.");
-      } finally {
-        if (isActive) {
-          setCheckingProfile(false);
-        }
-      }
-    };
-
-    if (!loading) {
-      void determineLandingPage();
+    if (!authLoading && !user) {
+      navigate("/auth");
     }
-    return () => {
-      isActive = false;
-    };
-  }, [user, loading, navigate]);
+  }, [user, authLoading, navigate]);
 
-  if (loading || checkingProfile) {
+  useEffect(() => {
+    if (!authLoading && !dataLoading && user) {
+      navigate(profile ? "/dashboard" : "/profile");
+    }
+  }, [authLoading, dataLoading, user, profile, navigate]);
+
+  if (authLoading || dataLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg font-oswald">Loading Rockmundo...</p>
-        </div>
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
@@ -76,21 +38,16 @@ const Index = () => {
         <div className="w-full max-w-md space-y-6 rounded-xl bg-background/95 p-8 text-center shadow-xl">
           <Alert variant="destructive" className="text-left">
             <AlertCircle className="h-5 w-5" />
-            <AlertTitle>Heads up!</AlertTitle>
+            <AlertTitle>We couldn&apos;t load your profile</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              We'll take you to the character creator so you can finish setting up your artist.
-            </p>
-            <Button onClick={() => navigate("/character-create")}>Continue to Creator</Button>
-          </div>
+          <Button onClick={() => navigate("/profile")}>Open profile</Button>
         </div>
       </div>
     );
   }
 
-  return null; // Will redirect to dashboard
+  return null;
 };
 
 export default Index;
