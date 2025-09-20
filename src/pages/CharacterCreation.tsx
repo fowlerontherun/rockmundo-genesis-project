@@ -100,6 +100,7 @@ const attributeSchema = z.object(
 );
 
 const optionalUuidSchema = z.union([z.string().uuid(), z.literal("")]);
+const UNSPECIFIED_SELECT_VALUE = "__unspecified__";
 
 const characterSchema = z.object({
   username: z
@@ -608,8 +609,16 @@ const CharacterCreation = () => {
                     <FormItem>
                       <FormLabel>City of Birth</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
+                        onValueChange={(value) =>
+                          field.onChange(
+                            value === UNSPECIFIED_SELECT_VALUE ? "" : value,
+                          )
+                        }
+                        value={
+                          field.value && field.value.length > 0
+                            ? field.value
+                            : UNSPECIFIED_SELECT_VALUE
+                        }
                         disabled={cityOptionsLoading || isSaving}
                       >
                         <FormControl>
@@ -620,7 +629,9 @@ const CharacterCreation = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Unspecified</SelectItem>
+                          <SelectItem value={UNSPECIFIED_SELECT_VALUE}>
+                            Unspecified
+                          </SelectItem>
                           {cityOptions.map(option => (
                             <SelectItem key={option.id} value={option.id}>
                               {option.label}
@@ -641,8 +652,16 @@ const CharacterCreation = () => {
                     <FormItem>
                       <FormLabel>Current City</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
+                        onValueChange={(value) =>
+                          field.onChange(
+                            value === UNSPECIFIED_SELECT_VALUE ? "" : value,
+                          )
+                        }
+                        value={
+                          field.value && field.value.length > 0
+                            ? field.value
+                            : UNSPECIFIED_SELECT_VALUE
+                        }
                         disabled={cityOptionsLoading || isSaving}
                       >
                         <FormControl>
@@ -653,7 +672,9 @@ const CharacterCreation = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Unspecified</SelectItem>
+                          <SelectItem value={UNSPECIFIED_SELECT_VALUE}>
+                            Unspecified
+                          </SelectItem>
                           {cityOptions.map(option => (
                             <SelectItem key={option.id} value={option.id}>
                               {option.label}
