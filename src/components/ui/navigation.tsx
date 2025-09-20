@@ -30,6 +30,7 @@ import {
   DollarSign,
   Plane,
   ListMusic,
+  Megaphone,
   Store,
 } from "lucide-react";
 
@@ -85,6 +86,7 @@ const Navigation = () => {
         { icon: Users, label: "Band Manager", path: "/band" },
         { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
         { icon: Share2, label: "Social Media", path: "/social" },
+        { icon: Megaphone, label: "Public Relations", path: "/pr" },
         { icon: Users, label: "Fan Management", path: "/fans" },
       ]
     },
@@ -132,6 +134,7 @@ const Navigation = () => {
     { icon: ListMusic, label: "Setlists", path: "/setlists" },
     { icon: Mic, label: "Busking", path: "/busking" },
     { icon: Plane, label: "Travel", path: "/travel" },
+    { icon: Megaphone, label: "PR", path: "/pr" },
     { icon: User, label: "Profile", path: "/profile" },
     { icon: DollarSign, label: "Underworld", path: "/underworld" },
   ];
