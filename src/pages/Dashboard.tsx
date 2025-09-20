@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,12 +13,12 @@ import {
   Mic,
   Headphones,
   DollarSign,
-  PiggyBank,
   Star,
   Play,
   AlertCircle,
   Sparkles,
   MessageSquare,
+  Bell,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
@@ -48,12 +47,39 @@ interface XpLedgerEntry {
   created_at?: string | null;
 }
 
+interface DashboardNotification {
+  id: string;
+  title: string;
+  description: string;
+  icon: ReactNode;
+  iconClasses: string;
+  timestamp?: string;
+}
+
 const genderLabels: Record<string, string> = {
   female: "Female",
   male: "Male",
   non_binary: "Non-binary",
   other: "Other",
   prefer_not_to_say: "Prefer not to say",
+};
+
+const formatNotificationDate = (isoString: string | null | undefined) => {
+  if (!isoString) {
+    return undefined;
+  }
+
+  const parsed = new Date(isoString);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
 };
 
 const Dashboard = () => {
@@ -315,6 +341,65 @@ const Dashboard = () => {
         minute: "2-digit"
       }).format(weeklyBonusRecorded)
     : null;
+  const formattedWeeklyBonusAmount = weeklyBonusAmount.toLocaleString();
+  const formattedWeeklyBonusSourceXp = weeklyBonusSourceXp.toLocaleString();
+  const latestWeeklyBonusId = latestWeeklyBonus?.id ?? null;
+
+  const notifications: DashboardNotification[] = (() => {
+    const items: DashboardNotification[] = [];
+
+    if (freshWeeklyBonusAvailable) {
+      items.push({
+        id: "weekly-bonus-available",
+        title: "Weekly bonus available",
+        description:
+          weeklyBonusAmount > 0
+            ? `Collect your ${formattedWeeklyBonusAmount} XP bonus${weeklyBonusSourceXp > 0 ? ` for earning ${formattedWeeklyBonusSourceXp} XP last week.` : "."}`
+            : "Your weekly rehearsal bonus is ready whenever you are.",
+        icon: <Sparkles className="h-4 w-4" />,
+        iconClasses: "bg-primary/10 text-primary",
+        timestamp: formattedWeeklyBonusRecorded ?? undefined,
+      });
+    } else if (latestWeeklyBonusId) {
+      items.push({
+        id: "weekly-bonus-summary",
+        title: "Weekly bonus processed",
+        description:
+          weeklyBonusAmount > 0
+            ? `You received ${formattedWeeklyBonusAmount} XP after gaining ${formattedWeeklyBonusSourceXp} XP last week.`
+            : "No bonus was awarded this cycle. Earn more XP this week to unlock it.",
+        icon: <Sparkles className="h-4 w-4" />,
+        iconClasses: "bg-primary/10 text-primary",
+        timestamp: formattedWeeklyBonusRecorded ?? undefined,
+      });
+    }
+
+    const latestActivity = activities[0];
+    if (latestActivity) {
+      items.push({
+        id: `activity-${latestActivity.id}`,
+        title: "Latest activity",
+        description: latestActivity.message,
+        icon: getActivityIcon(latestActivity.activity_type),
+        iconClasses: "bg-secondary/40 text-foreground",
+        timestamp: formatNotificationDate(latestActivity.created_at),
+      });
+    }
+
+    const skillActivity = activities.find(activity => activity.activity_type === "skill");
+    if (skillActivity && (!latestActivity || skillActivity.id !== latestActivity.id)) {
+      items.push({
+        id: `skill-${skillActivity.id}`,
+        title: "Skill progress",
+        description: skillActivity.message,
+        icon: <Guitar className="h-4 w-4" />,
+        iconClasses: "bg-success/10 text-success",
+        timestamp: formatNotificationDate(skillActivity.created_at),
+      });
+    }
+
+    return items.slice(0, 3);
+  })();
   const recentLedgerEntries = xpLedger.slice(0, 5);
 
   return (
@@ -341,16 +426,6 @@ const Dashboard = () => {
                 {currentCityDisplay}
               </Badge>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => navigate("/finances")}
-              variant="outline"
-              className="border-primary/20 hover:bg-primary/10"
-            >
-              <PiggyBank className="h-4 w-4 mr-2" />
-              Manage Finances
-            </Button>
           </div>
         </div>
 
@@ -404,6 +479,46 @@ const Dashboard = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Notifications */}
+        <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              Notifications
+            </CardTitle>
+            <CardDescription>Stay in the loop with your latest milestones and opportunities.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {notifications.length > 0 ? (
+              notifications.map(notification => (
+                <div
+                  key={notification.id}
+                  className="flex items-start gap-3 rounded-lg border border-primary/10 bg-secondary/20 p-3"
+                >
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full ${notification.iconClasses}`}
+                  >
+                    {notification.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{notification.title}</p>
+                    <p className="text-xs text-muted-foreground">{notification.description}</p>
+                    {notification.timestamp && (
+                      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                        {notification.timestamp}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                You're all caught up. Complete gigs or jam with friends to generate new updates.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
