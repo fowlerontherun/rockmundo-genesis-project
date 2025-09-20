@@ -82,6 +82,13 @@ const formatNotificationDate = (isoString: string | null | undefined) => {
   }).format(parsed);
 };
 
+const formatAttributeLabel = (attributeKey: keyof PlayerAttributes) =>
+  attributeKey
+    .toString()
+    .split("_")
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
@@ -117,10 +124,16 @@ const Dashboard = () => {
     "composition"
   ];
   const attributeKeys: (keyof PlayerAttributes)[] = [
-    "creativity",
-    "business",
-    "marketing",
-    "technical"
+    "charisma",
+    "looks",
+    "mental_focus",
+    "musicality",
+    "physical_endurance",
+    "stage_presence",
+    "crowd_engagement",
+    "social_reach",
+    "business_acumen",
+    "marketing_savvy"
   ];
 
   const handleChatTabChange = useCallback((value: string) => {
@@ -682,21 +695,22 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                Professional Attributes
+                Core Attributes
               </CardTitle>
-              <CardDescription>Business and creative prowess</CardDescription>
+              <CardDescription>Signature traits that shape your performances</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {attributeKeys.map(attributeKey => {
                 const value = Number(attributes?.[attributeKey] ?? 0);
                 const percent = Math.min(100, (value / 1000) * 100);
+                const label = formatAttributeLabel(attributeKey);
                 return (
                   <div key={attributeKey} className="space-y-2">
-                    <span className="capitalize font-medium text-sm">{attributeKey}</span>
+                    <span className="font-medium text-sm">{label}</span>
                     <Progress
                       value={percent}
                       className="h-2"
-                      aria-label={`${attributeKey} attribute score ${value} out of 1000`}
+                      aria-label={`${label} attribute score ${value} out of 1000`}
                     />
                   </div>
                 );
