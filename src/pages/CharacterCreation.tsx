@@ -1,46 +1,158 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
 import { useCityOptions } from "@/hooks/useCityOptions";
+import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
-import { ATTRIBUTE_KEYS, type AttributeKey } from "@/utils/attributeProgression";
+import type { Database, Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 const DEFAULT_ATTRIBUTE_VALUE = 5;
+const genderEnumValues = ["female", "male", "non_binary", "other", "prefer_not_to_say"] as const;
 
-const DEFAULT_ATTRIBUTE_DISTRIBUTION: Record<AttributeKey, number> = ATTRIBUTE_KEYS.reduce(
-  (accumulator, key) => {
-    accumulator[key] = DEFAULT_ATTRIBUTE_VALUE;
-    return accumulator;
+const ATTRIBUTE_FORM_KEYS = [
+  "charisma",
+  "looks",
+  "mental_focus",
+  "musicality",
+  "musical_ability",
+  "vocal_talent",
+  "rhythm_sense",
+  "physical_endurance",
+  "stage_presence",
+  "crowd_engagement",
+  "social_reach",
+  "creative_insight",
+  "technical_mastery",
+  "business_acumen",
+  "marketing_savvy",
+] as const;
+
+const ATTRIBUTE_SECTIONS: Array<{
+  title: string;
+  description: string;
+  keys: typeof ATTRIBUTE_FORM_KEYS[number][];
+}> = [
+  {
+    title: "Stage Presence & Spotlight",
+    description: "Define how magnetic your artist feels on stage and across social channels.",
+    keys: ["charisma", "stage_presence", "crowd_engagement", "looks", "social_reach"],
   },
-  {} as Record<AttributeKey, number>,
+  {
+    title: "Musicianship & Focus",
+    description: "Tune the core musical instincts that drive songwriting, rehearsal, and performance.",
+    keys: [
+      "musicality",
+      "musical_ability",
+      "vocal_talent",
+      "rhythm_sense",
+      "creative_insight",
+      "technical_mastery",
+      "mental_focus",
+    ],
+  },
+  {
+    title: "Business Drive & Endurance",
+    description: "Set the hustle factors that impact touring stamina and commercial strategy.",
+    keys: ["business_acumen", "marketing_savvy", "physical_endurance"],
+  },
+];
+
+type AttributeFormKey = (typeof ATTRIBUTE_FORM_KEYS)[number];
+type ProfileRow = Tables<"profiles">;
+type PlayerAttributesRow = Tables<"player_attributes">;
+type PlayerAttributesInsert = TablesInsert<"player_attributes">;
+type ProfileInsert = TablesInsert<"profiles">;
+type ProfileUpdate = TablesUpdate<"profiles">;
+type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+
+const attributeSchema = z.object(
+  ATTRIBUTE_FORM_KEYS.reduce(
+    (accumulator, key) => ({
+      ...accumulator,
+      [key]: z
+        .coerce
+        .number({ invalid_type_error: "Enter a value" })
+        .min(0, "Attributes cannot be negative")
+        .max(1000, "Attributes cap at 1000"),
+    }),
+    {} as Record<AttributeFormKey, z.ZodTypeAny>,
+  ),
 );
 
-type ProfileRow = Tables<"profiles">;
-type PlayerAttributesInsert = TablesInsert<"player_attributes">;
-type ProfileGender = Database["public"]["Enums"]["profile_gender"];
+const optionalUuidSchema = z.union([z.string().uuid(), z.literal("")]);
+
+const characterSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(60, "Name must be under 60 characters"),
+  display_name: z
+    .string()
+    .trim()
+    .min(1, "Stage name is required")
+    .max(80, "Stage name must be under 80 characters"),
+  bio: z
+    .string()
+    .trim()
+    .max(500, "Bio can be up to 500 characters")
+    .optional()
+    .transform(value => value ?? ""),
+  gender: z.enum(genderEnumValues),
+  age: z.coerce.number().int().min(13, "Must be at least 13").max(120, "Must be 120 or younger"),
+  city_of_birth: optionalUuidSchema,
+  current_city_id: optionalUuidSchema,
+  current_location: z
+    .string()
+    .trim()
+    .min(2, "Enter a location or leave as Unknown")
+    .max(120, "Location must be under 120 characters"),
+  health: z.coerce.number().int().min(0, "Health cannot be negative").max(100, "Health tops out at 100"),
+  attributes: attributeSchema,
+});
+
+type CharacterFormValues = z.infer<typeof characterSchema>;
 
 type CharacterCreationLocationState = {
   fromProfile?: boolean;
   profileId?: string | null;
 };
 
-const genderOptions: Array<{ value: ProfileGender; label: string }> = [
-  { value: "female", label: "Female" },
-  { value: "male", label: "Male" },
-  { value: "non_binary", label: "Non-binary" },
-  { value: "other", label: "Other" },
-  { value: "prefer_not_to_say", label: "Prefer not to say" },
-];
+const formatAttributeLabel = (attributeKey: AttributeFormKey) =>
+  attributeKey
+    .toString()
+    .split("_")
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+const buildDefaultAttributes = () =>
+  ATTRIBUTE_FORM_KEYS.reduce(
+    (accumulator, key) => {
+      accumulator[key] = DEFAULT_ATTRIBUTE_VALUE;
+      return accumulator;
+    },
+    {} as Record<AttributeFormKey, number>,
+  );
 
 const CharacterCreation = () => {
   const { user, loading } = useAuth();
@@ -57,29 +169,45 @@ const CharacterCreation = () => {
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
   const locationProfileId =
-    typeof locationState?.profileId === "string" && locationState.profileId.length > 0
-      ? locationState.profileId
-      : null;
+    typeof locationState?.profileId === "string" && locationState.profileId.length > 0 ? locationState.profileId : null;
   const activeProfileId = activeProfile?.id ?? null;
-  const targetProfileId = useMemo(() => {
-    return locationProfileId ?? selectedCharacterId ?? activeProfileId ?? null;
-  }, [locationProfileId, selectedCharacterId, activeProfileId]);
+  const targetProfileId = useMemo(
+    () => locationProfileId ?? selectedCharacterId ?? activeProfileId ?? null,
+    [locationProfileId, selectedCharacterId, activeProfileId],
+  );
+
+  const form = useForm<CharacterFormValues>({
+    resolver: zodResolver(characterSchema),
+    defaultValues: {
+      username: "",
+      display_name: "",
+      bio: "",
+      gender: "prefer_not_to_say",
+      age: 16,
+      city_of_birth: "",
+      current_city_id: "",
+      current_location: "Unknown",
+      health: 100,
+      attributes: buildDefaultAttributes(),
+    },
+  });
 
   const [existingProfile, setExistingProfile] = useState<ProfileRow | null>(null);
-  const [hasExistingAttributes, setHasExistingAttributes] = useState(false);
-  const [needsAttributeBackfill, setNeedsAttributeBackfill] = useState(false);
+  const [existingAttributes, setExistingAttributes] = useState<PlayerAttributesRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
-  const [stageName, setStageName] = useState("");
-  const [bio, setBio] = useState("");
-  const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
-  const [age, setAge] = useState("16");
-  const [cityOfBirthId, setCityOfBirthId] = useState("");
-  const [currentCityId, setCurrentCityId] = useState("");
+  const watchedAttributes = form.watch("attributes");
+  const totalAttributeScore = useMemo(
+    () =>
+      Object.values(watchedAttributes ?? {}).reduce((sum, value) => {
+        const numericValue = Number(value);
+        return Number.isFinite(numericValue) ? sum + numericValue : sum;
+      }, 0),
+    [watchedAttributes],
+  );
 
   useEffect(() => {
     if (!loading && !user) {
@@ -88,138 +216,110 @@ const CharacterCreation = () => {
   }, [loading, user, navigate]);
 
   useEffect(() => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
     const fetchExistingData = async () => {
-      console.log("[CharacterCreation] Starting fetchExistingData", {
-        hasUser: Boolean(user),
-        userId: user?.id ?? null,
-        targetProfileId,
-      });
-
-      if (!user) {
-        console.log("[CharacterCreation] Aborting fetchExistingData because no user is present");
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
       setLoadError(null);
 
-      const scopedProfileId = targetProfileId;
-      const shouldUseProfileScope = Boolean(scopedProfileId);
-
-      console.log("[CharacterCreation] Loading profile data", {
-        scopedProfileId,
-        shouldUseProfileScope,
-      });
-
       try {
+        const shouldUseProfileScope = Boolean(targetProfileId);
         const profileQuery = shouldUseProfileScope
-          ? supabase.from("profiles").select("*").eq("id", scopedProfileId!)
+          ? supabase.from("profiles").select("*").eq("id", targetProfileId!)
           : supabase.from("profiles").select("*").eq("user_id", user.id);
 
-        const { data: profileData, error: profileError, status: profileStatus } = await profileQuery.maybeSingle();
+        const { data: profileData, error: profileError } = await profileQuery.maybeSingle();
 
-        if (profileError && profileStatus !== 406) {
-          console.error("[CharacterCreation] Error retrieving profile", {
-            profileError,
-            profileStatus,
-          });
+        if (profileError) {
           throw profileError;
         }
 
-        if (profileStatus === 406) {
-          console.warn("[CharacterCreation] Multiple profile rows detected for user scope; ignoring results", {
-            profileStatus,
-          });
-        }
-
         const profileRecord = (profileData as ProfileRow | null) ?? null;
-        console.log("[CharacterCreation] Profile load result", {
-          hasProfile: Boolean(profileRecord),
-          profileId: profileRecord?.id ?? null,
-        });
         setExistingProfile(profileRecord);
 
-        if (profileRecord) {
-          setName(profileRecord.username ?? "");
-          setStageName(profileRecord.display_name ?? "");
-          setBio(profileRecord.bio ?? "");
-          setGender(profileRecord.gender ?? "prefer_not_to_say");
-          setAge(
-            typeof profileRecord.age === "number" && Number.isFinite(profileRecord.age)
-              ? String(profileRecord.age)
-              : "16",
-          );
-          setCityOfBirthId(profileRecord.city_of_birth ?? "");
-          const activeCityId = profileRecord.current_city ?? profileRecord.current_city_id ?? null;
-          setCurrentCityId(activeCityId ?? "");
+        const defaultAttributes = buildDefaultAttributes();
 
-          if (profileRecord.id) {
-            console.log("[CharacterCreation] Loading existing attributes", {
-              profileId: profileRecord.id,
-            });
-            const attributeColumns = ["id", ...ATTRIBUTE_KEYS] as const;
-            const { data: attributesData, error: attributesError, status: attributesStatus } = await supabase
-              .from("player_attributes")
-              .select(attributeColumns.join(", "))
-              .eq("profile_id", profileRecord.id)
-              .maybeSingle();
+        if (profileRecord?.id) {
+          const attributeColumns = ["id", "profile_id", "user_id", ...ATTRIBUTE_FORM_KEYS] as const;
+          const { data: attributesData, error: attributesError } = await supabase
+            .from("player_attributes")
+            .select(attributeColumns.join(", "))
+            .eq("profile_id", profileRecord.id)
+            .maybeSingle();
 
-            if (attributesError && attributesStatus !== 406) {
-              console.error("[CharacterCreation] Error retrieving attributes", {
-                attributesError,
-                attributesStatus,
-              });
-              throw attributesError;
-            }
-
-            if (attributesStatus === 406) {
-              console.warn("[CharacterCreation] Multiple attribute rows detected; using first result");
-            }
-
-            const hasAttributes = Boolean(attributesData);
-            const attributeSnapshot = attributesData as Tables<"player_attributes"> | null;
-            const isZeroDistribution = ATTRIBUTE_KEYS.every((key) => {
-              const value = attributeSnapshot?.[key];
-              return typeof value !== "number" || value <= 0;
-            });
-            console.log("[CharacterCreation] Attribute load result", {
-              hasAttributes,
-              isZeroDistribution,
-            });
-            setHasExistingAttributes(hasAttributes);
-            setNeedsAttributeBackfill(hasAttributes && isZeroDistribution);
-          } else {
-            console.warn("[CharacterCreation] Loaded profile without an id; skipping attribute check");
-            setHasExistingAttributes(false);
-            setNeedsAttributeBackfill(false);
+          if (attributesError) {
+            throw attributesError;
           }
+
+          const attributeRecord = (attributesData as PlayerAttributesRow | null) ?? null;
+          setExistingAttributes(attributeRecord);
+
+          if (attributeRecord) {
+            for (const key of ATTRIBUTE_FORM_KEYS) {
+              const rawValue = attributeRecord[key];
+              if (typeof rawValue === "number" && Number.isFinite(rawValue)) {
+                defaultAttributes[key] = rawValue;
+              }
+            }
+          }
+
+          const resolvedCurrentCity = profileRecord.current_city_id ?? profileRecord.current_city ?? "";
+          form.reset({
+            username: profileRecord.username ?? "",
+            display_name: profileRecord.display_name ?? "",
+            bio: profileRecord.bio ?? "",
+            gender: (profileRecord.gender ?? "prefer_not_to_say") as ProfileGender,
+            age: typeof profileRecord.age === "number" && Number.isFinite(profileRecord.age) ? profileRecord.age : 16,
+            city_of_birth: profileRecord.city_of_birth ?? "",
+            current_city_id: resolvedCurrentCity ?? "",
+            current_location: profileRecord.current_location ?? "Unknown",
+            health: typeof profileRecord.health === "number" && Number.isFinite(profileRecord.health)
+              ? profileRecord.health
+              : 100,
+            attributes: defaultAttributes,
+          });
         } else {
-          console.log("[CharacterCreation] No existing profile found; resetting form fields");
-          setName("");
-          setStageName("");
-          setBio("");
-          setGender("prefer_not_to_say");
-          setAge("16");
-          setCityOfBirthId("");
-          setCurrentCityId("");
-          setHasExistingAttributes(false);
-          setNeedsAttributeBackfill(false);
+          setExistingAttributes(null);
+          form.reset({
+            username: "",
+            display_name: "",
+            bio: "",
+            gender: "prefer_not_to_say",
+            age: 16,
+            city_of_birth: "",
+            current_city_id: "",
+            current_location: "Unknown",
+            health: 100,
+            attributes: defaultAttributes,
+          });
         }
       } catch (error) {
         console.error("[CharacterCreation] Failed to load character data", error);
-        setLoadError("We couldn't load your character details. You can still create a new persona.");
         setExistingProfile(null);
-        setHasExistingAttributes(false);
-        setNeedsAttributeBackfill(false);
+        setExistingAttributes(null);
+        setLoadError("We couldn't load your character details. You can still create a new persona.");
+        form.reset({
+          username: "",
+          display_name: "",
+          bio: "",
+          gender: "prefer_not_to_say",
+          age: 16,
+          city_of_birth: "",
+          current_city_id: "",
+          current_location: "Unknown",
+          health: 100,
+          attributes: buildDefaultAttributes(),
+        });
       } finally {
         setIsLoading(false);
-        console.log("[CharacterCreation] Finished fetchExistingData");
       }
     };
 
     void fetchExistingData();
-  }, [user, targetProfileId]);
+  }, [form, targetProfileId, user]);
 
   useEffect(() => {
     if (!loading && !isLoading && existingProfile && !fromProfileFlow) {
@@ -227,186 +327,110 @@ const CharacterCreation = () => {
     }
   }, [loading, isLoading, existingProfile, fromProfileFlow, navigate]);
 
-  const handleSave = async () => {
+  const onSubmit = async (values: CharacterFormValues) => {
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    const trimmedName = name.trim();
-    const trimmedStageName = stageName.trim();
-    const trimmedBio = bio.trim();
-
-    if (!trimmedName) {
-      console.warn("[CharacterCreation] Preventing save due to missing name");
-      toast({
-        title: "Name required",
-        description: "Enter a unique name for your artist persona.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!trimmedStageName) {
-      console.warn("[CharacterCreation] Preventing save due to missing stage name");
-      toast({
-        title: "Stage name required",
-        description: "Enter the stage name you want other players to see.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const parsedAge = Number.parseInt(age, 10);
-    if (!Number.isFinite(parsedAge) || parsedAge < 13 || parsedAge > 120) {
-      console.warn("[CharacterCreation] Preventing save due to invalid age", { age });
-      toast({
-        title: "Invalid age",
-        description: "Age must be between 13 and 120 for your artist persona.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const normalizedBirthCityId = cityOfBirthId.trim().length > 0 ? cityOfBirthId : null;
-    const normalizedCurrentCityId = currentCityId.trim().length > 0 ? currentCityId : null;
-
     setIsSaving(true);
     setSaveError(null);
 
-    console.log("[CharacterCreation] Starting save", {
-      userId: user.id,
-      existingProfileId: existingProfile?.id ?? null,
-      targetProfileId,
-      hasExistingAttributes,
-      needsAttributeBackfill,
-      gender,
-      age: parsedAge,
-      trimmedName,
-      trimmedStageName,
-      normalizedBirthCityId,
-      normalizedCurrentCityId,
-    });
+    const trimmedName = values.username.trim();
+    const trimmedStageName = values.display_name.trim();
+    const trimmedBio = values.bio?.trim() ?? "";
+    const normalizedBio = trimmedBio.length > 0 ? trimmedBio : null;
+    const normalizedBirthCityId = values.city_of_birth.length > 0 ? values.city_of_birth : null;
+    const normalizedCurrentCityId = values.current_city_id.length > 0 ? values.current_city_id : null;
+    const normalizedLocation = values.current_location.trim().length > 0 ? values.current_location.trim() : "Unknown";
 
     try {
       let savedProfile: ProfileRow | null = null;
 
       if (existingProfile) {
-        console.log("[CharacterCreation] Updating existing profile", {
-          profileId: existingProfile.id,
-        });
-        const { data, error } = await supabase
-          .from("profiles")
-          .update({
-            username: trimmedName,
-            display_name: trimmedStageName,
-            bio: trimmedBio.length > 0 ? trimmedBio : null,
-            gender,
-            age: parsedAge,
-            city_of_birth: normalizedBirthCityId,
-            current_city: normalizedCurrentCityId,
-            current_city_id: normalizedCurrentCityId,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingProfile.id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error("[CharacterCreation] Error updating profile", error);
-          throw error;
-        }
-
-        console.log("[CharacterCreation] Updated profile response", data);
-        savedProfile = (data as ProfileRow | null) ?? null;
-      } else {
-        console.log("[CharacterCreation] Creating new profile", {
-          userId: user.id,
-        });
-        const insertPayload: TablesInsert<"profiles"> = {
-          user_id: user.id,
+        const updatePayload: ProfileUpdate = {
           username: trimmedName,
           display_name: trimmedStageName,
-          bio: trimmedBio.length > 0 ? trimmedBio : null,
-          gender,
-          age: parsedAge,
+          bio: normalizedBio,
+          gender: values.gender,
+          age: values.age,
           city_of_birth: normalizedBirthCityId,
           current_city: normalizedCurrentCityId,
           current_city_id: normalizedCurrentCityId,
+          current_location: normalizedLocation,
+          health: values.health,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .update(updatePayload)
+          .eq("id", existingProfile.id)
+          .select("*")
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        savedProfile = (data as ProfileRow | null) ?? null;
+      } else {
+        const insertPayload: ProfileInsert = {
+          user_id: user.id,
+          username: trimmedName,
+          display_name: trimmedStageName,
+          bio: normalizedBio,
+          gender: values.gender,
+          age: values.age,
+          city_of_birth: normalizedBirthCityId,
+          current_city: normalizedCurrentCityId,
+          current_city_id: normalizedCurrentCityId,
+          current_location: normalizedLocation,
+          health: values.health,
         };
 
         const { data, error } = await supabase
           .from("profiles")
           .insert(insertPayload)
-          .select()
+          .select("*")
           .single();
 
         if (error) {
-          console.error("[CharacterCreation] Error inserting profile", error);
           throw error;
         }
 
-        console.log("[CharacterCreation] Inserted profile response", data);
         savedProfile = (data as ProfileRow | null) ?? null;
       }
 
       if (!savedProfile) {
-        console.error("[CharacterCreation] No profile returned after save");
         throw new Error("The profile could not be saved.");
       }
 
       setExistingProfile(savedProfile);
-      setAge(
-        typeof savedProfile.age === "number" && Number.isFinite(savedProfile.age)
-          ? String(savedProfile.age)
-          : String(parsedAge),
-      );
-      setCityOfBirthId(savedProfile.city_of_birth ?? "");
-      const savedCurrentCityId = savedProfile.current_city ?? savedProfile.current_city_id ?? normalizedCurrentCityId;
-      setCurrentCityId(savedCurrentCityId ?? "");
 
-      const shouldEnsureAttributes = Boolean(savedProfile.id) && (!hasExistingAttributes || needsAttributeBackfill);
+      const attributePayload: PlayerAttributesInsert = {
+        user_id: user.id,
+        profile_id: savedProfile.id,
+      };
 
-      if (shouldEnsureAttributes && savedProfile.id) {
-        console.log("[CharacterCreation] Ensuring default attributes", {
-          profileId: savedProfile.id,
-          hadExistingAttributes: hasExistingAttributes,
-          needsAttributeBackfill,
-        });
-        const attributePayload: PlayerAttributesInsert = {
-          user_id: user.id,
-          profile_id: savedProfile.id,
-          ...DEFAULT_ATTRIBUTE_DISTRIBUTION,
-        };
-
-        const { error: attributesError } = await supabase
-          .from("player_attributes")
-          .upsert(attributePayload, { onConflict: "profile_id" })
-          .select()
-          .maybeSingle();
-
-        if (attributesError) {
-          console.error("[CharacterCreation] Error upserting attributes", attributesError);
-          throw attributesError;
-        }
-
-        setHasExistingAttributes(true);
-        setNeedsAttributeBackfill(false);
-        console.log("[CharacterCreation] Default attributes ensured successfully");
-      } else if (hasExistingAttributes) {
-        console.log("[CharacterCreation] Skipping default attribute creation because attributes already exist", {
-          needsAttributeBackfill,
-        });
+      for (const key of ATTRIBUTE_FORM_KEYS) {
+        attributePayload[key] = values.attributes[key];
       }
 
-      console.log("[CharacterCreation] Refreshing characters after save");
+      const { data: attributesData, error: attributesError } = await supabase
+        .from("player_attributes")
+        .upsert(attributePayload, { onConflict: "profile_id" })
+        .select("*")
+        .maybeSingle();
+
+      if (attributesError) {
+        throw attributesError;
+      }
+
+      setExistingAttributes((attributesData as PlayerAttributesRow | null) ?? null);
+
       await refreshCharacters();
-      console.log("[CharacterCreation] Characters refreshed successfully");
-      console.log("[CharacterCreation] Setting active character", {
-        profileId: savedProfile.id,
-      });
-      setActiveCharacter(savedProfile.id);
-      console.log("[CharacterCreation] Active character updated");
+      await setActiveCharacter(savedProfile.id);
 
       toast({
         title: "Character saved",
@@ -414,7 +438,6 @@ const CharacterCreation = () => {
       });
 
       window.dispatchEvent(new CustomEvent("profile-updated"));
-      console.log("[CharacterCreation] Emitted profile-updated event and navigating to dashboard");
       navigate("/dashboard");
     } catch (error) {
       console.error("[CharacterCreation] Failed to save character", error);
@@ -422,8 +445,8 @@ const CharacterCreation = () => {
         typeof error === "string"
           ? error
           : error instanceof Error
-          ? error.message
-          : "An unknown error occurred while saving.";
+            ? error.message
+            : "An unknown error occurred while saving.";
       setSaveError(message);
       toast({
         title: "Could not save character",
@@ -462,7 +485,8 @@ const CharacterCreation = () => {
         <CardHeader>
           <CardTitle>Create Your Character</CardTitle>
           <CardDescription>
-            Provide the essentials for your artist persona. Attributes will start at 5/1000 and can grow through play.
+            Provide the essentials for your artist persona. These details map directly to your in-game profile and starting
+            attributes.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -480,132 +504,248 @@ const CharacterCreation = () => {
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Enter your artist name"
-            />
-            <p className="text-sm text-muted-foreground">
-              This is your unique handle within Rockmundo. It must be distinct from other players.
-            </p>
-          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profile Handle</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Unique artist handle" {...field} disabled={isSaving} />
+                      </FormControl>
+                      <FormDescription>This must be unique and is used for identification in-game.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="display_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stage Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="What do fans call you on stage?" {...field} disabled={isSaving} />
+                      </FormControl>
+                      <FormDescription>Displayed publicly across leaderboards and venues.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="stage-name">Stage Name</Label>
-            <Input
-              id="stage-name"
-              value={stageName}
-              onChange={(event) => setStageName(event.target.value)}
-              placeholder="What do fans call you on stage?"
-            />
-            <p className="text-sm text-muted-foreground">Displayed publicly across leaderboards and venues.</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(event) => setBio(event.target.value)}
-              placeholder="Share a short backstory for your artist persona."
-              rows={4}
-            />
-            <p className="text-sm text-muted-foreground">Let the world know who you are and what drives your sound.</p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select value={gender} onValueChange={(value) => setGender(value as ProfileGender)}>
-                <SelectTrigger id="gender">
-                  <SelectValue placeholder="Select a gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  {genderOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="age">Age</Label>
-              <Input
-                id="age"
-                type="number"
-                min={13}
-                max={120}
-                value={age}
-                onChange={(event) => setAge(event.target.value)}
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Share a short backstory for your artist persona."
+                        rows={4}
+                        {...field}
+                        disabled={isSaving}
+                      />
+                    </FormControl>
+                    <FormDescription>Let the world know who you are and what drives your sound.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="birth-city">City of Birth</Label>
-              <Select
-                value={cityOfBirthId}
-                onValueChange={(value) => setCityOfBirthId(value)}
-                disabled={cityOptionsLoading}
-              >
-                <SelectTrigger id="birth-city">
-                  <SelectValue
-                    placeholder={cityOptionsLoading ? "Loading cities..." : "Select a birth city"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Unspecified</SelectItem>
-                  {cityOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {cityOptionsError && <p className="text-xs text-destructive">{cityOptionsError}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="current-city">Current City</Label>
-              <Select
-                value={currentCityId}
-                onValueChange={(value) => setCurrentCityId(value)}
-                disabled={cityOptionsLoading}
-              >
-                <SelectTrigger id="current-city">
-                  <SelectValue
-                    placeholder={cityOptionsLoading ? "Loading cities..." : "Select a current city"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Unspecified</SelectItem>
-                  {cityOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          <Alert>
-            <AlertTitle>Attribute defaults</AlertTitle>
-            <AlertDescription>
-              All performance attributes start at 5 out of 1000. Grow them by practicing, performing, and progressing in the
-              world.
-            </AlertDescription>
-          </Alert>
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isSaving}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {genderEnumValues.map(option => (
+                            <SelectItem key={option} value={option}>
+                              {option
+                                .split("_")
+                                .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+                                .join(" ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Button onClick={handleSave} disabled={isSaving} className="bg-gradient-primary">
-              {isSaving ? "Saving…" : "Save Character"}
-            </Button>
-            <Button onClick={handleCancel} variant="outline" disabled={isSaving}>
-              Cancel
-            </Button>
-          </div>
+                <FormField
+                  control={form.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={13} max={120} {...field} disabled={isSaving} />
+                      </FormControl>
+                      <FormDescription>Age must be between 13 and 120.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="city_of_birth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City of Birth</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                        disabled={cityOptionsLoading || isSaving}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={cityOptionsLoading ? "Loading cities..." : "Select a birth city"}
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Unspecified</SelectItem>
+                          {cityOptions.map(option => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {cityOptionsError && <p className="text-xs text-destructive">{cityOptionsError}</p>}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="current_city_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current City</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                        disabled={cityOptionsLoading || isSaving}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={cityOptionsLoading ? "Loading cities..." : "Select a current city"}
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Unspecified</SelectItem>
+                          {cityOptions.map(option => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="current_location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. London Rehearsal Studio" {...field} disabled={isSaving} />
+                      </FormControl>
+                      <FormDescription>Displayed on travel timelines and event invites.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="health"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Health</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} max={100} {...field} disabled={isSaving} />
+                      </FormControl>
+                      <FormDescription>Impacts touring stamina and wellness activities.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Allocate your starting attributes. Each score mirrors the values shown on the profile attributes tab. Total
+                    starting score: <span className="font-semibold text-primary">{totalAttributeScore}</span>
+                  </p>
+                </div>
+
+                {ATTRIBUTE_SECTIONS.map(section => (
+                  <div key={section.title} className="space-y-4 rounded-lg border border-border bg-card/50 p-4">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold">{section.title}</h3>
+                      <p className="text-sm text-muted-foreground">{section.description}</p>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {section.keys.map(attributeKey => (
+                        <FormField
+                          key={attributeKey}
+                          control={form.control}
+                          name={`attributes.${attributeKey}` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{formatAttributeLabel(attributeKey)}</FormLabel>
+                              <FormControl>
+                                <Input type="number" min={0} max={1000} step={1} {...field} disabled={isSaving} />
+                              </FormControl>
+                              <FormDescription>Higher values unlock more opportunities in early gameplay.</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button type="submit" disabled={isSaving} className="bg-gradient-primary">
+                  {isSaving ? "Saving…" : "Save Character"}
+                </Button>
+                <Button onClick={handleCancel} type="button" variant="outline" disabled={isSaving}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
