@@ -1,5 +1,6 @@
 import { useMemo, type ElementType } from "react";
 import {
+  Cake,
   CalendarDays,
   MapPin,
   Mic,
@@ -34,6 +35,7 @@ const sanitizeSkillLabel = (label: string) =>
 
 const PROFILE_META_FIELDS: Array<{ key: keyof PlayerProfile; label: string; icon: ElementType }> = [
   { key: "current_location", label: "Hometown", icon: MapPin },
+  { key: "age", label: "Age", icon: Cake },
   { key: "genre", label: "Primary Genre", icon: Music },
   { key: "fame", label: "Fame", icon: Sparkles },
   { key: "fans", label: "Fans", icon: Users },
