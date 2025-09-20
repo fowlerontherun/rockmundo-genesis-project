@@ -27,7 +27,7 @@ const DEFAULT_FORM_STATE: ProfileFormState = {
 const sanitizeInput = (value: string) => value.replace(/\s+/g, " ");
 
 const Profile = () => {
-  const { profile, loading, error, upsertProfileWithDefaults, currentCity } = useGameData();
+  const { profile, loading, error, attributes, upsertProfileWithDefaults, currentCity } = useGameData();
   const { toast } = useToast();
 
   const [formState, setFormState] = useState<ProfileFormState>(DEFAULT_FORM_STATE);
@@ -84,6 +84,7 @@ const Profile = () => {
         name: trimmedName,
         stageName: trimmedStageName,
         bio: trimmedBio,
+        ...(attributes ? { attributes } : {}),
       });
 
       toast({
