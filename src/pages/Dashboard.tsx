@@ -248,13 +248,13 @@ const Dashboard = () => {
       }
     };
 
-    // City loading simplified - city_of_birth not in schema
+    // Initialize the birth city label before profile data loads
     setBirthCityLabel(null);
 
     return () => {
       isMounted = false;
     };
-  }, []); // Simplified - city_of_birth not in schema
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

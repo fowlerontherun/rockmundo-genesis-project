@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import { useCityOptions } from "@/hooks/useCityOptions";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Tables, TablesInsert } from "@/integrations/supabase/types";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "@/utils/attributeProgression";
@@ -47,6 +48,11 @@ const CharacterCreation = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { refreshCharacters, setActiveCharacter, selectedCharacterId, profile: activeProfile } = useGameData();
+  const {
+    options: cityOptions,
+    loading: cityOptionsLoading,
+    error: cityOptionsError,
+  } = useCityOptions();
 
   const locationState = location.state as CharacterCreationLocationState | null;
   const fromProfileFlow = Boolean(locationState?.fromProfile);
@@ -71,6 +77,9 @@ const CharacterCreation = () => {
   const [stageName, setStageName] = useState("");
   const [bio, setBio] = useState("");
   const [gender, setGender] = useState<ProfileGender>("prefer_not_to_say");
+  const [age, setAge] = useState("16");
+  const [cityOfBirthId, setCityOfBirthId] = useState("");
+  const [currentCityId, setCurrentCityId] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -136,6 +145,14 @@ const CharacterCreation = () => {
           setStageName(profileRecord.display_name ?? "");
           setBio(profileRecord.bio ?? "");
           setGender(profileRecord.gender ?? "prefer_not_to_say");
+          setAge(
+            typeof profileRecord.age === "number" && Number.isFinite(profileRecord.age)
+              ? String(profileRecord.age)
+              : "16",
+          );
+          setCityOfBirthId(profileRecord.city_of_birth ?? "");
+          const activeCityId = profileRecord.current_city ?? profileRecord.current_city_id ?? null;
+          setCurrentCityId(activeCityId ?? "");
 
           if (profileRecord.id) {
             console.log("[CharacterCreation] Loading existing attributes", {
@@ -183,6 +200,9 @@ const CharacterCreation = () => {
           setStageName("");
           setBio("");
           setGender("prefer_not_to_say");
+          setAge("16");
+          setCityOfBirthId("");
+          setCurrentCityId("");
           setHasExistingAttributes(false);
           setNeedsAttributeBackfill(false);
         }
@@ -237,6 +257,20 @@ const CharacterCreation = () => {
       return;
     }
 
+    const parsedAge = Number.parseInt(age, 10);
+    if (!Number.isFinite(parsedAge) || parsedAge < 13 || parsedAge > 120) {
+      console.warn("[CharacterCreation] Preventing save due to invalid age", { age });
+      toast({
+        title: "Invalid age",
+        description: "Age must be between 13 and 120 for your artist persona.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const normalizedBirthCityId = cityOfBirthId.trim().length > 0 ? cityOfBirthId : null;
+    const normalizedCurrentCityId = currentCityId.trim().length > 0 ? currentCityId : null;
+
     setIsSaving(true);
     setSaveError(null);
 
@@ -247,8 +281,11 @@ const CharacterCreation = () => {
       hasExistingAttributes,
       needsAttributeBackfill,
       gender,
+      age: parsedAge,
       trimmedName,
       trimmedStageName,
+      normalizedBirthCityId,
+      normalizedCurrentCityId,
     });
 
     try {
@@ -265,6 +302,10 @@ const CharacterCreation = () => {
             display_name: trimmedStageName,
             bio: trimmedBio.length > 0 ? trimmedBio : null,
             gender,
+            age: parsedAge,
+            city_of_birth: normalizedBirthCityId,
+            current_city: normalizedCurrentCityId,
+            current_city_id: normalizedCurrentCityId,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingProfile.id)
@@ -288,6 +329,10 @@ const CharacterCreation = () => {
           display_name: trimmedStageName,
           bio: trimmedBio.length > 0 ? trimmedBio : null,
           gender,
+          age: parsedAge,
+          city_of_birth: normalizedBirthCityId,
+          current_city: normalizedCurrentCityId,
+          current_city_id: normalizedCurrentCityId,
         };
 
         const { data, error } = await supabase
@@ -311,6 +356,14 @@ const CharacterCreation = () => {
       }
 
       setExistingProfile(savedProfile);
+      setAge(
+        typeof savedProfile.age === "number" && Number.isFinite(savedProfile.age)
+          ? String(savedProfile.age)
+          : String(parsedAge),
+      );
+      setCityOfBirthId(savedProfile.city_of_birth ?? "");
+      const savedCurrentCityId = savedProfile.current_city ?? savedProfile.current_city_id ?? normalizedCurrentCityId;
+      setCurrentCityId(savedCurrentCityId ?? "");
 
       const shouldEnsureAttributes = Boolean(savedProfile.id) && (!hasExistingAttributes || needsAttributeBackfill);
 
@@ -463,7 +516,7 @@ const CharacterCreation = () => {
             <p className="text-sm text-muted-foreground">Let the world know who you are and what drives your sound.</p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
               <Select value={gender} onValueChange={(value) => setGender(value as ProfileGender)}>
@@ -473,6 +526,62 @@ const CharacterCreation = () => {
                 <SelectContent>
                   {genderOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="age">Age</Label>
+              <Input
+                id="age"
+                type="number"
+                min={13}
+                max={120}
+                value={age}
+                onChange={(event) => setAge(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="birth-city">City of Birth</Label>
+              <Select
+                value={cityOfBirthId}
+                onValueChange={(value) => setCityOfBirthId(value)}
+                disabled={cityOptionsLoading}
+              >
+                <SelectTrigger id="birth-city">
+                  <SelectValue
+                    placeholder={cityOptionsLoading ? "Loading cities..." : "Select a birth city"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unspecified</SelectItem>
+                  {cityOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {cityOptionsError && <p className="text-xs text-destructive">{cityOptionsError}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="current-city">Current City</Label>
+              <Select
+                value={currentCityId}
+                onValueChange={(value) => setCurrentCityId(value)}
+                disabled={cityOptionsLoading}
+              >
+                <SelectTrigger id="current-city">
+                  <SelectValue
+                    placeholder={cityOptionsLoading ? "Loading cities..." : "Select a current city"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unspecified</SelectItem>
+                  {cityOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
                       {option.label}
                     </SelectItem>
                   ))}
