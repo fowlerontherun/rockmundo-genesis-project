@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Upload } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
@@ -78,6 +79,12 @@ const MyCharacterEdit = () => {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const [usernameInput, setUsernameInput] = useState(profile?.username ?? "");
+  const [displayNameInput, setDisplayNameInput] = useState(profile?.display_name ?? "");
+  const [bioInput, setBioInput] = useState(profile?.bio ?? "");
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   const availableXp = useMemo(() => {
     const rawValue = (xpWallet as XpWalletRow | null)?.xp_balance ?? 0;
     const numericValue = Number(rawValue ?? 0);
@@ -128,6 +135,17 @@ const MyCharacterEdit = () => {
     setAllocationInputs(createEmptyAllocation());
     setAllocationError(null);
   };
+
+  const resetProfileForm = useCallback(() => {
+    setUsernameInput(profile?.username ?? "");
+    setDisplayNameInput(profile?.display_name ?? "");
+    setBioInput(profile?.bio ?? "");
+    setProfileError(null);
+  }, [profile]);
+
+  useEffect(() => {
+    resetProfileForm();
+  }, [resetProfileForm]);
 
   const handleAllocationSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -214,6 +232,59 @@ const MyCharacterEdit = () => {
       });
     } finally {
       setIsAllocating(false);
+    }
+  };
+
+  const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!profile) {
+      setProfileError("No profile available to update yet.");
+      return;
+    }
+
+    const nextUsername = usernameInput.trim();
+    const nextDisplayName = displayNameInput.trim();
+    const nextBio = bioInput.trim();
+
+    if (nextUsername.length === 0 || nextDisplayName.length === 0) {
+      setProfileError("Username and display name are required.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setProfileError(null);
+
+    try {
+      await updateProfile({
+        username: nextUsername,
+        display_name: nextDisplayName,
+        bio: nextBio.length > 0 ? nextBio : null,
+      });
+      await refetch();
+
+      setUsernameInput(nextUsername);
+      setDisplayNameInput(nextDisplayName);
+      setBioInput(nextBio);
+
+      toast({
+        title: "Profile updated",
+        description: "Your character details have been saved.",
+      });
+    } catch (profileUpdateError) {
+      const message =
+        profileUpdateError instanceof Error
+          ? profileUpdateError.message
+          : "We couldn't update your profile right now.";
+
+      setProfileError(message);
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: message,
+      });
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -304,88 +375,168 @@ const MyCharacterEdit = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Skill allocation</CardTitle>
-            <CardDescription>Distribute available XP to grow your abilities.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAllocationSubmit} className="space-y-6">
-              <div className="rounded-md border bg-muted/30 p-4">
-                <p className="text-sm text-muted-foreground">Available XP</p>
-                <p className="text-2xl font-semibold">{formatNumber(availableXp)}</p>
-                <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                  <span>Allocated: {formatNumber(totalAllocated)}</span>
-                  <span>Remaining: {formatNumber(remainingXp)}</span>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile details</CardTitle>
+              <CardDescription>Update your username, display name, and bio.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleProfileSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-username">Username</Label>
+                  <Input
+                    id="profile-username"
+                    value={usernameInput}
+                    onChange={(event) => setUsernameInput(event.target.value)}
+                    placeholder="rockstar123"
+                    autoComplete="username"
+                    disabled={isSavingProfile}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Usernames help fans find you — keep it short and memorable.
+                  </p>
                 </div>
-              </div>
 
-              <div className="grid gap-4">
-                {SKILL_KEYS.map((key) => {
-                  const currentValue = readSkillValue(key);
-                  return (
-                    <div
-                      key={key}
-                      className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
-                    >
-                      <div>
-                        <Label htmlFor={`skill-${key}`}>{SKILL_LABELS[key]}</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Current: <span className="font-medium">{formatNumber(currentValue)}</span>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 sm:justify-end">
-                        <Input
-                          id={`skill-${key}`}
-                          type="number"
-                          inputMode="numeric"
-                          min={0}
-                          step={1}
-                          value={allocationInputs[key]}
-                          onChange={(event) => handleAllocationChange(key, event.target.value)}
-                          className="w-24"
-                        />
-                        <span className="text-sm text-muted-foreground">XP</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {allocationError ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Allocation issue</AlertTitle>
-                  <AlertDescription>{allocationError}</AlertDescription>
-                </Alert>
-              ) : null}
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Updates take effect immediately after saving.</span>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-display-name">Display name</Label>
+                  <Input
+                    id="profile-display-name"
+                    value={displayNameInput}
+                    onChange={(event) => setDisplayNameInput(event.target.value)}
+                    placeholder="The Midnight Echo"
+                    autoComplete="name"
+                    disabled={isSavingProfile}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This is the name shown throughout Rockmundo.
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={resetAllocation} disabled={isAllocating}>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile-bio">Bio</Label>
+                  <Textarea
+                    id="profile-bio"
+                    value={bioInput}
+                    onChange={(event) => setBioInput(event.target.value)}
+                    placeholder="Share your origin story, influences, and aspirations."
+                    rows={4}
+                    disabled={isSavingProfile}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A compelling bio helps labels and fans connect with your journey.
+                  </p>
+                </div>
+
+                {profileError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Profile update issue</AlertTitle>
+                    <AlertDescription>{profileError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={resetProfileForm} disabled={isSavingProfile}>
                     Reset
                   </Button>
-                  <Button
-                    type="submit"
-                    disabled={isAllocating || totalAllocated === 0 || totalAllocated > availableXp}
-                  >
-                    {isAllocating ? (
+                  <Button type="submit" disabled={isSavingProfile}>
+                    {isSavingProfile ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Saving...
                       </>
                     ) : (
-                      "Allocate XP"
+                      "Save changes"
                     )}
                   </Button>
                 </div>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Skill allocation</CardTitle>
+              <CardDescription>Distribute available XP to grow your abilities.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAllocationSubmit} className="space-y-6">
+                <div className="rounded-md border bg-muted/30 p-4">
+                  <p className="text-sm text-muted-foreground">Available XP</p>
+                  <p className="text-2xl font-semibold">{formatNumber(availableXp)}</p>
+                  <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                    <span>Allocated: {formatNumber(totalAllocated)}</span>
+                    <span>Remaining: {formatNumber(remainingXp)}</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-4">
+                  {SKILL_KEYS.map((key) => {
+                    const currentValue = readSkillValue(key);
+                    return (
+                      <div
+                        key={key}
+                        className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+                      >
+                        <div>
+                          <Label htmlFor={`skill-${key}`}>{SKILL_LABELS[key]}</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Current: <span className="font-medium">{formatNumber(currentValue)}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 sm:justify-end">
+                          <Input
+                            id={`skill-${key}`}
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            step={1}
+                            value={allocationInputs[key]}
+                            onChange={(event) => handleAllocationChange(key, event.target.value)}
+                            className="w-24"
+                          />
+                          <span className="text-sm text-muted-foreground">XP</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {allocationError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Allocation issue</AlertTitle>
+                    <AlertDescription>{allocationError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Updates take effect immediately after saving.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={resetAllocation} disabled={isAllocating}>
+                      Reset
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isAllocating || totalAllocated === 0 || totalAllocated > availableXp}
+                    >
+                      {isAllocating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Allocate XP"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-6">
           <Card>
