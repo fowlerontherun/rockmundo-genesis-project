@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PlayerXpWallet } from "@/hooks/useGameData";
 
-export type ProgressionAction = "award_action_xp" | "award_special_xp";
+export type ProgressionAction = "award_action_xp" | "award_special_xp" | "admin_award_special_xp";
 
 export interface ProgressionProfileSummary {
   id: string;
@@ -85,6 +85,63 @@ export const awardSpecialXp = async ({
     metadata,
     event_id: uniqueEventId,
   };
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to award experience points");
+  }
+
+  return data;
+};
+
+export interface AdminAwardSpecialXpInput {
+  amount: number;
+  reason: string;
+  profileIds?: string[];
+  applyToAll?: boolean;
+  metadata?: Record<string, unknown>;
+  uniqueEventId?: string;
+}
+
+export const adminAwardSpecialXp = async ({
+  amount,
+  reason,
+  profileIds = [],
+  applyToAll = false,
+  metadata = {},
+  uniqueEventId,
+}: AdminAwardSpecialXpInput): Promise<ProgressionResponse> => {
+  const normalizedProfileIds = Array.from(
+    new Set(
+      profileIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0),
+    ),
+  );
+
+  const payload: Record<string, unknown> = {
+    action: "admin_award_special_xp" as const,
+    amount,
+    reason,
+    metadata,
+  };
+
+  if (applyToAll) {
+    payload.apply_to_all = true;
+  }
+
+  if (normalizedProfileIds.length > 0) {
+    payload.target_profile_ids = normalizedProfileIds;
+  }
+
+  if (uniqueEventId) {
+    payload.event_id = uniqueEventId;
+  }
 
   const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
     body: payload,

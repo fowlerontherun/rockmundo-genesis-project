@@ -32,7 +32,8 @@ type ProgressionAction =
   | "weekly_bonus"
   | "buy_attribute_star"
   | "respec_attributes"
-  | "award_special_xp";
+  | "award_special_xp"
+  | "admin_award_special_xp";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -80,6 +81,13 @@ type PointAvailability = {
   skill_points_available: number;
 };
 
+type TargetProfileSummary = {
+  profile_id: string;
+  user_id: string;
+  username: string | null;
+  display_name: string | null;
+};
+
 type NormalizedResponse = {
   success: true;
   action: ProgressionAction;
@@ -116,6 +124,7 @@ const LEDGER_EVENT_TYPES: Record<ProgressionAction, string> = {
   buy_attribute_star: "attribute_purchase",
   respec_attributes: "attribute_respec",
   award_special_xp: "special_xp",
+  admin_award_special_xp: "special_xp",
 };
 
 async function progressionHandler(req: Request): Promise<Response> {
@@ -373,6 +382,81 @@ const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: 
       result,
     };
   },
+
+  admin_award_special_xp: async (ctx, payload) => {
+    await assertAdminPrivileges(ctx.client, ctx.user.id);
+
+    const xpAmount = resolveNumber(payload.xp ?? payload.amount ?? payload.bonus);
+    if (!Number.isFinite(xpAmount) || xpAmount <= 0) {
+      throw new HttpError(400, "Admin XP grants require a positive XP amount");
+    }
+
+    const targetScope = resolveString(payload.target_scope ?? payload.scope);
+    const applyToAll = payload.apply_to_all === true
+      || payload.applyToAll === true
+      || targetScope === "all";
+
+    const profileIds = normalizeProfileIdPayload(payload);
+    const targets = await resolveTargetProfiles(ctx.client, {
+      applyToAll,
+      profileIds,
+    });
+
+    if (targets.length === 0) {
+      throw new HttpError(
+        400,
+        applyToAll
+          ? "No player profiles are available to receive XP"
+          : "No matching player profiles were found for the grant",
+        { apply_to_all: applyToAll, profile_ids: profileIds },
+      );
+    }
+
+    const reason = resolveString(payload.reason ?? payload.description ?? payload.context) ?? "Admin XP grant";
+    const metadataBase = buildMetadata(payload, {
+      reason,
+      awarded_by: ctx.user.id,
+      target_scope: applyToAll ? "all" : "selected",
+      unique_event_id: resolveUniqueEventId(payload) ?? null,
+    });
+
+    const awardedTargets: TargetProfileSummary[] = [];
+
+    for (const target of targets) {
+      const metadata = {
+        ...metadataBase,
+        target_profile_id: target.profile_id,
+        target_user_id: target.user_id,
+      };
+
+      await callProgressionProcedure<JsonRecord>(ctx.client, "progression_award_special_xp", {
+        p_profile_id: target.profile_id,
+        p_amount: xpAmount,
+        p_bonus_type: "admin_award",
+        p_metadata: metadata,
+      });
+
+      awardedTargets.push(target);
+    }
+
+    if (awardedTargets.length === 0) {
+      throw new HttpError(500, "Failed to apply XP grant to the selected players");
+    }
+
+    const notificationMessage = buildNotificationMessage(xpAmount, reason);
+    await createXpNotifications(ctx.client, awardedTargets, notificationMessage);
+
+    return {
+      message: `Granted ${xpAmount} XP to ${awardedTargets.length} player${awardedTargets.length === 1 ? "" : "s"}.`,
+      result: {
+        amount: xpAmount,
+        reason,
+        awarded_count: awardedTargets.length,
+        target_profile_ids: awardedTargets.map((target) => target.profile_id),
+        apply_to_all: applyToAll,
+      },
+    };
+  },
 };
 
 function resolveAction(url: string, payloadAction: unknown): ProgressionAction | null {
@@ -539,6 +623,7 @@ async function computeActionCooldowns(client: SupabaseClient<Database>, profileI
     award_special_xp: 0,
     buy_attribute_star: 0,
     respec_attributes: 0,
+    admin_award_special_xp: 0,
   };
 
   const weeklyPromise = client
@@ -632,6 +717,190 @@ function resolveString(value: unknown): string | undefined {
     return trimmed.length > 0 ? trimmed : undefined;
   }
   return undefined;
+}
+
+async function assertAdminPrivileges(client: SupabaseClient<Database>, userId: string): Promise<void> {
+  const { data, error } = await client
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (error) {
+    throw new HttpError(500, "Unable to verify admin privileges", error);
+  }
+
+  if (!data) {
+    throw new HttpError(403, "Admin privileges are required to grant XP bonuses");
+  }
+}
+
+function normalizeProfileIdPayload(payload: JsonRecord): string[] {
+  const uniqueIds = new Set<string>();
+
+  const addId = (candidate: unknown) => {
+    const value = resolveString(candidate);
+    if (value) {
+      uniqueIds.add(value);
+    }
+  };
+
+  const addFromDelimitedString = (value: string) => {
+    const segments = value.split(",");
+    if (segments.length === 1) {
+      addId(value);
+      return;
+    }
+
+    for (const segment of segments) {
+      addId(segment);
+    }
+  };
+
+  const addCandidate = (candidate: unknown) => {
+    if (typeof candidate === "string") {
+      addFromDelimitedString(candidate);
+      return;
+    }
+
+    if (Array.isArray(candidate)) {
+      for (const entry of candidate) {
+        if (typeof entry === "string") {
+          addFromDelimitedString(entry);
+        } else if (entry && typeof entry === "object" && "profile_id" in entry) {
+          addId((entry as JsonRecord).profile_id);
+        } else if (entry && typeof entry === "object" && "id" in entry) {
+          addId((entry as JsonRecord).id);
+        }
+      }
+    }
+  };
+
+  const arrayCandidates = [
+    payload.profile_ids,
+    payload.target_profile_ids,
+    payload.profileIds,
+    payload.targetProfileIds,
+  ];
+
+  for (const candidate of arrayCandidates) {
+    addCandidate(candidate);
+  }
+
+  const singleCandidates = [
+    payload.profile_id,
+    payload.target_profile_id,
+    payload.profileId,
+    payload.targetProfileId,
+  ];
+
+  for (const candidate of singleCandidates) {
+    addId(candidate);
+  }
+
+  return Array.from(uniqueIds);
+}
+
+async function resolveTargetProfiles(
+  client: SupabaseClient<Database>,
+  options: { applyToAll: boolean; profileIds: string[] },
+): Promise<TargetProfileSummary[]> {
+  if (options.applyToAll) {
+    const { data, error } = await client
+      .from("profiles")
+      .select("id, user_id, username, display_name");
+
+    if (error) {
+      throw new HttpError(500, "Failed to load player profiles", error);
+    }
+
+    return (Array.isArray(data) ? data : [])
+      .filter((row): row is { id: string; user_id: string; username: string | null; display_name: string | null } => {
+        return typeof row?.id === "string" && typeof row?.user_id === "string";
+      })
+      .map((row) => ({
+        profile_id: row.id,
+        user_id: row.user_id,
+        username: typeof row.username === "string" ? row.username : null,
+        display_name: typeof row.display_name === "string" ? row.display_name : null,
+      }));
+  }
+
+  if (!options.profileIds || options.profileIds.length === 0) {
+    return [];
+  }
+
+  const uniqueIds = Array.from(new Set(options.profileIds));
+  const { data, error } = await client
+    .from("profiles")
+    .select("id, user_id, username, display_name")
+    .in("id", uniqueIds);
+
+  if (error) {
+    throw new HttpError(500, "Failed to load target player profiles", error);
+  }
+
+  const rows = (Array.isArray(data) ? data : []).filter((row): row is {
+    id: string;
+    user_id: string;
+    username: string | null;
+    display_name: string | null;
+  } => typeof row?.id === "string" && typeof row?.user_id === "string");
+
+  const results = rows.map((row) => ({
+    profile_id: row.id,
+    user_id: row.user_id,
+    username: typeof row.username === "string" ? row.username : null,
+    display_name: typeof row.display_name === "string" ? row.display_name : null,
+  }));
+
+  const foundIds = new Set(results.map((row) => row.profile_id));
+  const missingIds = uniqueIds.filter((id) => !foundIds.has(id));
+
+  if (missingIds.length > 0) {
+    throw new HttpError(404, "One or more player profiles could not be found", { missing_profile_ids: missingIds });
+  }
+
+  return results;
+}
+
+function buildNotificationMessage(amount: number, reason: string): string {
+  const formatter = new Intl.NumberFormat("en-US");
+  const formattedAmount = formatter.format(Math.round(amount));
+  const trimmedReason = reason.length > 250 ? `${reason.slice(0, 247)}...` : reason;
+  return `You received ${formattedAmount} XP: ${trimmedReason}`;
+}
+
+async function createXpNotifications(
+  client: SupabaseClient<Database>,
+  targets: TargetProfileSummary[],
+  message: string,
+): Promise<void> {
+  const notifications: { user_id: string; type: string; message: string }[] = [];
+  const seenUsers = new Set<string>();
+
+  for (const target of targets) {
+    if (!target.user_id || seenUsers.has(target.user_id)) {
+      continue;
+    }
+
+    seenUsers.add(target.user_id);
+    notifications.push({
+      user_id: target.user_id,
+      type: "system",
+      message,
+    });
+  }
+
+  if (notifications.length === 0) {
+    return;
+  }
+
+  const { error } = await client.from("notifications").insert(notifications);
+  if (error) {
+    throw new HttpError(500, "Failed to create XP notifications", error);
+  }
 }
 
 async function enforceLedgerRules(
