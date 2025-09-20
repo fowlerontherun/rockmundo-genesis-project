@@ -41,6 +41,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData, type PlayerAttributes, type PlayerSkills } from "@/hooks/useGameData";
 import { useEquippedClothing } from "@/hooks/useEquippedClothing";
 import { useFriendships, type FriendProfileSummary } from "@/hooks/useFriendships";
+import { useCityOptions } from "@/hooks/useCityOptions";
 import {
   Select,
   SelectContent,
@@ -80,6 +81,8 @@ type ProfileFormState = {
   bio: string;
   gender: ProfileGender;
   age: string;
+  city_of_birth: string | null;
+  current_city: string | null;
 };
 
 const instrumentSkillKeys: (keyof PlayerSkills)[] = [
@@ -128,6 +131,7 @@ const Profile = () => {
     profile,
     skills,
     attributes,
+    currentCity,
     updateProfile,
     freshWeeklyBonusAvailable,
     xpLedger,
@@ -136,6 +140,11 @@ const Profile = () => {
     refetch,
   } = useGameData();
   const { items: equippedClothing } = useEquippedClothing();
+  const {
+    options: cityOptions,
+    loading: cityOptionsLoading,
+    error: cityOptionsError,
+  } = useCityOptions();
 
   type MusicalSkill = { key: keyof PlayerSkills; value: number };
 
@@ -164,6 +173,8 @@ const Profile = () => {
     bio: "",
     gender: "prefer_not_to_say",
     age: "16",
+    city_of_birth: null,
+    current_city: null,
   });
   const [friendSearchTerm, setFriendSearchTerm] = useState("");
   const [friendSearchResults, setFriendSearchResults] = useState<SearchProfilesRow[]>([]);
@@ -172,6 +183,36 @@ const Profile = () => {
   const [sendingFriendRequestTo, setSendingFriendRequestTo] = useState<string | null>(null);
   const [requestedFriendUserIds, setRequestedFriendUserIds] = useState<Record<string, boolean>>({});
   const friendSearchRequestId = useRef(0);
+
+  const cityLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const option of cityOptions) {
+      map.set(option.id, option.label);
+    }
+    return map;
+  }, [cityOptions]);
+
+  const birthCityLabel = useMemo(() => {
+    if (!profile?.city_of_birth) {
+      return null;
+    }
+    return cityLabelById.get(profile.city_of_birth) ?? null;
+  }, [cityLabelById, profile?.city_of_birth]);
+
+  const currentCityLabel = useMemo(() => {
+    if (currentCity?.name) {
+      return currentCity.country && currentCity.country.trim().length > 0
+        ? `${currentCity.name}, ${currentCity.country}`
+        : currentCity.name;
+    }
+
+    const cityId = profile?.current_city ?? profile?.current_city_id ?? null;
+    if (!cityId) {
+      return null;
+    }
+
+    return cityLabelById.get(cityId) ?? null;
+  }, [cityLabelById, currentCity, profile?.current_city, profile?.current_city_id]);
 
   const {
     loading: friendsLoading,
@@ -444,6 +485,8 @@ const Profile = () => {
         bio: profile.bio || "",
         gender: (profile.gender as ProfileGender) || "prefer_not_to_say",
         age: typeof profile.age === "number" ? String(profile.age) : "16",
+        city_of_birth: profile.city_of_birth ?? null,
+        current_city: profile.current_city ?? profile.current_city_id ?? null,
       });
     }
   }, [profile]);
@@ -544,6 +587,11 @@ const Profile = () => {
       return;
     }
 
+    const normalizedBirthCity =
+      formData.city_of_birth && formData.city_of_birth.trim().length > 0 ? formData.city_of_birth : null;
+    const normalizedCurrentCity =
+      formData.current_city && formData.current_city.trim().length > 0 ? formData.current_city : null;
+
     setSaving(true);
     try {
       await updateProfile({
@@ -552,6 +600,9 @@ const Profile = () => {
         bio: formData.bio,
         gender: formData.gender,
         age: parsedAge,
+        city_of_birth: normalizedBirthCity,
+        current_city: normalizedCurrentCity,
+        current_city_id: normalizedCurrentCity,
       });
       setIsEditing(false);
       toast({
@@ -811,6 +862,16 @@ const Profile = () => {
                         <Badge variant="outline" className="border-border text-foreground/80">
                           {profileGenderLabel}
                         </Badge>
+                        {birthCityLabel && (
+                          <Badge variant="outline" className="border-border text-foreground/80">
+                            Born in {birthCityLabel}
+                          </Badge>
+                        )}
+                        {currentCityLabel && (
+                          <Badge variant="outline" className="border-border text-foreground/80">
+                            Based in {currentCityLabel}
+                          </Badge>
+                        )}
                       </div>
                       <AlertDialog
                         open={isResetDialogOpen}
@@ -910,7 +971,7 @@ const Profile = () => {
                         rows={4}
                       />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="gender">Gender</Label>
                         <Select
@@ -947,6 +1008,72 @@ const Profile = () => {
                           className={!isEditing ? "bg-secondary/50" : ""}
                         />
                         <p className="text-xs text-muted-foreground">Age helps us tailor narrative beats.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="birth-city">City of Birth</Label>
+                        <Select
+                          value={formData.city_of_birth ?? ""}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              city_of_birth: value.length > 0 ? value : null,
+                            }))
+                          }
+                          disabled={!isEditing || cityOptionsLoading}
+                        >
+                          <SelectTrigger
+                            id="birth-city"
+                            className={!isEditing ? "bg-secondary/50" : ""}
+                          >
+                            <SelectValue
+                              placeholder={cityOptionsLoading ? "Loading cities..." : "Select a birth city"}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Unspecified</SelectItem>
+                            {cityOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {cityOptionsError && isEditing && (
+                          <p className="text-xs text-destructive">{cityOptionsError}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="current-city">Current City</Label>
+                        <Select
+                          value={formData.current_city ?? ""}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              current_city: value.length > 0 ? value : null,
+                            }))
+                          }
+                          disabled={!isEditing || cityOptionsLoading}
+                        >
+                          <SelectTrigger
+                            id="current-city"
+                            className={!isEditing ? "bg-secondary/50" : ""}
+                          >
+                            <SelectValue
+                              placeholder={cityOptionsLoading ? "Loading cities..." : "Select a current city"}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Unspecified</SelectItem>
+                            {cityOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Choose your home base to influence travel and local events.
+                        </p>
                       </div>
                     </div>
                     {isEditing && (

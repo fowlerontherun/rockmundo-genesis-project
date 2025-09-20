@@ -984,6 +984,7 @@ export type Database = {
           bio: string | null
           cash: number | null
           city_of_birth: string | null
+          current_city: string | null
           current_city_id: string | null
           current_location: string | null
           created_at: string | null
@@ -1016,6 +1017,7 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           city_of_birth?: string | null
+          current_city?: string | null
           current_city_id?: string | null
           current_location?: string | null
           created_at?: string | null
@@ -1048,6 +1050,7 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           city_of_birth?: string | null
+          current_city?: string | null
           current_city_id?: string | null
           current_location?: string | null
           created_at?: string | null
@@ -1078,6 +1081,13 @@ export type Database = {
           {
             foreignKeyName: "profiles_city_of_birth_fkey"
             columns: ["city_of_birth"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_current_city_fkey"
+            columns: ["current_city"]
             isOneToOne: false
             referencedRelation: "cities"
             referencedColumns: ["id"]
