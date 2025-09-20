@@ -54,6 +54,7 @@ const Health = lazyWithRetry(() => import("./pages/Health"));
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
+const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ function App() {
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
+                    <Route path="gear" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
                     <Route path="health" element={<Health />} />

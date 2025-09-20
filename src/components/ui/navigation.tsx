@@ -32,6 +32,7 @@ import {
   ListMusic,
   Megaphone,
   Store,
+  Guitar,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -93,6 +94,7 @@ const Navigation = () => {
     {
       title: "Business & Operations",
       items: [
+        { icon: Guitar, label: "My Gear", path: "/gear" },
         { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
         { icon: Store, label: "Inventory", path: "/inventory" },
         { icon: DollarSign, label: "Finances", path: "/finances" },
