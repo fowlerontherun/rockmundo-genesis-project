@@ -837,6 +837,7 @@ const Education = () => {
 
     const payload: Record<string, unknown> = {
       user_id: profile.user_id,
+      profile_id: profile.id,
       updated_at: new Date().toISOString()
     };
 
@@ -864,7 +865,7 @@ const Education = () => {
 
     const { error } = await supabase
       .from("player_skills")
-      .upsert(payload, { onConflict: "user_id" });
+      .upsert(payload, { onConflict: "profile_id" });
 
     if (error) {
       throw error;
