@@ -344,29 +344,6 @@ const Dashboard = () => {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => navigate("/band")}
-              className="bg-gradient-primary hover:shadow-electric"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Band Manager
-            </Button>
-            <Button
-              onClick={() => navigate("/gigs")}
-              variant="outline"
-              className="border-primary/20 hover:bg-primary/10"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Book Gigs
-            </Button>
-            <Button
-              onClick={() => navigate("/busking")}
-              variant="outline"
-              className="border-primary/20 hover:bg-primary/10"
-            >
-              <Mic className="h-4 w-4 mr-2" />
-              Street Busking
-            </Button>
-            <Button
               onClick={() => navigate("/finances")}
               variant="outline"
               className="border-primary/20 hover:bg-primary/10"
