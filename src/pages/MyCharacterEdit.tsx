@@ -11,45 +11,34 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
+import { useGameData, type PlayerAttributes } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-const SKILL_KEYS = [
-  "vocals",
-  "guitar",
-  "bass",
-  "drums",
-  "songwriting",
-  "composition",
-  "performance",
-  "creativity",
-  "technical",
-  "business",
-  "marketing",
-] as const;
+type AttributeKey = keyof PlayerAttributes;
 
-const SKILL_LABELS: Record<SkillKey, string> = {
-  vocals: "Vocals",
-  guitar: "Guitar",
-  bass: "Bass",
-  drums: "Drums",
-  songwriting: "Songwriting",
-  composition: "Composition",
-  performance: "Performance",
+const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   creativity: "Creativity",
-  technical: "Technical",
   business: "Business",
   marketing: "Marketing",
+  technical: "Technical",
+  charisma: "Charisma",
+  looks: "Looks",
+  mental_focus: "Mental Focus",
+  musicality: "Musicality",
+  physical_endurance: "Physical Endurance",
+  stage_presence: "Stage Presence",
+  crowd_engagement: "Crowd Engagement",
+  social_reach: "Social Reach",
+  business_acumen: "Business Acumen",
+  marketing_savvy: "Marketing Savvy",
 };
 
-type SkillKey = (typeof SKILL_KEYS)[number];
-type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
-type SkillsUpdateInput = Database["public"]["Tables"]["player_skills"]["Update"];
+const ATTRIBUTE_KEYS = Object.keys(ATTRIBUTE_LABELS) as AttributeKey[];
 type XpWalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"];
 type XpWalletUpdateInput = Database["public"]["Tables"]["player_xp_wallet"]["Update"];
 
-const clampSkillScore = (value: number) => {
+const clampAttributeScore = (value: number) => {
   if (!Number.isFinite(value)) {
     return 5;
   }
@@ -58,20 +47,20 @@ const clampSkillScore = (value: number) => {
 };
 
 const createEmptyAllocation = () =>
-  SKILL_KEYS.reduce((accumulator, key) => {
+  ATTRIBUTE_KEYS.reduce((accumulator, key) => {
     accumulator[key] = "";
     return accumulator;
-  }, {} as Record<SkillKey, string>);
+  }, {} as Record<AttributeKey, string>);
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 
 const MyCharacterEdit = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { profile, skills, xpWallet, loading, updateProfile, updateSkills, updateXpWallet, refetch } =
+  const { profile, attributes, xpWallet, loading, updateProfile, updateAttributes, updateXpWallet, refetch } =
     useGameData();
 
-  const [allocationInputs, setAllocationInputs] = useState<Record<SkillKey, string>>(createEmptyAllocation);
+  const [allocationInputs, setAllocationInputs] = useState<Record<AttributeKey, string>>(createEmptyAllocation);
   const [allocationError, setAllocationError] = useState<string | null>(null);
   const [isAllocating, setIsAllocating] = useState(false);
 
@@ -93,7 +82,7 @@ const MyCharacterEdit = () => {
 
   const totalAllocated = useMemo(
     () =>
-      SKILL_KEYS.reduce((sum, key) => {
+      ATTRIBUTE_KEYS.reduce((sum, key) => {
         const rawValue = allocationInputs[key];
         if (!rawValue) {
           return sum;
@@ -111,13 +100,13 @@ const MyCharacterEdit = () => {
 
   const remainingXp = Math.max(0, availableXp - totalAllocated);
 
-  const readSkillValue = (key: SkillKey) => {
-    const value = (skills as PlayerSkillsRow | null)?.[key] ?? 0;
+  const readAttributeValue = (key: AttributeKey) => {
+    const value = attributes?.[key] ?? 0;
     const numericValue = Number(value ?? 0);
     return Number.isFinite(numericValue) ? numericValue : 0;
   };
 
-  const handleAllocationChange = (key: SkillKey, value: string) => {
+  const handleAllocationChange = (key: AttributeKey, value: string) => {
     if (!value || value.trim().length === 0) {
       setAllocationInputs((previous) => ({ ...previous, [key]: "" }));
       return;
@@ -150,8 +139,8 @@ const MyCharacterEdit = () => {
   const handleAllocationSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!skills) {
-      setAllocationError("No skills available to update yet.");
+    if (!attributes) {
+      setAllocationError("No attributes available to update yet.");
       return;
     }
 
@@ -170,10 +159,10 @@ const MyCharacterEdit = () => {
       return;
     }
 
-    const skillUpdates: SkillsUpdateInput = {};
+    const attributeUpdates: Partial<PlayerAttributes> = {};
     let hasUpdates = false;
 
-    for (const key of SKILL_KEYS) {
+    for (const key of ATTRIBUTE_KEYS) {
       const rawValue = allocationInputs[key];
       if (!rawValue) {
         continue;
@@ -184,14 +173,14 @@ const MyCharacterEdit = () => {
         continue;
       }
 
-      const currentValue = readSkillValue(key);
-      const nextValue = clampSkillScore(currentValue + parsed);
-      skillUpdates[key] = nextValue;
+      const currentValue = readAttributeValue(key);
+      const nextValue = clampAttributeScore(currentValue + parsed);
+      attributeUpdates[key] = nextValue;
       hasUpdates = true;
     }
 
     if (!hasUpdates) {
-      setAllocationError("Nothing to update yet — try adding XP to at least one skill.");
+      setAllocationError("Nothing to update yet — try adding XP to at least one attribute.");
       return;
     }
 
@@ -199,7 +188,7 @@ const MyCharacterEdit = () => {
     setAllocationError(null);
 
     try {
-      await updateSkills(skillUpdates);
+      await updateAttributes(attributeUpdates);
 
       const currentWallet = xpWallet as XpWalletRow | null;
       const walletBalance = Number(currentWallet?.xp_balance ?? 0);
@@ -215,19 +204,19 @@ const MyCharacterEdit = () => {
 
       resetAllocation();
       toast({
-        title: "Skills updated",
-        description: `Allocated ${formatNumber(totalAllocated)} XP across your skills.`,
+        title: "Attributes updated",
+        description: `Allocated ${formatNumber(totalAllocated)} XP across your attributes.`,
       });
     } catch (allocationError) {
       const message =
         allocationError instanceof Error
           ? allocationError.message
-          : "We couldn't update your skills right now.";
+          : "We couldn't update your attributes right now.";
 
       setAllocationError(message);
       toast({
         variant: "destructive",
-        title: "Skill update failed",
+        title: "Attribute update failed",
         description: message,
       });
     } finally {
@@ -456,8 +445,8 @@ const MyCharacterEdit = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Skill allocation</CardTitle>
-              <CardDescription>Distribute available XP to grow your abilities.</CardDescription>
+              <CardTitle>Attribute allocation</CardTitle>
+              <CardDescription>Distribute available XP to grow your core attributes.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAllocationSubmit} className="space-y-6">
@@ -471,22 +460,22 @@ const MyCharacterEdit = () => {
                 </div>
 
                 <div className="grid gap-4">
-                  {SKILL_KEYS.map((key) => {
-                    const currentValue = readSkillValue(key);
+                  {ATTRIBUTE_KEYS.map((key) => {
+                    const currentValue = readAttributeValue(key);
                     return (
                       <div
                         key={key}
                         className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
                       >
                         <div>
-                          <Label htmlFor={`skill-${key}`}>{SKILL_LABELS[key]}</Label>
+                          <Label htmlFor={`attribute-${key}`}>{ATTRIBUTE_LABELS[key]}</Label>
                           <p className="text-sm text-muted-foreground">
                             Current: <span className="font-medium">{formatNumber(currentValue)}</span>
                           </p>
                         </div>
                         <div className="flex items-center gap-2 sm:justify-end">
                           <Input
-                            id={`skill-${key}`}
+                            id={`attribute-${key}`}
                             type="number"
                             inputMode="numeric"
                             min={0}
