@@ -1,4 +1,5 @@
 import { useMemo, type ElementType } from "react";
+import { Link } from "react-router-dom";
 import {
   CalendarDays,
   MapPin,
@@ -10,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
 
 const formatDate = (input: string | null | undefined) => {
@@ -25,7 +27,7 @@ const formatDate = (input: string | null | undefined) => {
   return parsed.toLocaleDateString();
 };
 
-const sanitizeSkillLabel = (label: string) =>
+const sanitizeAttributeLabel = (label: string) =>
   label
     .replace(/_/g, " ")
     .split(" ")
@@ -39,10 +41,10 @@ const PROFILE_META_FIELDS: Array<{ key: keyof PlayerProfile; label: string; icon
   { key: "fans", label: "Fans", icon: Users },
 ];
 
-const HIDDEN_SKILL_FIELDS = new Set(["id", "user_id", "created_at", "updated_at"]);
+const MIN_ATTRIBUTE_SCORE = 5;
 
 const MyCharacter = () => {
-  const { profile, skills, loading, error, currentCity } = useGameData();
+  const { profile, attributes, loading, error, currentCity } = useGameData();
 
   const displayName = profile?.display_name || profile?.username || "Performer";
 
@@ -120,15 +122,20 @@ const MyCharacter = () => {
           <h1 className="text-3xl font-bold">My Character</h1>
           <p className="text-muted-foreground">A snapshot of your artist profile and core skills.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge variant="outline" className="text-base">
-            Level {profile.level ?? 1}
-          </Badge>
-          {typeof profile.experience === "number" && (
-            <Badge variant="secondary" className="text-base">
-              {profile.experience.toLocaleString()} XP
+        <div className="flex flex-col gap-3 md:items-end">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant="outline" className="text-base">
+              Level {profile.level ?? 1}
             </Badge>
-          )}
+            {typeof profile.experience === "number" && (
+              <Badge variant="secondary" className="text-base">
+                {profile.experience.toLocaleString()} XP
+              </Badge>
+            )}
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/my-character/edit">Edit profile</Link>
+          </Button>
         </div>
       </div>
 
@@ -199,23 +206,20 @@ const MyCharacter = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mic className="h-5 w-5" />
-              Player Skills
+              Core Attributes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {skills ? (
+            {attributes ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {Object.entries(skills).map(([skillKey, score]) => {
-                  if (HIDDEN_SKILL_FIELDS.has(skillKey)) {
-                    return null;
-                  }
-
-                  const displayScore = typeof score === "number" ? score : 0;
+                {Object.entries(attributes).map(([attributeKey, score]) => {
+                  const numericScore = typeof score === "number" ? score : MIN_ATTRIBUTE_SCORE;
+                  const displayScore = Math.max(MIN_ATTRIBUTE_SCORE, numericScore);
 
                   return (
-                    <div key={skillKey} className="space-y-2">
+                    <div key={attributeKey} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{sanitizeSkillLabel(skillKey)}</span>
+                        <span className="text-sm font-medium">{sanitizeAttributeLabel(attributeKey)}</span>
                         <Badge variant="secondary">{displayScore}</Badge>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -229,7 +233,9 @@ const MyCharacter = () => {
                 })}
               </div>
             ) : (
-              <p className="text-muted-foreground">No skill data available yet. Start performing to earn stats!</p>
+              <p className="text-muted-foreground">
+                Attribute data will appear here once your character is set up.
+              </p>
             )}
           </CardContent>
         </Card>

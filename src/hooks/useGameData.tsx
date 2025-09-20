@@ -146,19 +146,31 @@ interface UseGameDataReturn {
   ) => Promise<{ profile: PlayerProfile; attributes: PlayerAttributes | null }>;
 }
 
-const mapAttributes = (row: RawAttributes): PlayerAttributes | null => {
+const ATTRIBUTE_CATEGORIES = Object.keys(ATTRIBUTE_COLUMN_MAP) as AttributeCategory[];
+
+const createDefaultAttributes = (): PlayerAttributes =>
+  ATTRIBUTE_CATEGORIES.reduce((accumulator, category) => {
+    accumulator[category] = DEFAULT_ATTRIBUTE_SCORE;
+    return accumulator;
+  }, {} as PlayerAttributes);
+
+const mapAttributes = (row: RawAttributes): PlayerAttributes => {
+  const baseAttributes = createDefaultAttributes();
+
   if (!row) {
-    return null;
+    return baseAttributes;
   }
 
-  return (Object.entries(ATTRIBUTE_COLUMN_MAP) as Array<[AttributeCategory, keyof PlayerAttributesRow]>).reduce(
-    (accumulator, [category, column]) => {
-      const rawValue = row[column];
-      accumulator[category] = typeof rawValue === "number" && Number.isFinite(rawValue) ? rawValue : 0;
-      return accumulator;
-    },
-    {} as Record<AttributeCategory, number>,
-  );
+  for (const [category, column] of Object.entries(ATTRIBUTE_COLUMN_MAP) as Array<[
+    AttributeCategory,
+    keyof PlayerAttributesRow,
+  ]>) {
+    const rawValue = row[column];
+    const numericValue = typeof rawValue === "number" && Number.isFinite(rawValue) ? rawValue : DEFAULT_ATTRIBUTE_SCORE;
+    baseAttributes[category] = Math.max(DEFAULT_ATTRIBUTE_SCORE, numericValue);
+  }
+
+  return baseAttributes;
 };
 
 export const useGameData = (): UseGameDataReturn => {
