@@ -224,6 +224,36 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_participants: {
+        Row: {
+          channel: string
+          created_at: string | null
+          id: string
+          last_seen: string | null
+          status: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string | null
+          id?: string
+          last_seen?: string | null
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          id?: string
+          last_seen?: string | null
+          status?: Database["public"]["Enums"]["chat_participant_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       cities: {
         Row: {
           cost_of_living: number | null
@@ -350,6 +380,39 @@ export type Database = {
           },
         ]
       }
+      experience_ledger: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          profile_id: string | null
+          skill_slug: string | null
+          user_id: string
+          xp_amount: number
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          profile_id?: string | null
+          skill_slug?: string | null
+          user_id: string
+          xp_amount?: number
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          profile_id?: string | null
+          skill_slug?: string | null
+          user_id?: string
+          xp_amount?: number
+        }
+        Relationships: []
+      }
       fan_demographics: {
         Row: {
           age_18_25: number | null
@@ -398,6 +461,39 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           weekly_growth?: number | null
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          created_at: string | null
+          friend_profile_id: string | null
+          friend_user_id: string
+          id: string
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string | null
+          user_id: string
+          user_profile_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          friend_profile_id?: string | null
+          friend_user_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string | null
+          user_id: string
+          user_profile_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          friend_profile_id?: string | null
+          friend_user_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string | null
+          user_id?: string
+          user_profile_id?: string | null
         }
         Relationships: []
       }
@@ -738,6 +834,60 @@ export type Database = {
           },
         ]
       }
+      player_skills: {
+        Row: {
+          bass: number | null
+          business: number | null
+          composition: number | null
+          created_at: string | null
+          creativity: number | null
+          drums: number | null
+          guitar: number | null
+          id: string
+          marketing: number | null
+          performance: number | null
+          songwriting: number | null
+          technical: number | null
+          updated_at: string | null
+          user_id: string
+          vocals: number | null
+        }
+        Insert: {
+          bass?: number | null
+          business?: number | null
+          composition?: number | null
+          created_at?: string | null
+          creativity?: number | null
+          drums?: number | null
+          guitar?: number | null
+          id?: string
+          marketing?: number | null
+          performance?: number | null
+          songwriting?: number | null
+          technical?: number | null
+          updated_at?: string | null
+          user_id: string
+          vocals?: number | null
+        }
+        Update: {
+          bass?: number | null
+          business?: number | null
+          composition?: number | null
+          created_at?: string | null
+          creativity?: number | null
+          drums?: number | null
+          guitar?: number | null
+          id?: string
+          marketing?: number | null
+          performance?: number | null
+          songwriting?: number | null
+          technical?: number | null
+          updated_at?: string | null
+          user_id?: string
+          vocals?: number | null
+        }
+        Relationships: []
+      }
       player_streaming_accounts: {
         Row: {
           connected_at: string | null
@@ -834,14 +984,19 @@ export type Database = {
           cash: number | null
           created_at: string | null
           display_name: string | null
+          equipment_loadout: Json | null
           experience: number | null
+          experience_at_last_weekly_bonus: number | null
           fame: number | null
           fans: number | null
           id: string
+          last_weekly_bonus_at: string | null
           level: number | null
           updated_at: string | null
           user_id: string
           username: string
+          weekly_bonus_metadata: Json | null
+          weekly_bonus_streak: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -849,14 +1004,19 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          equipment_loadout?: Json | null
           experience?: number | null
+          experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
           id?: string
+          last_weekly_bonus_at?: string | null
           level?: number | null
           updated_at?: string | null
           user_id: string
           username: string
+          weekly_bonus_metadata?: Json | null
+          weekly_bonus_streak?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -864,14 +1024,19 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           display_name?: string | null
+          equipment_loadout?: Json | null
           experience?: number | null
+          experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
           id?: string
+          last_weekly_bonus_at?: string | null
           level?: number | null
           updated_at?: string | null
           user_id?: string
           username?: string
+          weekly_bonus_metadata?: Json | null
+          weekly_bonus_streak?: number | null
         }
         Relationships: []
       }
@@ -1282,6 +1447,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      chat_participant_status: "online" | "offline" | "typing" | "away"
+      friendship_status: "pending" | "accepted" | "declined" | "blocked"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
     CompositeTypes: {
@@ -1411,6 +1578,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      chat_participant_status: ["online", "offline", "typing", "away"],
+      friendship_status: ["pending", "accepted", "declined", "blocked"],
       show_type_enum: ["concert", "festival", "private", "street"],
     },
   },

@@ -10,9 +10,9 @@ export type FriendProfileSummary = {
   avatarUrl: string | null;
 };
 
-type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
-type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
-type FriendPresenceStatus = Database["public"]["Enums"]["chat_participant_status"];
+type FriendshipRow = any; // Will be updated when types regenerate
+type FriendshipStatus = 'pending' | 'accepted' | 'declined' | 'blocked';
+type FriendPresenceStatus = 'online' | 'offline' | 'typing' | 'away';
 
 type FriendRelationship = {
   friendshipId: string;
@@ -110,7 +110,7 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
       return {} as Record<string, FriendPresenceStatus>;
     }
 
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("chat_participants")
       .select("user_id, status")
       .in("user_id", userIds);
@@ -141,8 +141,8 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
 
     try {
       const [outgoingResult, incomingResult] = await Promise.all([
-        supabase.from("friendships").select("*").eq("user_id", userId),
-        supabase.from("friendships").select("*").eq("friend_user_id", userId),
+        (supabase as any).from("friendships").select("*").eq("user_id", userId),
+        (supabase as any).from("friendships").select("*").eq("friend_user_id", userId),
       ]);
 
       const outgoingRows = outgoingResult.data ?? [];
@@ -207,7 +207,7 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
         throw new Error("You need to be logged in to accept friendships");
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from("friendships")
         .update({ status: "accepted" as FriendshipStatus })
         .eq("id", friendshipId)
@@ -229,7 +229,7 @@ export const useFriendships = (userId?: string): UseFriendshipsReturn => {
         throw new Error("You need to be logged in to update friendships");
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from("friendships")
         .update({ status: "declined" as FriendshipStatus })
         .eq("id", friendshipId)

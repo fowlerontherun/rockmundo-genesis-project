@@ -25,7 +25,7 @@ type AttributeCategory =
 export type PlayerAttributes = Record<AttributeCategory, number>;
 export type PlayerXpWallet = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
 export type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
-export type ExperienceLedgerRow = Database["public"]["Tables"]["experience_ledger"]["Row"];
+export type ExperienceLedgerRow = any; // Will be updated when types regenerate
 export type UnlockedSkillsMap = Record<string, boolean>;
 export type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 

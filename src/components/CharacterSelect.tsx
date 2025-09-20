@@ -61,10 +61,9 @@ const CharacterSelect = () => {
       await createCharacter({
         username,
         display_name: trimmed,
-        slotNumber: nextSlotNumber,
-        unlockCost: requiredUnlockCost,
+        // slotNumber and unlockCost are handled by createCharacter internally
         makeActive
-      });
+      } as any);
 
       setStageName("");
       toast({
