@@ -50,10 +50,10 @@ type XpWalletUpdateInput = Database["public"]["Tables"]["player_xp_wallet"]["Upd
 
 const clampSkillScore = (value: number) => {
   if (!Number.isFinite(value)) {
-    return 0;
+    return 5;
   }
 
-  return Math.max(0, Math.min(1000, Math.round(value)));
+  return Math.max(5, Math.min(1000, Math.round(value)));
 };
 
 const createEmptyAllocation = () =>
