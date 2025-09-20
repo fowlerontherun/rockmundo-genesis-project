@@ -24,7 +24,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
-import { getStoredAvatarPreviewUrl } from "@/utils/avatar";
 import {
   Heart,
   MessageCircle,
@@ -51,7 +50,6 @@ interface SocialProfile {
   userId: string;
   username: string;
   displayName: string;
-  avatarUrl?: string | null;
 }
 
 interface SocialComment extends SocialCommentRow {
@@ -468,7 +466,7 @@ const SocialMedia = () => {
 
       const { data, error } = await supabase
         .from("public_profiles")
-        .select("user_id, username, display_name, avatar_url")
+        .select("user_id, username, display_name")
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -485,7 +483,6 @@ const SocialMedia = () => {
         userId: data.user_id,
         username: data.username,
         displayName: data.display_name ?? data.username,
-        avatarUrl: getStoredAvatarPreviewUrl(data.avatar_url ?? null),
       };
 
       setProfileLookup((previous) => ({ ...previous, [userId]: profile }));
@@ -557,7 +554,7 @@ const SocialMedia = () => {
       if (userIds.size > 0) {
         const { data: profileRows, error: profileError } = await supabase
           .from("public_profiles")
-          .select("user_id, username, display_name, avatar_url")
+          .select("user_id, username, display_name")
           .in("user_id", Array.from(userIds));
 
         if (profileError) {
@@ -569,7 +566,6 @@ const SocialMedia = () => {
             userId: profile.user_id,
             username: profile.username,
             displayName: profile.display_name ?? profile.username,
-            avatarUrl: getStoredAvatarPreviewUrl(profile.avatar_url ?? null),
           };
         });
 
@@ -651,7 +647,6 @@ const SocialMedia = () => {
               userId: data.user_id,
               username: data.username,
               displayName: data.display_name ?? data.username ?? "Player",
-              avatarUrl: getStoredAvatarPreviewUrl(data.avatar_url ?? null)
             },
           }));
         } else {
