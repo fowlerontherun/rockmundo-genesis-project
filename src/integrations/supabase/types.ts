@@ -58,6 +58,7 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          profile_id: string
           user_id: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          profile_id: string
           user_id: string
         }
         Update: {
@@ -76,9 +78,18 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          profile_id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       band_members: {
         Row: {
@@ -845,6 +856,7 @@ export type Database = {
           guitar: number | null
           id: string
           marketing: number | null
+          profile_id: string
           performance: number | null
           songwriting: number | null
           technical: number | null
@@ -862,6 +874,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id: string
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -879,6 +892,7 @@ export type Database = {
           guitar?: number | null
           id?: string
           marketing?: number | null
+          profile_id?: string
           performance?: number | null
           songwriting?: number | null
           technical?: number | null
@@ -886,7 +900,15 @@ export type Database = {
           user_id?: string
           vocals?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "player_skills_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_streaming_accounts: {
         Row: {
@@ -984,10 +1006,8 @@ export type Database = {
           bio: string | null
           cash: number | null
           city_of_birth: string | null
-          current_city: string | null
-          current_city_id: string | null
-          current_location: string | null
           created_at: string | null
+          current_city: string | null
           current_city_id: string | null
           current_location: string
           display_name: string | null
@@ -1000,11 +1020,14 @@ export type Database = {
           gender: Database["public"]["Enums"]["profile_gender"] | null
           health: number | null
           id: string
+          is_active: boolean
           last_weekly_bonus_at: string | null
           level: number | null
+          slot_number: number
           travel_started_at: string | null
           travel_eta: string | null
           travel_mode: string | null
+          unlock_cost: number
           updated_at: string | null
           user_id: string
           username: string
@@ -1017,10 +1040,8 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           city_of_birth?: string | null
-          current_city?: string | null
-          current_city_id?: string | null
-          current_location?: string | null
           created_at?: string | null
+          current_city?: string | null
           current_city_id?: string | null
           current_location?: string
           display_name?: string | null
@@ -1033,11 +1054,14 @@ export type Database = {
           gender?: Database["public"]["Enums"]["profile_gender"] | null
           health?: number | null
           id?: string
+          is_active?: boolean
           last_weekly_bonus_at?: string | null
           level?: number | null
+          slot_number?: number
           travel_started_at?: string | null
           travel_eta?: string | null
           travel_mode?: string | null
+          unlock_cost?: number
           updated_at?: string | null
           user_id: string
           username: string
@@ -1050,10 +1074,8 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           city_of_birth?: string | null
-          current_city?: string | null
-          current_city_id?: string | null
-          current_location?: string | null
           created_at?: string | null
+          current_city?: string | null
           current_city_id?: string | null
           current_location?: string
           display_name?: string | null
@@ -1066,11 +1088,14 @@ export type Database = {
           gender?: Database["public"]["Enums"]["profile_gender"] | null
           health?: number | null
           id?: string
+          is_active?: boolean
           last_weekly_bonus_at?: string | null
           level?: number | null
+          slot_number?: number
           travel_started_at?: string | null
           travel_eta?: string | null
           travel_mode?: string | null
+          unlock_cost?: number
           updated_at?: string | null
           user_id?: string
           username?: string

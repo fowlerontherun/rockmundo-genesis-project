@@ -219,6 +219,7 @@ export default function PerformGig() {
         .from('activity_feed')
         .insert({
           user_id: user.id,
+          profile_id: profile.id,
           activity_type: 'gig_performance',
           message: `Performed at ${gig.venues?.name ?? 'a venue'} and earned $${calculatedEarnings.toLocaleString()}`,
           earnings: calculatedEarnings,

@@ -268,6 +268,7 @@ export const useGameData = (): UseGameDataReturn => {
         supabase
           .from("player_skills")
           .select("*")
+          .eq("profile_id", effectiveProfile.id)
           .eq("user_id", user.id)
           .maybeSingle(),
         supabase
@@ -293,6 +294,7 @@ export const useGameData = (): UseGameDataReturn => {
           .from("activity_feed")
           .select("*")
           .eq("user_id", user.id)
+          .eq("profile_id", effectiveProfile.id)
           .order("created_at", { ascending: false })
           .limit(20),
       ]);
@@ -381,14 +383,14 @@ export const useGameData = (): UseGameDataReturn => {
     }
 
     const channel = supabase
-      .channel(`activity_feed:user:${user.id}`)
+      .channel(`activity_feed:profile:${profile.id}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "activity_feed",
-          filter: `user_id=eq.${user.id}`,
+          filter: `profile_id=eq.${profile.id}`,
         },
         (payload) => {
           const newRow = payload.new as ActivityFeedRow;
@@ -403,7 +405,7 @@ export const useGameData = (): UseGameDataReturn => {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [profile, user]);
+  }, [profile?.id, user?.id]);
 
   const upsertProfileWithDefaults = useCallback(
     async ({ name, stageName, bio }: ProfileUpsertInput) => {
@@ -510,6 +512,8 @@ export const useGameData = (): UseGameDataReturn => {
         const insertPayload: Database["public"]["Tables"]["profiles"]["Insert"] = {
           ...baseProfilePayload,
           user_id: user.id,
+          slot_number: 1,
+          is_active: true,
         };
 
         console.info("useGameData.profileUpsert.profileMutation.start", {
@@ -618,14 +622,22 @@ export const useGameData = (): UseGameDataReturn => {
         throw new Error("Authentication required to update skills");
       }
 
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
       const payload: Database["public"]["Tables"]["player_skills"]["Insert"] = {
+        profile_id: profile.id,
         user_id: user.id,
         ...updates,
       };
 
+      payload.profile_id = profile.id;
+      payload.user_id = user.id;
+
       const { data, error: upsertError } = await supabase
         .from("player_skills")
-        .upsert(payload, { onConflict: "user_id" })
+        .upsert(payload, { onConflict: "profile_id" })
         .select("*")
         .maybeSingle();
 
@@ -636,7 +648,7 @@ export const useGameData = (): UseGameDataReturn => {
       setSkills((data ?? null) as PlayerSkills);
       return (data ?? null) as PlayerSkills;
     },
-    [user],
+    [profile, user],
   );
 
   const updateAttributes = useCallback(
@@ -692,8 +704,13 @@ export const useGameData = (): UseGameDataReturn => {
         throw new Error("Authentication required to log activity");
       }
 
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
       const payload: ActivityInsert = {
         user_id: user.id,
+        profile_id: profile.id,
         activity_type: type,
         message,
         earnings: typeof earnings === "number" ? earnings : null,
@@ -705,7 +722,7 @@ export const useGameData = (): UseGameDataReturn => {
         throw insertError;
       }
     },
-    [user],
+    [profile, user],
   );
 
   const awardActionXp = useCallback(
