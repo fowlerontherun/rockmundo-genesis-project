@@ -301,7 +301,10 @@ const Profile = () => {
             <div className="space-y-4">
               <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                  <AvatarImage src={formState.avatarUrl || profile?.avatar_url ?? undefined} alt={`${profileDisplayName} avatar`} />
+                  <AvatarImage
+                    src={formState.avatarUrl || profile?.avatar_url || undefined}
+                    alt={`${profileDisplayName} avatar`}
+                  />
                   <AvatarFallback>{avatarFallback}</AvatarFallback>
                 </Avatar>
 
