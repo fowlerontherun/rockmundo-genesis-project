@@ -110,13 +110,19 @@ interface UseGameDataReturn {
   refetch: () => Promise<void>;
   refreshCharacters: () => Promise<void>;
   setActiveCharacter: (id: string) => Promise<void>;
-  createCharacter: (data: Partial<PlayerProfile>) => Promise<void>;
+  createCharacter: (data: CreateCharacterInput) => Promise<void>;
   resetCharacter: () => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<PlayerProfile>;
   updateSkills: (updates: SkillsUpdate) => Promise<PlayerSkills>;
   updateAttributes: (updates: AttributesUpdate) => Promise<PlayerAttributes | null>;
   addActivity: (type: string, message: string, earnings?: number, metadata?: ActivityInsert["metadata"]) => Promise<void>;
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
+}
+
+export interface CreateCharacterInput extends Partial<PlayerProfile> {
+  slotNumber: number;
+  unlockCost: number;
+  makeActive: boolean;
 }
 
 const mapAttributes = (row: RawAttributes): PlayerAttributes | null => {
@@ -139,6 +145,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [characters, setCharacters] = useState<PlayerProfile[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+  const selectedCharacterIdRef = useRef<string | null>(null);
   const [skills, setSkills] = useState<PlayerSkills>(null);
   const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet>(null);
@@ -290,6 +297,7 @@ export const useGameData = (): UseGameDataReturn => {
       setProfile(null);
       setCharacters([]);
       setSelectedCharacterId(null);
+      selectedCharacterIdRef.current = null;
       setSkills(null);
       setAttributes(null);
       setXpWallet(null);
@@ -318,9 +326,12 @@ export const useGameData = (): UseGameDataReturn => {
       const profileList = (data ?? []) as PlayerProfile[];
       setCharacters(profileList);
 
-      const activeProfile = profileList.find((candidate) => candidate.id === selectedCharacterId) ?? profileList[0] ?? null;
+      const activeProfile =
+        profileList.find((candidate) => candidate.id === selectedCharacterIdRef.current) ?? profileList[0] ?? null;
       setProfile(activeProfile ?? null);
-      setSelectedCharacterId(activeProfile?.id ?? null);
+      const nextSelectedId = activeProfile?.id ?? null;
+      selectedCharacterIdRef.current = nextSelectedId;
+      setSelectedCharacterId(nextSelectedId);
 
       await loadCharacterDetails(activeProfile ?? null);
     } catch (err) {
@@ -329,7 +340,7 @@ export const useGameData = (): UseGameDataReturn => {
     } finally {
       setLoading(false);
     }
-  }, [loadCharacterDetails, selectedCharacterId, user]);
+  }, [loadCharacterDetails, user]);
 
   useEffect(() => {
     void fetchData();
@@ -370,16 +381,32 @@ export const useGameData = (): UseGameDataReturn => {
     async (id: string) => {
       const nextProfile = characters.find((character) => character.id === id) ?? null;
       setProfile(nextProfile);
-      setSelectedCharacterId(nextProfile?.id ?? null);
+      const nextSelectedId = nextProfile?.id ?? null;
+      selectedCharacterIdRef.current = nextSelectedId;
+      setSelectedCharacterId(nextSelectedId);
       await loadCharacterDetails(nextProfile ?? null);
     },
     [characters, loadCharacterDetails],
   );
 
   const createCharacter = useCallback(
-    async (data: Partial<PlayerProfile>) => {
+    async ({ slotNumber, unlockCost, makeActive, ...data }: CreateCharacterInput) => {
       if (!user) {
         throw new Error("You need to be signed in to create a character");
+      }
+
+      const requiresUnlockPayment = unlockCost > 0;
+      let availableCash = 0;
+
+      if (requiresUnlockPayment) {
+        if (!profile) {
+          throw new Error(`You need an active character to unlock slot ${slotNumber}.`);
+        }
+
+        availableCash = Number(profile.cash ?? 0);
+        if (!Number.isFinite(availableCash) || availableCash < unlockCost) {
+          throw new Error("Insufficient funds to unlock this character slot.");
+        }
       }
 
       const payload: Database["public"]["Tables"]["profiles"]["Insert"] = {
@@ -388,14 +415,38 @@ export const useGameData = (): UseGameDataReturn => {
         display_name: data.display_name ?? data.username ?? "New Performer",
       };
 
-      const { error: insertError } = await supabase.from("profiles").insert(payload);
+      const { data: insertedProfile, error: insertError } = await supabase
+        .from("profiles")
+        .insert(payload)
+        .select("*")
+        .single();
+
       if (insertError) {
         throw insertError;
       }
 
+      const newProfile = insertedProfile as PlayerProfile;
+
+      if (requiresUnlockPayment && profile) {
+        const updatedCash = availableCash - unlockCost;
+        const { error: cashUpdateError } = await supabase
+          .from("profiles")
+          .update({ cash: updatedCash })
+          .eq("id", profile.id);
+
+        if (cashUpdateError) {
+          await supabase.from("profiles").delete().eq("id", newProfile.id);
+          throw cashUpdateError;
+        }
+      }
+
+      if (makeActive) {
+        selectedCharacterIdRef.current = newProfile.id;
+      }
+
       await fetchData();
     },
-    [fetchData, user],
+    [fetchData, profile, user],
   );
 
   const resetCharacter = useCallback(async () => {
