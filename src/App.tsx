@@ -33,6 +33,7 @@ const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const MusicCreation = lazyWithRetry(() => import("./pages/MusicCreation"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
+const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
 const SetlistDesigner = lazyWithRetry(() => import("./pages/SetlistDesigner"));
@@ -93,6 +94,7 @@ function App() {
                     <Route path="travel" element={<Travel />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
+                    <Route path="pr" element={<PublicRelations />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />
                     <Route path="chemistry" element={<BandChemistry />} />
