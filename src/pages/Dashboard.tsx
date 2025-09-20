@@ -14,6 +14,7 @@ import {
   Mic,
   Headphones,
   DollarSign,
+  PiggyBank,
   Star,
   Play,
   AlertCircle,
@@ -364,6 +365,14 @@ const Dashboard = () => {
             >
               <Mic className="h-4 w-4 mr-2" />
               Street Busking
+            </Button>
+            <Button
+              onClick={() => navigate("/finances")}
+              variant="outline"
+              className="border-primary/20 hover:bg-primary/10"
+            >
+              <PiggyBank className="h-4 w-4 mr-2" />
+              Manage Finances
             </Button>
           </div>
         </div>
