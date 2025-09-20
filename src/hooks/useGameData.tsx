@@ -32,6 +32,8 @@ export type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type SkillsUpdate = Database["public"]["Tables"]["player_skills"]["Update"];
 type AttributesUpdate = Partial<PlayerAttributes>;
+type XpWalletUpdate = Database["public"]["Tables"]["player_xp_wallet"]["Update"];
+type XpWalletInsert = Database["public"]["Tables"]["player_xp_wallet"]["Insert"];
 type ActivityInsert = Database["public"]["Tables"]["activity_feed"]["Insert"];
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
@@ -135,6 +137,7 @@ interface UseGameDataReturn {
   refetch: () => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<PlayerProfile>;
   updateSkills: (updates: SkillsUpdate) => Promise<PlayerSkills>;
+  updateXpWallet: (updates: XpWalletUpdate) => Promise<PlayerXpWallet>;
   updateAttributes: (updates: AttributesUpdate) => Promise<PlayerAttributes | null>;
   addActivity: (type: string, message: string, earnings?: number, metadata?: ActivityInsert["metadata"]) => Promise<void>;
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
@@ -763,6 +766,33 @@ export const useGameData = (): UseGameDataReturn => {
     [profile, user],
   );
 
+  const updateXpWallet = useCallback(
+    async (updates: XpWalletUpdate) => {
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      const payload: XpWalletInsert = {
+        profile_id: profile.id,
+        ...updates,
+      };
+
+      const { data, error: upsertError } = await supabase
+        .from("player_xp_wallet")
+        .upsert(payload, { onConflict: "profile_id" })
+        .select("*")
+        .maybeSingle();
+
+      if (upsertError) {
+        throw upsertError;
+      }
+
+      setXpWallet((data ?? null) as PlayerXpWallet);
+      return (data ?? null) as PlayerXpWallet;
+    },
+    [profile],
+  );
+
   const addActivity = useCallback(
     async (
       type: string,
@@ -829,6 +859,7 @@ export const useGameData = (): UseGameDataReturn => {
       refetch: fetchData,
       updateProfile,
       updateSkills,
+      updateXpWallet,
       updateAttributes,
       addActivity,
       awardActionXp,
@@ -850,6 +881,7 @@ export const useGameData = (): UseGameDataReturn => {
       fetchData,
       updateProfile,
       updateSkills,
+      updateXpWallet,
       updateAttributes,
       addActivity,
       awardActionXp,
