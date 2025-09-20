@@ -6,7 +6,21 @@ import { awardActionXp as awardActionXpUtility, type AwardActionXpInput } from "
 
 export type PlayerProfile = Database["public"]["Tables"]["profiles"]["Row"];
 export type PlayerSkills = Database["public"]["Tables"]["player_skills"]["Row"] | null;
-type AttributeCategory = "creativity" | "business" | "marketing" | "technical";
+type AttributeCategory =
+  | "creativity"
+  | "business"
+  | "marketing"
+  | "technical"
+  | "charisma"
+  | "looks"
+  | "mental_focus"
+  | "musicality"
+  | "physical_endurance"
+  | "stage_presence"
+  | "crowd_engagement"
+  | "social_reach"
+  | "business_acumen"
+  | "marketing_savvy";
 
 export type PlayerAttributes = Record<AttributeCategory, number>;
 export type PlayerXpWallet = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
@@ -28,6 +42,16 @@ const ATTRIBUTE_COLUMN_MAP: Record<AttributeCategory, keyof PlayerAttributesRow>
   business: "business_acumen",
   marketing: "marketing_savvy",
   technical: "technical_mastery",
+  charisma: "charisma",
+  looks: "looks",
+  mental_focus: "mental_focus",
+  musicality: "musicality",
+  physical_endurance: "physical_endurance",
+  stage_presence: "stage_presence",
+  crowd_engagement: "crowd_engagement",
+  social_reach: "social_reach",
+  business_acumen: "business_acumen",
+  marketing_savvy: "marketing_savvy",
 };
 
 const XP_LEDGER_FETCH_LIMIT = 20;
