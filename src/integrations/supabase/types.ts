@@ -979,16 +979,22 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          city_of_birth: string | null
           created_at: string | null
+          current_city_id: string | null
+          current_location: string
           display_name: string | null
           equipment_loadout: Json | null
           experience: number | null
           experience_at_last_weekly_bonus: number | null
           fame: number | null
           fans: number | null
+          gender: Database["public"]["Enums"]["profile_gender"]
+          health: number
           id: string
           last_weekly_bonus_at: string | null
           level: number | null
@@ -999,16 +1005,22 @@ export type Database = {
           weekly_bonus_streak: number | null
         }
         Insert: {
+          age?: number
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          city_of_birth?: string | null
           created_at?: string | null
+          current_city_id?: string | null
+          current_location?: string
           display_name?: string | null
           equipment_loadout?: Json | null
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          health?: number
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
@@ -1019,16 +1031,22 @@ export type Database = {
           weekly_bonus_streak?: number | null
         }
         Update: {
+          age?: number
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          city_of_birth?: string | null
           created_at?: string | null
+          current_city_id?: string | null
+          current_location?: string
           display_name?: string | null
           equipment_loadout?: Json | null
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          gender?: Database["public"]["Enums"]["profile_gender"]
+          health?: number
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
@@ -1038,7 +1056,22 @@ export type Database = {
           weekly_bonus_metadata?: Json | null
           weekly_bonus_streak?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_city_of_birth_fkey"
+            columns: ["city_of_birth"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       skill_definitions: {
         Row: {
@@ -1449,6 +1482,12 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "offline" | "typing" | "away"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
+      profile_gender:
+        | "female"
+        | "male"
+        | "non_binary"
+        | "other"
+        | "prefer_not_to_say"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
     CompositeTypes: {
