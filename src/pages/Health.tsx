@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useGameData } from "@/hooks/useGameData";
@@ -12,6 +13,7 @@ import {
   Moon,
   Syringe,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const clampToPercent = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
@@ -268,6 +270,30 @@ const HealthPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Health Services</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Connect with specialist support teams when you need targeted recovery plans or advanced care.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: "Therapy", to: "/health/therapy" },
+              { label: "Rehab", to: "/health/rehab" },
+              { label: "Wonder Drugs", to: "/health/wonder-drugs" },
+              { label: "Cosmetic Surgery", to: "/health/cosmetic-surgery" },
+              { label: "Doctor", to: "/health/doctor" },
+            ].map((service) => (
+              <Button key={service.to} asChild variant="outline" className="justify-start">
+                <Link to={service.to}>{service.label}</Link>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
