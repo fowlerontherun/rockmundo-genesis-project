@@ -267,44 +267,80 @@ export type Database = {
       }
       cities: {
         Row: {
+          bonuses: string | null
+          busking_value: number | null
           cost_of_living: number | null
           country: string
           created_at: string | null
           cultural_events: string[] | null
+          description: string | null
+          districts: Json | null
           dominant_genre: string | null
+          featured_studios: Json
+          featured_venues: Json
+          famous_resident: string | null
           id: string
           local_bonus: number | null
           music_scene: number | null
           name: string
           population: number | null
+          profile_description: string | null
+          transport_links: Json
+          travel_hub: string | null
+          travel_nodes: Json | null
+          unlocked: boolean | null
           updated_at: string | null
           venues: number | null
         }
         Insert: {
+          bonuses?: string | null
+          busking_value?: number | null
           cost_of_living?: number | null
           country: string
           created_at?: string | null
           cultural_events?: string[] | null
+          description?: string | null
+          districts?: Json | null
           dominant_genre?: string | null
+          featured_studios?: Json
+          featured_venues?: Json
+          famous_resident?: string | null
           id?: string
           local_bonus?: number | null
           music_scene?: number | null
           name: string
           population?: number | null
+          profile_description?: string | null
+          transport_links?: Json
+          travel_hub?: string | null
+          travel_nodes?: Json | null
+          unlocked?: boolean | null
           updated_at?: string | null
           venues?: number | null
         }
         Update: {
+          bonuses?: string | null
+          busking_value?: number | null
           cost_of_living?: number | null
           country?: string
           created_at?: string | null
           cultural_events?: string[] | null
+          description?: string | null
+          districts?: Json | null
           dominant_genre?: string | null
+          featured_studios?: Json
+          featured_venues?: Json
+          famous_resident?: string | null
           id?: string
           local_bonus?: number | null
           music_scene?: number | null
           name?: string
           population?: number | null
+          profile_description?: string | null
+          transport_links?: Json
+          travel_hub?: string | null
+          travel_nodes?: Json | null
+          unlocked?: boolean | null
           updated_at?: string | null
           venues?: number | null
         }
@@ -402,6 +438,48 @@ export type Database = {
           resource_sort_order?: number
           resource_summary?: string
           resource_url?: string
+          updated_at?: string | null
+      education_band_sessions: {
+        Row: {
+          attribute_keys: string[]
+          base_xp: number
+          cooldown_hours: number
+          created_at: string | null
+          description: string | null
+          difficulty: string
+          duration_minutes: number
+          focus_skills: string[]
+          id: string
+          synergy_notes: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          attribute_keys?: string[]
+          base_xp: number
+          cooldown_hours: number
+          created_at?: string | null
+          description?: string | null
+          difficulty: string
+          duration_minutes: number
+          focus_skills?: string[]
+          id?: string
+          synergy_notes?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          attribute_keys?: string[]
+          base_xp?: number
+          cooldown_hours?: number
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string
+          duration_minutes?: number
+          focus_skills?: string[]
+          id?: string
+          synergy_notes?: string | null
+          title?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -568,6 +646,60 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           weekly_growth?: number | null
+        }
+        Relationships: []
+      }
+      education_mentors: {
+        Row: {
+          attribute_keys: string[]
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at: string
+          description: string
+          difficulty: string
+          focus_skill: string
+          id: string
+          name: string
+          required_skill_value: number
+          skill_gain_ratio: number | string
+          specialty: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_keys?: string[]
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at?: string
+          description: string
+          difficulty: string
+          focus_skill: string
+          id?: string
+          name: string
+          required_skill_value: number
+          skill_gain_ratio?: number | string
+          specialty: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_keys?: string[]
+          base_xp?: number
+          bonus_description?: string
+          cooldown_hours?: number
+          cost?: number
+          created_at?: string
+          description?: string
+          difficulty?: string
+          focus_skill?: string
+          id?: string
+          name?: string
+          required_skill_value?: number
+          skill_gain_ratio?: number | string
+          specialty?: string
+          updated_at?: string
         }
         Relationships: []
       }

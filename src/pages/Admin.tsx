@@ -1,6 +1,8 @@
-import { Gift, GraduationCap, NotebookPen, PlaySquare } from "lucide-react";
-import { Link } from "react-router-dom";
 
+import { Gift, GraduationCap, NotebookPen, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Gift, GraduationCap, NotebookPen, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +23,13 @@ const adminSections = [
     Icon: GraduationCap,
   },
   {
+    title: "Cities",
+    description: "Manage destination data, cultural hooks, and gameplay modifiers for each city.",
+    href: "/admin/cities",
+    action: "Manage cities",
+    Icon: Building2,
+  },
+  {
     title: "Skill Books",
     description: "Configure purchasable books that unlock skills and deliver XP to players.",
     href: "/admin/skill-books",
@@ -33,6 +42,15 @@ const adminSections = [
     href: "/admin/youtube-videos",
     action: "Manage YouTube content",
     Icon: PlaySquare,
+    title: "Band Learning",
+    description: "Curate collaborative sessions that power the band's education track.",
+    href: "/admin/band-learning",
+    action: "Manage band sessions",
+    Icon: Sparkles,
+    title: "Mentors",
+    description: "Control the mentor roster powering education XP and progression boosts.",
+    href: "/admin/mentors",
+    action: "Manage mentors",
   },
 ] as const;
 
