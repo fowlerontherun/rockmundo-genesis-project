@@ -34,6 +34,7 @@ import {
   Megaphone,
   Store,
   Guitar,
+  Handshake,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -85,6 +86,7 @@ const Navigation = () => {
     {
       title: "Community & Audience",
       items: [
+        { icon: Handshake, label: "Friends Hub", path: "/friends" },
         { icon: Users, label: "Band Manager", path: "/band" },
         { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
         { icon: Share2, label: "Social Media", path: "/social" },
