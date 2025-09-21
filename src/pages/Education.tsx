@@ -457,7 +457,7 @@ const mentorOptions: MentorOption[] = [
     cooldownHours: 36,
     baseXp: 190,
     difficulty: "intermediate",
-    attributeKeys: ["vocal_talent", "physical_endurance"],
+    attributeKeys: ["vocal_talent", "technical_mastery"],
     requiredSkillValue: 160,
     skillGainRatio: 0.8,
     bonusDescription: "Adds sustain control exercises that accelerate range stability and nightly recovery."
