@@ -600,26 +600,44 @@ export interface Database {
         Row: {
           id: string;
           title: string;
-          description: string;
+          description: string | null;
+          event_type: string;
           start_date: string;
           end_date: string;
-          created_at: string;
+          rewards: Json | null;
+          requirements: Json | null;
+          max_participants: number | null;
+          current_participants: number | null;
+          is_active: boolean | null;
+          created_at: string | null;
         };
         Insert: {
           id?: string;
           title: string;
-          description: string;
+          description?: string | null;
+          event_type: string;
           start_date: string;
           end_date: string;
-          created_at?: string;
+          rewards?: Json | null;
+          requirements?: Json | null;
+          max_participants?: number | null;
+          current_participants?: number | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
         };
         Update: {
           id?: string;
           title?: string;
-          description?: string;
+          description?: string | null;
+          event_type?: string;
           start_date?: string;
           end_date?: string;
-          created_at?: string;
+          rewards?: Json | null;
+          requirements?: Json | null;
+          max_participants?: number | null;
+          current_participants?: number | null;
+          is_active?: boolean | null;
+          created_at?: string | null;
         };
       };
       gigs: {
