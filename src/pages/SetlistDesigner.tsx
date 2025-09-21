@@ -37,30 +37,37 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { CalendarDays, Flame, Music2, Sparkles } from "lucide-react";
 
+type ShowType = "act" | "headliner" | "festivalHeadliner" | "acoustic";
+
 const showTabs = [
   {
-    key: "tour",
+    key: "headliner" as const,
     label: "World Tour",
     tagline: "Stadium pacing with cinematic fan moments",
   },
   {
-    key: "arena",
+    key: "act" as const,
     label: "Arena Spectacle",
     tagline: "High-production arena night with synced visuals",
   },
   {
-    key: "club",
+    key: "acoustic" as const,
     label: "Club Showcase",
     tagline: "Intimate rooms built around fan connection",
   },
   {
-    key: "festival",
+    key: "festivalHeadliner" as const,
     label: "Festival Circuit",
     tagline: "Rapid-fire festival slots with headline punch",
   },
-] as const;
+] satisfies ReadonlyArray<{ key: ShowType; label: string; tagline: string }>;
 
-type ShowType = typeof showTabs[number]["key"];
+const SONG_LIMITS: Record<ShowType, number> = {
+  act: 5,
+  headliner: 16,
+  festivalHeadliner: 22,
+  acoustic: 8,
+};
 
 type SetlistItem = {
   id: string;
@@ -85,8 +92,8 @@ type NewItemForm = {
   duration: string;
 };
 
-const initialSetlists: Record<ShowType, SetlistBlueprint> = {
-  tour: {
+export const initialSetlists: Record<ShowType, SetlistBlueprint> = {
+  headliner: {
     title: "World Tour Kickoff",
     locale: "Continental stadium route",
     description:
@@ -141,7 +148,7 @@ const initialSetlists: Record<ShowType, SetlistBlueprint> = {
       },
     ],
   },
-  arena: {
+  act: {
     title: "Arena Pulse Sequence",
     locale: "Major market arenas",
     description:
@@ -196,7 +203,7 @@ const initialSetlists: Record<ShowType, SetlistBlueprint> = {
       },
     ],
   },
-  club: {
+  acoustic: {
     title: "Club Residency Flow",
     locale: "500-cap rooms",
     description:
@@ -251,7 +258,7 @@ const initialSetlists: Record<ShowType, SetlistBlueprint> = {
       },
     ],
   },
-  festival: {
+  festivalHeadliner: {
     title: "Sunrise Festival Sprint",
     locale: "Outdoor main stages",
     description:
@@ -320,9 +327,9 @@ const createNewItemState = (): Record<ShowType, NewItemForm> => {
   }, {} as Record<ShowType, NewItemForm>);
 };
 
-const createEditingState = () => {
+const createEditingState = (overrides?: Partial<Record<ShowType, boolean>>) => {
   return showTabs.reduce((acc, tab) => {
-    acc[tab.key] = false;
+    acc[tab.key] = overrides?.[tab.key] ?? false;
     return acc;
   }, {} as Record<ShowType, boolean>);
 };
@@ -339,11 +346,23 @@ const reorderItems = (list: SetlistItem[], startIndex: number, endIndex: number)
   return updated;
 };
 
-export default function SetlistDesigner() {
+type SetlistDesignerProps = {
+  initialState?: Record<ShowType, SetlistBlueprint>;
+  initialEditing?: Partial<Record<ShowType, boolean>>;
+  initialActiveTab?: ShowType;
+};
+
+export default function SetlistDesigner({
+  initialState,
+  initialEditing,
+  initialActiveTab,
+}: SetlistDesignerProps = {}) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<ShowType>("tour");
-  const [setlists, setSetlists] = useState(initialSetlists);
-  const [isEditing, setIsEditing] = useState<Record<ShowType, boolean>>(createEditingState);
+  const [activeTab, setActiveTab] = useState<ShowType>(initialActiveTab ?? "headliner");
+  const [setlists, setSetlists] = useState(initialState ?? initialSetlists);
+  const [isEditing, setIsEditing] = useState<Record<ShowType, boolean>>(() =>
+    createEditingState(initialEditing),
+  );
   const [newItems, setNewItems] = useState<Record<ShowType, NewItemForm>>(createNewItemState);
 
   const handleToggleEditing = (showType: ShowType) => {
@@ -356,6 +375,20 @@ export default function SetlistDesigner() {
   const handleAddItem = (showType: ShowType) => {
     const form = newItems[showType];
     if (!form.title.trim()) {
+      return;
+    }
+
+    const currentSongCount = setlists[showType].items.filter((item) => item.type === "song").length;
+    const songLimit = SONG_LIMITS[showType];
+
+    if (form.type === "song" && currentSongCount >= songLimit) {
+      const tabLabel = showTabs.find((tab) => tab.key === showType)?.label ?? "This set";
+
+      toast({
+        title: "Song limit reached",
+        description: `${tabLabel} can feature up to ${songLimit} songs. Convert the new idea to a production moment or remove a track before adding another song.`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -482,6 +515,9 @@ export default function SetlistDesigner() {
           const formState = newItems[tab.key];
           const songCount = list.items.filter((item) => item.type === "song").length;
           const eventCount = list.items.length - songCount;
+          const songLimit = SONG_LIMITS[tab.key];
+          const remainingSongSlots = Math.max(0, songLimit - songCount);
+          const songLimitReached = songCount >= songLimit;
 
           return (
             <TabsContent key={tab.key} value={tab.key} className="space-y-6">
@@ -702,7 +738,23 @@ export default function SetlistDesigner() {
                         </div>
                       </div>
 
-                      <div className="flex justify-end">
+                      <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 md:flex-row md:items-center md:justify-between">
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <span>Song limit</span>
+                            <Badge variant="outline" className="font-semibold">
+                              {songLimit}
+                            </Badge>
+                            <Badge variant="secondary" className="font-semibold">
+                              {songCount}/{songLimit}
+                            </Badge>
+                          </div>
+                          <p className={songLimitReached ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
+                            {songLimitReached
+                              ? "Song limit reached. Convert the next addition to a production moment or remove a track to free up space."
+                              : `${remainingSongSlots} song slot${remainingSongSlots === 1 ? "" : "s"} remaining in this set.`}
+                          </p>
+                        </div>
                         <Button onClick={() => handleAddItem(tab.key)} disabled={!formState.title.trim()}>
                           Add to running order
                         </Button>
