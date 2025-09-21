@@ -267,44 +267,80 @@ export type Database = {
       }
       cities: {
         Row: {
+          bonuses: string | null
+          busking_value: number | null
           cost_of_living: number | null
           country: string
           created_at: string | null
           cultural_events: string[] | null
+          description: string | null
+          districts: Json | null
           dominant_genre: string | null
+          featured_studios: Json
+          featured_venues: Json
+          famous_resident: string | null
           id: string
           local_bonus: number | null
           music_scene: number | null
           name: string
           population: number | null
+          profile_description: string | null
+          transport_links: Json
+          travel_hub: string | null
+          travel_nodes: Json | null
+          unlocked: boolean | null
           updated_at: string | null
           venues: number | null
         }
         Insert: {
+          bonuses?: string | null
+          busking_value?: number | null
           cost_of_living?: number | null
           country: string
           created_at?: string | null
           cultural_events?: string[] | null
+          description?: string | null
+          districts?: Json | null
           dominant_genre?: string | null
+          featured_studios?: Json
+          featured_venues?: Json
+          famous_resident?: string | null
           id?: string
           local_bonus?: number | null
           music_scene?: number | null
           name: string
           population?: number | null
+          profile_description?: string | null
+          transport_links?: Json
+          travel_hub?: string | null
+          travel_nodes?: Json | null
+          unlocked?: boolean | null
           updated_at?: string | null
           venues?: number | null
         }
         Update: {
+          bonuses?: string | null
+          busking_value?: number | null
           cost_of_living?: number | null
           country?: string
           created_at?: string | null
           cultural_events?: string[] | null
+          description?: string | null
+          districts?: Json | null
           dominant_genre?: string | null
+          featured_studios?: Json
+          featured_venues?: Json
+          famous_resident?: string | null
           id?: string
           local_bonus?: number | null
           music_scene?: number | null
           name?: string
           population?: number | null
+          profile_description?: string | null
+          transport_links?: Json
+          travel_hub?: string | null
+          travel_nodes?: Json | null
+          unlocked?: boolean | null
           updated_at?: string | null
           venues?: number | null
         }
