@@ -801,20 +801,20 @@ export interface Database {
     };
     Views: {
       [key: string]: {
-        Row: Record<string, any>;
+        Row: Record<string, unknown>;
       };
     };
     Functions: {
       [key: string]: {
-        Args: Record<string, any>;
-        Returns: any;
+        Args: Record<string, unknown>;
+        Returns: unknown;
       };
     };
     Enums: {
       [key: string]: string;
     };
     CompositeTypes: {
-      [key: string]: Record<string, any>;
+      [key: string]: Record<string, unknown>;
     };
   };
 }

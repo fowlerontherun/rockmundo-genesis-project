@@ -21,10 +21,10 @@ const WorldMap = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const cities = data?.cities ?? [];
-
   const pins = useMemo(() => {
-    if (!cities.length) {
+    const cityList = data?.cities ?? [];
+
+    if (!cityList.length) {
       return [] as Array<{
         id: string;
         label: string;
@@ -34,7 +34,7 @@ const WorldMap = () => {
       }>;
     }
 
-    return cities.map((city) => {
+    return cityList.map((city) => {
       const coordinates = getCoordinatesForCity(city.name, city.country);
       const point = projectCoordinates(coordinates, MAP_DIMENSIONS);
       const left = `${(point.x / MAP_DIMENSIONS.width) * 100}%`;
@@ -52,7 +52,7 @@ const WorldMap = () => {
         description,
       };
     });
-  }, [cities]);
+  }, [data?.cities]);
 
   const renderMap = () => {
     if (isLoading) {

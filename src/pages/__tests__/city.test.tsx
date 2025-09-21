@@ -106,7 +106,8 @@ describe("City page", () => {
       fetchCityEnvironmentDetails: detailsMock,
     }));
 
-    const { CityContent, loadCityPageData } = await import("../City");
+    const { CityContent } = await import("../City");
+    const { loadCityPageData } = await import("../city-data");
 
     const result = await loadCityPageData(sampleCity.id);
 
@@ -149,7 +150,7 @@ describe("City page", () => {
       fetchCityEnvironmentDetails: mock(async () => sampleDetails),
     }));
 
-    const { loadCityPageData, CITY_NOT_FOUND_ERROR } = await import("../City");
+    const { loadCityPageData, CITY_NOT_FOUND_ERROR } = await import("../city-data");
 
     await expect(loadCityPageData("missing-city"))
       .rejects.toThrow(CITY_NOT_FOUND_ERROR);
