@@ -47,6 +47,7 @@ const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/Experie
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
 const AdminCities = lazyWithRetry(() => import("./pages/admin/Cities"));
 const AdminSkillBooks = lazyWithRetry(() => import("./pages/admin/SkillBooks"));
+const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"));
@@ -121,6 +122,7 @@ function App() {
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/cities" element={<AdminCities />} />
                     <Route path="admin/skill-books" element={<AdminSkillBooks />} />
+                    <Route path="admin/mentors" element={<AdminMentors />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />

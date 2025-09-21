@@ -511,6 +511,60 @@ export type Database = {
         }
         Relationships: []
       }
+      education_mentors: {
+        Row: {
+          attribute_keys: string[]
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at: string
+          description: string
+          difficulty: string
+          focus_skill: string
+          id: string
+          name: string
+          required_skill_value: number
+          skill_gain_ratio: number | string
+          specialty: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_keys?: string[]
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at?: string
+          description: string
+          difficulty: string
+          focus_skill: string
+          id?: string
+          name: string
+          required_skill_value: number
+          skill_gain_ratio?: number | string
+          specialty: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_keys?: string[]
+          base_xp?: number
+          bonus_description?: string
+          cooldown_hours?: number
+          cost?: number
+          created_at?: string
+          description?: string
+          difficulty?: string
+          focus_skill?: string
+          id?: string
+          name?: string
+          required_skill_value?: number
+          skill_gain_ratio?: number | string
+          specialty?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           created_at: string | null
