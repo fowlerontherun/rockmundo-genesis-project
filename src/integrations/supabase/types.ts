@@ -346,6 +346,99 @@ export type Database = {
         }
         Relationships: []
       }
+      education_youtube_lessons: {
+        Row: {
+          attribute_keys: string[]
+          channel: string
+          created_at: string
+          difficulty: Database["public"]["Enums"]["education_youtube_lesson_difficulty"]
+          duration_minutes: number
+          focus: string
+          id: string
+          required_skill_value: number | null
+          skill: string
+          summary: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          attribute_keys?: string[] | null
+          channel: string
+          created_at?: string | null
+          difficulty: Database["public"]["Enums"]["education_youtube_lesson_difficulty"]
+          duration_minutes: number
+          focus: string
+          id?: string
+          required_skill_value?: number | null
+          skill: string
+          summary: string
+          title: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          attribute_keys?: string[] | null
+          channel?: string
+          created_at?: string | null
+          difficulty?: Database["public"]["Enums"]["education_youtube_lesson_difficulty"]
+          duration_minutes?: number
+          focus?: string
+          id?: string
+          required_skill_value?: number | null
+          skill?: string
+          summary?: string
+          title?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      education_youtube_resources: {
+        Row: {
+          collection_description: string | null
+          collection_key: string
+          collection_sort_order: number
+          collection_title: string
+          created_at: string
+          id: string
+          resource_focus: string
+          resource_format: string
+          resource_name: string
+          resource_sort_order: number
+          resource_summary: string
+          resource_url: string
+          updated_at: string
+        }
+        Insert: {
+          collection_description?: string | null
+          collection_key: string
+          collection_sort_order?: number
+          collection_title: string
+          created_at?: string | null
+          id?: string
+          resource_focus: string
+          resource_format: string
+          resource_name: string
+          resource_sort_order?: number
+          resource_summary: string
+          resource_url: string
+          updated_at?: string | null
+        }
+        Update: {
+          collection_description?: string | null
+          collection_key?: string
+          collection_sort_order?: number
+          collection_title?: string
+          created_at?: string | null
+          id?: string
+          resource_focus?: string
+          resource_format?: string
+          resource_name?: string
+          resource_sort_order?: number
+          resource_summary?: string
+          resource_url?: string
+          updated_at?: string | null
       education_band_sessions: {
         Row: {
           attribute_keys: string[]
@@ -1704,6 +1797,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "offline" | "typing" | "away"
+      education_youtube_lesson_difficulty: "beginner" | "intermediate" | "advanced"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       profile_gender:
         | "female"

@@ -37,6 +37,11 @@ const adminSections = [
     Icon: NotebookPen,
   },
   {
+    title: "YouTube Playlists",
+    description: "Curate lessons and supporting playlists for the Education page.",
+    href: "/admin/youtube-videos",
+    action: "Manage YouTube content",
+    Icon: PlaySquare,
     title: "Band Learning",
     description: "Curate collaborative sessions that power the band's education track.",
     href: "/admin/band-learning",
@@ -46,7 +51,6 @@ const adminSections = [
     description: "Control the mentor roster powering education XP and progression boosts.",
     href: "/admin/mentors",
     action: "Manage mentors",
-    Icon: Users,
   },
 ] as const;
 

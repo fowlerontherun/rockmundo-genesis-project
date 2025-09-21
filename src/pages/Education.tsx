@@ -17,12 +17,22 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  DIFFICULTY_ORDER,
+  LESSON_DIFFICULTIES,
+  LESSON_DIFFICULTY_CONFIG,
+  SKILL_LABELS,
+  type LessonDifficulty,
+  type PrimarySkill
+} from "@/features/education/constants";
+import { useEducationVideoPlaylists } from "@/features/education/hooks/useEducationVideoPlaylists";
 import { awardActionXp } from "@/utils/progression";
 import {
   ATTRIBUTE_KEYS,
@@ -126,7 +136,7 @@ interface SkillLesson {
   summary: string;
   url: string;
   difficulty: LessonDifficulty;
-  durationMinutes: 30 | 45 | 60;
+  durationMinutes: number;
   attributeKeys?: AttributeKey[];
   requiredSkillValue?: number;
 }
@@ -176,6 +186,65 @@ interface BandMemberWithProfile {
     username: string | null;
   };
 }
+
+type YoutubeLessonRow = Tables<'education_youtube_lessons'>;
+
+const LESSON_QUERY_KEY = ["education", "youtube-lessons"] as const;
+const PRIMARY_SKILL_VALUES = Object.keys(SKILL_LABELS) as PrimarySkill[];
+const ATTRIBUTE_KEY_SET = new Set<AttributeKey>(ATTRIBUTE_KEYS);
+
+const isDefined = <T,>(value: T | null | undefined): value is T => value !== null && value !== undefined;
+
+const isPrimarySkillValue = (value: string | null | undefined): value is PrimarySkill =>
+  typeof value === "string" && (PRIMARY_SKILL_VALUES as readonly string[]).includes(value);
+
+const isLessonDifficultyValue = (value: string | null | undefined): value is LessonDifficulty =>
+  typeof value === "string" && (LESSON_DIFFICULTIES as readonly string[]).includes(value);
+
+const normalizeAttributeKeys = (keys: string[] | null | undefined): AttributeKey[] =>
+  (keys ?? []).filter((key): key is AttributeKey => ATTRIBUTE_KEY_SET.has(key as AttributeKey));
+
+const mapLessonRow = (row: YoutubeLessonRow): SkillLesson | null => {
+  if (!isPrimarySkillValue(row.skill) || !isLessonDifficultyValue(row.difficulty)) {
+    return null;
+  }
+
+  if (row.duration_minutes === null || Number.isNaN(row.duration_minutes)) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    skill: row.skill,
+    title: row.title,
+    channel: row.channel,
+    focus: row.focus,
+    summary: row.summary,
+    url: row.url,
+    difficulty: row.difficulty,
+    durationMinutes: row.duration_minutes,
+    attributeKeys: normalizeAttributeKeys(row.attribute_keys as string[] | null | undefined),
+    requiredSkillValue: row.required_skill_value ?? undefined,
+  };
+};
+
+const sortLessons = (a: SkillLesson, b: SkillLesson) => {
+  const difficultyComparison = DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty];
+  if (difficultyComparison !== 0) {
+    return difficultyComparison;
+  }
+
+  const requiredComparison = (a.requiredSkillValue ?? 0) - (b.requiredSkillValue ?? 0);
+  if (requiredComparison !== 0) {
+    return requiredComparison;
+  }
+
+  if (a.durationMinutes !== b.durationMinutes) {
+    return a.durationMinutes - b.durationMinutes;
+  }
+
+  return a.title.localeCompare(b.title);
+};
 
 const bookJourneys = [
   {
@@ -348,249 +417,6 @@ const universityRoutes = [
   }
 ];
 
-const videoCollections = [
-  {
-    title: "Technique & Theory",
-    description: "Channels that deliver weekly drills, breakdowns, and ear training challenges.",
-    resources: [
-      {
-        name: "Rick Beato",
-        format: "Deep-dive lessons",
-        focus: "Ear Training",
-        link: "https://www.youtube.com/user/pegzch",
-        summary: "Dissect iconic songs, chord changes, and arrangement secrets in long-form videos."
-      },
-      {
-        name: "Marty Music",
-        format: "Guitar tutorials",
-        focus: "Technique",
-        link: "https://www.youtube.com/c/martyschwartz",
-        summary: "Accessible riffs, tone tips, and genre studies that scale with your skill."
-      },
-      {
-        name: "Nahre Sol",
-        format: "Creative experiments",
-        focus: "Composition",
-        link: "https://www.youtube.com/c/nahresol",
-        summary: "Blend classical, electronic, and improvisational tools for fresh writing prompts."
-      }
-    ]
-  },
-  {
-    title: "Structured Playlists",
-    description: "Follow guided series that mimic a cohort with homework and check-ins.",
-    resources: [
-      {
-        name: "30-Day Songwriting Bootcamp",
-        format: "Playlist",
-        focus: "Daily Prompts",
-        link: "https://www.youtube.com/playlist?list=PL1A2F2A3",
-        summary: "Turn sparks into full demos in a month with incremental challenges."
-      },
-      {
-        name: "Mixing Essentials in Logic Pro",
-        format: "Playlist",
-        focus: "Home Studio",
-        link: "https://www.youtube.com/playlist?list=PL2F3G4H5",
-        summary: "Master EQ, compression, and mix bus workflows for indie releases."
-      },
-      {
-        name: "Stage Presence Fundamentals",
-        format: "Mini-series",
-        focus: "Performance",
-        link: "https://www.youtube.com/playlist?list=PL7K8L9M0",
-        summary: "Own the stage with crowd engagement tactics and mic control drills."
-      }
-    ]
-  },
-  {
-    title: "Accountability Formats",
-    description: "Keep practice consistent with co-working streams, trackable logs, and improv labs.",
-    resources: [
-      {
-        name: "Practice With Me Streams",
-        format: "Co-practice",
-        focus: "Routine Building",
-        link: "https://www.youtube.com/results?search_query=music+practice+with+me",
-        summary: "Join real-time practice rooms that feel like digital rehearsal studios."
-      },
-      {
-        name: "Looped Backing Tracks",
-        format: "Play-along",
-        focus: "Improvisation",
-        link: "https://www.youtube.com/results?search_query=backing+tracks+for+guitar",
-        summary: "Expand your improv vocabulary with tempo-based jam sessions."
-      },
-      {
-        name: "Ear Training Drills",
-        format: "Interactive",
-        focus: "Listening Skills",
-        link: "https://www.youtube.com/results?search_query=ear+training+intervals",
-        summary: "Speed up interval recognition with call-and-response challenges."
-      }
-    ]
-  }
-];
-
-const skillLessons: SkillLesson[] = [
-  {
-    id: "guitar-modal-mastery",
-    skill: "guitar",
-    title: "Modal Lead Mastery",
-    channel: "Rick Beato",
-    focus: "Interval Mapping",
-    summary: "Drill pentatonic-to-modal transitions with live application riffs and phrasing challenges.",
-    url: "https://www.youtube.com/watch?v=wfJDUKq4HPg",
-    difficulty: "intermediate",
-    durationMinutes: 45,
-    attributeKeys: ["musical_ability", "technical_mastery"],
-    requiredSkillValue: 120
-  },
-  {
-    id: "guitar-polyrhythm-chops",
-    skill: "guitar",
-    title: "Polyrhythmic Chops",
-    channel: "Marty Music",
-    focus: "Rhythmic Precision",
-    summary: "Layer accent grids over groove etudes to tighten muting, timing, and pick-hand discipline.",
-    url: "https://www.youtube.com/watch?v=e4a1zYmQJy4",
-    difficulty: "advanced",
-    durationMinutes: 60,
-    attributeKeys: ["musical_ability", "rhythm_sense"],
-    requiredSkillValue: 240
-  },
-  {
-    id: "bass-syncopation-lab",
-    skill: "bass",
-    title: "Syncopation Lab",
-    channel: "Scott's Bass Lessons",
-    focus: "Groove Displacement",
-    summary: "Use ghost notes and rhythmic displacement drills to lock with kick patterns under pressure.",
-    url: "https://www.youtube.com/watch?v=QFgrKxEE0dE",
-    difficulty: "intermediate",
-    durationMinutes: 45,
-    attributeKeys: ["rhythm_sense", "musical_ability"],
-    requiredSkillValue: 110
-  },
-  {
-    id: "bass-pocket-endurance",
-    skill: "bass",
-    title: "Pocket Endurance Builder",
-    channel: "BassBuzz",
-    focus: "Stamina & Consistency",
-    summary: "Develop long-form pocket stamina with dynamic swells and subdivision tracking for tour-length sets.",
-    url: "https://www.youtube.com/watch?v=1gL8w3bQybQ",
-    difficulty: "advanced",
-    durationMinutes: 60,
-    attributeKeys: ["physical_endurance", "rhythm_sense"],
-    requiredSkillValue: 210
-  },
-  {
-    id: "drums-linear-phrasing",
-    skill: "drums",
-    title: "Linear Fills & Phrasing",
-    channel: "Drumeo",
-    focus: "Fill Fluency",
-    summary: "Stack stickings and kick ostinatos to unlock linear fills that resolve cleanly back to the groove.",
-    url: "https://www.youtube.com/watch?v=RGeyz4ZmQXw",
-    difficulty: "advanced",
-    durationMinutes: 60,
-    attributeKeys: ["rhythm_sense", "physical_endurance"],
-    requiredSkillValue: 260
-  },
-  {
-    id: "drums-dynamic-control",
-    skill: "drums",
-    title: "Dynamic Control Shed",
-    channel: "Stephen Taylor",
-    focus: "Volume Architecture",
-    summary: "Balance ghost-note grids with explosive accents to expand touch, tone, and live mix placement.",
-    url: "https://www.youtube.com/watch?v=9Uac9XqZz_c",
-    difficulty: "intermediate",
-    durationMinutes: 45,
-    attributeKeys: ["rhythm_sense", "stage_presence"],
-    requiredSkillValue: 130
-  },
-  {
-    id: "vocals-resonance-reset",
-    skill: "vocals",
-    title: "Resonance Reset",
-    channel: "Cheryl Porter Vocal Coach",
-    focus: "Tone Anchoring",
-    summary: "Layer sirens, vowel shaping, and projection drills to steady resonance throughout your range.",
-    url: "https://www.youtube.com/watch?v=KjF0YErEy3o",
-    difficulty: "beginner",
-    durationMinutes: 30,
-    attributeKeys: ["vocal_talent", "mental_focus"],
-    requiredSkillValue: 40
-  },
-  {
-    id: "vocals-belting-strategies",
-    skill: "vocals",
-    title: "Belting Strategies",
-    channel: "Madeleine Harvey",
-    focus: "Power Sustain",
-    summary: "Blend chest-to-head transitions with support drills that protect stamina during encore sets.",
-    url: "https://www.youtube.com/watch?v=1sRQnNz1U9I",
-    difficulty: "advanced",
-    durationMinutes: 60,
-    attributeKeys: ["vocal_talent", "physical_endurance"],
-    requiredSkillValue: 220
-  },
-  {
-    id: "performance-crowd-sculpt",
-    skill: "performance",
-    title: "Crowd Sculpting Essentials",
-    channel: "StageMilk",
-    focus: "Engagement Flow",
-    summary: "Design pacing arcs, silent beats, and body anchoring that modulate energy across a full set.",
-    url: "https://www.youtube.com/watch?v=ulq_MGd7ycM",
-    difficulty: "intermediate",
-    durationMinutes: 45,
-    attributeKeys: ["stage_presence", "creative_insight"],
-    requiredSkillValue: 150
-  },
-  {
-    id: "performance-micro-gestures",
-    skill: "performance",
-    title: "Micro-Gesture Masterclass",
-    channel: "Charisma on Command",
-    focus: "Stage Detail",
-    summary: "Refine hand cues, eye-line control, and crowd scanning to deepen rapport in intimate venues.",
-    url: "https://www.youtube.com/watch?v=9R_8AZWZz0A",
-    difficulty: "advanced",
-    durationMinutes: 60,
-    attributeKeys: ["stage_presence", "social_reach"],
-    requiredSkillValue: 230
-  },
-  {
-    id: "songwriting-hook-forging",
-    skill: "songwriting",
-    title: "Hook Forging Workshop",
-    channel: "Holistic Songwriting",
-    focus: "Hook Systems",
-    summary: "Deconstruct top-chart hooks and rebuild them with motif stacking and lyrical negative space.",
-    url: "https://www.youtube.com/watch?v=g3Q2bp7nY5k",
-    difficulty: "intermediate",
-    durationMinutes: 45,
-    attributeKeys: ["creative_insight", "marketing_savvy"],
-    requiredSkillValue: 140
-  },
-  {
-    id: "songwriting-cinematic-arcs",
-    skill: "songwriting",
-    title: "Cinematic Story Arcs",
-    channel: "Andrew Huang",
-    focus: "Narrative Dynamics",
-    summary: "Plot emotional peaks with harmony pivots, textural swells, and lyrical callbacks for festival sets.",
-    url: "https://www.youtube.com/watch?v=7kGS7FpC18A",
-    difficulty: "advanced",
-    durationMinutes: 60,
-    attributeKeys: ["creative_insight", "technical_mastery"],
-    requiredSkillValue: 250
-  }
-];
-
 const mentorOptions: MentorOption[] = [
   {
     id: "mentor-stage-architect",
@@ -680,22 +506,62 @@ const Education = () => {
   const { profile, skills, attributes, refetch, addActivity, updateProfile } = useGameData();
 
   const {
-    data: bandSessionRows = [],
-    isLoading: bandSessionsLoading,
-    error: bandSessionsError
+    data: lessonRows,
+    isLoading: isLoadingLessons,
+    isError: isLessonsError,
+    error: lessonsError,
   } = useQuery({
-    queryKey: ["education", "band-sessions"],
+    queryKey: LESSON_QUERY_KEY,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("education_band_sessions")
+        .from("education_youtube_lessons")
         .select("*")
+        .order("skill", { ascending: true })
+        .order("required_skill_value", { ascending: true, nullsFirst: true })
         .order("difficulty", { ascending: true })
+        .order("duration_minutes", { ascending: true })
         .order("title", { ascending: true });
 
       if (error) {
         throw error;
       }
 
+
+      return (data ?? []) as YoutubeLessonRow[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const skillLessons = useMemo<SkillLesson[]>(() => {
+    if (!lessonRows) {
+      return [];
+    }
+
+    const normalized = lessonRows.map(mapLessonRow).filter(isDefined);
+    normalized.sort(sortLessons);
+    return normalized;
+  }, [lessonRows]);
+
+  const {
+    data: playlistData,
+    isLoading: isLoadingPlaylists,
+    isError: isPlaylistsError,
+    error: playlistsError,
+  } = useEducationVideoPlaylists();
+
+  const videoPlaylists = playlistData ?? [];
+  const lessonsErrorMessage =
+    lessonsError instanceof Error
+      ? lessonsError.message
+      : lessonsError
+        ? "We couldn't load curated lessons. Please try again later."
+        : "";
+  const playlistsErrorMessage =
+    playlistsError instanceof Error
+      ? playlistsError.message
+      : playlistsError
+        ? "We couldn't load resource playlists. Please try again later."
+        : "";
       return (data ?? []) as BandSessionRow[];
     }
   });
@@ -746,7 +612,6 @@ const Education = () => {
       });
     }
   }, [bandSessionsError, toast]);
-
   const [viewCounts, setViewCounts] = useState<Record<string, number>>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -1140,23 +1005,15 @@ const Education = () => {
     }
 
     for (const key of Object.keys(groups) as PrimarySkill[]) {
-      groups[key]?.sort((a, b) => {
-        const difficultyComparison = DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty];
-        if (difficultyComparison !== 0) {
-          return difficultyComparison;
-        }
-        return a.durationMinutes - b.durationMinutes;
-      });
+      groups[key]?.sort(sortLessons);
     }
 
     return groups;
-  }, []);
+  }, [skillLessons]);
 
   const bandCooldownLookup = bandCooldowns[activeBandKey] ?? {};
   const bandSize = bandMembers.length;
-  const availableSkillKeys = (Object.keys(SKILL_LABELS) as PrimarySkill[]).filter(
-    (skillKey) => (lessonGroups[skillKey]?.length ?? 0) > 0
-  );
+  const availableSkillKeys = PRIMARY_SKILL_VALUES.filter((skillKey) => (lessonGroups[skillKey]?.length ?? 0) > 0);
 
   const handleWatchLesson = async (lesson: SkillLesson) => {
     if (!profile) {
@@ -1623,105 +1480,120 @@ const Education = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {(Object.keys(SKILL_LABELS) as PrimarySkill[]).map((skillKey) => {
-                const lessons = lessonGroups[skillKey];
-                if (!lessons || lessons.length === 0) return null;
+              {isLoadingLessons ? (
+                <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading curated lessons...
+                </div>
+              ) : isLessonsError ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Unable to load lessons</AlertTitle>
+                  <AlertDescription>{lessonsErrorMessage}</AlertDescription>
+                </Alert>
+              ) : availableSkillKeys.length === 0 ? (
+                <div className="rounded-lg border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
+                  No lessons have been published yet. Check back soon for fresh training drops.
+                </div>
+              ) : (
+                availableSkillKeys.map((skillKey) => {
+                  const lessons = lessonGroups[skillKey];
+                  if (!lessons || lessons.length === 0) return null;
 
-                const skillLevel = resolveSkillValue(skillKey);
-                const viewCount = viewCounts[skillKey] ?? 0;
-                const highestRequirement = lessons.reduce(
-                  (max, lesson) => Math.max(max, lesson.requiredSkillValue ?? 0),
-                  0
-                );
-                const unlocked = isSkillUnlocked(skillKey, Math.max(highestRequirement, 1));
+                  const skillLevel = resolveSkillValue(skillKey);
+                  const viewCount = viewCounts[skillKey] ?? 0;
+                  const highestRequirement = lessons.reduce(
+                    (max, lesson) => Math.max(max, lesson.requiredSkillValue ?? 0),
+                    0
+                  );
+                  const unlocked = isSkillUnlocked(skillKey, Math.max(highestRequirement, 1));
 
-                return (
-                  <Card key={skillKey} className="border-dashed">
-                    <CardHeader className="space-y-2">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <CardTitle className="text-lg">{SKILL_LABELS[skillKey]}</CardTitle>
-                          <CardDescription>
-                            Current rating: {Math.round(skillLevel)} • Repeat stacks: {Math.min(viewCount, MAX_REPEAT_STACKS)} / {MAX_REPEAT_STACKS}
-                          </CardDescription>
-                        </div>
-                        <Badge variant={unlocked ? "secondary" : "outline"} className="whitespace-nowrap text-xs">
-                          {unlocked ? "Unlocked" : `Requires ${highestRequirement}+`}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {lessons.map((lesson) => {
-                        const reward = computeLessonReward(lesson);
-                        const locked = !isSkillUnlocked(lesson.skill, lesson.requiredSkillValue ?? 1);
-
-                        return (
-                          <div key={lesson.id} className="space-y-4 rounded-lg border bg-muted/40 p-4">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                              <div>
-                                <p className="text-sm font-semibold">{lesson.title}</p>
-                                <p className="text-xs text-muted-foreground">{lesson.focus} • {lesson.channel}</p>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {LESSON_DIFFICULTY_CONFIG[lesson.difficulty].label}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {lesson.durationMinutes} min
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  Views: {viewCounts[lesson.skill] ?? 0}
-                                </Badge>
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">{lesson.summary}</p>
-                            <div className="grid gap-2 sm:grid-cols-3">
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Clock className="h-4 w-4" />
-                                Session time: {lesson.durationMinutes} min
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Trophy className="h-4 w-4 text-primary" />
-                                Next reward: {reward.effectiveXp} XP
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Gauge className="h-4 w-4" />
-                                Attribute boost: {(Math.max(0, reward.attributeMultiplier - 1) * 100).toFixed(0)}%
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="text-xs text-muted-foreground">
-                                Repeat bonus: {((reward.repeatMultiplier - 1) * 100).toFixed(0)}% • Skill gain ≈ {reward.skillGain}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleWatchLesson(lesson)}
-                                  disabled={locked || activeLessonId === lesson.id}
-                                >
-                                  {locked
-                                    ? "Unlock skill first"
-                                    : activeLessonId === lesson.id
-                                      ? "Recording..."
-                                      : "Watch & Earn"}
-                                </Button>
-                                <Button asChild size="sm" variant="ghost">
-                                  <a href={lesson.url} target="_blank" rel="noreferrer">
-                                    <Play className="mr-2 h-4 w-4" /> Preview
-                                  </a>
-                                </Button>
-                              </div>
-                            </div>
+                  return (
+                    <Card key={skillKey} className="border-dashed">
+                      <CardHeader className="space-y-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{SKILL_LABELS[skillKey]}</CardTitle>
+                            <CardDescription>
+                              Current rating: {Math.round(skillLevel)} • Repeat stacks: {Math.min(viewCount, MAX_REPEAT_STACKS)} / {MAX_REPEAT_STACKS}
+                            </CardDescription>
                           </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                          <Badge variant={unlocked ? "secondary" : "outline"} className="whitespace-nowrap text-xs">
+                            {unlocked ? "Unlocked" : `Requires ${highestRequirement}+`}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {lessons.map((lesson) => {
+                          const reward = computeLessonReward(lesson);
+                          const locked = !isSkillUnlocked(lesson.skill, lesson.requiredSkillValue ?? 1);
+
+                          return (
+                            <div key={lesson.id} className="space-y-4 rounded-lg border bg-muted/40 p-4">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-sm font-semibold">{lesson.title}</p>
+                                  <p className="text-xs text-muted-foreground">{lesson.focus} • {lesson.channel}</p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {LESSON_DIFFICULTY_CONFIG[lesson.difficulty].label}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {lesson.durationMinutes} min
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    Views: {viewCounts[lesson.skill] ?? 0}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{lesson.summary}</p>
+                              <div className="grid gap-2 sm:grid-cols-3">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Clock className="h-4 w-4" />
+                                  Session time: {lesson.durationMinutes} min
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Trophy className="h-4 w-4 text-primary" />
+                                  Next reward: {reward.effectiveXp} XP
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Gauge className="h-4 w-4" />
+                                  Attribute boost: {(Math.max(0, reward.attributeMultiplier - 1) * 100).toFixed(0)}%
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="text-xs text-muted-foreground">
+                                  Repeat bonus: {((reward.repeatMultiplier - 1) * 100).toFixed(0)}% • Skill gain ≈ {reward.skillGain}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleWatchLesson(lesson)}
+                                    disabled={locked || activeLessonId === lesson.id}
+                                  >
+                                    {locked
+                                      ? "Unlock skill first"
+                                      : activeLessonId === lesson.id
+                                        ? "Recording..."
+                                        : "Watch & Earn"}
+                                  </Button>
+                                  <Button asChild size="sm" variant="ghost">
+                                    <a href={lesson.url} target="_blank" rel="noreferrer">
+                                      <Play className="mr-2 h-4 w-4" /> Preview
+                                    </a>
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Resource Playlists</CardTitle>
@@ -1730,35 +1602,53 @@ const Education = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {videoCollections.map((collection) => (
-                <Card key={collection.title} className="border-dashed">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-lg">{collection.title}</CardTitle>
-                    <CardDescription>{collection.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {collection.resources.map((resource) => (
-                      <div key={resource.name} className="space-y-3 rounded-lg border bg-muted/40 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold">{resource.name}</p>
-                            <p className="text-xs text-muted-foreground">{resource.format}</p>
+              {isLoadingPlaylists ? (
+                <div className="col-span-full flex items-center justify-center py-8 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading playlists...
+                </div>
+              ) : isPlaylistsError ? (
+                <div className="col-span-full">
+                  <Alert variant="destructive">
+                    <AlertTitle>Unable to load playlists</AlertTitle>
+                    <AlertDescription>{playlistsErrorMessage}</AlertDescription>
+                  </Alert>
+                </div>
+              ) : videoPlaylists.length === 0 ? (
+                <div className="col-span-full rounded-lg border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
+                  No playlists are available yet. Add resources from the admin panel to surface recommendations.
+                </div>
+              ) : (
+                videoPlaylists.map((collection) => (
+                  <Card key={collection.key} className="border-dashed">
+                    <CardHeader className="space-y-2">
+                      <CardTitle className="text-lg">{collection.title}</CardTitle>
+                      <CardDescription>{collection.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {collection.resources.map((resource) => (
+                        <div key={resource.id} className="space-y-3 rounded-lg border bg-muted/40 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">{resource.name}</p>
+                              <p className="text-xs text-muted-foreground">{resource.format}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {resource.focus}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            {resource.focus}
-                          </Badge>
+                          <p className="text-xs text-muted-foreground">{resource.summary}</p>
+                          <Button asChild variant="link" className="h-auto px-0 text-xs font-semibold">
+                            <a href={resource.url} target="_blank" rel="noreferrer">
+                              Watch now
+                            </a>
+                          </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">{resource.summary}</p>
-                        <Button asChild variant="link" className="h-auto px-0 text-xs font-semibold">
-                          <a href={resource.link} target="_blank" rel="noreferrer">
-                            Watch now
-                          </a>
-                        </Button>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))}
+                      ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </CardContent>
           </Card>
         </TabsContent>
