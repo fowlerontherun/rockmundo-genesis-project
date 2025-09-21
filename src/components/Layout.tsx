@@ -47,7 +47,7 @@ const Layout = () => {
       <Navigation />
       <main className="flex-1 overflow-y-auto pb-16 lg:ml-0 lg:pb-0">
         <header className="bg-muted py-2 text-center font-oswald text-sm uppercase tracking-wide text-muted-foreground">
-          DEMO- In Developmen
+          DEMO- In Development
         </header>
         <div className="pt-12 lg:pt-0">
           {profileError && (
