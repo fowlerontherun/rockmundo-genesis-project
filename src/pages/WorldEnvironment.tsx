@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -916,6 +916,18 @@ const WorldEnvironment: React.FC = () => {
                               <p className="text-xs text-muted-foreground">No cultural events recorded.</p>
                             )}
                           </div>
+                          <div className="flex justify-end">
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <Link to={`/cities/${city.id}`}>
+                                Open city overview
+                              </Link>
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     );
@@ -988,6 +1000,13 @@ const WorldEnvironment: React.FC = () => {
                             Arrival expected {travelEtaDate.toLocaleString()}.
                           </p>
                         )}
+                        <div className="flex justify-end">
+                          <Button asChild size="sm" variant="secondary">
+                            <Link to={`/cities/${selectedCity.id}`}>
+                              Open city overview
+                            </Link>
+                          </Button>
+                        </div>
                         <Separator />
                       </div>
                       <div className="space-y-4">

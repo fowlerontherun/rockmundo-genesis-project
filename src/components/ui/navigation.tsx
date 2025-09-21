@@ -4,6 +4,7 @@ import logo from "@/assets/rockmundo-new-logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Home,
@@ -39,8 +40,11 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
+  const { currentCity } = useGameData();
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
+
+  const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
 
   const navSections = [
     {
@@ -71,6 +75,7 @@ const Navigation = () => {
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: Building2, label: "Venue Management", path: "/venues" },
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
+        { icon: MapPin, label: "City Overview", path: cityOverviewPath },
         { icon: Globe, label: "World Map", path: "/cities" },
         { icon: Mic, label: "Street Busking", path: "/busking" },
         { icon: Plane, label: "Travel Planner", path: "/travel" },
