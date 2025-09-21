@@ -35,12 +35,10 @@ const WorldMap = () => {
     }
 
     return cityList.map((city) => {
-      const coordinates = getCoordinatesForCity(
-        city.name,
-        city.country,
-        city.latitude ?? null,
-        city.longitude ?? null,
-      );
+      const coordinates = getCoordinatesForCity(city.name, city.country, {
+        latitude: city.latitude ?? null,
+        longitude: city.longitude ?? null,
+      });
       const point = projectCoordinates(coordinates, MAP_DIMENSIONS);
       const left = `${(point.x / MAP_DIMENSIONS.width) * 100}%`;
       const top = `${(point.y / MAP_DIMENSIONS.height) * 100}%`;
