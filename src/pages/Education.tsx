@@ -190,7 +190,6 @@ interface BandMemberWithProfile {
 type YoutubeLessonRow = Tables<'education_youtube_lessons'>;
 
 const LESSON_QUERY_KEY = ["education", "youtube-lessons"] as const;
-const PRIMARY_SKILL_VALUES = Object.keys(SKILL_LABELS) as PrimarySkill[];
 const ATTRIBUTE_KEY_SET = new Set<AttributeKey>(ATTRIBUTE_KEYS);
 
 const isDefined = <T,>(value: T | null | undefined): value is T => value !== null && value !== undefined;

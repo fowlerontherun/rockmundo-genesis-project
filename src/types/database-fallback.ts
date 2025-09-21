@@ -1,6 +1,4 @@
-// Fallback types when supabase types file is corrupted
-// This provides minimal type safety while the issue is resolved
-
+// Comprehensive fallback types when supabase types file is corrupted
 export type Json =
   | string
   | number
@@ -9,7 +7,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-// Basic database structure - minimal but functional
 export interface Database {
   public: {
     Tables: {
@@ -21,6 +18,8 @@ export interface Database {
           display_name: string;
           avatar_url?: string;
           bio?: string;
+          current_city_id?: string;
+          slot_number?: number;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +30,8 @@ export interface Database {
           display_name: string;
           avatar_url?: string;
           bio?: string;
+          current_city_id?: string;
+          slot_number?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -41,6 +42,8 @@ export interface Database {
           display_name?: string;
           avatar_url?: string;
           bio?: string;
+          current_city_id?: string;
+          slot_number?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -71,11 +74,619 @@ export interface Database {
           updated_at?: string;
         };
       };
-      // Add other common tables as needed
-      [key: string]: {
-        Row: Record<string, any>;
-        Insert: Record<string, any>;
-        Update: Record<string, any>;
+      player_skills: {
+        Row: {
+          id: string;
+          profile_id: string;
+          skill_slug: string;
+          current_level: number;
+          current_xp: number;
+          required_xp: number;
+          metadata?: Json;
+          last_practiced_at?: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          skill_slug: string;
+          current_level?: number;
+          current_xp?: number;
+          required_xp?: number;
+          metadata?: Json;
+          last_practiced_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          skill_slug?: string;
+          current_level?: number;
+          current_xp?: number;
+          required_xp?: number;
+          metadata?: Json;
+          last_practiced_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      player_xp_wallet: {
+        Row: {
+          profile_id: string;
+          xp_balance: number;
+          xp_spent: number;
+          lifetime_xp: number;
+          skill_points_earned: number;
+          attribute_points_earned: number;
+          last_recalculated: string;
+        };
+        Insert: {
+          profile_id: string;
+          xp_balance?: number;
+          xp_spent?: number;
+          lifetime_xp?: number;
+          skill_points_earned?: number;
+          attribute_points_earned?: number;
+          last_recalculated?: string;
+        };
+        Update: {
+          profile_id?: string;
+          xp_balance?: number;
+          xp_spent?: number;
+          lifetime_xp?: number;
+          skill_points_earned?: number;
+          attribute_points_earned?: number;
+          last_recalculated?: string;
+        };
+      };
+      education_youtube_resources: {
+        Row: {
+          id: string;
+          title: string;
+          url: string;
+          skill?: string;
+          difficulty?: string;
+          resource_name?: string;
+          resource_format?: string;
+          resource_focus?: string;
+          resource_url?: string;
+          resource_summary?: string;
+          resource_sort_order?: number;
+          collection_key?: string;
+          collection_title?: string;
+          collection_description?: string;
+          collection_sort_order?: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          url: string;
+          skill?: string;
+          difficulty?: string;
+          resource_name?: string;
+          resource_format?: string;
+          resource_focus?: string;
+          resource_url?: string;
+          resource_summary?: string;
+          resource_sort_order?: number;
+          collection_key?: string;
+          collection_title?: string;
+          collection_description?: string;
+          collection_sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          url?: string;
+          skill?: string;
+          difficulty?: string;
+          resource_name?: string;
+          resource_format?: string;
+          resource_focus?: string;
+          resource_url?: string;
+          resource_summary?: string;
+          resource_sort_order?: number;
+          collection_key?: string;
+          collection_title?: string;
+          collection_description?: string;
+          collection_sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      education_youtube_lessons: {
+        Row: {
+          id: string;
+          title: string;
+          skill?: string;
+          difficulty?: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          skill?: string;
+          difficulty?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          skill?: string;
+          difficulty?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      profile_daily_xp_grants: {
+        Row: {
+          id: string;
+          profile_id: string;
+          amount: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          amount: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          amount?: number;
+          created_at?: string;
+        };
+      };
+      skill_definitions: {
+        Row: {
+          id: string;
+          slug: string;
+          display_name: string;
+          description?: string;
+          tier_caps?: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          display_name: string;
+          description?: string;
+          tier_caps?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          display_name?: string;
+          description?: string;
+          tier_caps?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      skill_progress: {
+        Row: {
+          id: string;
+          profile_id: string;
+          skill_slug: string;
+          current_level: number;
+          current_xp: number;
+          required_xp: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          skill_slug: string;
+          current_level?: number;
+          current_xp?: number;
+          required_xp?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          skill_slug?: string;
+          current_level?: number;
+          current_xp?: number;
+          required_xp?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      achievements: {
+        Row: {
+          id: string;
+          name: string;
+          description: string;
+          icon: string;
+          rarity: string;
+          category: string;
+          requirements: Json;
+          rewards: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description: string;
+          icon: string;
+          rarity: string;
+          category: string;
+          requirements: Json;
+          rewards: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string;
+          icon?: string;
+          rarity?: string;
+          category?: string;
+          requirements?: Json;
+          rewards?: Json;
+          created_at?: string;
+        };
+      };
+      activity_feed: {
+        Row: {
+          id: string;
+          user_id: string;
+          activity_type: string;
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          activity_type: string;
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          activity_type?: string;
+          message?: string;
+          created_at?: string;
+        };
+      };
+      band_members: {
+        Row: {
+          id: string;
+          band_id: string;
+          profile_id: string;
+          role: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          band_id: string;
+          profile_id: string;
+          role: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          band_id?: string;
+          profile_id?: string;
+          role?: string;
+          created_at?: string;
+        };
+      };
+      bands: {
+        Row: {
+          id: string;
+          name: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      chart_entries: {
+        Row: {
+          id: string;
+          song_id: string;
+          chart_position: number;
+          week: string;
+          genre: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          song_id: string;
+          chart_position: number;
+          week: string;
+          genre: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          song_id?: string;
+          chart_position?: number;
+          week?: string;
+          genre?: string;
+          created_at?: string;
+        };
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          user_id: string;
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          message?: string;
+          created_at?: string;
+        };
+      };
+      equipment_items: {
+        Row: {
+          id: string;
+          name: string;
+          type: string;
+          rarity: string;
+          effects: Json;
+          price: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          type: string;
+          rarity: string;
+          effects: Json;
+          price: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          type?: string;
+          rarity?: string;
+          effects?: Json;
+          price?: number;
+          created_at?: string;
+        };
+      };
+      game_events: {
+        Row: {
+          id: string;
+          title: string;
+          description: string;
+          start_date: string;
+          end_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description: string;
+          start_date: string;
+          end_date: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string;
+          start_date?: string;
+          end_date?: string;
+          created_at?: string;
+        };
+      };
+      gigs: {
+        Row: {
+          id: string;
+          venue_id: string;
+          performer_id: string;
+          date: string;
+          payment: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          venue_id: string;
+          performer_id: string;
+          date: string;
+          payment: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          venue_id?: string;
+          performer_id?: string;
+          date?: string;
+          payment?: number;
+          created_at?: string;
+        };
+      };
+      inventory: {
+        Row: {
+          id: string;
+          user_id: string;
+          item_id: string;
+          quantity: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          item_id: string;
+          quantity: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          item_id?: string;
+          quantity?: number;
+          created_at?: string;
+        };
+      };
+      songs: {
+        Row: {
+          id: string;
+          title: string;
+          artist_id: string;
+          genre: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          artist_id: string;
+          genre: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          artist_id?: string;
+          genre?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      streaming_platforms: {
+        Row: {
+          id: string;
+          name: string;
+          base_rate: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          base_rate: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          base_rate?: number;
+          created_at?: string;
+        };
+      };
+      tours: {
+        Row: {
+          id: string;
+          name: string;
+          artist_id: string;
+          start_date: string;
+          end_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          artist_id: string;
+          start_date: string;
+          end_date: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          artist_id?: string;
+          start_date?: string;
+          end_date?: string;
+          created_at?: string;
+        };
+      };
+      user_roles: {
+        Row: {
+          id: string;
+          user_id: string;
+          role: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          role: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          role?: string;
+          created_at?: string;
+        };
+      };
+      venues: {
+        Row: {
+          id: string;
+          name: string;
+          location: string;
+          capacity: number;
+          venue_type: string;
+          prestige_level: number;
+          base_payment: number;
+          requirements: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          location: string;
+          capacity: number;
+          venue_type: string;
+          prestige_level: number;
+          base_payment: number;
+          requirements: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          location?: string;
+          capacity?: number;
+          venue_type?: string;
+          prestige_level?: number;
+          base_payment?: number;
+          requirements?: Json;
+          created_at?: string;
+        };
       };
     };
     Views: {
