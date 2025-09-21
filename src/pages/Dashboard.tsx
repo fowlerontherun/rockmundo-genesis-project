@@ -5,6 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Music,
   Users,
@@ -20,12 +29,24 @@ import {
   Sparkles,
   MessageSquare,
   Bell,
+  Search,
+  UserPlus,
+  Loader2,
+  Eye,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type SkillProgressRow } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
 import type { Database } from "@/lib/supabase-types";
+import {
+  fetchFriendshipsForProfile,
+  findExistingFriendshipBetweenProfiles,
+  searchProfilesByDisplayNameOrUsername,
+  sendFriendRequest,
+  type FriendProfileRow,
+  type FriendshipRow,
+} from "@/integrations/supabase/friends";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 
@@ -98,6 +119,14 @@ const formatSkillName = (slug: string) =>
     .join(" ");
 
 const DAILY_XP_STIPEND = 150;
+const MIN_FRIEND_SEARCH_LENGTH = 2;
+const FRIEND_SEARCH_DEBOUNCE_MS = 400;
+const NON_REQUESTABLE_STATUSES: FriendshipRow["status"][] = [
+  "pending",
+  "accepted",
+  "declined",
+  "blocked",
+];
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -124,6 +153,17 @@ const Dashboard = () => {
     general: false,
     city: false
   });
+  const { toast } = useToast();
+  const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
+  const [friendshipsLoading, setFriendshipsLoading] = useState(false);
+  const [friendshipsError, setFriendshipsError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<FriendProfileRow[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [previewProfile, setPreviewProfile] = useState<FriendProfileRow | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [pendingRequestIds, setPendingRequestIds] = useState<Record<string, boolean>>({});
 
   const attributeKeys: (keyof PlayerAttributes)[] = [
     "charisma",
@@ -137,6 +177,330 @@ const Dashboard = () => {
     "business_acumen",
     "marketing_savvy"
   ];
+
+  const profileId = profile?.id ?? null;
+  const profileUserId = profile?.user_id ?? null;
+
+  const refreshFriendships = useCallback(async () => {
+    if (!profileId) {
+      return;
+    }
+
+    try {
+      const data = await fetchFriendshipsForProfile(profileId);
+      setFriendships(data);
+      setFriendshipsError(null);
+    } catch (error) {
+      console.error("Error refreshing friendships:", error);
+      setFriendshipsError(
+        error instanceof Error ? error.message : "Unable to refresh friends right now.",
+      );
+    }
+  }, [profileId]);
+
+  useEffect(() => {
+    if (!profileId) {
+      setFriendships([]);
+      setFriendshipsError(null);
+      setFriendshipsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setFriendshipsLoading(true);
+
+    void (async () => {
+      try {
+        const data = await fetchFriendshipsForProfile(profileId);
+        if (!isMounted) {
+          return;
+        }
+        setFriendships(data);
+        setFriendshipsError(null);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        console.error("Error loading friendships:", error);
+        setFriendshipsError(
+          error instanceof Error ? error.message : "Unable to load friends right now.",
+        );
+      } finally {
+        if (isMounted) {
+          setFriendshipsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [profileId]);
+
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+
+    if (!profileId) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      setSearchError(null);
+      return;
+    }
+
+    if (trimmed.length < MIN_FRIEND_SEARCH_LENGTH) {
+      setSearchLoading(false);
+      setSearchError(null);
+      setSearchResults([]);
+      return;
+    }
+
+    let isMounted = true;
+    setSearchLoading(true);
+    setSearchError(null);
+
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const results = await searchProfilesByDisplayNameOrUsername({
+            query: trimmed,
+            limit: 8,
+            excludeProfileIds: [profileId],
+          });
+          if (!isMounted) {
+            return;
+          }
+          setSearchResults(results);
+        } catch (error) {
+          console.error("Error searching profiles:", error);
+          if (!isMounted) {
+            return;
+          }
+          setSearchError(
+            error instanceof Error
+              ? error.message
+              : "Unable to search the community right now.",
+          );
+          setSearchResults([]);
+        } finally {
+          if (isMounted) {
+            setSearchLoading(false);
+          }
+        }
+      })();
+    }, FRIEND_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [profileId, searchTerm]);
+
+  const friendshipLookup = useMemo(() => {
+    if (!profileId) {
+      return {} as Record<string, FriendshipRow>;
+    }
+
+    return friendships.reduce<Record<string, FriendshipRow>>((accumulator, row) => {
+      const otherProfileId =
+        row.user_profile_id === profileId ? row.friend_profile_id : row.user_profile_id;
+
+      if (!otherProfileId) {
+        return accumulator;
+      }
+
+      const existing = accumulator[otherProfileId];
+      if (!existing) {
+        accumulator[otherProfileId] = row;
+        return accumulator;
+      }
+
+      const existingTimestamp = existing.updated_at ?? existing.created_at ?? null;
+      const nextTimestamp = row.updated_at ?? row.created_at ?? null;
+
+      if (!existingTimestamp) {
+        accumulator[otherProfileId] = row;
+        return accumulator;
+      }
+
+      if (!nextTimestamp) {
+        return accumulator;
+      }
+
+      const existingTime = new Date(existingTimestamp).getTime();
+      const nextTime = new Date(nextTimestamp).getTime();
+
+      if (Number.isNaN(existingTime) || Number.isNaN(nextTime) || nextTime >= existingTime) {
+        accumulator[otherProfileId] = row;
+      }
+
+      return accumulator;
+    }, {});
+  }, [friendships, profileId]);
+
+  const handlePreviewProfile = useCallback((target: FriendProfileRow) => {
+    setPreviewProfile(target);
+    setPreviewOpen(true);
+  }, []);
+
+  const handlePreviewOpenChange = useCallback((open: boolean) => {
+    setPreviewOpen(open);
+    if (!open) {
+      setPreviewProfile(null);
+    }
+  }, []);
+
+  const getRequestState = useCallback(
+    (target: FriendProfileRow) => {
+      const existing = target.id ? friendshipLookup[target.id] : undefined;
+      const sending = Boolean(target.id && pendingRequestIds[target.id]);
+      const status = existing?.status ?? null;
+      const disabled =
+        sending ||
+        !profileId ||
+        !profileUserId ||
+        !target.user_id ||
+        (status ? NON_REQUESTABLE_STATUSES.includes(status) : false);
+
+      return { existing, sending, status, disabled };
+    },
+    [friendshipLookup, pendingRequestIds, profileId, profileUserId],
+  );
+
+  const handleSendFriendRequest = useCallback(
+    async (target: FriendProfileRow) => {
+      if (!profileId || !profileUserId) {
+        toast({
+          title: "Profile not ready",
+          description: "We couldn't verify your profile details. Please try again in a moment.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!target.id || !target.user_id) {
+        toast({
+          title: "Artist unavailable",
+          description: "We couldn't access that artist's profile. Please try another search.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const existing = target.id ? friendshipLookup[target.id] : undefined;
+      if (existing && NON_REQUESTABLE_STATUSES.includes(existing.status)) {
+        const displayName = target.display_name || target.username || "this artist";
+        toast({
+          title: existing.status === "accepted" ? "Already friends" : "Request already in progress",
+          description:
+            existing.status === "accepted"
+              ? `You're already connected with ${displayName}.`
+              : `You're already waiting on ${displayName} to respond.`,
+        });
+        return;
+      }
+
+      let alreadyPending = false;
+      setPendingRequestIds(previous => {
+        if (target.id && previous[target.id]) {
+          alreadyPending = true;
+          return previous;
+        }
+
+        if (!target.id) {
+          return previous;
+        }
+
+        return { ...previous, [target.id]: true };
+      });
+
+      if (alreadyPending) {
+        return;
+      }
+
+      let optimisticId: string | null = null;
+      const timestamp = new Date().toISOString();
+      const displayName = target.display_name || target.username || "this artist";
+
+      try {
+        const remoteExisting = await findExistingFriendshipBetweenProfiles(profileId, target.id);
+        if (remoteExisting && NON_REQUESTABLE_STATUSES.includes(remoteExisting.status)) {
+          setFriendships(previous => {
+            const hasExisting = previous.some(row => row.id === remoteExisting.id);
+            return hasExisting ? previous : [...previous, remoteExisting];
+          });
+          toast({
+            title:
+              remoteExisting.status === "accepted"
+                ? "Already friends"
+                : remoteExisting.status === "blocked"
+                  ? "Connection unavailable"
+                  : "Request already sent",
+            description:
+              remoteExisting.status === "accepted"
+                ? `You're already connected with ${displayName}.`
+                : remoteExisting.status === "blocked"
+                  ? `${displayName} can't receive new requests right now.`
+                  : `You're already waiting on ${displayName} to respond.`,
+          });
+          await refreshFriendships();
+          return;
+        }
+
+        optimisticId = `optimistic-${target.id}`;
+        const optimisticRow: FriendshipRow = {
+          id: optimisticId,
+          user_id: profileUserId,
+          friend_user_id: target.user_id,
+          user_profile_id: profileId,
+          friend_profile_id: target.id,
+          status: "pending",
+          created_at: timestamp,
+          updated_at: timestamp,
+        };
+
+        setFriendships(previous => [...previous, optimisticRow]);
+        toast({
+          title: "Friend request sent",
+          description: `We'll let ${displayName} know you'd like to connect.`,
+        });
+
+        const created = await sendFriendRequest({
+          senderProfileId: profileId,
+          senderUserId: profileUserId,
+          recipientProfileId: target.id,
+          recipientUserId: target.user_id,
+        });
+
+        setFriendships(previous =>
+          previous.map(row => (row.id === optimisticId ? created : row)),
+        );
+        await refreshFriendships();
+      } catch (error) {
+        console.error("Error sending friend request:", error);
+        if (optimisticId) {
+          setFriendships(previous => previous.filter(row => row.id !== optimisticId));
+        }
+        toast({
+          title: "Unable to send request",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Something went wrong while sending your request.",
+          variant: "destructive",
+        });
+      } finally {
+        setPendingRequestIds(previous => {
+          if (!target.id) {
+            return previous;
+          }
+          const next = { ...previous };
+          delete next[target.id];
+          return next;
+        });
+      }
+    },
+    [friendshipLookup, profileId, profileUserId, refreshFriendships, toast],
+  );
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const dailyXpClaimedToday = (dailyXpGrant?.grant_date ?? null) === todayIso;
@@ -372,6 +736,9 @@ const Dashboard = () => {
   if (!profile) {
     return null;
   }
+
+  const searchReady = searchTerm.trim().length >= MIN_FRIEND_SEARCH_LENGTH;
+  const previewRequestState = previewProfile ? getRequestState(previewProfile) : null;
 
   const profileGenderLabel = genderLabels[profile.gender ?? "prefer_not_to_say"] ?? genderLabels.prefer_not_to_say;
 
@@ -826,6 +1193,152 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+            <CardHeader className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Connect with Musicians
+                </CardTitle>
+                <Badge variant="outline" className="border-primary/40 text-primary">
+                  {friendships.length} connections
+                </Badge>
+              </div>
+              <CardDescription>
+                Find collaborators, scout rivals, and grow your social reach.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchTerm}
+                  onChange={event => setSearchTerm(event.target.value)}
+                  placeholder="Search by display name or @username"
+                  className="pl-9"
+                />
+              </div>
+              {friendshipsLoading && (
+                <p className="text-xs text-muted-foreground">
+                  Refreshing your latest connections...
+                </p>
+              )}
+              {friendshipsError && (
+                <p className="text-xs text-destructive">
+                  Unable to load friends: {friendshipsError}
+                </p>
+              )}
+              <div className="space-y-3">
+                {!searchReady ? (
+                  <p className="text-sm text-muted-foreground">
+                    Enter at least {MIN_FRIEND_SEARCH_LENGTH} characters to search the community.
+                  </p>
+                ) : searchLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Searching for artists...
+                  </div>
+                ) : searchError ? (
+                  <p className="text-sm text-destructive">{searchError}</p>
+                ) : searchResults.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No artists matched your search yet. Try another name or handle.
+                  </p>
+                ) : (
+                  searchResults.map(result => {
+                    const requestState = getRequestState(result);
+                    const { status, sending, disabled } = requestState;
+                    const displayName = result.display_name || result.username || "Unnamed artist";
+                    const usernameLabel = result.username ? `@${result.username}` : null;
+                    const fameValue = Math.max(0, toNumber(result.fame, 0));
+                    const levelValue = Math.max(1, toNumber(result.level, 1));
+                    const statusLabel =
+                      status === "accepted"
+                        ? "Friends"
+                        : status === "pending"
+                          ? "Awaiting response"
+                          : status === "declined"
+                            ? "Request declined"
+                            : status === "blocked"
+                              ? "Blocked"
+                              : null;
+                    const buttonLabel =
+                      status === "accepted"
+                        ? "Friends"
+                        : status === "pending"
+                          ? "Pending"
+                          : status === "declined"
+                            ? "Declined"
+                            : status === "blocked"
+                              ? "Blocked"
+                              : sending
+                                ? "Sending..."
+                                : "Send request";
+
+                    return (
+                      <div
+                        key={result.id}
+                        className="space-y-3 rounded-lg border border-primary/15 bg-secondary/20 p-4"
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-base font-semibold">{displayName}</p>
+                            {usernameLabel && (
+                              <p className="text-xs text-muted-foreground">{usernameLabel}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            <Badge variant="outline" className="border-primary/30 text-primary">
+                              Level {Math.max(1, levelValue)}
+                            </Badge>
+                            <Badge variant="outline" className="border-primary/30 text-primary">
+                              Fame {Math.max(0, fameValue)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {result.bio && result.bio.trim().length > 0
+                            ? result.bio
+                            : "This artist hasn't written a bio yet."}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePreviewProfile(result)}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Preview
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendFriendRequest(result)}
+                            disabled={disabled}
+                          >
+                            {sending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <UserPlus className="mr-2 h-4 w-4" />
+                            )}
+                            {buttonLabel}
+                          </Button>
+                          {statusLabel && (
+                            <Badge
+                              variant="secondary"
+                              className="ml-auto border-primary/20 bg-primary/10 text-primary"
+                            >
+                              {statusLabel}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Band Info & Activity */}
           <div className="space-y-4">
             {/* Band Info */}
@@ -988,6 +1501,79 @@ const Dashboard = () => {
             </Card>
           </div>
         </div>
+        <Dialog open={previewOpen} onOpenChange={handlePreviewOpenChange}>
+          <DialogContent className="border-primary/20 bg-card/95 backdrop-blur">
+            <DialogHeader>
+              <DialogTitle>
+                {previewProfile?.display_name || previewProfile?.username || "Artist profile"}
+              </DialogTitle>
+              {previewProfile?.username && (
+                <DialogDescription>@{previewProfile.username}</DialogDescription>
+              )}
+            </DialogHeader>
+            {previewProfile && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <Badge variant="outline" className="border-primary/30 text-primary">
+                    Level {Math.max(1, toNumber(previewProfile.level, 1))}
+                  </Badge>
+                  <Badge variant="outline" className="border-primary/30 text-primary">
+                    Fame {Math.max(0, toNumber(previewProfile.fame, 0))}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {previewProfile.bio && previewProfile.bio.trim().length > 0
+                    ? previewProfile.bio
+                    : "This artist hasn't shared a bio yet."}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {previewRequestState?.status && (
+                    <Badge
+                      variant="secondary"
+                      className="border-primary/20 bg-primary/10 text-primary"
+                    >
+                      {previewRequestState.status === "accepted"
+                        ? "Friends"
+                        : previewRequestState.status === "pending"
+                          ? "Awaiting response"
+                          : previewRequestState.status === "declined"
+                            ? "Request declined"
+                            : previewRequestState.status === "blocked"
+                              ? "Blocked"
+                              : previewRequestState.status}
+                    </Badge>
+                  )}
+                  <div className="ml-auto flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSendFriendRequest(previewProfile)}
+                      disabled={previewRequestState?.disabled ?? true}
+                    >
+                      {previewRequestState?.sending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="mr-2 h-4 w-4" />
+                      )}
+                      {previewRequestState
+                        ? previewRequestState.status === "accepted"
+                          ? "Friends"
+                          : previewRequestState.status === "pending"
+                            ? "Pending"
+                            : previewRequestState.status === "declined"
+                              ? "Declined"
+                              : previewRequestState.status === "blocked"
+                                ? "Blocked"
+                                : previewRequestState.sending
+                                  ? "Sending..."
+                                  : "Send request"
+                        : "Send request"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
