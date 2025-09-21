@@ -76,6 +76,7 @@ const Navigation = () => {
         { icon: Building2, label: "Venue Management", path: "/venues" },
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
         { icon: MapPin, label: "City Overview", path: cityOverviewPath },
+        { icon: Globe, label: "World Map", path: "/cities" },
         { icon: Mic, label: "Street Busking", path: "/busking" },
         { icon: Plane, label: "Travel Planner", path: "/travel" },
         { icon: Globe, label: "Tour System", path: "/tours-system" },
