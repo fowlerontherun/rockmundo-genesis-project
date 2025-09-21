@@ -1239,9 +1239,11 @@ export type Database = {
           experience_at_last_weekly_bonus: number | null
           fame: number | null
           fans: number | null
+          inspiration: number
           id: string
           last_weekly_bonus_at: string | null
           level: number | null
+          momentum: number
           updated_at: string | null
           user_id: string
           username: string
@@ -1258,9 +1260,11 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          inspiration?: number
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
+          momentum?: number
           updated_at?: string | null
           user_id: string
           username: string
@@ -1277,9 +1281,11 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          inspiration?: number
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
+          momentum?: number
           updated_at?: string | null
           user_id?: string
           username?: string

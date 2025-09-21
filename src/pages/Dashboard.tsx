@@ -20,6 +20,8 @@ import {
   Calendar,
   TrendingUp,
   Guitar,
+  Flame,
+  Lightbulb,
   Mic,
   Headphones,
   DollarSign,
@@ -140,6 +142,7 @@ const Dashboard = () => {
     freshWeeklyBonusAvailable,
     currentCity,
     activities,
+    updateProfile,
     loading,
     error
   } = useGameData();
@@ -164,6 +167,7 @@ const Dashboard = () => {
   const [previewProfile, setPreviewProfile] = useState<FriendProfileRow | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingRequestIds, setPendingRequestIds] = useState<Record<string, boolean>>({});
+  const [unlockingMomentumBoost, setUnlockingMomentumBoost] = useState(false);
 
   const attributeKeys: (keyof PlayerAttributes)[] = [
     "charisma",
@@ -750,6 +754,11 @@ const Dashboard = () => {
 
   const lifetimeXp = Math.max(0, Number(xpWallet?.lifetime_xp ?? 0));
   const experienceProgress = lifetimeXp % 1000;
+  const momentum = Math.max(0, Number(profile.momentum ?? 0));
+  const inspiration = Math.max(0, Number(profile.inspiration ?? 0));
+  const momentumProgress = Math.max(0, Math.min(100, momentum));
+  const inspirationProgress = Math.max(0, Math.min(100, inspiration));
+  const canUnlockMomentumBoost = momentum >= 100;
   const latestWeeklyBonus = xpLedger.find(entry => entry.event_type === "weekly_bonus");
   const latestWeeklyMetadata = (latestWeeklyBonus?.metadata as Record<string, unknown> | null) ?? null;
   const weeklyBonusAmount = latestWeeklyBonus
@@ -769,6 +778,32 @@ const Dashboard = () => {
   const formattedWeeklyBonusAmount = weeklyBonusAmount.toLocaleString();
   const formattedWeeklyBonusSourceXp = weeklyBonusSourceXp.toLocaleString();
   const latestWeeklyBonusId = latestWeeklyBonus?.id ?? null;
+
+  const handleUnlockMomentumBoost = async () => {
+    if (!canUnlockMomentumBoost || unlockingMomentumBoost) {
+      return;
+    }
+
+    try {
+      setUnlockingMomentumBoost(true);
+      await updateProfile({ momentum: Math.max(0, momentum - 100) });
+      toast({
+        title: "Momentum boost activated",
+        description: "You channelled your recent momentum into a surge of energy.",
+      });
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Unable to unlock the momentum boost right now.";
+      toast({
+        title: "Could not unlock momentum boost",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setUnlockingMomentumBoost(false);
+    }
+  };
 
   const notifications: DashboardNotification[] = (() => {
     const items: DashboardNotification[] = [];
@@ -993,8 +1028,8 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">{profile.level}</div>
-              <Progress 
-                value={(experienceProgress / 1000) * 100} 
+              <Progress
+                value={(experienceProgress / 1000) * 100}
                 className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-1">
@@ -1027,6 +1062,45 @@ const Dashboard = () => {
               <div className="text-2xl font-bold text-accent">{profile.fame}</div>
               <p className="text-xs text-muted-foreground">
                 Keep performing to gain more fame!
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Momentum</CardTitle>
+              <Flame className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <div className="text-2xl font-bold text-destructive">{momentum}</div>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">/100</span>
+              </div>
+              <Progress value={momentumProgress} />
+              <Button
+                size="sm"
+                onClick={handleUnlockMomentumBoost}
+                disabled={!canUnlockMomentumBoost || unlockingMomentumBoost}
+              >
+                {unlockingMomentumBoost && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                Unlock Momentum Boost
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Hit 100 momentum to trigger a powerful creative boost.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Inspiration</CardTitle>
+              <Lightbulb className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">{inspiration}</div>
+              <Progress value={inspirationProgress} className="mt-2" />
+              <p className="text-xs text-muted-foreground">
+                Channel downtime and new cities into lasting inspiration.
               </p>
             </CardContent>
           </Card>
