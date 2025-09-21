@@ -636,6 +636,9 @@ const mentorOptions: MentorOption[] = [
     requiredSkillValue: 160,
     skillGainRatio: 0.8,
     bonusDescription: "Adds sustain control exercises that accelerate range stability and nightly recovery."
+  }
+];
+
 const bandSessions: BandSession[] = [
   {
     id: "band-sync-lock",
