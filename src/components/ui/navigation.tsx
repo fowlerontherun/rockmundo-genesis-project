@@ -33,6 +33,9 @@ import {
   Megaphone,
   Store,
   Guitar,
+  ShieldCheck,
+  Sparkles,
+  BookOpen,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -105,7 +108,10 @@ const Navigation = () => {
         { icon: Store, label: "Enhanced Store", path: "/equipment-enhanced" },
         { icon: Globe, label: "World Events", path: "/world" },
         { icon: TrendingUp, label: "Statistics", path: "/statistics" },
-        { icon: Settings, label: "Admin Panel", path: "/admin" },
+        { icon: ShieldCheck, label: "Admin Dashboard", path: "/admin/dashboard" },
+        { icon: Sparkles, label: "XP Rewards", path: "/admin/experience-rewards" },
+        { icon: GraduationCap, label: "Admin Universities", path: "/admin/universities" },
+        { icon: BookOpen, label: "Skill Books", path: "/admin/skill-books" },
       ],
     },
   ];

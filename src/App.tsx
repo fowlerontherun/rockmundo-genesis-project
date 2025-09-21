@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import Auth from "./pages/Auth";
@@ -42,7 +42,6 @@ const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
-const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"));
@@ -55,6 +54,10 @@ const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
+const AdminLayout = lazyWithRetry(() => import("./components/admin/AdminLayout"));
+const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/AdminExperienceRewards"));
+const AdminUniversities = lazyWithRetry(() => import("./pages/admin/AdminUniversities"));
+const AdminSkillBooks = lazyWithRetry(() => import("./pages/admin/AdminSkillBooks"));
 
 const queryClient = new QueryClient();
 
@@ -112,7 +115,13 @@ function App() {
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="charts-competitive" element={<CompetitiveCharts />} />
                     <Route path="tours-system" element={<TouringSystem />} />
-                    <Route path="admin" element={<Admin />} />
+                    <Route path="admin/*" element={<AdminLayout />}>
+                      <Route index element={<Navigate to="dashboard" replace />} />
+                      <Route path="dashboard" element={<AdminDashboard />} />
+                      <Route path="experience-rewards" element={<AdminExperienceRewards />} />
+                      <Route path="universities" element={<AdminUniversities />} />
+                      <Route path="skill-books" element={<AdminSkillBooks />} />
+                    </Route>
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
