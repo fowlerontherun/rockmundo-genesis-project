@@ -40,16 +40,20 @@ export interface UniversityTrack {
 }
 
 export interface VideoResource {
+  id: string;
   name: string;
   format: string;
   focus: string;
-  link: string;
+  url: string;
   summary: string;
+  sortOrder: number;
 }
 
 export interface VideoPlaylist {
+  key: string;
   title: string;
   description: string;
+  sortOrder: number;
   resources: VideoResource[];
 }
 

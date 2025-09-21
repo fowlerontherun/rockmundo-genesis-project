@@ -1,4 +1,4 @@
-import { Gift, GraduationCap, NotebookPen } from "lucide-react";
+import { Gift, GraduationCap, NotebookPen, PlaySquare } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -26,6 +26,13 @@ const adminSections = [
     href: "/admin/skill-books",
     action: "Manage skill books",
     Icon: NotebookPen,
+  },
+  {
+    title: "YouTube Playlists",
+    description: "Curate lessons and supporting playlists for the Education page.",
+    href: "/admin/youtube-videos",
+    action: "Manage YouTube content",
+    Icon: PlaySquare,
   },
 ] as const;
 
