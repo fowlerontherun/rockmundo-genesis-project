@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -1065,6 +1066,4 @@ export const useGameData = (): UseGameDataReturn => {
   return value;
 };
 
-export const GameDataProvider = ({ children }: { children: ReactNode }) => {
-  return <>{children}</>;
-};
+export const GameDataProvider = ({ children }: { children: ReactNode }) => <>{children}</>;
