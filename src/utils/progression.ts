@@ -1,7 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PlayerXpWallet } from "@/hooks/useGameData";
 
-export type ProgressionAction = "award_action_xp" | "award_special_xp" | "admin_award_special_xp";
+export type ProgressionAction =
+  | "award_action_xp"
+  | "award_special_xp"
+  | "admin_award_special_xp"
+  | "claim_daily_xp"
+  | "spend_attribute_xp"
+  | "spend_skill_xp";
 
 export interface ProgressionProfileSummary {
   id: string;
@@ -96,6 +102,103 @@ export const awardSpecialXp = async ({
 
   if (!data?.success) {
     throw new Error(data?.message ?? "Failed to award experience points");
+  }
+
+  return data;
+};
+
+export interface ClaimDailyXpInput {
+  metadata?: Record<string, unknown>;
+}
+
+export const claimDailyXp = async ({ metadata = {} }: ClaimDailyXpInput = {}): Promise<ProgressionResponse> => {
+  const payload = {
+    action: "claim_daily_xp" as const,
+    metadata,
+  };
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to claim daily experience points");
+  }
+
+  return data;
+};
+
+export interface SpendAttributeXpInput {
+  attributeKey: string;
+  amount: number;
+  metadata?: Record<string, unknown>;
+  uniqueEventId?: string;
+}
+
+export const spendAttributeXp = async ({
+  attributeKey,
+  amount,
+  metadata = {},
+  uniqueEventId,
+}: SpendAttributeXpInput): Promise<ProgressionResponse> => {
+  const payload = {
+    action: "spend_attribute_xp" as const,
+    attribute_key: attributeKey,
+    xp: amount,
+    metadata,
+    event_id: uniqueEventId,
+  };
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to spend XP on attribute");
+  }
+
+  return data;
+};
+
+export interface SpendSkillXpInput {
+  skillSlug: string;
+  amount: number;
+  metadata?: Record<string, unknown>;
+  uniqueEventId?: string;
+}
+
+export const spendSkillXp = async ({
+  skillSlug,
+  amount,
+  metadata = {},
+  uniqueEventId,
+}: SpendSkillXpInput): Promise<ProgressionResponse> => {
+  const payload = {
+    action: "spend_skill_xp" as const,
+    skill_slug: skillSlug,
+    xp: amount,
+    metadata,
+    event_id: uniqueEventId,
+  };
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to invest XP into skill");
   }
 
   return data;

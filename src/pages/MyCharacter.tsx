@@ -1,8 +1,9 @@
-import { useMemo, type ElementType } from "react";
+import { useEffect, useMemo, useState, type ElementType } from "react";
 import { Link } from "react-router-dom";
 import {
   Cake,
   CalendarDays,
+  Loader2,
   MapPin,
   Mic,
   Music,
@@ -13,6 +14,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
 
 const formatDate = (input: string | null | undefined) => {
@@ -44,9 +55,205 @@ const PROFILE_META_FIELDS: Array<{ key: keyof PlayerProfile; label: string; icon
 ];
 
 const MIN_ATTRIBUTE_SCORE = 5;
+const DAILY_XP_STIPEND = 150;
+const DEFAULT_ATTRIBUTE_SPEND = 10;
+const DEFAULT_SKILL_SPEND = 25;
+
+const ATTRIBUTE_COLUMN_KEY_MAP: Record<string, string> = {
+  creativity: "creative_insight",
+  business: "business_acumen",
+  marketing: "marketing_savvy",
+  technical: "technical_mastery",
+  charisma: "charisma",
+  looks: "looks",
+  mental_focus: "mental_focus",
+  musicality: "musicality",
+  musical_ability: "musical_ability",
+  physical_endurance: "physical_endurance",
+  stage_presence: "stage_presence",
+  crowd_engagement: "crowd_engagement",
+  social_reach: "social_reach",
+  business_acumen: "business_acumen",
+  marketing_savvy: "marketing_savvy",
+  creative_insight: "creative_insight",
+  technical_mastery: "technical_mastery",
+  vocal_talent: "vocal_talent",
+  rhythm_sense: "rhythm_sense",
+};
+
+const formatSkillLabel = (slug: string) =>
+  slug
+    .split(/[_-]/)
+    .filter(segment => segment.length > 0)
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
 
 const MyCharacter = () => {
-  const { profile, attributes, loading, error, currentCity } = useGameData();
+  const {
+    profile,
+    attributes,
+    xpWallet,
+    skillProgress,
+    dailyXpGrant,
+    claimDailyXp,
+    spendAttributeXp,
+    spendSkillXp,
+    loading,
+    error,
+    currentCity,
+  } = useGameData();
+  const { toast } = useToast();
+  const [claimingDailyXp, setClaimingDailyXp] = useState(false);
+  const [attributeXpInputs, setAttributeXpInputs] = useState<Record<string, number>>({});
+  const [attributeSpendPending, setAttributeSpendPending] = useState<string | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<string>("");
+  const [skillXpAmount, setSkillXpAmount] = useState<number>(DEFAULT_SKILL_SPEND);
+  const [skillSpendPending, setSkillSpendPending] = useState(false);
+
+  useEffect(() => {
+    if (!selectedSkill && Array.isArray(skillProgress) && skillProgress.length > 0) {
+      setSelectedSkill(skillProgress[0].skill_slug);
+    }
+  }, [skillProgress, selectedSkill]);
+
+  const xpBalance = useMemo(() => Math.max(0, Number(xpWallet?.xp_balance ?? 0)), [xpWallet]);
+  const lifetimeXp = useMemo(
+    () => Math.max(0, Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0)),
+    [xpWallet, profile],
+  );
+  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const hasClaimedDailyXp = (dailyXpGrant?.grant_date ?? null) === todayIso;
+  const todaysStipend = hasClaimedDailyXp
+    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? DAILY_XP_STIPEND))
+    : DAILY_XP_STIPEND;
+  const lastClaimedAtLabel = useMemo(() => {
+    if (!dailyXpGrant?.claimed_at) {
+      return null;
+    }
+    const parsed = new Date(dailyXpGrant.claimed_at);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+    return parsed.toLocaleString();
+  }, [dailyXpGrant]);
+  const trackedSkillProgress = Array.isArray(skillProgress) ? skillProgress : [];
+
+  const handleAttributeInputChange = (attributeKey: string, rawValue: string) => {
+    const parsed = Number(rawValue);
+    const normalized = Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
+    setAttributeXpInputs((previous) => ({ ...previous, [attributeKey]: normalized }));
+  };
+
+  const handleClaimDailyXp = async () => {
+    try {
+      setClaimingDailyXp(true);
+      await claimDailyXp({ source: "my_character" });
+      toast({
+        title: "Daily XP collected",
+        description: `Added ${todaysStipend.toLocaleString()} XP to your wallet.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to claim your stipend right now.";
+      toast({ title: "Could not claim daily XP", description: message, variant: "destructive" });
+    } finally {
+      setClaimingDailyXp(false);
+    }
+  };
+
+  const handleSpendAttribute = async (attributeKey: string) => {
+    const dbKey = ATTRIBUTE_COLUMN_KEY_MAP[attributeKey] ?? attributeKey;
+    const requested = attributeXpInputs[attributeKey] ?? DEFAULT_ATTRIBUTE_SPEND;
+    const amount = Math.max(1, Math.trunc(Number.isFinite(requested) ? requested : DEFAULT_ATTRIBUTE_SPEND));
+
+    if (amount <= 0) {
+      toast({
+        title: "Enter a positive XP amount",
+        description: "Add at least 1 XP to invest in this attribute.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (xpBalance < amount) {
+      toast({
+        title: "Not enough XP",
+        description: "Claim or earn more XP before investing in this attribute.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const attributeLabel = sanitizeAttributeLabel(attributeKey);
+
+    try {
+      setAttributeSpendPending(dbKey);
+      await spendAttributeXp({
+        attributeKey: dbKey,
+        amount,
+        metadata: { source: "my_character" },
+      });
+      toast({
+        title: "Attribute improved",
+        description: `Invested ${amount.toLocaleString()} XP into ${attributeLabel}.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to invest XP into this attribute.";
+      toast({ title: "Could not spend XP", description: message, variant: "destructive" });
+    } finally {
+      setAttributeSpendPending(null);
+    }
+  };
+
+  const handleSpendSkill = async () => {
+    if (!selectedSkill) {
+      toast({
+        title: "Choose a skill",
+        description: "Select a skill before investing XP.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const amount = Math.max(1, Math.trunc(Number.isFinite(skillXpAmount) ? skillXpAmount : DEFAULT_SKILL_SPEND));
+
+    if (amount <= 0) {
+      toast({
+        title: "Enter a positive XP amount",
+        description: "Add at least 1 XP to invest in your skill.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (xpBalance < amount) {
+      toast({
+        title: "Not enough XP",
+        description: "You need more unspent XP to train this skill.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const skillLabel = formatSkillLabel(selectedSkill);
+
+    try {
+      setSkillSpendPending(true);
+      await spendSkillXp({
+        skillSlug: selectedSkill,
+        amount,
+        metadata: { source: "my_character" },
+      });
+      toast({
+        title: "Skill training logged",
+        description: `Invested ${amount.toLocaleString()} XP into ${skillLabel}.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to invest XP into this skill.";
+      toast({ title: "Could not invest XP", description: message, variant: "destructive" });
+    } finally {
+      setSkillSpendPending(false);
+    }
+  };
 
   const displayName = profile?.display_name || profile?.username || "Performer";
 
@@ -141,6 +348,45 @@ const MyCharacter = () => {
         </div>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            Daily XP Stipend
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Claim your daily XP and invest it into attributes or skills below.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Wallet balance</p>
+              <p className="text-2xl font-semibold">{xpBalance.toLocaleString()} XP</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Today's stipend</p>
+              <p className="text-2xl font-semibold">{todaysStipend.toLocaleString()} XP</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Lifetime XP</p>
+              <p className="text-2xl font-semibold">{lifetimeXp.toLocaleString()} XP</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+              {hasClaimedDailyXp
+                ? `You've already claimed today's stipend${lastClaimedAtLabel ? ` (${lastClaimedAtLabel})` : ""}.`
+                : "You have a fresh XP stipend waiting to be claimed."}
+            </div>
+            <Button onClick={handleClaimDailyXp} disabled={claimingDailyXp || hasClaimedDailyXp}>
+              {claimingDailyXp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {hasClaimedDailyXp ? "Stipend claimed" : "Claim daily XP"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,320px),1fr]">
         <Card>
           <CardHeader className="flex flex-col items-center text-center">
@@ -217,6 +463,11 @@ const MyCharacter = () => {
                 {Object.entries(attributes).map(([attributeKey, score]) => {
                   const numericScore = typeof score === "number" ? score : MIN_ATTRIBUTE_SCORE;
                   const displayScore = Math.max(MIN_ATTRIBUTE_SCORE, numericScore);
+                  const dbKey = ATTRIBUTE_COLUMN_KEY_MAP[attributeKey] ?? attributeKey;
+                  const xpInputValue = attributeXpInputs[attributeKey] ?? DEFAULT_ATTRIBUTE_SPEND;
+                  const attributeButtonDisabled =
+                    xpBalance <= 0 || xpInputValue <= 0 || xpBalance < xpInputValue;
+                  const isProcessing = attributeSpendPending === dbKey;
 
                   return (
                     <div key={attributeKey} className="space-y-2">
@@ -230,6 +481,24 @@ const MyCharacter = () => {
                           style={{ width: `${Math.min(100, Math.max(0, displayScore))}%` }}
                         />
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={xpInputValue}
+                          onChange={(event) => handleAttributeInputChange(attributeKey, event.target.value)}
+                          className="h-9 w-20"
+                          aria-label={`XP to invest in ${sanitizeAttributeLabel(attributeKey)}`}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleSpendAttribute(attributeKey)}
+                          disabled={attributeButtonDisabled || isProcessing}
+                        >
+                          {isProcessing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                          Spend XP
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -242,6 +511,80 @@ const MyCharacter = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Music className="h-5 w-5" />
+            Skill Training
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Allocate XP to level up the skills you practise the most.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {trackedSkillProgress.length > 0 ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="skill-select">Skill</Label>
+                  <Select value={selectedSkill} onValueChange={setSelectedSkill}>
+                    <SelectTrigger id="skill-select">
+                      <SelectValue placeholder="Choose a skill" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {trackedSkillProgress.map((skill) => (
+                        <SelectItem key={skill.id} value={skill.skill_slug}>
+                          {formatSkillLabel(skill.skill_slug)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="skill-xp">XP to invest</Label>
+                  <Input
+                    id="skill-xp"
+                    type="number"
+                    min={1}
+                    value={skillXpAmount}
+                    onChange={(event) => setSkillXpAmount(Math.max(0, Math.trunc(Number(event.target.value))))}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {selectedSkill
+                    ? `Current level: ${
+                        trackedSkillProgress.find((entry) => entry.skill_slug === selectedSkill)?.current_level ?? 1
+                      }`
+                    : "Select a skill to see its current level."}
+                </div>
+                <Button onClick={handleSpendSkill} disabled={skillSpendPending || xpBalance <= 0}>
+                  {skillSpendPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Invest XP
+                </Button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {trackedSkillProgress.map((skill) => (
+                  <div key={skill.id} className="rounded-lg border bg-muted/40 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">{formatSkillLabel(skill.skill_slug)}</p>
+                      <Badge variant="secondary">Level {skill.current_level ?? 1}</Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {`XP: ${Math.max(0, skill.current_xp ?? 0).toLocaleString()}`}
+                      {skill.required_xp ? ` / ${Math.max(0, skill.required_xp).toLocaleString()}` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-muted-foreground">Start practising to track skill growth and invest XP here.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

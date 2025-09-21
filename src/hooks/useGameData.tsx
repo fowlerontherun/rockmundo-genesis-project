@@ -2,7 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth-context";
-import { awardActionXp as awardActionXpUtility, type AwardActionXpInput } from "@/utils/progression";
+import {
+  awardActionXp as awardActionXpUtility,
+  claimDailyXp as claimDailyXpUtility,
+  spendAttributeXp as spendAttributeXpUtility,
+  spendSkillXp as spendSkillXpUtility,
+  type AwardActionXpInput,
+  type SpendAttributeXpInput,
+  type SpendSkillXpInput,
+} from "@/utils/progression";
 
 export type PlayerProfile = Database["public"]["Tables"]["profiles"]["Row"];
 export type PlayerSkills = Database["public"]["Tables"]["player_skills"]["Row"] | null;
@@ -39,6 +47,7 @@ type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
 type RawAttributes = PlayerAttributesRow | null;
 type PlayerAttributesInsert = Database["public"]["Tables"]["player_attributes"]["Insert"];
+type DailyXpGrantRow = Database["public"]["Tables"]["profile_daily_xp_grants"]["Row"];
 
 export interface ProfileUpsertInput {
   name: string;
@@ -130,6 +139,7 @@ interface UseGameDataReturn {
   skillProgress: SkillProgressRow[];
   unlockedSkills: UnlockedSkillsMap;
   activities: ActivityFeedRow[];
+  dailyXpGrant: DailyXpGrantRow | null;
   freshWeeklyBonusAvailable: boolean;
   currentCity: CityRow | null;
   loading: boolean;
@@ -141,6 +151,9 @@ interface UseGameDataReturn {
   updateAttributes: (updates: AttributesUpdate) => Promise<PlayerAttributes | null>;
   addActivity: (type: string, message: string, earnings?: number, metadata?: ActivityInsert["metadata"]) => Promise<void>;
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
+  claimDailyXp: (metadata?: Record<string, unknown>) => Promise<void>;
+  spendAttributeXp: (input: SpendAttributeXpInput) => Promise<void>;
+  spendSkillXp: (input: SpendSkillXpInput) => Promise<void>;
   upsertProfileWithDefaults: (
     input: ProfileUpsertInput,
   ) => Promise<{ profile: PlayerProfile; attributes: PlayerAttributes | null }>;
@@ -183,6 +196,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
   const [unlockedSkills, setUnlockedSkills] = useState<UnlockedSkillsMap>({});
   const [activities, setActivities] = useState<ActivityFeedRow[]>([]);
+  const [dailyXpGrant, setDailyXpGrant] = useState<DailyXpGrantRow | null>(null);
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -205,6 +219,7 @@ export const useGameData = (): UseGameDataReturn => {
         setUnlockedSkills({});
         setActivities([]);
         setCurrentCity(null);
+        setDailyXpGrant(null);
         return;
       }
 
@@ -281,6 +296,7 @@ export const useGameData = (): UseGameDataReturn => {
         cityResult,
         activitiesResult,
         skillProgressResult,
+        dailyGrantResult,
       ] = await Promise.all([
         supabase
           .from("player_skills")
@@ -320,6 +336,13 @@ export const useGameData = (): UseGameDataReturn => {
           .eq("profile_id", effectiveProfile.id)
           .order("current_level", { ascending: false, nullsFirst: false })
           .order("current_xp", { ascending: false, nullsFirst: false }),
+        supabase
+          .from("profile_daily_xp_grants")
+          .select("*")
+          .eq("profile_id", effectiveProfile.id)
+          .order("grant_date", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (skillsResult.error) {
@@ -343,6 +366,9 @@ export const useGameData = (): UseGameDataReturn => {
       if (skillProgressResult.error) {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
+      if (dailyGrantResult.error) {
+        console.error("Failed to load daily XP grant", dailyGrantResult.error);
+      }
 
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
@@ -352,6 +378,8 @@ export const useGameData = (): UseGameDataReturn => {
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
+      const grantRow = dailyGrantResult.data ? (dailyGrantResult.data as DailyXpGrantRow) : null;
+      setDailyXpGrant(grantRow);
     },
     [user],
   );
@@ -367,6 +395,7 @@ export const useGameData = (): UseGameDataReturn => {
       setUnlockedSkills({});
       setActivities([]);
       setCurrentCity(null);
+      setDailyXpGrant(null);
       return;
     }
 
@@ -862,6 +891,123 @@ export const useGameData = (): UseGameDataReturn => {
     [],
   );
 
+  const claimDailyXp = useCallback(
+    async (metadata: Record<string, unknown> = {}) => {
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      const response = await claimDailyXpUtility({ metadata });
+
+      if (response.wallet) {
+        setXpWallet(response.wallet as PlayerXpWallet);
+      }
+
+      if (response.profile) {
+        setProfile((prev) => (prev && prev.id === response.profile.id ? { ...prev, ...response.profile } : prev));
+      }
+
+      if (response.attributes) {
+        setAttributes(mapAttributes(response.attributes as RawAttributes));
+      }
+
+      const { data: latestGrant, error: latestGrantError } = await supabase
+        .from("profile_daily_xp_grants")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .order("grant_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestGrantError && latestGrantError.code !== "PGRST116") {
+        console.error("Failed to refresh daily XP grant", latestGrantError);
+      }
+
+      setDailyXpGrant((latestGrant ?? null) as DailyXpGrantRow | null);
+    },
+    [profile],
+  );
+
+  const spendAttributeXp = useCallback(
+    async ({ attributeKey, amount, metadata, uniqueEventId }: SpendAttributeXpInput) => {
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      const response = await spendAttributeXpUtility({ attributeKey, amount, metadata, uniqueEventId });
+
+      if (response.wallet) {
+        setXpWallet(response.wallet as PlayerXpWallet);
+      }
+
+      if (response.attributes) {
+        setAttributes(mapAttributes(response.attributes as RawAttributes));
+      }
+    },
+    [profile],
+  );
+
+  const spendSkillXp = useCallback(
+    async ({ skillSlug, amount, metadata, uniqueEventId }: SpendSkillXpInput) => {
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      const response = await spendSkillXpUtility({ skillSlug, amount, metadata, uniqueEventId });
+
+      if (response.wallet) {
+        setXpWallet(response.wallet as PlayerXpWallet);
+      }
+
+      const { data: updatedSkill, error: updatedSkillError } = await supabase
+        .from("skill_progress")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .eq("skill_slug", skillSlug)
+        .maybeSingle();
+
+      if (updatedSkillError && updatedSkillError.code !== "PGRST116") {
+        console.error("Failed to refresh skill progress", updatedSkillError);
+      } else if (updatedSkill) {
+        setSkillProgress((previous) => {
+          const next = Array.isArray(previous) ? [...previous] : [];
+          const index = next.findIndex((entry) => entry.skill_slug === skillSlug);
+          if (index >= 0) {
+            next[index] = updatedSkill as SkillProgressRow;
+          } else {
+            next.push(updatedSkill as SkillProgressRow);
+          }
+          return next;
+        });
+      }
+
+      if (response.result && typeof response.result === "object") {
+        const result = response.result as Record<string, unknown>;
+        if (typeof result.current_level === "number" || typeof result.current_xp === "number") {
+          setSkillProgress((previous) => {
+            const next = Array.isArray(previous) ? [...previous] : [];
+            const index = next.findIndex((entry) => entry.skill_slug === skillSlug);
+            if (index >= 0) {
+              next[index] = {
+                ...next[index],
+                current_level:
+                  typeof result.current_level === "number" ? result.current_level : next[index].current_level,
+                current_xp:
+                  typeof result.current_xp === "number" ? result.current_xp : next[index].current_xp,
+                required_xp:
+                  typeof result.required_xp === "number" ? result.required_xp : next[index].required_xp,
+                updated_at: new Date().toISOString(),
+                last_practiced_at: new Date().toISOString(),
+              };
+            }
+            return next;
+          });
+        }
+      }
+    },
+    [profile],
+  );
+
   const freshWeeklyBonusAvailable = useMemo(() => isWeeklyBonusFresh(xpLedger), [xpLedger]);
 
   const value: UseGameDataReturn = useMemo(
@@ -874,6 +1020,7 @@ export const useGameData = (): UseGameDataReturn => {
       skillProgress,
       unlockedSkills,
       activities,
+      dailyXpGrant,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
@@ -885,6 +1032,9 @@ export const useGameData = (): UseGameDataReturn => {
       updateAttributes,
       addActivity,
       awardActionXp,
+      claimDailyXp,
+      spendAttributeXp,
+      spendSkillXp,
       upsertProfileWithDefaults,
     }),
     [
@@ -896,6 +1046,7 @@ export const useGameData = (): UseGameDataReturn => {
       skillProgress,
       unlockedSkills,
       activities,
+      dailyXpGrant,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
@@ -907,6 +1058,9 @@ export const useGameData = (): UseGameDataReturn => {
       updateAttributes,
       addActivity,
       awardActionXp,
+      claimDailyXp,
+      spendAttributeXp,
+      spendSkillXp,
       upsertProfileWithDefaults,
     ],
   );

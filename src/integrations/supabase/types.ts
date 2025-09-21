@@ -999,6 +999,41 @@ export type Database = {
           },
         ]
       }
+      profile_daily_xp_grants: {
+        Row: {
+          claimed_at: string | null
+          grant_date: string
+          id: string
+          metadata: Json
+          profile_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          claimed_at?: string | null
+          grant_date: string
+          id?: string
+          metadata?: Json
+          profile_id: string
+          xp_awarded: number
+        }
+        Update: {
+          claimed_at?: string | null
+          grant_date?: string
+          id?: string
+          metadata?: Json
+          profile_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_daily_xp_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number | null
