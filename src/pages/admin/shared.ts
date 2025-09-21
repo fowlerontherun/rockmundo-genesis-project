@@ -38,3 +38,30 @@ export const currencyFormatter = new Intl.NumberFormat("en-US", {
   currency: "USD",
   maximumFractionDigits: 0,
 });
+
+export const formatNumberInput = (value: number | null | undefined): string => {
+  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
+    return "";
+  }
+
+  return `${value}`;
+};
+
+export const parseNumberInput = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+export const parseCommaSeparatedInput = (value: string): string[] =>
+  value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+export const formatCommaSeparatedList = (value: string[] | null | undefined): string =>
+  Array.isArray(value) && value.length > 0 ? value.join(", ") : "";

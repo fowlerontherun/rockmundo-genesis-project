@@ -125,6 +125,26 @@ export interface TravelOption {
   icon?: string;
 }
 
+export interface CityVenueHighlight {
+  name: string;
+  description: string;
+  district: string;
+  capacity?: string;
+}
+
+export interface CityStudioProfile {
+  name: string;
+  specialties: string[];
+  neighborhood?: string;
+}
+
+export interface CityTransportLink {
+  type: string;
+  name: string;
+  description: string;
+  distance?: string;
+}
+
 const normalizeDistricts = (value: unknown): CityLocation[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -243,6 +263,145 @@ const normalizeTravelNodes = (value: unknown): TravelOption[] => {
   }, []);
 };
 
+const normalizeFeaturedVenues = (
+  value: unknown,
+  fallbackLocations: CityLocation[] = [],
+): CityVenueHighlight[] => {
+  if (Array.isArray(value)) {
+    return value.reduce<CityVenueHighlight[]>((acc, entry) => {
+      if (!isRecord(entry)) {
+        return acc;
+      }
+
+      const nameRaw = typeof entry.name === "string" ? entry.name.trim() : "";
+      const descriptionRaw = typeof entry.description === "string" ? entry.description.trim() : "";
+      const districtRaw =
+        typeof entry.district === "string"
+          ? entry.district.trim()
+          : typeof entry.neighborhood === "string"
+            ? entry.neighborhood.trim()
+            : "";
+      const capacityRaw = typeof entry.capacity === "string" ? entry.capacity.trim() : undefined;
+
+      const highlight: CityVenueHighlight = {
+        name: nameRaw || "Signature Venue",
+        description: descriptionRaw || "A must-visit location for touring artists.",
+        district: districtRaw || "City Center",
+      };
+
+      if (capacityRaw) {
+        highlight.capacity = capacityRaw;
+      }
+
+      acc.push(highlight);
+      return acc;
+    }, []);
+  }
+
+  if (fallbackLocations.length) {
+    return fallbackLocations.map<CityVenueHighlight>((location) => ({
+      name: location.signatureVenue ?? location.name,
+      description: location.description ?? "A notable spot within the city.",
+      district: location.name,
+      capacity: location.averageTicketPrice ? `Avg ticket £${location.averageTicketPrice}` : undefined,
+    }));
+  }
+
+  return [];
+};
+
+const normalizeStudioProfiles = (value: unknown): CityStudioProfile[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.reduce<CityStudioProfile[]>((acc, entry) => {
+    if (!isRecord(entry)) {
+      return acc;
+    }
+
+    const nameRaw = typeof entry.name === "string" ? entry.name.trim() : "";
+    const neighborhoodRaw =
+      typeof entry.neighborhood === "string"
+        ? entry.neighborhood.trim()
+        : typeof entry.district === "string"
+          ? entry.district.trim()
+          : undefined;
+    const specialties = normalizeStringArray(entry.specialties ?? entry.services ?? entry.focus);
+
+    const studio: CityStudioProfile = {
+      name: nameRaw || "Creative Studio",
+      specialties,
+    };
+
+    if (neighborhoodRaw) {
+      studio.neighborhood = neighborhoodRaw;
+    }
+
+    acc.push(studio);
+    return acc;
+  }, []);
+};
+
+const normalizeTransportEntries = (
+  value: unknown,
+  fallbackOptions: TravelOption[] = [],
+): CityTransportLink[] => {
+  if (Array.isArray(value)) {
+    return value.reduce<CityTransportLink[]>((acc, entry) => {
+      if (!isRecord(entry)) {
+        return acc;
+      }
+
+      const typeRaw = typeof entry.type === "string" ? entry.type.trim() : "";
+      const nameRaw = typeof entry.name === "string" ? entry.name.trim() : "";
+      const descriptionRaw = typeof entry.description === "string" ? entry.description.trim() : "";
+      const distanceRaw = entry.distance ?? entry.travel_time ?? entry.duration;
+
+      let distance: string | undefined;
+      if (typeof distanceRaw === "string") {
+        distance = distanceRaw.trim();
+      } else if (typeof distanceRaw === "number" && !Number.isNaN(distanceRaw)) {
+        distance = `${distanceRaw} minutes`;
+      }
+
+      const link: CityTransportLink = {
+        type: typeRaw || "local",
+        name: nameRaw || formatTravelModeLabel(typeRaw || "local"),
+        description: descriptionRaw || formatTravelModeLabel(typeRaw || "local"),
+      };
+
+      if (distance) {
+        link.distance = distance;
+      }
+
+      acc.push(link);
+      return acc;
+    }, []);
+  }
+
+  if (fallbackOptions.length) {
+    return fallbackOptions.map<CityTransportLink>((option) => {
+      const distanceParts: string[] = [];
+      if (typeof option.durationMinutes === "number" && !Number.isNaN(option.durationMinutes)) {
+        distanceParts.push(`${option.durationMinutes} min travel`);
+      }
+      if (option.frequency) {
+        distanceParts.push(option.frequency);
+      }
+
+      return {
+        type: option.mode,
+        name: option.name,
+        description: option.description,
+        distance: distanceParts.length ? distanceParts.join(" • ") : undefined,
+      };
+    });
+  }
+
+  return [];
+};
+
 export interface WeatherCondition {
   id: string;
   city: string;
@@ -264,6 +423,7 @@ export interface City {
   name: string;
   country: string;
   description?: string;
+  profileDescription?: string;
   bonuses?: string;
   unlocked?: boolean;
   population: number;
@@ -275,6 +435,9 @@ export interface City {
   busking_value: number;
   cultural_events: string[];
   locations: CityLocation[];
+  venueHighlights: CityVenueHighlight[];
+  studioProfiles: CityStudioProfile[];
+  transportLinks: CityTransportLink[];
   famousResident: string;
   travelHub: string;
   travelOptions: TravelOption[];
@@ -474,9 +637,14 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
   const culturalEvents = normalizeStringArray(item.cultural_events);
   const locations = normalizeDistricts(item.districts);
   const travelOptions = normalizeTravelNodes(item.travel_nodes);
+  const venueHighlights = normalizeFeaturedVenues(item.featured_venues, locations);
+  const studioProfiles = normalizeStudioProfiles(item.featured_studios);
+  const transportLinks = normalizeTransportEntries(item.transport_links, travelOptions);
   const famousResidentRaw = typeof item.famous_resident === "string" ? item.famous_resident.trim() : "";
   const travelHubRaw = typeof item.travel_hub === "string" ? item.travel_hub.trim() : "";
   const description = typeof item.description === "string" ? item.description : undefined;
+  const profileDescription =
+    typeof item.profile_description === "string" ? item.profile_description : undefined;
   const bonuses = typeof item.bonuses === "string" ? item.bonuses : undefined;
   const unlocked = typeof item.unlocked === "boolean" ? item.unlocked : undefined;
 
@@ -485,6 +653,7 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     name: typeof item.name === "string" ? item.name : "Unknown",
     country: typeof item.country === "string" ? item.country : "",
     description,
+    profileDescription: profileDescription ?? description,
     bonuses,
     unlocked,
     population: toNumber(item.population),
@@ -496,6 +665,9 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     busking_value: toNumber(item.busking_value, 1),
     cultural_events: culturalEvents,
     locations,
+    venueHighlights,
+    studioProfiles,
+    transportLinks,
     famousResident: famousResidentRaw || "Local legend emerging",
     travelHub: travelHubRaw || travelOptions[0]?.name || "",
     travelOptions,

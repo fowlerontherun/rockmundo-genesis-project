@@ -45,8 +45,10 @@ const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
+const AdminCities = lazyWithRetry(() => import("./pages/admin/Cities"));
 const AdminSkillBooks = lazyWithRetry(() => import("./pages/admin/SkillBooks"));
 const AdminBandLearning = lazyWithRetry(() => import("./pages/admin/BandLearning"));
+const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"));
@@ -59,7 +61,6 @@ const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
 const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
-
 const queryClient = new QueryClient();
 
 function App() {
@@ -119,8 +120,10 @@ function App() {
                     <Route path="admin" element={<Admin />} />
                     <Route path="admin/experience-rewards" element={<AdminExperienceRewards />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
+                    <Route path="admin/cities" element={<AdminCities />} />
                     <Route path="admin/skill-books" element={<AdminSkillBooks />} />
                     <Route path="admin/band-learning" element={<AdminBandLearning />} />
+                    <Route path="admin/mentors" element={<AdminMentors />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
