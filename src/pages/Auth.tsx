@@ -471,6 +471,9 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-8 sm:px-6">
+      <header className="w-full bg-primary text-primary-foreground text-center uppercase tracking-wide font-bebas text-sm sm:text-base py-2">
+        DEMO- In Developmen
+      </header>
       <div className="w-full max-w-sm sm:max-w-md">
         {/* Logo and Branding */}
         <div className="text-center mb-6 sm:mb-8">
