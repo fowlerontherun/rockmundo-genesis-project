@@ -1,4 +1,6 @@
 
+import { Gift, GraduationCap, NotebookPen, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Gift, GraduationCap, NotebookPen, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -35,6 +37,11 @@ const adminSections = [
     Icon: NotebookPen,
   },
   {
+    title: "Band Learning",
+    description: "Curate collaborative sessions that power the band's education track.",
+    href: "/admin/band-learning",
+    action: "Manage band sessions",
+    Icon: Sparkles,
     title: "Mentors",
     description: "Control the mentor roster powering education XP and progression boosts.",
     href: "/admin/mentors",

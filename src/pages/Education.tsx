@@ -13,6 +13,7 @@ import {
   Trophy,
   Users
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,6 +80,18 @@ type PrimarySkill = EducationMentorFocusSkill;
 
 type LessonDifficulty = EducationMentorDifficulty;
 
+const LESSON_DIFFICULTIES: LessonDifficulty[] = ["beginner", "intermediate", "advanced"];
+const PRIMARY_SKILL_VALUES = Object.keys(SKILL_LABELS) as PrimarySkill[];
+
+const isLessonDifficulty = (value: string | null | undefined): value is LessonDifficulty =>
+  typeof value === "string" && LESSON_DIFFICULTIES.includes(value as LessonDifficulty);
+
+const isPrimarySkill = (value: string | null | undefined): value is PrimarySkill =>
+  typeof value === "string" && PRIMARY_SKILL_VALUES.includes(value as PrimarySkill);
+
+const isAttributeKey = (value: string | null | undefined): value is AttributeKey =>
+  typeof value === "string" && ATTRIBUTE_KEYS.includes(value as AttributeKey);
+
 const LESSON_DIFFICULTY_CONFIG: Record<LessonDifficulty, { label: string; multiplier: number; description: string }>
   = {
     beginner: { label: "Foundation", multiplier: 1, description: "Core fundamentals" },
@@ -143,11 +156,13 @@ interface BandSession {
   focusSkills: PrimarySkill[];
   attributeKeys: AttributeKey[];
   baseXp: number;
-  durationMinutes: 60 | 75 | 90;
+  durationMinutes: number;
   cooldownHours: number;
   difficulty: LessonDifficulty;
   synergyNotes: string;
 }
+
+type BandSessionRow = Tables<"education_band_sessions">;
 
 interface BandMemberWithProfile {
   id: string;
@@ -576,6 +591,51 @@ const skillLessons: SkillLesson[] = [
   }
 ];
 
+const mentorOptions: MentorOption[] = [
+  {
+    id: "mentor-stage-architect",
+    name: "Nova Reyes",
+    focusSkill: "performance",
+    description: "Award-winning tour director who rebuilds stage shows from the ground up with cinematic pacing.",
+    specialty: "Stagecraft Architect",
+    cost: 850,
+    cooldownHours: 72,
+    baseXp: 260,
+    difficulty: "advanced",
+    attributeKeys: ["stage_presence", "musical_ability"],
+    requiredSkillValue: 240,
+    skillGainRatio: 0.9,
+    bonusDescription: "Large stage-presence scaling and stamina drills tailored for amphitheater audiences."
+  },
+  {
+    id: "mentor-song-catalyst",
+    name: "Avery Quinn",
+    focusSkill: "songwriting",
+    description: "Billboard-charting writer specializing in modern pop hooks and cinematic lyric arcs.",
+    specialty: "Story Catalyst",
+    cost: 620,
+    cooldownHours: 48,
+    baseXp: 210,
+    difficulty: "intermediate",
+    attributeKeys: ["creative_insight", "marketing_savvy"],
+    requiredSkillValue: 180,
+    skillGainRatio: 0.85,
+    bonusDescription: "Improves topline agility and positioning for sync placements and playlist pitches."
+  },
+  {
+    id: "mentor-vocal-innovator",
+    name: "Lyric Sol",
+    focusSkill: "vocals",
+    description: "Session vocalist famed for hybrid belting techniques and vocal health optimization on tour.",
+    specialty: "Vocal Innovator",
+    cost: 540,
+    cooldownHours: 36,
+    baseXp: 190,
+    difficulty: "intermediate",
+    attributeKeys: ["vocal_talent", "physical_endurance"],
+    requiredSkillValue: 160,
+    skillGainRatio: 0.8,
+    bonusDescription: "Adds sustain control exercises that accelerate range stability and nightly recovery."
 const bandSessions: BandSession[] = [
   {
     id: "band-sync-lock",
@@ -618,6 +678,74 @@ const bandSessions: BandSession[] = [
 const Education = () => {
   const { toast } = useToast();
   const { profile, skills, attributes, refetch, addActivity, updateProfile } = useGameData();
+
+  const {
+    data: bandSessionRows = [],
+    isLoading: bandSessionsLoading,
+    error: bandSessionsError
+  } = useQuery({
+    queryKey: ["education", "band-sessions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("education_band_sessions")
+        .select("*")
+        .order("difficulty", { ascending: true })
+        .order("title", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []) as BandSessionRow[];
+    }
+  });
+
+  const bandSessions = useMemo<BandSession[]>(() => {
+    const sessions = (bandSessionRows ?? []).map((row) => {
+      const focusSkills = Array.isArray(row.focus_skills)
+        ? row.focus_skills.filter((skill): skill is PrimarySkill => isPrimarySkill(skill))
+        : [];
+      const attributeKeys = Array.isArray(row.attribute_keys)
+        ? row.attribute_keys.filter((key): key is AttributeKey => isAttributeKey(key))
+        : [];
+      const difficulty = isLessonDifficulty(row.difficulty) ? row.difficulty : "beginner";
+      const baseXp = Number.isFinite(row.base_xp) ? row.base_xp : 0;
+      const durationMinutes = Number.isFinite(row.duration_minutes) ? row.duration_minutes : 60;
+      const cooldownHours = Number.isFinite(row.cooldown_hours) ? row.cooldown_hours : 0;
+
+      return {
+        id: row.id,
+        title: row.title,
+        description: row.description ?? "",
+        focusSkills,
+        attributeKeys,
+        baseXp,
+        durationMinutes,
+        cooldownHours,
+        difficulty,
+        synergyNotes: row.synergy_notes ?? ""
+      } satisfies BandSession;
+    });
+
+    return sessions.sort((a, b) => {
+      const difficultyComparison = DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty];
+      if (difficultyComparison !== 0) {
+        return difficultyComparison;
+      }
+      return a.title.localeCompare(b.title);
+    });
+  }, [bandSessionRows]);
+
+  useEffect(() => {
+    if (bandSessionsError) {
+      const message = bandSessionsError instanceof Error ? bandSessionsError.message : "Unable to load band sessions.";
+      toast({
+        title: "Band sessions unavailable",
+        description: message,
+        variant: "destructive"
+      });
+    }
+  }, [bandSessionsError, toast]);
 
   const [viewCounts, setViewCounts] = useState<Record<string, number>>(() => {
     if (typeof window === "undefined") return {};
@@ -1787,64 +1915,83 @@ const Education = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {bandSessions.map((session) => {
-                const reward = computeBandReward(session);
-                const cooldownRemaining = formatRemainingTime(bandCooldownLookup[session.id]);
-                const disabled =
-                  !band || bandMembers.length < 2 || Boolean(cooldownRemaining) || activeSessionId === session.id;
+              {bandSessionsLoading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading band sessions...
+                </div>
+              ) : bandSessions.length > 0 ? (
+                bandSessions.map((session) => {
+                  const reward = computeBandReward(session);
+                  const cooldownRemaining = formatRemainingTime(bandCooldownLookup[session.id]);
+                  const disabled =
+                    !band || bandMembers.length < 2 || Boolean(cooldownRemaining) || activeSessionId === session.id;
 
-                return (
-                  <div key={session.id} className="space-y-4 rounded-lg border bg-muted/40 p-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold">{session.title}</p>
-                        <p className="text-xs text-muted-foreground">{session.description}</p>
+                  return (
+                    <div key={session.id} className="space-y-4 rounded-lg border bg-muted/40 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">{session.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {session.description || "No description provided yet."}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {LESSON_DIFFICULTY_CONFIG[session.difficulty].label}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {session.durationMinutes} min
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Focus:
+                            {" "}
+                            {session.focusSkills.length > 0
+                              ? session.focusSkills.map((skill) => SKILL_LABELS[skill]).join(", ")
+                              : "Multi-discipline"}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {LESSON_DIFFICULTY_CONFIG[session.difficulty].label}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {session.durationMinutes} min
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          Focus: {session.focusSkills.map((skill) => SKILL_LABELS[skill]).join(", ")}
-                        </Badge>
+                      <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                        <div className="flex items-center gap-2">
+                          <Trophy className="h-4 w-4 text-primary" />
+                          Reward: {reward.effectiveXp} XP • Skill gain ≈ {reward.skillGainPerSkill} each
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Roster bonus: {((reward.rosterBonus - 1) * 100).toFixed(0)}% • Synergy: {((reward.synergyBonus - 1) * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {session.synergyNotes || "No synergy notes provided."}
+                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs text-muted-foreground">
+                          Cooldown: {session.cooldownHours}h
+                          {cooldownRemaining ? ` • ${cooldownRemaining} remaining` : ""}
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleBandSession(session)}
+                          disabled={disabled}
+                        >
+                          {cooldownRemaining
+                            ? `Available in ${cooldownRemaining}`
+                            : !band || bandMembers.length < 2
+                              ? "Bandmates needed"
+                              : activeSessionId === session.id
+                                ? "Running..."
+                                : "Run session"}
+                        </Button>
                       </div>
                     </div>
-                    <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                      <div className="flex items-center gap-2">
-                        <Trophy className="h-4 w-4 text-primary" />
-                        Reward: {reward.effectiveXp} XP • Skill gain ≈ {reward.skillGainPerSkill} each
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Roster bonus: {((reward.rosterBonus - 1) * 100).toFixed(0)}% • Synergy: {((reward.synergyBonus - 1) * 100).toFixed(0)}%
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{session.synergyNotes}</p>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs text-muted-foreground">
-                        Cooldown: {session.cooldownHours}h
-                        {cooldownRemaining ? ` • ${cooldownRemaining} remaining` : ""}
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleBandSession(session)}
-                        disabled={disabled}
-                      >
-                        {cooldownRemaining
-                          ? `Available in ${cooldownRemaining}`
-                          : !band || bandMembers.length < 2
-                            ? "Bandmates needed"
-                            : activeSessionId === session.id
-                              ? "Running..."
-                              : "Run session"}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+                  No band intensives are configured yet. Check back soon or add sessions from the admin panel.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

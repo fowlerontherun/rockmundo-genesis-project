@@ -346,6 +346,51 @@ export type Database = {
         }
         Relationships: []
       }
+      education_band_sessions: {
+        Row: {
+          attribute_keys: string[]
+          base_xp: number
+          cooldown_hours: number
+          created_at: string | null
+          description: string | null
+          difficulty: string
+          duration_minutes: number
+          focus_skills: string[]
+          id: string
+          synergy_notes: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          attribute_keys?: string[]
+          base_xp: number
+          cooldown_hours: number
+          created_at?: string | null
+          description?: string | null
+          difficulty: string
+          duration_minutes: number
+          focus_skills?: string[]
+          id?: string
+          synergy_notes?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          attribute_keys?: string[]
+          base_xp?: number
+          cooldown_hours?: number
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string
+          duration_minutes?: number
+          focus_skills?: string[]
+          id?: string
+          synergy_notes?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       equipment_items: {
         Row: {
           category: string
