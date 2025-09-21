@@ -433,6 +433,8 @@ export interface City {
   venues: number;
   local_bonus: number;
   busking_value: number;
+  latitude?: number;
+  longitude?: number;
   cultural_events: string[];
   locations: CityLocation[];
   venueHighlights: CityVenueHighlight[];
@@ -647,6 +649,10 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     typeof item.profile_description === "string" ? item.profile_description : undefined;
   const bonuses = typeof item.bonuses === "string" ? item.bonuses : undefined;
   const unlocked = typeof item.unlocked === "boolean" ? item.unlocked : undefined;
+  const latitudeValue = toNumber(item.latitude, Number.NaN);
+  const longitudeValue = toNumber(item.longitude, Number.NaN);
+  const latitude = Number.isFinite(latitudeValue) ? latitudeValue : undefined;
+  const longitude = Number.isFinite(longitudeValue) ? longitudeValue : undefined;
 
   return {
     id: String(item.id ?? crypto.randomUUID()),
@@ -663,6 +669,8 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     venues: toNumber(item.venues),
     local_bonus: toNumber(item.local_bonus, 1),
     busking_value: toNumber(item.busking_value, 1),
+    latitude,
+    longitude,
     cultural_events: culturalEvents,
     locations,
     venueHighlights,
