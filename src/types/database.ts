@@ -27,6 +27,8 @@ export interface Profile {
   cash: number;
   fame: number;
   fans: number;
+  momentum: number;
+  inspiration: number;
   last_weekly_bonus_at: string | null;
   weekly_bonus_streak: number;
   weekly_bonus_metadata: Record<string, unknown>;

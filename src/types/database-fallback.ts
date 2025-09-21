@@ -24,6 +24,8 @@ export interface Database {
           cash?: number;
           fame?: number;
           fans?: number;
+          momentum?: number;
+          inspiration?: number;
           experience_at_last_weekly_bonus?: number;
           last_weekly_bonus_at?: string;
           weekly_bonus_streak?: number;
@@ -44,6 +46,8 @@ export interface Database {
           cash?: number;
           fame?: number;
           fans?: number;
+          momentum?: number;
+          inspiration?: number;
           experience_at_last_weekly_bonus?: number;
           last_weekly_bonus_at?: string;
           weekly_bonus_streak?: number;
@@ -64,6 +68,8 @@ export interface Database {
           cash?: number;
           fame?: number;
           fans?: number;
+          momentum?: number;
+          inspiration?: number;
           experience_at_last_weekly_bonus?: number;
           last_weekly_bonus_at?: string;
           weekly_bonus_streak?: number;
