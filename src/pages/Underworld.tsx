@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowDownRight, ArrowUpRight, Coins } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Coins, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  UNDERWORLD_AVAILABILITY_BADGE_VARIANTS,
+  UNDERWORLD_AVAILABILITY_LABELS,
+  UNDERWORLD_RARITY_BADGE_STYLES,
+  UNDERWORLD_RARITY_LABELS,
+  UnderworldStoreItemRow,
+  formatUnderworldStorePrice,
+} from "./admin/underworldStore.helpers";
 import { cn } from "@/lib/utils";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 
@@ -17,14 +27,6 @@ interface TokenMarketRow {
   price: number;
   change24h: number;
   volume: number;
-}
-
-interface MerchandiseItem {
-  name: string;
-  category: string;
-  rarity: "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary";
-  price: string;
-  availability?: "In Stock" | "Limited" | "Restocking";
 }
 
 const mockTokens: TokenMarketRow[] = [
@@ -83,43 +85,6 @@ const tokenHistory: Record<string, { timestamp: string; price: number }[]> = {
   ],
 };
 
-const mockMerchandise: MerchandiseItem[] = [
-  {
-    name: "Phantom Cloak",
-    category: "Apparel",
-    rarity: "Legendary",
-    price: "2,500 SCL",
-    availability: "Limited",
-  },
-  {
-    name: "Gloom Resonator",
-    category: "Instruments",
-    rarity: "Epic",
-    price: "1,150 GEM",
-    availability: "In Stock",
-  },
-  {
-    name: "Shadowbound Strings",
-    category: "Accessories",
-    rarity: "Rare",
-    price: "780 OBL",
-  },
-  {
-    name: "Eclipse Mix Console",
-    category: "Production",
-    rarity: "Epic",
-    price: "3,950 ASH",
-    availability: "Restocking",
-  },
-  {
-    name: "Spectral Amp",
-    category: "Gear",
-    rarity: "Uncommon",
-    price: "520 WSP",
-    availability: "In Stock",
-  },
-];
-
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -143,26 +108,40 @@ const overviewMetrics = [
   { label: "Vault Liquidity", value: "$1.6B", change: 0.9 },
 ];
 
-const rarityBadgeStyles: Record<MerchandiseItem["rarity"], string> = {
-  Common: "border-muted text-muted-foreground",
-  Uncommon: "border-emerald-500/40 text-emerald-500",
-  Rare: "border-sky-500/40 text-sky-500",
-  Epic: "border-fuchsia-500/40 text-fuchsia-500",
-  Legendary: "border-amber-500/40 text-amber-500",
-};
-
-const availabilityBadgeVariant: Record<NonNullable<MerchandiseItem["availability"]>, "default" | "secondary" | "destructive" | "outline"> = {
-  "In Stock": "secondary",
-  Limited: "default",
-  Restocking: "outline",
-};
-
 const Underworld: React.FC = () => {
+  const { toast } = useToast();
   const [selectedToken, setSelectedToken] = React.useState<TokenMarketRow>(mockTokens[0]);
   const [buyQuantity, setBuyQuantity] = React.useState("1");
   const [buyPrice, setBuyPrice] = React.useState(mockTokens[0].price.toFixed(2));
   const [sellQuantity, setSellQuantity] = React.useState("1");
   const [sellPrice, setSellPrice] = React.useState(mockTokens[0].price.toFixed(2));
+  const [storeItems, setStoreItems] = React.useState<UnderworldStoreItemRow[]>([]);
+  const [isLoadingStoreItems, setIsLoadingStoreItems] = React.useState(false);
+
+  const handleFetchStoreItems = React.useCallback(async () => {
+    setIsLoadingStoreItems(true);
+    try {
+      const { data, error } = await supabase
+        .from("underworld_store_items")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+
+      setStoreItems((data as UnderworldStoreItemRow[] | null) ?? []);
+    } catch (error) {
+      console.error("Failed to load Underworld store items", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load store items",
+        description: "We couldn't retrieve the Underworld store catalog. Please try again later.",
+      });
+    } finally {
+      setIsLoadingStoreItems(false);
+    }
+  }, [toast]);
 
   const selectedTokenHistory = React.useMemo(
     () => tokenHistory[selectedToken.symbol] ?? [],
@@ -189,6 +168,10 @@ const Underworld: React.FC = () => {
     setBuyQuantity("1");
     setSellQuantity("1");
   }, [latestPrice, selectedToken.symbol]);
+
+  React.useEffect(() => {
+    void handleFetchStoreItems();
+  }, [handleFetchStoreItems]);
 
   const safeNumber = React.useCallback((value: string) => {
     const parsed = Number(value);
@@ -468,32 +451,45 @@ const Underworld: React.FC = () => {
             <CardDescription>Curated artifacts for the daring performer.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {mockMerchandise.map((item) => (
-                <Card key={item.name} className="border-dashed border-primary/20 bg-background/80 shadow-sm">
-                  <CardHeader className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">{item.name}</CardTitle>
-                      <Badge variant="outline" className={rarityBadgeStyles[item.rarity]}>
-                        {item.rarity}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-sm text-muted-foreground">{item.category}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm">Starting at</p>
-                    <p className="text-2xl font-semibold">{item.price}</p>
-                    {item.availability ? (
-                      <Badge variant={availabilityBadgeVariant[item.availability]}>{item.availability}</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        Special order
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {isLoadingStoreItems ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              </div>
+            ) : storeItems.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {storeItems.map((item) => {
+                  const rarityLabel = UNDERWORLD_RARITY_LABELS[item.rarity];
+                  const rarityStyles = UNDERWORLD_RARITY_BADGE_STYLES[item.rarity];
+                  const availabilityKey = item.availability ?? "special_order";
+                  const availabilityLabel = UNDERWORLD_AVAILABILITY_LABELS[availabilityKey];
+                  const availabilityVariant = UNDERWORLD_AVAILABILITY_BADGE_VARIANTS[availabilityKey];
+                  const priceLabel = formatUnderworldStorePrice(item.price_amount, item.price_currency);
+
+                  return (
+                    <Card key={item.id} className="border-dashed border-primary/20 bg-background/80 shadow-sm">
+                      <CardHeader className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-lg">{item.name}</CardTitle>
+                          <Badge variant="outline" className={rarityStyles}>
+                            {rarityLabel}
+                          </Badge>
+                        </div>
+                        <CardDescription className="text-sm text-muted-foreground">{item.category}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm">Starting at</p>
+                        <p className="text-2xl font-semibold">{priceLabel}</p>
+                        <Badge variant={availabilityVariant}>{availabilityLabel}</Badge>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No artifacts are currently available. Check back soon.
+              </p>
+            )}
           </CardContent>
         </Card>
       </section>
