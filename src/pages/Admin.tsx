@@ -1,4 +1,4 @@
-import { Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users } from "lucide-react";
+import { Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Store, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -33,6 +33,13 @@ const adminSections = [
     href: "/admin/skill-books",
     action: "Manage skill books",
     Icon: NotebookPen,
+  },
+  {
+    title: "Underworld Store",
+    description: "Manage the artifacts offered through the Underworld Nexus storefront.",
+    href: "/admin/underworld-store",
+    action: "Manage store items",
+    Icon: Store,
   },
   {
     title: "YouTube Playlists",
