@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
-
 type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
 type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
 export type FriendProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -21,6 +20,52 @@ export interface SendFriendRequestParams {
 }
 
 const PROFILE_SELECTION = "id, user_id, username, display_name, bio, level, fame";
+const FRIENDSHIP_SELECTION =
+  "id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at";
+
+const formatInFilterList = (values: string[]) =>
+  `(${values.map(value => `"${value}"`).join(",")})`;
+
+const escapeIlikeTerm = (term: string) => term.replace(/[%_]/g, match => `\\${match}`);
+
+export interface ProfileSearchParams {
+  query: string;
+  limit?: number;
+  excludeProfileIds?: string[];
+}
+
+export const searchProfilesByDisplayNameOrUsername = async ({
+  query,
+  limit = 8,
+  excludeProfileIds = [],
+}: ProfileSearchParams): Promise<FriendProfileRow[]> => {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+
+  const sanitized = escapeIlikeTerm(trimmed);
+  const searchExpression = `display_name.ilike.%${sanitized}%,username.ilike.%${sanitized}%`;
+
+  let builder = supabase
+    .from("profiles")
+    .select(PROFILE_SELECTION)
+    .or(searchExpression)
+    .order("fame", { ascending: false })
+    .limit(Math.max(1, limit));
+
+  if (excludeProfileIds.length > 0) {
+    builder = builder.not("id", "in", formatInFilterList(excludeProfileIds));
+  }
+
+  const { data, error } = await builder;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as FriendProfileRow[]) ?? [];
+};
 
 export const fetchPrimaryProfileForUser = async (
   userId: string,
@@ -45,9 +90,7 @@ export const fetchFriendshipsForProfile = async (
 ): Promise<FriendshipRow[]> => {
   const { data, error } = await supabase
     .from("friendships")
-    .select(
-      "id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at",
-    )
+    .select(FRIENDSHIP_SELECTION)
     .or(`user_profile_id.eq.${profileId},friend_profile_id.eq.${profileId}`)
     .order("created_at", { ascending: false });
 
@@ -66,9 +109,7 @@ export const updateFriendshipStatus = async (
     .from("friendships")
     .update({ status })
     .eq("id", friendshipId)
-    .select(
-      "id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at",
-    )
+    .select(FRIENDSHIP_SELECTION)
     .single();
 
   if (error) {
@@ -76,6 +117,31 @@ export const updateFriendshipStatus = async (
   }
 
   return data as FriendshipRow;
+};
+
+export const findExistingFriendshipBetweenProfiles = async (
+  profileAId: string,
+  profileBId: string,
+): Promise<FriendshipRow | null> => {
+  if (!profileAId || !profileBId || profileAId === profileBId) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("friendships")
+    .select(FRIENDSHIP_SELECTION)
+    .or(
+      `and(user_profile_id.eq.${profileAId},friend_profile_id.eq.${profileBId}),and(user_profile_id.eq.${profileBId},friend_profile_id.eq.${profileAId})`,
+    )
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as FriendshipRow | null) ?? null;
 };
 
 export const fetchProfilesByIds = async (

@@ -22,6 +22,7 @@ const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
 const Achievements = lazyWithRetry(() => import("./pages/Achievements"));
+const FriendsHub = lazyWithRetry(() => import("./pages/FriendsHub"));
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
@@ -98,6 +99,7 @@ function App() {
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="equipment" element={<EquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
+                    <Route path="friends" element={<FriendsHub />} />
                     <Route path="achievements" element={<Achievements />} />
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
