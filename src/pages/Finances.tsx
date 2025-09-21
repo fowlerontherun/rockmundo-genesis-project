@@ -1,7 +1,24 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/use-auth-context";
+import {
+  fetchAcceptedFriendsForProfile,
+  fetchPrimaryProfileForUser,
+  type AcceptedFriendProfile,
+} from "@/integrations/supabase/friends";
+import {
+  fetchWalletForProfile,
+  giftWalletFunds,
+  type PlayerXpWalletRow,
+} from "@/integrations/supabase/wallet";
 
 const personalIncome = [
   { source: "Gig Payouts", amount: "$1,200", cadence: "Monthly" },
@@ -46,6 +63,204 @@ const loanOffer = {
 };
 
 const Finances = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<PlayerXpWalletRow | null>(null);
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false);
+  const [friends, setFriends] = useState<AcceptedFriendProfile[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(false);
+  const [selectedFriendId, setSelectedFriendId] = useState<string>("");
+  const [giftAmount, setGiftAmount] = useState<string>("");
+  const [isProcessingGift, setIsProcessingGift] = useState(false);
+
+  const selectedFriend = useMemo(
+    () => friends.find((friend) => friend.partnerProfileId === selectedFriendId) ?? null,
+    [friends, selectedFriendId],
+  );
+  const walletBalance = useMemo(() => wallet?.xp_balance ?? 0, [wallet]);
+  const formattedBalance = useMemo(
+    () => walletBalance.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+    [walletBalance],
+  );
+
+  const refreshWallet = useCallback(
+    async (currentProfileId: string) => {
+      setIsLoadingWallet(true);
+      try {
+        const walletRow = await fetchWalletForProfile(currentProfileId);
+        setWallet(walletRow);
+      } catch (error) {
+        console.error("Failed to load wallet", error);
+        toast({
+          variant: "destructive",
+          title: "Unable to load wallet",
+          description: "We couldn't retrieve your wallet balance. Please try again later.",
+        });
+      } finally {
+        setIsLoadingWallet(false);
+      }
+    },
+    [toast],
+  );
+
+  const refreshFriends = useCallback(
+    async (currentProfileId: string) => {
+      setIsLoadingFriends(true);
+      try {
+        const friendRows = await fetchAcceptedFriendsForProfile(currentProfileId);
+        setFriends(friendRows);
+      } catch (error) {
+        console.error("Failed to load friends", error);
+        toast({
+          variant: "destructive",
+          title: "Unable to load friends",
+          description: "We couldn't fetch your friend list. Please try again later.",
+        });
+      } finally {
+        setIsLoadingFriends(false);
+      }
+    },
+    [toast],
+  );
+
+  useEffect(() => {
+    if (!user) {
+      setProfileId(null);
+      setWallet(null);
+      setFriends([]);
+      setSelectedFriendId("");
+      return;
+    }
+
+    let active = true;
+
+    const loadProfile = async () => {
+      try {
+        const profile = await fetchPrimaryProfileForUser(user.id);
+        if (!active) return;
+        setProfileId(profile?.id ?? null);
+        if (!profile?.id) {
+          setWallet(null);
+          setFriends([]);
+        }
+      } catch (error) {
+        console.error("Failed to load finance profile", error);
+        if (active) {
+          toast({
+            variant: "destructive",
+            title: "Unable to load profile",
+            description: "Sign in again or refresh the page to access gifting tools.",
+          });
+          setProfileId(null);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [toast, user]);
+
+  useEffect(() => {
+    if (!profileId) {
+      setWallet(null);
+      setFriends([]);
+      setSelectedFriendId("");
+      return;
+    }
+
+    void refreshWallet(profileId);
+    void refreshFriends(profileId);
+  }, [profileId, refreshFriends, refreshWallet]);
+
+  useEffect(() => {
+    if (!selectedFriendId && friends.length > 0) {
+      setSelectedFriendId(friends[0].partnerProfileId);
+    } else if (friends.length === 0 && selectedFriendId) {
+      setSelectedFriendId("");
+    }
+  }, [friends, selectedFriendId]);
+
+  const handleGiftFunds = useCallback(async () => {
+    if (!profileId) {
+      return;
+    }
+
+    if (!selectedFriendId) {
+      toast({
+        title: "Choose a recipient",
+        description: "Select a friend to gift funds to before sending.",
+      });
+      return;
+    }
+
+    const amountValue = Number.parseInt(giftAmount, 10);
+
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      toast({
+        title: "Enter a valid amount",
+        description: "Gift amounts must be greater than zero.",
+      });
+      return;
+    }
+
+    const availableBalance = wallet?.xp_balance ?? 0;
+    if (amountValue > availableBalance) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient balance",
+        description: "You don't have enough funds to complete this gift.",
+      });
+      return;
+    }
+
+    setIsProcessingGift(true);
+    const friendName =
+      selectedFriend?.partnerProfile?.display_name ??
+      selectedFriend?.partnerProfile?.username ??
+      "your friend";
+
+    try {
+      const result = await giftWalletFunds({
+        senderProfileId: profileId,
+        recipientProfileId: selectedFriendId,
+        amount: amountValue,
+      });
+
+      await refreshWallet(profileId);
+
+      toast({
+        title: "Gift sent",
+        description: `Shared ${amountValue.toLocaleString()} credits with ${friendName}. New balance: ${result.sender_balance.toLocaleString()}.`,
+      });
+
+      setGiftAmount("");
+    } catch (error) {
+      console.error("Failed to gift funds", error);
+      toast({
+        variant: "destructive",
+        title: "Gift failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "We couldn't send your gift. Please try again later.",
+      });
+    } finally {
+      setIsProcessingGift(false);
+    }
+  }, [
+    giftAmount,
+    profileId,
+    refreshWallet,
+    selectedFriend,
+    selectedFriendId,
+    toast,
+    wallet?.xp_balance,
+  ]);
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -55,6 +270,124 @@ const Finances = () => {
           funded.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Gift funds</CardTitle>
+          <CardDescription>Send spare XP credits to help friends hit their next milestone.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!user ? (
+            <p className="text-sm text-muted-foreground">Sign in to start sending funds to your crew.</p>
+          ) : !profileId ? (
+            <p className="text-sm text-muted-foreground">
+              Create a character profile to unlock wallet gifting and collaborative budgeting tools.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2 rounded-lg border bg-muted/20 p-4 md:col-span-1">
+                  <p className="text-sm font-medium text-muted-foreground">Wallet balance</p>
+                  <div className="flex items-baseline gap-2">
+                    {isLoadingWallet ? (
+                      <span className="flex items-center gap-2 text-2xl font-semibold">
+                        <Loader2 className="h-5 w-5 animate-spin" /> Syncing…
+                      </span>
+                    ) : wallet ? (
+                      <>
+                        <span className="text-2xl font-semibold">{formattedBalance}</span>
+                        <span className="text-sm text-muted-foreground">credits</span>
+                      </>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        Wallet not initialized yet—complete an activity to populate your balance.
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="grid gap-4 md:col-span-2 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="gift-recipient">Recipient</Label>
+                    <Select
+                      value={selectedFriendId}
+                      onValueChange={setSelectedFriendId}
+                      disabled={isLoadingFriends || friends.length === 0}
+                    >
+                      <SelectTrigger id="gift-recipient">
+                        <SelectValue
+                          placeholder={
+                            isLoadingFriends
+                              ? "Loading friends..."
+                              : friends.length === 0
+                              ? "Add an accepted friend to get started"
+                              : "Choose a friend"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {friends.map((friend) => {
+                          const displayName =
+                            friend.partnerProfile?.display_name ??
+                            friend.partnerProfile?.username ??
+                            "Friend";
+                          return (
+                            <SelectItem key={friend.friendshipId} value={friend.partnerProfileId}>
+                              {displayName}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gift-amount">Amount</Label>
+                    <Input
+                      id="gift-amount"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={giftAmount}
+                      onChange={(event) => setGiftAmount(event.target.value)}
+                      placeholder="Enter credits to send"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  onClick={() => void handleGiftFunds()}
+                  disabled={
+                    !selectedFriendId ||
+                    !giftAmount ||
+                    isProcessingGift ||
+                    wallet === null ||
+                    isLoadingWallet ||
+                    friends.length === 0 ||
+                    Number.parseInt(giftAmount, 10) <= 0
+                  }
+                >
+                  {isProcessingGift ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Sending gift…
+                    </span>
+                  ) : (
+                    "Send gift"
+                  )}
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  {selectedFriend
+                    ? `Boosting ${
+                        selectedFriend.partnerProfile?.display_name ??
+                        selectedFriend.partnerProfile?.username ??
+                        "a friend"
+                      } with shared funds.`
+                    : "Choose a friend and amount to share your wallet balance."}
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="personal" className="space-y-6">
         <TabsList>
