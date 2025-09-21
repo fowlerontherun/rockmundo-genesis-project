@@ -1708,6 +1708,54 @@ export type Database = {
           },
         ]
       }
+      underworld_store_items: {
+        Row: {
+          availability: Database["public"]["Enums"]["underworld_item_availability"]
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          price_amount: number | string
+          price_currency: string
+          rarity: Database["public"]["Enums"]["underworld_item_rarity"]
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          availability?: Database["public"]["Enums"]["underworld_item_availability"]
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          price_amount?: number | string
+          price_currency?: string
+          rarity?: Database["public"]["Enums"]["underworld_item_rarity"]
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          availability?: Database["public"]["Enums"]["underworld_item_availability"]
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          price_amount?: number | string
+          price_currency?: string
+          rarity?: Database["public"]["Enums"]["underworld_item_rarity"]
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1787,6 +1835,8 @@ export type Database = {
       chat_participant_status: "online" | "offline" | "typing" | "away"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       education_youtube_lesson_difficulty: "beginner" | "intermediate" | "advanced"
+      underworld_item_availability: "in_stock" | "limited" | "restocking" | "special_order"
+      underworld_item_rarity: "common" | "uncommon" | "rare" | "epic" | "legendary"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
     CompositeTypes: {
