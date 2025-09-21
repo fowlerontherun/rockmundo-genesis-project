@@ -565,9 +565,6 @@ const Education = () => {
       : playlistsError
         ? "We couldn't load resource playlists. Please try again later."
         : "";
-      return (data ?? []) as BandSessionRow[];
-    },
-  });
 
   const bandSessions = useMemo<BandSession[]>(() => {
     const sessions = (bandSessionRows ?? []).map((row) => {
@@ -1891,7 +1888,7 @@ const Education = () => {
       </Tabs>
     </div>
   );
-};
+}
 
 export default Education;
 
