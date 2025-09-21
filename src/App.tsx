@@ -129,6 +129,7 @@ function App() {
                     <Route path="admin/band-learning" element={<AdminBandLearning />} />
                     <Route path="admin/mentors" element={<AdminMentors />} />
                     <Route path="world" element={<WorldEnvironment />} />
+                    <Route path="world-map" element={<WorldMap />} />
                     <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />

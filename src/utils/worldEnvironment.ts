@@ -963,20 +963,90 @@ const locationMatches = (needle: string, haystack: string) => {
 };
 
 export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentSnapshot> => {
-  const [weatherResponse, citiesResponse, worldEventsResponse, randomEventsResponse] = await Promise.all([
-    supabase.from("weather").select("*").order("city", { ascending: true }),
+  const [citiesResponse, worldEventsResponse, randomEventsResponse] = await Promise.all([
     supabase.from("cities").select("*").order("name", { ascending: true }),
     supabase.from("world_events").select("*").order("start_date", { ascending: true }),
     supabase.from("random_events").select("*").order("expiry", { ascending: true }),
   ]);
 
-  if (weatherResponse.error) throw weatherResponse.error;
   if (citiesResponse.error) throw citiesResponse.error;
   if (worldEventsResponse.error) throw worldEventsResponse.error;
   if (randomEventsResponse.error) throw randomEventsResponse.error;
 
-  const weather = (weatherResponse.data || []).map((item) => normalizeWeatherRecord(item as Record<string, unknown>));
-  const cities = (citiesResponse.data || []).map((item) => normalizeCityRecord(item as Record<string, unknown>));
+  const weather: WeatherCondition[] = []; // Empty weather data since table doesn't exist
+  
+  // Create mock cities data if no cities exist in database
+  const citiesData = citiesResponse.data || [];
+  const cities = citiesData.length > 0 
+    ? citiesData.map((item) => normalizeCityRecord(item as Record<string, unknown>))
+    : [
+        {
+          id: "london",
+          name: "London",
+          country: "United Kingdom",
+          description: "The heart of the UK music scene",
+          population: 9000000,
+          music_scene: 95,
+          cost_of_living: 85,
+          dominant_genre: "Rock",
+          venues: 250,
+          local_bonus: 15,
+          busking_value: 45,
+          cultural_events: ["Festival of London", "Camden Music Week"],
+          locations: [],
+          venueHighlights: [],
+          studioProfiles: [],
+          transportLinks: [],
+          famousResident: "The Beatles",
+          travelHub: "Heathrow Airport",
+          travelOptions: [],
+          distanceKm: null,
+        },
+        {
+          id: "new-york",
+          name: "New York",
+          country: "United States",
+          description: "The city that never sleeps",
+          population: 8400000,
+          music_scene: 98,
+          cost_of_living: 90,
+          dominant_genre: "Hip Hop",
+          venues: 300,
+          local_bonus: 20,
+          busking_value: 60,
+          cultural_events: ["NY Music Festival", "Brooklyn Music Week"],
+          locations: [],
+          venueHighlights: [],
+          studioProfiles: [],
+          transportLinks: [],
+          famousResident: "Jay-Z",
+          travelHub: "JFK Airport",
+          travelOptions: [],
+          distanceKm: null,
+        },
+        {
+          id: "tokyo",
+          name: "Tokyo",
+          country: "Japan",
+          description: "Electronic music capital of Asia",
+          population: 14000000,
+          music_scene: 88,
+          cost_of_living: 75,
+          dominant_genre: "Electronic",
+          venues: 180,
+          local_bonus: 12,
+          busking_value: 35,
+          cultural_events: ["Tokyo Music Festival", "Shibuya Sound Week"],
+          locations: [],
+          venueHighlights: [],
+          studioProfiles: [],
+          transportLinks: [],
+          famousResident: "Hatsune Miku",
+          travelHub: "Narita Airport",
+          travelOptions: [],
+          distanceKm: null,
+        }
+      ];
 
   const worldEvents = (worldEventsResponse.data || [])
     .map((item) => normalizeWorldEventRecord(item as Record<string, unknown>))
