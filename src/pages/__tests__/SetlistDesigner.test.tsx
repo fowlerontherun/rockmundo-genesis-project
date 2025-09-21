@@ -9,15 +9,15 @@ describe("SetlistDesigner", () => {
     const html = renderToStaticMarkup(<SetlistDesigner />);
 
     expect(html).toContain("Setlist Designer");
-    expect(html).toContain("World Tour Kickoff");
+    expect(html).toContain("Twilight Spark Warmup");
     expect(html).toContain("Running order");
   });
 
   it("seeds sample songs and production moments", () => {
     const html = renderToStaticMarkup(<SetlistDesigner />);
 
-    expect(html).toContain("Skyline Anthem");
-    expect(html).toContain("Fireworks Cascade");
+    expect(html).toContain("Signal Flare");
+    expect(html).toContain("Crowd Pulse Check");
   });
 
   it("surfaces the song limit message when a setlist is at capacity", () => {

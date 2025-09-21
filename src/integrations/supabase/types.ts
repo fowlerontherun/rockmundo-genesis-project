@@ -692,6 +692,66 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_transfers: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string | null
+          id: string
+          item_id: string
+          item_snapshot: Json | null
+          item_table: string
+          recipient_profile_id: string
+          recipient_user_id: string
+          sender_profile_id: string
+          sender_user_id: string
+          status: Database["public"]["Enums"]["inventory_transfer_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string | null
+          id?: string
+          item_id: string
+          item_snapshot?: Json | null
+          item_table: string
+          recipient_profile_id: string
+          recipient_user_id: string
+          sender_profile_id: string
+          sender_user_id: string
+          status?: Database["public"]["Enums"]["inventory_transfer_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string | null
+          id?: string
+          item_id?: string
+          item_snapshot?: Json | null
+          item_table?: string
+          recipient_profile_id?: string
+          recipient_user_id?: string
+          sender_profile_id?: string
+          sender_user_id?: string
+          status?: Database["public"]["Enums"]["inventory_transfer_status"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transfers_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_events: {
         Row: {
           created_at: string | null
@@ -1818,9 +1878,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acknowledge_inventory_transfer: {
+        Args: {
+          p_transfer_id: string
+          p_recipient_profile_id: string
+        }
+        Returns: Database["public"]["Tables"]["inventory_transfers"]["Row"]
+      }
+      gift_wallet_funds: {
+        Args: {
+          p_sender_profile_id: string
+          p_recipient_profile_id: string
+          p_amount: number
+        }
+        Returns: {
+          sender_profile_id: string
+          sender_balance: number
+          recipient_profile_id: string
+          recipient_balance: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      transfer_inventory_items: {
+        Args: {
+          p_sender_profile_id: string
+          p_recipient_profile_id: string
+          p_inventory_table: string
+          p_item_ids: string[]
+        }
+        Returns: string[]
       }
       has_role: {
         Args: {
@@ -1834,6 +1923,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "offline" | "typing" | "away"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
+      inventory_transfer_status: "completed" | "acknowledged"
       education_youtube_lesson_difficulty: "beginner" | "intermediate" | "advanced"
       underworld_item_availability: "in_stock" | "limited" | "restocking" | "special_order"
       underworld_item_rarity: "common" | "uncommon" | "rare" | "epic" | "legendary"
