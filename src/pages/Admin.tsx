@@ -1,4 +1,4 @@
-import { Gift, GraduationCap, NotebookPen } from "lucide-react";
+import { Building2, Gift, GraduationCap, NotebookPen } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -19,6 +19,13 @@ const adminSections = [
     href: "/admin/universities",
     action: "Manage universities",
     Icon: GraduationCap,
+  },
+  {
+    title: "Cities",
+    description: "Manage destination data, cultural hooks, and gameplay modifiers for each city.",
+    href: "/admin/cities",
+    action: "Manage cities",
+    Icon: Building2,
   },
   {
     title: "Skill Books",
