@@ -1420,6 +1420,155 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_band_roles: {
+        Row: {
+          amps: string[]
+          created_at: string
+          id: string
+          instrument: string
+          monitors: string[]
+          notes: string[]
+          role: string
+        }
+        Insert: {
+          amps?: string[]
+          created_at?: string
+          id?: string
+          instrument: string
+          monitors?: string[]
+          notes?: string[]
+          role: string
+        }
+        Update: {
+          amps?: string[]
+          created_at?: string
+          id?: string
+          instrument?: string
+          monitors?: string[]
+          notes?: string[]
+          role?: string
+        }
+        Relationships: []
+      }
+      stage_crew_roles: {
+        Row: {
+          created_at: string
+          headcount: number
+          id: string
+          responsibilities: string | null
+          skill: number
+          specialty: string
+        }
+        Insert: {
+          created_at?: string
+          headcount?: number
+          id?: string
+          responsibilities?: string | null
+          skill?: number
+          specialty: string
+        }
+        Update: {
+          created_at?: string
+          headcount?: number
+          id?: string
+          responsibilities?: string | null
+          skill?: number
+          specialty?: string
+        }
+        Relationships: []
+      }
+      stage_pedalboard_items: {
+        Row: {
+          band_role_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          pedal: string
+          position: number
+          power_draw: string | null
+        }
+        Insert: {
+          band_role_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pedal: string
+          position: number
+          power_draw?: string | null
+        }
+        Update: {
+          band_role_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pedal?: string
+          position?: number
+          power_draw?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_pedalboard_items_band_role_id_fkey"
+            columns: ["band_role_id"]
+            isOneToOne: false
+            referencedRelation: "stage_band_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_rig_systems: {
+        Row: {
+          coverage: string | null
+          created_at: string
+          details: string[]
+          id: string
+          status: string
+          system: string
+        }
+        Insert: {
+          coverage?: string | null
+          created_at?: string
+          details?: string[]
+          id?: string
+          status: string
+          system: string
+        }
+        Update: {
+          coverage?: string | null
+          created_at?: string
+          details?: string[]
+          id?: string
+          status?: string
+          system?: string
+        }
+        Relationships: []
+      }
+      stage_setup_metrics: {
+        Row: {
+          created_at: string
+          current_wattage: number | null
+          id: string
+          max_db: number | null
+          max_rating: number
+          rating: number
+        }
+        Insert: {
+          created_at?: string
+          current_wattage?: number | null
+          id?: string
+          max_db?: number | null
+          max_rating?: number
+          rating?: number
+        }
+        Update: {
+          created_at?: string
+          current_wattage?: number | null
+          id?: string
+          max_db?: number | null
+          max_rating?: number
+          rating?: number
+        }
+        Relationships: []
+      }
       streaming_platforms: {
         Row: {
           created_at: string | null
