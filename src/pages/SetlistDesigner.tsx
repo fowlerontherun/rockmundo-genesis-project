@@ -449,13 +449,18 @@ export default function SetlistDesigner() {
   };
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-10 space-y-8">
-      <header className="space-y-4">
-        <Badge variant="secondary" className="uppercase tracking-wider">
+    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
+      <header className="space-y-3">
+        <Badge
+          variant="secondary"
+          className="px-2.5 py-0.5 text-xs uppercase tracking-wide"
+        >
           Production Sandbox
         </Badge>
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Setlist Designer</h1>
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Setlist Designer
+          </h1>
           <p className="text-muted-foreground max-w-3xl">
             Experiment with how Rockmundo keeps touring teams aligned. Sketch songs, drop in fan surprises, and rehearse the transitions that turn a night into a show.
           </p>
@@ -465,11 +470,15 @@ export default function SetlistDesigner() {
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as ShowType)}
-        className="space-y-6"
+        className="space-y-4"
       >
-        <TabsList className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <TabsList className="grid w-full gap-1 sm:grid-cols-2 lg:grid-cols-4">
           {showTabs.map((tab) => (
-            <TabsTrigger key={tab.key} value={tab.key} className="flex flex-col gap-1 py-3">
+            <TabsTrigger
+              key={tab.key}
+              value={tab.key}
+              className="flex flex-col gap-1 px-2.5 py-2 text-sm"
+            >
               <span className="font-semibold">{tab.label}</span>
               <span className="text-xs font-normal text-muted-foreground">{tab.tagline}</span>
             </TabsTrigger>
@@ -484,31 +493,42 @@ export default function SetlistDesigner() {
           const eventCount = list.items.length - songCount;
 
           return (
-            <TabsContent key={tab.key} value={tab.key} className="space-y-6">
+            <TabsContent key={tab.key} value={tab.key} className="space-y-4">
               <Card className="border-dashed border-border/60">
-                <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Badge variant="outline" className="uppercase tracking-wide">
+                <CardHeader className="flex flex-col gap-3 space-y-0 p-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="px-2.5 py-0.5 text-xs uppercase tracking-wide"
+                      >
                         {list.locale}
                       </Badge>
-                      <Badge variant="secondary" className="flex items-center gap-1">
+                      <Badge
+                        variant="secondary"
+                        className="flex items-center gap-1 px-2.5 py-0.5 text-xs"
+                      >
                         <Music2 className="h-3.5 w-3.5" /> {songCount} songs
                       </Badge>
-                      <Badge variant="secondary" className="flex items-center gap-1">
+                      <Badge
+                        variant="secondary"
+                        className="flex items-center gap-1 px-2.5 py-0.5 text-xs"
+                      >
                         <Sparkles className="h-3.5 w-3.5" /> {eventCount} moments
                       </Badge>
                     </div>
                     <div className="space-y-1">
-                      <CardTitle className="text-2xl">{list.title}</CardTitle>
+                      <CardTitle className="text-xl font-semibold sm:text-2xl">
+                        {list.title}
+                      </CardTitle>
                       <CardDescription>{list.description}</CardDescription>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" className="gap-2">
+                        <Button variant="ghost" size="sm" className="gap-1.5">
                           <Flame className="h-4 w-4" /> Production notes
                         </Button>
                       </DialogTrigger>
@@ -530,31 +550,34 @@ export default function SetlistDesigner() {
                     </Dialog>
                     <Button
                       variant={editing ? "secondary" : "outline"}
+                      size="sm"
                       onClick={() => handleToggleEditing(tab.key)}
                     >
                       {editing ? "Done editing" : "Edit setlist"}
                     </Button>
-                    <Button onClick={() => handleSave(tab.key)} className="gap-2">
+                    <Button onClick={() => handleSave(tab.key)} size="sm" className="gap-1.5">
                       <CalendarDays className="h-4 w-4" /> Save setlist
                     </Button>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-5 px-4 py-4">
                   <section className="space-y-3">
-                    <header className="flex flex-wrap items-center justify-between gap-3">
+                    <header className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <h2 className="text-lg font-semibold">Running order</h2>
-                        <p className="text-sm text-muted-foreground">
+                        <h2 className="text-base font-semibold">Running order</h2>
+                        <p className="text-xs text-muted-foreground">
                           Drag to resequence or use the move controls for a keyboard-friendly edit pass.
                         </p>
                       </div>
-                      <Badge variant="outline">{list.items.length} entries</Badge>
+                      <Badge variant="outline" className="px-2.5 py-0.5 text-xs">
+                        {list.items.length} entries
+                      </Badge>
                     </header>
 
                     <ul
                       role="list"
-                      className="space-y-3"
+                      className="space-y-2.5"
                       onDragOver={(event) => editing && event.preventDefault()}
                       onDrop={(event) => editing && handleDrop(event, tab.key, list.items.length)}
                     >
@@ -570,21 +593,23 @@ export default function SetlistDesigner() {
                             }
                           }}
                           onDrop={(event) => editing && handleDrop(event, tab.key, index)}
-                          className={`group rounded-lg border border-border/60 bg-card/40 p-4 transition hover:border-primary ${
+                          className={`group rounded-lg border border-border/60 bg-card/40 p-3 transition hover:border-primary ${
                             editing ? "cursor-move" : "cursor-default"
                           }`}
                           aria-roledescription="Reorderable setlist item"
                         >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="flex gap-4">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                                 {index + 1}
                               </div>
                               <div className="space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <Badge
                                     variant={item.type === "song" ? "secondary" : "outline"}
-                                    className={item.type === "event" ? "border-dashed" : undefined}
+                                    className={`px-2.5 py-0.5 text-xs ${
+                                      item.type === "event" ? "border-dashed" : ""
+                                    }`}
                                   >
                                     {item.type === "song" ? "Song" : "Production"}
                                   </Badge>
@@ -602,7 +627,7 @@ export default function SetlistDesigner() {
                             </div>
 
                             {editing && (
-                              <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -628,17 +653,17 @@ export default function SetlistDesigner() {
                   </section>
 
                   {editing && (
-                    <section className="space-y-4">
+                    <section className="space-y-3">
                       <Separator />
                       <header className="space-y-1">
-                        <h2 className="text-lg font-semibold">Add to this set</h2>
-                        <p className="text-sm text-muted-foreground">
+                        <h2 className="text-base font-semibold">Add to this set</h2>
+                        <p className="text-xs text-muted-foreground">
                           Sketch new moments while routing teams lock final inputs. Everything stays in this preview until you export to the master routing doc.
                         </p>
                       </header>
 
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <div className="space-y-2">
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="space-y-1.5">
                           <Label htmlFor={`${tab.key}-type`}>Entry type</Label>
                           <Select
                             value={formState.type}
@@ -658,7 +683,7 @@ export default function SetlistDesigner() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2 md:col-span-2">
+                        <div className="space-y-1.5 md:col-span-2">
                           <Label htmlFor={`${tab.key}-title`}>Title</Label>
                           <Input
                             id={`${tab.key}-title`}
@@ -672,7 +697,7 @@ export default function SetlistDesigner() {
                             }
                           />
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <Label htmlFor={`${tab.key}-duration`}>Duration</Label>
                           <Input
                             id={`${tab.key}-duration`}
@@ -686,7 +711,7 @@ export default function SetlistDesigner() {
                             }
                           />
                         </div>
-                        <div className="space-y-2 md:col-span-3">
+                        <div className="space-y-1.5 md:col-span-3">
                           <Label htmlFor={`${tab.key}-detail`}>Notes</Label>
                           <Textarea
                             id={`${tab.key}-detail`}
@@ -703,7 +728,11 @@ export default function SetlistDesigner() {
                       </div>
 
                       <div className="flex justify-end">
-                        <Button onClick={() => handleAddItem(tab.key)} disabled={!formState.title.trim()}>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddItem(tab.key)}
+                          disabled={!formState.title.trim()}
+                        >
                           Add to running order
                         </Button>
                       </div>
@@ -711,7 +740,7 @@ export default function SetlistDesigner() {
                   )}
                 </CardContent>
 
-                <CardFooter className="flex flex-col items-start gap-3 border-t border-dashed border-border/60 bg-muted/30 p-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+                <CardFooter className="flex flex-col items-start gap-2 border-t border-dashed border-border/60 bg-muted/30 px-4 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
                   <span>
                     Draft stage for crews – final versions sync with routing calendars once approved.
                   </span>
