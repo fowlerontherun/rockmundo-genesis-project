@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import {
   Music,
   Users,
@@ -20,7 +21,7 @@ import {
   MessageSquare,
   Bell,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type SkillProgressRow } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
@@ -96,6 +97,8 @@ const formatSkillName = (slug: string) =>
     .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
+const DAILY_XP_STIPEND = 150;
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
@@ -104,6 +107,7 @@ const Dashboard = () => {
     xpWallet,
     xpLedger,
     skillProgress,
+    dailyXpGrant,
     freshWeeklyBonusAvailable,
     currentCity,
     activities,
@@ -133,6 +137,14 @@ const Dashboard = () => {
     "business_acumen",
     "marketing_savvy"
   ];
+
+  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const dailyXpClaimedToday = (dailyXpGrant?.grant_date ?? null) === todayIso;
+  const dailyXpAmount = dailyXpClaimedToday
+    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? DAILY_XP_STIPEND))
+    : DAILY_XP_STIPEND;
+  const dailyXpClaimedAtLabel = dailyXpGrant?.claimed_at ? formatNotificationDate(dailyXpGrant.claimed_at) : undefined;
+  const spendableXpBalance = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
 
   const handleChatTabChange = useCallback((value: string) => {
     setActiveChatTab(value === "city" ? "city" : "general");
@@ -394,6 +406,26 @@ const Dashboard = () => {
   const notifications: DashboardNotification[] = (() => {
     const items: DashboardNotification[] = [];
 
+    if (dailyXpClaimedToday) {
+      items.push({
+        id: "daily-xp-claimed",
+        title: "Daily XP ready",
+        description: `You received ${dailyXpAmount.toLocaleString()} XP today. Spend it on My Character to keep growing.`,
+        icon: <Sparkles className="h-4 w-4" />,
+        iconClasses: "bg-primary/10 text-primary",
+        timestamp: dailyXpClaimedAtLabel,
+      });
+    } else {
+      items.push({
+        id: "daily-xp-available",
+        title: "Daily XP available",
+        description: `Claim ${dailyXpAmount.toLocaleString()} XP and invest it on the My Character screen.`,
+        icon: <Sparkles className="h-4 w-4" />,
+        iconClasses: "bg-primary/10 text-primary",
+        timestamp: undefined,
+      });
+    }
+
     if (freshWeeklyBonusAvailable) {
       items.push({
         id: "weekly-bonus-available",
@@ -474,6 +506,25 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        <Alert className="border-primary/40 bg-primary/5 text-foreground">
+          <Sparkles className="h-4 w-4" />
+          <AlertTitle>
+            {dailyXpClaimedToday ? "Today's XP stipend claimed" : "Daily XP stipend available"}
+          </AlertTitle>
+          <AlertDescription className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {dailyXpClaimedToday
+                ? `You received ${dailyXpAmount.toLocaleString()} XP today${
+                    dailyXpClaimedAtLabel ? ` at ${dailyXpClaimedAtLabel}` : ""
+                  }. Spend your ${spendableXpBalance.toLocaleString()} XP balance on the My Character page.`
+                : `Claim ${dailyXpAmount.toLocaleString()} XP now and invest it into attributes or skills on the My Character page.`}
+            </span>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/my-character">Open My Character</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
 
         {latestWeeklyBonus ? (
           <Alert className="border-primary/30 bg-primary/5 text-primary">

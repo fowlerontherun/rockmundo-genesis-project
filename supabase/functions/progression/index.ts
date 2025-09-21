@@ -33,7 +33,10 @@ type ProgressionAction =
   | "buy_attribute_star"
   | "respec_attributes"
   | "award_special_xp"
-  | "admin_award_special_xp";
+  | "admin_award_special_xp"
+  | "claim_daily_xp"
+  | "spend_attribute_xp"
+  | "spend_skill_xp";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -125,6 +128,9 @@ const LEDGER_EVENT_TYPES: Record<ProgressionAction, string> = {
   respec_attributes: "attribute_respec",
   award_special_xp: "special_xp",
   admin_award_special_xp: "special_xp",
+  claim_daily_xp: "daily_stipend",
+  spend_attribute_xp: "attribute_daily_spend",
+  spend_skill_xp: "skill_training",
 };
 
 async function progressionHandler(req: Request): Promise<Response> {
@@ -383,6 +389,82 @@ const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: 
     };
   },
 
+  claim_daily_xp: async (ctx, payload) => {
+    const metadata = buildMetadata(payload, {
+      source: resolveString(payload.source ?? payload.context) ?? "daily_stipend",
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_claim_daily_xp", {
+      p_profile_id: ctx.profile.id,
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Daily XP claimed",
+      result,
+    };
+  },
+
+  spend_attribute_xp: async (ctx, payload) => {
+    const attributeKey = resolveString(payload.attribute_key ?? payload.attributeKey ?? payload.attribute);
+    if (!attributeKey) {
+      throw new HttpError(400, "Attribute key is required to spend XP");
+    }
+
+    const xpAmount = resolveNumber(payload.xp ?? payload.amount ?? payload.points);
+    if (!Number.isFinite(xpAmount) || xpAmount <= 0) {
+      throw new HttpError(400, "XP spend amount must be a positive number");
+    }
+
+    const metadata = buildMetadata(payload, {
+      attribute_key: attributeKey,
+      requested_xp: xpAmount,
+      unique_event_id: resolveUniqueEventId(payload) ?? null,
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_spend_attribute_xp", {
+      p_profile_id: ctx.profile.id,
+      p_attribute_key: attributeKey,
+      p_xp: Math.trunc(xpAmount),
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Attribute XP spent",
+      result,
+    };
+  },
+
+  spend_skill_xp: async (ctx, payload) => {
+    const skillSlug = resolveString(payload.skill_slug ?? payload.skillSlug ?? payload.skill);
+    if (!skillSlug) {
+      throw new HttpError(400, "Skill slug is required to spend XP");
+    }
+
+    const xpAmount = resolveNumber(payload.xp ?? payload.amount ?? payload.points);
+    if (!Number.isFinite(xpAmount) || xpAmount <= 0) {
+      throw new HttpError(400, "XP spend amount must be a positive number");
+    }
+
+    const metadata = buildMetadata(payload, {
+      skill_slug: skillSlug,
+      requested_xp: xpAmount,
+      unique_event_id: resolveUniqueEventId(payload) ?? null,
+    });
+
+    const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_spend_skill_xp", {
+      p_profile_id: ctx.profile.id,
+      p_skill_slug: skillSlug,
+      p_xp: Math.trunc(xpAmount),
+      p_metadata: metadata,
+    });
+
+    return {
+      message: result?.message ?? "Skill XP invested",
+      result,
+    };
+  },
+
   admin_award_special_xp: async (ctx, payload) => {
     await assertAdminPrivileges(ctx.client, ctx.user.id);
 
@@ -489,6 +571,10 @@ function isProgressionAction(action: string): action is ProgressionAction {
     "buy_attribute_star",
     "respec_attributes",
     "award_special_xp",
+    "admin_award_special_xp",
+    "claim_daily_xp",
+    "spend_attribute_xp",
+    "spend_skill_xp",
   ].includes(action as ProgressionAction);
 }
 
@@ -624,6 +710,9 @@ async function computeActionCooldowns(client: SupabaseClient<Database>, profileI
     buy_attribute_star: 0,
     respec_attributes: 0,
     admin_award_special_xp: 0,
+    claim_daily_xp: 0,
+    spend_attribute_xp: 0,
+    spend_skill_xp: 0,
   };
 
   const weeklyPromise = client
