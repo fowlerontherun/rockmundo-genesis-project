@@ -96,7 +96,8 @@ function App() {
                     <Route path="equipment" element={<EquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
                     <Route path="achievements" element={<Achievements />} />
-                    <Route path="city" element={<City />} />
+                    <Route path="cities" element={<WorldEnvironment />} />
+                    <Route path="cities/:cityId" element={<City />} />
                     <Route path="tours" element={<TourManager />} />
                     <Route path="setlists" element={<SetlistDesigner />} />
                     <Route path="travel" element={<Travel />} />
