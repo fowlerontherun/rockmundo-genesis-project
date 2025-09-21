@@ -45,19 +45,24 @@ const Layout = () => {
   return (
     <div className="flex h-screen bg-background">
       <Navigation />
-      <main className="flex-1 overflow-y-auto pb-16 pt-16 lg:ml-0 lg:pb-0 lg:pt-0">
-        {profileError && (
-          <div className="px-4 pt-4 lg:px-6">
-            <Alert variant="destructive" className="max-w-2xl">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Profile error</AlertTitle>
-              <AlertDescription>{profileError}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-        <CharacterGate>
-          <Outlet />
-        </CharacterGate>
+      <main className="flex-1 overflow-y-auto pb-16 lg:ml-0 lg:pb-0">
+        <header className="bg-muted py-2 text-center font-oswald text-sm uppercase tracking-wide text-muted-foreground">
+          DEMO- In Developmen
+        </header>
+        <div className="pt-12 lg:pt-0">
+          {profileError && (
+            <div className="px-4 pt-4 lg:px-6">
+              <Alert variant="destructive" className="max-w-2xl">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Profile error</AlertTitle>
+                <AlertDescription>{profileError}</AlertDescription>
+              </Alert>
+            </div>
+          )}
+          <CharacterGate>
+            <Outlet />
+          </CharacterGate>
+        </div>
       </main>
     </div>
   );
