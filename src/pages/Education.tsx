@@ -24,14 +24,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
-import {
-  DIFFICULTY_ORDER,
-  LESSON_DIFFICULTIES,
-  LESSON_DIFFICULTY_CONFIG,
-  SKILL_LABELS,
-  type LessonDifficulty,
-  type PrimarySkill
-} from "@/features/education/constants";
 import { useEducationVideoPlaylists } from "@/features/education/hooks/useEducationVideoPlaylists";
 import { awardActionXp } from "@/utils/progression";
 import {
