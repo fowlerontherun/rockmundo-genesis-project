@@ -76,6 +76,23 @@ const toNumber = (value: unknown, defaultValue = 0) => {
   return Number.isNaN(numericValue) ? defaultValue : numericValue;
 };
 
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+
+  return null;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -441,6 +458,8 @@ export interface City {
   famousResident: string;
   travelHub: string;
   travelOptions: TravelOption[];
+  latitude?: number | null;
+  longitude?: number | null;
   distanceKm: number | null;
 }
 
@@ -647,6 +666,8 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     typeof item.profile_description === "string" ? item.profile_description : undefined;
   const bonuses = typeof item.bonuses === "string" ? item.bonuses : undefined;
   const unlocked = typeof item.unlocked === "boolean" ? item.unlocked : undefined;
+  const latitude = toNullableNumber(item.latitude);
+  const longitude = toNullableNumber(item.longitude);
 
   return {
     id: String(item.id ?? crypto.randomUUID()),
@@ -671,6 +692,8 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     famousResident: famousResidentRaw || "Local legend emerging",
     travelHub: travelHubRaw || travelOptions[0]?.name || "",
     travelOptions,
+    latitude,
+    longitude,
     distanceKm: null,
   };
 };
