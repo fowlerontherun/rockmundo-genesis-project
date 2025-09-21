@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
@@ -160,6 +160,8 @@ type UseGameDataReturn = {
   ) => Promise<{ profile: PlayerProfile; attributes: PlayerAttributes | null }>;
 };
 
+const GameDataContext = createContext<UseGameDataReturn | undefined>(undefined);
+
 const ATTRIBUTE_CATEGORIES = Object.keys(ATTRIBUTE_COLUMN_MAP) as AttributeCategory[];
 
 const createDefaultAttributes = (): PlayerAttributes =>
@@ -187,7 +189,7 @@ const mapAttributes = (row: RawAttributes): PlayerAttributes => {
   return baseAttributes;
 };
 
-export const useGameData = (): UseGameDataReturn => {
+const useGameDataInternal = (): UseGameDataReturn => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [skills, setSkills] = useState<PlayerSkills>(null);
@@ -1066,4 +1068,16 @@ export const useGameData = (): UseGameDataReturn => {
   return value;
 };
 
-export const GameDataProvider = ({ children }: { children: ReactNode }) => <>{children}</>;
+export const GameDataProvider = ({ children }: { children: ReactNode }) => {
+  const value = useGameDataInternal();
+  return <GameDataContext.Provider value={value}>{children}</GameDataContext.Provider>;
+};
+
+export const useGameData = (): UseGameDataReturn => {
+  const context = useContext(GameDataContext);
+  if (!context) {
+    throw new Error("useGameData must be used within a GameDataProvider");
+  }
+
+  return context;
+};
