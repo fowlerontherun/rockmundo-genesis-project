@@ -21,10 +21,10 @@ const WorldMap = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const cities = data?.cities ?? [];
-
   const pins = useMemo(() => {
-    if (!cities.length) {
+    const cityList = data?.cities ?? [];
+
+    if (!cityList.length) {
       return [] as Array<{
         id: string;
         label: string;
@@ -34,7 +34,7 @@ const WorldMap = () => {
       }>;
     }
 
-    return cities.map((city) => {
+    return cityList.map((city) => {
       const coordinates = getCoordinatesForCity(city.name, city.country);
       const point = projectCoordinates(coordinates, MAP_DIMENSIONS);
       const left = `${(point.x / MAP_DIMENSIONS.width) * 100}%`;
@@ -52,7 +52,7 @@ const WorldMap = () => {
         description,
       };
     });
-  }, [cities]);
+  }, [data?.cities]);
 
   const renderMap = () => {
     if (isLoading) {
@@ -119,7 +119,7 @@ const WorldMap = () => {
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        onClick={() => navigate(`/cities/${encodeURIComponent(pin.id)}`)}
+                        onClick={() => navigate(`/cities?cityId=${encodeURIComponent(pin.id)}`)}
                         className="group absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/90 px-3 py-1 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 ring-1 ring-primary/40 transition hover:-translate-y-2 hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                         style={{ left: pin.left, top: pin.top }}
                         aria-label={`Open details for ${pin.label}`}

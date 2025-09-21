@@ -706,7 +706,7 @@ const VenueManagement = () => {
                             <MapPin className="h-4 w-4" />
                             {venue.cityId ? (
                               <Link
-                                to={`/cities/${venue.cityId}`}
+                                to={`/cities?cityId=${encodeURIComponent(venue.cityId)}`}
                                 className="inline-flex items-center gap-1 text-accent transition-colors hover:text-accent/90 hover:underline"
                                 title={`Explore ${venue.location}`}
                               >

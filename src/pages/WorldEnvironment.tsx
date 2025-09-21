@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -918,14 +918,14 @@ const WorldEnvironment: React.FC = () => {
                           </div>
                           <div className="flex justify-end">
                             <Button
-                              asChild
                               size="sm"
                               variant="outline"
-                              onClick={(event) => event.stopPropagation()}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleCitySelection(city);
+                              }}
                             >
-                              <Link to={`/cities/${city.id}`}>
-                                Open city overview
-                              </Link>
+                              View city insights
                             </Button>
                           </div>
                         </CardContent>
@@ -1001,10 +1001,8 @@ const WorldEnvironment: React.FC = () => {
                           </p>
                         )}
                         <div className="flex justify-end">
-                          <Button asChild size="sm" variant="secondary">
-                            <Link to={`/cities/${selectedCity.id}`}>
-                              Open city overview
-                            </Link>
+                          <Button size="sm" variant="secondary" onClick={() => handleCitySelection(selectedCity)}>
+                            View city insights
                           </Button>
                         </div>
                         <Separator />
