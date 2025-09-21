@@ -33,7 +33,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { format, addDays, differenceInDays } from 'date-fns';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database } from '@/lib/supabase-types';
 
 interface TourVenue {
   id: string;

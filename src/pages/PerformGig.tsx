@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Music, DollarSign, Users, Star, Play, TrendingUp, Calendar, MapPin } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database } from '@/lib/supabase-types';
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;

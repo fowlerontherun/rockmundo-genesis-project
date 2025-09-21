@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database } from '@/lib/supabase-types';
 import { useGameData } from '@/hooks/useGameData';
 import { Lock, Star, Trophy, Music, Users, Mic, Zap } from 'lucide-react';
 
