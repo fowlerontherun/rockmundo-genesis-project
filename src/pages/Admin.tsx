@@ -1,4 +1,4 @@
-import { Gift, GraduationCap, NotebookPen } from "lucide-react";
+import { Gift, GraduationCap, NotebookPen, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -26,6 +26,13 @@ const adminSections = [
     href: "/admin/skill-books",
     action: "Manage skill books",
     Icon: NotebookPen,
+  },
+  {
+    title: "Mentors",
+    description: "Control the mentor roster powering education XP and progression boosts.",
+    href: "/admin/mentors",
+    action: "Manage mentors",
+    Icon: Users,
   },
 ] as const;
 

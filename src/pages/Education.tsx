@@ -5,6 +5,7 @@ import {
   Clock,
   Gauge,
   GraduationCap,
+  Loader2,
   Play,
   PlaySquare,
   Sparkles,
@@ -20,14 +21,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { awardActionXp } from "@/utils/progression";
 import {
+  ATTRIBUTE_KEYS,
   applyAttributeToValue,
   calculateAttributeMultiplier,
   SKILL_ATTRIBUTE_MAP,
   type AttributeKey
 } from "@/utils/attributeProgression";
 import type { Band } from "@/types/database";
+import {
+  EDUCATION_MENTOR_SKILL_LABELS,
+  type EducationMentorDifficulty,
+  type EducationMentorFocusSkill
+} from "@/types/education";
 
 const tabItems = [
   {
@@ -65,18 +73,11 @@ const tabItems = [
   }
 ];
 
-const SKILL_LABELS = {
-  guitar: "Guitar",
-  bass: "Bass",
-  drums: "Drums",
-  vocals: "Vocals",
-  performance: "Performance",
-  songwriting: "Songwriting"
-} as const;
+const SKILL_LABELS = EDUCATION_MENTOR_SKILL_LABELS;
 
-type PrimarySkill = keyof typeof SKILL_LABELS;
+type PrimarySkill = EducationMentorFocusSkill;
 
-type LessonDifficulty = "beginner" | "intermediate" | "advanced";
+type LessonDifficulty = EducationMentorDifficulty;
 
 const LESSON_DIFFICULTY_CONFIG: Record<LessonDifficulty, { label: string; multiplier: number; description: string }>
   = {
@@ -132,6 +133,8 @@ interface MentorOption {
   skillGainRatio: number;
   bonusDescription: string;
 }
+
+type EducationMentorRow = Tables<"education_mentors">;
 
 interface BandSession {
   id: string;
@@ -573,54 +576,6 @@ const skillLessons: SkillLesson[] = [
   }
 ];
 
-const mentorOptions: MentorOption[] = [
-  {
-    id: "mentor-stage-architect",
-    name: "Nova Reyes",
-    focusSkill: "performance",
-    description: "Award-winning tour director who rebuilds stage shows from the ground up with cinematic pacing.",
-    specialty: "Stagecraft Architect",
-    cost: 850,
-    cooldownHours: 72,
-    baseXp: 260,
-    difficulty: "advanced",
-    attributeKeys: ["stage_presence", "musical_ability"],
-    requiredSkillValue: 240,
-    skillGainRatio: 0.9,
-    bonusDescription: "Large stage-presence scaling and stamina drills tailored for amphitheater audiences."
-  },
-  {
-    id: "mentor-song-catalyst",
-    name: "Avery Quinn",
-    focusSkill: "songwriting",
-    description: "Billboard-charting writer specializing in modern pop hooks and cinematic lyric arcs.",
-    specialty: "Story Catalyst",
-    cost: 620,
-    cooldownHours: 48,
-    baseXp: 210,
-    difficulty: "intermediate",
-    attributeKeys: ["creative_insight", "marketing_savvy"],
-    requiredSkillValue: 180,
-    skillGainRatio: 0.85,
-    bonusDescription: "Improves topline agility and positioning for sync placements and playlist pitches."
-  },
-  {
-    id: "mentor-vocal-innovator",
-    name: "Lyric Sol",
-    focusSkill: "vocals",
-    description: "Session vocalist famed for hybrid belting techniques and vocal health optimization on tour.",
-    specialty: "Vocal Innovator",
-    cost: 540,
-    cooldownHours: 36,
-    baseXp: 190,
-    difficulty: "intermediate",
-    attributeKeys: ["vocal_talent", "physical_endurance"],
-    requiredSkillValue: 160,
-    skillGainRatio: 0.8,
-    bonusDescription: "Adds sustain control exercises that accelerate range stability and nightly recovery."
-  }
-];
-
 const bandSessions: BandSession[] = [
   {
     id: "band-sync-lock",
@@ -688,6 +643,10 @@ const Education = () => {
     }
   });
 
+  const [mentorOptions, setMentorOptions] = useState<MentorOption[]>([]);
+  const [isLoadingMentors, setIsLoadingMentors] = useState(false);
+  const [mentorError, setMentorError] = useState<string | null>(null);
+
   const [bandCooldowns, setBandCooldowns] = useState<Record<string, Record<string, string>>>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -723,6 +682,86 @@ const Education = () => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(BAND_COOLDOWN_STORAGE_KEY, JSON.stringify(bandCooldowns));
   }, [bandCooldowns]);
+
+  const resolveFocusSkill = useCallback((skill: string): PrimarySkill => {
+    if (skill && Object.prototype.hasOwnProperty.call(SKILL_LABELS, skill)) {
+      return skill as PrimarySkill;
+    }
+    return "performance";
+  }, []);
+
+  const resolveDifficultyValue = useCallback((value: string): LessonDifficulty => {
+    if (value && value in LESSON_DIFFICULTY_CONFIG) {
+      return value as LessonDifficulty;
+    }
+    return "beginner";
+  }, []);
+
+  const normalizeAttributeKeys = useCallback((keys: string[] | null | undefined): AttributeKey[] => {
+    if (!Array.isArray(keys)) return [];
+    return keys.filter((key): key is AttributeKey => ATTRIBUTE_KEYS.includes(key as AttributeKey));
+  }, []);
+
+  const mapMentorRowToOption = useCallback(
+    (row: EducationMentorRow): MentorOption => {
+      const focusSkill = resolveFocusSkill(row.focus_skill);
+      const difficulty = resolveDifficultyValue(row.difficulty);
+      const attributeKeys = normalizeAttributeKeys(row.attribute_keys);
+      const rawSkillGainRatio =
+        typeof row.skill_gain_ratio === "number"
+          ? row.skill_gain_ratio
+          : Number(row.skill_gain_ratio);
+      const skillGainRatio =
+        Number.isFinite(rawSkillGainRatio) && rawSkillGainRatio > 0 ? Number(rawSkillGainRatio) : 0.75;
+
+      return {
+        id: row.id,
+        name: row.name,
+        focusSkill,
+        description: row.description,
+        specialty: row.specialty,
+        cost: typeof row.cost === "number" && Number.isFinite(row.cost) ? row.cost : 0,
+        cooldownHours:
+          typeof row.cooldown_hours === "number" && Number.isFinite(row.cooldown_hours) ? row.cooldown_hours : 0,
+        baseXp: typeof row.base_xp === "number" && Number.isFinite(row.base_xp) ? row.base_xp : 0,
+        difficulty,
+        attributeKeys,
+        requiredSkillValue:
+          typeof row.required_skill_value === "number" && Number.isFinite(row.required_skill_value)
+            ? row.required_skill_value
+            : 0,
+        skillGainRatio,
+        bonusDescription: row.bonus_description
+      };
+    },
+    [normalizeAttributeKeys, resolveDifficultyValue, resolveFocusSkill]
+  );
+
+  const fetchMentorRoster = useCallback(async () => {
+    setIsLoadingMentors(true);
+    try {
+      const { data, error } = await supabase
+        .from("education_mentors")
+        .select("*")
+        .order("difficulty", { ascending: true })
+        .order("cost", { ascending: true });
+
+      if (error) throw error;
+
+      const mapped = (data as EducationMentorRow[] | null)?.map((row) => mapMentorRowToOption(row)) ?? [];
+      setMentorOptions(mapped);
+      setMentorError(null);
+    } catch (error) {
+      console.error("Failed to load education mentors", error);
+      setMentorError("We couldn't load mentors right now. Please try again soon.");
+    } finally {
+      setIsLoadingMentors(false);
+    }
+  }, [mapMentorRowToOption]);
+
+  useEffect(() => {
+    void fetchMentorRoster();
+  }, [fetchMentorRoster]);
 
   const resolveSkillValue = (skill: PrimarySkill | string): number => {
     const raw = skills?.[skill];
@@ -773,7 +812,8 @@ const Education = () => {
   const computeMentorReward = (mentor: MentorOption) => {
     const difficultyConfig = LESSON_DIFFICULTY_CONFIG[mentor.difficulty];
     const baseXp = Math.round(mentor.baseXp * difficultyConfig.multiplier);
-    const attributeResult = applyAttributeToValue(baseXp, attributes, mentor.attributeKeys);
+    const attributeFocus = resolveAttributeFocus(mentor.focusSkill, mentor.attributeKeys);
+    const attributeResult = applyAttributeToValue(baseXp, attributes, attributeFocus);
     const focusSkillValue = resolveSkillValue(mentor.focusSkill);
     const masteryBoost = 1 + Math.min(0.25, Math.max(0, focusSkillValue - mentor.requiredSkillValue) / 800);
     const effectiveXp = Math.max(1, Math.round(attributeResult.value * masteryBoost));
@@ -814,6 +854,23 @@ const Education = () => {
       skillGainPerSkill
     };
   };
+
+  const sortedMentorOptions = useMemo(() => {
+    if (mentorOptions.length === 0) {
+      return mentorOptions;
+    }
+
+    return [...mentorOptions].sort((a, b) => {
+      const difficultyDelta = DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty];
+      if (difficultyDelta !== 0) {
+        return difficultyDelta;
+      }
+      if (a.cost !== b.cost) {
+        return a.cost - b.cost;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [mentorOptions]);
 
   const formatRemainingTime = (iso: string | null | undefined) => {
     if (!iso) return null;
@@ -1587,71 +1644,85 @@ const Education = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {mentorOptions.map((mentor) => {
-                const reward = computeMentorReward(mentor);
-                const cooldownRemaining = formatRemainingTime(mentorCooldowns[mentor.id]);
-                const requirementMet = isSkillUnlocked(mentor.focusSkill, mentor.requiredSkillValue);
-                const availableCash = Number(profile?.cash ?? 0);
-                const insufficientFunds = availableCash < mentor.cost;
-                const disabled =
-                  !requirementMet || Boolean(cooldownRemaining) || insufficientFunds || activeMentorId === mentor.id;
+              {isLoadingMentors ? (
+                <div className="col-span-full flex items-center justify-center rounded-lg border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading mentors...
+                </div>
+              ) : mentorError ? (
+                <div className="col-span-full rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                  {mentorError}
+                </div>
+              ) : sortedMentorOptions.length === 0 ? (
+                <div className="col-span-full rounded-lg border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  No mentors are currently available. Check back soon!
+                </div>
+              ) : (
+                sortedMentorOptions.map((mentor) => {
+                  const reward = computeMentorReward(mentor);
+                  const cooldownRemaining = formatRemainingTime(mentorCooldowns[mentor.id]);
+                  const requirementMet = isSkillUnlocked(mentor.focusSkill, mentor.requiredSkillValue);
+                  const availableCash = Number(profile?.cash ?? 0);
+                  const insufficientFunds = availableCash < mentor.cost;
+                  const disabled =
+                    !requirementMet || Boolean(cooldownRemaining) || insufficientFunds || activeMentorId === mentor.id;
 
-                return (
-                  <Card key={mentor.id} className="border-dashed">
-                    <CardHeader className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <CardTitle className="text-base font-semibold">{mentor.name}</CardTitle>
-                          <CardDescription>{mentor.specialty}</CardDescription>
+                  return (
+                    <Card key={mentor.id} className="border-dashed">
+                      <CardHeader className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <CardTitle className="text-base font-semibold">{mentor.name}</CardTitle>
+                            <CardDescription>{mentor.specialty}</CardDescription>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {LESSON_DIFFICULTY_CONFIG[mentor.difficulty].label}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          {LESSON_DIFFICULTY_CONFIG[mentor.difficulty].label}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-xs text-muted-foreground">{mentor.description}</p>
-                      <div className="grid gap-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <BadgeDollarSign className="h-4 w-4" />
-                          Session cost: ${mentor.cost.toLocaleString()}
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-xs text-muted-foreground">{mentor.description}</p>
+                        <div className="grid gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <BadgeDollarSign className="h-4 w-4" />
+                            Session cost: ${mentor.cost.toLocaleString()}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-4 w-4 text-primary" />
+                            Reward: {reward.effectiveXp} XP • Skill gain ≈ {reward.skillGain}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" />
+                            Attribute boost: {(Math.max(0, reward.attributeMultiplier - 1) * 100).toFixed(0)}%
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Timer className="h-4 w-4" />
+                            Cooldown: {mentor.cooldownHours}h
+                            {cooldownRemaining ? ` • ${cooldownRemaining} remaining` : ""}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Trophy className="h-4 w-4 text-primary" />
-                          Reward: {reward.effectiveXp} XP • Skill gain ≈ {reward.skillGain}
+                        <div className="space-y-2 text-xs text-muted-foreground">
+                          <p>
+                            Requires {mentor.requiredSkillValue}+ {SKILL_LABELS[mentor.focusSkill]} • {mentor.bonusDescription}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          Attribute boost: {(Math.max(0, reward.attributeMultiplier - 1) * 100).toFixed(0)}%
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Timer className="h-4 w-4" />
-                          Cooldown: {mentor.cooldownHours}h
-                          {cooldownRemaining ? ` • ${cooldownRemaining} remaining` : ""}
-                        </div>
-                      </div>
-                      <div className="space-y-2 text-xs text-muted-foreground">
-                        <p>
-                          Requires {mentor.requiredSkillValue}+ {SKILL_LABELS[mentor.focusSkill]} • {mentor.bonusDescription}
-                        </p>
-                      </div>
-                      <Button
-                        className="w-full"
-                        onClick={() => handleBookMentor(mentor)}
-                        disabled={disabled}
-                      >
-                        {cooldownRemaining
-                          ? `Available in ${cooldownRemaining}`
-                          : insufficientFunds
-                            ? "Not enough cash"
-                            : activeMentorId === mentor.id
-                              ? "Scheduling..."
-                              : "Book mentor session"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        <Button
+                          className="w-full"
+                          onClick={() => handleBookMentor(mentor)}
+                          disabled={disabled}
+                        >
+                          {cooldownRemaining
+                            ? `Available in ${cooldownRemaining}`
+                            : insufficientFunds
+                              ? "Not enough cash"
+                              : activeMentorId === mentor.id
+                                ? "Scheduling..."
+                                : "Book mentor session"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </TabsContent>
