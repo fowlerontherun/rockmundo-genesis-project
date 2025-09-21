@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/lib/supabase-types";
 import {
   LESSON_DIFFICULTIES,
   LESSON_DIFFICULTY_CONFIG,

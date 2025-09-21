@@ -1,4 +1,4 @@
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/lib/supabase-types";
 
 export type PlayerXpWallet = Tables<"player_xp_wallet">;
 

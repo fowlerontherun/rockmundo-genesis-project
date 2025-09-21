@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase-types";
 
 export const UNIVERSITY_PAGE_SIZE = 10;
 

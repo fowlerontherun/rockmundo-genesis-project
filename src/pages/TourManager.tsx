@@ -39,7 +39,7 @@ import {
   TRAVEL_MODES,
   type TravelMode,
 } from "@/utils/worldTravel";
-import type { Database, Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/lib/supabase-types";
 
 interface Tour {
   id: string;

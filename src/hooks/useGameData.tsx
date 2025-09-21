@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
 import {
   awardActionXp as awardActionXpUtility,

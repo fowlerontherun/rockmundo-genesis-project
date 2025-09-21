@@ -25,7 +25,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type SkillProgressRow } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase-types";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 

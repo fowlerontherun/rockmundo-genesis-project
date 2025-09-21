@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase-types";
 
 type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
 type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];

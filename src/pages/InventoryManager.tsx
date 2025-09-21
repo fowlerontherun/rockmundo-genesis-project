@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { SKILL_TREE_DEFINITIONS, type TierName } from "@/data/skillTree";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase-types";
 import type { SkillDefinitionRecord } from "@/hooks/useSkillSystem.types";
 
 import { getMetadataValue, parseString, parseTier } from "./shared";

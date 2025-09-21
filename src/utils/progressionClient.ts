@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/lib/supabase-types";
 
 export type ProgressionAction =
   | "award_action_xp"

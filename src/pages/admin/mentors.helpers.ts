@@ -5,7 +5,7 @@ import {
   EDUCATION_MENTOR_FOCUS_SKILLS,
   type EducationMentorFocusSkill,
 } from "@/types/education";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/lib/supabase-types";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "@/utils/attributeProgression";
 
 export const mentorSchema = z.object({

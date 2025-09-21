@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { applyRoyaltyRecoupment } from "@/utils/contracts";
 import * as datetimeUtils from "@/utils/datetime";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
-import type { Database, Json } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/lib/supabase-types";
 
 interface Song {
   id: string;

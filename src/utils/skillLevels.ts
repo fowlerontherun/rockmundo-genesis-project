@@ -1,4 +1,4 @@
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/lib/supabase-types";
 
 export type SkillDefinitionRow = Tables<"skill_definitions">;
 export type SkillLevelMap = Record<string, number>;

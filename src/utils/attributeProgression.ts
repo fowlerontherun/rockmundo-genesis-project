@@ -1,4 +1,4 @@
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/lib/supabase-types";
 
 export type AttributeSnapshot = Tables<'player_attributes'>;
 

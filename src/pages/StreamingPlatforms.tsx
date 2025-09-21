@@ -27,7 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase-types";
 
 type StreamingPlatform = Database["public"]["Tables"]["streaming_platforms"]["Row"];
 type PlayerStreamingAccount = Database["public"]["Tables"]["player_streaming_accounts"]["Row"];
