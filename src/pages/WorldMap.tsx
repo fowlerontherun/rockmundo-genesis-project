@@ -11,7 +11,7 @@ import { fetchWorldEnvironmentSnapshot } from "@/utils/worldEnvironment";
 import { getCoordinatesForCity } from "@/utils/worldTravel";
 import { projectCoordinates } from "@/utils/mapProjection";
 
-const MAP_DIMENSIONS = { width: 1200, height: 620, padding: 48 } as const;
+const MAP_DIMENSIONS = { width: 1440, height: 720, padding: 48 } as const;
 
 const WorldMap = () => {
   const navigate = useNavigate();
@@ -110,7 +110,7 @@ const WorldMap = () => {
         </CardHeader>
         <CardContent className="space-y-4 p-0">
           <div className="relative w-full overflow-hidden">
-            <div className="relative w-full pt-[56%] sm:pt-[48%]">
+            <div className="relative w-full aspect-[1440/720]">
               <img
                 src={mapBackground}
                 alt="Stylised Rockmundo world map"

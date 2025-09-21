@@ -117,7 +117,7 @@ const CITY_COORDINATES: Record<string, Coordinates> = {
   'solace-city': { lat: 37.7749, lng: -122.4194 },
   'vela horizonte': { lat: -22.9068, lng: -43.1729 },
   'vela-horizonte': { lat: -22.9068, lng: -43.1729 },
-  'asterhaven': { lat: 52.4862, lng: -1.8904 },
+  'asterhaven': { lat: 51.5072, lng: -0.1276 },
 };
 
 const DISTRICT_COORDINATES: Record<string, Coordinates> = {
@@ -291,6 +291,14 @@ export const getCoordinatesForLocation = (
   }
 
   return hashToCoordinate(`${location}`);
+};
+
+const parseCoordinateOverride = (value?: number | null) => {
+  if (typeof value !== 'number') {
+    return null;
+  }
+
+  return Number.isFinite(value) ? value : null;
 };
 
 export const getCoordinatesForCity = (

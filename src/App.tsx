@@ -51,6 +51,7 @@ const AdminSkillBooks = lazyWithRetry(() => import("./pages/admin/SkillBooks"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const AdminBandLearning = lazyWithRetry(() => import("./pages/admin/BandLearning"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
+const AdminStageSetup = lazyWithRetry(() => import("./pages/admin/StageSetup"));
 const AdminUnderworldStore = lazyWithRetry(() => import("./pages/admin/UnderworldStore"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
@@ -129,6 +130,7 @@ function App() {
                     <Route path="admin/youtube-videos" element={<AdminYoutubeVideos />} />
                     <Route path="admin/band-learning" element={<AdminBandLearning />} />
                     <Route path="admin/mentors" element={<AdminMentors />} />
+                    <Route path="admin/stage-setup" element={<AdminStageSetup />} />
                     <Route path="admin/underworld-store" element={<AdminUnderworldStore />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
