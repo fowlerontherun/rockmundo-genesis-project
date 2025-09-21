@@ -61,6 +61,11 @@ const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"))
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const Health = lazyWithRetry(() => import("./pages/Health"));
+const Therapy = lazyWithRetry(() => import("./pages/Therapy"));
+const Rehab = lazyWithRetry(() => import("./pages/Rehab"));
+const WonderDrugs = lazyWithRetry(() => import("./pages/WonderDrugs"));
+const CosmeticSurgery = lazyWithRetry(() => import("./pages/CosmeticSurgery"));
+const Doctor = lazyWithRetry(() => import("./pages/Doctor"));
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
@@ -142,6 +147,11 @@ function App() {
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
                     <Route path="health" element={<Health />} />
+                    <Route path="health/therapy" element={<Therapy />} />
+                    <Route path="health/rehab" element={<Rehab />} />
+                    <Route path="health/wonder-drugs" element={<WonderDrugs />} />
+                    <Route path="health/cosmetic-surgery" element={<CosmeticSurgery />} />
+                    <Route path="health/doctor" element={<Doctor />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>
