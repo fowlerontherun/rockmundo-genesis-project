@@ -37,30 +37,38 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { CalendarDays, Flame, Music2, Sparkles } from "lucide-react";
 
+type ShowType = "act" | "headliner" | "festivalHeadliner" | "acoustic";
+
 const showTabs = [
   {
-    key: "act",
-    label: "Support Act",
-    tagline: "Sprint from house lights to handshake moments in under 30 minutes.",
+    key: "headliner" as const,
+    label: "World Tour",
+    tagline: "Stadium pacing with cinematic fan moments",
   },
   {
-    key: "headliner",
-    label: "Headliner Run",
-    tagline: "Full-scale arena arc with room to breathe between set pieces.",
+    key: "act" as const,
+    label: "Arena Spectacle",
+    tagline: "High-production arena night with synced visuals",
   },
   {
-    key: "festivalHeadliner",
-    label: "Festival Headliner",
-    tagline: "Command the main stage with relentless pacing and marquee drops.",
+    key: "acoustic" as const,
+    label: "Club Showcase",
+    tagline: "Intimate rooms built around fan connection",
   },
   {
-    key: "acoustic",
-    label: "Acoustic Lounge",
-    tagline: "Stories-first session designed for stripped-back storytelling.",
-  },
-] as const;
+    key: "festivalHeadliner" as const,
+    label: "Festival Circuit",
+    tagline: "Rapid-fire festival slots with headline punch",
 
-type ShowType = typeof showTabs[number]["key"];
+  },
+] satisfies ReadonlyArray<{ key: ShowType; label: string; tagline: string }>;
+
+const SONG_LIMITS: Record<ShowType, number> = {
+  act: 5,
+  headliner: 16,
+  festivalHeadliner: 22,
+  acoustic: 8,
+};
 
 type SetlistItem = {
   id: string;
@@ -85,10 +93,10 @@ type NewItemForm = {
   duration: string;
 };
 
-const initialSetlists: Record<ShowType, SetlistBlueprint> = {
-  act: {
-    title: "Twilight Spark Warmup",
-    locale: "Regional theatre circuit",
+export const initialSetlists: Record<ShowType, SetlistBlueprint> = {
+  headliner: {
+    title: "World Tour Kickoff",
+    locale: "Continental stadium route",
     description:
       "Designed for opening slots where momentum matters most – five hooks to earn the room before the headliner loads in.",
     productionNotes: [
@@ -148,8 +156,8 @@ const initialSetlists: Record<ShowType, SetlistBlueprint> = {
       },
     ],
   },
-  headliner: {
-    title: "Night Arcade Headliner",
+  act: {
+    title: "Arena Pulse Sequence",
     locale: "Major market arenas",
     description:
       "Sixteen-song headline stretch balancing blockbuster sequences with breathers for narration and sponsor beats.",
@@ -294,9 +302,9 @@ const initialSetlists: Record<ShowType, SetlistBlueprint> = {
       },
     ],
   },
-  festivalHeadliner: {
-    title: "Solar Heights Festival Close",
-    locale: "Sunset main stages",
+  acoustic: {
+    title: "Club Residency Flow",
+    locale: "500-cap rooms",
     description:
       "Twenty-two high-impact songs engineered to conquer festival sprawl and keep drop-in fans locked through the finale.",
     productionNotes: [
@@ -475,9 +483,9 @@ const initialSetlists: Record<ShowType, SetlistBlueprint> = {
       },
     ],
   },
-  acoustic: {
-    title: "Gallery Room Acoustic",
-    locale: "Pop-up gallery sessions",
+  festivalHeadliner: {
+    title: "Sunrise Festival Sprint",
+    locale: "Outdoor main stages",
     description:
       "Eight unplugged staples crafted for storytelling stops, radio visits, and VIP lounges with zero production footprint.",
     productionNotes: [
@@ -572,9 +580,9 @@ const createNewItemState = (): Record<ShowType, NewItemForm> => {
   }, {} as Record<ShowType, NewItemForm>);
 };
 
-const createEditingState = () => {
+const createEditingState = (overrides?: Partial<Record<ShowType, boolean>>) => {
   return showTabs.reduce((acc, tab) => {
-    acc[tab.key] = false;
+    acc[tab.key] = overrides?.[tab.key] ?? false;
     return acc;
   }, {} as Record<ShowType, boolean>);
 };
@@ -591,11 +599,23 @@ const reorderItems = (list: SetlistItem[], startIndex: number, endIndex: number)
   return updated;
 };
 
-export default function SetlistDesigner() {
+type SetlistDesignerProps = {
+  initialState?: Record<ShowType, SetlistBlueprint>;
+  initialEditing?: Partial<Record<ShowType, boolean>>;
+  initialActiveTab?: ShowType;
+};
+
+export default function SetlistDesigner({
+  initialState,
+  initialEditing,
+  initialActiveTab,
+}: SetlistDesignerProps = {}) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<ShowType>("act");
-  const [setlists, setSetlists] = useState(initialSetlists);
-  const [isEditing, setIsEditing] = useState<Record<ShowType, boolean>>(createEditingState);
+  const [activeTab, setActiveTab] = useState<ShowType>(initialActiveTab ?? "headliner");
+  const [setlists, setSetlists] = useState(initialState ?? initialSetlists);
+  const [isEditing, setIsEditing] = useState<Record<ShowType, boolean>>(() =>
+    createEditingState(initialEditing),
+  );
   const [newItems, setNewItems] = useState<Record<ShowType, NewItemForm>>(createNewItemState);
 
   const handleToggleEditing = (showType: ShowType) => {
@@ -608,6 +628,20 @@ export default function SetlistDesigner() {
   const handleAddItem = (showType: ShowType) => {
     const form = newItems[showType];
     if (!form.title.trim()) {
+      return;
+    }
+
+    const currentSongCount = setlists[showType].items.filter((item) => item.type === "song").length;
+    const songLimit = SONG_LIMITS[showType];
+
+    if (form.type === "song" && currentSongCount >= songLimit) {
+      const tabLabel = showTabs.find((tab) => tab.key === showType)?.label ?? "This set";
+
+      toast({
+        title: "Song limit reached",
+        description: `${tabLabel} can feature up to ${songLimit} songs. Convert the new idea to a production moment or remove a track before adding another song.`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -743,6 +777,9 @@ export default function SetlistDesigner() {
           const formState = newItems[tab.key];
           const songCount = list.items.filter((item) => item.type === "song").length;
           const eventCount = list.items.length - songCount;
+          const songLimit = SONG_LIMITS[tab.key];
+          const remainingSongSlots = Math.max(0, songLimit - songCount);
+          const songLimitReached = songCount >= songLimit;
 
           return (
             <TabsContent key={tab.key} value={tab.key} className="space-y-4">
@@ -979,12 +1016,24 @@ export default function SetlistDesigner() {
                         </div>
                       </div>
 
-                      <div className="flex justify-end">
-                        <Button
-                          size="sm"
-                          onClick={() => handleAddItem(tab.key)}
-                          disabled={!formState.title.trim()}
-                        >
+                      <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 md:flex-row md:items-center md:justify-between">
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <span>Song limit</span>
+                            <Badge variant="outline" className="font-semibold">
+                              {songLimit}
+                            </Badge>
+                            <Badge variant="secondary" className="font-semibold">
+                              {songCount}/{songLimit}
+                            </Badge>
+                          </div>
+                          <p className={songLimitReached ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
+                            {songLimitReached
+                              ? "Song limit reached. Convert the next addition to a production moment or remove a track to free up space."
+                              : `${remainingSongSlots} song slot${remainingSongSlots === 1 ? "" : "s"} remaining in this set.`}
+                          </p>
+                        </div>
+                        <Button onClick={() => handleAddItem(tab.key)} disabled={!formState.title.trim()}>
                           Add to running order
                         </Button>
                       </div>
