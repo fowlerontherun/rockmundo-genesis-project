@@ -338,6 +338,201 @@ export type Database = {
         }
         Relationships: []
       }
+      education_band_sessions: {
+        Row: {
+          attribute_keys: string[]
+          base_xp: number
+          cooldown_hours: number
+          created_at: string
+          description: string | null
+          difficulty: "beginner" | "intermediate" | "advanced"
+          duration_minutes: number
+          focus_skills: string[]
+          id: string
+          synergy_notes: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_keys?: string[]
+          base_xp: number
+          cooldown_hours: number
+          created_at?: string
+          description?: string | null
+          difficulty: "beginner" | "intermediate" | "advanced"
+          duration_minutes: number
+          focus_skills?: string[]
+          id?: string
+          synergy_notes?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_keys?: string[]
+          base_xp?: number
+          cooldown_hours?: number
+          created_at?: string
+          description?: string | null
+          difficulty?: "beginner" | "intermediate" | "advanced"
+          duration_minutes?: number
+          focus_skills?: string[]
+          id?: string
+          synergy_notes?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      education_mentors: {
+        Row: {
+          attribute_keys: string[]
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at: string
+          description: string
+          difficulty: "beginner" | "intermediate" | "advanced"
+          focus_skill: string
+          id: string
+          name: string
+          required_skill_value: number
+          skill_gain_ratio: number | string
+          specialty: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_keys?: string[]
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at?: string
+          description: string
+          difficulty: "beginner" | "intermediate" | "advanced"
+          focus_skill: string
+          id?: string
+          name: string
+          required_skill_value: number
+          skill_gain_ratio: number | string
+          specialty: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_keys?: string[]
+          base_xp?: number
+          bonus_description?: string
+          cooldown_hours?: number
+          cost?: number
+          created_at?: string
+          description?: string
+          difficulty?: "beginner" | "intermediate" | "advanced"
+          focus_skill?: string
+          id?: string
+          name?: string
+          required_skill_value?: number
+          skill_gain_ratio?: number | string
+          specialty?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      education_youtube_lessons: {
+        Row: {
+          attribute_keys: string[]
+          channel: string
+          created_at: string
+          difficulty: Database["public"]["Enums"]["education_youtube_lesson_difficulty"]
+          duration_minutes: number
+          focus: string
+          id: string
+          required_skill_value: number | null
+          skill: string
+          summary: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          attribute_keys?: string[]
+          channel: string
+          created_at?: string
+          difficulty: Database["public"]["Enums"]["education_youtube_lesson_difficulty"]
+          duration_minutes: number
+          focus: string
+          id?: string
+          required_skill_value?: number | null
+          skill: string
+          summary: string
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          attribute_keys?: string[]
+          channel?: string
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["education_youtube_lesson_difficulty"]
+          duration_minutes?: number
+          focus?: string
+          id?: string
+          required_skill_value?: number | null
+          skill?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      education_youtube_resources: {
+        Row: {
+          collection_description: string | null
+          collection_key: string
+          collection_sort_order: number
+          collection_title: string
+          created_at: string
+          id: string
+          resource_focus: string
+          resource_format: string
+          resource_name: string
+          resource_sort_order: number
+          resource_summary: string
+          resource_url: string
+          updated_at: string
+        }
+        Insert: {
+          collection_description?: string | null
+          collection_key: string
+          collection_sort_order?: number
+          collection_title: string
+          created_at?: string
+          id?: string
+          resource_focus: string
+          resource_format: string
+          resource_name: string
+          resource_sort_order?: number
+          resource_summary: string
+          resource_url: string
+          updated_at?: string
+        }
+        Update: {
+          collection_description?: string | null
+          collection_key?: string
+          collection_sort_order?: number
+          collection_title?: string
+          created_at?: string
+          id?: string
+          resource_focus?: string
+          resource_format?: string
+          resource_name?: string
+          resource_sort_order?: number
+          resource_summary?: string
+          resource_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_participants: {
         Row: {
           event_id: string
@@ -830,6 +1025,56 @@ export type Database = {
             columns: ["equipment_id"]
             isOneToOne: false
             referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_skills: {
+        Row: {
+          bass: number
+          created_at: string | null
+          drums: number
+          guitar: number
+          id: string
+          performance: number
+          profile_id: string
+          songwriting: number
+          updated_at: string | null
+          user_id: string
+          vocals: number
+        }
+        Insert: {
+          bass?: number
+          created_at?: string | null
+          drums?: number
+          guitar?: number
+          id?: string
+          performance?: number
+          profile_id: string
+          songwriting?: number
+          updated_at?: string | null
+          user_id: string
+          vocals?: number
+        }
+        Update: {
+          bass?: number
+          created_at?: string | null
+          drums?: number
+          guitar?: number
+          id?: string
+          performance?: number
+          profile_id?: string
+          songwriting?: number
+          updated_at?: string | null
+          user_id?: string
+          vocals?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_skills_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1392,6 +1637,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "offline" | "typing" | "away"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
+      education_youtube_lesson_difficulty: "beginner" | "intermediate" | "advanced"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
     CompositeTypes: {
