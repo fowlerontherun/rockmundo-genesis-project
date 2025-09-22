@@ -32,15 +32,14 @@ import {
   describeAllRecipientCount,
   getAffectedCount,
   playerTargetingDefaultValues,
-  playerTargetingSchema,
+  extendPlayerTargetingSchema,
   resolveTargetProfileIds,
   usePlayerProfiles,
   useTargetScopeSynchronization,
 } from "./playerBoosts.helpers";
 import { adminAdjustMomentum, adminAwardSpecialXp, adminSetDailyXpAmount } from "@/utils/progression";
 
-const momentumSchema = playerTargetingSchema
-  .extend({
+const momentumSchema = extendPlayerTargetingSchema({
     amount: z
       .coerce
       .number({ invalid_type_error: "Momentum change must be a number" })
@@ -64,7 +63,7 @@ const momentumDefaultValues: MomentumFormValues = {
   reason: "",
 };
 
-const xpBoostSchema = playerTargetingSchema.extend({
+const xpBoostSchema = extendPlayerTargetingSchema({
   amount: z
     .coerce
     .number({ invalid_type_error: "XP amount must be a number" })
@@ -80,7 +79,7 @@ const xpBoostDefaultValues: XpBoostFormValues = {
   reason: "Community momentum boost",
 };
 
-const stipendSchema = playerTargetingSchema.extend({
+const stipendSchema = extendPlayerTargetingSchema({
   amount: z
     .coerce
     .number({ invalid_type_error: "Daily XP must be a number" })

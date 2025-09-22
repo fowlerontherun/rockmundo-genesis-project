@@ -10,14 +10,19 @@ import { parseString } from "./shared";
 export const targetScopes = ["single", "multiple", "all"] as const;
 export type TargetScope = (typeof targetScopes)[number];
 
-export const playerTargetingSchema = z
-  .object({
-    targetScope: z.enum(targetScopes),
-    profileId: z.string().uuid().optional(),
-    profileIds: z.array(z.string().uuid()).optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.targetScope === "single" && !values.profileId) {
+const playerTargetingSchemaBase = z.object({
+  targetScope: z.enum(targetScopes),
+  profileId: z.string().uuid().optional(),
+  profileIds: z.array(z.string().uuid()).optional(),
+});
+
+const applyTargetingRefinements = <TSchema extends z.ZodTypeAny>(schema: TSchema) =>
+  schema.superRefine((values, ctx) => {
+    const targetScope = (values as { targetScope?: TargetScope }).targetScope;
+    const profileId = (values as { profileId?: string | null }).profileId;
+    const profileIds = (values as { profileIds?: string[] | null }).profileIds;
+
+    if (targetScope === "single" && !profileId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["profileId"],
@@ -25,8 +30,8 @@ export const playerTargetingSchema = z
       });
     }
 
-    if (values.targetScope === "multiple") {
-      const ids = values.profileIds ?? [];
+    if (targetScope === "multiple") {
+      const ids = Array.isArray(profileIds) ? profileIds : [];
       if (ids.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -36,6 +41,11 @@ export const playerTargetingSchema = z
       }
     }
   });
+
+export const playerTargetingSchema = applyTargetingRefinements(playerTargetingSchemaBase);
+
+export const extendPlayerTargetingSchema = <TShape extends z.ZodRawShape>(shape: TShape) =>
+  applyTargetingRefinements(playerTargetingSchemaBase.extend(shape));
 
 export type PlayerTargetingFormValues = z.infer<typeof playerTargetingSchema>;
 
