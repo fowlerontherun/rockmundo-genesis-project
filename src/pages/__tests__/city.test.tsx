@@ -105,11 +105,75 @@ describe("City page", () => {
       fetchWorldEnvironmentSnapshot: snapshotMock,
       fetchCityEnvironmentDetails: detailsMock,
     }));
+    type MockTravelRow = {
+      id: string;
+      city_from: string;
+      city_to: string;
+      cost: number;
+      duration_minutes: number;
+      health_impact: number;
+    };
+
+    const travelDataset: Record<string, MockTravelRow[]> = {
+      travel_flights: [
+        {
+          id: "flight-neo-aster",
+          city_from: sampleCity.id,
+          city_to: "asterhaven-city-id",
+          cost: 880,
+          duration_minutes: 720,
+          health_impact: 12,
+        },
+      ],
+      travel_trains: [
+        {
+          id: "train-neo-solace",
+          city_from: sampleCity.id,
+          city_to: "solace-city-id",
+          cost: 135,
+          duration_minutes: 240,
+          health_impact: 3,
+        },
+      ],
+      travel_taxis: [
+        {
+          id: "taxi-neo-local",
+          city_from: sampleCity.id,
+          city_to: sampleCity.id,
+          cost: 32,
+          duration_minutes: 22,
+          health_impact: 4,
+        },
+      ],
+      travel_ferries: [],
+    };
+
+    const destinationCities = [
+      { id: "asterhaven-city-id", name: "Asterhaven" },
+      { id: "solace-city-id", name: "Solace City" },
+      { id: sampleCity.id, name: sampleCity.name },
+    ];
+
     mock.module("@/integrations/supabase/client", () => ({
       supabase: {
-        from: () => ({
+        from: (table: string) => ({
           select: () => ({
-            eq: async () => ({ data: [], error: null }),
+            eq: async (column: string, value: string) => {
+              if (column === "city_from") {
+                const matches = (travelDataset[table] ?? []).filter(
+                  (entry) => entry.city_from === value,
+                );
+                return { data: matches, error: null };
+              }
+              return { data: [], error: null };
+            },
+            in: async (column: string, values: string[]) => {
+              if (table === "cities" && column === "id") {
+                const matches = destinationCities.filter((entry) => values.includes(entry.id));
+                return { data: matches, error: null };
+              }
+              return { data: [], error: null };
+            },
           }),
           insert: async () => ({ error: null }),
         }),
@@ -190,6 +254,33 @@ describe("City page", () => {
     expect(markup).toContain("Luna Lights Festival");
     expect(markup).toContain("Back to cities");
     expect(markup).toContain("href=\"/cities\"");
+  });
+
+  it("normalizes seeded travel rows into booking options", async () => {
+    const { __cityTravelTestUtils } = await import("../City");
+    const { flattenTravelRows, groupTravelOptionsByMode } = __cityTravelTestUtils;
+
+    const rows = [
+      {
+        id: "flight-neo-aster",
+        mode: "flight",
+        mode_label: "Flight",
+        city_to: "asterhaven-city-id",
+        destination_city_id: "asterhaven-city-id",
+        destination_name: "Asterhaven",
+        cost: 880,
+        duration_minutes: 720,
+        health_impact: 12,
+        currency: "USD",
+      },
+    ];
+
+    const options = flattenTravelRows(rows as Record<string, unknown>[]);
+    const groups = groupTravelOptionsByMode(options);
+    const flightGroup = groups.find((group) => group.mode === "flight");
+
+    expect(flightGroup).toBeDefined();
+    expect(flightGroup?.options.some((option) => option.destinationName === "Asterhaven")).toBe(true);
   });
 
   it("throws a descriptive error when a city cannot be found", async () => {

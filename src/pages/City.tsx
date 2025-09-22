@@ -79,14 +79,18 @@ interface CityTravelOptionGroup {
   options: CityTravelOption[];
 }
 
-const TRAVEL_TABLE_CANDIDATES: Array<{ table: string; cityColumns: string[] }> = [
-  { table: "city_travel_routes", cityColumns: ["origin_city_id", "city_id", "from_city_id"] },
-  { table: "city_travel_options", cityColumns: ["city_id", "origin_city_id"] },
-  { table: "city_travel_modes", cityColumns: ["city_id"] },
-  { table: "travel_routes", cityColumns: ["origin_city_id", "city_id"] },
-  { table: "travel_options", cityColumns: ["city_id", "origin_city_id"] },
-  { table: "travel_links", cityColumns: ["city_id", "origin_city_id"] },
-  { table: "travel_nodes", cityColumns: ["city_id", "origin_city_id"] },
+type TravelTableName = "travel_flights" | "travel_trains" | "travel_taxis" | "travel_ferries";
+
+const TRAVEL_TABLE_CONFIG: Array<{
+  table: TravelTableName;
+  mode: string;
+  modeLabel: string;
+  defaultCurrency?: string;
+}> = [
+  { table: "travel_flights", mode: "flight", modeLabel: "Flight", defaultCurrency: "USD" },
+  { table: "travel_trains", mode: "train", modeLabel: "Train", defaultCurrency: "USD" },
+  { table: "travel_taxis", mode: "taxi", modeLabel: "Taxi", defaultCurrency: "USD" },
+  { table: "travel_ferries", mode: "ferry", modeLabel: "Ferry", defaultCurrency: "USD" },
 ];
 
 const toStringOrNull = (value: unknown): string | null => {
@@ -222,6 +226,7 @@ const normalizeTravelOptionRow = (
     pickString(
       row.destination_name,
       row.destination_city_name,
+      row.city_to_name,
       row.destination,
       row.destination_city,
       row.destination_label,
@@ -233,6 +238,7 @@ const normalizeTravelOptionRow = (
     pickString(
       row.destination_city_id,
       row.destinationCityId,
+      row.city_to,
       row.destination_id,
       row.arrival_city_id,
       row.destinationCityID,
@@ -277,7 +283,15 @@ const normalizeTravelOptionRow = (
     durationMinutes = toNumberOrNull(durationText);
   }
 
-  const healthImpact = pickNumber(row.health_impact, row.healthImpact, row.health_penalty, row.health_cost, row.health_delta) ?? 0;
+  const healthImpactRaw = pickNumber(
+    row.health_impact,
+    row.healthImpact,
+    row.health_penalty,
+    row.health_cost,
+    row.health_delta,
+  );
+  const healthImpact =
+    healthImpactRaw === null || !Number.isFinite(healthImpactRaw) ? 0 : Math.abs(healthImpactRaw);
 
   const identifier =
     pickString(row.id, row.route_id, row.option_id, row.travel_option_id, row.travelRouteId, row.travelOptionId) ??
@@ -297,7 +311,7 @@ const normalizeTravelOptionRow = (
     price,
     currency: currency ? currency.toUpperCase() : null,
     durationMinutes,
-    healthImpact: healthImpact < 0 ? 0 : healthImpact,
+    healthImpact,
   };
 };
 
@@ -382,6 +396,13 @@ const groupTravelOptionsByMode = (options: CityTravelOption[]): CityTravelOption
     .sort((a, b) => a.modeLabel.localeCompare(b.modeLabel));
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
+export const __cityTravelTestUtils = {
+  normalizeTravelOptionRow,
+  flattenTravelRows,
+  groupTravelOptionsByMode,
+};
+
 export const CityContent = ({
   city,
   details,
@@ -412,40 +433,103 @@ export const CityContent = ({
       return [];
     }
 
-    for (const candidate of TRAVEL_TABLE_CANDIDATES) {
-      for (const column of candidate.cityColumns) {
-        try {
-          const response = await supabase.from(candidate.table).select("*").eq(column, city.id);
-          if (response.error) {
-            const error = response.error as PostgrestError;
-            if (error?.code === "42703") {
-              continue;
-            }
-            if (error?.code === "42P01") {
-              break;
-            }
-            throw error;
-          }
+    const collectedRows: Record<string, unknown>[] = [];
+    const destinationIds = new Set<string>();
 
-          const rows = Array.isArray(response.data) ? (response.data as Record<string, unknown>[]) : [];
-          const normalized = flattenTravelRows(rows);
-          if (normalized.length > 0) {
-            return groupTravelOptionsByMode(normalized);
-          }
-        } catch (unknownError) {
-          const error = unknownError as PostgrestError;
-          if (error?.code === "42703") {
-            continue;
-          }
+    for (const config of TRAVEL_TABLE_CONFIG) {
+      try {
+        const response = await supabase
+          .from(config.table)
+          .select("id, city_from, city_to, cost, duration_minutes, health_impact")
+          .eq("city_from", city.id);
+
+        if (response.error) {
+          const error = response.error as PostgrestError;
           if (error?.code === "42P01") {
-            break;
+            continue;
           }
           throw error;
         }
+
+        const rows = Array.isArray(response.data) ? (response.data as Record<string, unknown>[]) : [];
+
+        rows.forEach((row) => {
+          if (!row || typeof row !== "object") {
+            return;
+          }
+
+          const destinationCityId =
+            typeof (row as Record<string, unknown>).city_to === "string"
+              ? ((row as Record<string, unknown>).city_to as string)
+              : null;
+
+          if (destinationCityId) {
+            destinationIds.add(destinationCityId);
+          }
+
+          collectedRows.push({
+            ...row,
+            mode: config.mode,
+            mode_label: config.modeLabel,
+            destination_city_id: destinationCityId,
+            currency: config.defaultCurrency ?? null,
+          });
+        });
+      } catch (unknownError) {
+        const error = unknownError as PostgrestError;
+        if (error?.code === "42P01") {
+          continue;
+        }
+        throw error;
       }
     }
 
-    return [];
+    if (collectedRows.length === 0) {
+      return [];
+    }
+
+    let destinationMap = new Map<string, string>();
+
+    if (destinationIds.size > 0) {
+      try {
+        const response = await supabase
+          .from("cities")
+          .select("id, name")
+          .in("id", Array.from(destinationIds));
+
+        if (!response.error && Array.isArray(response.data)) {
+          destinationMap = new Map(
+            response.data
+              .filter((entry): entry is { id: string; name: string | null } =>
+                Boolean(entry && typeof entry.id === "string"),
+              )
+              .map((entry) => [entry.id, entry.name ?? "Confirmed destination"]),
+          );
+        }
+      } catch (lookupError) {
+        console.warn("Failed to resolve destination city names", lookupError);
+      }
+    }
+
+    const enrichedRows = collectedRows.map((row) => {
+      const destinationCityId =
+        typeof row.destination_city_id === "string" ? (row.destination_city_id as string) : null;
+      const destinationName =
+        (destinationCityId ? destinationMap.get(destinationCityId) : undefined) ??
+        (typeof row.destination_name === "string" ? (row.destination_name as string) : undefined);
+
+      return {
+        ...row,
+        destination_name: destinationName ?? "Confirmed destination",
+      } as Record<string, unknown>;
+    });
+
+    const normalized = flattenTravelRows(enrichedRows);
+    if (normalized.length === 0) {
+      return [];
+    }
+
+    return groupTravelOptionsByMode(normalized);
   }, [city?.id]);
 
   const refreshTravelOptions = useCallback(async () => {
