@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 
 import { fetchProfileState, loadActiveProfile, __TESTING__ } from "./index.ts";
 import type { Database } from "../../../src/lib/supabase-types.ts";
@@ -448,5 +448,56 @@ describe("admin progression actions", () => {
     await expect(ACTION_HANDLERS.admin_set_daily_xp(ctx as any, {
       amount: 0,
     })).rejects.toThrow("Daily XP amount must be a positive integer");
+  });
+});
+
+describe("resolveSupabaseCredentials", () => {
+  const { resolveSupabaseCredentials } = __TESTING__;
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    for (const key of Object.keys(process.env)) {
+      delete process.env[key];
+    }
+    Object.assign(process.env, originalEnv);
+  });
+
+  it("prefers the service role key when available", () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
+    process.env.SUPABASE_ANON_KEY = "anon-key";
+
+    const credentials = resolveSupabaseCredentials();
+
+    expect(credentials.supabaseUrl).toBe("https://example.supabase.co");
+    expect(credentials.supabaseKey).toBe("service-key");
+    expect(credentials.usingServiceRole).toBe(true);
+  });
+
+  it("falls back to the anon key when the service role key is missing", () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_ANON_KEY = "anon-key";
+
+    const credentials = resolveSupabaseCredentials();
+
+    expect(credentials.supabaseUrl).toBe("https://example.supabase.co");
+    expect(credentials.supabaseKey).toBe("anon-key");
+    expect(credentials.usingServiceRole).toBe(false);
+  });
+
+  it("throws a descriptive error when no Supabase keys are configured", () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
+
+    expect(() => resolveSupabaseCredentials()).toThrow(/environment variables are not configured/);
+  });
+
+  it("throws when the Supabase URL is missing", () => {
+    delete process.env.SUPABASE_URL;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
+
+    expect(() => resolveSupabaseCredentials()).toThrow(/Supabase URL is not configured/);
   });
 });

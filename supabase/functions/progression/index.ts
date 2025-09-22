@@ -27,6 +27,59 @@ async function resolveSupabaseModule(): Promise<SupabaseModule> {
   return supabaseModulePromise;
 }
 
+type SupabaseCredentials = {
+  supabaseUrl: string;
+  supabaseKey: string;
+  usingServiceRole: boolean;
+};
+
+function getEnvVariable(name: string): string | null {
+  const denoCandidate = (globalThis as {
+    Deno?: { env?: { get?: (key: string) => string | undefined } };
+  }).Deno;
+  const denoValue = denoCandidate?.env?.get?.(name);
+  if (typeof denoValue === "string" && denoValue.trim().length > 0) {
+    return denoValue;
+  }
+
+  const processCandidate = (globalThis as {
+    process?: { env?: Record<string, string | undefined> };
+  }).process;
+  const processValue = processCandidate?.env?.[name];
+  if (typeof processValue === "string" && processValue.trim().length > 0) {
+    return processValue;
+  }
+
+  return null;
+}
+
+function resolveSupabaseCredentials(): SupabaseCredentials {
+  const supabaseUrl = getEnvVariable("SUPABASE_URL");
+  if (!supabaseUrl) {
+    throw new HttpError(500, "Supabase URL is not configured");
+  }
+
+  const serviceRoleKey = getEnvVariable("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = getEnvVariable("SUPABASE_ANON_KEY");
+  const supabaseKey = serviceRoleKey ?? anonKey;
+
+  if (!supabaseKey) {
+    throw new HttpError(500, "Supabase environment variables are not configured");
+  }
+
+  if (!serviceRoleKey && typeof console !== "undefined" && typeof console.warn === "function") {
+    console.warn(
+      "SUPABASE_SERVICE_ROLE_KEY not configured; falling back to SUPABASE_ANON_KEY for progression handler",
+    );
+  }
+
+  return {
+    supabaseUrl,
+    supabaseKey,
+    usingServiceRole: Boolean(serviceRoleKey),
+  };
+}
+
 type ProgressionAction =
   | "award_action_xp"
   | "weekly_bonus"
@@ -152,11 +205,7 @@ async function progressionHandler(req: Request): Promise<Response> {
       throw new HttpError(401, "Missing Authorization header");
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new HttpError(500, "Supabase environment variables are not configured");
-    }
+    const { supabaseUrl, supabaseKey } = resolveSupabaseCredentials();
 
     let payload: JsonRecord = {};
     try {
@@ -171,7 +220,7 @@ async function progressionHandler(req: Request): Promise<Response> {
     }
 
     const { createClient } = await resolveSupabaseModule();
-    const client = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    const client = createClient<Database>(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { headers: { Authorization: authHeader } },
     });
@@ -1356,7 +1405,7 @@ function jsonResponse(body: NormalizedResponse | ErrorResponse, status: number) 
   });
 }
 
-const __TESTING__ = { ACTION_HANDLERS } as const;
+const __TESTING__ = { ACTION_HANDLERS, resolveSupabaseCredentials } as const;
 
 export { progressionHandler, loadActiveProfile, fetchProfileState, __TESTING__ };
 export type { PointAvailability, ProfileSummary };
