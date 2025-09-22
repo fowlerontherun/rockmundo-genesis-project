@@ -3,70 +3,97 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 const flights = [
   {
-    destination: "Los Angeles",
-    departure: "09:10",
-    arrival: "12:45",
-    duration: "3h 35m",
-    economy: "$285",
-    business: "$540",
-    first: "$890",
+    cityFrom: "Los Angeles",
+    cityTo: "Seattle",
+    cost: "$245",
+    duration: "2h 55m",
+    healthImpact: "High emissions – offset recommended",
   },
   {
-    destination: "New York",
-    departure: "13:20",
-    arrival: "17:55",
-    duration: "4h 35m",
-    economy: "$320",
-    business: "$610",
-    first: "$975",
-  },
-  {
-    destination: "Austin",
-    departure: "18:05",
-    arrival: "20:10",
+    cityFrom: "Chicago",
+    cityTo: "Atlanta",
+    cost: "$210",
     duration: "2h 5m",
-    economy: "$210",
-    business: "$420",
-    first: "$760",
+    healthImpact: "Moderate emissions",
+  },
+  {
+    cityFrom: "New York",
+    cityTo: "Austin",
+    cost: "$320",
+    duration: "3h 50m",
+    healthImpact: "High emissions – consider rail when possible",
   },
 ];
 
 const trains = [
   {
-    destination: "Chicago",
-    schedule: "Daily 07:30 departure",
-    duration: "5h 20m",
-    fare: "$135 (reserved coach) / $220 (sleeper)",
+    cityFrom: "San Francisco",
+    cityTo: "Los Angeles",
+    cost: "$145",
+    duration: "8h 20m",
+    healthImpact: "Low emissions",
   },
   {
-    destination: "Seattle",
-    schedule: "Mon, Wed, Fri 11:45 departure",
-    duration: "8h 15m",
-    fare: "$180 (business) / $260 (first class dome)",
+    cityFrom: "Boston",
+    cityTo: "Philadelphia",
+    cost: "$95",
+    duration: "5h 10m",
+    healthImpact: "Very low emissions",
   },
   {
-    destination: "Portland",
-    schedule: "Daily 16:10 departure",
-    duration: "3h 45m",
-    fare: "$98 (coach) / $155 (business)",
+    cityFrom: "Portland",
+    cityTo: "Vancouver",
+    cost: "$130",
+    duration: "7h 5m",
+    healthImpact: "Low emissions",
   },
 ];
 
-const rideshares = [
+const taxis = [
   {
-    category: "UberX",
-    capacity: "4 passengers",
-    estimate: "$22 - $28",
+    cityFrom: "Downtown Los Angeles",
+    cityTo: "LAX",
+    cost: "$48",
+    duration: "45m",
+    healthImpact: "Moderate emissions",
   },
   {
-    category: "UberXL",
-    capacity: "6 passengers",
-    estimate: "$34 - $42",
+    cityFrom: "Brooklyn",
+    cityTo: "JFK",
+    cost: "$62",
+    duration: "55m",
+    healthImpact: "Moderate emissions",
   },
   {
-    category: "Uber Black",
-    capacity: "4 passengers",
-    estimate: "$58 - $72",
+    cityFrom: "Chicago Loop",
+    cityTo: "United Center",
+    cost: "$22",
+    duration: "18m",
+    healthImpact: "Moderate emissions",
+  },
+];
+
+const ferries = [
+  {
+    cityFrom: "Seattle",
+    cityTo: "Bainbridge Island",
+    cost: "$18",
+    duration: "35m",
+    healthImpact: "Low emissions",
+  },
+  {
+    cityFrom: "San Francisco",
+    cityTo: "Sausalito",
+    cost: "$16",
+    duration: "30m",
+    healthImpact: "Low emissions",
+  },
+  {
+    cityFrom: "Boston",
+    cityTo: "Salem",
+    cost: "$28",
+    duration: "55m",
+    healthImpact: "Moderate emissions",
   },
 ];
 
@@ -83,31 +110,27 @@ const Travel = () => {
       <Card>
         <CardHeader>
           <CardTitle>Flights</CardTitle>
-          <CardDescription>Sample itineraries for quick hops between major tour cities.</CardDescription>
+          <CardDescription>Sample itineraries between tour cities including cost, travel time, and sustainability notes.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Destination</TableHead>
-                <TableHead className="hidden sm:table-cell">Departure</TableHead>
-                <TableHead className="hidden sm:table-cell">Arrival</TableHead>
+                <TableHead>City From</TableHead>
+                <TableHead>City To</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
                 <TableHead>Duration</TableHead>
-                <TableHead className="text-right">Economy</TableHead>
-                <TableHead className="text-right">Business</TableHead>
-                <TableHead className="text-right">First Class</TableHead>
+                <TableHead>Health Impact</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {flights.map((flight) => (
-                <TableRow key={flight.destination}>
-                  <TableCell className="font-medium">{flight.destination}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{flight.departure}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{flight.arrival}</TableCell>
+                <TableRow key={`${flight.cityFrom}-${flight.cityTo}`}>
+                  <TableCell className="font-medium">{flight.cityFrom}</TableCell>
+                  <TableCell className="text-muted-foreground">{flight.cityTo}</TableCell>
+                  <TableCell className="text-right font-medium">{flight.cost}</TableCell>
                   <TableCell>{flight.duration}</TableCell>
-                  <TableCell className="text-right font-medium">{flight.economy}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{flight.business}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{flight.first}</TableCell>
+                  <TableCell className="text-muted-foreground">{flight.healthImpact}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -118,25 +141,27 @@ const Travel = () => {
       <Card>
         <CardHeader>
           <CardTitle>Trains</CardTitle>
-          <CardDescription>Regional rail options for lower-carbon travel between key markets.</CardDescription>
+          <CardDescription>Regional rail routes providing pricing, timing, and health impact guidance.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Destination</TableHead>
-                <TableHead>Schedule</TableHead>
+                <TableHead>City From</TableHead>
+                <TableHead>City To</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
                 <TableHead>Duration</TableHead>
-                <TableHead className="text-right">Fare</TableHead>
+                <TableHead>Health Impact</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {trains.map((train) => (
-                <TableRow key={train.destination}>
-                  <TableCell className="font-medium">{train.destination}</TableCell>
-                  <TableCell className="text-muted-foreground">{train.schedule}</TableCell>
+                <TableRow key={`${train.cityFrom}-${train.cityTo}`}>
+                  <TableCell className="font-medium">{train.cityFrom}</TableCell>
+                  <TableCell className="text-muted-foreground">{train.cityTo}</TableCell>
+                  <TableCell className="text-right font-medium">{train.cost}</TableCell>
                   <TableCell>{train.duration}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{train.fare}</TableCell>
+                  <TableCell className="text-muted-foreground">{train.healthImpact}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -146,24 +171,59 @@ const Travel = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Rideshare</CardTitle>
-          <CardDescription>Local transport estimates for venue transfers and airport pickups.</CardDescription>
+          <CardTitle>Taxis</CardTitle>
+          <CardDescription>Ground transfers for airport runs and venue hops with health impact context.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vehicle</TableHead>
-                <TableHead className="hidden sm:table-cell">Capacity</TableHead>
-                <TableHead className="text-right">Estimated Cost</TableHead>
+                <TableHead>City From</TableHead>
+                <TableHead>City To</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Health Impact</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rideshares.map((ride) => (
-                <TableRow key={ride.category}>
-                  <TableCell className="font-medium">{ride.category}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{ride.capacity}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{ride.estimate}</TableCell>
+              {taxis.map((taxi) => (
+                <TableRow key={`${taxi.cityFrom}-${taxi.cityTo}`}>
+                  <TableCell className="font-medium">{taxi.cityFrom}</TableCell>
+                  <TableCell className="text-muted-foreground">{taxi.cityTo}</TableCell>
+                  <TableCell className="text-right font-medium">{taxi.cost}</TableCell>
+                  <TableCell>{taxi.duration}</TableCell>
+                  <TableCell className="text-muted-foreground">{taxi.healthImpact}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ferries</CardTitle>
+          <CardDescription>Coastal shuttle options highlighting cost, duration, and overall health considerations.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>City From</TableHead>
+                <TableHead>City To</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Health Impact</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ferries.map((ferry) => (
+                <TableRow key={`${ferry.cityFrom}-${ferry.cityTo}`}>
+                  <TableCell className="font-medium">{ferry.cityFrom}</TableCell>
+                  <TableCell className="text-muted-foreground">{ferry.cityTo}</TableCell>
+                  <TableCell className="text-right font-medium">{ferry.cost}</TableCell>
+                  <TableCell>{ferry.duration}</TableCell>
+                  <TableCell className="text-muted-foreground">{ferry.healthImpact}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
