@@ -198,6 +198,11 @@ const isWeeklyBonusFresh = (ledger: ExperienceLedgerRow[]): boolean => {
   return recordedAt >= windowStart;
 };
 
+const SCHEMA_CACHE_MISSING_COLUMN_CODES = new Set<string>([
+  "PGRST204", // PostgREST column missing (schema cache not refreshed)
+  "42703", // Postgres undefined_column SQLSTATE
+]);
+
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type SkillsUpdate = Database["public"]["Tables"]["player_skills"]["Update"];
 type AttributesUpdate = Partial<PlayerAttributes>;
@@ -306,11 +311,19 @@ const useGameDataInternal = (): UseGameDataReturn => {
     habits: false,
     wellness: false,
   });
-  const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "PGRST204";
+  const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } => {
+    if (typeof error !== "object" || error === null || !("code" in error)) {
+      return false;
+    }
+
+    const code = (error as { code?: string }).code;
+
+    if (typeof code !== "string" || code.length === 0) {
+      return false;
+    }
+
+    return SCHEMA_CACHE_MISSING_COLUMN_CODES.has(code.toUpperCase());
+  };
   const isSchemaCacheMissingTableError = (error: unknown): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&

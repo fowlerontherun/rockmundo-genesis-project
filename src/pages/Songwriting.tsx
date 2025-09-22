@@ -167,6 +167,7 @@ const Songwriting = () => {
                   <p>Completion: {displayProgress}%</p>
                 </div>
               )}
+
             </div>
           </CardContent>
         </Card>
