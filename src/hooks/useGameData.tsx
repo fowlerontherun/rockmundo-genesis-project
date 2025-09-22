@@ -369,8 +369,14 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (skillProgressResult.error) {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
-      if (dailyGrantResult.error) {
+      const shouldIgnoreDailyGrantError =
+        dailyGrantResult.error?.code === "PGRST205" || dailyGrantResult.error?.code === "42P01";
+
+      if (dailyGrantResult.error && !shouldIgnoreDailyGrantError) {
         console.error("Failed to load daily XP grant", dailyGrantResult.error);
+      }
+      if (dailyGrantResult.error && shouldIgnoreDailyGrantError) {
+        console.info("Daily XP grant data is unavailable on this schema version; skipping.");
       }
 
       setSkills((skillsResult.data ?? null) as PlayerSkills);
@@ -381,7 +387,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
-      const grantRow = dailyGrantResult.data ? (dailyGrantResult.data as DailyXpGrantRow) : null;
+      const grantRow =
+        shouldIgnoreDailyGrantError || !dailyGrantResult.data
+          ? null
+          : (dailyGrantResult.data as DailyXpGrantRow);
       setDailyXpGrant(grantRow);
     },
     [user],
