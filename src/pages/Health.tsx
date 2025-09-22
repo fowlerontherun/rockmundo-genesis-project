@@ -45,10 +45,37 @@ const getBodyShape = (fitness: number) => {
   return "Needs Training";
 };
 
-const HealthPage = () => {
-  const { profile, attributes, loading } = useGameData();
+const formatLabel = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
 
-  const healthValue = clampToPercent(profile?.health ?? 72);
+  const cleaned = value.replace(/[_-]+/g, " ").trim();
+  if (cleaned.length === 0) {
+    return null;
+  }
+
+  return cleaned
+    .split(" ")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+};
+
+const HealthPage = () => {
+  const {
+    profile,
+    attributes,
+    loading,
+    healthMetrics,
+    healthConditions,
+    healthHabits,
+    wellnessRecommendations,
+  } = useGameData();
+
+  const baseHealth = typeof profile?.health === "number" ? profile.health : null;
+  const healthValue = clampToPercent(
+    typeof healthMetrics?.health_score === "number" ? healthMetrics.health_score : baseHealth ?? 100,
+  );
   const averageAttribute = attributes
     ? clampToPercent(
         Object.values(attributes).reduce((sum, value) => sum + (value ?? 0), 0) /
@@ -56,19 +83,28 @@ const HealthPage = () => {
       )
     : 55;
 
-  const stressLevel = clampToPercent(100 - healthValue / 1.5 + (100 - averageAttribute) / 3);
-  const fitnessLevel = clampToPercent((healthValue + averageAttribute) / 2);
-  const recoveryLevel = clampToPercent(healthValue - stressLevel / 2 + averageAttribute / 4);
+  const fallbackStressLevel = clampToPercent(100 - healthValue / 1.5 + (100 - averageAttribute) / 3);
+  const stressLevel = clampToPercent(
+    typeof healthMetrics?.stress_level === "number" ? healthMetrics.stress_level : fallbackStressLevel,
+  );
+  const fallbackFitnessLevel = clampToPercent((healthValue + averageAttribute) / 2);
+  const fitnessLevel = clampToPercent(
+    typeof healthMetrics?.fitness_level === "number" ? healthMetrics.fitness_level : fallbackFitnessLevel,
+  );
+  const fallbackRecoveryLevel = clampToPercent(healthValue - fallbackStressLevel / 2 + averageAttribute / 4);
+  const recoveryLevel = clampToPercent(
+    typeof healthMetrics?.recovery_level === "number" ? healthMetrics.recovery_level : fallbackRecoveryLevel,
+  );
 
   const stressLabel = getStressLabel(stressLevel);
   const fitnessLabel = getFitnessLabel(fitnessLevel);
   const bodyShape = getBodyShape(fitnessLevel);
   const healthStatus = getHealthStatus(healthValue);
 
-  const hasIllness = healthValue < 55 || stressLevel > 75;
-  const illnesses = hasIllness
+  const fallbackIllnesses = (healthValue < 55 || stressLevel > 75)
     ? [
         {
+          id: "fallback-fatigue",
           name: "Tour Fatigue",
           severity: healthValue < 40 ? "Severe" : "Mild",
           description: "Energy reserves are low after recent performances. Prioritize rest days.",
@@ -76,6 +112,7 @@ const HealthPage = () => {
         ...(stressLevel > 80
           ? [
               {
+                id: "fallback-stress-overload",
                 name: "Stress Overload",
                 severity: "Moderate",
                 description: "Mental strain is building. Incorporate mindfulness or downtime immediately.",
@@ -85,22 +122,98 @@ const HealthPage = () => {
       ]
     : [];
 
-  const addictions = stressLevel > 70 ? ["Caffeine dependence"] : [];
+  const illnesses =
+    healthConditions.length > 0
+      ? healthConditions.map((condition) => ({
+          id: condition.id,
+          name: condition.condition_name,
+          severity:
+            formatLabel(condition.severity) ?? condition.severity ?? "Unspecified",
+          description:
+            condition.description ??
+            `No detailed notes recorded yet. Logged on ${
+              condition.detected_at
+                ? new Date(condition.detected_at).toLocaleDateString()
+                : "a recent session"
+            }.`,
+        }))
+      : fallbackIllnesses;
 
-  const wellnessSuggestions = [
-    healthValue < 65
-      ? "Plan lighter engagements this week to rebuild stamina."
-      : "Maintain current routines and hydration to keep health steady.",
-    stressLevel > 55
-      ? "Introduce a daily mindfulness or breathing exercise to lower stress."
-      : "Keep using stress management habits before shows.",
-    fitnessLevel < 60
-      ? "Schedule cross-training or movement sessions twice this week."
-      : "Keep consistent training blocks on the calendar.",
-    addictions.length > 0
-      ? "Swap one caffeinated drink for hydration and sleep earlier on off-nights."
-      : "Continue balanced nutrition and hydration routines.",
+  const fallbackHabits =
+    stressLevel > 70
+      ? [
+          {
+            id: "fallback-caffeine",
+            name: "Caffeine dependence",
+            impact: "elevated",
+            recommendation: "Recommend tapering with support from crew and wellness coach.",
+          },
+        ]
+      : [];
+
+  const activeHabits =
+    healthHabits.length > 0
+      ? healthHabits.map((habit) => ({
+          id: habit.id,
+          name: habit.habit_name,
+          impact: formatLabel(habit.impact) ?? habit.impact ?? null,
+          rawImpact: habit.impact ?? null,
+          recommendation: habit.recommendation ?? null,
+        }))
+      : fallbackHabits.map((habit) => ({
+          ...habit,
+          impact: formatLabel(habit.impact) ?? habit.impact,
+          rawImpact: habit.impact,
+        }));
+
+  const fallbackRecommendations = [
+    {
+      id: "fallback-health",
+      recommendation:
+        healthValue < 65
+          ? "Plan lighter engagements this week to rebuild stamina."
+          : "Maintain current routines and hydration to keep health steady.",
+      priority: healthValue < 65 ? "high" : "normal",
+      category: "health",
+    },
+    {
+      id: "fallback-stress",
+      recommendation:
+        stressLevel > 55
+          ? "Introduce a daily mindfulness or breathing exercise to lower stress."
+          : "Keep using stress management habits before shows.",
+      priority: stressLevel > 55 ? "high" : "normal",
+      category: "stress",
+    },
+    {
+      id: "fallback-fitness",
+      recommendation:
+        fitnessLevel < 60
+          ? "Schedule cross-training or movement sessions twice this week."
+          : "Keep consistent training blocks on the calendar.",
+      priority: fitnessLevel < 60 ? "medium" : "normal",
+      category: "fitness",
+    },
+    {
+      id: "fallback-habits",
+      recommendation:
+        activeHabits.length > 0
+          ? "Swap one caffeinated drink for hydration and sleep earlier on off-nights."
+          : "Continue balanced nutrition and hydration routines.",
+      priority: activeHabits.length > 0 ? "medium" : "normal",
+      category: "habits",
+    },
   ];
+
+  const wellnessEntries =
+    wellnessRecommendations.length > 0
+      ? wellnessRecommendations.map((entry) => ({
+          id: entry.id,
+          recommendation: entry.recommendation,
+          priority: entry.priority,
+          category: entry.category,
+        }))
+      : fallbackRecommendations;
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -218,15 +331,24 @@ const HealthPage = () => {
           <CardContent>
             {illnesses.length > 0 ? (
               <ul className="space-y-4">
-                {illnesses.map((illness) => (
-                  <li key={illness.name} className="rounded-lg border bg-card/80 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="font-medium">{illness.name}</div>
-                      <Badge variant="destructive">{illness.severity}</Badge>
-                    </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{illness.description}</p>
-                  </li>
-                ))}
+                {illnesses.map((illness) => {
+                  const severityLabel = illness.severity ?? "Unspecified";
+                  const severityVariant = severityLabel.toLowerCase().includes("severe")
+                    ? "destructive"
+                    : "secondary";
+
+                  return (
+                    <li key={illness.id ?? illness.name} className="rounded-lg border bg-card/80 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="font-medium">{illness.name}</div>
+                        <Badge variant={severityVariant} className="text-xs">
+                          {severityLabel}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">{illness.description}</p>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -245,13 +367,30 @@ const HealthPage = () => {
             <p className="text-sm text-muted-foreground">Track habits that could impact performance quality.</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {addictions.length > 0 ? (
+            {activeHabits.length > 0 ? (
               <ul className="space-y-3">
-                {addictions.map((habit) => (
-                  <li key={habit} className="rounded-lg border bg-card/80 p-3 text-sm">
-                    {habit} — recommend tapering with support from crew and wellness coach.
-                  </li>
-                ))}
+                {activeHabits.map((habit) => {
+                  const normalizedImpact = habit.rawImpact?.toLowerCase() ?? "";
+                  const impactVariant = /severe|high|negative|elevated/.test(normalizedImpact)
+                    ? "destructive"
+                    : "secondary";
+
+                  return (
+                    <li key={habit.id ?? habit.name} className="rounded-lg border bg-card/80 p-3 text-sm space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium">{habit.name}</span>
+                        {habit.impact ? (
+                          <Badge variant={impactVariant} className="text-xs">
+                            {habit.impact}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {habit.recommendation ? (
+                        <p className="text-xs text-muted-foreground">{habit.recommendation}</p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -306,11 +445,34 @@ const HealthPage = () => {
             </div>
           ) : (
             <ul className="grid gap-4 md:grid-cols-2">
-              {wellnessSuggestions.map((tip, index) => (
-                <li key={`${tip}-${index}`} className="rounded-lg border bg-card/80 p-4 text-sm">
-                  {tip}
-                </li>
-              ))}
+              {wellnessEntries.map((entry) => {
+                const normalizedPriority = entry.priority?.toLowerCase() ?? "normal";
+                const priorityLabel = formatLabel(entry.priority);
+                const showPriorityBadge = Boolean(priorityLabel && normalizedPriority !== "normal");
+                const priorityVariant =
+                  normalizedPriority === "high"
+                    ? "destructive"
+                    : normalizedPriority === "medium"
+                    ? "secondary"
+                    : "outline";
+                const categoryLabel = formatLabel(entry.category);
+
+                return (
+                  <li key={entry.id} className="rounded-lg border bg-card/80 p-4 text-sm space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span>{entry.recommendation}</span>
+                      {showPriorityBadge ? (
+                        <Badge variant={priorityVariant} className="text-xs">
+                          {priorityLabel}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    {categoryLabel ? (
+                      <p className="text-xs text-muted-foreground">Focus area: {categoryLabel}</p>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

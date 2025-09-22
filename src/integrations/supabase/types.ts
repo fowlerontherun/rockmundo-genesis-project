@@ -1083,6 +1083,191 @@ export type Database = {
           },
         ]
       }
+      player_health_conditions: {
+        Row: {
+          condition_name: string
+          created_at: string | null
+          description: string | null
+          detected_at: string | null
+          id: string
+          is_active: boolean
+          profile_id: string
+          resolved_at: string | null
+          severity: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          condition_name: string
+          created_at?: string | null
+          description?: string | null
+          detected_at?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id: string
+          resolved_at?: string | null
+          severity?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          condition_name?: string
+          created_at?: string | null
+          description?: string | null
+          detected_at?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id?: string
+          resolved_at?: string | null
+          severity?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_health_conditions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_health_habits: {
+        Row: {
+          created_at: string | null
+          habit_name: string
+          id: string
+          impact: string | null
+          is_active: boolean
+          profile_id: string
+          recommendation: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          habit_name: string
+          id?: string
+          impact?: string | null
+          is_active?: boolean
+          profile_id: string
+          recommendation?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          habit_name?: string
+          id?: string
+          impact?: string | null
+          is_active?: boolean
+          profile_id?: string
+          recommendation?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_health_habits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_health_metrics: {
+        Row: {
+          created_at: string | null
+          fitness_level: number
+          health_score: number
+          id: string
+          profile_id: string
+          recovery_level: number
+          stress_level: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          fitness_level?: number
+          health_score?: number
+          id?: string
+          profile_id: string
+          recovery_level?: number
+          stress_level?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          fitness_level?: number
+          health_score?: number
+          id?: string
+          profile_id?: string
+          recovery_level?: number
+          stress_level?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_health_metrics_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_wellness_recommendations: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          is_completed: boolean
+          priority: string | null
+          profile_id: string
+          recommendation: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean
+          priority?: string | null
+          profile_id: string
+          recommendation: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean
+          priority?: string | null
+          profile_id?: string
+          recommendation?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_wellness_recommendations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_equipment: {
         Row: {
           condition: number | null
