@@ -474,6 +474,8 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (skillProgressResult.error) {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
+      let shouldIgnoreDailyGrantError = false;
+
       if (dailyGrantResult.error) {
         if (isSchemaCacheMissingTableError(dailyGrantResult.error)) {
           if (!dailyXpGrantUnavailableRef.current) {
@@ -483,6 +485,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
               dailyGrantResult.error,
             );
           }
+          shouldIgnoreDailyGrantError = true;
         } else if (dailyGrantResult.error.code !== "PGRST116") {
           console.error("Failed to load daily XP grant", dailyGrantResult.error);
         }
