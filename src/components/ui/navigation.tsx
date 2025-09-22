@@ -184,7 +184,7 @@ const Navigation = () => {
                 const Icon = item.icon;
                 return (
                   <Button
-                    key={item.path}
+                    key={`${item.path}-${item.label}`}
                     variant={isActive(item.path) ? "secondary" : "ghost"}
                     className={`w-full justify-start gap-3 ${
                       isActive(item.path)
@@ -256,7 +256,7 @@ const Navigation = () => {
             const Icon = item.icon;
             return (
               <Button
-                key={item.path}
+                key={`${item.path}-${item.label}`}
                 variant="ghost"
                 size="sm"
                 className={`flex flex-col gap-1 h-12 px-2 ${

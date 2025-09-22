@@ -1260,6 +1260,7 @@ export type Database = {
           experience_at_last_weekly_bonus: number | null
           fame: number | null
           fans: number | null
+          health: number
           inspiration: number
           id: string
           last_weekly_bonus_at: string | null
@@ -1281,6 +1282,7 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number
           inspiration?: number
           id?: string
           last_weekly_bonus_at?: string | null
@@ -1302,6 +1304,7 @@ export type Database = {
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number
           inspiration?: number
           id?: string
           last_weekly_bonus_at?: string | null
@@ -1791,6 +1794,198 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_ferries: {
+        Row: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at: string
+          duration_minutes: number
+          health_impact: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at?: string
+          duration_minutes: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          city_from?: string
+          city_to?: string
+          cost?: number
+          created_at?: string
+          duration_minutes?: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_ferries_city_from_fkey",
+            columns: ["city_from"],
+            isOneToOne: false,
+            referencedRelation: "cities",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_ferries_city_to_fkey",
+            columns: ["city_to"],
+            isOneToOne: false,
+            referencedRelation: "cities",
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_flights: {
+        Row: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at: string
+          duration_minutes: number
+          health_impact: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at?: string
+          duration_minutes: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          city_from?: string
+          city_to?: string
+          cost?: number
+          created_at?: string
+          duration_minutes?: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_flights_city_from_fkey",
+            columns: ["city_from"],
+            isOneToOne: false,
+            referencedRelation: "cities",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_flights_city_to_fkey",
+            columns: ["city_to"],
+            isOneToOne: false,
+            referencedRelation: "cities",
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_taxis: {
+        Row: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at: string
+          duration_minutes: number
+          health_impact: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at?: string
+          duration_minutes: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          city_from?: string
+          city_to?: string
+          cost?: number
+          created_at?: string
+          duration_minutes?: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_taxis_city_from_fkey",
+            columns: ["city_from"],
+            isOneToOne: false,
+            referencedRelation: "cities",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_taxis_city_to_fkey",
+            columns: ["city_to"],
+            isOneToOne: false,
+            referencedRelation: "cities",
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_trains: {
+        Row: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at: string
+          duration_minutes: number
+          health_impact: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          city_from: string
+          city_to: string
+          cost: number
+          created_at?: string
+          duration_minutes: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          city_from?: string
+          city_to?: string
+          cost?: number
+          created_at?: string
+          duration_minutes?: number
+          health_impact?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_trains_city_from_fkey",
+            columns: ["city_from"],
+            isOneToOne: false,
+            referencedRelation: "cities",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_trains_city_to_fkey",
+            columns: ["city_to"],
+            isOneToOne: false,
+            referencedRelation: "cities",
             referencedColumns: ["id"]
           },
         ]

@@ -7,7 +7,9 @@ export type ProgressionAction =
   | "buy_attribute_star"
   | "respec_attributes"
   | "award_special_xp"
-  | "admin_award_special_xp";
+  | "admin_award_special_xp"
+  | "admin_adjust_momentum"
+  | "admin_set_daily_xp_amount";
 
 export interface ProgressionProfile {
   id: string;
