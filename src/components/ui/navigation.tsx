@@ -28,6 +28,7 @@ import {
   Globe,
   Mic,
   GraduationCap,
+  PenSquare,
   DollarSign,
   Plane,
   ListMusic,
@@ -64,6 +65,7 @@ const Navigation = () => {
       items: [
         { icon: Music, label: "Music Studio", path: "/music" },
         { icon: Play, label: "Music Creation", path: "/create" },
+        { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
         { icon: ListMusic, label: "Song Manager", path: "/songs" },
         { icon: GraduationCap, label: "Education", path: "/education" },
         { icon: PenSquare, label: "Songwriting", path: "/songwriting" },

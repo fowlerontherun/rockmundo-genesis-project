@@ -1,175 +1,219 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
-const WRITING_BLOCK_OPTIONS = [15, 30, 60];
-const MAX_MINUTES = 180;
+const themes = [
+  { value: "love", label: "Love" },
+  { value: "loss", label: "Loss" },
+  { value: "desire", label: "Desire" },
+  { value: "rebellion", label: "Rebellion" },
+  { value: "escapism", label: "Escapism" },
+  { value: "nostalgia", label: "Nostalgia" },
+  { value: "pain", label: "Pain" },
+  { value: "aspiration", label: "Aspiration" },
+];
 
-const calculateQuality = (minutes: number) => Math.min(5000, Math.round((minutes / MAX_MINUTES) * 5000));
+const genres = [
+  "Pop",
+  "Rock",
+  "Indie",
+  "Electronic",
+  "Hip-Hop",
+  "R&B",
+  "Country",
+  "Folk",
+];
+
+const chordProgressions = [
+  "I–V–vi–IV",
+  "ii–V–I",
+  "vi–IV–I–V",
+  "I–IV–V–IV",
+  "iv–V–I",
+];
 
 const Songwriting = () => {
-  const [isSongCreated, setIsSongCreated] = useState(false);
-  const [minutesSpent, setMinutesSpent] = useState(0);
-  const [qualityScore, setQualityScore] = useState(0);
-  const [selectedBlock, setSelectedBlock] = useState<string>(WRITING_BLOCK_OPTIONS[0].toString());
-  const [showDebug, setShowDebug] = useState(false);
+  const [title, setTitle] = useState("");
+  const [theme, setTheme] = useState("");
+  const [genre, setGenre] = useState("");
+  const [chordProgression, setChordProgression] = useState("");
+  const [lyrics, setLyrics] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
-  const progressPercent = Math.min(100, (minutesSpent / MAX_MINUTES) * 100);
-  const displayProgress = Math.round(progressPercent);
-  const isSongComplete = minutesSpent >= MAX_MINUTES;
+  const isFormReady = Boolean(title.trim() && theme && genre && chordProgression);
 
-  const qualityLabel = useMemo(() => {
-    if (!isSongCreated) {
-      return "Not Started";
-    }
+  const summary = useMemo(
+    () => ({
+      title: title.trim() || "Untitled idea",
+      theme: theme ? themes.find((item) => item.value === theme)?.label ?? theme : "Select a theme to get started",
+      genre: genre || "Choose a genre to define the sound",
+      chordProgression: chordProgression || "Pick a chord progression to shape the mood",
+      lyrics: lyrics.trim() || "Add optional lyric sketches when inspiration strikes.",
+    }),
+    [title, theme, genre, chordProgression, lyrics],
+  );
 
-    const ratio = qualityScore / 5000;
-
-    if (ratio === 0) return "Blank Page";
-    if (ratio < 0.25) return "Rough Draft";
-    if (ratio < 0.5) return "Finding the Hook";
-    if (ratio < 0.75) return "Polished Demo";
-    if (ratio < 1) return "Stage Ready";
-    return "Studio Ready";
-  }, [isSongCreated, qualityScore]);
-
-  const handleCreateSong = () => {
-    setIsSongCreated(true);
-    setMinutesSpent(0);
-    setQualityScore(0);
-    setSelectedBlock(WRITING_BLOCK_OPTIONS[0].toString());
+  const handleSave = () => {
+    if (!isFormReady) return;
+    setLastSavedAt(new Date().toLocaleString());
   };
 
-  const handleSpendTime = () => {
-    if (!isSongCreated) return;
-
-    const blockValue = Number(selectedBlock);
-    if (!blockValue) return;
-
-    setMinutesSpent((previousMinutes) => {
-      const nextMinutes = Math.min(MAX_MINUTES, previousMinutes + blockValue);
-      setQualityScore(calculateQuality(nextMinutes));
-      return nextMinutes;
-    });
+  const handleClear = () => {
+    setTitle("");
+    setTheme("");
+    setGenre("");
+    setChordProgression("");
+    setLyrics("");
+    setLastSavedAt(null);
   };
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold">Songwriting</h1>
-        <p className="text-muted-foreground">Craft your next hit by investing focused writing time.</p>
-      </div>
+    <div className="container mx-auto px-4 py-10 space-y-8">
+      <header className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Songwriting Lab</h1>
+        <p className="text-muted-foreground">
+          Capture the core ingredients of your next anthem. Lock in the vibe, outline the theme, and draft lyrics when
+          inspiration hits.
+        </p>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Songwriting Session</CardTitle>
-            <CardDescription>
-              Create a new song and log your dedicated writing blocks until the session is complete.
-            </CardDescription>
+            <CardTitle>Idea builder</CardTitle>
+            <CardDescription>Required fields help anchor the direction of the song.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium">Song Status</p>
-                  <p className="text-lg font-semibold">
-                    {isSongCreated ? (isSongComplete ? "Songwriting complete" : "Song in progress") : "No song created"}
-                  </p>
-                </div>
-                <Button variant={isSongCreated ? "secondary" : "default"} onClick={handleCreateSong}>
-                  {isSongCreated ? "Start New Song" : "Create Song"}
-                </Button>
-              </div>
-              {!isSongCreated && (
-                <p className="mt-4 text-sm text-muted-foreground">
-                  Create a song to begin writing immediately.
-                </p>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="song-title">Song title</Label>
+              <Input
+                id="song-title"
+                placeholder="Give your song a working title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
             </div>
 
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Label htmlFor="writing-block">Writing block</Label>
-                <Select
-                  value={selectedBlock}
-                  onValueChange={setSelectedBlock}
-                  disabled={!isSongCreated || isSongComplete}
-                >
-                  <SelectTrigger id="writing-block" className="w-[200px]">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WRITING_BLOCK_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option.toString()}>
-                        {option} minutes
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Theme (required)</Label>
+              <Select value={theme} onValueChange={setTheme}>
+                <SelectTrigger id="song-theme" aria-label="Select a theme">
+                  <SelectValue placeholder="Choose a theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {themes.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <Button onClick={handleSpendTime} disabled={!isSongCreated || isSongComplete}>
-                Spend Time Writing
-              </Button>
+            <div className="space-y-2">
+              <Label>Genre (required)</Label>
+              <Select value={genre} onValueChange={setGenre}>
+                <SelectTrigger id="song-genre" aria-label="Select a genre">
+                  <SelectValue placeholder="Select a genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {genres.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Chord progression (required)</Label>
+              <Select value={chordProgression} onValueChange={setChordProgression}>
+                <SelectTrigger id="song-progression" aria-label="Select a chord progression">
+                  <SelectValue placeholder="Choose a progression" />
+                </SelectTrigger>
+                <SelectContent>
+                  {chordProgressions.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {item}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="song-lyrics">Lyrics (optional)</Label>
+                <span className="text-xs text-muted-foreground">Use this area for freeform notes.</span>
+              </div>
+              <Textarea
+                id="song-lyrics"
+                placeholder="Jot down hooks, verses, or imagery — or leave blank for now."
+                value={lyrics}
+                onChange={(event) => setLyrics(event.target.value)}
+                className="min-h-[160px]"
+              />
             </div>
           </CardContent>
-          {isSongComplete && (
-            <CardFooter>
-              <p className="text-sm font-medium text-primary">
-                You have logged the full 180 minutes. This song is ready for its next steps!
-              </p>
-            </CardFooter>
-          )}
+          <CardFooter className="flex flex-wrap gap-3">
+            <Button type="button" onClick={handleSave} disabled={!isFormReady}>
+              Save idea
+            </Button>
+            <Button type="button" variant="outline" onClick={handleClear}>
+              Clear fields
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              {isFormReady
+                ? "Fill in the optional lyrics whenever you’re ready to flesh out the story."
+                : "Complete the required selections above to enable saving."}
+            </p>
+          </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Session Summary</CardTitle>
-            <CardDescription>Review progress and quality as the song evolves.</CardDescription>
+
+            <CardTitle>Creative snapshot</CardTitle>
+            <CardDescription>Preview of the current direction for this song idea.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 text-sm">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Writing Time Logged</p>
-              <p className="text-2xl font-semibold">{minutesSpent} / {MAX_MINUTES} minutes</p>
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Title</p>
+              <p className="text-base font-medium text-foreground">{summary.title}</p>
             </div>
-
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Song Quality</p>
-              <p className="text-lg font-semibold">{qualityLabel}</p>
-              <p className="text-xs text-muted-foreground">
-                Quality grows as you invest more focused writing blocks. The exact score remains behind the scenes.
-              </p>
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Theme</p>
+              <p className="text-foreground">{summary.theme}</p>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-                <span>Progress</span>
-                <span>{displayProgress}%</span>
-              </div>
-              <Progress value={progressPercent} className="h-2" />
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Genre</p>
+              <p className="text-foreground">{summary.genre}</p>
             </div>
-
-            <div className="rounded-lg border border-dashed border-muted-foreground/40 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="debug-toggle" className="text-sm">
-                  Developer debug details
-                </Label>
-                <Switch id="debug-toggle" checked={showDebug} onCheckedChange={setShowDebug} />
-              </div>
-              {showDebug && (
-                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                  <p>Hidden quality score: {qualityScore} / 5000</p>
-                  <p>Completion: {displayProgress}%</p>
-                </div>
-              )}
-
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Chord progression</p>
+              <p className="text-foreground">{summary.chordProgression}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Lyrics sketch</p>
+              <p className="text-muted-foreground whitespace-pre-line">{summary.lyrics}</p>
             </div>
           </CardContent>
+          {lastSavedAt && (
+            <CardFooter>
+              <p className="text-xs text-muted-foreground">Last saved {lastSavedAt}</p>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </div>
