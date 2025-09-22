@@ -243,6 +243,57 @@ describe("admin progression actions", () => {
     profile: adminProfile,
   });
 
+  it("awards special XP to selected players efficiently", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: { role: "admin" }, error: null },
+      profiles: {
+        data: [
+          { id: "profile-10", user_id: "user-10", username: "alpha", display_name: "Alpha" },
+          { id: "profile-20", user_id: "user-20", username: "beta", display_name: "Beta" },
+          { id: "profile-30", user_id: "user-30", username: "gamma", display_name: "Gamma" },
+        ],
+        error: null,
+      },
+      notifications: { data: [], error: null },
+    };
+
+    const rpcResults: Record<string, QueryResult> = {
+      progression_award_special_xp: {
+        data: { message: "ok" },
+        error: null,
+      },
+    };
+
+    const client = new MockSupabaseClient(tables, rpcResults);
+    const ctx = createContext(client);
+
+    const result = await ACTION_HANDLERS.admin_award_special_xp(ctx as any, {
+      amount: 150,
+      profile_ids: ["profile-10", "profile-20", "profile-30"],
+      reason: "Tour kickoff reward",
+    });
+
+    expect(result.message).toContain("Granted 150 XP to 3 players");
+    expect(client.rpcCalls).toHaveLength(3);
+    expect(client.rpcCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "progression_award_special_xp",
+          args: expect.objectContaining({ p_profile_id: "profile-10", p_amount: 150 }),
+        }),
+        expect.objectContaining({
+          name: "progression_award_special_xp",
+          args: expect.objectContaining({ p_profile_id: "profile-20", p_amount: 150 }),
+        }),
+        expect.objectContaining({
+          name: "progression_award_special_xp",
+          args: expect.objectContaining({ p_profile_id: "profile-30", p_amount: 150 }),
+        }),
+      ]),
+    );
+    expect(client.inserted.notifications?.length ?? 0).toBe(3);
+  });
+
   it("adjusts momentum for selected players when authorized", async () => {
     const tables: Record<string, QueryResult> = {
       user_roles: { data: { role: "admin" }, error: null },
