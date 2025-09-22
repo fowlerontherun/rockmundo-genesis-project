@@ -1,4 +1,14 @@
-import { Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Store, Users } from "lucide-react";
+import {
+  Building2,
+  Gift,
+  GraduationCap,
+  NotebookPen,
+  PlaySquare,
+  Rocket,
+  Sparkles,
+  Store,
+  Users,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -61,6 +71,13 @@ const adminSections = [
     href: "/admin/mentors",
     action: "Manage mentors",
     Icon: Users,
+  },
+  {
+    title: "Player Boosts",
+    description: "Calibrate temporary boosts and bonuses that accelerate individual player growth.",
+    href: "/admin/player-boosts",
+    action: "Configure player boosts",
+    Icon: Rocket,
   },
 ] as const;
 
