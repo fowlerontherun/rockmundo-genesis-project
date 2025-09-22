@@ -105,6 +105,59 @@ describe("City page", () => {
       fetchWorldEnvironmentSnapshot: snapshotMock,
       fetchCityEnvironmentDetails: detailsMock,
     }));
+    mock.module("@/integrations/supabase/client", () => ({
+      supabase: {
+        from: () => ({
+          select: () => ({
+            eq: async () => ({ data: [], error: null }),
+          }),
+          insert: async () => ({ error: null }),
+        }),
+      },
+    }));
+    mock.module("@/hooks/useGameData", () => ({
+      useGameData: () => ({
+        profile: {
+          id: "profile-1",
+          health: 100,
+          current_city_id: sampleCity.id,
+        },
+        skills: null,
+        attributes: null,
+        xpWallet: null,
+        xpLedger: [],
+        skillProgress: [],
+        unlockedSkills: {},
+        activities: [],
+        dailyXpGrant: null,
+        freshWeeklyBonusAvailable: false,
+        currentCity: sampleCity,
+        loading: false,
+        error: null,
+        refetch: async () => {},
+        updateProfile: async () => ({
+          id: "profile-1",
+          health: 100,
+          current_city_id: sampleCity.id,
+        }),
+        updateSkills: async () => null,
+        updateXpWallet: async () => null,
+        updateAttributes: async () => null,
+        addActivity: async () => {},
+        awardActionXp: async () => {},
+        claimDailyXp: async () => {},
+        spendAttributeXp: async () => {},
+        spendSkillXp: async () => {},
+        upsertProfileWithDefaults: async () => ({
+          profile: {
+            id: "profile-1",
+            health: 100,
+            current_city_id: sampleCity.id,
+          },
+          attributes: null,
+        }),
+      }),
+    }));
 
     const { CityContent } = await import("../City");
     const { loadCityPageData } = await import("../city-data");
@@ -148,6 +201,47 @@ describe("City page", () => {
         randomEvents: [],
       })),
       fetchCityEnvironmentDetails: mock(async () => sampleDetails),
+    }));
+    mock.module("@/integrations/supabase/client", () => ({
+      supabase: {
+        from: () => ({
+          select: () => ({
+            eq: async () => ({ data: [], error: null }),
+          }),
+          insert: async () => ({ error: null }),
+        }),
+      },
+    }));
+    mock.module("@/hooks/useGameData", () => ({
+      useGameData: () => ({
+        profile: null,
+        skills: null,
+        attributes: null,
+        xpWallet: null,
+        xpLedger: [],
+        skillProgress: [],
+        unlockedSkills: {},
+        activities: [],
+        dailyXpGrant: null,
+        freshWeeklyBonusAvailable: false,
+        currentCity: null,
+        loading: false,
+        error: null,
+        refetch: async () => {},
+        updateProfile: async () => ({ id: "profile-1" }),
+        updateSkills: async () => null,
+        updateXpWallet: async () => null,
+        updateAttributes: async () => null,
+        addActivity: async () => {},
+        awardActionXp: async () => {},
+        claimDailyXp: async () => {},
+        spendAttributeXp: async () => {},
+        spendSkillXp: async () => {},
+        upsertProfileWithDefaults: async () => ({
+          profile: { id: "profile-1" },
+          attributes: null,
+        }),
+      }),
     }));
 
     const { loadCityPageData, CITY_NOT_FOUND_ERROR } = await import("../city-data");
