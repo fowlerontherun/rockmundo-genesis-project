@@ -617,38 +617,49 @@ export type Database = {
           },
         ]
       }
-      experience_ledger: {
+      xp_ledger: {
         Row: {
-          activity_type: string
-          created_at: string | null
+          attribute_points_delta: number
+          balance_after: number
+          created_at: string
+          event_type: string
           id: string
           metadata: Json | null
-          profile_id: string | null
-          skill_slug: string | null
-          user_id: string
-          xp_amount: number
+          profile_id: string
+          skill_points_delta: number
+          xp_delta: number
         }
         Insert: {
-          activity_type: string
-          created_at?: string | null
+          attribute_points_delta?: number
+          balance_after: number
+          created_at?: string
+          event_type: string
           id?: string
           metadata?: Json | null
-          profile_id?: string | null
-          skill_slug?: string | null
-          user_id: string
-          xp_amount?: number
+          profile_id: string
+          skill_points_delta?: number
+          xp_delta: number
         }
         Update: {
-          activity_type?: string
-          created_at?: string | null
+          attribute_points_delta?: number
+          balance_after?: number
+          created_at?: string
+          event_type?: string
           id?: string
           metadata?: Json | null
-          profile_id?: string | null
-          skill_slug?: string | null
-          user_id?: string
-          xp_amount?: number
+          profile_id?: string
+          skill_points_delta?: number
+          xp_delta?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "xp_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fan_demographics: {
         Row: {
