@@ -58,7 +58,6 @@ const PROFILE_META_FIELDS: Array<{ key: keyof PlayerProfile; label: string; icon
 ];
 
 const MIN_ATTRIBUTE_SCORE = 5;
-const DAILY_XP_STIPEND = 150;
 const DEFAULT_ATTRIBUTE_SPEND = 10;
 const DEFAULT_SKILL_SPEND = 25;
 
@@ -98,6 +97,7 @@ const MyCharacter = () => {
     xpWallet,
     skillProgress,
     dailyXpGrant,
+    dailyXpStipend,
     claimDailyXp,
     spendAttributeXp,
     spendSkillXp,
@@ -128,9 +128,16 @@ const MyCharacter = () => {
   );
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const hasClaimedDailyXp = (dailyXpGrant?.grant_date ?? null) === todayIso;
+  const configuredDailyStipend = useMemo(() => {
+    if (typeof dailyXpStipend === "number" && Number.isFinite(dailyXpStipend)) {
+      return Math.max(0, dailyXpStipend);
+    }
+
+    return 150;
+  }, [dailyXpStipend]);
   const todaysStipend = hasClaimedDailyXp
-    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? DAILY_XP_STIPEND))
-    : DAILY_XP_STIPEND;
+    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? configuredDailyStipend))
+    : configuredDailyStipend;
   const momentum = Math.max(0, Number(profile?.momentum ?? 0));
   const inspiration = Math.max(0, Number(profile?.inspiration ?? 0));
   const momentumProgress = Math.max(0, Math.min(100, momentum));
