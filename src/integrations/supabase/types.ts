@@ -1563,6 +1563,7 @@ export type Database = {
           display_name: string
           id: string
           slug: string
+          metadata: Json
           tier_caps: Json | null
           updated_at: string | null
         }
@@ -1572,6 +1573,7 @@ export type Database = {
           display_name: string
           id?: string
           slug: string
+          metadata?: Json
           tier_caps?: Json | null
           updated_at?: string | null
         }
@@ -1581,6 +1583,7 @@ export type Database = {
           display_name?: string
           id?: string
           slug?: string
+          metadata?: Json
           tier_caps?: Json | null
           updated_at?: string | null
         }

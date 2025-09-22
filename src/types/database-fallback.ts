@@ -362,6 +362,7 @@ export interface Database {
           slug: string;
           display_name: string;
           description?: string;
+          metadata: Json;
           tier_caps?: Json;
           created_at: string;
           updated_at: string;
@@ -371,6 +372,7 @@ export interface Database {
           slug: string;
           display_name: string;
           description?: string;
+          metadata?: Json;
           tier_caps?: Json;
           created_at?: string;
           updated_at?: string;
@@ -380,6 +382,7 @@ export interface Database {
           slug?: string;
           display_name?: string;
           description?: string;
+          metadata?: Json;
           tier_caps?: Json;
           created_at?: string;
           updated_at?: string;
