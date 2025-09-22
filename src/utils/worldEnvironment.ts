@@ -696,8 +696,6 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     famousResident: famousResidentRaw || "Local legend emerging",
     travelHub: travelHubRaw || travelOptions[0]?.name || "",
     travelOptions,
-    latitude,
-    longitude,
     distanceKm: null,
   };
 };

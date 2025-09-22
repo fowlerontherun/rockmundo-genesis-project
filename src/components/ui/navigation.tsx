@@ -36,7 +36,6 @@ import {
   Store,
   Guitar,
   Handshake,
-  PenSquare,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -68,7 +67,6 @@ const Navigation = () => {
         { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
         { icon: ListMusic, label: "Song Manager", path: "/songs" },
         { icon: GraduationCap, label: "Education", path: "/education" },
-        { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
       ],
     },
     {
