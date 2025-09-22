@@ -199,3 +199,6 @@ from route_data
 join public.cities cf on cf.name = route_data.city_from_name
 join public.cities ct on ct.name = route_data.city_to_name
 on conflict (city_from, city_to) do nothing;
+
+-- Refresh PostgREST schema cache so the new travel tables are immediately available
+notify pgrst, 'reload schema';
