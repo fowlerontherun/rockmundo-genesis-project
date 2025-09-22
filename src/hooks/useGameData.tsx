@@ -205,11 +205,17 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const [error, setError] = useState<string | null>(null);
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
+  const dailyXpGrantUnavailableRef = useRef(false);
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
     (error as { code?: string }).code === "PGRST204";
+  const isSchemaCacheMissingTableError = (error: unknown): error is { code?: string } =>
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "PGRST205";
 
   const loadProfileDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
@@ -291,6 +297,16 @@ const useGameDataInternal = (): UseGameDataReturn => {
         }
       }
 
+      const dailyGrantPromise = dailyXpGrantUnavailableRef.current
+        ? Promise.resolve({ data: null, error: null })
+        : supabase
+            .from("profile_daily_xp_grants")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .order("grant_date", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
       const [
         skillsResult,
         attributesResult,
@@ -339,13 +355,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
           .eq("profile_id", effectiveProfile.id)
           .order("current_level", { ascending: false, nullsFirst: false })
           .order("current_xp", { ascending: false, nullsFirst: false }),
-        supabase
-          .from("profile_daily_xp_grants")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .order("grant_date", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+        dailyGrantPromise,
       ]);
 
       if (skillsResult.error) {
@@ -370,7 +380,17 @@ const useGameDataInternal = (): UseGameDataReturn => {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
       if (dailyGrantResult.error) {
-        console.error("Failed to load daily XP grant", dailyGrantResult.error);
+        if (isSchemaCacheMissingTableError(dailyGrantResult.error)) {
+          if (!dailyXpGrantUnavailableRef.current) {
+            dailyXpGrantUnavailableRef.current = true;
+            console.warn(
+              "Skipping daily XP grant load - profile_daily_xp_grants table missing from schema cache; ensure migrations have run.",
+              dailyGrantResult.error,
+            );
+          }
+        } else if (dailyGrantResult.error.code !== "PGRST116") {
+          console.error("Failed to load daily XP grant", dailyGrantResult.error);
+        }
       }
 
       setSkills((skillsResult.data ?? null) as PlayerSkills);
@@ -381,7 +401,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
-      const grantRow = dailyGrantResult.data ? (dailyGrantResult.data as DailyXpGrantRow) : null;
+      const grantRow =
+        dailyGrantResult.error || !dailyGrantResult.data
+          ? null
+          : ((dailyGrantResult.data ?? null) as DailyXpGrantRow | null);
       setDailyXpGrant(grantRow);
     },
     [user],
@@ -911,19 +934,37 @@ const useGameDataInternal = (): UseGameDataReturn => {
         setAttributes(mapAttributes(response.attributes as RawAttributes));
       }
 
-      const { data: latestGrant, error: latestGrantError } = await supabase
-        .from("profile_daily_xp_grants")
-        .select("*")
-        .eq("profile_id", profile.id)
-        .order("grant_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (dailyXpGrantUnavailableRef.current) {
+        setDailyXpGrant(null);
+      } else {
+        const { data: latestGrant, error: latestGrantError } = await supabase
+          .from("profile_daily_xp_grants")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .order("grant_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (latestGrantError && latestGrantError.code !== "PGRST116") {
-        console.error("Failed to refresh daily XP grant", latestGrantError);
+        if (latestGrantError) {
+          if (isSchemaCacheMissingTableError(latestGrantError)) {
+            if (!dailyXpGrantUnavailableRef.current) {
+              dailyXpGrantUnavailableRef.current = true;
+              console.warn(
+                "Skipping daily XP grant refresh - profile_daily_xp_grants table missing from schema cache; ensure migrations have run.",
+                latestGrantError,
+              );
+            }
+            setDailyXpGrant(null);
+          } else if (latestGrantError.code !== "PGRST116") {
+            console.error("Failed to refresh daily XP grant", latestGrantError);
+            setDailyXpGrant(null);
+          } else {
+            setDailyXpGrant(null);
+          }
+        } else {
+          setDailyXpGrant((latestGrant ?? null) as DailyXpGrantRow | null);
+        }
       }
-
-      setDailyXpGrant((latestGrant ?? null) as DailyXpGrantRow | null);
     },
     [profile],
   );
