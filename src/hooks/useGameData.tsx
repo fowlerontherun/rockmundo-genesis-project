@@ -377,6 +377,15 @@ const useGameDataInternal = (): UseGameDataReturn => {
         }
       }
 
+      const skillsPromise = playerSkillsTableMissingRef.current
+        ? Promise.resolve({ data: null, error: null })
+        : supabase
+            .from("player_skills")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .eq("user_id", user.id)
+            .maybeSingle();
+
       const dailyGrantPromise = dailyXpGrantUnavailableRef.current
         ? Promise.resolve({ data: null, error: null })
         : supabase
