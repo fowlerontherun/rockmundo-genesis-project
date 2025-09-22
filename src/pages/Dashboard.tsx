@@ -1171,7 +1171,7 @@ const Dashboard = () => {
                 <RealtimeChatPanel
                   channelKey="general"
                   title="Global Chat"
-                  className="h-[28rem] border border-primary/20 bg-card/90 backdrop-blur-sm"
+                  className="h-[20rem] md:h-[24rem] xl:h-[28rem] border border-primary/20 bg-card/90 backdrop-blur-sm"
                   onConnectionStatusChange={handleGeneralConnection}
                   onParticipantCountChange={handleGeneralOnlineCount}
                 />
@@ -1180,7 +1180,7 @@ const Dashboard = () => {
                 <RealtimeChatPanel
                   channelKey={`city-${currentCity?.id ?? 'lobby'}`}
                   title={cityTabLabel}
-                  className="h-[28rem] border border-primary/20 bg-card/90 backdrop-blur-sm"
+                  className="h-[20rem] md:h-[24rem] xl:h-[28rem] border border-primary/20 bg-card/90 backdrop-blur-sm"
                   onConnectionStatusChange={handleCityConnection}
                   onParticipantCountChange={handleCityOnlineCount}
                 />
