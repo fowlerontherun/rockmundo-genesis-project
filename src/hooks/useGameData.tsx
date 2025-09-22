@@ -285,6 +285,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantUnavailableRef = useRef(false);
   const playerSkillsTableMissingRef = useRef(false);
+  const activityFeedSupportsProfileIdRef = useRef(true);
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&
@@ -397,6 +398,39 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
             .maybeSingle();
 
+      const buildActivityFeedQuery = (includeProfileFilter: boolean) => {
+        let query = supabase
+          .from("activity_feed")
+          .select("*")
+          .eq("user_id", user.id);
+
+        if (includeProfileFilter) {
+          query = query.eq("profile_id", effectiveProfile.id);
+        }
+
+        return query.order("created_at", { ascending: false }).limit(20);
+      };
+
+      const activitiesPromise = (async () => {
+        let result = await buildActivityFeedQuery(activityFeedSupportsProfileIdRef.current);
+
+        if (
+          result.error &&
+          activityFeedSupportsProfileIdRef.current &&
+          isSchemaCacheMissingColumnError(result.error)
+        ) {
+          activityFeedSupportsProfileIdRef.current = false;
+          console.warn(
+            "Skipping profile_id filter for activity feed - column missing from schema cache; ensure migrations have run.",
+            result.error,
+          );
+
+          result = await buildActivityFeedQuery(false);
+        }
+
+        return result;
+      })();
+
       const [
         skillsResult,
         attributesResult,
@@ -427,13 +461,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
         effectiveProfile.current_city_id
           ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
-        supabase
-          .from("activity_feed")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("profile_id", effectiveProfile.id)
-          .order("created_at", { ascending: false })
-          .limit(20),
+        activitiesPromise,
         supabase
           .from("skill_progress")
           .select("*")
