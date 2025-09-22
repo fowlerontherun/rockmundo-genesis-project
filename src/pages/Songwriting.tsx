@@ -1,259 +1,173 @@
-import { type FormEvent, useMemo, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
-const themeOptions = [
-  { value: "love", label: "Love & Relationships" },
-  { value: "heartbreak", label: "Heartbreak & Healing" },
-  { value: "growth", label: "Personal Growth" },
-  { value: "party", label: "Party & Celebration" },
-  { value: "society", label: "Social Commentary" },
-  { value: "adventure", label: "Travel & Adventure" },
-  { value: "dreams", label: "Dreams & Ambition" },
-  { value: "resilience", label: "Resilience & Hope" },
-] as const;
+const WRITING_BLOCK_OPTIONS = [15, 30, 60];
+const MAX_MINUTES = 180;
 
-const genreOptions = [
-  "Pop",
-  "Rock",
-  "Indie",
-  "Electronic",
-  "Hip-Hop",
-  "R&B",
-  "Country",
-  "Folk",
-] as const;
-
-const progressionOptions = [
-  "I–V–vi–IV",
-  "ii–V–I",
-  "vi–IV–I–V",
-  "I–IV–V–IV",
-  "iv–V–I",
-] as const;
+const calculateQuality = (minutes: number) => Math.min(5000, Math.round((minutes / MAX_MINUTES) * 5000));
 
 const Songwriting = () => {
-  const { toast } = useToast();
-  const [title, setTitle] = useState("");
-  const [theme, setTheme] = useState<string | undefined>();
-  const [lyrics, setLyrics] = useState("");
-  const [genre, setGenre] = useState<string | undefined>();
-  const [progression, setProgression] = useState<string | undefined>();
+  const [isSongCreated, setIsSongCreated] = useState(false);
+  const [minutesSpent, setMinutesSpent] = useState(0);
+  const [qualityScore, setQualityScore] = useState(0);
+  const [selectedBlock, setSelectedBlock] = useState<string>(WRITING_BLOCK_OPTIONS[0].toString());
+  const [showDebug, setShowDebug] = useState(false);
 
-  const isCreateDisabled = useMemo(
-    () =>
-      !title.trim() ||
-      !theme ||
-      !genre ||
-      !progression,
-    [genre, progression, theme, title],
-  );
+  const progressPercent = Math.min(100, (minutesSpent / MAX_MINUTES) * 100);
+  const displayProgress = Math.round(progressPercent);
+  const isSongComplete = minutesSpent >= MAX_MINUTES;
 
-  const selectedThemeLabel = useMemo(
-    () => themeOptions.find((option) => option.value === theme)?.label,
-    [theme],
-  );
-
-  const handleCreateSong = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (isCreateDisabled) {
-      return;
+  const qualityLabel = useMemo(() => {
+    if (!isSongCreated) {
+      return "Not Started";
     }
 
-    toast({
-      title: "Song draft created",
-      description: "Your songwriting blueprint has been generated.",
-    });
+    const ratio = qualityScore / 5000;
+
+    if (ratio === 0) return "Blank Page";
+    if (ratio < 0.25) return "Rough Draft";
+    if (ratio < 0.5) return "Finding the Hook";
+    if (ratio < 0.75) return "Polished Demo";
+    if (ratio < 1) return "Stage Ready";
+    return "Studio Ready";
+  }, [isSongCreated, qualityScore]);
+
+  const handleCreateSong = () => {
+    setIsSongCreated(true);
+    setMinutesSpent(0);
+    setQualityScore(0);
+    setSelectedBlock(WRITING_BLOCK_OPTIONS[0].toString());
   };
 
-  const handleClear = () => {
-    setTitle("");
-    setTheme(undefined);
-    setLyrics("");
-    setGenre(undefined);
-    setProgression(undefined);
+  const handleSpendTime = () => {
+    if (!isSongCreated) return;
+
+    const blockValue = Number(selectedBlock);
+    if (!blockValue) return;
+
+    setMinutesSpent((previousMinutes) => {
+      const nextMinutes = Math.min(MAX_MINUTES, previousMinutes + blockValue);
+      setQualityScore(calculateQuality(nextMinutes));
+      return nextMinutes;
+    });
   };
 
   return (
     <div className="container mx-auto space-y-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Songwriting Workshop</h1>
-        <p className="text-muted-foreground">
-          Craft the next anthem by pairing strong themes, genre direction, and
-          harmonic movement.
-        </p>
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold">Songwriting</h1>
+        <p className="text-muted-foreground">Craft your next hit by investing focused writing time.</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Card asChild>
-          <form onSubmit={handleCreateSong} className="space-y-6">
-            <CardHeader>
-              <CardTitle>Song Blueprint</CardTitle>
-              <CardDescription>
-                Define the creative direction of your track with focused inputs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="song-title">Song Title</Label>
-                <Input
-                  id="song-title"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Enter a standout title"
-                />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="song-theme">Song Theme</Label>
-                  <Select
-                    value={theme}
-                    onValueChange={setTheme}
-                  >
-                    <SelectTrigger id="song-theme">
-                      <SelectValue placeholder="Select a core theme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {themeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Songwriting Session</CardTitle>
+            <CardDescription>
+              Create a new song and log your dedicated writing blocks until the session is complete.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium">Song Status</p>
+                  <p className="text-lg font-semibold">
+                    {isSongCreated ? (isSongComplete ? "Songwriting complete" : "Song in progress") : "No song created"}
+                  </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="song-genre">Genre Direction</Label>
-                  <Select value={genre} onValueChange={setGenre}>
-                    <SelectTrigger id="song-genre">
-                      <SelectValue placeholder="Choose a genre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {genreOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Button variant={isSongCreated ? "secondary" : "default"} onClick={handleCreateSong}>
+                  {isSongCreated ? "Start New Song" : "Create Song"}
+                </Button>
               </div>
+              {!isSongCreated && (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Create a song to begin writing immediately.
+                </p>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="song-progression">Chord Progression</Label>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Label htmlFor="writing-block">Writing block</Label>
                 <Select
-                  value={progression}
-                  onValueChange={setProgression}
+                  value={selectedBlock}
+                  onValueChange={setSelectedBlock}
+                  disabled={!isSongCreated || isSongComplete}
                 >
-                  <SelectTrigger id="song-progression">
-                    <SelectValue placeholder="Select a harmonic map" />
+                  <SelectTrigger id="writing-block" className="w-[200px]">
+                    <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent>
-                    {progressionOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
+                    {WRITING_BLOCK_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option.toString()}>
+                        {option} minutes
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-sm text-muted-foreground">
-                  Choose a classic progression to anchor your songwriting session.
-                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="song-lyrics">Lyric Sketch</Label>
-                <Textarea
-                  id="song-lyrics"
-                  value={lyrics}
-                  onChange={(event) => setLyrics(event.target.value)}
-                  placeholder="Capture hooks, verses, or imagery to explore later"
-                  className="min-h-[140px]"
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={handleClear}>
-                Clear
+              <Button onClick={handleSpendTime} disabled={!isSongCreated || isSongComplete}>
+                Spend Time Writing
               </Button>
-              <Button type="submit" disabled={isCreateDisabled}>
-                Create Song
-              </Button>
+            </div>
+          </CardContent>
+          {isSongComplete && (
+            <CardFooter>
+              <p className="text-sm font-medium text-primary">
+                You have logged the full 180 minutes. This song is ready for its next steps!
+              </p>
             </CardFooter>
-          </form>
+          )}
         </Card>
 
-        <Card className="h-fit">
+        <Card>
           <CardHeader>
-            <CardTitle>Live Summary</CardTitle>
-            <CardDescription>
-              Preview how your selections shape the songwriting brief.
-            </CardDescription>
+            <CardTitle>Session Summary</CardTitle>
+            <CardDescription>Review progress and quality as the song evolves.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">
-                Title
-              </p>
-              <p className="text-lg font-semibold">
-                {title.trim() || "Untitled Composition"}
-              </p>
+              <p className="text-sm font-medium text-muted-foreground">Writing Time Logged</p>
+              <p className="text-2xl font-semibold">{minutesSpent} / {MAX_MINUTES} minutes</p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {selectedThemeLabel ? (
-                <Badge variant="secondary">{selectedThemeLabel}</Badge>
-              ) : (
-                <Badge variant="outline" className="text-muted-foreground">
-                  Theme pending
-                </Badge>
-              )}
-              {genre ? (
-                <Badge variant="secondary">{genre}</Badge>
-              ) : (
-                <Badge variant="outline" className="text-muted-foreground">
-                  Genre pending
-                </Badge>
-              )}
-              {progression ? (
-                <Badge variant="secondary">{progression}</Badge>
-              ) : (
-                <Badge variant="outline" className="text-muted-foreground">
-                  Progression pending
-                </Badge>
-              )}
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Song Quality</p>
+              <p className="text-lg font-semibold">{qualityLabel}</p>
+              <p className="text-xs text-muted-foreground">
+                Quality grows as you invest more focused writing blocks. The exact score remains behind the scenes.
+              </p>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">
-                Lyric Direction
-              </p>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                {lyrics.trim() ||
-                  "Use the lyric sketch to note imagery, emotional beats, or melodic cues."}
-              </p>
+              <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+                <span>Progress</span>
+                <span>{displayProgress}%</span>
+              </div>
+              <Progress value={progressPercent} className="h-2" />
+            </div>
+
+            <div className="rounded-lg border border-dashed border-muted-foreground/40 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="debug-toggle" className="text-sm">
+                  Developer debug details
+                </Label>
+                <Switch id="debug-toggle" checked={showDebug} onCheckedChange={setShowDebug} />
+              </div>
+              {showDebug && (
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  <p>Hidden quality score: {qualityScore} / 5000</p>
+                  <p>Completion: {displayProgress}%</p>
+                </div>
+              )}
+
             </div>
           </CardContent>
         </Card>
