@@ -206,6 +206,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantUnavailableRef = useRef(false);
+  const playerSkillsTableMissingRef = useRef(false);
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&
@@ -229,6 +230,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
         setActivities([]);
         setCurrentCity(null);
         setDailyXpGrant(null);
+        playerSkillsTableMissingRef.current = false;
         return;
       }
 
@@ -305,6 +307,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
             .eq("profile_id", effectiveProfile.id)
             .order("grant_date", { ascending: false })
             .limit(1)
+
             .maybeSingle();
 
       const [
@@ -317,12 +320,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
         skillProgressResult,
         dailyGrantResult,
       ] = await Promise.all([
-        supabase
-          .from("player_skills")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .eq("user_id", user.id)
-          .maybeSingle(),
+        skillsPromise,
         supabase
           .from("player_attributes")
           .select("*")
@@ -359,7 +357,17 @@ const useGameDataInternal = (): UseGameDataReturn => {
       ]);
 
       if (skillsResult.error) {
-        console.error("Failed to load player skills", skillsResult.error);
+        if (isSchemaCacheMissingTableError(skillsResult.error, "player_skills")) {
+          if (!playerSkillsTableMissingRef.current) {
+            console.warn(
+              "Player skills table missing from schema cache. Disabling legacy skills features until the schema is refreshed.",
+              skillsResult.error,
+            );
+          }
+          playerSkillsTableMissingRef.current = true;
+        } else {
+          console.error("Failed to load player skills", skillsResult.error);
+        }
       }
       if (attributesResult.error) {
         console.error("Failed to load player attributes", attributesResult.error);
@@ -391,6 +399,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
         } else if (dailyGrantResult.error.code !== "PGRST116") {
           console.error("Failed to load daily XP grant", dailyGrantResult.error);
         }
+
+      }
+      if (dailyGrantResult.error && shouldIgnoreDailyGrantError) {
+        console.info("Daily XP grant data is unavailable on this schema version; skipping.");
       }
 
       setSkills((skillsResult.data ?? null) as PlayerSkills);
@@ -402,7 +414,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
       const grantRow =
-        dailyGrantResult.error || !dailyGrantResult.data
+yeah         dailyGrantResult.error || !dailyGrantResult.data
           ? null
           : ((dailyGrantResult.data ?? null) as DailyXpGrantRow | null);
       setDailyXpGrant(grantRow);
@@ -816,6 +828,14 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
       if (!profile) {
         throw new Error("No active profile selected");
+      }
+
+      if (playerSkillsTableMissingRef.current) {
+        console.warn(
+          "Skipping player skill update - player_skills table unavailable in schema cache.",
+          updates,
+        );
+        return null;
       }
 
       const payload: Database["public"]["Tables"]["player_skills"]["Insert"] = {

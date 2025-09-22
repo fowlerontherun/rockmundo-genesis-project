@@ -334,20 +334,26 @@ export interface Database {
         Row: {
           id: string;
           profile_id: string;
-          amount: number;
-          created_at: string;
+          grant_date: string;
+          xp_awarded: number;
+          metadata: Json;
+          claimed_at: string;
         };
         Insert: {
           id?: string;
           profile_id: string;
-          amount: number;
-          created_at?: string;
+          grant_date: string;
+          xp_awarded: number;
+          metadata?: Json;
+          claimed_at?: string;
         };
         Update: {
           id?: string;
           profile_id?: string;
-          amount?: number;
-          created_at?: string;
+          grant_date?: string;
+          xp_awarded?: number;
+          metadata?: Json;
+          claimed_at?: string;
         };
       };
       skill_definitions: {

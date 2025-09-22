@@ -1190,6 +1190,27 @@ export type Database = {
           },
         ]
       }
+      daily_xp_settings: {
+        Row: {
+          daily_xp_amount: number
+          id: boolean
+          metadata: Json
+          updated_at: string
+        }
+        Insert: {
+          daily_xp_amount: number
+          id?: boolean
+          metadata?: Json
+          updated_at?: string
+        }
+        Update: {
+          daily_xp_amount?: number
+          id?: boolean
+          metadata?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       player_xp_wallet: {
         Row: {
           attribute_points_earned: number | null
@@ -2102,6 +2123,32 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      progression_admin_adjust_momentum: {
+        Args: {
+          p_actor_user_id: string
+          p_profile_id: string
+          p_amount: number
+          p_reason?: string | null
+          p_metadata?: Json | null
+        }
+        Returns: Json
+      }
+      progression_admin_set_daily_xp: {
+        Args: {
+          p_actor_user_id: string
+          p_new_amount: number
+          p_reason?: string | null
+          p_metadata?: Json | null
+        }
+        Returns: Json
+      }
+      progression_claim_daily_xp: {
+        Args: {
+          p_profile_id: string
+          p_metadata?: Json | null
+        }
+        Returns: Json
       }
       transfer_inventory_items: {
         Args: {

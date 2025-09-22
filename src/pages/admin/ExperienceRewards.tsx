@@ -3,6 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
+import type { PostgrestError } from "@supabase/supabase-js";
+
 import { AdminRoute } from "@/components/AdminRoute";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,9 +95,26 @@ export default function ExperienceRewards() {
         .order("username", { ascending: true, nullsFirst: false })
         .limit(500);
 
-      if (error) throw error;
+      let profileRows = data;
+      if (error) {
+        if ((error as PostgrestError | null)?.code === "PGRST205") {
+          console.warn("public_profiles view unavailable, falling back to profiles table", error);
 
-      const profiles = (data ?? [])
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("profiles")
+            .select("id, user_id, display_name, username")
+            .order("display_name", { ascending: true, nullsFirst: false })
+            .order("username", { ascending: true, nullsFirst: false })
+            .limit(500);
+
+          if (fallbackError) throw fallbackError;
+          profileRows = fallbackData;
+        } else {
+          throw error;
+        }
+      }
+
+      const profiles = (profileRows ?? [])
         .filter((row): row is {
           id: string;
           user_id: string;

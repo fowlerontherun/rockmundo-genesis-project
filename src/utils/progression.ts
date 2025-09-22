@@ -5,6 +5,9 @@ export type ProgressionAction =
   | "award_action_xp"
   | "award_special_xp"
   | "admin_award_special_xp"
+  | "admin_adjust_momentum"
+  | "admin_set_daily_xp"
+  | "admin_set_daily_xp_amount"
   | "claim_daily_xp"
   | "spend_attribute_xp"
   | "spend_skill_xp";
@@ -204,6 +207,136 @@ export const spendSkillXp = async ({
   return data;
 };
 
+export interface AdminAdjustMomentumInput {
+  amount: number;
+  reason?: string;
+  profileIds?: string[];
+  applyToAll?: boolean;
+  metadata?: Record<string, unknown>;
+  notifyTargets?: boolean;
+  uniqueEventId?: string;
+}
+
+export const adminAdjustMomentum = async ({
+  amount,
+  reason,
+  profileIds = [],
+  applyToAll = false,
+  metadata = {},
+  notifyTargets,
+  uniqueEventId,
+}: AdminAdjustMomentumInput): Promise<ProgressionResponse> => {
+  const momentumAmount = Math.trunc(Number(amount));
+  if (!Number.isFinite(momentumAmount) || momentumAmount === 0) {
+    throw new Error("Momentum adjustment must be a non-zero integer");
+  }
+
+  const payload: Record<string, unknown> = {
+    action: "admin_adjust_momentum" satisfies ProgressionAction,
+    amount: momentumAmount,
+    metadata,
+  };
+
+  if (typeof reason === "string" && reason.trim().length > 0) {
+    payload.reason = reason;
+  }
+
+  if (Array.isArray(profileIds) && profileIds.length > 0) {
+    payload.profile_ids = profileIds;
+  }
+
+  if (applyToAll) {
+    payload.apply_to_all = true;
+  }
+
+  if (typeof notifyTargets === "boolean") {
+    payload.notify = notifyTargets;
+  }
+
+  if (uniqueEventId) {
+    payload.event_id = uniqueEventId;
+  }
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to adjust player momentum");
+  }
+
+  return data;
+};
+
+export interface AdminSetDailyXpAmountInput {
+  amount: number;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  notifyPlayers?: boolean;
+  applyToAll?: boolean;
+  profileIds?: string[];
+  uniqueEventId?: string;
+}
+
+export const adminSetDailyXpAmount = async ({
+  amount,
+  reason,
+  metadata = {},
+  notifyPlayers,
+  applyToAll = false,
+  profileIds = [],
+  uniqueEventId,
+}: AdminSetDailyXpAmountInput): Promise<ProgressionResponse> => {
+  const stipendAmount = Math.trunc(Number(amount));
+  if (!Number.isFinite(stipendAmount) || stipendAmount <= 0) {
+    throw new Error("Daily XP stipend must be a positive integer");
+  }
+
+  const payload: Record<string, unknown> = {
+    action: "admin_set_daily_xp" satisfies ProgressionAction,
+    amount: stipendAmount,
+    metadata,
+  };
+
+  if (typeof reason === "string" && reason.trim().length > 0) {
+    payload.reason = reason;
+  }
+
+  if (typeof notifyPlayers === "boolean") {
+    payload.notify = notifyPlayers;
+  }
+
+  if (applyToAll) {
+    payload.apply_to_all = true;
+  }
+
+  if (Array.isArray(profileIds) && profileIds.length > 0) {
+    payload.profile_ids = profileIds;
+  }
+
+  if (uniqueEventId) {
+    payload.event_id = uniqueEventId;
+  }
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to update the daily XP stipend");
+  }
+
+  return data;
+};
+
 export interface AdminAwardSpecialXpInput {
   amount: number;
   reason: string;
@@ -256,6 +389,126 @@ export const adminAwardSpecialXp = async ({
 
   if (!data?.success) {
     throw new Error(data?.message ?? "Failed to award experience points");
+  }
+
+  return data;
+};
+
+export interface AdminAdjustMomentumInput {
+  amount: number;
+  reason?: string;
+  profileIds?: string[];
+  applyToAll?: boolean;
+  metadata?: Record<string, unknown>;
+  uniqueEventId?: string;
+}
+
+export const adminAdjustMomentum = async ({
+  amount,
+  reason,
+  profileIds = [],
+  applyToAll = false,
+  metadata = {},
+  uniqueEventId,
+}: AdminAdjustMomentumInput): Promise<ProgressionResponse> => {
+  const normalizedProfileIds = Array.from(
+    new Set(
+      profileIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0),
+    ),
+  );
+
+  const payload: Record<string, unknown> = {
+    action: "admin_adjust_momentum" as const,
+    amount,
+    metadata,
+  };
+
+  if (typeof reason === "string" && reason.trim().length > 0) {
+    payload.reason = reason.trim();
+  }
+
+  if (applyToAll) {
+    payload.apply_to_all = true;
+  }
+
+  if (normalizedProfileIds.length > 0) {
+    payload.target_profile_ids = normalizedProfileIds;
+  }
+
+  if (uniqueEventId) {
+    payload.event_id = uniqueEventId;
+  }
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to adjust momentum");
+  }
+
+  return data;
+};
+
+export interface AdminSetDailyXpAmountInput {
+  amount: number;
+  reason?: string;
+  profileIds?: string[];
+  applyToAll?: boolean;
+  metadata?: Record<string, unknown>;
+  uniqueEventId?: string;
+}
+
+export const adminSetDailyXpAmount = async ({
+  amount,
+  reason,
+  profileIds = [],
+  applyToAll = false,
+  metadata = {},
+  uniqueEventId,
+}: AdminSetDailyXpAmountInput): Promise<ProgressionResponse> => {
+  const normalizedProfileIds = Array.from(
+    new Set(
+      profileIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0),
+    ),
+  );
+
+  const payload: Record<string, unknown> = {
+    action: "admin_set_daily_xp_amount" as const,
+    amount,
+    metadata,
+  };
+
+  if (typeof reason === "string" && reason.trim().length > 0) {
+    payload.reason = reason.trim();
+  }
+
+  if (applyToAll) {
+    payload.apply_to_all = true;
+  }
+
+  if (normalizedProfileIds.length > 0) {
+    payload.target_profile_ids = normalizedProfileIds;
+  }
+
+  if (uniqueEventId) {
+    payload.event_id = uniqueEventId;
+  }
+
+  const { data, error } = await supabase.functions.invoke<ProgressionResponse>("progression", {
+    body: payload,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message ?? "Failed to update daily stipend");
   }
 
   return data;
