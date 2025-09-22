@@ -120,7 +120,6 @@ const formatSkillName = (slug: string) =>
     .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
-const DAILY_XP_STIPEND = 150;
 const MIN_FRIEND_SEARCH_LENGTH = 2;
 const FRIEND_SEARCH_DEBOUNCE_MS = 400;
 const NON_REQUESTABLE_STATUSES: FriendshipRow["status"][] = [
@@ -139,6 +138,7 @@ const Dashboard = () => {
     xpLedger,
     skillProgress,
     dailyXpGrant,
+    dailyXpStipend,
     freshWeeklyBonusAvailable,
     currentCity,
     activities,
@@ -508,9 +508,16 @@ const Dashboard = () => {
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const dailyXpClaimedToday = (dailyXpGrant?.grant_date ?? null) === todayIso;
+  const configuredDailyStipend = useMemo(() => {
+    if (typeof dailyXpStipend === "number" && Number.isFinite(dailyXpStipend)) {
+      return Math.max(0, dailyXpStipend);
+    }
+
+    return 150;
+  }, [dailyXpStipend]);
   const dailyXpAmount = dailyXpClaimedToday
-    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? DAILY_XP_STIPEND))
-    : DAILY_XP_STIPEND;
+    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? configuredDailyStipend))
+    : configuredDailyStipend;
   const dailyXpClaimedAtLabel = dailyXpGrant?.claimed_at ? formatNotificationDate(dailyXpGrant.claimed_at) : undefined;
   const spendableXpBalance = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
 

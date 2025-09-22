@@ -86,6 +86,81 @@ const XP_LEDGER_FETCH_LIMIT = 20;
 const WEEKLY_WINDOW_ANCHOR_UTC_HOUR = 5;
 const WEEKLY_WINDOW_ANCHOR_UTC_MINUTE = 15;
 
+const parseNumericValue = (candidate: unknown): number | null => {
+  if (typeof candidate === "number" && Number.isFinite(candidate)) {
+    return candidate;
+  }
+
+  if (typeof candidate === "string") {
+    const parsed = Number(candidate);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const extractDailyXpStipend = (row: DailyXpConfigurationRow): number | null => {
+  if (!row || typeof row !== "object") {
+    return null;
+  }
+
+  const candidate = row as Record<string, unknown>;
+  const directKeys = [
+    "daily_xp_stipend",
+    "dailyXpStipend",
+    "daily_xp_amount",
+    "dailyXpAmount",
+    "xp_stipend",
+    "xpAmount",
+    "amount",
+  ];
+
+  for (const key of directKeys) {
+    if (key in candidate) {
+      const numeric = parseNumericValue(candidate[key]);
+      if (numeric !== null) {
+        return numeric;
+      }
+    }
+  }
+
+  const keyedSources: Array<[unknown, unknown[]]> = [
+    [candidate.config_key, [candidate.config_value, candidate.value, candidate.numeric_value]],
+    [candidate.key, [candidate.value, candidate.numeric_value]],
+    [candidate.slug, [candidate.numeric_value, candidate.value]],
+    [candidate.name, [candidate.numeric_value, candidate.value]],
+    [candidate.setting_key, [candidate.setting_value, candidate.value]],
+  ];
+
+  for (const [rawKey, rawValues] of keyedSources) {
+    if (typeof rawKey === "string" && rawKey.toLowerCase() === "daily_xp_stipend") {
+      for (const valueCandidate of rawValues) {
+        const numeric = parseNumericValue(valueCandidate);
+        if (numeric !== null) {
+          return numeric;
+        }
+      }
+    }
+  }
+
+  if (candidate.metadata && typeof candidate.metadata === "object") {
+    const metadata = candidate.metadata as Record<string, unknown>;
+    const metadataKeys = ["daily_xp_stipend", "dailyXpStipend", "daily_xp_amount", "dailyXpAmount"] as const;
+    for (const key of metadataKeys) {
+      if (key in metadata) {
+        const numeric = parseNumericValue(metadata[key]);
+        if (numeric !== null) {
+          return numeric;
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
 const getCurrentWeeklyWindowStart = (referenceDate: Date): Date => {
   const result = new Date(referenceDate);
   const utcDay = result.getUTCDay();
@@ -130,6 +205,7 @@ type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Ro
 type RawAttributes = PlayerAttributesRow | null;
 type PlayerAttributesInsert = Database["public"]["Tables"]["player_attributes"]["Insert"];
 type DailyXpGrantRow = Database["public"]["Tables"]["profile_daily_xp_grants"]["Row"];
+type DailyXpConfigurationRow = Record<string, unknown> | null;
 
 type UseGameDataReturn = {
   profile: PlayerProfile | null;
@@ -141,6 +217,7 @@ type UseGameDataReturn = {
   unlockedSkills: UnlockedSkillsMap;
   activities: ActivityFeedRow[];
   dailyXpGrant: DailyXpGrantRow | null;
+  dailyXpStipend: number | null;
   freshWeeklyBonusAvailable: boolean;
   currentCity: CityRow | null;
   loading: boolean;
@@ -200,6 +277,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const [unlockedSkills, setUnlockedSkills] = useState<UnlockedSkillsMap>({});
   const [activities, setActivities] = useState<ActivityFeedRow[]>([]);
   const [dailyXpGrant, setDailyXpGrant] = useState<DailyXpGrantRow | null>(null);
+  const [dailyXpStipend, setDailyXpStipend] = useState<number | null>(null);
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -418,6 +496,63 @@ yeah         dailyGrantResult.error || !dailyGrantResult.data
           ? null
           : ((dailyGrantResult.data ?? null) as DailyXpGrantRow | null);
       setDailyXpGrant(grantRow);
+
+      let stipendResolved = false;
+      let resolvedStipend: number | null = null;
+      let stipendErrored = false;
+
+      try {
+        const configClient = supabase as unknown as { from: (table: string) => any };
+        const stipendAttempt = await configClient
+          .from("game_configuration")
+          .select("*")
+          .eq("config_key", "daily_xp_stipend")
+          .limit(1)
+          .maybeSingle();
+
+        if (stipendAttempt?.error) {
+          stipendErrored = true;
+          console.error("Failed to load daily XP configuration", stipendAttempt.error);
+        } else {
+          stipendResolved = true;
+          resolvedStipend = extractDailyXpStipend((stipendAttempt?.data ?? null) as DailyXpConfigurationRow);
+        }
+
+        if (!stipendResolved || resolvedStipend === null) {
+          const stipendFallback = await configClient
+            .from("game_configuration")
+            .select("*")
+            .limit(20);
+
+          if (stipendFallback?.error) {
+            stipendErrored = true;
+            if (!stipendAttempt?.error) {
+              console.error("Failed to load daily XP configuration", stipendFallback.error);
+            }
+          } else if (Array.isArray(stipendFallback?.data)) {
+            stipendResolved = true;
+            for (const entry of stipendFallback.data as DailyXpConfigurationRow[]) {
+              const extracted = extractDailyXpStipend(entry);
+              if (extracted !== null) {
+                resolvedStipend = extracted;
+                break;
+              }
+            }
+          } else if (stipendFallback?.data) {
+            stipendResolved = true;
+            resolvedStipend = extractDailyXpStipend(stipendFallback.data as DailyXpConfigurationRow);
+          }
+        }
+      } catch (configurationError) {
+        stipendErrored = true;
+        console.error("Unexpected error loading daily XP configuration", configurationError);
+      }
+
+      if (resolvedStipend !== null) {
+        setDailyXpStipend(resolvedStipend);
+      } else if (stipendResolved || stipendErrored) {
+        setDailyXpStipend(null);
+      }
     },
     [user],
   );
@@ -434,6 +569,7 @@ yeah         dailyGrantResult.error || !dailyGrantResult.data
       setActivities([]);
       setCurrentCity(null);
       setDailyXpGrant(null);
+      setDailyXpStipend(null);
       return;
     }
 
@@ -1082,6 +1218,7 @@ yeah         dailyGrantResult.error || !dailyGrantResult.data
       unlockedSkills,
       activities,
       dailyXpGrant,
+      dailyXpStipend,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
@@ -1108,6 +1245,7 @@ yeah         dailyGrantResult.error || !dailyGrantResult.data
       unlockedSkills,
       activities,
       dailyXpGrant,
+      dailyXpStipend,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
