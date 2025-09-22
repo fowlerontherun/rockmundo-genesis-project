@@ -1,103 +1,129 @@
+import { useEffect, useMemo, useState } from "react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const flights = [
-  {
-    cityFrom: "Los Angeles",
-    cityTo: "Seattle",
-    cost: "$245",
-    duration: "2h 55m",
-    healthImpact: "High emissions – offset recommended",
-  },
-  {
-    cityFrom: "Chicago",
-    cityTo: "Atlanta",
-    cost: "$210",
-    duration: "2h 5m",
-    healthImpact: "Moderate emissions",
-  },
-  {
-    cityFrom: "New York",
-    cityTo: "Austin",
-    cost: "$320",
-    duration: "3h 50m",
-    healthImpact: "High emissions – consider rail when possible",
-  },
-];
+type TravelRecord = {
+  id: string;
+  city_from: string | null;
+  city_to: string | null;
+  cost: string | number | null;
+  duration: string | number | null;
+  health_impact: string | null;
+};
 
-const trains = [
-  {
-    cityFrom: "San Francisco",
-    cityTo: "Los Angeles",
-    cost: "$145",
-    duration: "8h 20m",
-    healthImpact: "Low emissions",
-  },
-  {
-    cityFrom: "Boston",
-    cityTo: "Philadelphia",
-    cost: "$95",
-    duration: "5h 10m",
-    healthImpact: "Very low emissions",
-  },
-  {
-    cityFrom: "Portland",
-    cityTo: "Vancouver",
-    cost: "$130",
-    duration: "7h 5m",
-    healthImpact: "Low emissions",
-  },
-];
+type TravelDataset = {
+  flights: TravelRecord[];
+  trains: TravelRecord[];
+  taxis: TravelRecord[];
+  ferries: TravelRecord[];
+};
 
-const taxis = [
-  {
-    cityFrom: "Downtown Los Angeles",
-    cityTo: "LAX",
-    cost: "$48",
-    duration: "45m",
-    healthImpact: "Moderate emissions",
-  },
-  {
-    cityFrom: "Brooklyn",
-    cityTo: "JFK",
-    cost: "$62",
-    duration: "55m",
-    healthImpact: "Moderate emissions",
-  },
-  {
-    cityFrom: "Chicago Loop",
-    cityTo: "United Center",
-    cost: "$22",
-    duration: "18m",
-    healthImpact: "Moderate emissions",
-  },
-];
+const defaultDataset: TravelDataset = {
+  flights: [],
+  trains: [],
+  taxis: [],
+  ferries: [],
+};
 
-const ferries = [
-  {
-    cityFrom: "Seattle",
-    cityTo: "Bainbridge Island",
-    cost: "$18",
-    duration: "35m",
-    healthImpact: "Low emissions",
-  },
-  {
-    cityFrom: "San Francisco",
-    cityTo: "Sausalito",
-    cost: "$16",
-    duration: "30m",
-    healthImpact: "Low emissions",
-  },
-  {
-    cityFrom: "Boston",
-    cityTo: "Salem",
-    cost: "$28",
-    duration: "55m",
-    healthImpact: "Moderate emissions",
-  },
-];
+const formatValue = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `$${value.toLocaleString()}`;
+  }
+
+  return value;
+};
+
+const formatDuration = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `${value} min`;
+  }
+
+  return value;
+};
 
 const Travel = () => {
+  const [data, setData] = useState<TravelDataset>(defaultDataset);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchTravelData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+
+        const [flightsResponse, trainsResponse, taxisResponse, ferriesResponse] = await Promise.all([
+          supabase.from("travel_flights" as any).select("*"),
+          supabase.from("travel_trains" as any).select("*"),
+          supabase.from("travel_taxis" as any).select("*"),
+          supabase.from("travel_ferries" as any).select("*"),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const errors = [
+          flightsResponse.error,
+          trainsResponse.error,
+          taxisResponse.error,
+          ferriesResponse.error,
+        ].filter(Boolean);
+
+        if (errors.length > 0) {
+          setError(errors.map((entry) => entry!.message).join(" \u2022 "));
+        }
+
+        setData({
+          flights: (flightsResponse.data ?? []) as TravelRecord[],
+          trains: (trainsResponse.data ?? []) as TravelRecord[],
+          taxis: (taxisResponse.data ?? []) as TravelRecord[],
+          ferries: (ferriesResponse.data ?? []) as TravelRecord[],
+        });
+      } catch (fetchError) {
+        if (!isMounted) {
+          return;
+        }
+
+        const message = fetchError instanceof Error ? fetchError.message : "Failed to load travel data.";
+        setError(message);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchTravelData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hasNoData = useMemo(
+    () =>
+      !loading &&
+      data.flights.length === 0 &&
+      data.trains.length === 0 &&
+      data.taxis.length === 0 &&
+      data.ferries.length === 0,
+    [data, loading],
+  );
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <header className="space-y-2">
@@ -106,6 +132,16 @@ const Travel = () => {
           Placeholder logistics hub for coordinating regional travel and transport around upcoming shows.
         </p>
       </header>
+
+      {loading && <p className="text-sm text-muted-foreground">Loading travel itineraries...</p>}
+      {error && !loading && (
+        <p className="text-sm font-medium text-destructive" role="alert">
+          {error}
+        </p>
+      )}
+      {hasNoData && (
+        <p className="text-sm text-muted-foreground">No travel data available right now. Check back soon for updated routes.</p>
+      )}
 
       <Card>
         <CardHeader>
@@ -124,13 +160,15 @@ const Travel = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {flights.map((flight) => (
-                <TableRow key={`${flight.cityFrom}-${flight.cityTo}`}>
-                  <TableCell className="font-medium">{flight.cityFrom}</TableCell>
-                  <TableCell className="text-muted-foreground">{flight.cityTo}</TableCell>
-                  <TableCell className="text-right font-medium">{flight.cost}</TableCell>
-                  <TableCell>{flight.duration}</TableCell>
-                  <TableCell className="text-muted-foreground">{flight.healthImpact}</TableCell>
+              {data.flights.map((flight) => (
+                <TableRow
+                  key={`${flight.id}-${flight.city_from ?? "unknown"}-${flight.city_to ?? "unknown"}`}
+                >
+                  <TableCell className="font-medium">{flight.city_from ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{flight.city_to ?? "—"}</TableCell>
+                  <TableCell className="text-right font-medium">{formatValue(flight.cost)}</TableCell>
+                  <TableCell>{formatDuration(flight.duration)}</TableCell>
+                  <TableCell className="text-muted-foreground">{flight.health_impact ?? "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -155,13 +193,15 @@ const Travel = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trains.map((train) => (
-                <TableRow key={`${train.cityFrom}-${train.cityTo}`}>
-                  <TableCell className="font-medium">{train.cityFrom}</TableCell>
-                  <TableCell className="text-muted-foreground">{train.cityTo}</TableCell>
-                  <TableCell className="text-right font-medium">{train.cost}</TableCell>
-                  <TableCell>{train.duration}</TableCell>
-                  <TableCell className="text-muted-foreground">{train.healthImpact}</TableCell>
+              {data.trains.map((train) => (
+                <TableRow
+                  key={`${train.id}-${train.city_from ?? "unknown"}-${train.city_to ?? "unknown"}`}
+                >
+                  <TableCell className="font-medium">{train.city_from ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{train.city_to ?? "—"}</TableCell>
+                  <TableCell className="text-right font-medium">{formatValue(train.cost)}</TableCell>
+                  <TableCell>{formatDuration(train.duration)}</TableCell>
+                  <TableCell className="text-muted-foreground">{train.health_impact ?? "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -186,13 +226,15 @@ const Travel = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {taxis.map((taxi) => (
-                <TableRow key={`${taxi.cityFrom}-${taxi.cityTo}`}>
-                  <TableCell className="font-medium">{taxi.cityFrom}</TableCell>
-                  <TableCell className="text-muted-foreground">{taxi.cityTo}</TableCell>
-                  <TableCell className="text-right font-medium">{taxi.cost}</TableCell>
-                  <TableCell>{taxi.duration}</TableCell>
-                  <TableCell className="text-muted-foreground">{taxi.healthImpact}</TableCell>
+              {data.taxis.map((taxi) => (
+                <TableRow
+                  key={`${taxi.id}-${taxi.city_from ?? "unknown"}-${taxi.city_to ?? "unknown"}`}
+                >
+                  <TableCell className="font-medium">{taxi.city_from ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{taxi.city_to ?? "—"}</TableCell>
+                  <TableCell className="text-right font-medium">{formatValue(taxi.cost)}</TableCell>
+                  <TableCell>{formatDuration(taxi.duration)}</TableCell>
+                  <TableCell className="text-muted-foreground">{taxi.health_impact ?? "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -217,13 +259,15 @@ const Travel = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {ferries.map((ferry) => (
-                <TableRow key={`${ferry.cityFrom}-${ferry.cityTo}`}>
-                  <TableCell className="font-medium">{ferry.cityFrom}</TableCell>
-                  <TableCell className="text-muted-foreground">{ferry.cityTo}</TableCell>
-                  <TableCell className="text-right font-medium">{ferry.cost}</TableCell>
-                  <TableCell>{ferry.duration}</TableCell>
-                  <TableCell className="text-muted-foreground">{ferry.healthImpact}</TableCell>
+              {data.ferries.map((ferry) => (
+                <TableRow
+                  key={`${ferry.id}-${ferry.city_from ?? "unknown"}-${ferry.city_to ?? "unknown"}`}
+                >
+                  <TableCell className="font-medium">{ferry.city_from ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{ferry.city_to ?? "—"}</TableCell>
+                  <TableCell className="text-right font-medium">{formatValue(ferry.cost)}</TableCell>
+                  <TableCell>{formatDuration(ferry.duration)}</TableCell>
+                  <TableCell className="text-muted-foreground">{ferry.health_impact ?? "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
