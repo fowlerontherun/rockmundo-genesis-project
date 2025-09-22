@@ -1492,6 +1492,10 @@ export type Database = {
           age: number
           bio: string | null
           cash: number | null
+          current_activity: string | null
+          current_city_id: string | null
+          primary_instrument: string | null
+          travel_mode: string | null
           created_at: string | null
           display_name: string | null
           experience: number | null
@@ -1515,6 +1519,8 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           created_at?: string | null
+          current_activity?: string | null
+          current_city_id?: string | null
           display_name?: string | null
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
@@ -1525,7 +1531,9 @@ export type Database = {
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
+          primary_instrument?: string | null
           momentum?: number
+          travel_mode?: string | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -1536,6 +1544,8 @@ export type Database = {
           age?: number
           bio?: string | null
           cash?: number | null
+          current_activity?: string | null
+          current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
           experience?: number | null
@@ -1547,7 +1557,9 @@ export type Database = {
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
+          primary_instrument?: string | null
           momentum?: number
+          travel_mode?: string | null
           updated_at?: string | null
           user_id?: string
           username?: string
