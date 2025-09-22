@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Handshake, Loader2, MessageCircle, RefreshCcw, Sparkles, UserRound, Gift } from "lucide-react";
+import { Check, Gift, Handshake, Loader2, MessageCircle, RefreshCcw, Sparkles, UserRound, X } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { updateFriendshipStatus } from "@/integrations/supabase/friends";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useSupabasePresence } from "@/hooks/useSupabasePresence";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
@@ -20,6 +21,10 @@ interface FriendEntry {
   friendUserId: string;
   friendProfileId: string | null;
   profile: Database["public"]["Tables"]["profiles"]["Row"] | null;
+}
+
+interface PendingFriendEntry extends FriendEntry {
+  direction: "incoming" | "outgoing";
 }
 
 const FRIENDS_PRESENCE_CHANNEL = "friends-hub-presence";
@@ -60,16 +65,21 @@ const FriendsHub = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [friends, setFriends] = useState<FriendEntry[]>([]);
+  const [pendingIncoming, setPendingIncoming] = useState<PendingFriendEntry[]>([]);
+  const [pendingOutgoing, setPendingOutgoing] = useState<PendingFriendEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [profileDialogId, setProfileDialogId] = useState<string | null>(null);
+  const [processingFriendshipIds, setProcessingFriendshipIds] = useState<Set<string>>(() => new Set());
 
   const userId = user?.id;
 
   const fetchFriends = useCallback(async () => {
     if (!userId) {
       setFriends([]);
+      setPendingIncoming([]);
+      setPendingOutgoing([]);
       return;
     }
 
@@ -80,7 +90,7 @@ const FriendsHub = () => {
       const { data: friendshipRows, error: friendshipsError } = await supabase
         .from("friendships")
         .select("id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at")
-        .eq("status", "accepted")
+        .in("status", ["accepted", "pending"])
         .or(`user_id.eq.${userId},friend_user_id.eq.${userId}`);
 
       if (friendshipsError) {
@@ -91,10 +101,15 @@ const FriendsHub = () => {
 
       if (typedFriendships.length === 0) {
         setFriends([]);
+        setPendingIncoming([]);
+        setPendingOutgoing([]);
         return;
       }
 
-      const normalized = typedFriendships.map((friendship) => {
+      const acceptedFriendships = typedFriendships.filter((friendship) => friendship.status === "accepted");
+      const pendingFriendships = typedFriendships.filter((friendship) => friendship.status === "pending");
+
+      const normalizedAccepted = acceptedFriendships.map((friendship) => {
         const isRequester = friendship.user_id === userId;
         const friendUserId = isRequester ? friendship.friend_user_id : friendship.user_id;
         const friendProfileId = isRequester ? friendship.friend_profile_id : friendship.user_profile_id;
@@ -107,7 +122,23 @@ const FriendsHub = () => {
         } satisfies FriendEntry;
       });
 
-      const friendUserIds = Array.from(new Set(normalized.map((item) => item.friendUserId)));
+      const normalizedPending = pendingFriendships.map((friendship) => {
+        const isRequester = friendship.user_id === userId;
+        const friendUserId = isRequester ? friendship.friend_user_id : friendship.user_id;
+        const friendProfileId = isRequester ? friendship.friend_profile_id : friendship.user_profile_id;
+
+        return {
+          friendship,
+          friendUserId,
+          friendProfileId,
+          profile: null,
+          direction: isRequester ? "outgoing" : "incoming",
+        } satisfies PendingFriendEntry;
+      });
+
+      const friendUserIds = Array.from(
+        new Set([...normalizedAccepted, ...normalizedPending].map((item) => item.friendUserId))
+      );
 
       let profilesMap = new Map<string, Database["public"]["Tables"]["profiles"]["Row"]>();
 
@@ -125,14 +156,24 @@ const FriendsHub = () => {
         profilesMap = new Map(typedProfiles.map((profile) => [profile.user_id, profile]));
       }
 
-      const withProfiles = normalized.map((entry) => ({
+      const withProfilesAccepted = normalizedAccepted.map((entry) => ({
         ...entry,
         profile: profilesMap.get(entry.friendUserId) ?? null,
       }));
 
-      setFriends(withProfiles);
+      const withProfilesPending = normalizedPending.map((entry) => ({
+        ...entry,
+        profile: profilesMap.get(entry.friendUserId) ?? null,
+      }));
+
+      setFriends(withProfilesAccepted);
+      setPendingIncoming(withProfilesPending.filter((entry) => entry.direction === "incoming"));
+      setPendingOutgoing(withProfilesPending.filter((entry) => entry.direction === "outgoing"));
     } catch (fetchError) {
       console.error("Failed to load friends", fetchError);
+      setFriends([]);
+      setPendingIncoming([]);
+      setPendingOutgoing([]);
       setError(fetchError instanceof Error ? fetchError.message : "Unable to load friends right now.");
     } finally {
       setLoading(false);
@@ -250,6 +291,152 @@ const FriendsHub = () => {
 
   const handleRefresh = () => {
     void fetchFriends();
+  };
+
+  const handleRespondToRequest = async (entry: PendingFriendEntry, status: "accepted" | "declined") => {
+    const friendshipId = entry.friendship.id;
+
+    if (processingFriendshipIds.has(friendshipId)) {
+      return;
+    }
+
+    setProcessingFriendshipIds((previous) => {
+      const next = new Set(previous);
+      next.add(friendshipId);
+      return next;
+    });
+
+    const previousFriends = friends;
+    const previousPendingIncoming = pendingIncoming;
+
+    if (status === "accepted") {
+      const optimisticFriend: FriendEntry = {
+        friendship: {
+          ...entry.friendship,
+          status: "accepted",
+          updated_at: new Date().toISOString(),
+        },
+        friendUserId: entry.friendUserId,
+        friendProfileId: entry.friendProfileId,
+        profile: entry.profile,
+      };
+
+      setFriends((current) => {
+        const filtered = current.filter((item) => item.friendship.id !== friendshipId);
+        return [optimisticFriend, ...filtered];
+      });
+    }
+
+    setPendingIncoming((current) => current.filter((item) => item.friendship.id !== friendshipId));
+
+    try {
+      const updatedFriendship = await updateFriendshipStatus(friendshipId, status);
+
+      if (status === "accepted") {
+        const normalizedFriend: FriendEntry = {
+          friendship: updatedFriendship,
+          friendUserId: entry.friendUserId,
+          friendProfileId: entry.friendProfileId,
+          profile: entry.profile,
+        };
+
+        setFriends((current) => {
+          const filtered = current.filter((item) => item.friendship.id !== friendshipId);
+          return [normalizedFriend, ...filtered];
+        });
+
+        toast({
+          title: "Friendship accepted",
+          description: `You're now connected with ${getDisplayName(entry)}.`,
+        });
+      } else {
+        setFriends((current) => current.filter((item) => item.friendship.id !== friendshipId));
+        toast({
+          title: "Friend request declined",
+          description: `You declined ${getDisplayName(entry)}'s request.`,
+        });
+      }
+    } catch (updateError) {
+      console.error("Failed to update friendship status", updateError);
+      setFriends(previousFriends);
+      setPendingIncoming(previousPendingIncoming);
+      toast({
+        title: "Unable to update request",
+        description:
+          updateError instanceof Error ? updateError.message : "Something went wrong while updating this request.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingFriendshipIds((previous) => {
+        const next = new Set(previous);
+        next.delete(friendshipId);
+        return next;
+      });
+    }
+  };
+
+  const renderPendingRequestCard = (entry: PendingFriendEntry) => {
+    const displayName = getDisplayName(entry);
+    const createdAt = entry.friendship.created_at;
+    const isProcessing = processingFriendshipIds.has(entry.friendship.id);
+
+    return (
+      <div
+        key={entry.friendship.id}
+        className="flex flex-col gap-4 rounded-lg border border-border/60 bg-background/60 p-4"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+              {getInitials(displayName)}
+            </div>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-base font-semibold text-foreground">{displayName}</span>
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-600">
+                  Incoming request
+                </Badge>
+                {createdAt && (
+                  <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                    Sent {new Date(createdAt).toLocaleString()}
+                  </Badge>
+                )}
+              </div>
+              {entry.profile?.bio && (
+                <p className="max-w-xl text-sm text-muted-foreground line-clamp-2">{entry.profile.bio}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => void handleRespondToRequest(entry, "accepted")}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              Accept
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void handleRespondToRequest(entry, "declined")}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <X className="mr-2 h-4 w-4" />
+              )}
+              Decline
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderFriendCard = (entry: FriendEntry) => {
@@ -379,34 +566,78 @@ const FriendsHub = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
-        <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Accepted Friends</CardTitle>
-            <CardDescription>All of your confirmed friendships in one place.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertTitle>Failed to load friends</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Requests</CardTitle>
+              <CardDescription>
+                Review incoming invites and keep your circle tidy.
+                {pendingOutgoing.length > 0 && !loading && (
+                  <span className="ml-1 text-muted-foreground">
+                    You have {pendingOutgoing.length} request{pendingOutgoing.length === 1 ? "" : "s"} awaiting a response.
+                  </span>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading ? (
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Checking for new requests...
+                </div>
+              ) : pendingIncoming.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  You're all caught up! New friend requests will appear here when other players reach out.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingIncoming.map((entry) => renderPendingRequestCard(entry))}
+                </div>
+              )}
 
-            {loading ? (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading your friends list...
-              </div>
-            ) : friends.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                You haven't accepted any friendships yet. Send some requests from the community to get started!
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {friends.map((entry) => renderFriendCard(entry))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {!loading && pendingOutgoing.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-dashed border-border/60 bg-muted/30 p-4">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Requests you've sent</p>
+                  <div className="flex flex-wrap gap-2">
+                    {pendingOutgoing.map((entry) => (
+                      <Badge key={entry.friendship.id} variant="outline" className="text-xs">
+                        {getDisplayName(entry)}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Accepted Friends</CardTitle>
+              <CardDescription>All of your confirmed friendships in one place.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTitle>Failed to load friends</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {loading ? (
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading your friends list...
+                </div>
+              ) : friends.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  You haven't accepted any friendships yet. Send some requests from the community to get started!
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {friends.map((entry) => renderFriendCard(entry))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {activeChannelKey && selectedFriend ? (
           <RealtimeChatPanel
