@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -100,6 +101,9 @@ const HealthPage = () => {
   const fitnessLabel = getFitnessLabel(fitnessLevel);
   const bodyShape = getBodyShape(fitnessLevel);
   const healthStatus = getHealthStatus(healthValue);
+  const healthBadgeVariant: BadgeProps["variant"] =
+    healthValue >= 85 ? "default" : healthValue >= 70 ? "secondary" : healthValue >= 50 ? "outline" : "destructive";
+  const healthBadgeLabel = `${healthValue}% • ${healthStatus}`;
 
   const fallbackIllnesses = (healthValue < 55 || stressLevel > 75)
     ? [
@@ -234,8 +238,8 @@ const HealthPage = () => {
                 <p className="text-sm text-muted-foreground">{healthStatus}</p>
               </div>
             </div>
-            <Badge variant="outline" className="px-3 py-1 text-sm">
-              {healthValue}% stable
+            <Badge variant={healthBadgeVariant} className="px-3 py-1 text-sm">
+              {healthBadgeLabel}
             </Badge>
           </CardHeader>
           <CardContent className="space-y-6">
