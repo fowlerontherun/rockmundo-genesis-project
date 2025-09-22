@@ -652,6 +652,65 @@ export interface Database {
           created_at?: string | null;
         };
       };
+      schedule_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          type: string;
+          date: string;
+          time: string;
+          location: string;
+          status: string;
+          description: string | null;
+          reminder_minutes: number | null;
+          last_notified: string | null;
+          recurrence_rule: string | null;
+          duration_minutes: number;
+          energy_cost: number | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          type: string;
+          date: string;
+          time: string;
+          location: string;
+          status?: string;
+          description?: string | null;
+          reminder_minutes?: number | null;
+          last_notified?: string | null;
+          recurrence_rule?: string | null;
+          duration_minutes?: number;
+          energy_cost?: number | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          type?: string;
+          date?: string;
+          time?: string;
+          location?: string;
+          status?: string;
+          description?: string | null;
+          reminder_minutes?: number | null;
+          last_notified?: string | null;
+          recurrence_rule?: string | null;
+          duration_minutes?: number;
+          energy_cost?: number | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       gigs: {
         Row: {
           id: string;
