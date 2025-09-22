@@ -37,6 +37,10 @@ export type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["R
 export type ExperienceLedgerRow = any; // Will be updated when types regenerate
 export type UnlockedSkillsMap = Record<string, boolean>;
 export type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
+type PlayerHealthMetrics = Database["public"]["Tables"]["player_health_metrics"]["Row"] | null;
+type PlayerHealthCondition = Database["public"]["Tables"]["player_health_conditions"]["Row"];
+type PlayerHealthHabit = Database["public"]["Tables"]["player_health_habits"]["Row"];
+type PlayerWellnessRecommendation = Database["public"]["Tables"]["player_wellness_recommendations"]["Row"];
 
 export interface ProfileUpsertInput {
   name: string;
@@ -212,6 +216,10 @@ type UseGameDataReturn = {
   profile: PlayerProfile | null;
   skills: PlayerSkills;
   attributes: PlayerAttributes | null;
+  healthMetrics: PlayerHealthMetrics;
+  healthConditions: PlayerHealthCondition[];
+  healthHabits: PlayerHealthHabit[];
+  wellnessRecommendations: PlayerWellnessRecommendation[];
   xpWallet: PlayerXpWallet;
   xpLedger: ExperienceLedgerRow[];
   skillProgress: SkillProgressRow[];
@@ -272,6 +280,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [skills, setSkills] = useState<PlayerSkills>(null);
   const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
+  const [healthMetrics, setHealthMetrics] = useState<PlayerHealthMetrics>(null);
+  const [healthConditions, setHealthConditions] = useState<PlayerHealthCondition[]>([]);
+  const [healthHabits, setHealthHabits] = useState<PlayerHealthHabit[]>([]);
+  const [wellnessRecommendations, setWellnessRecommendations] = useState<PlayerWellnessRecommendation[]>([]);
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet>(null);
   const [xpLedger, setXpLedger] = useState<ExperienceLedgerRow[]>([]);
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
@@ -303,6 +315,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (!user || !activeProfile) {
         setSkills(null);
         setAttributes(null);
+        setHealthMetrics(null);
+        setHealthConditions([]);
+        setHealthHabits([]);
+        setWellnessRecommendations([]);
         setXpWallet(null);
         setXpLedger([]);
         setSkillProgress([]);
@@ -399,6 +415,37 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
             .maybeSingle();
 
+      const healthMetricsPromise = supabase
+        .from("player_health_metrics")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const healthConditionsPromise = supabase
+        .from("player_health_conditions")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("detected_at", { ascending: false });
+
+      const healthHabitsPromise = supabase
+        .from("player_health_habits")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      const wellnessRecommendationsPromise = supabase
+        .from("player_wellness_recommendations")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .eq("user_id", user.id)
+        .eq("is_completed", false)
+        .order("created_at", { ascending: true });
+
       const buildActivityFeedQuery = (includeProfileFilter: boolean) => {
         let query = supabase
           .from("activity_feed")
@@ -441,6 +488,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
         activitiesResult,
         skillProgressResult,
         dailyGrantResult,
+        healthMetricsResult,
+        healthConditionsResult,
+        healthHabitsResult,
+        wellnessRecommendationsResult,
       ] = await Promise.all([
         skillsPromise,
         supabase
@@ -470,6 +521,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
           .order("current_level", { ascending: false, nullsFirst: false })
           .order("current_xp", { ascending: false, nullsFirst: false }),
         dailyGrantPromise,
+        healthMetricsPromise,
+        healthConditionsPromise,
+        healthHabitsPromise,
+        wellnessRecommendationsPromise,
       ]);
 
       if (skillsResult.error) {
@@ -503,6 +558,18 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (skillProgressResult.error) {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
+      if (healthMetricsResult.error && healthMetricsResult.error.code !== "PGRST116") {
+        console.error("Failed to load health metrics", healthMetricsResult.error);
+      }
+      if (healthConditionsResult.error) {
+        console.error("Failed to load health conditions", healthConditionsResult.error);
+      }
+      if (healthHabitsResult.error) {
+        console.error("Failed to load health habits", healthHabitsResult.error);
+      }
+      if (wellnessRecommendationsResult.error) {
+        console.error("Failed to load wellness recommendations", wellnessRecommendationsResult.error);
+      }
       let shouldIgnoreDailyGrantError = false;
 
       if (dailyGrantResult.error) {
@@ -532,6 +599,22 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
+      const metricsRow =
+        healthMetricsResult.error && healthMetricsResult.error.code === "PGRST116"
+          ? null
+          : ((healthMetricsResult.data ?? null) as PlayerHealthMetrics);
+      setHealthMetrics(metricsRow);
+      setHealthConditions(
+        (healthConditionsResult.error ? [] : (healthConditionsResult.data ?? [])) as PlayerHealthCondition[],
+      );
+      setHealthHabits(
+        (healthHabitsResult.error ? [] : (healthHabitsResult.data ?? [])) as PlayerHealthHabit[],
+      );
+      setWellnessRecommendations(
+        (wellnessRecommendationsResult.error
+          ? []
+          : (wellnessRecommendationsResult.data ?? [])) as PlayerWellnessRecommendation[],
+      );
       const grantRow =
         dailyGrantResult.error || !dailyGrantResult.data
           ? null
@@ -644,6 +727,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setProfile(null);
       setSkills(null);
       setAttributes(null);
+      setHealthMetrics(null);
+      setHealthConditions([]);
+      setHealthHabits([]);
+      setWellnessRecommendations([]);
       setXpWallet(null);
       setXpLedger([]);
       setSkillProgress([]);
@@ -1294,6 +1381,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
       profile,
       skills,
       attributes,
+      healthMetrics,
+      healthConditions,
+      healthHabits,
+      wellnessRecommendations,
       xpWallet,
       xpLedger,
       skillProgress,
@@ -1321,6 +1412,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
       profile,
       skills,
       attributes,
+      healthMetrics,
+      healthConditions,
+      healthHabits,
+      wellnessRecommendations,
       xpWallet,
       xpLedger,
       skillProgress,
