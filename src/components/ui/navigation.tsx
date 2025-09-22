@@ -36,6 +36,7 @@ import {
   Store,
   Guitar,
   Handshake,
+  PenSquare,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -67,6 +68,7 @@ const Navigation = () => {
         { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
         { icon: ListMusic, label: "Song Manager", path: "/songs" },
         { icon: GraduationCap, label: "Education", path: "/education" },
+        { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
       ],
     },
     {
@@ -128,6 +130,7 @@ const Navigation = () => {
     { icon: Megaphone, label: "PR", path: "/pr" },
     { icon: User, label: "My Character", path: "/my-character" },
     { icon: DollarSign, label: "Underworld", path: "/underworld" },
+    { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
   ];
 
   const handleLogout = async () => {

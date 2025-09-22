@@ -183,6 +183,7 @@ const Songwriting = () => {
 
         <Card>
           <CardHeader>
+
             <CardTitle>Creative snapshot</CardTitle>
             <CardDescription>Preview of the current direction for this song idea.</CardDescription>
           </CardHeader>

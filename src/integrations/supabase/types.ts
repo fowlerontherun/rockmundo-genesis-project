@@ -2403,7 +2403,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      experience_ledger: {
+        Row: {
+          id: string
+          profile_id: string
+          user_id: string
+          amount: number
+          reason: string
+          metadata: Json
+          recorded_at: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
       acknowledge_inventory_transfer: {
