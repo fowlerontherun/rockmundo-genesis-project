@@ -1189,7 +1189,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Skill Progress */}
           <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
             <CardHeader className="space-y-2">
@@ -1267,7 +1267,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+          <Card className="bg-card/80 backdrop-blur-sm border-primary/20 lg:col-span-2 xl:col-span-1">
             <CardHeader className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-2">
@@ -1414,9 +1414,9 @@ const Dashboard = () => {
           </Card>
 
           {/* Band Info & Activity */}
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 lg:col-span-2 xl:col-span-3 xl:grid-cols-2">
             {/* Band Info */}
-            <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
+            <Card className="bg-card/80 backdrop-blur-sm border-primary/20 xl:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Headphones className="h-5 w-5 text-accent" />
