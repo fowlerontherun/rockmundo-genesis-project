@@ -299,6 +299,13 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const dailyXpGrantUnavailableRef = useRef(false);
   const playerSkillsTableMissingRef = useRef(false);
   const activityFeedSupportsProfileIdRef = useRef(true);
+  type HealthTableKey = "metrics" | "conditions" | "habits" | "wellness";
+  const healthTablesUnavailableRef = useRef<Record<HealthTableKey, boolean>>({
+    metrics: false,
+    conditions: false,
+    habits: false,
+    wellness: false,
+  });
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&
@@ -309,6 +316,39 @@ const useGameDataInternal = (): UseGameDataReturn => {
     error !== null &&
     "code" in error &&
     (error as { code?: string }).code === "PGRST205";
+  const isRelationMissingError = (error: unknown): error is { code?: string } =>
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    ["PGRST116", "PGRST205"].includes((error as { code?: string }).code ?? "");
+
+  const resetHealthTableAvailability = () => {
+    healthTablesUnavailableRef.current = {
+      metrics: false,
+      conditions: false,
+      habits: false,
+      wellness: false,
+    };
+  };
+
+  const markHealthTableUnavailable = (
+    table: HealthTableKey,
+    error: { code?: string } | null,
+    tableName: string,
+  ) => {
+    if (error && isRelationMissingError(error)) {
+      if (!healthTablesUnavailableRef.current[table]) {
+        healthTablesUnavailableRef.current[table] = true;
+        console.warn(
+          `Skipping ${tableName} load - table missing from schema cache; ensure migrations have run.`,
+          error,
+        );
+      }
+      return true;
+    }
+
+    return false;
+  };
 
   const loadProfileDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
@@ -327,6 +367,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
         setCurrentCity(null);
         setDailyXpGrant(null);
         playerSkillsTableMissingRef.current = false;
+        resetHealthTableAvailability();
         return;
       }
 
@@ -415,36 +456,44 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
             .maybeSingle();
 
-      const healthMetricsPromise = supabase
-        .from("player_health_metrics")
-        .select("*")
-        .eq("profile_id", effectiveProfile.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const healthMetricsPromise = healthTablesUnavailableRef.current.metrics
+        ? Promise.resolve({ data: null, error: null })
+        : supabase
+            .from("player_health_metrics")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .eq("user_id", user.id)
+            .maybeSingle();
 
-      const healthConditionsPromise = supabase
-        .from("player_health_conditions")
-        .select("*")
-        .eq("profile_id", effectiveProfile.id)
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .order("detected_at", { ascending: false });
+      const healthConditionsPromise = healthTablesUnavailableRef.current.conditions
+        ? Promise.resolve({ data: [], error: null })
+        : supabase
+            .from("player_health_conditions")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .order("detected_at", { ascending: false });
 
-      const healthHabitsPromise = supabase
-        .from("player_health_habits")
-        .select("*")
-        .eq("profile_id", effectiveProfile.id)
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      const healthHabitsPromise = healthTablesUnavailableRef.current.habits
+        ? Promise.resolve({ data: [], error: null })
+        : supabase
+            .from("player_health_habits")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .order("created_at", { ascending: false });
 
-      const wellnessRecommendationsPromise = supabase
-        .from("player_wellness_recommendations")
-        .select("*")
-        .eq("profile_id", effectiveProfile.id)
-        .eq("user_id", user.id)
-        .eq("is_completed", false)
-        .order("created_at", { ascending: true });
+      const wellnessRecommendationsPromise = healthTablesUnavailableRef.current.wellness
+        ? Promise.resolve({ data: [], error: null })
+        : supabase
+            .from("player_wellness_recommendations")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .eq("user_id", user.id)
+            .eq("is_completed", false)
+            .order("created_at", { ascending: true });
 
       const buildActivityFeedQuery = (includeProfileFilter: boolean) => {
         let query = supabase
@@ -527,6 +576,27 @@ const useGameDataInternal = (): UseGameDataReturn => {
         wellnessRecommendationsPromise,
       ]);
 
+      const metricsUnavailable = markHealthTableUnavailable(
+        "metrics",
+        healthMetricsResult?.error ?? null,
+        "player_health_metrics",
+      );
+      const conditionsUnavailable = markHealthTableUnavailable(
+        "conditions",
+        healthConditionsResult?.error ?? null,
+        "player_health_conditions",
+      );
+      const habitsUnavailable = markHealthTableUnavailable(
+        "habits",
+        healthHabitsResult?.error ?? null,
+        "player_health_habits",
+      );
+      const wellnessUnavailable = markHealthTableUnavailable(
+        "wellness",
+        wellnessRecommendationsResult?.error ?? null,
+        "player_wellness_recommendations",
+      );
+
       if (skillsResult.error) {
         if (isSchemaCacheMissingTableError(skillsResult.error, "player_skills")) {
           if (!playerSkillsTableMissingRef.current) {
@@ -558,16 +628,16 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (skillProgressResult.error) {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
-      if (healthMetricsResult.error && healthMetricsResult.error.code !== "PGRST116") {
+      if (!metricsUnavailable && healthMetricsResult.error) {
         console.error("Failed to load health metrics", healthMetricsResult.error);
       }
-      if (healthConditionsResult.error) {
+      if (!conditionsUnavailable && healthConditionsResult.error) {
         console.error("Failed to load health conditions", healthConditionsResult.error);
       }
-      if (healthHabitsResult.error) {
+      if (!habitsUnavailable && healthHabitsResult.error) {
         console.error("Failed to load health habits", healthHabitsResult.error);
       }
-      if (wellnessRecommendationsResult.error) {
+      if (!wellnessUnavailable && wellnessRecommendationsResult.error) {
         console.error("Failed to load wellness recommendations", wellnessRecommendationsResult.error);
       }
       let shouldIgnoreDailyGrantError = false;
@@ -599,21 +669,22 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
-      const metricsRow =
-        healthMetricsResult.error && healthMetricsResult.error.code === "PGRST116"
-          ? null
-          : ((healthMetricsResult.data ?? null) as PlayerHealthMetrics);
+      const metricsRow = metricsUnavailable
+        ? null
+        : ((healthMetricsResult?.data ?? null) as PlayerHealthMetrics);
       setHealthMetrics(metricsRow);
       setHealthConditions(
-        (healthConditionsResult.error ? [] : (healthConditionsResult.data ?? [])) as PlayerHealthCondition[],
+        (conditionsUnavailable || healthConditionsResult?.error
+          ? []
+          : (healthConditionsResult?.data ?? [])) as PlayerHealthCondition[],
       );
       setHealthHabits(
-        (healthHabitsResult.error ? [] : (healthHabitsResult.data ?? [])) as PlayerHealthHabit[],
+        (habitsUnavailable || healthHabitsResult?.error ? [] : (healthHabitsResult?.data ?? [])) as PlayerHealthHabit[],
       );
       setWellnessRecommendations(
-        (wellnessRecommendationsResult.error
+        (wellnessUnavailable || wellnessRecommendationsResult?.error
           ? []
-          : (wellnessRecommendationsResult.data ?? [])) as PlayerWellnessRecommendation[],
+          : (wellnessRecommendationsResult?.data ?? [])) as PlayerWellnessRecommendation[],
       );
       const grantRow =
         dailyGrantResult.error || !dailyGrantResult.data
@@ -739,6 +810,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setCurrentCity(null);
       setDailyXpGrant(null);
       setDailyXpStipend(null);
+      resetHealthTableAvailability();
       return;
     }
 
