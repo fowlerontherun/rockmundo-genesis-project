@@ -2,14 +2,14 @@ import React from "react";
 import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import SetlistDesigner, { initialSetlists } from "../SetlistDesigner";
+import SetlistDesigner, { SONG_LIMITS, initialSetlists } from "../SetlistDesigner";
 
 describe("SetlistDesigner", () => {
   it("renders the headliner tab with running order guidance", () => {
     const html = renderToStaticMarkup(<SetlistDesigner />);
 
     expect(html).toContain("Setlist Designer");
-    expect(html).toContain("Twilight Spark Warmup");
+    expect(html).toContain("Signal Flare");
     expect(html).toContain("Running order");
   });
 
@@ -47,6 +47,9 @@ describe("SetlistDesigner", () => {
     );
 
     expect(html).toContain("Song limit reached");
-    expect(html).toContain("5/5");
+
+    const updatedSongCount = cappedSetlists.act.items.filter((item) => item.type === "song").length;
+    const songLimit = SONG_LIMITS.act;
+    expect(html).toContain(`${updatedSongCount}/${songLimit}`);
   });
 });

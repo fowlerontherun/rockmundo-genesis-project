@@ -63,9 +63,9 @@ const showTabs = [
   },
 ] satisfies ReadonlyArray<{ key: ShowType; label: string; tagline: string }>;
 
-const SONG_LIMITS: Record<ShowType, number> = {
-  act: 5,
-  headliner: 16,
+export const SONG_LIMITS: Record<ShowType, number> = {
+  act: 16,
+  headliner: 5,
   festivalHeadliner: 22,
   acoustic: 8,
 };

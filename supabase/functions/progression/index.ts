@@ -508,7 +508,7 @@ const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: 
 
     const awardedTargets: TargetProfileSummary[] = [];
 
-    for (const target of targets) {
+    await runWithConcurrency(targets, 8, async (target) => {
       const metadata = {
         ...metadataBase,
         target_profile_id: target.profile_id,
@@ -523,7 +523,7 @@ const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: 
       });
 
       awardedTargets.push(target);
-    }
+    });
 
     if (awardedTargets.length === 0) {
       throw new HttpError(500, "Failed to apply XP grant to the selected players");
@@ -1259,6 +1259,48 @@ async function enforceLedgerRules(
         max_entries: options.maxEntries,
       });
     }
+  }
+}
+
+async function runWithConcurrency<T>(
+  items: readonly T[],
+  concurrencyLimit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  if (items.length === 0) {
+    return;
+  }
+
+  const limit = Math.max(1, Math.min(concurrencyLimit, items.length));
+  let index = 0;
+  let firstError: unknown = null;
+
+  const runner = async () => {
+    while (true) {
+      if (firstError) {
+        return;
+      }
+
+      const current = index++;
+      if (current >= items.length) {
+        return;
+      }
+
+      try {
+        await worker(items[current]!);
+      } catch (error) {
+        if (!firstError) {
+          firstError = error;
+        }
+        return;
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: limit }, runner));
+
+  if (firstError) {
+    throw firstError instanceof Error ? firstError : new Error(String(firstError));
   }
 }
 
