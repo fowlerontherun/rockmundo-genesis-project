@@ -1,6 +1,87 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PlayerXpWallet } from "@/hooks/useGameData";
 
+const extractMessageFromJson = (payload: unknown): string | null => {
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (Array.isArray(payload)) {
+    for (const entry of payload) {
+      const nestedMessage = extractMessageFromJson(entry);
+      if (nestedMessage) {
+        return nestedMessage;
+      }
+    }
+    return null;
+  }
+
+  if (payload && typeof payload === "object") {
+    const candidates: unknown[] = [];
+
+    const record = payload as Record<string, unknown>;
+    const knownKeys = ["message", "error", "detail", "hint", "description", "errors"] as const;
+
+    for (const key of knownKeys) {
+      const value = record[key];
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+          return trimmed;
+        }
+      } else if (value) {
+        candidates.push(value);
+      }
+    }
+
+    for (const candidate of candidates) {
+      const nestedMessage = extractMessageFromJson(candidate);
+      if (nestedMessage) {
+        return nestedMessage;
+      }
+    }
+  }
+
+  return null;
+};
+
+const extractFunctionsErrorMessage = async (
+  error: unknown,
+  fallbackMessage: string,
+): Promise<string> => {
+  if (error && typeof error === "object") {
+    const context = (error as { context?: unknown }).context;
+    if (typeof Response !== "undefined" && context instanceof Response) {
+      try {
+        const contentType = context.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const jsonPayload = await context.clone().json().catch(() => null);
+          const parsedJsonMessage = extractMessageFromJson(jsonPayload);
+          if (parsedJsonMessage) {
+            return parsedJsonMessage;
+          }
+        }
+
+        const rawText = await context.clone().text();
+        const parsedTextMessage = extractMessageFromJson(rawText);
+        if (parsedTextMessage) {
+          return parsedTextMessage;
+        }
+      } catch (parseError) {
+        console.warn("Unable to read Supabase function error response", parseError);
+      }
+    }
+
+    const defaultMessage = (error as { message?: unknown }).message;
+    if (typeof defaultMessage === "string" && defaultMessage.trim().length > 0) {
+      return defaultMessage.trim();
+    }
+  }
+
+  return fallbackMessage;
+};
+
 export type ProgressionAction =
   | "award_action_xp"
   | "award_special_xp"
@@ -64,7 +145,9 @@ export const awardActionXp = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to award experience points"),
+    );
   }
 
   if (!data?.success) {
@@ -100,7 +183,9 @@ export const awardSpecialXp = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to award experience points"),
+    );
   }
 
   if (!data?.success) {
@@ -125,7 +210,9 @@ export const claimDailyXp = async ({ metadata = {} }: ClaimDailyXpInput = {}): P
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to claim daily experience points"),
+    );
   }
 
   if (!data?.success) {
@@ -161,7 +248,9 @@ export const spendAttributeXp = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to spend XP on attribute"),
+    );
   }
 
   if (!data?.success) {
@@ -197,7 +286,9 @@ export const spendSkillXp = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to invest XP into skill"),
+    );
   }
 
   if (!data?.success) {
@@ -262,7 +353,9 @@ export const adminAdjustMomentum = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to adjust player momentum"),
+    );
   }
 
   if (!data?.success) {
@@ -327,7 +420,9 @@ export const adminSetDailyXpAmount = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to update the daily XP stipend"),
+    );
   }
 
   if (!data?.success) {
@@ -384,7 +479,9 @@ export const adminAwardSpecialXp = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      await extractFunctionsErrorMessage(error, "Failed to award experience points"),
+    );
   }
 
   if (!data?.success) {
