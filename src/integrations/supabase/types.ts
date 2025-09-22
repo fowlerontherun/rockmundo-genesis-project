@@ -254,6 +254,59 @@ export type Database = {
         }
         Relationships: []
       }
+      city_metadata: {
+        Row: {
+          aliases: string[]
+          city_id: string
+          created_at: string
+          famous_resident: string | null
+          id: string
+          intra_locations: Json
+          metro_area: string | null
+          signature_sound: string | null
+          summary: string | null
+          timezone: string | null
+          travel_modes: Json
+          updated_at: string
+        }
+        Insert: {
+          aliases?: string[]
+          city_id: string
+          created_at?: string
+          famous_resident?: string | null
+          id?: string
+          intra_locations?: Json
+          metro_area?: string | null
+          signature_sound?: string | null
+          summary?: string | null
+          timezone?: string | null
+          travel_modes?: Json
+          updated_at?: string
+        }
+        Update: {
+          aliases?: string[]
+          city_id?: string
+          created_at?: string
+          famous_resident?: string | null
+          id?: string
+          intra_locations?: Json
+          metro_area?: string | null
+          signature_sound?: string | null
+          summary?: string | null
+          timezone?: string | null
+          travel_modes?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_metadata_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: true
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cities: {
         Row: {
           bonuses: string | null
