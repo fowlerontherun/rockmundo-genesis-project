@@ -6,6 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 interface UseSupabasePresenceOptions {
   channelName: string;
   userId?: string;
+  /**
+   * When false, the hook subscribes to presence updates without tracking the
+   * current client. Useful for observers that should not be counted as live
+   * participants.
+   */
+  trackSelf?: boolean;
+  /**
+   * Explicit presence key. Falls back to the user id (when tracking) or a
+   * generated anonymous key when omitted.
+   */
+  presenceKey?: string;
   onConnectionStatusChange?: (connected: boolean) => void;
   onParticipantCountChange?: (count: number) => void;
   onChannelReady?: (channel: RealtimeChannel) => void;
@@ -21,6 +32,8 @@ interface UseSupabasePresenceResult {
 export const useSupabasePresence = ({
   channelName,
   userId,
+  trackSelf = true,
+  presenceKey,
   onConnectionStatusChange,
   onParticipantCountChange,
   onChannelReady,
@@ -29,6 +42,7 @@ export const useSupabasePresence = ({
   const [participantCount, setParticipantCount] = useState(0);
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const fallbackPresenceKeyRef = useRef<string>();
 
   const connectionStatusChangeRef = useRef(onConnectionStatusChange);
   const participantCountChangeRef = useRef(onParticipantCountChange);
@@ -47,7 +61,11 @@ export const useSupabasePresence = ({
   }, [onChannelReady]);
 
   useEffect(() => {
-    if (!userId) {
+    if (!fallbackPresenceKeyRef.current) {
+      fallbackPresenceKeyRef.current = `observer-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    if (trackSelf && !userId) {
       setIsConnected(false);
       setParticipantCount(0);
       setOnlineUserIds([]);
@@ -57,9 +75,13 @@ export const useSupabasePresence = ({
     }
 
     let isMounted = true;
+    const resolvedPresenceKey = trackSelf && userId
+      ? userId
+      : presenceKey ?? fallbackPresenceKeyRef.current ?? `observer-${Math.random().toString(36).slice(2, 10)}`;
+
     const channel = supabase.channel(channelName, {
       config: {
-        presence: { key: userId },
+        presence: { key: resolvedPresenceKey },
       },
     });
 
@@ -96,16 +118,21 @@ export const useSupabasePresence = ({
         if (status === "SUBSCRIBED") {
           setIsConnected(true);
           connectionStatusChangeRef.current?.(true);
-          void channel
-            .track({ user_id: userId })
-            .then(() => {
-              if (isMounted) {
-                updatePresence();
-              }
-            })
-            .catch((presenceError) => {
-              console.error("Error updating presence:", presenceError);
-            });
+
+          if (trackSelf && userId) {
+            void channel
+              .track({ user_id: userId })
+              .then(() => {
+                if (isMounted) {
+                  updatePresence();
+                }
+              })
+              .catch((presenceError) => {
+                console.error("Error updating presence:", presenceError);
+              });
+          } else {
+            updatePresence();
+          }
         } else if (
           status === "TIMED_OUT" ||
           status === "CHANNEL_ERROR" ||
@@ -128,7 +155,7 @@ export const useSupabasePresence = ({
         channelRef.current = null;
       }
     };
-  }, [channelName, userId]);
+  }, [channelName, presenceKey, trackSelf, userId]);
 
   return {
     channel: channelRef.current,
