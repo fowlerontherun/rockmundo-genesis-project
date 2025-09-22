@@ -492,7 +492,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
       const grantRow =
-yeah         dailyGrantResult.error || !dailyGrantResult.data
+        dailyGrantResult.error || !dailyGrantResult.data
           ? null
           : ((dailyGrantResult.data ?? null) as DailyXpGrantRow | null);
       setDailyXpGrant(grantRow);
