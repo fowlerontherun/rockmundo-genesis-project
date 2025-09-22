@@ -13,6 +13,7 @@ import logo from "@/assets/rockmundo-new-logo.png";
 import { cn } from "@/lib/utils";
 import PlayerCommunityStats from "@/components/PlayerCommunityStats";
 import { useCommunityStats } from "@/hooks/useCommunityStats";
+import { handleInvalidRefreshTokenError } from "@/lib/auth-error-handlers";
 
 type AuthTab = "login" | "signup" | "forgot";
 
@@ -149,6 +150,7 @@ const Auth = () => {
         }
 
         if (sessionError) {
+          await handleInvalidRefreshTokenError(sessionError);
           console.error("Failed to fetch auth session:", sessionError);
           setError("We couldn't verify your session. Please sign in again.");
           return;
@@ -158,6 +160,7 @@ const Auth = () => {
           navigate("/");
         }
       } catch (sessionError) {
+        await handleInvalidRefreshTokenError(sessionError);
         console.error("Unexpected error fetching auth session:", sessionError);
         if (!isMounted) {
           return;
