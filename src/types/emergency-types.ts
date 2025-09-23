@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Minimal emergency types to bypass corrupted Supabase types
 export type Json = any;
 
