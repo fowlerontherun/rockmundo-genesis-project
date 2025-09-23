@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { afterEach, describe, expect, it } from "bun:test";
 
 import { fetchProfileState, loadActiveProfile, __TESTING__ } from "./index.ts";
