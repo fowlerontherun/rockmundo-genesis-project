@@ -213,8 +213,17 @@ const WorldPulse = () => {
 
           const streams = Number(row.total_streams ?? 0);
           const streamScore = maxStreams > 0 ? Math.round((streams / maxStreams) * 100) : 0;
-          const qualityScore = song?.quality_score ?? 50;
-          const popularity = clamp(Math.round(0.6 * streamScore + 0.4 * qualityScore), 0, 100);
+          const rawQualityScore = song?.quality_score ?? 500;
+          const normalizedQuality = clamp(
+            Math.round((rawQualityScore / 1000) * 100),
+            0,
+            100,
+          );
+          const popularity = clamp(
+            Math.round(0.6 * streamScore + 0.4 * normalizedQuality),
+            0,
+            100,
+          );
           const trendValue: TrendDirection =
             row.trend === "up" || row.trend === "down" || row.trend === "same" ? row.trend : "same";
 
@@ -425,14 +434,17 @@ const WorldPulse = () => {
         genreMap.set(genre, current);
       });
 
-      const stats = Array.from(genreMap.entries()).map(([genre, info]) => ({
-        genre,
-        totalPlays: info.totalPlays,
-        totalSongs: info.totalSongs,
-        avgPopularity: info.totalSongs > 0 ? Math.round(info.totalQuality / info.totalSongs) : 0,
-        topSong: info.topSong,
-        growth: 0
-      }));
+      const stats = Array.from(genreMap.entries()).map(([genre, info]) => {
+        const averageQuality = info.totalSongs > 0 ? info.totalQuality / info.totalSongs : 0;
+        return {
+          genre,
+          totalPlays: info.totalPlays,
+          totalSongs: info.totalSongs,
+          avgPopularity: Math.round(clamp((averageQuality / 1000) * 100, 0, 100)),
+          topSong: info.topSong,
+          growth: 0
+        };
+      });
 
       const totalStreams = stats.reduce((sum, stat) => sum + stat.totalPlays, 0);
       const normalized = stats
