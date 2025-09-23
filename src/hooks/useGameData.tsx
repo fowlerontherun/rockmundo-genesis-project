@@ -401,6 +401,8 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantUnavailableRef = useRef(false);
+  const dailyXpSettingsUnavailableRef = useRef(false);
+  const legacyGameConfigurationUnavailableRef = useRef(false);
   const xpLedgerUnavailableRef = useRef(false);
   const playerSkillsTableMissingRef = useRef(false);
   const activityFeedSupportsProfileIdRef = useRef(true);
@@ -1458,34 +1460,42 @@ const useGameDataInternal = (): UseGameDataReturn => {
       let stipendErrored = false;
 
       try {
-        const {
-          data: dailySettings,
-          error: dailySettingsError,
-        } = await supabase
-          .from("daily_xp_settings")
-          .select("*")
-          .eq("id", true)
-          .limit(1)
-          .maybeSingle();
+        let dailySettingsMissing = dailyXpSettingsUnavailableRef.current;
 
-        if (dailySettingsError) {
-          if (isSchemaCacheMissingTableError(dailySettingsError)) {
-            console.info(
-              "Daily XP settings table missing from schema cache; falling back to legacy configuration table if available.",
-              dailySettingsError,
-            );
-          } else if (dailySettingsError.code !== "PGRST116") {
-            stipendErrored = true;
-            console.error("Failed to load daily XP settings", dailySettingsError);
+        if (!dailySettingsMissing) {
+          const {
+            data: dailySettings,
+            error: dailySettingsError,
+          } = await supabase
+            .from("daily_xp_settings")
+            .select("*")
+            .eq("id", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (dailySettingsError) {
+            if (isSchemaCacheMissingTableError(dailySettingsError)) {
+              if (!dailyXpSettingsUnavailableRef.current) {
+                dailyXpSettingsUnavailableRef.current = true;
+                console.info(
+                  "Daily XP settings table missing from schema cache; falling back to legacy configuration table if available.",
+                  dailySettingsError,
+                );
+              }
+              dailySettingsMissing = true;
+            } else if (dailySettingsError.code !== "PGRST116") {
+              stipendErrored = true;
+              console.error("Failed to load daily XP settings", dailySettingsError);
+            }
+          } else if (dailySettings) {
+            stipendResolved = true;
+            resolvedStipend = extractDailyXpStipend((dailySettings ?? null) as DailyXpConfigurationRow);
+          } else {
+            stipendResolved = true;
           }
-        } else if (dailySettings) {
-          stipendResolved = true;
-          resolvedStipend = extractDailyXpStipend((dailySettings ?? null) as DailyXpConfigurationRow);
-        } else {
-          stipendResolved = true;
         }
 
-        if (!stipendResolved || resolvedStipend === null) {
+        if (!legacyGameConfigurationUnavailableRef.current && (!stipendResolved || resolvedStipend === null)) {
           const configClient = supabase as unknown as { from: (table: string) => any };
           const stipendAttempt = await configClient
             .from("game_configuration")
@@ -1496,10 +1506,14 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
           if (stipendAttempt?.error) {
             if (isSchemaCacheMissingTableError(stipendAttempt.error)) {
-              console.info(
-                "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
-                stipendAttempt.error,
-              );
+              if (!legacyGameConfigurationUnavailableRef.current) {
+                legacyGameConfigurationUnavailableRef.current = true;
+                console.info(
+                  "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
+                  stipendAttempt.error,
+                );
+              }
+              stipendResolved = true;
             } else {
               stipendErrored = true;
               console.error("Failed to load daily XP configuration", stipendAttempt.error);
@@ -1509,7 +1523,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
             resolvedStipend = extractDailyXpStipend((stipendAttempt?.data ?? null) as DailyXpConfigurationRow);
           }
 
-          if (!stipendResolved || resolvedStipend === null) {
+          if (!legacyGameConfigurationUnavailableRef.current && (!stipendResolved || resolvedStipend === null)) {
             const stipendFallback = await configClient
               .from("game_configuration")
               .select("*")
@@ -1517,10 +1531,14 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
             if (stipendFallback?.error) {
               if (isSchemaCacheMissingTableError(stipendFallback.error)) {
-                console.info(
-                  "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
-                  stipendFallback.error,
-                );
+                if (!legacyGameConfigurationUnavailableRef.current) {
+                  legacyGameConfigurationUnavailableRef.current = true;
+                  console.info(
+                    "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
+                    stipendFallback.error,
+                  );
+                }
+                stipendResolved = true;
               } else if (!stipendAttempt?.error) {
                 stipendErrored = true;
                 console.error("Failed to load daily XP configuration", stipendFallback.error);
@@ -1539,6 +1557,15 @@ const useGameDataInternal = (): UseGameDataReturn => {
               resolvedStipend = extractDailyXpStipend(stipendFallback.data as DailyXpConfigurationRow);
             }
           }
+        }
+
+        if (
+          !stipendResolved &&
+          resolvedStipend === null &&
+          !stipendErrored &&
+          (dailySettingsMissing || legacyGameConfigurationUnavailableRef.current)
+        ) {
+          stipendResolved = true;
         }
       } catch (configurationError) {
         stipendErrored = true;
