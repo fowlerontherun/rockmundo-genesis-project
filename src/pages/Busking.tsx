@@ -85,7 +85,7 @@ export default function Busking() {
     <div className="container mx-auto p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Street Busking</CardTitle>
+          <CardTitle>Busking</CardTitle>
           <CardDescription>
             Pick a spot, choose how long to play, and see what kind of experience and cash you might pull in.
           </CardDescription>
