@@ -618,7 +618,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
     [profileSupportsStatusColumns, toPlainMetadata],
   );
 
-  const normalizeMetadataInput = (
+  const normalizeMetadataInput = useCallback((
     value: Json | Record<string, unknown> | null | undefined,
   ): Json | null => {
     if (value === null || typeof value === "undefined") {
@@ -643,7 +643,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
     }
 
     return null;
-  };
+  }, []);
 
   const mergeActivityMetadata = (
     base: ActivityInsert["metadata"],
