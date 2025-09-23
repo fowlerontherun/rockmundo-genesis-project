@@ -21,6 +21,10 @@ export interface Database {
           age: number;
           level?: number;
           experience?: number;
+          current_activity?: string;
+          current_activity_started_at?: string;
+          current_activity_duration_minutes?: number;
+          current_activity_ends_at?: string;
           cash?: number;
           fame?: number;
           fans?: number;
@@ -43,6 +47,10 @@ export interface Database {
           age?: number;
           level?: number;
           experience?: number;
+          current_activity?: string;
+          current_activity_started_at?: string;
+          current_activity_duration_minutes?: number;
+          current_activity_ends_at?: string;
           cash?: number;
           fame?: number;
           fans?: number;
@@ -65,6 +73,10 @@ export interface Database {
           age?: number;
           level?: number;
           experience?: number;
+          current_activity?: string;
+          current_activity_started_at?: string;
+          current_activity_duration_minutes?: number;
+          current_activity_ends_at?: string;
           cash?: number;
           fame?: number;
           fans?: number;
@@ -469,6 +481,8 @@ export interface Database {
           message: string;
           metadata?: Json;
           earnings?: number;
+          status?: string;
+          duration_minutes?: number;
           created_at: string;
         };
         Insert: {
@@ -478,6 +492,8 @@ export interface Database {
           message: string;
           metadata?: Json;
           earnings?: number;
+          status?: string;
+          duration_minutes?: number;
           created_at?: string;
         };
         Update: {
@@ -487,6 +503,8 @@ export interface Database {
           message?: string;
           metadata?: Json;
           earnings?: number;
+          status?: string;
+          duration_minutes?: number;
           created_at?: string;
         };
       };
