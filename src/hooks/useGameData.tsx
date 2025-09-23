@@ -437,14 +437,14 @@ const useGameDataInternal = (): UseGameDataReturn => {
     "code" in error &&
     ["PGRST116", "PGRST205"].includes((error as { code?: string }).code ?? "");
 
-  const resetHealthTableAvailability = () => {
+  const resetHealthTableAvailability = useCallback(() => {
     healthTablesUnavailableRef.current = {
       metrics: false,
       conditions: false,
       habits: false,
       wellness: false,
     };
-  };
+  }, []);
 
   const markHealthTableUnavailable = (
     table: HealthTableKey,
@@ -465,24 +465,25 @@ const useGameDataInternal = (): UseGameDataReturn => {
     return false;
   };
 
-  const profileSupportsStatusColumns = (
-    candidate: PlayerProfile | null,
-  ): candidate is ProfileWithStatusColumns => {
-    if (!candidate) {
-      return false;
-    }
+  const profileSupportsStatusColumns = useCallback(
+    (candidate: PlayerProfile | null): candidate is ProfileWithStatusColumns => {
+      if (!candidate) {
+        return false;
+      }
 
-    const requiredColumns: Array<keyof ProfileWithStatusColumns> = [
-      "active_status",
-      "active_status_metadata",
-      "active_status_started_at",
-      "active_status_ends_at",
-    ];
+      const requiredColumns: Array<keyof ProfileWithStatusColumns> = [
+        "active_status",
+        "active_status_metadata",
+        "active_status_started_at",
+        "active_status_ends_at",
+      ];
 
-    return requiredColumns.every((column) =>
-      Object.prototype.hasOwnProperty.call(candidate, column),
-    );
-  };
+      return requiredColumns.every((column) =>
+        Object.prototype.hasOwnProperty.call(candidate, column),
+      );
+    },
+    [],
+  );
 
   const toPlainMetadata = (value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null => {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
