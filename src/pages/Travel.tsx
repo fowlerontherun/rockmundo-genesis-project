@@ -3,6 +3,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { isTableMissingFromSchemaCache } from "@/utils/postgrestErrors";
 
 type TravelRecord = {
   id: string;
@@ -233,6 +234,14 @@ const Travel = () => {
                 error: null,
               };
             } catch (unknownError) {
+              if (isTableMissingFromSchemaCache(unknownError)) {
+                return {
+                  ...config,
+                  rows: [] as RawTravelRow[],
+                  error: unknownError as PostgrestError,
+                };
+              }
+
               const error = unknownError as PostgrestError | Error;
 
               if (error && typeof (error as PostgrestError).code === "string") {
@@ -263,7 +272,7 @@ const Travel = () => {
 
           fallbackTables.add(key);
 
-          if (error.code === "42P01") {
+          if (isTableMissingFromSchemaCache(error)) {
             missingTables.add(key);
           } else {
             fatalErrors.push(error);

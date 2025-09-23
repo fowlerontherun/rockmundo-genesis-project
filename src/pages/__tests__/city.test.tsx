@@ -105,6 +105,15 @@ describe("City page", () => {
       fetchWorldEnvironmentSnapshot: snapshotMock,
       fetchCityEnvironmentDetails: detailsMock,
     }));
+    mock.module("@/hooks/usePlayerStatus", () => ({
+      usePlayerStatus: () => ({
+        status: null,
+        statusLoading: false,
+        statusError: null,
+        startTimedStatus: async () => {},
+        refreshStatus: async () => {},
+      }),
+    }));
     type MockTravelRow = {
       id: string;
       city_from: string;
