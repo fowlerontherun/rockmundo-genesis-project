@@ -666,41 +666,6 @@ const useGameDataInternal = (): UseGameDataReturn => {
     return normalized as ActivityInsert["metadata"];
   };
 
-  const addActivity = useCallback(
-    async (
-      type: string,
-      message: string,
-      earnings: number | undefined = undefined,
-      metadata: ActivityInsert["metadata"] = null,
-      statusExtras?: { status?: string | null; durationMinutes?: number | null },
-    ) => {
-      if (!user) {
-        throw new Error("Authentication required to log activity");
-      }
-
-      if (!profile) {
-        throw new Error("No active profile selected");
-      }
-
-      const normalizedMetadata = mergeActivityMetadata(metadata, statusExtras);
-
-      const payload: ActivityInsert = {
-        user_id: user.id,
-        profile_id: profile.id,
-        activity_type: type,
-        message,
-        earnings: typeof earnings === "number" ? earnings : null,
-        metadata: normalizedMetadata,
-      };
-
-      const { error: insertError } = await supabase.from("activity_feed").insert(payload);
-      if (insertError) {
-        throw insertError;
-      }
-    },
-    [mergeActivityMetadata, profile, user],
-  );
-
   const closeActiveStatusSession = useCallback(
     async (
       profileId: string,
@@ -2001,6 +1966,41 @@ const useGameDataInternal = (): UseGameDataReturn => {
       return (data ?? null) as PlayerXpWallet;
     },
     [profile],
+  );
+
+  const addActivity = useCallback(
+    async (
+      type: string,
+      message: string,
+      earnings: number | undefined = undefined,
+      metadata: ActivityInsert["metadata"] = null,
+      statusExtras?: { status?: string | null; durationMinutes?: number | null },
+    ) => {
+      if (!user) {
+        throw new Error("Authentication required to log activity");
+      }
+
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      const normalizedMetadata = mergeActivityMetadata(metadata, statusExtras);
+
+      const payload: ActivityInsert = {
+        user_id: user.id,
+        profile_id: profile.id,
+        activity_type: type,
+        message,
+        earnings: typeof earnings === "number" ? earnings : null,
+        metadata: normalizedMetadata,
+      };
+
+      const { error: insertError } = await supabase.from("activity_feed").insert(payload);
+      if (insertError) {
+        throw insertError;
+      }
+    },
+    [mergeActivityMetadata, profile, user],
   );
 
   const awardActionXp = useCallback(
