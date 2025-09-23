@@ -22,10 +22,12 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
+import { usePlayerStatus } from "@/hooks/usePlayerStatus";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 import { useEducationVideoPlaylists } from "@/features/education/hooks/useEducationVideoPlaylists";
 import { awardActionXp } from "@/utils/progression";
+import { formatDurationMinutes } from "@/utils/datetime";
 import {
   ATTRIBUTE_KEYS,
   applyAttributeToValue,
@@ -498,6 +500,7 @@ const DEFAULT_BAND_SESSIONS: BandSession[] = [
 const Education = () => {
   const { toast } = useToast();
   const { profile, skills, attributes, refetch, addActivity, updateProfile } = useGameData();
+  const { startTimedStatus } = usePlayerStatus();
 
   const {
     data: lessonRows,
@@ -1056,6 +1059,18 @@ const Education = () => {
     setActiveLessonId(lesson.id);
 
     try {
+      const studyDurationMinutes = Math.max(1, Math.round(lesson.durationMinutes));
+      startTimedStatus({
+        status: "Studying",
+        durationMinutes: studyDurationMinutes,
+        metadata: {
+          lessonId: lesson.id,
+          skill: lesson.skill,
+          title: lesson.title,
+        },
+      });
+      const studyDurationLabel = formatDurationMinutes(studyDurationMinutes);
+
       await awardActionXp({
         amount: reward.effectiveXp,
         category: "practice",
@@ -1089,8 +1104,8 @@ const Education = () => {
       );
 
       toast({
-        title: "Lesson complete",
-        description: `You earned ${reward.effectiveXp} XP and boosted ${SKILL_LABELS[lesson.skill].toLowerCase()} skills.`,
+        title: "Studying session logged",
+        description: `Studying ${lesson.title} for about ${studyDurationLabel}. Earned ${reward.effectiveXp} XP toward ${SKILL_LABELS[lesson.skill].toLowerCase()} skills.`,
         variant: "default"
       });
 

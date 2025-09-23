@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
+import { usePlayerStatus } from "@/hooks/usePlayerStatus";
+import { formatDurationCountdown } from "@/utils/datetime";
 
 const formatDate = (input: string | null | undefined) => {
   if (!input) {
@@ -107,6 +109,7 @@ const MyCharacter = () => {
     currentCity,
   } = useGameData();
   const { toast } = useToast();
+  const { activeStatus, remainingMs } = usePlayerStatus();
   const [claimingDailyXp, setClaimingDailyXp] = useState(false);
   const [attributeXpInputs, setAttributeXpInputs] = useState<Record<string, number>>({});
   const [attributeSpendPending, setAttributeSpendPending] = useState<string | null>(null);
@@ -114,6 +117,31 @@ const MyCharacter = () => {
   const [skillXpAmount, setSkillXpAmount] = useState<number>(DEFAULT_SKILL_SPEND);
   const [skillSpendPending, setSkillSpendPending] = useState(false);
   const [unlockingMomentumBoost, setUnlockingMomentumBoost] = useState(false);
+
+  const statusContextLabel = useMemo(() => {
+    if (!activeStatus?.metadata || typeof activeStatus.metadata !== "object") {
+      return null;
+    }
+
+    const metadata = activeStatus.metadata as Record<string, unknown>;
+    const title = typeof metadata.title === "string" ? metadata.title : null;
+    const destination =
+      typeof metadata.destination === "string"
+        ? metadata.destination
+        : typeof metadata.destination_name === "string"
+          ? metadata.destination_name
+          : typeof metadata.destinationName === "string"
+            ? metadata.destinationName
+            : null;
+    const skill = typeof metadata.skill === "string" ? metadata.skill : null;
+
+    return title ?? destination ?? skill;
+  }, [activeStatus]);
+
+  const statusCountdownLabel = useMemo(
+    () => formatDurationCountdown(remainingMs),
+    [remainingMs],
+  );
 
   useEffect(() => {
     if (!selectedSkill && Array.isArray(skillProgress) && skillProgress.length > 0) {
@@ -390,6 +418,18 @@ const MyCharacter = () => {
           </Button>
         </div>
       </div>
+
+      {activeStatus && remainingMs > 0 && (
+        <Card className="border-secondary/40 bg-secondary/10">
+          <CardContent className="space-y-1 py-4">
+            <p className="text-sm font-semibold text-foreground">Active status: {activeStatus.status}</p>
+            <p className="text-sm text-muted-foreground">
+              {statusContextLabel ? `${statusContextLabel} • ` : ""}
+              Time remaining: {statusCountdownLabel}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

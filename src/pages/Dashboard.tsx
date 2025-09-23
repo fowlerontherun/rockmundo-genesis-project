@@ -38,9 +38,11 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type SkillProgressRow } from "@/hooks/useGameData";
+import { usePlayerStatus } from "@/hooks/usePlayerStatus";
 import { supabase } from "@/integrations/supabase/client";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
 import type { Database } from "@/lib/supabase-types";
+import { formatDurationCountdown } from "@/utils/datetime";
 import {
   fetchFriendshipsForProfile,
   findExistingFriendshipBetweenProfiles,
@@ -168,6 +170,7 @@ const Dashboard = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingRequestIds, setPendingRequestIds] = useState<Record<string, boolean>>({});
   const [unlockingMomentumBoost, setUnlockingMomentumBoost] = useState(false);
+  const { activeStatus, remainingMs } = usePlayerStatus();
 
   const attributeKeys: (keyof PlayerAttributes)[] = [
     "charisma",
@@ -184,6 +187,31 @@ const Dashboard = () => {
 
   const profileId = profile?.id ?? null;
   const profileUserId = profile?.user_id ?? null;
+
+  const statusContextLabel = useMemo(() => {
+    if (!activeStatus?.metadata || typeof activeStatus.metadata !== "object") {
+      return null;
+    }
+
+    const metadata = activeStatus.metadata as Record<string, unknown>;
+    const title = typeof metadata.title === "string" ? metadata.title : null;
+    const destination =
+      typeof metadata.destination === "string"
+        ? metadata.destination
+        : typeof metadata.destination_name === "string"
+          ? metadata.destination_name
+          : typeof metadata.destinationName === "string"
+            ? metadata.destinationName
+            : null;
+    const skill = typeof metadata.skill === "string" ? metadata.skill : null;
+
+    return title ?? destination ?? skill;
+  }, [activeStatus]);
+
+  const statusCountdownLabel = useMemo(
+    () => formatDurationCountdown(remainingMs),
+    [remainingMs],
+  );
 
   const refreshFriendships = useCallback(async () => {
     if (!profileId) {
@@ -913,11 +941,23 @@ const Dashboard = () => {
                 {currentCityDisplay}
               </Badge>
             </div>
-          </div>
         </div>
+      </div>
 
-        <Alert className="border-primary/40 bg-primary/5 text-foreground">
-          <Sparkles className="h-4 w-4" />
+      {activeStatus && remainingMs > 0 && (
+        <Alert className="border-secondary/40 bg-secondary/10 text-foreground">
+          <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Clock className="h-4 w-4" /> Active status: {activeStatus.status}
+          </AlertTitle>
+          <AlertDescription className="text-sm">
+            {statusContextLabel ? <span>{statusContextLabel} • </span> : null}
+            Time remaining: {statusCountdownLabel}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Alert className="border-primary/40 bg-primary/5 text-foreground">
+        <Sparkles className="h-4 w-4" />
           <AlertTitle>
             {dailyXpClaimedToday ? "Today's XP stipend claimed" : "Daily XP stipend available"}
           </AlertTitle>
