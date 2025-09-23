@@ -324,6 +324,12 @@ const useProvideGameData = (): UseGameDataReturn => {
     "code" in error &&
     (error as { code?: string }).code === "PGRST204";
 
+  const isActivityFeedMissingProfileIdError = (error: unknown): error is { code?: string } =>
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    ["42703", "PGRST204"].includes((error as { code?: string }).code ?? "");
+
   const sanitizeActivityFeedRows = useCallback(
     (
       rows: ActivityFeedRow[] | null | undefined,
@@ -563,7 +569,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       let nextActivities: ActivityFeedRow[] = [];
 
       if (activitiesResult.error) {
-        if (activitiesResult.error.code === "42703") {
+        if (isActivityFeedMissingProfileIdError(activitiesResult.error)) {
           if (activityFeedSupportsProfileId) {
             setActivityFeedSupportsProfileId(false);
           }
