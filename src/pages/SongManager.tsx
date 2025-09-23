@@ -18,12 +18,41 @@ import * as datetimeUtils from "@/utils/datetime";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
 import type { Database, Json } from "@/lib/supabase-types";
 
+const DEFAULT_SONG_DURATION_SECONDS = 180;
+
+const formatSongDuration = (durationInSeconds: number): string | null => {
+  if (!Number.isFinite(durationInSeconds) || durationInSeconds <= 0) {
+    return null;
+  }
+
+  const safeDuration = Math.max(0, Math.round(durationInSeconds));
+  const minutes = Math.floor(safeDuration / 60);
+  const seconds = safeDuration % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+};
+
+type NewSongFormState = {
+  title: string;
+  genre: string;
+  lyrics: string;
+  duration: number;
+};
+
+const createInitialNewSong = (): NewSongFormState => ({
+  title: '',
+  genre: '',
+  lyrics: '',
+  duration: DEFAULT_SONG_DURATION_SECONDS,
+});
+
 interface Song {
   id: string;
   title: string;
   genre: string;
   lyrics?: string;
   quality_score: number;
+  duration: number;
   release_date?: string;
   marketing_budget?: number | null;
   chart_position?: number;
@@ -221,6 +250,10 @@ const normalizeSongRecord = (record: SongRow): Song => ({
   genre: record.genre,
   lyrics: record.lyrics ?? undefined,
   quality_score: toNumber(record.quality_score, 0),
+  duration:
+    record.duration === null || record.duration === undefined
+      ? DEFAULT_SONG_DURATION_SECONDS
+      : toNumber(record.duration, DEFAULT_SONG_DURATION_SECONDS),
   release_date: record.release_date ?? undefined,
   chart_position: record.chart_position ?? undefined,
   streams: toNumber(record.streams, 0),
@@ -394,11 +427,7 @@ const SongManager = () => {
   const { profile, skills, updateProfile } = useGameData();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newSong, setNewSong] = useState({
-    title: '',
-    genre: '',
-    lyrics: ''
-  });
+  const [newSong, setNewSong] = useState<NewSongFormState>(() => createInitialNewSong());
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRecordDialogOpen, setIsRecordDialogOpen] = useState(false);
@@ -883,9 +912,21 @@ const SongManager = () => {
       return;
     }
 
+    const rawDuration = Number(newSong.duration);
+    const durationSeconds = Number.isFinite(rawDuration) ? Math.max(0, Math.round(rawDuration)) : 0;
+
+    if (durationSeconds <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Duration",
+        description: "Please provide a positive duration for your song."
+      });
+      return;
+    }
+
     try {
       const qualityScore = Math.floor(
-        ((skills?.songwriting || 0) + (skills?.performance || 0)) / 2 + 
+        ((skills?.songwriting || 0) + (skills?.performance || 0)) / 2 +
         Math.random() * 20 - 10
       );
 
@@ -895,6 +936,7 @@ const SongManager = () => {
           title: newSong.title,
           genre: newSong.genre,
           lyrics: newSong.lyrics,
+          duration: durationSeconds,
           quality_score: Math.max(1, Math.min(100, qualityScore)),
           status: 'draft',
           streams: 0,
@@ -909,7 +951,7 @@ const SongManager = () => {
       if (error) throw error;
 
       setSongs(prev => [normalizeSongRecord(data), ...prev]);
-      setNewSong({ title: '', genre: '', lyrics: '' });
+      setNewSong(createInitialNewSong());
       setIsCreateDialogOpen(false);
       
       toast({
@@ -1525,6 +1567,27 @@ const SongManager = () => {
                   </Select>
                 </div>
                 <div>
+                  <Label htmlFor="duration">Duration (seconds)</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    min={30}
+                    step={5}
+                    value={Number.isFinite(newSong.duration) ? newSong.duration : DEFAULT_SONG_DURATION_SECONDS}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      setNewSong(prev => ({
+                        ...prev,
+                        duration: Number.isFinite(value) ? Math.max(0, value) : prev.duration,
+                      }));
+                    }}
+                    placeholder="e.g. 180"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Enter the track length in seconds. Typical songs run between 120 and 300 seconds.
+                  </p>
+                </div>
+                <div>
                   <Label htmlFor="lyrics">Lyrics (Optional)</Label>
                   <Textarea
                     id="lyrics"
@@ -1551,6 +1614,7 @@ const SongManager = () => {
             const shareBreakdown = calculateCollaboratorShares(song, ownerDisplayName);
             const hasCollaborators = song.co_writers.length > 0;
             const ownerShareLabel = shareBreakdown[0]?.percentage ?? 100;
+            const formattedDuration = formatSongDuration(song.duration);
 
             return (
               <Card key={song.id} className="hover:shadow-lg transition-shadow">
@@ -1563,6 +1627,15 @@ const SongManager = () => {
                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {formattedDuration && (
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Play className="h-4 w-4 text-emerald-500" />
+                        <span>Duration</span>
+                      </div>
+                      <span className="font-medium">{formattedDuration}</span>
+                    </div>
+                  )}
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Quality</span>
