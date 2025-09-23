@@ -23,7 +23,7 @@ import {
 } from "@/utils/progression";
 
 export type PlayerProfile = Database["public"]["Tables"]["profiles"]["Row"];
-export type PlayerSkills = Database["public"]["Tables"]["player_skills"]["Row"] | null;
+export type PlayerSkills = Partial<Record<string, number>>;
 type AttributeCategory =
   | "creativity"
   | "business"
@@ -48,7 +48,7 @@ export type UnlockedSkillsMap = Record<string, boolean>;
 export type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
-type SkillsUpdate = Database["public"]["Tables"]["player_skills"]["Update"];
+type SkillsUpdate = Record<string, number | null | undefined>;
 type AttributesUpdate = Partial<PlayerAttributes>;
 type XpWalletUpdate = Database["public"]["Tables"]["player_xp_wallet"]["Update"];
 type XpWalletInsert = Database["public"]["Tables"]["player_xp_wallet"]["Insert"];
@@ -142,7 +142,7 @@ const isWeeklyBonusFresh = (ledger: ExperienceLedgerRow[]): boolean => {
 
 interface UseGameDataReturn {
   profile: PlayerProfile | null;
-  skills: PlayerSkills;
+  skills: PlayerSkills | null;
   attributes: PlayerAttributes | null;
   xpWallet: PlayerXpWallet;
   xpLedger: ExperienceLedgerRow[];
@@ -177,6 +177,106 @@ const createDefaultAttributes = (): PlayerAttributes =>
     return accumulator;
   }, {} as PlayerAttributes);
 
+const LEGACY_SKILL_KEYS = [
+  "vocals",
+  "guitar",
+  "bass",
+  "drums",
+  "songwriting",
+  "performance",
+  "creativity",
+  "technical",
+  "business",
+  "marketing",
+  "composition",
+] as const;
+
+const LEGACY_SKILL_KEY_SET = new Set<string>(LEGACY_SKILL_KEYS);
+const FALLBACK_SKILL_VALUE = 0;
+
+const createDefaultSkills = (): PlayerSkills => {
+  const base: PlayerSkills = {};
+  for (const key of LEGACY_SKILL_KEYS) {
+    base[key] = FALLBACK_SKILL_VALUE;
+  }
+  return base;
+};
+
+const normalizeSkillSlug = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+};
+
+const resolveLegacySkillKey = (slug: string): string | null => {
+  if (LEGACY_SKILL_KEY_SET.has(slug)) {
+    return slug;
+  }
+
+  const [prefix] = slug.split(/[_-]/);
+  if (prefix && LEGACY_SKILL_KEY_SET.has(prefix)) {
+    return prefix;
+  }
+
+  return null;
+};
+
+const coerceSkillValue = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.round(value));
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.round(parsed));
+    }
+  }
+
+  return null;
+};
+
+const deriveSkillsFromProgress = (
+  progress: SkillProgressRow[],
+  fallback: PlayerSkills | null,
+): PlayerSkills => {
+  const base: PlayerSkills = { ...(fallback ?? createDefaultSkills()) };
+
+  for (const key of LEGACY_SKILL_KEYS) {
+    if (typeof base[key] !== "number" || !Number.isFinite(base[key])) {
+      base[key] = FALLBACK_SKILL_VALUE;
+    }
+  }
+
+  for (const row of progress) {
+    const slug = normalizeSkillSlug(row.skill_slug);
+    if (!slug) {
+      continue;
+    }
+
+    const numericValue =
+      coerceSkillValue(row.current_level) ??
+      coerceSkillValue((row.metadata as Record<string, unknown> | null | undefined)?.current_level);
+
+    if (numericValue == null) {
+      continue;
+    }
+
+    base[slug] = numericValue;
+
+    const legacyKey = resolveLegacySkillKey(slug);
+    if (legacyKey) {
+      const previous =
+        typeof base[legacyKey] === "number" && Number.isFinite(base[legacyKey])
+          ? (base[legacyKey] as number)
+          : FALLBACK_SKILL_VALUE;
+      base[legacyKey] = Math.max(previous, numericValue);
+    }
+  }
+
+  return base;
+};
+
 const mapAttributes = (row: RawAttributes): PlayerAttributes => {
   const baseAttributes = createDefaultAttributes();
 
@@ -201,7 +301,7 @@ const GameDataContext = createContext<UseGameDataReturn | undefined>(undefined);
 const useProvideGameData = (): UseGameDataReturn => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
-  const [skills, setSkills] = useState<PlayerSkills>(null);
+  const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet>(null);
   const [xpLedger, setXpLedger] = useState<ExperienceLedgerRow[]>([]);
@@ -331,7 +431,6 @@ const useProvideGameData = (): UseGameDataReturn => {
       }
 
       const [
-        skillsResult,
         attributesResult,
         walletResult,
         ledgerResult,
@@ -339,12 +438,6 @@ const useProvideGameData = (): UseGameDataReturn => {
         activitiesResult,
         skillProgressResult,
       ] = await Promise.all([
-        supabase
-          .from("player_skills")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .eq("user_id", user.id)
-          .maybeSingle(),
         supabase
           .from("player_attributes")
           .select("*")
@@ -403,9 +496,6 @@ const useProvideGameData = (): UseGameDataReturn => {
         } as PostgrestSingleResponse<DailyXpGrantRow | null>;
       }
 
-      if (skillsResult.error) {
-        console.error("Failed to load player skills", skillsResult.error);
-      }
       if (attributesResult.error) {
         console.error("Failed to load player attributes", attributesResult.error);
       }
@@ -475,13 +565,17 @@ const useProvideGameData = (): UseGameDataReturn => {
         nextActivities = rows;
       }
 
-      setSkills((skillsResult.data ?? null) as PlayerSkills);
+      const resolvedSkillProgress = (skillProgressResult.data ?? []) as SkillProgressRow[];
+      setSkillProgress(resolvedSkillProgress);
+      setSkills((previous) => deriveSkillsFromProgress(resolvedSkillProgress, previous));
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
       setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
+      setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setActivities(nextActivities);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
+
       setUnlockedSkills({});
       const grantRow =
         dailyGrantResult.error && isSchemaCacheMissingTableError(dailyGrantResult.error)
@@ -913,29 +1007,65 @@ const useProvideGameData = (): UseGameDataReturn => {
         throw new Error("No active profile selected");
       }
 
-      const payload: Database["public"]["Tables"]["player_skills"]["Insert"] = {
-        profile_id: profile.id,
-        user_id: user.id,
-        ...updates,
-      };
+      const normalizedEntries = Object.entries(updates ?? {})
+        .map(([key, value]) => ({ slug: normalizeSkillSlug(key), value: coerceSkillValue(value) }))
+        .filter((entry): entry is { slug: string; value: number } => Boolean(entry.slug) && entry.value !== null);
 
-      payload.profile_id = profile.id;
-      payload.user_id = user.id;
+      if (normalizedEntries.length === 0) {
+        return skills ?? createDefaultSkills();
+      }
+
+      const timestamp = new Date().toISOString();
+      const payloads = normalizedEntries.map(({ slug, value }) => ({
+        profile_id: profile.id,
+        skill_slug: slug,
+        current_level: value,
+        last_practiced_at: timestamp,
+      }));
 
       const { data, error: upsertError } = await supabase
-        .from("player_skills")
-        .upsert(payload, { onConflict: "profile_id" })
-        .select("*")
-        .maybeSingle();
+        .from("skill_progress")
+        .upsert(payloads, { onConflict: "profile_id,skill_slug" })
+        .select("*");
 
       if (upsertError) {
         throw upsertError;
       }
 
-      setSkills((data ?? null) as PlayerSkills);
-      return (data ?? null) as PlayerSkills;
+      const rows = (data ?? []) as SkillProgressRow[];
+
+      let nextSkillProgressState: SkillProgressRow[] = [];
+      setSkillProgress((current) => {
+        const map = new Map<string, SkillProgressRow>();
+        for (const row of current) {
+          if (row?.skill_slug) {
+            map.set(row.skill_slug, row);
+          }
+        }
+
+        for (const row of rows) {
+          if (row?.skill_slug) {
+            map.set(row.skill_slug, row);
+          }
+        }
+
+        nextSkillProgressState = Array.from(map.values());
+        return nextSkillProgressState;
+      });
+
+      let nextSnapshot = createDefaultSkills();
+      setSkills((previous) => {
+        const fallback = previous ?? createDefaultSkills();
+        nextSnapshot = deriveSkillsFromProgress(
+          nextSkillProgressState.length > 0 ? nextSkillProgressState : rows,
+          fallback,
+        );
+        return nextSnapshot;
+      });
+
+      return nextSnapshot;
     },
-    [profile, user],
+    [profile, skills, user],
   );
 
   const updateXpWallet = useCallback(
