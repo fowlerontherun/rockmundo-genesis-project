@@ -324,34 +324,28 @@ const useProvideGameData = (): UseGameDataReturn => {
     "code" in error &&
     (error as { code?: string }).code === "PGRST204";
 
-
   const isSchemaCacheMissingTableError = (
     error: unknown,
-  ): error is { code?: string; message?: string; details?: string } => {
+    tableName: string = "profile_daily_xp_grants",
+  ): error is { code?: string; message?: string | null; details?: string | null } => {
     if (typeof error !== "object" || error === null) {
       return false;
     }
 
-    const { message, details } = error as {
-      code?: string;
-      message?: string;
-      details?: string;
-    };
+    const candidate = error as { code?: string; message?: string | null; details?: string | null };
+    const haystack = [candidate.message, candidate.details]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
 
-    const haystack = `${message ?? ""} ${details ?? ""}`.toLowerCase();
+    if (haystack.includes(tableName.toLowerCase())) {
+      if (haystack.includes("schema cache") || haystack.includes("does not exist") || haystack.includes("not found")) {
+        return true;
+      }
+    }
 
-    return (
-      haystack.includes("schema cache") &&
-      (haystack.includes("relation") || haystack.includes("table")) &&
-      (haystack.includes("missing") || haystack.includes("could not find"))
-    );
+    return false;
   };
-
-  const isActivityFeedMissingProfileIdError = (error: unknown): error is { code?: string } =>
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    ["42703", "PGRST204"].includes((error as { code?: string }).code ?? "");
 
 
   const sanitizeActivityFeedRows = useCallback(
