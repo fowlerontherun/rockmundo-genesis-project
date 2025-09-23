@@ -344,9 +344,13 @@ BEGIN
       USING ERRCODE = 'PGRST116';
   END IF;
 
-  SELECT COALESCE(attribute_points_available, 0) INTO v_available_points
-  FROM public.profiles
-  WHERE id = p_profile_id
+  INSERT INTO public.player_attributes (profile_id)
+  VALUES (p_profile_id)
+  ON CONFLICT (profile_id) DO NOTHING;
+
+  SELECT COALESCE(attribute_points, 0) INTO v_available_points
+  FROM public.player_attributes
+  WHERE profile_id = p_profile_id
   FOR UPDATE;
 
   IF v_available_points < v_points THEN
@@ -354,17 +358,8 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  INSERT INTO public.player_attributes (profile_id)
-  VALUES (p_profile_id)
-  ON CONFLICT (profile_id) DO NOTHING;
-
-  PERFORM 1
-  FROM public.player_attributes
-  WHERE profile_id = p_profile_id
-  FOR UPDATE;
-
   EXECUTE format(
-    'SELECT COALESCE(%1$I, 0) FROM public.player_attributes WHERE profile_id = $1',
+    'SELECT COALESCE(%1$I, 0) FROM public.player_attributes WHERE profile_id = $1 FOR UPDATE',
     p_attribute_key
   )
   INTO v_current_value
@@ -521,7 +516,7 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  v_budget := GREATEST(COALESCE(v_profile.attribute_points_available, 0), 0)
+  v_budget := GREATEST(COALESCE(v_attributes.attribute_points, 0), 0)
     + GREATEST(COALESCE(v_attributes.attribute_points_spent, 0), 0);
 
   IF v_target_total > v_budget THEN
@@ -821,6 +816,7 @@ BEGIN
   SET
     xp_balance = GREATEST(xp_balance + v_xp, 0),
     xp_spent = GREATEST(xp_spent - GREATEST(v_xp, 0), 0),
+    skill_points_earned = skill_points_earned + GREATEST(v_skill, 0),
     last_recalculated = timezone('utc', now())
   WHERE profile_id = NEW.profile_id
   RETURNING * INTO v_wallet;
@@ -832,10 +828,7 @@ BEGIN
   END IF;
 
   UPDATE public.profiles
-  SET
-    attribute_points_available = GREATEST(COALESCE(attribute_points_available, 0) + v_attr, 0),
-    skill_points_available = GREATEST(COALESCE(skill_points_available, 0) + v_skill, 0),
-    experience = GREATEST(COALESCE(experience, 0) + v_xp, 0)
+  SET experience = GREATEST(COALESCE(experience, 0) + v_xp, 0)
   WHERE id = NEW.profile_id;
 
   INSERT INTO public.player_attributes (profile_id)

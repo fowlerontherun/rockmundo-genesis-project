@@ -11,6 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { cn } from "@/lib/utils";
+import PlayerCommunityStats from "@/components/PlayerCommunityStats";
+import { useCommunityStats } from "@/hooks/useCommunityStats";
+import { handleInvalidRefreshTokenError } from "@/lib/auth-error-handlers";
 
 type AuthTab = "login" | "signup" | "forgot";
 
@@ -35,6 +38,14 @@ const Auth = () => {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [resendingVerification, setResendingVerification] = useState(false);
+
+  const {
+    registeredPlayers,
+    registeredLoading,
+    registeredError,
+    livePlayers,
+    livePlayersConnected,
+  } = useCommunityStats({ presenceKey: "auth-landing" });
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -139,6 +150,7 @@ const Auth = () => {
         }
 
         if (sessionError) {
+          await handleInvalidRefreshTokenError(sessionError);
           console.error("Failed to fetch auth session:", sessionError);
           setError("We couldn't verify your session. Please sign in again.");
           return;
@@ -148,6 +160,7 @@ const Auth = () => {
           navigate("/");
         }
       } catch (sessionError) {
+        await handleInvalidRefreshTokenError(sessionError);
         console.error("Unexpected error fetching auth session:", sessionError);
         if (!isMounted) {
           return;
@@ -471,6 +484,22 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-8 sm:px-6">
+      <header className="w-full bg-primary text-primary-foreground">
+        <div className="mx-auto flex max-w-3xl flex-col items-center justify-center gap-1 px-4 py-2 text-center">
+          <span className="font-bebas text-sm sm:text-base uppercase tracking-wide">
+            DEMO - In Development
+          </span>
+          <PlayerCommunityStats
+            registeredPlayers={registeredPlayers}
+            registeredLoading={registeredLoading}
+            registeredError={registeredError}
+            livePlayers={livePlayers}
+            livePlayersConnected={livePlayersConnected}
+            size="sm"
+            className="text-primary-foreground/90"
+          />
+        </div>
+      </header>
       <div className="w-full max-w-sm sm:max-w-md">
         {/* Logo and Branding */}
         <div className="text-center mb-6 sm:mb-8">

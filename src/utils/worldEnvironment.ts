@@ -76,6 +76,23 @@ const toNumber = (value: unknown, defaultValue = 0) => {
   return Number.isNaN(numericValue) ? defaultValue : numericValue;
 };
 
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+
+  return null;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -433,6 +450,8 @@ export interface City {
   venues: number;
   local_bonus: number;
   busking_value: number;
+  latitude?: number;
+  longitude?: number;
   cultural_events: string[];
   locations: CityLocation[];
   venueHighlights: CityVenueHighlight[];
@@ -441,6 +460,8 @@ export interface City {
   famousResident: string;
   travelHub: string;
   travelOptions: TravelOption[];
+  latitude?: number | null;
+  longitude?: number | null;
   distanceKm: number | null;
 }
 
@@ -647,6 +668,8 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     typeof item.profile_description === "string" ? item.profile_description : undefined;
   const bonuses = typeof item.bonuses === "string" ? item.bonuses : undefined;
   const unlocked = typeof item.unlocked === "boolean" ? item.unlocked : undefined;
+  const latitude = toNullableNumber(item.latitude);
+  const longitude = toNullableNumber(item.longitude);
 
   return {
     id: String(item.id ?? crypto.randomUUID()),
@@ -663,6 +686,8 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     venues: toNumber(item.venues),
     local_bonus: toNumber(item.local_bonus, 1),
     busking_value: toNumber(item.busking_value, 1),
+    latitude,
+    longitude,
     cultural_events: culturalEvents,
     locations,
     venueHighlights,
@@ -676,29 +701,132 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
 };
 
 const normalizeWorldEventRecord = (item: Record<string, unknown>): WorldEvent => {
-  const typeRaw = typeof item.type === "string" ? item.type : "";
-  const type = WORLD_EVENT_TYPES.includes(typeRaw as WorldEvent["type"]) ?
-    (typeRaw as WorldEvent["type"]) : "festival";
+  const typeCandidates = [item.event_type, item.type]
+    .map((value) => (typeof value === "string" ? value.trim().toLowerCase() : ""))
+    .filter((value) => value.length > 0);
 
-  const globalEffects = parseNumericRecord(item.global_effects as Record<string, unknown> | null | undefined);
-  const affectedCities = Array.isArray(item.affected_cities)
-    ? item.affected_cities.filter((city: unknown): city is string => typeof city === "string")
-    : [];
+  const type = typeCandidates.find((candidate) =>
+    WORLD_EVENT_TYPES.includes(candidate as WorldEvent["type"]),
+  ) as WorldEvent["type"] | undefined;
 
-  const startDate = typeof item.start_date === "string" ? item.start_date : new Date().toISOString();
-  const endDate = typeof item.end_date === "string" ? item.end_date : startDate;
+  const requirementsRecord = isRecord(item.requirements) ? item.requirements : undefined;
+  const rewardsRecord = isRecord(item.rewards) ? item.rewards : undefined;
+  const metadataRecord = isRecord(item.metadata) ? item.metadata : undefined;
+
+  const affectedCitySources: unknown[] = [
+    item.affected_cities,
+    requirementsRecord?.affected_cities,
+    requirementsRecord?.cities,
+    requirementsRecord?.locations,
+    requirementsRecord?.regions,
+    rewardsRecord?.affected_cities,
+    rewardsRecord?.cities,
+    rewardsRecord?.locations,
+    metadataRecord?.affected_cities,
+    metadataRecord?.cities,
+    metadataRecord?.locations,
+  ];
+
+  const affectedCitiesSet = affectedCitySources.reduce<Set<string>>((acc, source) => {
+    parseStringArray(source).forEach((city) => acc.add(city));
+    return acc;
+  }, new Set());
+
+  const locationCandidates = [
+    requirementsRecord?.location,
+    requirementsRecord?.city,
+    requirementsRecord?.region,
+    rewardsRecord?.location,
+    metadataRecord?.location,
+    metadataRecord?.city,
+    item.location,
+  ];
+
+  locationCandidates.forEach((entry) => {
+    if (typeof entry === "string" && entry.trim()) {
+      affectedCitiesSet.add(entry.trim());
+    }
+  });
+
+  const affectedCities = affectedCitiesSet.size > 0 ? Array.from(affectedCitiesSet) : ["all"];
+
+  const effectSources: unknown[] = [
+    item.global_effects,
+    rewardsRecord?.global_effects,
+    rewardsRecord?.effects,
+    rewardsRecord?.multipliers,
+    metadataRecord?.global_effects,
+    metadataRecord?.effects,
+    requirementsRecord?.global_effects,
+  ];
+
+  const effectRecord = effectSources.find((entry) => isRecord(entry)) as
+    | Record<string, unknown>
+    | undefined;
+
+  const globalEffects = parseNumericRecord(effectRecord);
+
+  const rewardCandidates = [
+    item.participation_reward,
+    rewardsRecord?.participation_reward,
+    rewardsRecord?.cash,
+    rewardsRecord?.money,
+    rewardsRecord?.payout,
+    rewardsRecord?.reward,
+    rewardsRecord?.credits,
+    rewardsRecord?.amount,
+    rewardsRecord?.cash_reward,
+  ];
+
+  let participationReward = 0;
+  for (const candidate of rewardCandidates) {
+    const numericValue = toNumber(candidate, Number.NaN);
+    if (!Number.isNaN(numericValue)) {
+      participationReward = numericValue;
+      break;
+    }
+  }
+
+  const startDate = typeof item.start_date === "string"
+    ? item.start_date
+    : typeof item.startDate === "string"
+      ? item.startDate
+      : new Date().toISOString();
+
+  const endDate = typeof item.end_date === "string"
+    ? item.end_date
+    : typeof item.endDate === "string"
+      ? item.endDate
+      : startDate;
+
+  const startTimestamp = Date.parse(startDate);
+  const endTimestamp = Date.parse(endDate);
+  const scheduleActive = !Number.isNaN(startTimestamp) && !Number.isNaN(endTimestamp)
+    ? Date.now() >= startTimestamp && Date.now() <= endTimestamp
+    : false;
+
+  const isActive = typeof item.is_active === "boolean"
+    ? item.is_active
+    : typeof item.isActive === "boolean"
+      ? item.isActive
+      : scheduleActive;
 
   return {
     id: String(item.id ?? crypto.randomUUID()),
-    title: typeof item.title === "string" ? item.title : "Global Event",
-    description: typeof item.description === "string" ? item.description : "",
-    type,
+    title: typeof item.title === "string" ? item.title : typeof item.name === "string" ? item.name : "Global Event",
+    description:
+      typeof item.description === "string"
+        ? item.description
+        : typeof metadataRecord?.description === "string"
+          ? metadataRecord.description
+          : "",
+    type: type ?? "festival",
     start_date: startDate,
     end_date: endDate,
     affected_cities: affectedCities,
     global_effects: globalEffects,
-    participation_reward: toNumber(item.participation_reward),
-    is_active: Boolean(item.is_active),
+    participation_reward: participationReward,
+    is_active: Boolean(isActive),
   };
 };
 
@@ -965,7 +1093,7 @@ const locationMatches = (needle: string, haystack: string) => {
 export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentSnapshot> => {
   const [citiesResponse, worldEventsResponse, randomEventsResponse] = await Promise.all([
     supabase.from("cities").select("*").order("name", { ascending: true }),
-    supabase.from("world_events").select("*").order("start_date", { ascending: true }),
+    supabase.from("game_events").select("*").order("start_date", { ascending: true }),
     supabase.from("random_events").select("*").order("expiry", { ascending: true }),
   ]);
 
@@ -1173,7 +1301,7 @@ export const fetchEnvironmentModifiers = async (
 ): Promise<EnvironmentModifierSummary> => {
   const [weatherResponse, worldEventsResponse] = await Promise.all([
     supabase.from("weather").select("*"),
-    supabase.from("world_events").select("*"),
+    supabase.from("game_events").select("*"),
   ]);
 
   if (weatherResponse.error) throw weatherResponse.error;

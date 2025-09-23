@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -15,6 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/components/ui/use-toast";
+import { usePlayerStatus } from "@/hooks/usePlayerStatus";
+import { ACTIVITY_STATUS_DURATIONS } from "@/utils/gameBalance";
+import { formatDurationMinutes } from "@/utils/datetime";
 
 const mediaCampaigns = {
   tv: {
@@ -171,13 +176,34 @@ const statusVariants: Record<string, "secondary" | "default" | "outline" | "dest
 };
 
 const PublicRelations = () => {
+  const { startTimedStatus } = usePlayerStatus();
+  const { toast } = useToast();
+
+  const handleStartPrSprint = () => {
+    const sprintMinutes = ACTIVITY_STATUS_DURATIONS.publicRelationsSprint;
+    startTimedStatus({
+      status: "Doing PR",
+      durationMinutes: sprintMinutes,
+      metadata: { source: "public_relations" },
+    });
+    toast({
+      title: "PR sprint started",
+      description: `Doing PR runs for about ${formatDurationMinutes(sprintMinutes)}.`,
+    });
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Public Relations</h1>
-        <p className="text-muted-foreground">
-          Placeholder media strategy hub to monitor broadcast outreach, guest bookings, and campaign traction.
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Public Relations</h1>
+          <p className="text-muted-foreground">
+            Placeholder media strategy hub to monitor broadcast outreach, guest bookings, and campaign traction.
+          </p>
+        </div>
+        <Button onClick={handleStartPrSprint} className="w-full sm:w-auto">
+          Launch PR sprint
+        </Button>
       </header>
 
       <Tabs defaultValue="tv" className="space-y-6">

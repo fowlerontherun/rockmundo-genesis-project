@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
+import { PlayerStatusProvider } from "./hooks/usePlayerStatus";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import WorldPulsePage from "./pages/WorldPulse";
@@ -22,6 +23,7 @@ const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
 const Achievements = lazyWithRetry(() => import("./pages/Achievements"));
+const FriendsHub = lazyWithRetry(() => import("./pages/FriendsHub"));
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
@@ -30,6 +32,7 @@ const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const MusicCreation = lazyWithRetry(() => import("./pages/MusicCreation"));
+const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
@@ -51,6 +54,9 @@ const AdminSkillBooks = lazyWithRetry(() => import("./pages/admin/SkillBooks"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const AdminBandLearning = lazyWithRetry(() => import("./pages/admin/BandLearning"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
+const AdminStageSetup = lazyWithRetry(() => import("./pages/admin/StageSetup"));
+const AdminUnderworldStore = lazyWithRetry(() => import("./pages/admin/UnderworldStore"));
+const AdminPlayerBoosts = lazyWithRetry(() => import("./pages/admin/PlayerBoosts"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"));
@@ -58,6 +64,11 @@ const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"))
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const Health = lazyWithRetry(() => import("./pages/Health"));
+const Therapy = lazyWithRetry(() => import("./pages/Therapy"));
+const Rehab = lazyWithRetry(() => import("./pages/Rehab"));
+const WonderDrugs = lazyWithRetry(() => import("./pages/WonderDrugs"));
+const CosmeticSurgery = lazyWithRetry(() => import("./pages/CosmeticSurgery"));
+const Doctor = lazyWithRetry(() => import("./pages/Doctor"));
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
@@ -70,10 +81,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GameDataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+          <PlayerStatusProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
               <Suspense
                 fallback={
                   <div className="flex h-screen w-full items-center justify-center">
@@ -96,6 +108,7 @@ function App() {
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="equipment" element={<EquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
+                    <Route path="friends" element={<FriendsHub />} />
                     <Route path="achievements" element={<Achievements />} />
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
@@ -114,6 +127,7 @@ function App() {
                     <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="create" element={<MusicCreation />} />
+                    <Route path="songwriting" element={<Songwriting />} />
                     <Route path="band-enhanced" element={<EnhancedBandManager />} />
                     <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
                     <Route path="fans-enhanced" element={<EnhancedFanManagement />} />
@@ -128,6 +142,9 @@ function App() {
                     <Route path="admin/youtube-videos" element={<AdminYoutubeVideos />} />
                     <Route path="admin/band-learning" element={<AdminBandLearning />} />
                     <Route path="admin/mentors" element={<AdminMentors />} />
+                    <Route path="admin/stage-setup" element={<AdminStageSetup />} />
+                    <Route path="admin/underworld-store" element={<AdminUnderworldStore />} />
+                    <Route path="admin/player-boosts" element={<AdminPlayerBoosts />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
                     <Route path="songs" element={<SongManager />} />
@@ -136,6 +153,11 @@ function App() {
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
                     <Route path="health" element={<Health />} />
+                    <Route path="health/therapy" element={<Therapy />} />
+                    <Route path="health/rehab" element={<Rehab />} />
+                    <Route path="health/wonder-drugs" element={<WonderDrugs />} />
+                    <Route path="health/cosmetic-surgery" element={<CosmeticSurgery />} />
+                    <Route path="health/doctor" element={<Doctor />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>
@@ -144,7 +166,8 @@ function App() {
               </Suspense>
             </BrowserRouter>
           </TooltipProvider>
-        </GameDataProvider>
+        </PlayerStatusProvider>
+      </GameDataProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

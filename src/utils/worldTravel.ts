@@ -117,7 +117,7 @@ const CITY_COORDINATES: Record<string, Coordinates> = {
   'solace-city': { lat: 37.7749, lng: -122.4194 },
   'vela horizonte': { lat: -22.9068, lng: -43.1729 },
   'vela-horizonte': { lat: -22.9068, lng: -43.1729 },
-  'asterhaven': { lat: 52.4862, lng: -1.8904 },
+  'asterhaven': { lat: 51.5072, lng: -0.1276 },
 };
 
 const DISTRICT_COORDINATES: Record<string, Coordinates> = {
@@ -175,6 +175,36 @@ const normalizeKey = (value: string) =>
 const KNOWN_COORDINATES: Record<string, Coordinates> = {
   ...CITY_COORDINATES,
   ...DISTRICT_COORDINATES,
+};
+
+const toOverrideNumber = (value: unknown): number | null => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+
+  return null;
+};
+
+const resolveCoordinateOverride = (
+  override?: { latitude?: number | null; longitude?: number | null } | null,
+): Coordinates | null => {
+  if (!override) {
+    return null;
+  }
+
+  const lat = toOverrideNumber(override.latitude);
+  const lng = toOverrideNumber(override.longitude);
+
+  if (lat === null || lng === null) {
+    return null;
+  }
+
+  return { lat, lng };
 };
 
 const resolveCoordinateKey = (value: string): string | null => {
@@ -263,10 +293,26 @@ export const getCoordinatesForLocation = (
   return hashToCoordinate(`${location}`);
 };
 
+const parseCoordinateOverride = (value?: number | null) => {
+  if (typeof value !== 'number') {
+    return null;
+  }
+
+  return Number.isFinite(value) ? value : null;
+};
+
 export const getCoordinatesForCity = (
   cityName?: string | null,
   country?: string | null,
-): Coordinates => getCoordinatesForLocation(cityName, { country });
+  override?: { latitude?: number | null; longitude?: number | null } | null,
+): Coordinates => {
+  const overrideCoordinates = resolveCoordinateOverride(override);
+  if (overrideCoordinates) {
+    return overrideCoordinates;
+  }
+
+  return getCoordinatesForLocation(cityName, { country });
+};
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 

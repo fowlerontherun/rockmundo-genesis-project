@@ -98,7 +98,16 @@ const WorldEnvironment: React.FC = () => {
         return cityList.map((city) => ({ ...city, distanceKm: null }));
       }
 
-      const originCoordinates = getCoordinatesForCity(originName, originCountry);
+      const originCoordinates = getCoordinatesForCity(
+        originName,
+        originCountry,
+        matchedCity
+          ? {
+              latitude: matchedCity.latitude ?? null,
+              longitude: matchedCity.longitude ?? null,
+            }
+          : undefined,
+      );
       const normalizedOriginName = normalize(originName);
       const normalizedOriginCountry = normalize(originCountry);
 
@@ -115,7 +124,10 @@ const WorldEnvironment: React.FC = () => {
           return { ...city, distanceKm: 0 };
         }
 
-        const destinationCoordinates = getCoordinatesForCity(city.name, city.country);
+        const destinationCoordinates = getCoordinatesForCity(city.name, city.country, {
+          latitude: city.latitude ?? null,
+          longitude: city.longitude ?? null,
+        });
         const distance = calculateDistanceBetweenCoordinates(originCoordinates, destinationCoordinates);
         const normalizedDistance = Number.isFinite(distance)
           ? Math.max(0, Math.round(distance * 100) / 100)

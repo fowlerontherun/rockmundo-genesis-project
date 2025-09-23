@@ -10,7 +10,8 @@ describe("Travel page", () => {
 
     expect(html).toContain("Flights");
     expect(html).toContain("Trains");
-    expect(html).toContain("Rideshare");
+    expect(html).toContain("Taxis");
+    expect(html).toContain("Ferries");
     expect(html).toContain("Private Jet");
     expect(html).toContain("Band Vehicle");
   });

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "bun:test";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { afterEach, describe, expect, it } from "bun:test";
 
-import { fetchProfileState, loadActiveProfile } from "./index.ts";
+import { fetchProfileState, loadActiveProfile, __TESTING__ } from "./index.ts";
 import type { Database } from "../../../src/lib/supabase-types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -11,13 +12,24 @@ type QueryResult = {
 
 class MockQuery<T> {
   #single = false;
-  constructor(private readonly result: QueryResult) {}
+  constructor(
+    private readonly table: string,
+    private readonly result: QueryResult,
+    private readonly client: {
+      recordInsert: (table: string, values: unknown) => void;
+      getInsertError: (table: string) => QueryResult["error"] | null;
+    },
+  ) {}
 
   select(_columns: string) {
     return this;
   }
 
   eq(_column: string, _value: unknown) {
+    return this;
+  }
+
+  in(_column: string, _values: unknown[]) {
     return this;
   }
 
@@ -32,6 +44,17 @@ class MockQuery<T> {
   maybeSingle() {
     this.#single = true;
     return this;
+  }
+
+  insert(values: unknown) {
+    const error = this.client.getInsertError(this.table);
+    if (error) {
+      return Promise.resolve({ data: null, error });
+    }
+
+    this.client.recordInsert(this.table, values);
+    const payload = Array.isArray(values) ? values : [values];
+    return Promise.resolve({ data: payload, error: null });
   }
 
   then<TResult1 = unknown, TResult2 = unknown>(
@@ -71,11 +94,33 @@ class MockQuery<T> {
 }
 
 class MockSupabaseClient {
-  constructor(private readonly tables: Record<string, QueryResult>) {}
+  readonly inserted: Record<string, unknown[]> = {};
+  readonly rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+
+  constructor(
+    private readonly tables: Record<string, QueryResult>,
+    private readonly rpcResults: Record<string, QueryResult> = {},
+    private readonly insertErrors: Record<string, QueryResult["error"]> = {},
+  ) {}
 
   from(_table: string) {
     const result = this.tables[_table] ?? { data: [], error: null };
-    return new MockQuery(result);
+    return new MockQuery(_table, result, this);
+  }
+
+  recordInsert(table: string, values: unknown) {
+    const payload = Array.isArray(values) ? values : [values];
+    this.inserted[table] = [...(this.inserted[table] ?? []), ...payload];
+  }
+
+  getInsertError(table: string) {
+    return this.insertErrors[table] ?? null;
+  }
+
+  rpc(name: string, args: Record<string, unknown>) {
+    this.rpcCalls.push({ name, args });
+    const result = this.rpcResults[name] ?? { data: null, error: null };
+    return Promise.resolve(result);
   }
 }
 
@@ -167,5 +212,293 @@ describe("progression profile state", () => {
       skill_points_available: 4,
     });
     expect(state.profile.weekly_bonus_metadata).toEqual({ streak: 2, bonus_awarded: 150 });
+  });
+});
+
+describe("admin progression actions", () => {
+  const { ACTION_HANDLERS } = __TESTING__;
+
+  const adminProfile = {
+    id: "admin-profile",
+    user_id: "admin-1",
+    username: "admin",
+    display_name: "Admin",
+    avatar_url: null,
+    bio: null,
+    level: 1,
+    experience: 0,
+    experience_at_last_weekly_bonus: 0,
+    cash: 0,
+    fame: 0,
+    fans: 0,
+    last_weekly_bonus_at: null,
+    weekly_bonus_streak: 0,
+    weekly_bonus_metadata: {},
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  } satisfies Database["public"]["Tables"]["profiles"]["Row"];
+
+  const createContext = (client: MockSupabaseClient) => ({
+    client: client as unknown as SupabaseClient<Database>,
+    user: { id: "admin-1" },
+    profile: adminProfile,
+  });
+
+  it("awards special XP to selected players efficiently", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: { role: "admin" }, error: null },
+      profiles: {
+        data: [
+          { id: "profile-10", user_id: "user-10", username: "alpha", display_name: "Alpha" },
+          { id: "profile-20", user_id: "user-20", username: "beta", display_name: "Beta" },
+          { id: "profile-30", user_id: "user-30", username: "gamma", display_name: "Gamma" },
+        ],
+        error: null,
+      },
+      notifications: { data: [], error: null },
+    };
+
+    const rpcResults: Record<string, QueryResult> = {
+      progression_award_special_xp: {
+        data: { message: "ok" },
+        error: null,
+      },
+    };
+
+    const client = new MockSupabaseClient(tables, rpcResults);
+    const ctx = createContext(client);
+
+    const result = await ACTION_HANDLERS.admin_award_special_xp(ctx as any, {
+      amount: 150,
+      profile_ids: ["profile-10", "profile-20", "profile-30"],
+      reason: "Tour kickoff reward",
+    });
+
+    expect(result.message).toContain("Granted 150 XP to 3 players");
+    expect(client.rpcCalls).toHaveLength(3);
+    expect(client.rpcCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "progression_award_special_xp",
+          args: expect.objectContaining({ p_profile_id: "profile-10", p_amount: 150 }),
+        }),
+        expect.objectContaining({
+          name: "progression_award_special_xp",
+          args: expect.objectContaining({ p_profile_id: "profile-20", p_amount: 150 }),
+        }),
+        expect.objectContaining({
+          name: "progression_award_special_xp",
+          args: expect.objectContaining({ p_profile_id: "profile-30", p_amount: 150 }),
+        }),
+      ]),
+    );
+    expect(client.inserted.notifications?.length ?? 0).toBe(3);
+  });
+
+  it("adjusts momentum for selected players when authorized", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: { role: "admin" }, error: null },
+      profiles: {
+        data: [
+          { id: "profile-2", user_id: "user-2", username: "target", display_name: "Target" },
+        ],
+        error: null,
+      },
+      notifications: { data: [], error: null },
+    };
+
+    const rpcResults: Record<string, QueryResult> = {
+      progression_admin_adjust_momentum: {
+        data: {
+          profile_id: "profile-2",
+          momentum_before: 10,
+          momentum_after: 20,
+          momentum_delta: 10,
+          reason: "Calibration",
+        },
+        error: null,
+      },
+    };
+
+    const client = new MockSupabaseClient(tables, rpcResults);
+    const ctx = createContext(client);
+
+    const result = await ACTION_HANDLERS.admin_adjust_momentum(ctx as any, {
+      amount: 10,
+      profile_ids: ["profile-2"],
+      reason: "Calibration",
+    });
+
+    expect(result.message).toContain("Adjusted momentum");
+    expect(client.rpcCalls).toHaveLength(1);
+    expect(client.rpcCalls[0]).toEqual({
+      name: "progression_admin_adjust_momentum",
+      args: expect.objectContaining({
+        p_profile_id: "profile-2",
+        p_amount: 10,
+      }),
+    });
+    expect(client.inserted.notifications?.length ?? 0).toBe(1);
+  });
+
+  it("rejects momentum adjustments when user lacks admin role", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: null, error: null },
+    };
+
+    const client = new MockSupabaseClient(tables);
+    const ctx = createContext(client);
+
+    await expect(ACTION_HANDLERS.admin_adjust_momentum(ctx as any, {
+      amount: 5,
+      profile_ids: ["profile-2"],
+    })).rejects.toThrow("Admin privileges are required");
+  });
+
+  it("rejects zero-value momentum adjustments", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: { role: "admin" }, error: null },
+      profiles: {
+        data: [
+          { id: "profile-3", user_id: "user-3", username: "hero", display_name: "Hero" },
+        ],
+        error: null,
+      },
+    };
+
+    const client = new MockSupabaseClient(tables);
+    const ctx = createContext(client);
+
+    await expect(ACTION_HANDLERS.admin_adjust_momentum(ctx as any, {
+      amount: 0,
+      profile_ids: ["profile-3"],
+    })).rejects.toThrow("Momentum adjustment must be a non-zero number");
+  });
+
+  it("updates the daily XP stipend and notifies players when requested", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: { role: "admin" }, error: null },
+      profiles: {
+        data: [
+          { id: "profile-4", user_id: "user-4", username: "alpha", display_name: "Alpha" },
+          { id: "profile-5", user_id: "user-5", username: "bravo", display_name: "Bravo" },
+        ],
+        error: null,
+      },
+      notifications: { data: [], error: null },
+    };
+
+    const rpcResults: Record<string, QueryResult> = {
+      progression_admin_set_daily_xp: {
+        data: {
+          previous_amount: 150,
+          daily_xp_amount: 200,
+          updated_at: "2025-01-01T00:00:00Z",
+          metadata: {},
+        },
+        error: null,
+      },
+    };
+
+    const client = new MockSupabaseClient(tables, rpcResults);
+    const ctx = createContext(client);
+
+    const result = await ACTION_HANDLERS.admin_set_daily_xp(ctx as any, {
+      amount: 200,
+      notify: true,
+      apply_to_all: true,
+      reason: "System balance update",
+    });
+
+    expect(result.message).toContain("Daily XP stipend set to 200 XP");
+    expect(result.result).toMatchObject({
+      daily_xp_amount: 200,
+      notified_count: 2,
+    });
+    expect(client.rpcCalls[0]).toEqual({
+      name: "progression_admin_set_daily_xp",
+      args: expect.objectContaining({
+        p_new_amount: 200,
+        p_reason: "System balance update",
+      }),
+    });
+    expect(client.inserted.notifications?.length ?? 0).toBe(2);
+  });
+
+  it("rejects daily stipend updates from non-admins", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: null, error: null },
+    };
+
+    const client = new MockSupabaseClient(tables);
+    const ctx = createContext(client);
+
+    await expect(ACTION_HANDLERS.admin_set_daily_xp(ctx as any, {
+      amount: 150,
+    })).rejects.toThrow("Admin privileges are required");
+  });
+
+  it("rejects invalid daily stipend amounts", async () => {
+    const tables: Record<string, QueryResult> = {
+      user_roles: { data: { role: "admin" }, error: null },
+    };
+
+    const client = new MockSupabaseClient(tables);
+    const ctx = createContext(client);
+
+    await expect(ACTION_HANDLERS.admin_set_daily_xp(ctx as any, {
+      amount: 0,
+    })).rejects.toThrow("Daily XP amount must be a positive integer");
+  });
+});
+
+describe("resolveSupabaseCredentials", () => {
+  const { resolveSupabaseCredentials } = __TESTING__;
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    for (const key of Object.keys(process.env)) {
+      delete process.env[key];
+    }
+    Object.assign(process.env, originalEnv);
+  });
+
+  it("prefers the service role key when available", () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
+    process.env.SUPABASE_ANON_KEY = "anon-key";
+
+    const credentials = resolveSupabaseCredentials();
+
+    expect(credentials.supabaseUrl).toBe("https://example.supabase.co");
+    expect(credentials.supabaseKey).toBe("service-key");
+    expect(credentials.usingServiceRole).toBe(true);
+  });
+
+  it("falls back to the anon key when the service role key is missing", () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_ANON_KEY = "anon-key";
+
+    const credentials = resolveSupabaseCredentials();
+
+    expect(credentials.supabaseUrl).toBe("https://example.supabase.co");
+    expect(credentials.supabaseKey).toBe("anon-key");
+    expect(credentials.usingServiceRole).toBe(false);
+  });
+
+  it("throws a descriptive error when no Supabase keys are configured", () => {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
+
+    expect(() => resolveSupabaseCredentials()).toThrow(/environment variables are not configured/);
+  });
+
+  it("throws when the Supabase URL is missing", () => {
+    delete process.env.SUPABASE_URL;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
+
+    expect(() => resolveSupabaseCredentials()).toThrow(/Supabase URL is not configured/);
   });
 });

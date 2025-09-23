@@ -11,7 +11,7 @@ import { fetchWorldEnvironmentSnapshot } from "@/utils/worldEnvironment";
 import { getCoordinatesForCity } from "@/utils/worldTravel";
 import { projectCoordinates } from "@/utils/mapProjection";
 
-const MAP_DIMENSIONS = { width: 1200, height: 620, padding: 48 } as const;
+const MAP_DIMENSIONS = { width: 1440, height: 720, padding: 48 } as const;
 
 const WorldMap = () => {
   const navigate = useNavigate();
@@ -21,10 +21,10 @@ const WorldMap = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const cities = data?.cities ?? [];
-
   const pins = useMemo(() => {
-    if (!cities.length) {
+    const cityList = data?.cities ?? [];
+
+    if (!cityList.length) {
       return [] as Array<{
         id: string;
         label: string;
@@ -34,8 +34,11 @@ const WorldMap = () => {
       }>;
     }
 
-    return cities.map((city) => {
-      const coordinates = getCoordinatesForCity(city.name, city.country);
+    return cityList.map((city) => {
+      const coordinates = getCoordinatesForCity(city.name, city.country, {
+        latitude: city.latitude ?? null,
+        longitude: city.longitude ?? null,
+      });
       const point = projectCoordinates(coordinates, MAP_DIMENSIONS);
       const left = `${(point.x / MAP_DIMENSIONS.width) * 100}%`;
       const top = `${(point.y / MAP_DIMENSIONS.height) * 100}%`;
@@ -52,7 +55,7 @@ const WorldMap = () => {
         description,
       };
     });
-  }, [cities]);
+  }, [data?.cities]);
 
   const renderMap = () => {
     if (isLoading) {
@@ -107,7 +110,7 @@ const WorldMap = () => {
         </CardHeader>
         <CardContent className="space-y-4 p-0">
           <div className="relative w-full overflow-hidden">
-            <div className="relative w-full pt-[56%] sm:pt-[48%]">
+            <div className="relative w-full aspect-[1440/720]">
               <img
                 src={mapBackground}
                 alt="Stylised Rockmundo world map"

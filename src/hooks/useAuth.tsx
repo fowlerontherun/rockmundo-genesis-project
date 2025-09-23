@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode, type FC } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { handleInvalidRefreshTokenError } from "@/lib/auth-error-handlers";
 
 import { AuthContext, type AuthContextType } from "./use-auth-context";
 
@@ -21,12 +22,20 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
-          throw error;
+          const handled = await handleInvalidRefreshTokenError(error);
+          if (!handled) {
+            throw error;
+          }
+
+          setSession(null);
+          setUser(null);
+          return;
         }
 
         setSession(data.session);
         setUser(data.session?.user ?? null);
       } catch (sessionError) {
+        await handleInvalidRefreshTokenError(sessionError);
         console.error("Error fetching initial auth session:", sessionError);
         setSession(null);
         setUser(null);
