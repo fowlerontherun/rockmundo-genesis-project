@@ -12,10 +12,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
+import { usePlayerStatus } from '@/hooks/usePlayerStatus';
 import { applyAttributeToValue } from '@/utils/attributeProgression';
 import { toast } from '@/components/ui/sonner-toast';
 import { applyEquipmentWear } from '@/utils/equipmentWear';
 import { awardActionXp } from '@/utils/progression';
+import { ACTIVITY_STATUS_DURATIONS } from '@/utils/gameBalance';
+import { formatDurationMinutes } from '@/utils/datetime';
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -126,6 +129,7 @@ type TourRecord = TourRow & {
 const TouringSystem: React.FC = () => {
   const { user } = useAuth();
   const { profile, attributes, updateProfile, addActivity, awardActionXp } = useGameData();
+  const { startTimedStatus } = usePlayerStatus();
   const [tours, setTours] = useState<Tour[]>([]);
   const [availableVenues, setAvailableVenues] = useState<VenueRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -422,7 +426,27 @@ const TouringSystem: React.FC = () => {
         console.error('Failed to apply equipment wear after executing tour show', wearError);
       }
 
-      toast.success(`Show completed! ${getShowTypeLabel(showType)} night sold ${ticketsSold} tickets for $${revenue.toLocaleString()}`);
+      const showDurationSeconds = TOUR_SHOW_DURATION_SECONDS[showType] ?? TOUR_SHOW_DURATION_SECONDS[DEFAULT_SHOW_TYPE];
+      const gigDurationMinutes = Number.isFinite(showDurationSeconds)
+        ? Math.max(1, Math.round((showDurationSeconds as number) / 60))
+        : ACTIVITY_STATUS_DURATIONS.gigPerformance;
+      startTimedStatus({
+        status: 'Gigging',
+        durationMinutes: gigDurationMinutes,
+        metadata: {
+          tour_id: tour.id,
+          tour_name: tour.name,
+          tour_venue_id: venue.id,
+          venue: venue.venue_name,
+          city: venue.city,
+          show_type: showType,
+        },
+      });
+      const gigDurationLabel = formatDurationMinutes(gigDurationMinutes);
+
+      toast.success(
+        `Gigging at ${venue.venue_name}! ${ticketsSold} tickets sold for $${revenue.toLocaleString()} — about ${gigDurationLabel} remaining in Gigging.`,
+      );
       loadTourData();
 
     } catch (error: unknown) {

@@ -186,6 +186,18 @@ export const COOLDOWNS = {
   socialPost: 30 * 60 * 1000 // 30 minutes
 } as const;
 
+export const ACTIVITY_STATUS_DURATIONS = {
+  songwritingIdea: 45,
+  songwritingSession: 60,
+  recordingSession: 120,
+  gigPerformance: 120,
+  rehearsal: 90,
+  travelFallback: 45,
+  buskingSession: 60,
+  publicRelationsSprint: 45,
+  jammingSession: 75,
+} as const;
+
 export const FAME_THRESHOLDS = {
   localTalent: 100,
   risingArtist: 500,

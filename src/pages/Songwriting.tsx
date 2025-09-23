@@ -11,6 +11,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { usePlayerStatus } from "@/hooks/usePlayerStatus";
+import { ACTIVITY_STATUS_DURATIONS } from "@/utils/gameBalance";
+import { formatDurationMinutes } from "@/utils/datetime";
 
 const themes = [
   { value: "love", label: "Love" },
@@ -49,6 +53,8 @@ const Songwriting = () => {
   const [chordProgression, setChordProgression] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const { toast } = useToast();
+  const { startTimedStatus } = usePlayerStatus();
 
   const isFormReady = Boolean(title.trim() && theme && genre && chordProgression);
 
@@ -66,6 +72,24 @@ const Songwriting = () => {
   const handleSave = () => {
     if (!isFormReady) return;
     setLastSavedAt(new Date().toLocaleString());
+    const songwritingDurationMinutes = ACTIVITY_STATUS_DURATIONS.songwritingSession;
+    startTimedStatus({
+      status: "Songwriting",
+      durationMinutes: songwritingDurationMinutes,
+      metadata: {
+        title: title.trim() || "Untitled idea",
+        genre,
+        source: "songwriting_lab",
+      },
+    });
+    const songwritingDurationLabel = formatDurationMinutes(
+      songwritingDurationMinutes,
+    );
+
+    toast({
+      title: "Songwriting saved",
+      description: `Songwriting stays active for about ${songwritingDurationLabel}. Keep refining your idea.`,
+    });
   };
 
   const handleClear = () => {

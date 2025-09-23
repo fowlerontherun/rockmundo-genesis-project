@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
+import { PlayerStatusProvider } from "./hooks/usePlayerStatus";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import WorldPulsePage from "./pages/WorldPulse";
@@ -80,10 +81,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GameDataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+          <PlayerStatusProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
               <Suspense
                 fallback={
                   <div className="flex h-screen w-full items-center justify-center">
@@ -164,7 +166,8 @@ function App() {
               </Suspense>
             </BrowserRouter>
           </TooltipProvider>
-        </GameDataProvider>
+        </PlayerStatusProvider>
+      </GameDataProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

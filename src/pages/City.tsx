@@ -10,8 +10,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
+import { usePlayerStatus } from "@/hooks/usePlayerStatus";
 import { supabase } from "@/integrations/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { ACTIVITY_STATUS_DURATIONS } from "@/utils/gameBalance";
+import { formatDurationMinutes } from "@/utils/datetime";
 import {
   fetchWorldEnvironmentSnapshot,
   fetchCityEnvironmentDetails,
@@ -414,6 +417,7 @@ export const CityContent = ({
 }: CityContentProps) => {
   const { toast } = useToast();
   const { profile, currentCity, updateProfile, addActivity } = useGameData();
+  const { startTimedStatus } = usePlayerStatus();
   const culturalEvents = useMemo(
     () => (city?.cultural_events ?? []).filter((event) => typeof event === "string" && event.trim().length > 0),
     [city?.cultural_events],
@@ -666,11 +670,27 @@ export const CityContent = ({
           console.warn("Failed to log travel activity", activityError);
         }
 
+        const travelDurationCandidate = Number(option.durationMinutes);
+        const travelDurationMinutes = Number.isFinite(travelDurationCandidate)
+          ? Math.max(1, Math.round(travelDurationCandidate))
+          : ACTIVITY_STATUS_DURATIONS.travelFallback;
+        startTimedStatus({
+          status: "Traveling",
+          durationMinutes: travelDurationMinutes,
+          metadata: {
+            origin: city.name,
+            destination: option.destinationName,
+            mode: option.modeLabel,
+            travel_option_id: option.id,
+          },
+        });
+        const travelDurationLabel = formatDurationMinutes(travelDurationMinutes);
+
         toast({
-          title: "Travel booked",
+          title: "Traveling",
           description: option.destinationCityId
-            ? `Heading to ${option.destinationName} via ${option.modeLabel}. Your city profile will update shortly.`
-            : `Heading to ${option.destinationName} via ${option.modeLabel}.`,
+            ? `Traveling to ${option.destinationName} via ${option.modeLabel} — about ${travelDurationLabel} remaining.`
+            : `Traveling toward ${option.destinationName} via ${option.modeLabel} — about ${travelDurationLabel} remaining.`,
         });
       } catch (error) {
         console.error("Failed to confirm travel booking", error);
@@ -683,7 +703,7 @@ export const CityContent = ({
         setBookingOptionId(null);
       }
     },
-    [addActivity, city, profile, toast, updateProfile],
+    [addActivity, city, profile, startTimedStatus, toast, updateProfile],
   );
 
   const summary = useMemo(() => {
