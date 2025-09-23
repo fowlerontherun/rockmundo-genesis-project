@@ -22,8 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchPublicProfilesByUserIds } from "@/integrations/supabase/public-profiles";
-import type { BasicPublicProfile } from "@/integrations/supabase/public-profiles";
 import type { Database } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
 import {
@@ -77,17 +75,6 @@ interface SocialPost {
   commentsTree: SocialComment[];
   repostsList: SocialRepost[];
 }
-
-const mapToSocialProfile = (profile: BasicPublicProfile): SocialProfile => {
-  const username = profile.username ?? profile.user_id;
-  const displayName = profile.display_name ?? profile.username ?? profile.user_id;
-
-  return {
-    userId: profile.user_id,
-    username,
-    displayName,
-  };
-};
 
 interface Campaign {
   id: string;
@@ -477,21 +464,29 @@ const SocialMedia = () => {
         return cached;
       }
 
-      try {
-        const profiles = await fetchPublicProfilesByUserIds([userId]);
-        const profile = profiles.get(userId);
+      const { data, error } = await supabase
+        .from("public_profiles")
+        .select("user_id, username, display_name")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-        if (!profile) {
-          return undefined;
-        }
-
-        const mappedProfile = mapToSocialProfile(profile);
-        setProfileLookup((previous) => ({ ...previous, [userId]: mappedProfile }));
-        return mappedProfile;
-      } catch (error) {
+      if (error) {
         console.error("Error fetching profile:", error);
         return undefined;
       }
+
+      if (!data) {
+        return undefined;
+      }
+
+      const profile: SocialProfile = {
+        userId: data.user_id,
+        username: data.username,
+        displayName: data.display_name ?? data.username,
+      };
+
+      setProfileLookup((previous) => ({ ...previous, [userId]: profile }));
+      return profile;
     },
     [profileLookup],
   );
@@ -557,16 +552,24 @@ const SocialMedia = () => {
 
       const profileMap: Record<string, SocialProfile> = {};
       if (userIds.size > 0) {
-        const profiles = await fetchPublicProfilesByUserIds(Array.from(userIds));
+        const { data: profileRows, error: profileError } = await supabase
+          .from("public_profiles")
+          .select("user_id, username, display_name")
+          .in("user_id", Array.from(userIds));
 
-        profiles.forEach((profile, id) => {
-          const mapped = mapToSocialProfile(profile);
-          profileMap[id] = mapped;
+        if (profileError) {
+          throw profileError;
+        }
+
+        (profileRows ?? []).forEach((profile) => {
+          profileMap[profile.user_id] = {
+            userId: profile.user_id,
+            username: profile.username,
+            displayName: profile.display_name ?? profile.username,
+          };
         });
 
-        if (Object.keys(profileMap).length > 0) {
-          setProfileLookup((previous) => ({ ...previous, ...profileMap }));
-        }
+        setProfileLookup((previous) => ({ ...previous, ...profileMap }));
       }
 
       const commentsByPost = new Map<string, SocialCommentRow[]>();

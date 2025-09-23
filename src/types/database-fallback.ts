@@ -21,15 +21,9 @@ export interface Database {
           age: number;
           level?: number;
           experience?: number;
-          current_activity?: string;
-          current_activity_started_at?: string;
-          current_activity_duration_minutes?: number;
-          current_activity_ends_at?: string;
           cash?: number;
           fame?: number;
           fans?: number;
-          momentum?: number;
-          inspiration?: number;
           experience_at_last_weekly_bonus?: number;
           last_weekly_bonus_at?: string;
           weekly_bonus_streak?: number;
@@ -47,15 +41,9 @@ export interface Database {
           age?: number;
           level?: number;
           experience?: number;
-          current_activity?: string;
-          current_activity_started_at?: string;
-          current_activity_duration_minutes?: number;
-          current_activity_ends_at?: string;
           cash?: number;
           fame?: number;
           fans?: number;
-          momentum?: number;
-          inspiration?: number;
           experience_at_last_weekly_bonus?: number;
           last_weekly_bonus_at?: string;
           weekly_bonus_streak?: number;
@@ -73,19 +61,46 @@ export interface Database {
           age?: number;
           level?: number;
           experience?: number;
-          current_activity?: string;
-          current_activity_started_at?: string;
-          current_activity_duration_minutes?: number;
-          current_activity_ends_at?: string;
           cash?: number;
           fame?: number;
           fans?: number;
-          momentum?: number;
-          inspiration?: number;
           experience_at_last_weekly_bonus?: number;
           last_weekly_bonus_at?: string;
           weekly_bonus_streak?: number;
           weekly_bonus_metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      profile_activity_statuses: {
+        Row: {
+          id: string;
+          profile_id: string;
+          status: string;
+          started_at: string;
+          duration_minutes?: number | null;
+          ends_at?: string | null;
+          song_id?: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          status: string;
+          started_at?: string;
+          duration_minutes?: number | null;
+          song_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          status?: string;
+          started_at?: string;
+          duration_minutes?: number | null;
+          song_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -346,26 +361,20 @@ export interface Database {
         Row: {
           id: string;
           profile_id: string;
-          grant_date: string;
-          xp_awarded: number;
-          metadata: Json;
-          claimed_at: string;
+          amount: number;
+          created_at: string;
         };
         Insert: {
           id?: string;
           profile_id: string;
-          grant_date: string;
-          xp_awarded: number;
-          metadata?: Json;
-          claimed_at?: string;
+          amount: number;
+          created_at?: string;
         };
         Update: {
           id?: string;
           profile_id?: string;
-          grant_date?: string;
-          xp_awarded?: number;
-          metadata?: Json;
-          claimed_at?: string;
+          amount?: number;
+          created_at?: string;
         };
       };
       skill_definitions: {
@@ -374,7 +383,6 @@ export interface Database {
           slug: string;
           display_name: string;
           description?: string;
-          metadata: Json;
           tier_caps?: Json;
           created_at: string;
           updated_at: string;
@@ -384,7 +392,6 @@ export interface Database {
           slug: string;
           display_name: string;
           description?: string;
-          metadata?: Json;
           tier_caps?: Json;
           created_at?: string;
           updated_at?: string;
@@ -394,7 +401,6 @@ export interface Database {
           slug?: string;
           display_name?: string;
           description?: string;
-          metadata?: Json;
           tier_caps?: Json;
           created_at?: string;
           updated_at?: string;
@@ -477,35 +483,41 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
+          profile_id: string;
           activity_type: string;
           message: string;
           metadata?: Json;
           earnings?: number;
-          status?: string;
-          duration_minutes?: number;
           created_at: string;
+          status?: string | null;
+          duration_minutes?: number | null;
+          status_id?: string | null;
         };
         Insert: {
           id?: string;
           user_id: string;
+          profile_id: string;
           activity_type: string;
           message: string;
           metadata?: Json;
           earnings?: number;
-          status?: string;
-          duration_minutes?: number;
           created_at?: string;
+          status?: string | null;
+          duration_minutes?: number | null;
+          status_id?: string | null;
         };
         Update: {
           id?: string;
           user_id?: string;
+          profile_id?: string;
           activity_type?: string;
           message?: string;
           metadata?: Json;
           earnings?: number;
-          status?: string;
-          duration_minutes?: number;
           created_at?: string;
+          status?: string | null;
+          duration_minutes?: number | null;
+          status_id?: string | null;
         };
       };
       band_members: {
@@ -633,103 +645,26 @@ export interface Database {
         Row: {
           id: string;
           title: string;
-          description: string | null;
-          event_type: string;
+          description: string;
           start_date: string;
           end_date: string;
-          rewards: Json | null;
-          requirements: Json | null;
-          max_participants: number | null;
-          current_participants: number | null;
-          is_active: boolean | null;
-          created_at: string | null;
+          created_at: string;
         };
         Insert: {
           id?: string;
           title: string;
-          description?: string | null;
-          event_type: string;
+          description: string;
           start_date: string;
           end_date: string;
-          rewards?: Json | null;
-          requirements?: Json | null;
-          max_participants?: number | null;
-          current_participants?: number | null;
-          is_active?: boolean | null;
-          created_at?: string | null;
+          created_at?: string;
         };
         Update: {
           id?: string;
           title?: string;
-          description?: string | null;
-          event_type?: string;
+          description?: string;
           start_date?: string;
           end_date?: string;
-          rewards?: Json | null;
-          requirements?: Json | null;
-          max_participants?: number | null;
-          current_participants?: number | null;
-          is_active?: boolean | null;
-          created_at?: string | null;
-        };
-      };
-      schedule_events: {
-        Row: {
-          id: string;
-          user_id: string;
-          title: string;
-          type: string;
-          date: string;
-          time: string;
-          location: string;
-          status: string;
-          description: string | null;
-          reminder_minutes: number | null;
-          last_notified: string | null;
-          recurrence_rule: string | null;
-          duration_minutes: number;
-          energy_cost: number | null;
-          metadata: Json;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          title: string;
-          type: string;
-          date: string;
-          time: string;
-          location: string;
-          status?: string;
-          description?: string | null;
-          reminder_minutes?: number | null;
-          last_notified?: string | null;
-          recurrence_rule?: string | null;
-          duration_minutes?: number;
-          energy_cost?: number | null;
-          metadata?: Json;
           created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          title?: string;
-          type?: string;
-          date?: string;
-          time?: string;
-          location?: string;
-          status?: string;
-          description?: string | null;
-          reminder_minutes?: number | null;
-          last_notified?: string | null;
-          recurrence_rule?: string | null;
-          duration_minutes?: number;
-          energy_cost?: number | null;
-          metadata?: Json;
-          created_at?: string;
-          updated_at?: string;
         };
       };
       gigs: {
@@ -911,20 +846,20 @@ export interface Database {
     };
     Views: {
       [key: string]: {
-        Row: Record<string, unknown>;
+        Row: Record<string, any>;
       };
     };
     Functions: {
       [key: string]: {
-        Args: Record<string, unknown>;
-        Returns: unknown;
+        Args: Record<string, any>;
+        Returns: any;
       };
     };
     Enums: {
       [key: string]: string;
     };
     CompositeTypes: {
-      [key: string]: Record<string, unknown>;
+      [key: string]: Record<string, any>;
     };
   };
 }

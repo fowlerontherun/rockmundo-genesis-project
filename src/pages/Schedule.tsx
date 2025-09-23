@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
-import { usePlayerStatus } from "@/hooks/usePlayerStatus";
 import {
   useGameData,
   type PlayerAttributes,
@@ -53,7 +52,6 @@ import { addMonths } from "date-fns";
 import {
   AttributeFocus,
   AttributeKey,
-  ACTIVITY_STATUS_DURATIONS,
   calculateExperienceReward,
   calculateFanGain,
   calculateLevel,
@@ -62,7 +60,6 @@ import {
   attributeScoreToMultiplier
 } from "@/utils/gameBalance";
 import { applyCostReduction } from "@/utils/attributeModifiers";
-import { formatDurationMinutes } from "@/utils/datetime";
 
 type EventType = "gig" | "recording" | "rehearsal" | "meeting" | "tour";
 type EventStatus = "upcoming" | "in_progress" | "completed" | "cancelled";
@@ -799,7 +796,6 @@ const Schedule = () => {
     addActivity,
     refetch
   } = useGameData();
-  const { startTimedStatus } = usePlayerStatus();
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
@@ -1564,7 +1560,6 @@ const Schedule = () => {
 
       let completionResult: { summary: string; rewardLabel: string } | null = null;
       const wasCompleted = previousStatus !== "completed" && updatedEvent.status === "completed";
-      let statusToastAddition: string | null = null;
 
       if (wasCompleted) {
         try {
@@ -1576,43 +1571,6 @@ const Schedule = () => {
             description: "The event was updated, but we couldn't apply completion rewards. Please try again.",
             variant: "destructive",
           });
-        }
-
-        const durationCandidate = Number(updatedEvent.duration_minutes);
-        const fallbackDuration =
-          updatedEvent.type === "gig"
-            ? ACTIVITY_STATUS_DURATIONS.gigPerformance
-            : updatedEvent.type === "rehearsal"
-              ? ACTIVITY_STATUS_DURATIONS.rehearsal
-              : null;
-        const sessionDurationMinutes = Number.isFinite(durationCandidate)
-          ? Math.max(1, Math.round(durationCandidate))
-          : fallbackDuration;
-
-        if (sessionDurationMinutes) {
-          if (updatedEvent.type === "rehearsal") {
-            startTimedStatus({
-              status: "Rehearsing",
-              durationMinutes: sessionDurationMinutes,
-              metadata: {
-                event_id: updatedEvent.id,
-                title: updatedEvent.title,
-                location: updatedEvent.location,
-              },
-            });
-            statusToastAddition = `Rehearsing active for about ${formatDurationMinutes(sessionDurationMinutes)}.`;
-          } else if (updatedEvent.type === "gig") {
-            startTimedStatus({
-              status: "Gigging",
-              durationMinutes: sessionDurationMinutes,
-              metadata: {
-                event_id: updatedEvent.id,
-                title: updatedEvent.title,
-                location: updatedEvent.location,
-              },
-            });
-            statusToastAddition = `Gigging runs about ${formatDurationMinutes(sessionDurationMinutes)}.`;
-          }
         }
       }
 
@@ -1632,13 +1590,9 @@ const Schedule = () => {
           ? `${updatedEvent.title} marked as completed.`
           : "The schedule event has been updated.";
 
-      const combinedDescription = statusToastAddition
-        ? `${toastDescription} ${statusToastAddition}`
-        : toastDescription;
-
       toast({
         title: toastTitle,
-        description: combinedDescription,
+        description: toastDescription,
       });
     } catch (error) {
       console.error("Error updating schedule event:", error);

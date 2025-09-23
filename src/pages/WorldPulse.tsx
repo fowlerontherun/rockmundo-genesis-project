@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchPublicProfilesByUserIds } from "@/integrations/supabase/public-profiles";
 import type { Database } from "@/lib/supabase-types";
 import { format, getISOWeek } from "date-fns";
 import {
@@ -74,6 +73,7 @@ interface SalesSummary {
 
 type GlobalChartRow = Database["public"]["Tables"]["global_charts"]["Row"];
 type SongRow = Database["public"]["Tables"]["songs"]["Row"];
+type PublicProfileRow = Database["public"]["Views"]["public_profiles"]["Row"];
 
 const formatDailyValue = (dateString: string) => {
   const parsed = new Date(dateString);
@@ -182,7 +182,21 @@ const WorldPulse = () => {
         )
       );
 
-      const profilesByUserId = await fetchPublicProfilesByUserIds(userIds);
+      const profilesByUserId = new Map<string, PublicProfileRow>();
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("public_profiles")
+          .select("user_id, display_name, username")
+          .in("user_id", userIds);
+
+        if (profilesError) {
+          throw profilesError;
+        }
+
+        (profilesData ?? []).forEach((profile) => {
+          profilesByUserId.set(profile.user_id, profile as PublicProfileRow);
+        });
+      }
 
       const maxStreams = rows.reduce((max, row) => Math.max(max, Number(row.total_streams ?? 0)), 0);
       const maxSales = rows.reduce((max, row) => Math.max(max, Number(row.total_sales ?? 0)), 0);

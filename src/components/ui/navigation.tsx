@@ -28,14 +28,12 @@ import {
   Globe,
   Mic,
   GraduationCap,
-  PenSquare,
   DollarSign,
   Plane,
   ListMusic,
   Megaphone,
   Store,
   Guitar,
-  Handshake,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -64,7 +62,6 @@ const Navigation = () => {
       items: [
         { icon: Music, label: "Music Studio", path: "/music" },
         { icon: Play, label: "Music Creation", path: "/create" },
-        { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
         { icon: ListMusic, label: "Song Manager", path: "/songs" },
         { icon: GraduationCap, label: "Education", path: "/education" },
       ],
@@ -79,7 +76,7 @@ const Navigation = () => {
         { icon: Building2, label: "Venue Management", path: "/venues" },
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
         { icon: MapPin, label: "City Overview", path: cityOverviewPath },
-        { icon: Globe, label: "World Map", path: "/world-map" },
+        { icon: Globe, label: "World Map", path: "/cities" },
         { icon: Mic, label: "Street Busking", path: "/busking" },
         { icon: Plane, label: "Travel Planner", path: "/travel" },
         { icon: Globe, label: "Tour System", path: "/tours-system" },
@@ -88,7 +85,6 @@ const Navigation = () => {
     {
       title: "Community & Audience",
       items: [
-        { icon: Handshake, label: "Friends Hub", path: "/friends" },
         { icon: Users, label: "Band Manager", path: "/band" },
         { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
         { icon: Share2, label: "Social Media", path: "/social" },
@@ -128,7 +124,6 @@ const Navigation = () => {
     { icon: Megaphone, label: "PR", path: "/pr" },
     { icon: User, label: "My Character", path: "/my-character" },
     { icon: DollarSign, label: "Underworld", path: "/underworld" },
-    { icon: PenSquare, label: "Songwriting", path: "/songwriting" },
   ];
 
   const handleLogout = async () => {
@@ -187,7 +182,7 @@ const Navigation = () => {
                 const Icon = item.icon;
                 return (
                   <Button
-                    key={`${item.path}-${item.label}`}
+                    key={item.path}
                     variant={isActive(item.path) ? "secondary" : "ghost"}
                     className={`w-full justify-start gap-3 ${
                       isActive(item.path)
@@ -259,7 +254,7 @@ const Navigation = () => {
             const Icon = item.icon;
             return (
               <Button
-                key={`${item.path}-${item.label}`}
+                key={item.path}
                 variant="ghost"
                 size="sm"
                 className={`flex flex-col gap-1 h-12 px-2 ${

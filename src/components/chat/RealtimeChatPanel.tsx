@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useSupabasePresence } from "@/hooks/useSupabasePresence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,6 +46,8 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [participantCount, setParticipantCount] = useState(0);
   const profileCacheRef = useRef<Record<string, string>>({});
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
@@ -168,32 +168,6 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     }
   }, [user, channelKey, fetchMessages]);
 
-  const handleChannelReady = useCallback(
-    (channel: RealtimeChannel) => {
-      channel.on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "global_chat",
-          filter: `channel=eq.${channelKey}`
-        },
-        () => {
-          void fetchMessages();
-        }
-      );
-    },
-    [channelKey, fetchMessages]
-  );
-
-  const { isConnected, participantCount } = useSupabasePresence({
-    channelName: `global-chat-${channelKey}`,
-    userId: user?.id,
-    onConnectionStatusChange,
-    onParticipantCountChange,
-    onChannelReady: handleChannelReady,
-  });
-
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector(
       "[data-radix-scroll-area-viewport]"
@@ -204,7 +178,88 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (!user) {
+      setIsConnected(false);
+      setParticipantCount(0);
+      onConnectionStatusChange?.(false);
+      onParticipantCountChange?.(0);
+      return;
+    }
 
+    let isMounted = true;
+    const channelName = `global-chat-${channelKey}`;
+    const channel = supabase.channel(channelName, {
+      config: {
+        presence: { key: user.id }
+      }
+    });
+
+    const updatePresence = () => {
+      if (!isMounted) return;
+      const presenceState = channel.presenceState<{ user_id: string }>();
+      const participantIds = new Set<string>();
+
+      Object.values(presenceState).forEach((entries) => {
+        entries.forEach((entry) => {
+          if (entry?.user_id) {
+            participantIds.add(entry.user_id);
+          }
+        });
+      });
+
+      const count = participantIds.size;
+      setParticipantCount(count);
+      onParticipantCountChange?.(count);
+    };
+
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'global_chat',
+          filter: `channel=eq.${channelKey}`
+        },
+        () => {
+          void fetchMessages();
+        }
+      )
+      .on('presence', { event: 'sync' }, updatePresence)
+      .on('presence', { event: 'join' }, updatePresence)
+      .on('presence', { event: 'leave' }, updatePresence)
+      .subscribe((status) => {
+        if (!isMounted) return;
+
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true);
+          onConnectionStatusChange?.(true);
+          void channel
+            .track({ user_id: user.id })
+            .then(() => {
+              if (isMounted) {
+                updatePresence();
+              }
+            })
+            .catch((presenceError) => {
+              console.error('Error updating presence:', presenceError);
+            });
+        } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          setIsConnected(false);
+          onConnectionStatusChange?.(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      setIsConnected(false);
+      setParticipantCount(0);
+      onConnectionStatusChange?.(false);
+      onParticipantCountChange?.(0);
+      supabase.removeChannel(channel);
+    };
+  }, [user, channelKey, fetchMessages, onConnectionStatusChange, onParticipantCountChange]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

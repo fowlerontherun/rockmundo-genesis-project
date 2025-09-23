@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,9 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database, Json } from "@/lib/supabase-types";
+import type { Database } from "@/lib/supabase-types";
 
 import {
   formatCommaSeparatedList,
@@ -72,82 +70,16 @@ const createNumericFieldSchema = ({
   return schema.default("");
 };
 
-const createJsonArrayFieldSchema = ({ field }: { field: string }) =>
-  z
-    .string()
-    .trim()
-    .refine((value) => {
-      if (!value) {
-        return true;
-      }
-
-      try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed);
-      } catch (error) {
-        console.error(`Failed to parse ${field} JSON input`, error);
-        return false;
-      }
-    }, `${field} must be a valid JSON array`)
-    .default("");
-
-const parseJsonArrayInput = (value: string): Json => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return [] as Json;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    return Array.isArray(parsed) ? (parsed as Json) : ([] as Json);
-  } catch (error) {
-    console.error("Failed to parse JSON array input", error);
-    return [] as Json;
-  }
-};
-
-const formatJsonArrayInput = (value: Json | null | undefined): string => {
-  if (value === null || typeof value === "undefined") {
-    return "";
-  }
-
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch (error) {
-    console.error("Failed to format JSON array input", error);
-    return "";
-  }
-};
-
-const normalizeOptionalText = (value: string): string | null => {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
 const citySchema = z.object({
   name: z.string().trim().min(1, "City name is required"),
   country: z.string().trim().min(1, "Country is required"),
   dominantGenre: z.string().trim().default(""),
-  description: z.string().trim().default(""),
-  profileDescription: z.string().trim().default(""),
-  bonuses: z.string().trim().default(""),
-  unlocked: z.boolean().default(false),
   population: createNumericFieldSchema({ field: "Population", min: 0, integer: true }),
   musicScene: createNumericFieldSchema({ field: "Music scene score", min: 0, max: 100 }),
   localBonus: createNumericFieldSchema({ field: "Local bonus", min: 0 }),
-  buskingValue: createNumericFieldSchema({ field: "Busking value", min: 0 }),
   costOfLiving: createNumericFieldSchema({ field: "Cost of living index", min: 0 }),
   venues: createNumericFieldSchema({ field: "Venue count", min: 0, integer: true }),
   culturalEvents: z.string().trim().default(""),
-  districts: createJsonArrayFieldSchema({ field: "Districts" }),
-  travelNodes: createJsonArrayFieldSchema({ field: "Travel nodes" }),
-  featuredVenues: createJsonArrayFieldSchema({ field: "Featured venues" }),
-  featuredStudios: createJsonArrayFieldSchema({ field: "Featured studios" }),
-  transportLinks: createJsonArrayFieldSchema({ field: "Transport links" }),
-  famousResident: z.string().trim().default(""),
-  travelHub: z.string().trim().default(""),
-  latitude: createNumericFieldSchema({ field: "Latitude", min: -90, max: 90 }),
-  longitude: createNumericFieldSchema({ field: "Longitude", min: -180, max: 180 }),
 });
 
 type CityFormValues = z.infer<typeof citySchema>;
@@ -159,26 +91,12 @@ const cityDefaultValues: CityFormValues = {
   name: "",
   country: "",
   dominantGenre: "",
-  description: "",
-  profileDescription: "",
-  bonuses: "",
-  unlocked: false,
   population: "",
   musicScene: "",
   localBonus: "",
-  buskingValue: "",
   costOfLiving: "",
   venues: "",
   culturalEvents: "",
-  districts: "",
-  travelNodes: "",
-  featuredVenues: "",
-  featuredStudios: "",
-  transportLinks: "",
-  famousResident: "",
-  travelHub: "",
-  latitude: "",
-  longitude: "",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -251,42 +169,20 @@ export default function Cities() {
         const parsedPopulation = parseNumberInput(values.population);
         const parsedMusicScene = parseNumberInput(values.musicScene);
         const parsedLocalBonus = parseNumberInput(values.localBonus);
-        const parsedBuskingValue = parseNumberInput(values.buskingValue);
         const parsedCostOfLiving = parseNumberInput(values.costOfLiving);
         const parsedVenues = parseNumberInput(values.venues);
-        const parsedLatitude = parseNumberInput(values.latitude);
-        const parsedLongitude = parseNumberInput(values.longitude);
         const culturalEvents = parseCommaSeparatedInput(values.culturalEvents);
-        const districts = parseJsonArrayInput(values.districts);
-        const travelNodes = parseJsonArrayInput(values.travelNodes);
-        const featuredVenues = parseJsonArrayInput(values.featuredVenues);
-        const featuredStudios = parseJsonArrayInput(values.featuredStudios);
-        const transportLinks = parseJsonArrayInput(values.transportLinks);
 
         const payload: CityInsert = {
           name: values.name.trim(),
           country: values.country.trim(),
           dominant_genre: values.dominantGenre.trim() || null,
-          description: normalizeOptionalText(values.description),
-          profile_description: normalizeOptionalText(values.profileDescription),
-          bonuses: normalizeOptionalText(values.bonuses),
-          unlocked: values.unlocked,
           population: parsedPopulation,
           music_scene: parsedMusicScene,
           local_bonus: parsedLocalBonus,
-          busking_value: typeof parsedBuskingValue === "number" ? parsedBuskingValue : undefined,
           cost_of_living: parsedCostOfLiving,
           venues: parsedVenues,
           cultural_events: culturalEvents.length > 0 ? culturalEvents : null,
-          districts,
-          travel_nodes: travelNodes,
-          featured_venues: featuredVenues,
-          featured_studios: featuredStudios,
-          transport_links: transportLinks,
-          famous_resident: normalizeOptionalText(values.famousResident),
-          travel_hub: normalizeOptionalText(values.travelHub),
-          latitude: parsedLatitude,
-          longitude: parsedLongitude,
         };
 
         if (isEditing && editingId) {
@@ -333,26 +229,12 @@ export default function Cities() {
         name: city.name ?? "",
         country: city.country ?? "",
         dominantGenre: city.dominant_genre ?? "",
-        description: city.description ?? "",
-        profileDescription: city.profile_description ?? "",
-        bonuses: city.bonuses ?? "",
-        unlocked: Boolean(city.unlocked),
         population: formatNumberInput(city.population),
         musicScene: formatNumberInput(city.music_scene),
         localBonus: formatNumberInput(city.local_bonus),
-        buskingValue: formatNumberInput(city.busking_value),
         costOfLiving: formatNumberInput(city.cost_of_living),
         venues: formatNumberInput(city.venues),
         culturalEvents: formatCommaSeparatedList(city.cultural_events),
-        districts: formatJsonArrayInput(city.districts),
-        travelNodes: formatJsonArrayInput(city.travel_nodes),
-        featuredVenues: formatJsonArrayInput(city.featured_venues),
-        featuredStudios: formatJsonArrayInput(city.featured_studios),
-        transportLinks: formatJsonArrayInput(city.transport_links),
-        famousResident: city.famous_resident ?? "",
-        travelHub: city.travel_hub ?? "",
-        latitude: formatNumberInput(city.latitude),
-        longitude: formatNumberInput(city.longitude),
       });
     },
     [cityForm],
@@ -455,81 +337,6 @@ export default function Cities() {
 
                 <FormField
                   control={cityForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Short description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Narrative hook shown on the world map"
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="profileDescription"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Profile description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Long-form lore used on the city profile page"
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="bonuses"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Gameplay bonuses</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="e.g. +10% streaming buzz during night gigs"
-                          rows={2}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="unlocked"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <div className="flex items-start justify-between gap-4 rounded-md border p-4">
-                        <div className="space-y-1">
-                          <FormLabel className="text-base">Unlocked for players</FormLabel>
-                          <FormDescription>
-                            Locked cities remain hidden until progression or events unlock them.
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} aria-label="Toggle city unlock" />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
                   name="population"
                   render={({ field }) => (
                     <FormItem>
@@ -572,20 +379,6 @@ export default function Cities() {
 
                 <FormField
                   control={cityForm.control}
-                  name="buskingValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Busking value multiplier</FormLabel>
-                      <FormControl>
-                        <Input type="number" inputMode="decimal" min={0} step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
                   name="costOfLiving"
                   render={({ field }) => (
                     <FormItem>
@@ -614,62 +407,6 @@ export default function Cities() {
 
                 <FormField
                   control={cityForm.control}
-                  name="latitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Latitude</FormLabel>
-                      <FormControl>
-                        <Input type="number" inputMode="decimal" min={-90} max={90} step="0.0001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="longitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Longitude</FormLabel>
-                      <FormControl>
-                        <Input type="number" inputMode="decimal" min={-180} max={180} step="0.0001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="famousResident"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Famous resident</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Optional lore character" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="travelHub"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Primary travel hub</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Solace Union Station" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
                   name="culturalEvents"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
@@ -681,101 +418,6 @@ export default function Cities() {
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="districts"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Districts (JSON)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder='[{"name":"District","description":"What makes it unique"}]'
-                          rows={5}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>Provide a JSON array describing the city districts.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="travelNodes"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Travel nodes (JSON)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder='[{"mode":"tram","name":"City Loop","description":"Route details"}]'
-                          rows={5}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>Structured travel options used for route planning.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="featuredVenues"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Featured venues (JSON)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder='[{"name":"Venue","highlights":["Stage"],"vibe":"Atmosphere"}]'
-                          rows={5}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>Highlight signature venues in JSON format.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="featuredStudios"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Featured studios (JSON)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder='[{"name":"Studio","perks":["Analog gear"],"booking":"Tips"}]'
-                          rows={5}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>List notable studios players can discover.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={cityForm.control}
-                  name="transportLinks"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Transport links (JSON)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder='[{"mode":"ferry","name":"Harbor Line","frequency":"Every 10 minutes"}]'
-                          rows={5}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>Detailed transport entries surfaced on the city page.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -855,14 +497,6 @@ export default function Cities() {
                             {city.dominant_genre ? (
                               <Badge variant="secondary" className="w-fit">
                                 {city.dominant_genre}
-                              </Badge>
-                            ) : null}
-                            {typeof city.unlocked === "boolean" ? (
-                              <Badge
-                                variant={city.unlocked ? "default" : "outline"}
-                                className="w-fit"
-                              >
-                                {city.unlocked ? "Unlocked" : "Locked"}
                               </Badge>
                             ) : null}
                           </div>

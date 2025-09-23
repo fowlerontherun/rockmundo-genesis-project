@@ -30,12 +30,7 @@ export default defineConfig(({ mode }) => ({
               return "recharts";
             }
             if (id.includes("@radix-ui")) {
-              // Radix UI depends on React DOM internals. Forcing those modules
-              // into a dedicated manual chunk can reorder the evaluation of
-              // React's runtime and surface "Cannot access '$t' before
-              // initialization" errors in production. Let Vite manage the
-              // optimal split for these files instead.
-              return undefined;
+              return "radix";
             }
             if (id.includes("react-router")) {
               return "react-router";
