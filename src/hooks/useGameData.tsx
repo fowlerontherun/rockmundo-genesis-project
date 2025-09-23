@@ -222,6 +222,28 @@ const useProvideGameData = (): UseGameDataReturn => {
     "code" in error &&
     (error as { code?: string }).code === "PGRST204";
 
+  const isSchemaCacheMissingTableError = (
+    error: unknown,
+  ): error is { code?: string; message?: string; details?: string } => {
+    if (typeof error !== "object" || error === null) {
+      return false;
+    }
+
+    const { message, details } = error as {
+      code?: string;
+      message?: string;
+      details?: string;
+    };
+
+    const haystack = `${message ?? ""} ${details ?? ""}`.toLowerCase();
+
+    return (
+      haystack.includes("schema cache") &&
+      (haystack.includes("relation") || haystack.includes("table")) &&
+      (haystack.includes("missing") || haystack.includes("could not find"))
+    );
+  };
+
   const sanitizeActivityFeedRows = useCallback(
     (
       rows: ActivityFeedRow[] | null | undefined,
