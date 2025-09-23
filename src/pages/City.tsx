@@ -21,6 +21,7 @@ import {
   type City as CityRecord,
   type CityEnvironmentDetails,
 } from "@/utils/worldEnvironment";
+import { isTableMissingFromSchemaCache } from "@/utils/postgrestErrors";
 
 type CityRouteParams = {
   cityId?: string;
@@ -448,11 +449,10 @@ export const CityContent = ({
           .eq("city_from", city.id);
 
         if (response.error) {
-          const error = response.error as PostgrestError;
-          if (error?.code === "42P01") {
+          if (isTableMissingFromSchemaCache(response.error)) {
             continue;
           }
-          throw error;
+          throw response.error;
         }
 
         const rows = Array.isArray(response.data) ? (response.data as Record<string, unknown>[]) : [];
@@ -480,11 +480,11 @@ export const CityContent = ({
           });
         });
       } catch (unknownError) {
-        const error = unknownError as PostgrestError;
-        if (error?.code === "42P01") {
+        if (isTableMissingFromSchemaCache(unknownError)) {
           continue;
         }
-        throw error;
+
+        throw unknownError;
       }
     }
 
