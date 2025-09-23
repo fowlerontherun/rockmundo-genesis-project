@@ -485,13 +485,16 @@ const useGameDataInternal = (): UseGameDataReturn => {
     [],
   );
 
-  const toPlainMetadata = (value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return null;
-    }
+  const toPlainMetadata = useCallback(
+    (value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null;
+      }
 
-    return value as Record<string, unknown>;
-  };
+      return value as Record<string, unknown>;
+    },
+    [],
+  );
 
   const calculateCountdown = useCallback(
     (endsAt: string | null): ActiveStatusCountdown => {
@@ -559,55 +562,61 @@ const useGameDataInternal = (): UseGameDataReturn => {
     [calculateCountdown],
   );
 
-  const mapSessionRowToSnapshot = (row: ProfileStatusRow | null): ActiveStatusSnapshot | null => {
-    if (!row) {
-      return null;
-    }
+  const mapSessionRowToSnapshot = useCallback(
+    (row: ProfileStatusRow | null): ActiveStatusSnapshot | null => {
+      if (!row) {
+        return null;
+      }
 
-    const status = typeof row.status === "string" ? row.status : null;
-    const startedAt = typeof row.started_at === "string" ? row.started_at : null;
-    const endsAt = typeof row.ends_at === "string" ? row.ends_at : null;
-    const metadata = toPlainMetadata(row.metadata);
-    const sessionId = typeof row.id === "string" ? row.id : null;
+      const status = typeof row.status === "string" ? row.status : null;
+      const startedAt = typeof row.started_at === "string" ? row.started_at : null;
+      const endsAt = typeof row.ends_at === "string" ? row.ends_at : null;
+      const metadata = toPlainMetadata(row.metadata);
+      const sessionId = typeof row.id === "string" ? row.id : null;
 
-    if (!status && !startedAt && !endsAt && !metadata) {
-      return null;
-    }
+      if (!status && !startedAt && !endsAt && !metadata) {
+        return null;
+      }
 
-    return {
-      status,
-      metadata,
-      startedAt,
-      endsAt,
-      sessionId,
-      source: "session",
-    };
-  };
+      return {
+        status,
+        metadata,
+        startedAt,
+        endsAt,
+        sessionId,
+        source: "session",
+      };
+    },
+    [toPlainMetadata],
+  );
 
-  const extractActiveStatusFromProfile = (candidate: PlayerProfile | null): ActiveStatusSnapshot | null => {
-    if (!profileSupportsStatusColumns(candidate)) {
-      return null;
-    }
+  const extractActiveStatusFromProfile = useCallback(
+    (candidate: PlayerProfile | null): ActiveStatusSnapshot | null => {
+      if (!profileSupportsStatusColumns(candidate)) {
+        return null;
+      }
 
-    const status = typeof candidate.active_status === "string" ? candidate.active_status : null;
-    const startedAt =
-      typeof candidate.active_status_started_at === "string" ? candidate.active_status_started_at : null;
-    const endsAt = typeof candidate.active_status_ends_at === "string" ? candidate.active_status_ends_at : null;
-    const metadata = toPlainMetadata(candidate.active_status_metadata);
+      const status = typeof candidate.active_status === "string" ? candidate.active_status : null;
+      const startedAt =
+        typeof candidate.active_status_started_at === "string" ? candidate.active_status_started_at : null;
+      const endsAt = typeof candidate.active_status_ends_at === "string" ? candidate.active_status_ends_at : null;
+      const metadata = toPlainMetadata(candidate.active_status_metadata);
 
-    if (!status && !startedAt && !endsAt && !metadata) {
-      return null;
-    }
+      if (!status && !startedAt && !endsAt && !metadata) {
+        return null;
+      }
 
-    return {
-      status,
-      metadata,
-      startedAt,
-      endsAt,
-      sessionId: null,
-      source: "profile",
-    };
-  };
+      return {
+        status,
+        metadata,
+        startedAt,
+        endsAt,
+        sessionId: null,
+        source: "profile",
+      };
+    },
+    [profileSupportsStatusColumns, toPlainMetadata],
+  );
 
   const normalizeMetadataInput = (
     value: Json | Record<string, unknown> | null | undefined,
