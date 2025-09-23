@@ -27,59 +27,6 @@ async function resolveSupabaseModule(): Promise<SupabaseModule> {
   return supabaseModulePromise;
 }
 
-type SupabaseCredentials = {
-  supabaseUrl: string;
-  supabaseKey: string;
-  usingServiceRole: boolean;
-};
-
-function getEnvVariable(name: string): string | null {
-  const denoCandidate = (globalThis as {
-    Deno?: { env?: { get?: (key: string) => string | undefined } };
-  }).Deno;
-  const denoValue = denoCandidate?.env?.get?.(name);
-  if (typeof denoValue === "string" && denoValue.trim().length > 0) {
-    return denoValue;
-  }
-
-  const processCandidate = (globalThis as {
-    process?: { env?: Record<string, string | undefined> };
-  }).process;
-  const processValue = processCandidate?.env?.[name];
-  if (typeof processValue === "string" && processValue.trim().length > 0) {
-    return processValue;
-  }
-
-  return null;
-}
-
-function resolveSupabaseCredentials(): SupabaseCredentials {
-  const supabaseUrl = getEnvVariable("SUPABASE_URL");
-  if (!supabaseUrl) {
-    throw new HttpError(500, "Supabase URL is not configured");
-  }
-
-  const serviceRoleKey = getEnvVariable("SUPABASE_SERVICE_ROLE_KEY");
-  const anonKey = getEnvVariable("SUPABASE_ANON_KEY");
-  const supabaseKey = serviceRoleKey ?? anonKey;
-
-  if (!supabaseKey) {
-    throw new HttpError(500, "Supabase environment variables are not configured");
-  }
-
-  if (!serviceRoleKey && typeof console !== "undefined" && typeof console.warn === "function") {
-    console.warn(
-      "SUPABASE_SERVICE_ROLE_KEY not configured; falling back to SUPABASE_ANON_KEY for progression handler",
-    );
-  }
-
-  return {
-    supabaseUrl,
-    supabaseKey,
-    usingServiceRole: Boolean(serviceRoleKey),
-  };
-}
-
 type ProgressionAction =
   | "award_action_xp"
   | "weekly_bonus"
@@ -87,8 +34,6 @@ type ProgressionAction =
   | "respec_attributes"
   | "award_special_xp"
   | "admin_award_special_xp"
-  | "admin_adjust_momentum"
-  | "admin_set_daily_xp"
   | "claim_daily_xp"
   | "spend_attribute_xp"
   | "spend_skill_xp";
@@ -183,8 +128,6 @@ const LEDGER_EVENT_TYPES: Record<ProgressionAction, string> = {
   respec_attributes: "attribute_respec",
   award_special_xp: "special_xp",
   admin_award_special_xp: "special_xp",
-  admin_adjust_momentum: "admin_momentum_adjustment",
-  admin_set_daily_xp: "daily_stipend_admin_update",
   claim_daily_xp: "daily_stipend",
   spend_attribute_xp: "attribute_daily_spend",
   spend_skill_xp: "skill_training",
@@ -205,7 +148,11 @@ async function progressionHandler(req: Request): Promise<Response> {
       throw new HttpError(401, "Missing Authorization header");
     }
 
-    const { supabaseUrl, supabaseKey } = resolveSupabaseCredentials();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new HttpError(500, "Supabase environment variables are not configured");
+    }
 
     let payload: JsonRecord = {};
     try {
@@ -220,7 +167,7 @@ async function progressionHandler(req: Request): Promise<Response> {
     }
 
     const { createClient } = await resolveSupabaseModule();
-    const client = createClient<Database>(supabaseUrl, supabaseKey, {
+    const client = createClient<Database>(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { headers: { Authorization: authHeader } },
     });
@@ -557,7 +504,7 @@ const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: 
 
     const awardedTargets: TargetProfileSummary[] = [];
 
-    await runWithConcurrency(targets, 8, async (target) => {
+    for (const target of targets) {
       const metadata = {
         ...metadataBase,
         target_profile_id: target.profile_id,
@@ -572,7 +519,7 @@ const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: 
       });
 
       awardedTargets.push(target);
-    });
+    }
 
     if (awardedTargets.length === 0) {
       throw new HttpError(500, "Failed to apply XP grant to the selected players");
@@ -589,182 +536,6 @@ const ACTION_HANDLERS: Record<ProgressionAction, (ctx: HandlerContext, payload: 
         awarded_count: awardedTargets.length,
         target_profile_ids: awardedTargets.map((target) => target.profile_id),
         apply_to_all: applyToAll,
-      },
-    };
-  },
-
-  admin_adjust_momentum: async (ctx, payload) => {
-    await assertAdminPrivileges(ctx.client, ctx.user.id);
-
-    const momentumDelta = resolveNumber(
-      payload.momentum_delta
-        ?? payload.delta
-        ?? payload.amount
-        ?? payload.value,
-      Number.NaN,
-    );
-
-    if (!Number.isFinite(momentumDelta) || momentumDelta === 0) {
-      throw new HttpError(400, "Momentum adjustment must be a non-zero number");
-    }
-
-    const momentumAmount = Math.trunc(momentumDelta);
-
-    if (momentumAmount === 0) {
-      throw new HttpError(400, "Momentum adjustment must resolve to a non-zero integer");
-    }
-
-    const applyToAll = payload.apply_to_all === true
-      || payload.applyToAll === true;
-    const profileIds = normalizeProfileIdPayload(payload);
-
-    const targets = await resolveTargetProfiles(ctx.client, { applyToAll, profileIds });
-
-    if (targets.length === 0) {
-      throw new HttpError(
-        400,
-        applyToAll
-          ? "No player profiles are available for the momentum adjustment"
-          : "No matching player profiles were found for the momentum adjustment",
-        { apply_to_all: applyToAll, profile_ids: profileIds },
-      );
-    }
-
-    const reason = resolveString(payload.reason ?? payload.description ?? payload.context)
-      ?? "Momentum adjustment";
-
-    const notifyPreference =
-      resolveBoolean(payload.notify)
-      ?? resolveBoolean(payload.notify_players)
-      ?? resolveBoolean(payload.notifyPlayers)
-      ?? resolveBoolean(payload.notify_targets)
-      ?? resolveBoolean(payload.notifyTargets)
-      ?? resolveBoolean(payload.send_notification)
-      ?? resolveBoolean(payload.sendNotification);
-
-    const shouldNotify = notifyPreference ?? true;
-
-    const metadataBase = buildMetadata(payload, {
-      reason,
-      adjusted_by: ctx.user.id,
-      target_scope: applyToAll ? "all" : "selected",
-      momentum_delta: momentumAmount,
-      unique_event_id: resolveUniqueEventId(payload) ?? null,
-    });
-
-    const adjustmentResults: JsonRecord[] = [];
-
-    for (const target of targets) {
-      const metadata = {
-        ...metadataBase,
-        target_profile_id: target.profile_id,
-        target_user_id: target.user_id,
-      };
-
-      const result = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_admin_adjust_momentum", {
-        p_actor_user_id: ctx.user.id,
-        p_profile_id: target.profile_id,
-        p_amount: momentumAmount,
-        p_reason: reason,
-        p_metadata: metadata,
-      });
-
-      adjustmentResults.push({
-        profile_id: target.profile_id,
-        ...result,
-      });
-    }
-
-    if (shouldNotify) {
-      const notificationMessage = buildMomentumNotificationMessage(momentumAmount, reason);
-      await createXpNotifications(ctx.client, targets, notificationMessage);
-    }
-
-    return {
-      message: `Adjusted momentum by ${momentumAmount > 0 ? "+" : ""}${momentumAmount} for ${targets.length} player${targets.length === 1 ? "" : "s"}.`,
-      result: {
-        momentum_delta: momentumAmount,
-        reason,
-        adjusted_count: targets.length,
-        target_profile_ids: targets.map((target) => target.profile_id),
-        apply_to_all: applyToAll,
-        adjustments: adjustmentResults,
-      },
-    };
-  },
-
-  admin_set_daily_xp: async (ctx, payload) => {
-    await assertAdminPrivileges(ctx.client, ctx.user.id);
-
-    const dailyXpAmount = Math.trunc(
-      resolveNumber(
-        payload.daily_xp
-          ?? payload.amount
-          ?? payload.value
-          ?? payload.xp,
-        Number.NaN,
-      ),
-    );
-
-    if (!Number.isFinite(dailyXpAmount) || dailyXpAmount <= 0) {
-      throw new HttpError(400, "Daily XP amount must be a positive integer");
-    }
-
-    const reason = resolveString(payload.reason ?? payload.description ?? payload.context)
-      ?? "Daily XP stipend updated";
-
-    const metadata = buildMetadata(payload, {
-      reason,
-      updated_by: ctx.user.id,
-      daily_xp_amount: dailyXpAmount,
-      unique_event_id: resolveUniqueEventId(payload) ?? null,
-    });
-
-    const procedureResult = await callProgressionProcedure<JsonRecord>(ctx.client, "progression_admin_set_daily_xp", {
-      p_actor_user_id: ctx.user.id,
-      p_new_amount: dailyXpAmount,
-      p_reason: reason,
-      p_metadata: metadata,
-    });
-
-    const notifyPreference =
-      resolveBoolean(payload.notify)
-      ?? resolveBoolean(payload.notify_players)
-      ?? resolveBoolean(payload.notifyPlayers)
-      ?? resolveBoolean(payload.notify_targets)
-      ?? resolveBoolean(payload.notifyTargets)
-      ?? resolveBoolean(payload.send_notification)
-      ?? resolveBoolean(payload.sendNotification);
-
-    const shouldNotify = notifyPreference ?? false;
-
-    let notifiedCount = 0;
-    if (shouldNotify) {
-      const applyToAll = payload.apply_to_all === true
-        || payload.applyToAll === true
-        || payload.notify_all === true
-        || payload.notifyAll === true;
-      const profileIds = normalizeProfileIdPayload(payload);
-
-      const targets = await resolveTargetProfiles(ctx.client, {
-        applyToAll: applyToAll || profileIds.length === 0,
-        profileIds,
-      });
-
-      if (targets.length > 0) {
-        const notificationMessage = buildDailyXpNotificationMessage(dailyXpAmount, reason);
-        await createXpNotifications(ctx.client, targets, notificationMessage);
-        notifiedCount = targets.length;
-      }
-    }
-
-    return {
-      message: `Daily XP stipend set to ${dailyXpAmount} XP`,
-      result: {
-        daily_xp_amount: dailyXpAmount,
-        reason,
-        notified_count: notifiedCount,
-        procedure_result: procedureResult,
       },
     };
   },
@@ -801,8 +572,6 @@ function isProgressionAction(action: string): action is ProgressionAction {
     "respec_attributes",
     "award_special_xp",
     "admin_award_special_xp",
-    "admin_adjust_momentum",
-    "admin_set_daily_xp",
     "claim_daily_xp",
     "spend_attribute_xp",
     "spend_skill_xp",
@@ -941,8 +710,6 @@ async function computeActionCooldowns(client: SupabaseClient<Database>, profileI
     buy_attribute_star: 0,
     respec_attributes: 0,
     admin_award_special_xp: 0,
-    admin_adjust_momentum: 0,
-    admin_set_daily_xp: 0,
     claim_daily_xp: 0,
     spend_attribute_xp: 0,
     spend_skill_xp: 0,
@@ -1041,24 +808,6 @@ function resolveString(value: unknown): string | undefined {
   return undefined;
 }
 
-function resolveBoolean(value: unknown): boolean | undefined {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === "true") {
-      return true;
-    }
-    if (normalized === "false") {
-      return false;
-    }
-  }
-
-  return undefined;
-}
-
 async function assertAdminPrivileges(client: SupabaseClient<Database>, userId: string): Promise<void> {
   const { data, error } = await client
     .from("user_roles")
@@ -1122,8 +871,6 @@ function normalizeProfileIdPayload(payload: JsonRecord): string[] {
     payload.target_profile_ids,
     payload.profileIds,
     payload.targetProfileIds,
-    payload.notification_profile_ids,
-    payload.notificationProfileIds,
   ];
 
   for (const candidate of arrayCandidates) {
@@ -1135,8 +882,6 @@ function normalizeProfileIdPayload(payload: JsonRecord): string[] {
     payload.target_profile_id,
     payload.profileId,
     payload.targetProfileId,
-    payload.notification_profile_id,
-    payload.notificationProfileId,
   ];
 
   for (const candidate of singleCandidates) {
@@ -1214,21 +959,6 @@ function buildNotificationMessage(amount: number, reason: string): string {
   const formattedAmount = formatter.format(Math.round(amount));
   const trimmedReason = reason.length > 250 ? `${reason.slice(0, 247)}...` : reason;
   return `You received ${formattedAmount} XP: ${trimmedReason}`;
-}
-
-function buildMomentumNotificationMessage(delta: number, reason: string): string {
-  const formatter = new Intl.NumberFormat("en-US");
-  const absoluteAmount = formatter.format(Math.abs(Math.round(delta)));
-  const direction = delta >= 0 ? "increased" : "decreased";
-  const trimmedReason = reason.length > 250 ? `${reason.slice(0, 247)}...` : reason;
-  return `Your momentum ${direction} by ${absoluteAmount}: ${trimmedReason}`;
-}
-
-function buildDailyXpNotificationMessage(amount: number, reason: string): string {
-  const formatter = new Intl.NumberFormat("en-US");
-  const formattedAmount = formatter.format(Math.max(0, Math.round(amount)));
-  const trimmedReason = reason.length > 250 ? `${reason.slice(0, 247)}...` : reason;
-  return `Daily stipend is now ${formattedAmount} XP: ${trimmedReason}`;
 }
 
 async function createXpNotifications(
@@ -1311,48 +1041,6 @@ async function enforceLedgerRules(
   }
 }
 
-async function runWithConcurrency<T>(
-  items: readonly T[],
-  concurrencyLimit: number,
-  worker: (item: T) => Promise<void>,
-): Promise<void> {
-  if (items.length === 0) {
-    return;
-  }
-
-  const limit = Math.max(1, Math.min(concurrencyLimit, items.length));
-  let index = 0;
-  let firstError: unknown = null;
-
-  const runner = async () => {
-    while (true) {
-      if (firstError) {
-        return;
-      }
-
-      const current = index++;
-      if (current >= items.length) {
-        return;
-      }
-
-      try {
-        await worker(items[current]!);
-      } catch (error) {
-        if (!firstError) {
-          firstError = error;
-        }
-        return;
-      }
-    }
-  };
-
-  await Promise.all(Array.from({ length: limit }, runner));
-
-  if (firstError) {
-    throw firstError instanceof Error ? firstError : new Error(String(firstError));
-  }
-}
-
 async function callProgressionProcedure<T>(
   client: SupabaseClient<Database>,
   functionName: string,
@@ -1405,7 +1093,5 @@ function jsonResponse(body: NormalizedResponse | ErrorResponse, status: number) 
   });
 }
 
-const __TESTING__ = { ACTION_HANDLERS, resolveSupabaseCredentials } as const;
-
-export { progressionHandler, loadActiveProfile, fetchProfileState, __TESTING__ };
+export { progressionHandler, loadActiveProfile, fetchProfileState };
 export type { PointAvailability, ProfileSummary };

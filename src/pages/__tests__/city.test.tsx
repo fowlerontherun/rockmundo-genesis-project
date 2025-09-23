@@ -105,126 +105,8 @@ describe("City page", () => {
       fetchWorldEnvironmentSnapshot: snapshotMock,
       fetchCityEnvironmentDetails: detailsMock,
     }));
-    type MockTravelRow = {
-      id: string;
-      city_from: string;
-      city_to: string;
-      cost: number;
-      duration_minutes: number;
-      health_impact: number;
-    };
 
-    const travelDataset: Record<string, MockTravelRow[]> = {
-      travel_flights: [
-        {
-          id: "flight-neo-aster",
-          city_from: sampleCity.id,
-          city_to: "asterhaven-city-id",
-          cost: 880,
-          duration_minutes: 720,
-          health_impact: 12,
-        },
-      ],
-      travel_trains: [
-        {
-          id: "train-neo-solace",
-          city_from: sampleCity.id,
-          city_to: "solace-city-id",
-          cost: 135,
-          duration_minutes: 240,
-          health_impact: 3,
-        },
-      ],
-      travel_taxis: [
-        {
-          id: "taxi-neo-local",
-          city_from: sampleCity.id,
-          city_to: sampleCity.id,
-          cost: 32,
-          duration_minutes: 22,
-          health_impact: 4,
-        },
-      ],
-      travel_ferries: [],
-    };
-
-    const destinationCities = [
-      { id: "asterhaven-city-id", name: "Asterhaven" },
-      { id: "solace-city-id", name: "Solace City" },
-      { id: sampleCity.id, name: sampleCity.name },
-    ];
-
-    mock.module("@/integrations/supabase/client", () => ({
-      supabase: {
-        from: (table: string) => ({
-          select: () => ({
-            eq: async (column: string, value: string) => {
-              if (column === "city_from") {
-                const matches = (travelDataset[table] ?? []).filter(
-                  (entry) => entry.city_from === value,
-                );
-                return { data: matches, error: null };
-              }
-              return { data: [], error: null };
-            },
-            in: async (column: string, values: string[]) => {
-              if (table === "cities" && column === "id") {
-                const matches = destinationCities.filter((entry) => values.includes(entry.id));
-                return { data: matches, error: null };
-              }
-              return { data: [], error: null };
-            },
-          }),
-          insert: async () => ({ error: null }),
-        }),
-      },
-    }));
-    mock.module("@/hooks/useGameData", () => ({
-      useGameData: () => ({
-        profile: {
-          id: "profile-1",
-          health: 100,
-          current_city_id: sampleCity.id,
-        },
-        skills: null,
-        attributes: null,
-        xpWallet: null,
-        xpLedger: [],
-        skillProgress: [],
-        unlockedSkills: {},
-        activities: [],
-        dailyXpGrant: null,
-        freshWeeklyBonusAvailable: false,
-        currentCity: sampleCity,
-        loading: false,
-        error: null,
-        refetch: async () => {},
-        updateProfile: async () => ({
-          id: "profile-1",
-          health: 100,
-          current_city_id: sampleCity.id,
-        }),
-        updateSkills: async () => null,
-        updateXpWallet: async () => null,
-        updateAttributes: async () => null,
-        addActivity: async () => {},
-        awardActionXp: async () => {},
-        claimDailyXp: async () => {},
-        spendAttributeXp: async () => {},
-        spendSkillXp: async () => {},
-        upsertProfileWithDefaults: async () => ({
-          profile: {
-            id: "profile-1",
-            health: 100,
-            current_city_id: sampleCity.id,
-          },
-          attributes: null,
-        }),
-      }),
-    }));
-
-    const { CityContent } = await import("../City");
-    const { loadCityPageData } = await import("../city-data");
+    const { CityContent, loadCityPageData } = await import("../City");
 
     const result = await loadCityPageData(sampleCity.id);
 
@@ -256,33 +138,6 @@ describe("City page", () => {
     expect(markup).toContain("href=\"/cities\"");
   });
 
-  it("normalizes seeded travel rows into booking options", async () => {
-    const { __cityTravelTestUtils } = await import("../City");
-    const { flattenTravelRows, groupTravelOptionsByMode } = __cityTravelTestUtils;
-
-    const rows = [
-      {
-        id: "flight-neo-aster",
-        mode: "flight",
-        mode_label: "Flight",
-        city_to: "asterhaven-city-id",
-        destination_city_id: "asterhaven-city-id",
-        destination_name: "Asterhaven",
-        cost: 880,
-        duration_minutes: 720,
-        health_impact: 12,
-        currency: "USD",
-      },
-    ];
-
-    const options = flattenTravelRows(rows as Record<string, unknown>[]);
-    const groups = groupTravelOptionsByMode(options);
-    const flightGroup = groups.find((group) => group.mode === "flight");
-
-    expect(flightGroup).toBeDefined();
-    expect(flightGroup?.options.some((option) => option.destinationName === "Asterhaven")).toBe(true);
-  });
-
   it("throws a descriptive error when a city cannot be found", async () => {
     mock.module("@/utils/worldEnvironment", () => ({
       fetchWorldEnvironmentSnapshot: mock(async () => ({
@@ -293,49 +148,8 @@ describe("City page", () => {
       })),
       fetchCityEnvironmentDetails: mock(async () => sampleDetails),
     }));
-    mock.module("@/integrations/supabase/client", () => ({
-      supabase: {
-        from: () => ({
-          select: () => ({
-            eq: async () => ({ data: [], error: null }),
-          }),
-          insert: async () => ({ error: null }),
-        }),
-      },
-    }));
-    mock.module("@/hooks/useGameData", () => ({
-      useGameData: () => ({
-        profile: null,
-        skills: null,
-        attributes: null,
-        xpWallet: null,
-        xpLedger: [],
-        skillProgress: [],
-        unlockedSkills: {},
-        activities: [],
-        dailyXpGrant: null,
-        freshWeeklyBonusAvailable: false,
-        currentCity: null,
-        loading: false,
-        error: null,
-        refetch: async () => {},
-        updateProfile: async () => ({ id: "profile-1" }),
-        updateSkills: async () => null,
-        updateXpWallet: async () => null,
-        updateAttributes: async () => null,
-        addActivity: async () => {},
-        awardActionXp: async () => {},
-        claimDailyXp: async () => {},
-        spendAttributeXp: async () => {},
-        spendSkillXp: async () => {},
-        upsertProfileWithDefaults: async () => ({
-          profile: { id: "profile-1" },
-          attributes: null,
-        }),
-      }),
-    }));
 
-    const { loadCityPageData, CITY_NOT_FOUND_ERROR } = await import("../city-data");
+    const { loadCityPageData, CITY_NOT_FOUND_ERROR } = await import("../City");
 
     await expect(loadCityPageData("missing-city"))
       .rejects.toThrow(CITY_NOT_FOUND_ERROR);

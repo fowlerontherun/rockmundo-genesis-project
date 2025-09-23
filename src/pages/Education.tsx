@@ -22,12 +22,18 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
-import { usePlayerStatus } from "@/hooks/usePlayerStatus";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
+import {
+  DIFFICULTY_ORDER,
+  LESSON_DIFFICULTIES,
+  LESSON_DIFFICULTY_CONFIG,
+  SKILL_LABELS,
+  type LessonDifficulty,
+  type PrimarySkill
+} from "@/features/education/constants";
 import { useEducationVideoPlaylists } from "@/features/education/hooks/useEducationVideoPlaylists";
 import { awardActionXp } from "@/utils/progression";
-import { formatDurationMinutes } from "@/utils/datetime";
 import {
   ATTRIBUTE_KEYS,
   applyAttributeToValue,
@@ -451,14 +457,14 @@ const mentorOptions: MentorOption[] = [
     cooldownHours: 36,
     baseXp: 190,
     difficulty: "intermediate",
-    attributeKeys: ["vocal_talent", "technical_mastery"],
+    attributeKeys: ["vocal_talent", "physical_endurance"],
     requiredSkillValue: 160,
     skillGainRatio: 0.8,
     bonusDescription: "Adds sustain control exercises that accelerate range stability and nightly recovery."
   }
 ];
 
-const DEFAULT_BAND_SESSIONS: BandSession[] = [
+const bandSessions: BandSession[] = [
   {
     id: "band-sync-lock",
     title: "Sync Lock Intensive",
@@ -500,7 +506,6 @@ const DEFAULT_BAND_SESSIONS: BandSession[] = [
 const Education = () => {
   const { toast } = useToast();
   const { profile, skills, attributes, refetch, addActivity, updateProfile } = useGameData();
-  const { startTimedStatus } = usePlayerStatus();
 
   const {
     data: lessonRows,
@@ -560,34 +565,8 @@ const Education = () => {
         ? "We couldn't load resource playlists. Please try again later."
         : "";
 
-  const {
-    data: bandSessionRows,
-    isLoading: bandSessionsLoading,
-    error: bandSessionsError,
-  } = useQuery({
-    queryKey: ["education", "band-sessions"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("education_band_sessions")
-        .select("*")
-        .order("difficulty", { ascending: true })
-        .order("title", { ascending: true });
-
-      if (error) {
-        throw error;
-      }
-
-      return (data ?? []) as BandSessionRow[];
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-
   const bandSessions = useMemo<BandSession[]>(() => {
-    if (!bandSessionRows) {
-      return DEFAULT_BAND_SESSIONS;
-    }
-
-    const sessions = bandSessionRows.map((row) => {
+    const sessions = (bandSessionRows ?? []).map((row) => {
       const focusSkills = Array.isArray(row.focus_skills)
         ? row.focus_skills.filter((skill): skill is PrimarySkill => isPrimarySkill(skill))
         : [];
@@ -1059,18 +1038,6 @@ const Education = () => {
     setActiveLessonId(lesson.id);
 
     try {
-      const studyDurationMinutes = Math.max(1, Math.round(lesson.durationMinutes));
-      startTimedStatus({
-        status: "Studying",
-        durationMinutes: studyDurationMinutes,
-        metadata: {
-          lessonId: lesson.id,
-          skill: lesson.skill,
-          title: lesson.title,
-        },
-      });
-      const studyDurationLabel = formatDurationMinutes(studyDurationMinutes);
-
       await awardActionXp({
         amount: reward.effectiveXp,
         category: "practice",
@@ -1104,8 +1071,8 @@ const Education = () => {
       );
 
       toast({
-        title: "Studying session logged",
-        description: `Studying ${lesson.title} for about ${studyDurationLabel}. Earned ${reward.effectiveXp} XP toward ${SKILL_LABELS[lesson.skill].toLowerCase()} skills.`,
+        title: "Lesson complete",
+        description: `You earned ${reward.effectiveXp} XP and boosted ${SKILL_LABELS[lesson.skill].toLowerCase()} skills.`,
         variant: "default"
       });
 

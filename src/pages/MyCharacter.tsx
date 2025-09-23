@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import {
   Cake,
   CalendarDays,
-  Flame,
-  Lightbulb,
   Loader2,
   MapPin,
   Mic,
@@ -18,7 +16,6 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -28,8 +25,6 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
-import { usePlayerStatus } from "@/hooks/usePlayerStatus";
-import { formatDurationCountdown } from "@/utils/datetime";
 
 const formatDate = (input: string | null | undefined) => {
   if (!input) {
@@ -60,6 +55,7 @@ const PROFILE_META_FIELDS: Array<{ key: keyof PlayerProfile; label: string; icon
 ];
 
 const MIN_ATTRIBUTE_SCORE = 5;
+const DAILY_XP_STIPEND = 150;
 const DEFAULT_ATTRIBUTE_SPEND = 10;
 const DEFAULT_SKILL_SPEND = 25;
 
@@ -99,49 +95,20 @@ const MyCharacter = () => {
     xpWallet,
     skillProgress,
     dailyXpGrant,
-    dailyXpStipend,
     claimDailyXp,
     spendAttributeXp,
     spendSkillXp,
-    updateProfile,
     loading,
     error,
     currentCity,
   } = useGameData();
   const { toast } = useToast();
-  const { activeStatus, remainingMs } = usePlayerStatus();
   const [claimingDailyXp, setClaimingDailyXp] = useState(false);
   const [attributeXpInputs, setAttributeXpInputs] = useState<Record<string, number>>({});
   const [attributeSpendPending, setAttributeSpendPending] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string>("");
   const [skillXpAmount, setSkillXpAmount] = useState<number>(DEFAULT_SKILL_SPEND);
   const [skillSpendPending, setSkillSpendPending] = useState(false);
-  const [unlockingMomentumBoost, setUnlockingMomentumBoost] = useState(false);
-
-  const statusContextLabel = useMemo(() => {
-    if (!activeStatus?.metadata || typeof activeStatus.metadata !== "object") {
-      return null;
-    }
-
-    const metadata = activeStatus.metadata as Record<string, unknown>;
-    const title = typeof metadata.title === "string" ? metadata.title : null;
-    const destination =
-      typeof metadata.destination === "string"
-        ? metadata.destination
-        : typeof metadata.destination_name === "string"
-          ? metadata.destination_name
-          : typeof metadata.destinationName === "string"
-            ? metadata.destinationName
-            : null;
-    const skill = typeof metadata.skill === "string" ? metadata.skill : null;
-
-    return title ?? destination ?? skill;
-  }, [activeStatus]);
-
-  const statusCountdownLabel = useMemo(
-    () => formatDurationCountdown(remainingMs),
-    [remainingMs],
-  );
 
   useEffect(() => {
     if (!selectedSkill && Array.isArray(skillProgress) && skillProgress.length > 0) {
@@ -156,21 +123,9 @@ const MyCharacter = () => {
   );
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const hasClaimedDailyXp = (dailyXpGrant?.grant_date ?? null) === todayIso;
-  const configuredDailyStipend = useMemo(() => {
-    if (typeof dailyXpStipend === "number" && Number.isFinite(dailyXpStipend)) {
-      return Math.max(0, dailyXpStipend);
-    }
-
-    return 150;
-  }, [dailyXpStipend]);
   const todaysStipend = hasClaimedDailyXp
-    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? configuredDailyStipend))
-    : configuredDailyStipend;
-  const momentum = Math.max(0, Number(profile?.momentum ?? 0));
-  const inspiration = Math.max(0, Number(profile?.inspiration ?? 0));
-  const momentumProgress = Math.max(0, Math.min(100, momentum));
-  const inspirationProgress = Math.max(0, Math.min(100, inspiration));
-  const canUnlockMomentumBoost = momentum >= 100;
+    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? DAILY_XP_STIPEND))
+    : DAILY_XP_STIPEND;
   const lastClaimedAtLabel = useMemo(() => {
     if (!dailyXpGrant?.claimed_at) {
       return null;
@@ -202,32 +157,6 @@ const MyCharacter = () => {
       toast({ title: "Could not claim daily XP", description: message, variant: "destructive" });
     } finally {
       setClaimingDailyXp(false);
-    }
-  };
-
-  const handleUnlockMomentumBoost = async () => {
-    if (!canUnlockMomentumBoost || unlockingMomentumBoost) {
-      return;
-    }
-
-    try {
-      setUnlockingMomentumBoost(true);
-      await updateProfile({ momentum: Math.max(0, momentum - 100) });
-      toast({
-        title: "Momentum boost unlocked",
-        description: "You channelled your recent performances into a surge of energy.",
-      });
-    } catch (err) {
-      const message = err instanceof Error
-        ? err.message
-        : "Unable to unlock the momentum boost right now.";
-      toast({
-        title: "Could not unlock momentum boost",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setUnlockingMomentumBoost(false);
     }
   };
 
@@ -419,18 +348,6 @@ const MyCharacter = () => {
         </div>
       </div>
 
-      {activeStatus && remainingMs > 0 && (
-        <Card className="border-secondary/40 bg-secondary/10">
-          <CardContent className="space-y-1 py-4">
-            <p className="text-sm font-semibold text-foreground">Active status: {activeStatus.status}</p>
-            <p className="text-sm text-muted-foreground">
-              {statusContextLabel ? `${statusContextLabel} • ` : ""}
-              Time remaining: {statusCountdownLabel}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -471,114 +388,67 @@ const MyCharacter = () => {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,320px),1fr]">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-col items-center text-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-semibold text-primary">
-                {profileInitials}
-              </div>
-              <div className="mt-4 space-y-1">
-                <h2 className="text-2xl font-semibold">{displayName}</h2>
-                {profile.username && profile.username !== displayName && (
-                  <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {profile.bio ? (
-                <p className="text-sm text-muted-foreground">{profile.bio}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">Add a bio to share your origin story.</p>
+        <Card>
+          <CardHeader className="flex flex-col items-center text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-semibold text-primary">
+              {profileInitials}
+            </div>
+            <div className="mt-4 space-y-1">
+              <h2 className="text-2xl font-semibold">{displayName}</h2>
+              {profile.username && profile.username !== displayName && (
+                <p className="text-sm text-muted-foreground">@{profile.username}</p>
               )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {profile.bio ? (
+              <p className="text-sm text-muted-foreground">{profile.bio}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Add a bio to share your origin story.</p>
+            )}
 
-              <Separator />
+            <Separator />
 
-              <div className="space-y-3 text-sm">
-                {PROFILE_META_FIELDS.map(({ key, label, icon: Icon }) => {
-                  const value = profile[key];
+            <div className="space-y-3 text-sm">
+              {PROFILE_META_FIELDS.map(({ key, label, icon: Icon }) => {
+                const value = profile[key];
 
-                  if (value === null || value === undefined || value === "") {
-                    return null;
-                  }
+                if (value === null || value === undefined || value === "") {
+                  return null;
+                }
 
-                  return (
-                    <div key={key as string} className="flex items-center gap-3">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{label}:</span>
-                      <span className="text-muted-foreground">{String(value)}</span>
-                    </div>
-                  );
-                })}
-                {currentCityLabel && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Current City:</span>
-                    <span className="text-muted-foreground">{currentCityLabel}</span>
+                return (
+                  <div key={key as string} className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{label}:</span>
+                    <span className="text-muted-foreground">{String(value)}</span>
                   </div>
-                )}
-                {joinedDate && (
-                  <div className="flex items-center gap-3">
-                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Joined:</span>
-                    <span className="text-muted-foreground">{joinedDate}</span>
-                  </div>
-                )}
-                {updatedDate && (
-                  <div className="flex items-center gap-3">
-                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Last Active:</span>
-                    <span className="text-muted-foreground">{updatedDate}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Flame className="h-5 w-5 text-destructive" />
-                Momentum & Inspiration
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Track how your recent performances translate into creative spark.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Flame className="h-4 w-4 text-destructive" />
-                    Momentum
-                  </div>
-                  <span className="text-sm font-semibold">{momentum}</span>
+                );
+              })}
+              {currentCityLabel && (
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Current City:</span>
+                  <span className="text-muted-foreground">{currentCityLabel}</span>
                 </div>
-                <Progress value={momentumProgress} className="h-2" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Lightbulb className="h-4 w-4 text-primary" />
-                    Inspiration
-                  </div>
-                  <span className="text-sm font-semibold">{inspiration}</span>
+              )}
+              {joinedDate && (
+                <div className="flex items-center gap-3">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Joined:</span>
+                  <span className="text-muted-foreground">{joinedDate}</span>
                 </div>
-                <Progress value={inspirationProgress} className="h-2" />
-              </div>
-              <Button
-                className="w-full"
-                onClick={handleUnlockMomentumBoost}
-                disabled={!canUnlockMomentumBoost || unlockingMomentumBoost}
-              >
-                {unlockingMomentumBoost && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Unlock Momentum Boost
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Reach 100 momentum to convert live energy into a powerful boost.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              )}
+              {updatedDate && (
+                <div className="flex items-center gap-3">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Last Active:</span>
+                  <span className="text-muted-foreground">{updatedDate}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="h-full">
           <CardHeader>

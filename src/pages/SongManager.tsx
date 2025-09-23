@@ -11,12 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { usePlayerStatus } from "@/hooks/usePlayerStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { applyRoyaltyRecoupment } from "@/utils/contracts";
 import * as datetimeUtils from "@/utils/datetime";
-import { ACTIVITY_STATUS_DURATIONS } from "@/utils/gameBalance";
 import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
 import type { Database, Json } from "@/lib/supabase-types";
 
@@ -394,7 +392,6 @@ const summarizeGrowth = (
 const SongManager = () => {
   const { user } = useAuth();
   const { profile, skills, updateProfile } = useGameData();
-  const { startTimedStatus } = usePlayerStatus();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [newSong, setNewSong] = useState({
@@ -914,23 +911,10 @@ const SongManager = () => {
       setSongs(prev => [normalizeSongRecord(data), ...prev]);
       setNewSong({ title: '', genre: '', lyrics: '' });
       setIsCreateDialogOpen(false);
-      const songwritingDurationMinutes = ACTIVITY_STATUS_DURATIONS.songwritingIdea;
-      startTimedStatus({
-        status: "Songwriting",
-        durationMinutes: songwritingDurationMinutes,
-        metadata: {
-          songId: data.id,
-          title: data.title,
-          source: "song_manager",
-        },
-      });
-      const songwritingDurationLabel = datetimeUtils.formatDurationMinutes(
-        songwritingDurationMinutes,
-      );
-
+      
       toast({
-        title: "Songwriting started",
-        description: `"${data.title}" is in Songwriting for about ${songwritingDurationLabel}. Added to your collection!`,
+        title: "Song Created",
+        description: `"${data.title}" has been added to your collection!`
       });
     } catch (error: unknown) {
       const fallbackMessage = "Failed to create song";
@@ -970,30 +954,17 @@ const SongManager = () => {
 
       await updateProfile({ cash: profile.cash - 500 });
 
-      setSongs(prev => prev.map(s =>
-        s.id === song.id
+      setSongs(prev => prev.map(s => 
+        s.id === song.id 
           ? { ...s, status: 'recorded' as const, quality_score: finalQuality }
           : s
       ));
 
       setIsRecordDialogOpen(false);
-      const recordingDurationMinutes = ACTIVITY_STATUS_DURATIONS.recordingSession;
-      startTimedStatus({
-        status: "Song Recording",
-        durationMinutes: recordingDurationMinutes,
-        metadata: {
-          songId: song.id,
-          title: song.title,
-          source: "song_manager",
-        },
-      });
-      const recordingDurationLabel = datetimeUtils.formatDurationMinutes(
-        recordingDurationMinutes,
-      );
-
+      
       toast({
-        title: "Song Recording underway",
-        description: `Studio time locked in for "${song.title}" — expect about ${recordingDurationLabel} of Song Recording.`,
+        title: "Song Recorded",
+        description: `"${song.title}" has been professionally recorded!`
       });
     } catch (error: unknown) {
       const fallbackMessage = "Failed to record song";
