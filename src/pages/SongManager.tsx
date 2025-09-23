@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { applyRoyaltyRecoupment } from "@/utils/contracts";
 import * as datetimeUtils from "@/utils/datetime";
-import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2 } from "lucide-react";
+import { Music, Plus, TrendingUp, Star, Calendar, Play, Edit3, Trash2, RefreshCcw } from "lucide-react";
 import type { Database, Json } from "@/lib/supabase-types";
 
 interface Song {
@@ -394,6 +394,7 @@ const SongManager = () => {
   const { profile, skills, updateProfile } = useGameData();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newSong, setNewSong] = useState({
     title: '',
     genre: '',
@@ -424,7 +425,6 @@ const SongManager = () => {
     songsRef.current = songs;
   }, [songs]);
 
-  const POLL_INTERVAL = 30000;
 
   const ownerDisplayName = profile?.stage_name?.trim() || 'You';
 
@@ -740,6 +740,19 @@ const SongManager = () => {
     }
   }, [user?.id]);
 
+  const refreshData = useCallback(async () => {
+    if (!user?.id || isRefreshing) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      await Promise.all([fetchSongs(), fetchGrowthHistory()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [user?.id, isRefreshing, fetchSongs, fetchGrowthHistory]);
+
   useEffect(() => {
     if (!user?.id) {
       setSongs([]);
@@ -758,13 +771,21 @@ const SongManager = () => {
       return;
     }
 
-    const interval = setInterval(() => {
-      fetchSongs();
-      fetchGrowthHistory();
-    }, POLL_INTERVAL);
+    if (typeof document === "undefined") {
+      return;
+    }
 
-    return () => clearInterval(interval);
-  }, [user?.id, fetchSongs, fetchGrowthHistory]);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshData();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [user?.id, refreshData]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -1480,13 +1501,22 @@ const SongManager = () => {
               </TabsContent>
             </Tabs>
             <p className="mt-4 text-xs text-muted-foreground">
-              Streaming metrics refresh automatically every 15 minutes.
+              Streaming metrics update in real time. Refresh manually if you need to resync.
             </p>
           </CardContent>
         </Card>
 
         {/* Create Song Button */}
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={refreshData}
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCcw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh Data"}
+          </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
