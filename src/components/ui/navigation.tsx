@@ -182,7 +182,7 @@ const Navigation = () => {
                 const Icon = item.icon;
                 return (
                   <Button
-                    key={item.path}
+                    key={`${item.path}-${item.label}`}
                     variant={isActive(item.path) ? "secondary" : "ghost"}
                     className={`w-full justify-start gap-3 ${
                       isActive(item.path)
