@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -186,7 +195,9 @@ const mapAttributes = (row: RawAttributes): PlayerAttributes => {
   return baseAttributes;
 };
 
-export const useGameData = (): UseGameDataReturn => {
+const GameDataContext = createContext<UseGameDataReturn | undefined>(undefined);
+
+const useProvideGameData = (): UseGameDataReturn => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [skills, setSkills] = useState<PlayerSkills>(null);
@@ -198,7 +209,7 @@ export const useGameData = (): UseGameDataReturn => {
   const [activities, setActivities] = useState<ActivityFeedRow[]>([]);
   const [dailyXpGrant, setDailyXpGrant] = useState<DailyXpGrantRow | null>(null);
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
@@ -396,6 +407,7 @@ export const useGameData = (): UseGameDataReturn => {
       setActivities([]);
       setCurrentCity(null);
       setDailyXpGrant(null);
+      setLoading(false);
       return;
     }
 
@@ -1068,6 +1080,22 @@ export const useGameData = (): UseGameDataReturn => {
   return value;
 };
 
-export const GameDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <>{children}</>;
+interface GameDataProviderProps {
+  children: ReactNode;
+}
+
+export const GameDataProvider = ({ children }: GameDataProviderProps) => {
+  const value = useProvideGameData();
+
+  return <GameDataContext.Provider value={value}>{children}</GameDataContext.Provider>;
+};
+
+export const useGameData = (): UseGameDataReturn => {
+  const context = useContext(GameDataContext);
+
+  if (!context) {
+    throw new Error("useGameData must be used within a GameDataProvider");
+  }
+
+  return context;
 };
