@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,14 +38,38 @@ type NewSongFormState = {
   genre: string;
   lyrics: string;
   duration: number;
+  projectId: string | null;
+  sessionsCompleted: number;
+  totalSessions: number;
 };
+
+const MIN_REQUIRED_SESSIONS = 4;
 
 const createInitialNewSong = (): NewSongFormState => ({
   title: '',
   genre: '',
   lyrics: '',
   duration: DEFAULT_SONG_DURATION_SECONDS,
+  projectId: null,
+  sessionsCompleted: 0,
+  totalSessions: MIN_REQUIRED_SESSIONS,
 });
+
+type FinishedSongwritingProject = {
+  id: string;
+  title?: string | null;
+  genre?: string | null;
+  lyrics?: string | null;
+  sessions_completed?: number | null;
+  total_sessions?: number | null;
+  tempo?: number | null;
+  duration_seconds?: number | null;
+  metadata?: Json | null;
+};
+
+type SongwritingProjectLocationState = {
+  completedSongwritingProject?: FinishedSongwritingProject;
+} | null;
 
 interface Song {
   id: string;
@@ -244,6 +269,52 @@ const toNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const toFiniteNumberOrNull = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Number(parsed) : null;
+};
+
+const extractProjectMetadata = (metadata: Json | null | undefined): Record<string, unknown> | null => {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  return metadata as Record<string, unknown>;
+};
+
+const getProjectSessionStats = (project: FinishedSongwritingProject | null | undefined) => {
+  const sessionsCompleted = toFiniteNumberOrNull(project?.sessions_completed) ?? 0;
+  const totalSessions = Math.max(
+    MIN_REQUIRED_SESSIONS,
+    toFiniteNumberOrNull(project?.total_sessions) ?? MIN_REQUIRED_SESSIONS,
+  );
+  const completionRatio = totalSessions > 0 ? Math.min(1, Math.max(0, sessionsCompleted / totalSessions)) : 0;
+
+  return { sessionsCompleted, totalSessions, completionRatio };
+};
+
+const getProjectDurationSeconds = (project: FinishedSongwritingProject | null | undefined): number | null => {
+  if (!project) {
+    return null;
+  }
+
+  const metadata = extractProjectMetadata(project.metadata);
+  const candidates: Array<unknown> = [
+    project.duration_seconds,
+    metadata?.duration_seconds,
+    metadata?.duration,
+  ];
+
+  for (const candidate of candidates) {
+    const numeric = toFiniteNumberOrNull(candidate);
+    if (numeric !== null) {
+      return Math.max(30, Math.round(numeric));
+    }
+  }
+
+  return null;
+};
+
 const normalizeSongRecord = (record: SongRow): Song => ({
   id: record.id,
   title: record.title,
@@ -425,14 +496,13 @@ const summarizeGrowth = (
 const SongManager = () => {
   const { user } = useAuth();
   const { profile, skills, updateProfile } = useGameData();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [newSong, setNewSong] = useState({
-    title: '',
-    genre: '',
-    lyrics: ''
-  });
+  const [newSong, setNewSong] = useState<NewSongFormState>(createInitialNewSong());
+  const [selectedSongwritingProject, setSelectedSongwritingProject] = useState<FinishedSongwritingProject | null>(null);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRecordDialogOpen, setIsRecordDialogOpen] = useState(false);
@@ -447,6 +517,7 @@ const SongManager = () => {
   const [collaboratorsForm, setCollaboratorsForm] = useState<CollaboratorInputRow[]>([]);
 
   const releasingSongsRef = useRef<Set<string>>(new Set());
+  const lastSongwritingProjectIdRef = useRef<string | null>(null);
   const profileRef = useRef(profile);
   const songsRef = useRef<Song[]>([]);
 
@@ -459,7 +530,60 @@ const SongManager = () => {
   }, [songs]);
 
 
+  useEffect(() => {
+    const state = location.state as SongwritingProjectLocationState;
+    const project = state?.completedSongwritingProject;
+
+    if (!project) {
+      return;
+    }
+
+    if (project.id === lastSongwritingProjectIdRef.current) {
+      navigate({ pathname: location.pathname, search: location.search }, { replace: true });
+      return;
+    }
+
+    const { sessionsCompleted, totalSessions } = getProjectSessionStats(project);
+
+    if (sessionsCompleted < MIN_REQUIRED_SESSIONS) {
+      toast({
+        variant: "destructive",
+        title: "Songwriting Project Incomplete",
+        description: `Complete at least ${MIN_REQUIRED_SESSIONS} songwriting sessions before finishing your song.`
+      });
+      navigate({ pathname: location.pathname, search: location.search }, { replace: true });
+      lastSongwritingProjectIdRef.current = project.id;
+      return;
+    }
+
+    const durationSeconds = getProjectDurationSeconds(project) ?? DEFAULT_SONG_DURATION_SECONDS;
+
+    setSelectedSongwritingProject({
+      ...project,
+      sessions_completed: sessionsCompleted,
+      total_sessions: totalSessions,
+    });
+    setNewSong({
+      title: project.title ?? '',
+      genre: project.genre ?? '',
+      lyrics: project.lyrics ?? '',
+      duration: durationSeconds,
+      projectId: project.id,
+      sessionsCompleted,
+      totalSessions,
+    });
+
+    lastSongwritingProjectIdRef.current = project.id;
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true });
+  }, [location, navigate]);
+
   const ownerDisplayName = profile?.stage_name?.trim() || 'You';
+  const songwritingProjectStats = useMemo(
+    () => getProjectSessionStats(selectedSongwritingProject),
+    [selectedSongwritingProject]
+  );
+  const canCreateFromSongwritingProject =
+    selectedSongwritingProject !== null && songwritingProjectStats.sessionsCompleted >= MIN_REQUIRED_SESSIONS;
 
   const genres = [
     'Rock', 'Pop', 'Hip Hop', 'Jazz', 'Blues', 'Country',
@@ -937,6 +1061,15 @@ const SongManager = () => {
       return;
     }
 
+    if (!canCreateFromSongwritingProject || !selectedSongwritingProject) {
+      toast({
+        variant: "destructive",
+        title: "Songwriting Project Required",
+        description: `Finish a songwriting project with at least ${MIN_REQUIRED_SESSIONS} sessions to create a song.`
+      });
+      return;
+    }
+
     const rawDuration = Number(newSong.duration);
     const durationSeconds = Number.isFinite(rawDuration) ? Math.max(0, Math.round(rawDuration)) : 0;
 
@@ -950,10 +1083,11 @@ const SongManager = () => {
     }
 
     try {
-      const qualityScore = Math.floor(
-        ((skills?.songwriting || 0) + (skills?.performance || 0)) / 2 +
-        Math.random() * 20 - 10
-      );
+      const songwritingSkill = Math.min(1000, Math.max(0, Number(skills?.songwriting ?? 0)));
+      const normalizedSkill = Math.min(1, Math.max(0, songwritingSkill / 1000));
+      const completionRatio = songwritingProjectStats.completionRatio;
+      const qualityScore = Math.round(normalizedSkill * completionRatio * 1000);
+      const normalizedQualityScore = Math.max(0, Math.min(1000, qualityScore));
 
       const { data, error } = await supabase
         .from('songs')
@@ -962,7 +1096,7 @@ const SongManager = () => {
           genre: newSong.genre,
           lyrics: newSong.lyrics,
           duration: durationSeconds,
-          quality_score: Math.max(1, Math.min(100, qualityScore)),
+          quality_score: normalizedQualityScore,
           status: 'draft',
           streams: 0,
           revenue: 0,
@@ -977,8 +1111,10 @@ const SongManager = () => {
 
       setSongs(prev => [normalizeSongRecord(data), ...prev]);
       setNewSong(createInitialNewSong());
+      setSelectedSongwritingProject(null);
+      lastSongwritingProjectIdRef.current = null;
       setIsCreateDialogOpen(false);
-      
+
       toast({
         title: "Song Created",
         description: `"${data.title}" has been added to your collection!`
@@ -1006,8 +1142,9 @@ const SongManager = () => {
     }
 
     try {
-      const recordingBonus = (skills?.performance || 0) / 4;
-      const finalQuality = Math.min(100, song.quality_score + recordingBonus);
+      const performanceSkill = Math.min(1000, Math.max(0, Number(skills?.performance ?? 0)));
+      const recordingBonus = Math.floor(performanceSkill / 40);
+      const finalQuality = Math.min(1000, Math.round(song.quality_score + recordingBonus));
 
       const { error } = await supabase
         .from('songs')
@@ -1090,11 +1227,11 @@ const SongManager = () => {
     try {
       const marketingBudget = Math.max(0, Number(song.marketing_budget ?? 0));
       const fans = Number(currentProfile.fans ?? 0);
-      const baseStreams = Math.floor(song.quality_score * fans / 100);
+      const baseStreams = Math.floor(Math.max(0, (song.quality_score / 1000) * fans));
       const marketingBoost = Math.floor(marketingBudget * 20);
       const initialStreams = Math.max(baseStreams + marketingBoost, 0);
       const chartBonus = Math.floor(marketingBudget / 500);
-      const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.8) - chartBonus);
+      const chartPosition = Math.max(1, 101 - Math.floor(song.quality_score * 0.08) - chartBonus);
       const releaseTimestamp = releaseDate.toISOString();
       const royaltyEarnings = Number((initialStreams * 0.01).toFixed(2));
       const ownerPercentage = calculateOwnerPercentage(song);
@@ -1118,7 +1255,7 @@ const SongManager = () => {
       if (error) throw error;
 
       const { cashToPlayer, totalRecouped } = await applyRoyaltyRecoupment(user.id, ownerRevenueShare);
-      const fameGain = Math.floor(song.quality_score / 2);
+      const fameGain = Math.floor(song.quality_score / 20);
       const updatedFame = (currentProfile.fame ?? 0) + fameGain;
       const newCashTotal = (currentProfile.cash ?? 0) - marketingBudget + cashToPlayer;
 
@@ -1579,6 +1716,39 @@ const SongManager = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
+                  {selectedSongwritingProject ? (
+                    <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-primary">Songwriting Project Ready</p>
+                          <p className="text-xs text-muted-foreground">
+                            {songwritingProjectStats.sessionsCompleted}/{songwritingProjectStats.totalSessions} sessions completed
+                          </p>
+                        </div>
+                        <Badge variant="secondary">Ready</Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">
+                          {selectedSongwritingProject.title?.trim() || "Untitled Project"}
+                        </p>
+                        {selectedSongwritingProject.genre && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedSongwritingProject.genre}
+                          </p>
+                        )}
+                      </div>
+                      <Progress value={songwritingProjectStats.completionRatio * 100} className="h-2" />
+                      <p className="text-xs text-muted-foreground">
+                        Final quality is based on your songwriting skill and project completion—keep refining to push toward 1000.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-4 text-sm text-muted-foreground">
+                      Finish a songwriting project with at least {MIN_REQUIRED_SESSIONS} sessions to unlock song creation.
+                    </div>
+                  )}
+                </div>
+                <div>
                   <Label htmlFor="title">Song Title</Label>
                   <Input
                     id="title"
@@ -1636,7 +1806,12 @@ const SongManager = () => {
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={createSong}>Create Song</Button>
+                <Button
+                  onClick={createSong}
+                  disabled={!canCreateFromSongwritingProject || !newSong.title || !newSong.genre}
+                >
+                  Create Song
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -1673,9 +1848,9 @@ const SongManager = () => {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Quality</span>
-                      <span>{song.quality_score}/100</span>
+                      <span>{song.quality_score}/1000</span>
                     </div>
-                    <Progress value={song.quality_score} className="h-2" />
+                    <Progress value={Math.max(0, Math.min(100, song.quality_score / 10))} className="h-2" />
                   </div>
 
                   {isScheduled && releaseDate && (

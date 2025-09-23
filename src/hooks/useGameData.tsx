@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -22,7 +23,7 @@ import {
 } from "@/utils/progression";
 
 export type PlayerProfile = Database["public"]["Tables"]["profiles"]["Row"];
-export type PlayerSkills = Database["public"]["Tables"]["player_skills"]["Row"] | null;
+export type PlayerSkills = Partial<Record<string, number>>;
 type AttributeCategory =
   | "creativity"
   | "business"
@@ -47,7 +48,7 @@ export type UnlockedSkillsMap = Record<string, boolean>;
 export type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
-type SkillsUpdate = Database["public"]["Tables"]["player_skills"]["Update"];
+type SkillsUpdate = Record<string, number | null | undefined>;
 type AttributesUpdate = Partial<PlayerAttributes>;
 type XpWalletUpdate = Database["public"]["Tables"]["player_xp_wallet"]["Update"];
 type XpWalletInsert = Database["public"]["Tables"]["player_xp_wallet"]["Insert"];
@@ -142,7 +143,7 @@ const isWeeklyBonusFresh = (ledger: ExperienceLedgerRow[]): boolean => {
 
 interface UseGameDataReturn {
   profile: PlayerProfile | null;
-  skills: PlayerSkills;
+  skills: PlayerSkills | null;
   attributes: PlayerAttributes | null;
   xpWallet: PlayerXpWallet;
   xpLedger: ExperienceLedgerRow[];
@@ -177,6 +178,106 @@ const createDefaultAttributes = (): PlayerAttributes =>
     return accumulator;
   }, {} as PlayerAttributes);
 
+const LEGACY_SKILL_KEYS = [
+  "vocals",
+  "guitar",
+  "bass",
+  "drums",
+  "songwriting",
+  "performance",
+  "creativity",
+  "technical",
+  "business",
+  "marketing",
+  "composition",
+] as const;
+
+const LEGACY_SKILL_KEY_SET = new Set<string>(LEGACY_SKILL_KEYS);
+const FALLBACK_SKILL_VALUE = 0;
+
+const createDefaultSkills = (): PlayerSkills => {
+  const base: PlayerSkills = {};
+  for (const key of LEGACY_SKILL_KEYS) {
+    base[key] = FALLBACK_SKILL_VALUE;
+  }
+  return base;
+};
+
+const normalizeSkillSlug = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+};
+
+const resolveLegacySkillKey = (slug: string): string | null => {
+  if (LEGACY_SKILL_KEY_SET.has(slug)) {
+    return slug;
+  }
+
+  const [prefix] = slug.split(/[_-]/);
+  if (prefix && LEGACY_SKILL_KEY_SET.has(prefix)) {
+    return prefix;
+  }
+
+  return null;
+};
+
+const coerceSkillValue = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.round(value));
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.round(parsed));
+    }
+  }
+
+  return null;
+};
+
+const deriveSkillsFromProgress = (
+  progress: SkillProgressRow[],
+  fallback: PlayerSkills | null,
+): PlayerSkills => {
+  const base: PlayerSkills = { ...(fallback ?? createDefaultSkills()) };
+
+  for (const key of LEGACY_SKILL_KEYS) {
+    if (typeof base[key] !== "number" || !Number.isFinite(base[key])) {
+      base[key] = FALLBACK_SKILL_VALUE;
+    }
+  }
+
+  for (const row of progress) {
+    const slug = normalizeSkillSlug(row.skill_slug);
+    if (!slug) {
+      continue;
+    }
+
+    const numericValue =
+      coerceSkillValue(row.current_level) ??
+      coerceSkillValue((row.metadata as Record<string, unknown> | null | undefined)?.current_level);
+
+    if (numericValue == null) {
+      continue;
+    }
+
+    base[slug] = numericValue;
+
+    const legacyKey = resolveLegacySkillKey(slug);
+    if (legacyKey) {
+      const previous =
+        typeof base[legacyKey] === "number" && Number.isFinite(base[legacyKey])
+          ? (base[legacyKey] as number)
+          : FALLBACK_SKILL_VALUE;
+      base[legacyKey] = Math.max(previous, numericValue);
+    }
+  }
+
+  return base;
+};
+
 const mapAttributes = (row: RawAttributes): PlayerAttributes => {
   const baseAttributes = createDefaultAttributes();
 
@@ -201,7 +302,7 @@ const GameDataContext = createContext<UseGameDataReturn | undefined>(undefined);
 const useProvideGameData = (): UseGameDataReturn => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
-  const [skills, setSkills] = useState<PlayerSkills>(null);
+  const [skills, setSkills] = useState<PlayerSkills | null>(null);
   const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
   const [xpWallet, setXpWallet] = useState<PlayerXpWallet>(null);
   const [xpLedger, setXpLedger] = useState<ExperienceLedgerRow[]>([]);
@@ -213,13 +314,43 @@ const useProvideGameData = (): UseGameDataReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [supportsActivityProfileFilter, setSupportsActivityProfileFilter] = useState(true);
+  const [activityFeedSupportsProfileId, setActivityFeedSupportsProfileId] = useState(true);
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
+  const dailyXpGrantTableAvailableRef = useRef(true);
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
     (error as { code?: string }).code === "PGRST204";
+
+  const sanitizeActivityFeedRows = useCallback(
+    (
+      rows: ActivityFeedRow[] | null | undefined,
+      fallbackProfileId: string,
+    ): { rows: ActivityFeedRow[]; missingProfileId: boolean } => {
+      if (!Array.isArray(rows)) {
+        return { rows: [], missingProfileId: false };
+      }
+
+      let missingProfileId = false;
+
+      const normalized = rows.map((row) => {
+        const record = row as ActivityFeedRow & { profile_id?: string | null };
+        if (!record.profile_id) {
+          missingProfileId = true;
+        }
+
+        return {
+          ...record,
+          profile_id: record.profile_id ?? fallbackProfileId,
+        };
+      });
+
+      return { rows: normalized, missingProfileId };
+    },
+    [],
+  );
 
   const loadProfileDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
@@ -339,21 +470,13 @@ const useProvideGameData = (): UseGameDataReturn => {
       };
 
       const [
-        skillsResult,
         attributesResult,
         walletResult,
         ledgerResult,
         cityResult,
         activitiesResult,
         skillProgressResult,
-        dailyGrantResult,
       ] = await Promise.all([
-        supabase
-          .from("player_skills")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .eq("user_id", user.id)
-          .maybeSingle(),
         supabase
           .from("player_attributes")
           .select("*")
@@ -374,24 +497,45 @@ const useProvideGameData = (): UseGameDataReturn => {
           ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         fetchActivitiesWithFallback(),
+        (() => {
+          let activityFeedQuery = supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", user.id);
+
+          if (activityFeedSupportsProfileId) {
+            activityFeedQuery = activityFeedQuery.eq("profile_id", effectiveProfile.id);
+          }
+
+          return activityFeedQuery.order("created_at", { ascending: false }).limit(20);
+        })(),
         supabase
           .from("skill_progress")
           .select("*")
           .eq("profile_id", effectiveProfile.id)
           .order("current_level", { ascending: false, nullsFirst: false })
           .order("current_xp", { ascending: false, nullsFirst: false }),
-        supabase
+      ]);
+
+      let dailyGrantResult: PostgrestSingleResponse<DailyXpGrantRow | null>;
+      if (dailyXpGrantTableAvailableRef.current) {
+        dailyGrantResult = await supabase
           .from("profile_daily_xp_grants")
           .select("*")
           .eq("profile_id", effectiveProfile.id)
           .order("grant_date", { ascending: false })
           .limit(1)
-          .maybeSingle(),
-      ]);
-
-      if (skillsResult.error) {
-        console.error("Failed to load player skills", skillsResult.error);
+          .maybeSingle();
+      } else {
+        dailyGrantResult = {
+          data: null,
+          error: null,
+          count: null,
+          status: 200,
+          statusText: "OK",
+        } as PostgrestSingleResponse<DailyXpGrantRow | null>;
       }
+
       if (attributesResult.error) {
         console.error("Failed to load player attributes", attributesResult.error);
       }
@@ -404,28 +548,84 @@ const useProvideGameData = (): UseGameDataReturn => {
       if (cityResult && cityResult.error) {
         console.error("Failed to load city", cityResult.error);
       }
-      if (activitiesResult.error) {
-        console.error("Failed to load activities", activitiesResult.error);
-      }
       if (skillProgressResult.error) {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
       if (dailyGrantResult.error) {
-        console.error("Failed to load daily XP grant", dailyGrantResult.error);
+        if (isSchemaCacheMissingTableError(dailyGrantResult.error)) {
+          dailyXpGrantTableAvailableRef.current = false;
+          console.warn("Daily XP grant table is unavailable; skipping future queries", dailyGrantResult.error);
+        } else if (dailyGrantResult.error.code !== "PGRST116") {
+          console.error("Failed to load daily XP grant", dailyGrantResult.error);
+        }
       }
 
-      setSkills((skillsResult.data ?? null) as PlayerSkills);
+      let nextActivities: ActivityFeedRow[] = [];
+
+      if (activitiesResult.error) {
+        if (activitiesResult.error.code === "42703") {
+          if (activityFeedSupportsProfileId) {
+            setActivityFeedSupportsProfileId(false);
+          }
+
+          const fallbackResult = await supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+          if (fallbackResult.error) {
+            console.error("Failed to load activities", fallbackResult.error);
+          } else {
+            const { rows, missingProfileId } = sanitizeActivityFeedRows(
+              fallbackResult.data as ActivityFeedRow[] | null,
+              effectiveProfile.id,
+            );
+
+            if (missingProfileId && activityFeedSupportsProfileId) {
+              setActivityFeedSupportsProfileId(false);
+            }
+
+            nextActivities = rows;
+          }
+        } else {
+          console.error("Failed to load activities", activitiesResult.error);
+        }
+      } else {
+        const { rows, missingProfileId } = sanitizeActivityFeedRows(
+          activitiesResult.data as ActivityFeedRow[] | null,
+          effectiveProfile.id,
+        );
+
+        if (missingProfileId && activityFeedSupportsProfileId) {
+          setActivityFeedSupportsProfileId(false);
+        }
+
+        nextActivities = rows;
+      }
+
+      const resolvedSkillProgress = (skillProgressResult.data ?? []) as SkillProgressRow[];
+      setSkillProgress(resolvedSkillProgress);
+      setSkills((previous) => deriveSkillsFromProgress(resolvedSkillProgress, previous));
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
       setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
+      setActivities(nextActivities);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
+
       setUnlockedSkills({});
-      const grantRow = dailyGrantResult.data ? (dailyGrantResult.data as DailyXpGrantRow) : null;
+      const grantRow =
+        dailyGrantResult.error && isSchemaCacheMissingTableError(dailyGrantResult.error)
+          ? null
+          : dailyGrantResult.data
+            ? (dailyGrantResult.data as DailyXpGrantRow)
+            : null;
       setDailyXpGrant(grantRow);
     },
-    [user],
+    [activityFeedSupportsProfileId, sanitizeActivityFeedRows, user],
   );
 
   const fetchData = useCallback(async () => {
@@ -488,6 +688,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
     const channel = supabase
       .channel(`activity_feed:${filterColumn}:${filterValue}`)
+
       .on(
         "postgres_changes",
         {
@@ -497,7 +698,12 @@ const useProvideGameData = (): UseGameDataReturn => {
           filter: `${filterColumn}=eq.${filterValue}`,
         },
         (payload) => {
-          const newRow = payload.new as ActivityFeedRow;
+          const { rows } = sanitizeActivityFeedRows([payload.new as ActivityFeedRow], profile.id);
+          const [newRow] = rows;
+          if (!newRow) {
+            return;
+          }
+
           setActivities((previous) => {
             const withoutDuplicate = previous.filter((activity) => activity.id !== newRow.id);
             return [newRow, ...withoutDuplicate].slice(0, 20);
@@ -510,6 +716,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       void supabase.removeChannel(channel);
     };
   }, [profile?.id, supportsActivityProfileFilter, user?.id]);
+
 
   const updateAttributes = useCallback(
     async (updates: AttributesUpdate) => {
@@ -841,29 +1048,65 @@ const useProvideGameData = (): UseGameDataReturn => {
         throw new Error("No active profile selected");
       }
 
-      const payload: Database["public"]["Tables"]["player_skills"]["Insert"] = {
-        profile_id: profile.id,
-        user_id: user.id,
-        ...updates,
-      };
+      const normalizedEntries = Object.entries(updates ?? {})
+        .map(([key, value]) => ({ slug: normalizeSkillSlug(key), value: coerceSkillValue(value) }))
+        .filter((entry): entry is { slug: string; value: number } => Boolean(entry.slug) && entry.value !== null);
 
-      payload.profile_id = profile.id;
-      payload.user_id = user.id;
+      if (normalizedEntries.length === 0) {
+        return skills ?? createDefaultSkills();
+      }
+
+      const timestamp = new Date().toISOString();
+      const payloads = normalizedEntries.map(({ slug, value }) => ({
+        profile_id: profile.id,
+        skill_slug: slug,
+        current_level: value,
+        last_practiced_at: timestamp,
+      }));
 
       const { data, error: upsertError } = await supabase
-        .from("player_skills")
-        .upsert(payload, { onConflict: "profile_id" })
-        .select("*")
-        .maybeSingle();
+        .from("skill_progress")
+        .upsert(payloads, { onConflict: "profile_id,skill_slug" })
+        .select("*");
 
       if (upsertError) {
         throw upsertError;
       }
 
-      setSkills((data ?? null) as PlayerSkills);
-      return (data ?? null) as PlayerSkills;
+      const rows = (data ?? []) as SkillProgressRow[];
+
+      let nextSkillProgressState: SkillProgressRow[] = [];
+      setSkillProgress((current) => {
+        const map = new Map<string, SkillProgressRow>();
+        for (const row of current) {
+          if (row?.skill_slug) {
+            map.set(row.skill_slug, row);
+          }
+        }
+
+        for (const row of rows) {
+          if (row?.skill_slug) {
+            map.set(row.skill_slug, row);
+          }
+        }
+
+        nextSkillProgressState = Array.from(map.values());
+        return nextSkillProgressState;
+      });
+
+      let nextSnapshot = createDefaultSkills();
+      setSkills((previous) => {
+        const fallback = previous ?? createDefaultSkills();
+        nextSnapshot = deriveSkillsFromProgress(
+          nextSkillProgressState.length > 0 ? nextSkillProgressState : rows,
+          fallback,
+        );
+        return nextSnapshot;
+      });
+
+      return nextSnapshot;
     },
-    [profile, user],
+    [profile, skills, user],
   );
 
   const updateXpWallet = useCallback(
@@ -893,12 +1136,19 @@ const useProvideGameData = (): UseGameDataReturn => {
     [profile],
   );
 
+  interface AddActivityOptions {
+    status?: string | null;
+    durationMinutes?: number | null;
+    statusId?: string | null;
+  }
+
   const addActivity = useCallback(
     async (
       type: string,
       message: string,
       earnings: number | undefined = undefined,
       metadata: ActivityInsert["metadata"] = null,
+      options: AddActivityOptions = {},
     ) => {
       if (!user) {
         throw new Error("Authentication required to log activity");
@@ -914,6 +1164,12 @@ const useProvideGameData = (): UseGameDataReturn => {
         message,
         earnings: typeof earnings === "number" ? earnings : null,
         metadata,
+        status: options.status ?? null,
+        duration_minutes:
+          typeof options.durationMinutes === "number" && Number.isFinite(options.durationMinutes)
+            ? options.durationMinutes
+            : null,
+        status_id: options.statusId ?? null,
       };
 
       if (supportsActivityProfileFilter) {
@@ -984,6 +1240,11 @@ const useProvideGameData = (): UseGameDataReturn => {
         setAttributes(mapAttributes(response.attributes as RawAttributes));
       }
 
+      if (!dailyXpGrantTableAvailableRef.current) {
+        setDailyXpGrant(null);
+        return;
+      }
+
       const { data: latestGrant, error: latestGrantError } = await supabase
         .from("profile_daily_xp_grants")
         .select("*")
@@ -992,8 +1253,17 @@ const useProvideGameData = (): UseGameDataReturn => {
         .limit(1)
         .maybeSingle();
 
-      if (latestGrantError && latestGrantError.code !== "PGRST116") {
-        console.error("Failed to refresh daily XP grant", latestGrantError);
+      if (latestGrantError) {
+        if (isSchemaCacheMissingTableError(latestGrantError)) {
+          dailyXpGrantTableAvailableRef.current = false;
+          console.warn("Daily XP grant table is unavailable; skipping future queries", latestGrantError);
+          setDailyXpGrant(null);
+          return;
+        }
+
+        if (latestGrantError.code !== "PGRST116") {
+          console.error("Failed to refresh daily XP grant", latestGrantError);
+        }
       }
 
       setDailyXpGrant((latestGrant ?? null) as DailyXpGrantRow | null);
