@@ -61,7 +61,7 @@ const Navigation = () => {
       title: "Creative Studio",
       items: [
         { icon: Music, label: "Music Studio", path: "/music" },
-        { icon: Play, label: "Music Creation", path: "/create" },
+        { icon: Play, label: "Songwriting", path: "/songwriting" },
         { icon: ListMusic, label: "Song Manager", path: "/songs" },
         { icon: GraduationCap, label: "Education", path: "/education" },
       ],
