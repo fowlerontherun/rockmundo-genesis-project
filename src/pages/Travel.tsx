@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,7 +10,7 @@ type TravelRecord = {
   city_to: string | null;
   cost: string | number | null;
   duration: string | number | null;
-  health_impact: string | null;
+  health_impact: string | number | null;
 };
 
 type TravelDataset = {
@@ -24,6 +25,152 @@ const defaultDataset: TravelDataset = {
   trains: [],
   taxis: [],
   ferries: [],
+};
+
+const FALLBACK_TRAVEL_DATA: TravelDataset = {
+  flights: [
+    {
+      id: "fallback-flight-neo-aster",
+      city_from: "Neo Tokyo",
+      city_to: "Asterhaven",
+      cost: 880,
+      duration: 720,
+      health_impact: -12,
+    },
+    {
+      id: "fallback-flight-solace-vela",
+      city_from: "Solace City",
+      city_to: "Vela Horizonte",
+      cost: 540,
+      duration: 420,
+      health_impact: -8,
+    },
+    {
+      id: "fallback-flight-aster-portsmouth",
+      city_from: "Asterhaven",
+      city_to: "Portsmouth",
+      cost: 210,
+      duration: 110,
+      health_impact: -4,
+    },
+  ],
+  trains: [
+    {
+      id: "fallback-train-portsmouth-aster",
+      city_from: "Portsmouth",
+      city_to: "Asterhaven",
+      cost: 95,
+      duration: 180,
+      health_impact: -2,
+    },
+    {
+      id: "fallback-train-aster-solace",
+      city_from: "Asterhaven",
+      city_to: "Solace City",
+      cost: 135,
+      duration: 240,
+      health_impact: -3,
+    },
+    {
+      id: "fallback-train-solace-portsmouth",
+      city_from: "Solace City",
+      city_to: "Portsmouth",
+      cost: 115,
+      duration: 210,
+      health_impact: -1,
+    },
+  ],
+  taxis: [
+    {
+      id: "fallback-taxi-portsmouth",
+      city_from: "Portsmouth",
+      city_to: "Portsmouth",
+      cost: 24,
+      duration: 18,
+      health_impact: 3,
+    },
+    {
+      id: "fallback-taxi-solace",
+      city_from: "Solace City",
+      city_to: "Solace City",
+      cost: 32,
+      duration: 22,
+      health_impact: 4,
+    },
+    {
+      id: "fallback-taxi-aster",
+      city_from: "Asterhaven",
+      city_to: "Asterhaven",
+      cost: 38,
+      duration: 25,
+      health_impact: 2,
+    },
+  ],
+  ferries: [
+    {
+      id: "fallback-ferry-solace-portsmouth",
+      city_from: "Solace City",
+      city_to: "Portsmouth",
+      cost: 68,
+      duration: 95,
+      health_impact: 5,
+    },
+    {
+      id: "fallback-ferry-portsmouth-vela",
+      city_from: "Portsmouth",
+      city_to: "Vela Horizonte",
+      cost: 145,
+      duration: 260,
+      health_impact: 1,
+    },
+    {
+      id: "fallback-ferry-vela-solace",
+      city_from: "Vela Horizonte",
+      city_to: "Solace City",
+      cost: 142,
+      duration: 255,
+      health_impact: 2,
+    },
+  ],
+};
+
+const cloneDataset = (dataset: TravelDataset): TravelDataset => ({
+  flights: dataset.flights.map((record) => ({ ...record })),
+  trains: dataset.trains.map((record) => ({ ...record })),
+  taxis: dataset.taxis.map((record) => ({ ...record })),
+  ferries: dataset.ferries.map((record) => ({ ...record })),
+});
+
+type TravelTableName = "travel_flights" | "travel_trains" | "travel_taxis" | "travel_ferries";
+type TravelTableKey = keyof TravelDataset;
+
+const TRAVEL_TABLES: Array<{ key: TravelTableKey; table: TravelTableName }> = [
+  { key: "flights", table: "travel_flights" },
+  { key: "trains", table: "travel_trains" },
+  { key: "taxis", table: "travel_taxis" },
+  { key: "ferries", table: "travel_ferries" },
+];
+
+type RawTravelRow = {
+  id?: string | null;
+  city_from?: string | null;
+  city_to?: string | null;
+  cost?: number | string | null;
+  duration_minutes?: number | string | null;
+  health_impact?: number | string | null;
+};
+
+const parseNumeric = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
 };
 
 const formatValue = (value: string | number | null | undefined) => {
@@ -65,41 +212,183 @@ const Travel = () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
 
-        const [flightsResponse, trainsResponse, taxisResponse, ferriesResponse] = await Promise.all([
-          supabase.from("travel_flights" as any).select("*"),
-          supabase.from("travel_trains" as any).select("*"),
-          supabase.from("travel_taxis" as any).select("*"),
-          supabase.from("travel_ferries" as any).select("*"),
-        ]);
+        const responses = await Promise.all(
+          TRAVEL_TABLES.map(async (config) => {
+            try {
+              const response = await supabase
+                .from(config.table)
+                .select("id, city_from, city_to, cost, duration_minutes, health_impact");
+
+              if (response.error) {
+                return {
+                  ...config,
+                  rows: [] as RawTravelRow[],
+                  error: response.error as PostgrestError,
+                };
+              }
+
+              return {
+                ...config,
+                rows: Array.isArray(response.data) ? (response.data as RawTravelRow[]) : [],
+                error: null,
+              };
+            } catch (unknownError) {
+              const error = unknownError as PostgrestError | Error;
+
+              if (error && typeof (error as PostgrestError).code === "string") {
+                return {
+                  ...config,
+                  rows: [] as RawTravelRow[],
+                  error: error as PostgrestError,
+                };
+              }
+
+              throw unknownError;
+            }
+          }),
+        );
 
         if (!isMounted) {
           return;
         }
 
-        const errors = [
-          flightsResponse.error,
-          trainsResponse.error,
-          taxisResponse.error,
-          ferriesResponse.error,
-        ].filter(Boolean);
+        const fallbackTables = new Set<TravelTableKey>();
+        const missingTables = new Set<TravelTableKey>();
+        const fatalErrors: PostgrestError[] = [];
 
-        if (errors.length > 0) {
-          setError(errors.map((entry) => entry!.message).join(" \u2022 "));
+        responses.forEach(({ key, error }) => {
+          if (!error) {
+            return;
+          }
+
+          fallbackTables.add(key);
+
+          if (error.code === "42P01") {
+            missingTables.add(key);
+          } else {
+            fatalErrors.push(error);
+          }
+        });
+
+        const cityIds = new Set<string>();
+
+        responses.forEach(({ rows, error }) => {
+          if (error) {
+            return;
+          }
+
+          rows.forEach((row) => {
+            if (typeof row.city_from === "string" && row.city_from.trim().length > 0) {
+              cityIds.add(row.city_from);
+            }
+            if (typeof row.city_to === "string" && row.city_to.trim().length > 0) {
+              cityIds.add(row.city_to);
+            }
+          });
+        });
+
+        let cityLookup = new Map<string, string>();
+
+        if (cityIds.size > 0) {
+          try {
+            const cityResponse = await supabase
+              .from("cities")
+              .select("id, name")
+              .in("id", Array.from(cityIds));
+
+            if (!cityResponse.error && Array.isArray(cityResponse.data)) {
+              const entries = cityResponse.data
+                .filter((entry): entry is { id: string; name: string | null } =>
+                  Boolean(entry && typeof entry.id === "string"),
+                )
+                .map((entry) => [entry.id, entry.name ?? "Confirmed destination"] as const);
+
+              cityLookup = new Map(entries);
+            }
+          } catch (cityLookupError) {
+            console.warn("Failed to load city names for travel data", cityLookupError);
+          }
         }
 
-        setData({
-          flights: (flightsResponse.data ?? []) as TravelRecord[],
-          trains: (trainsResponse.data ?? []) as TravelRecord[],
-          taxis: (taxisResponse.data ?? []) as TravelRecord[],
-          ferries: (ferriesResponse.data ?? []) as TravelRecord[],
+        const nextDataset: TravelDataset = {
+          flights: [],
+          trains: [],
+          taxis: [],
+          ferries: [],
+        };
+
+        responses.forEach(({ key, rows }) => {
+          if (fallbackTables.has(key)) {
+            nextDataset[key] = FALLBACK_TRAVEL_DATA[key].map((record) => ({ ...record }));
+            return;
+          }
+
+          nextDataset[key] = rows.map((row, index) => {
+            const id =
+              typeof row.id === "string" && row.id.trim().length > 0
+                ? row.id
+                : `${key}-${index}`;
+
+            const cityFromId =
+              typeof row.city_from === "string" && row.city_from.trim().length > 0
+                ? row.city_from
+                : null;
+            const cityToId =
+              typeof row.city_to === "string" && row.city_to.trim().length > 0
+                ? row.city_to
+                : null;
+
+            const cityFrom = cityFromId ? cityLookup.get(cityFromId) ?? "Origin city" : null;
+            const cityTo = cityToId ? cityLookup.get(cityToId) ?? "Confirmed destination" : null;
+
+            const cost = parseNumeric(row.cost);
+            const duration = parseNumeric(row.duration_minutes);
+            const healthImpact = parseNumeric(row.health_impact);
+
+            return {
+              id,
+              city_from: cityFrom,
+              city_to: cityTo,
+              cost: cost ?? (typeof row.cost === "string" || typeof row.cost === "number" ? row.cost : null),
+              duration:
+                duration ??
+                (typeof row.duration_minutes === "string" || typeof row.duration_minutes === "number"
+                  ? row.duration_minutes
+                  : null),
+              health_impact:
+                healthImpact ??
+                (typeof row.health_impact === "string" || typeof row.health_impact === "number"
+                  ? row.health_impact
+                  : null),
+            };
+          });
         });
+
+        const errorMessages: string[] = [];
+
+        if (missingTables.size > 0) {
+          errorMessages.push(
+            "Travel tables are still being provisioned. Showing sample itineraries until the database is ready.",
+          );
+        }
+
+        if (fatalErrors.length > 0) {
+          console.warn("Encountered unexpected travel data errors", fatalErrors);
+          errorMessages.push(
+            "We couldn't load live travel data right now. Displaying sample itineraries while we recover travel data.",
+          );
+        }
+
+        setError(errorMessages.length > 0 ? errorMessages.join(" \u2022 ") : null);
+        setData(nextDataset);
       } catch (fetchError) {
         if (!isMounted) {
           return;
         }
 
         const message = fetchError instanceof Error ? fetchError.message : "Failed to load travel data.";
-        setError(message);
+        setError(`${message} \u2022 Showing sample itineraries while the travel database initializes.`);
+        setData(cloneDataset(FALLBACK_TRAVEL_DATA));
       } finally {
         if (isMounted) {
           setLoading(false);
