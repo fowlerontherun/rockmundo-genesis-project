@@ -58,6 +58,10 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          duration_minutes: number | null
+          profile_id: string
+          status: string | null
+          status_id: string | null
           user_id: string
         }
         Insert: {
@@ -67,6 +71,10 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          duration_minutes?: number | null
+          profile_id: string
+          status?: string | null
+          status_id?: string | null
           user_id: string
         }
         Update: {
@@ -76,9 +84,28 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          duration_minutes?: number | null
+          profile_id?: string
+          status?: string | null
+          status_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_feed_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "profile_activity_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       band_members: {
         Row: {
@@ -919,6 +946,55 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_activity_statuses: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          ends_at: string | null
+          id: string
+          profile_id: string
+          song_id: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          profile_id: string
+          song_id?: string | null
+          started_at?: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          profile_id?: string
+          song_id?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_activity_statuses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_activity_statuses_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
             referencedColumns: ["id"]
           },
         ]
