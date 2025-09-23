@@ -211,6 +211,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activityFeedSupportsProfileId, setActivityFeedSupportsProfileId] = useState(true);
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
@@ -218,6 +219,34 @@ const useProvideGameData = (): UseGameDataReturn => {
     error !== null &&
     "code" in error &&
     (error as { code?: string }).code === "PGRST204";
+
+  const sanitizeActivityFeedRows = useCallback(
+    (
+      rows: ActivityFeedRow[] | null | undefined,
+      fallbackProfileId: string,
+    ): { rows: ActivityFeedRow[]; missingProfileId: boolean } => {
+      if (!Array.isArray(rows)) {
+        return { rows: [], missingProfileId: false };
+      }
+
+      let missingProfileId = false;
+
+      const normalized = rows.map((row) => {
+        const record = row as ActivityFeedRow & { profile_id?: string | null };
+        if (!record.profile_id) {
+          missingProfileId = true;
+        }
+
+        return {
+          ...record,
+          profile_id: record.profile_id ?? fallbackProfileId,
+        };
+      });
+
+      return { rows: normalized, missingProfileId };
+    },
+    [],
+  );
 
   const loadProfileDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
@@ -334,13 +363,18 @@ const useProvideGameData = (): UseGameDataReturn => {
         effectiveProfile.current_city_id
           ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
-        supabase
-          .from("activity_feed")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("profile_id", effectiveProfile.id)
-          .order("created_at", { ascending: false })
-          .limit(20),
+        (() => {
+          let activityFeedQuery = supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", user.id);
+
+          if (activityFeedSupportsProfileId) {
+            activityFeedQuery = activityFeedQuery.eq("profile_id", effectiveProfile.id);
+          }
+
+          return activityFeedQuery.order("created_at", { ascending: false }).limit(20);
+        })(),
         supabase
           .from("skill_progress")
           .select("*")
@@ -371,9 +405,6 @@ const useProvideGameData = (): UseGameDataReturn => {
       if (cityResult && cityResult.error) {
         console.error("Failed to load city", cityResult.error);
       }
-      if (activitiesResult.error) {
-        console.error("Failed to load activities", activitiesResult.error);
-      }
       if (skillProgressResult.error) {
         console.error("Failed to load skill progress", skillProgressResult.error);
       }
@@ -381,18 +412,63 @@ const useProvideGameData = (): UseGameDataReturn => {
         console.error("Failed to load daily XP grant", dailyGrantResult.error);
       }
 
+      let nextActivities: ActivityFeedRow[] = [];
+
+      if (activitiesResult.error) {
+        if (activitiesResult.error.code === "42703") {
+          if (activityFeedSupportsProfileId) {
+            setActivityFeedSupportsProfileId(false);
+          }
+
+          const fallbackResult = await supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+          if (fallbackResult.error) {
+            console.error("Failed to load activities", fallbackResult.error);
+          } else {
+            const { rows, missingProfileId } = sanitizeActivityFeedRows(
+              fallbackResult.data as ActivityFeedRow[] | null,
+              effectiveProfile.id,
+            );
+
+            if (missingProfileId && activityFeedSupportsProfileId) {
+              setActivityFeedSupportsProfileId(false);
+            }
+
+            nextActivities = rows;
+          }
+        } else {
+          console.error("Failed to load activities", activitiesResult.error);
+        }
+      } else {
+        const { rows, missingProfileId } = sanitizeActivityFeedRows(
+          activitiesResult.data as ActivityFeedRow[] | null,
+          effectiveProfile.id,
+        );
+
+        if (missingProfileId && activityFeedSupportsProfileId) {
+          setActivityFeedSupportsProfileId(false);
+        }
+
+        nextActivities = rows;
+      }
+
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
       setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
-      setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
+      setActivities(nextActivities);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
       setUnlockedSkills({});
       const grantRow = dailyGrantResult.data ? (dailyGrantResult.data as DailyXpGrantRow) : null;
       setDailyXpGrant(grantRow);
     },
-    [user],
+    [activityFeedSupportsProfileId, sanitizeActivityFeedRows, user],
   );
 
   const fetchData = useCallback(async () => {
@@ -449,18 +525,28 @@ const useProvideGameData = (): UseGameDataReturn => {
       return;
     }
 
+    const filterColumn = activityFeedSupportsProfileId ? `profile_id=eq.${profile.id}` : `user_id=eq.${user.id}`;
+    const channelKey = activityFeedSupportsProfileId
+      ? `activity_feed:profile:${profile.id}`
+      : `activity_feed:user:${user.id}`;
+
     const channel = supabase
-      .channel(`activity_feed:profile:${profile.id}`)
+      .channel(channelKey)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "activity_feed",
-          filter: `profile_id=eq.${profile.id}`,
+          filter: filterColumn,
         },
         (payload) => {
-          const newRow = payload.new as ActivityFeedRow;
+          const { rows } = sanitizeActivityFeedRows([payload.new as ActivityFeedRow], profile.id);
+          const [newRow] = rows;
+          if (!newRow) {
+            return;
+          }
+
           setActivities((previous) => {
             const withoutDuplicate = previous.filter((activity) => activity.id !== newRow.id);
             return [newRow, ...withoutDuplicate].slice(0, 20);
@@ -472,7 +558,7 @@ const useProvideGameData = (): UseGameDataReturn => {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [profile?.id, user?.id]);
+  }, [activityFeedSupportsProfileId, profile?.id, sanitizeActivityFeedRows, user?.id]);
 
   const updateAttributes = useCallback(
     async (updates: AttributesUpdate) => {
