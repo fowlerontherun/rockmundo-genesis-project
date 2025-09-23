@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Comprehensive fallback types when supabase types file is corrupted
 export type Json =
   | string
