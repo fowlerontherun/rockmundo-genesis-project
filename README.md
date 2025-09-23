@@ -102,20 +102,6 @@ supabase db reset
 This data-only migration does not change the schema, so the generated Supabase TypeScript definitions stay in sync without any
 additional regeneration.
 
-## Daily XP configuration
-
-The Supabase migrations also provision a singleton `public.daily_xp_settings` row used by the frontend to determine the daily XP
-stipend. If you are working against a fresh database, run the migrations and seeds so this record exists before loading the app:
-
-```sh
-supabase db reset
-# or, for an existing database
-supabase db push && supabase db seed
-```
-
-The seed located at `supabase/seed/daily_xp_settings_seed.sql` upserts the default stipend (`150` XP). Once the row with `id = true`
-is present, the application will never fall back to the legacy `game_configuration` table and the console warnings disappear.
-
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/c3d67299-48a1-4744-a78e-1169f70eea31) and click on Share -> Publish.
