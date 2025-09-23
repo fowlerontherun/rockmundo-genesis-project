@@ -856,12 +856,19 @@ const useProvideGameData = (): UseGameDataReturn => {
     [profile],
   );
 
+  interface AddActivityOptions {
+    status?: string | null;
+    durationMinutes?: number | null;
+    statusId?: string | null;
+  }
+
   const addActivity = useCallback(
     async (
       type: string,
       message: string,
       earnings: number | undefined = undefined,
       metadata: ActivityInsert["metadata"] = null,
+      options: AddActivityOptions = {},
     ) => {
       if (!user) {
         throw new Error("Authentication required to log activity");
@@ -878,6 +885,12 @@ const useProvideGameData = (): UseGameDataReturn => {
         message,
         earnings: typeof earnings === "number" ? earnings : null,
         metadata,
+        status: options.status ?? null,
+        duration_minutes:
+          typeof options.durationMinutes === "number" && Number.isFinite(options.durationMinutes)
+            ? options.durationMinutes
+            : null,
+        status_id: options.statusId ?? null,
       };
 
       const { error: insertError } = await supabase.from("activity_feed").insert(payload);

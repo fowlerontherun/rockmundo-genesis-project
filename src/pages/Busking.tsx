@@ -1,7 +1,14 @@
-// Updated Busking page with selectable locations and session lengths
 import React from 'react';
+import { Loader2 } from 'lucide-react';
+import { formatDistanceToNowStrict } from 'date-fns';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useGameData } from '@/hooks/useGameData';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
 
 const SESSION_LENGTHS = [30, 60, 120] as const;
@@ -21,6 +28,18 @@ type BuskingLocation = {
   vibe: string;
   tip: string;
   rewards: Record<SessionLength, SessionReward>;
+};
+
+type ProfileActivityStatus = Database['public']['Tables']['profile_activity_statuses']['Row'];
+
+type BuskingResult = {
+  locationName: string;
+  duration: SessionLength;
+  xpGained: number;
+  cashEarned: number;
+  startedAt: string;
+  endsAt: string;
+  performanceDescriptor: string;
 };
 
 const buskingLocations: BuskingLocation[] = [
@@ -71,9 +90,72 @@ const sessionOptions: { value: SessionLength; label: string; description: string
   { value: 120, label: '2 hours', description: 'Full evening takeover.' },
 ];
 
+const getStatusEndDate = (status: ProfileActivityStatus | null): Date | null => {
+  if (!status) {
+    return null;
+  }
+
+  if (status.ends_at) {
+    const ends = new Date(status.ends_at);
+    if (!Number.isNaN(ends.getTime())) {
+      return ends;
+    }
+  }
+
+  if (!status.started_at || typeof status.duration_minutes !== 'number') {
+    return null;
+  }
+
+  const start = new Date(status.started_at);
+  if (Number.isNaN(start.getTime())) {
+    return null;
+  }
+
+  return new Date(start.getTime() + status.duration_minutes * 60_000);
+};
+
+const describePerformance = (roll: number): string => {
+  if (roll >= 1.25) {
+    return 'Electric crowd surge';
+  }
+
+  if (roll >= 1.1) {
+    return 'Strong engagement and steady tips';
+  }
+
+  if (roll >= 0.95) {
+    return 'Solid flow with a supportive audience';
+  }
+
+  return 'Tough crowd — every coin counted';
+};
+
+const formatSessionWindow = (startIso: string, endIso: string): string => {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return `${startIso} – ${endIso}`;
+  }
+
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  return `${formatter.format(start)} – ${formatter.format(end)}`;
+};
+
 export default function Busking() {
+  const { profile, updateProfile, addActivity, awardActionXp } = useGameData();
+  const { toast } = useToast();
+
   const [selectedLocationId, setSelectedLocationId] = React.useState(buskingLocations[0]?.id ?? '');
   const [selectedLength, setSelectedLength] = React.useState<SessionLength>(SESSION_LENGTHS[0]);
+  const [activityStatus, setActivityStatus] = React.useState<ProfileActivityStatus | null>(null);
+  const [statusLoading, setStatusLoading] = React.useState(false);
+  const [isStartingSession, setIsStartingSession] = React.useState(false);
+  const [lastResult, setLastResult] = React.useState<BuskingResult | null>(null);
 
   const activeLocation = React.useMemo(() => {
     return buskingLocations.find((location) => location.id === selectedLocationId) ?? buskingLocations[0];
@@ -81,13 +163,234 @@ export default function Busking() {
 
   const activeReward = activeLocation.rewards[selectedLength];
 
+  const statusEndsAt = React.useMemo(() => getStatusEndDate(activityStatus), [activityStatus]);
+
+  const isBusy = React.useMemo(() => {
+    if (!activityStatus) {
+      return false;
+    }
+
+    if (activityStatus.duration_minutes === null || activityStatus.duration_minutes === undefined) {
+      return activityStatus.status !== 'idle';
+    }
+
+    if (!statusEndsAt) {
+      return false;
+    }
+
+    return statusEndsAt.getTime() > Date.now();
+  }, [activityStatus, statusEndsAt]);
+
+  const timeRemainingLabel = React.useMemo(() => {
+    if (!isBusy || !statusEndsAt) {
+      return null;
+    }
+
+    try {
+      return formatDistanceToNowStrict(statusEndsAt, { addSuffix: true });
+    } catch (error) {
+      console.error('Failed to format status countdown', error);
+      return null;
+    }
+  }, [isBusy, statusEndsAt]);
+
+  const loadActivityStatus = React.useCallback(async () => {
+    if (!profile?.id) {
+      setActivityStatus(null);
+      return;
+    }
+
+    setStatusLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profile_activity_statuses')
+        .select('*')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Failed to load activity status', error);
+        return;
+      }
+
+      setActivityStatus((data ?? null) as ProfileActivityStatus | null);
+    } finally {
+      setStatusLoading(false);
+    }
+  }, [profile?.id]);
+
+  React.useEffect(() => {
+    void loadActivityStatus();
+  }, [loadActivityStatus]);
+
+  const handleStartBusking = React.useCallback(async () => {
+    if (!profile) {
+      toast({
+        title: 'Create your artist first',
+        description: 'Set up your performer profile before starting a busking session.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsStartingSession(true);
+
+    const now = new Date();
+    const sessionEnds = new Date(now.getTime() + selectedLength * 60_000);
+    const performanceRoll = 0.85 + Math.random() * 0.35;
+    const xpGained = Math.max(5, Math.round(activeReward.experience * performanceRoll));
+    const cashEarned = Math.max(5, Math.round(activeReward.cash * performanceRoll));
+    const performanceDescriptor = describePerformance(performanceRoll);
+
+    try {
+      const { data: freshStatus, error: freshStatusError } = await supabase
+        .from('profile_activity_statuses')
+        .select('*')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+
+      if (freshStatusError && freshStatusError.code !== 'PGRST116') {
+        throw freshStatusError;
+      }
+
+      const normalizedStatus = (freshStatus ?? null) as ProfileActivityStatus | null;
+      const normalizedEndsAt = getStatusEndDate(normalizedStatus);
+      const normalizedBusy = normalizedStatus
+        ? normalizedStatus.duration_minutes === null || normalizedStatus.duration_minutes === undefined
+          ? normalizedStatus.status !== 'idle'
+          : !!normalizedEndsAt && normalizedEndsAt.getTime() > now.getTime()
+        : false;
+
+      if (normalizedBusy) {
+        setActivityStatus(normalizedStatus);
+        let availabilityLabel = 'after you wrap up your current activity';
+        if (normalizedEndsAt) {
+          try {
+            availabilityLabel = formatDistanceToNowStrict(normalizedEndsAt, { addSuffix: true });
+          } catch (formatError) {
+            console.error('Failed to format availability window', formatError);
+          }
+        }
+
+        toast({
+          title: 'Already busy',
+          description: `You're currently ${normalizedStatus.status.replace(/_/g, ' ')}. Try again ${availabilityLabel}.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: statusRecord, error: statusUpsertError } = await supabase
+        .from('profile_activity_statuses')
+        .upsert(
+          {
+            profile_id: profile.id,
+            status: 'busking',
+            started_at: now.toISOString(),
+            duration_minutes: selectedLength,
+          },
+          { onConflict: 'profile_id' },
+        )
+        .select()
+        .single();
+
+      if (statusUpsertError) {
+        throw statusUpsertError;
+      }
+
+      const updatedStatus = (statusRecord ?? null) as ProfileActivityStatus | null;
+      setActivityStatus(updatedStatus);
+
+      if (xpGained > 0) {
+        await awardActionXp({
+          amount: xpGained,
+          category: 'performance',
+          actionKey: 'busking_session',
+          metadata: {
+            location_id: activeLocation.id,
+            location_name: activeLocation.name,
+            duration_minutes: selectedLength,
+            cash_earned: cashEarned,
+            performance_roll: performanceRoll,
+          },
+        });
+      }
+
+      const currentCash = typeof profile.cash === 'number' ? profile.cash : 0;
+      await updateProfile({ cash: currentCash + cashEarned });
+
+      await addActivity(
+        'busking_session',
+        `Played a ${selectedLength}-minute busking set at ${activeLocation.name}`,
+        cashEarned,
+        {
+          location_id: activeLocation.id,
+          location_name: activeLocation.name,
+          duration_minutes: selectedLength,
+          xp_gained: xpGained,
+          performance_roll: performanceRoll,
+          performance_descriptor: performanceDescriptor,
+        },
+        {
+          status: 'busking',
+          durationMinutes: selectedLength,
+          statusId: updatedStatus?.id ?? null,
+        },
+      );
+
+      setLastResult({
+        locationName: activeLocation.name,
+        duration: selectedLength,
+        xpGained,
+        cashEarned,
+        startedAt: now.toISOString(),
+        endsAt: sessionEnds.toISOString(),
+        performanceDescriptor,
+      });
+
+      toast({
+        title: 'Busking session complete',
+        description: `You earned ${xpGained} XP and $${cashEarned.toLocaleString()} in tips.`,
+      });
+    } catch (error) {
+      console.error('Failed to start busking session', error);
+      toast({
+        title: 'Unable to start busking',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred while starting your busking run.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsStartingSession(false);
+      void loadActivityStatus();
+    }
+  }, [
+    profile,
+    toast,
+    selectedLength,
+    activeReward.experience,
+    activeReward.cash,
+    awardActionXp,
+    activeLocation.id,
+    activeLocation.name,
+    updateProfile,
+    addActivity,
+    loadActivityStatus,
+  ]);
+
+  const buttonDisabled = !profile || isStartingSession || statusLoading || isBusy;
+  const selectedLengthLabel = sessionOptions.find((option) => option.value === selectedLength)?.label;
+  const busyStatusLabel = activityStatus?.status.replace(/_/g, ' ');
+
   return (
     <div className="container mx-auto p-6">
       <Card>
         <CardHeader>
           <CardTitle>Busking</CardTitle>
           <CardDescription>
-            Pick a spot, choose how long to play, and see what kind of experience and cash you might pull in.
+            Pick a spot, choose how long to play, and book the time to earn real experience and tips.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -174,12 +477,35 @@ export default function Busking() {
           </section>
 
           <section>
-            <div className="rounded-lg border bg-muted/40 p-6">
-              <p className="text-sm text-muted-foreground">Ready to take the stage?</p>
-              <p className="mt-2 text-lg font-semibold">
-                {activeLocation.name} · {sessionOptions.find((option) => option.value === selectedLength)?.label}
-              </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4 rounded-lg border bg-muted/40 p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Ready to take the stage?</p>
+                  <p className="mt-2 text-lg font-semibold">
+                    {activeLocation.name} · {selectedLengthLabel}
+                  </p>
+                </div>
+                <Button onClick={handleStartBusking} disabled={buttonDisabled} size="lg">
+                  {isStartingSession ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Starting...
+                    </>
+                  ) : statusLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Checking availability...
+                    </>
+                  ) : isBusy ? (
+                    'Time already committed'
+                  ) : !profile ? (
+                    'Create your artist to begin'
+                  ) : (
+                    'Start busking session'
+                  )}
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-md border border-primary/40 bg-background p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Projected XP</p>
                   <p className="mt-1 text-2xl font-bold text-primary">{activeReward.experience}</p>
@@ -189,10 +515,42 @@ export default function Busking() {
                   <p className="mt-1 text-2xl font-bold text-emerald-600">${activeReward.cash}</p>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-muted-foreground">
-                This placeholder simulates upcoming busking runs. Rewards will connect to your character once the full feature is
-                live.
-              </p>
+              {isBusy ? (
+                <div className="rounded-md border border-amber-300/60 bg-amber-100/40 p-4 text-sm text-amber-900">
+                  <p className="font-medium">
+                    You're currently {busyStatusLabel}.
+                  </p>
+                  {timeRemainingLabel && (
+                    <p className="mt-1 text-amber-900/80">
+                      You can start another timed activity {timeRemainingLabel}.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Reserving {selectedLength} in-game minutes will block other timed activities until this session finishes.
+                </p>
+              )}
+              {lastResult && (
+                <div className="rounded-md border border-border bg-background p-4 text-sm">
+                  <p className="font-semibold">Last session summary</p>
+                  <ul className="mt-2 space-y-1 text-muted-foreground">
+                    <li>
+                      <span className="font-medium text-foreground">Location:</span> {lastResult.locationName}
+                    </li>
+                    <li>
+                      <span className="font-medium text-foreground">Outcome:</span> {lastResult.performanceDescriptor}
+                    </li>
+                    <li>
+                      <span className="font-medium text-foreground">Rewards:</span> {lastResult.xpGained} XP · ${lastResult.cashEarned.toLocaleString()}
+                    </li>
+                    <li>
+                      <span className="font-medium text-foreground">Time committed:</span>{' '}
+                      {lastResult.duration} minutes ({formatSessionWindow(lastResult.startedAt, lastResult.endsAt)})
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
           </section>
         </CardContent>
