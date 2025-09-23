@@ -53,6 +53,7 @@ type AttributesUpdate = Partial<PlayerAttributes>;
 type XpWalletUpdate = Database["public"]["Tables"]["player_xp_wallet"]["Update"];
 type XpWalletInsert = Database["public"]["Tables"]["player_xp_wallet"]["Insert"];
 type ActivityInsert = Database["public"]["Tables"]["activity_feed"]["Insert"];
+type ActivityInsertPayload = Omit<ActivityInsert, "profile_id"> & { profile_id?: string };
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
 type RawAttributes = PlayerAttributesRow | null;
@@ -312,6 +313,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [supportsActivityProfileFilter, setSupportsActivityProfileFilter] = useState(true);
   const [activityFeedSupportsProfileId, setActivityFeedSupportsProfileId] = useState(true);
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
@@ -362,6 +364,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         setActivities([]);
         setCurrentCity(null);
         setDailyXpGrant(null);
+        setSupportsActivityProfileFilter(false);
         return;
       }
 
@@ -430,6 +433,42 @@ const useProvideGameData = (): UseGameDataReturn => {
         }
       }
 
+      const buildActivityQuery = () =>
+        supabase
+          .from("activity_feed")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+      const fetchActivitiesWithFallback = async () => {
+        if (!effectiveProfile?.id) {
+          setSupportsActivityProfileFilter(false);
+          return await buildActivityQuery();
+        }
+
+        const attempt = await buildActivityQuery().eq("profile_id", effectiveProfile.id);
+
+        if (attempt.error?.code === "42703") {
+          console.warn(
+            "Activity feed profile_id column missing; falling back to user-scoped activities.",
+            attempt.error,
+          );
+          setSupportsActivityProfileFilter(false);
+          const fallback = await buildActivityQuery();
+          if (fallback.error) {
+            console.error("Failed to load activities without profile filter", fallback.error);
+          }
+          return fallback;
+        }
+
+        if (!attempt.error) {
+          setSupportsActivityProfileFilter(true);
+        }
+
+        return attempt;
+      };
+
       const [
         attributesResult,
         walletResult,
@@ -457,6 +496,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         effectiveProfile.current_city_id
           ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
+        fetchActivitiesWithFallback(),
         (() => {
           let activityFeedQuery = supabase
             .from("activity_feed")
@@ -600,6 +640,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       setActivities([]);
       setCurrentCity(null);
       setDailyXpGrant(null);
+      setSupportsActivityProfileFilter(false);
       setLoading(false);
       return;
     }
@@ -642,20 +683,19 @@ const useProvideGameData = (): UseGameDataReturn => {
       return;
     }
 
-    const filterColumn = activityFeedSupportsProfileId ? `profile_id=eq.${profile.id}` : `user_id=eq.${user.id}`;
-    const channelKey = activityFeedSupportsProfileId
-      ? `activity_feed:profile:${profile.id}`
-      : `activity_feed:user:${user.id}`;
+    const filterColumn = supportsActivityProfileFilter ? "profile_id" : "user_id";
+    const filterValue = supportsActivityProfileFilter ? profile.id : user.id;
 
     const channel = supabase
-      .channel(channelKey)
+      .channel(`activity_feed:${filterColumn}:${filterValue}`)
+
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "activity_feed",
-          filter: filterColumn,
+          filter: `${filterColumn}=eq.${filterValue}`,
         },
         (payload) => {
           const { rows } = sanitizeActivityFeedRows([payload.new as ActivityFeedRow], profile.id);
@@ -675,7 +715,8 @@ const useProvideGameData = (): UseGameDataReturn => {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [activityFeedSupportsProfileId, profile?.id, sanitizeActivityFeedRows, user?.id]);
+  }, [profile?.id, supportsActivityProfileFilter, user?.id]);
+
 
   const updateAttributes = useCallback(
     async (updates: AttributesUpdate) => {
@@ -1117,9 +1158,8 @@ const useProvideGameData = (): UseGameDataReturn => {
         throw new Error("No active profile selected");
       }
 
-      const payload: ActivityInsert = {
+      const basePayload: ActivityInsertPayload = {
         user_id: user.id,
-        profile_id: profile.id,
         activity_type: type,
         message,
         earnings: typeof earnings === "number" ? earnings : null,
@@ -1132,12 +1172,37 @@ const useProvideGameData = (): UseGameDataReturn => {
         status_id: options.statusId ?? null,
       };
 
-      const { error: insertError } = await supabase.from("activity_feed").insert(payload);
+      if (supportsActivityProfileFilter) {
+        basePayload.profile_id = profile.id;
+      }
+
+      const { error: insertError } = await supabase.from("activity_feed").insert(basePayload);
+
+      if (!insertError && basePayload.profile_id) {
+        setSupportsActivityProfileFilter(true);
+        return;
+      }
+
+      if (insertError?.code === "42703" && basePayload.profile_id) {
+        console.warn(
+          "Activity feed profile_id column missing during insert; retrying without profile reference.",
+          insertError,
+        );
+        setSupportsActivityProfileFilter(false);
+        const fallbackPayload: ActivityInsertPayload = { ...basePayload };
+        delete fallbackPayload.profile_id;
+        const { error: fallbackError } = await supabase.from("activity_feed").insert(fallbackPayload);
+        if (fallbackError) {
+          throw fallbackError;
+        }
+        return;
+      }
+
       if (insertError) {
         throw insertError;
       }
     },
-    [profile, user],
+    [profile, supportsActivityProfileFilter, user],
   );
 
   const awardActionXp = useCallback(
