@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
-import { useGameData } from '@/hooks/useGameData';
+import { useGameData } from '@/hooks/useGameDataSimplified';
 import { Lock, Star, Trophy, Music, Users, Mic, Zap } from 'lucide-react';
 
 type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
@@ -52,7 +52,7 @@ export const SkillTree: React.FC = () => {
       try {
         const { data: skillsData, error: skillsError } = await supabase
           .from('skill_definitions')
-          .select<SkillDefinition>('*')
+          .select('*')
           .order('display_name');
 
         if (skillsError) throw skillsError;
@@ -62,7 +62,7 @@ export const SkillTree: React.FC = () => {
         if (profile) {
           const { data: progressData, error: progressError } = await supabase
             .from('skill_progress')
-            .select<SkillProgress>('*')
+            .select('*')
             .eq('profile_id', profile.id);
 
           if (progressError) throw progressError;

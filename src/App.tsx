@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
-import { GameDataProvider } from "./hooks/useGameData";
+import { GameDataProvider } from "./hooks/useGameDataSimplified";
 import { PlayerStatusProvider } from "./hooks/usePlayerStatus";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
