@@ -72,6 +72,39 @@ export interface Database {
           updated_at?: string;
         };
       };
+      profile_activity_statuses: {
+        Row: {
+          id: string;
+          profile_id: string;
+          status: string;
+          started_at: string;
+          duration_minutes?: number | null;
+          ends_at?: string | null;
+          song_id?: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          status: string;
+          started_at?: string;
+          duration_minutes?: number | null;
+          song_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          status?: string;
+          started_at?: string;
+          duration_minutes?: number | null;
+          song_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       cities: {
         Row: {
           id: string;
@@ -450,29 +483,41 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
+          profile_id: string;
           activity_type: string;
           message: string;
           metadata?: Json;
           earnings?: number;
           created_at: string;
+          status?: string | null;
+          duration_minutes?: number | null;
+          status_id?: string | null;
         };
         Insert: {
           id?: string;
           user_id: string;
+          profile_id: string;
           activity_type: string;
           message: string;
           metadata?: Json;
           earnings?: number;
           created_at?: string;
+          status?: string | null;
+          duration_minutes?: number | null;
+          status_id?: string | null;
         };
         Update: {
           id?: string;
           user_id?: string;
+          profile_id?: string;
           activity_type?: string;
           message?: string;
           metadata?: Json;
           earnings?: number;
           created_at?: string;
+          status?: string | null;
+          duration_minutes?: number | null;
+          status_id?: string | null;
         };
       };
       band_members: {
