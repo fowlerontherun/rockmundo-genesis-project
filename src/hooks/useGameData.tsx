@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/lib/supabase-types";
+import type { Database, Json } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
 import {
   awardActionXp as awardActionXpUtility,
@@ -217,10 +217,100 @@ type DailyXpGrantRow = Database["public"]["Tables"]["profile_daily_xp_grants"]["
 type DailyXpSettingsRow = Database["public"]["Tables"]["daily_xp_settings"]["Row"];
 type DailyXpConfigurationRow = DailyXpSettingsRow | Record<string, unknown> | null;
 
+type ProfileStatusTable = Database["public"]["Tables"] extends {
+  profile_status_sessions: infer Table;
+}
+  ? Table
+  : {
+      Row: {
+        id: string;
+        profile_id: string;
+        status: string;
+        metadata: Json | null;
+        started_at: string | null;
+        ends_at: string | null;
+        closed_at: string | null;
+        created_at: string | null;
+        updated_at: string | null;
+      };
+      Insert: {
+        id?: string;
+        profile_id: string;
+        status: string;
+        metadata?: Json | null;
+        started_at?: string | null;
+        ends_at?: string | null;
+        closed_at?: string | null;
+      };
+      Update: {
+        status?: string;
+        metadata?: Json | null;
+        started_at?: string | null;
+        ends_at?: string | null;
+        closed_at?: string | null;
+      };
+    };
+
+type ProfileStatusRow = ProfileStatusTable["Row"];
+type ProfileStatusInsert = ProfileStatusTable["Insert"];
+type ProfileStatusUpdate = ProfileStatusTable["Update"];
+
+type ProfileWithStatusColumns = PlayerProfile & {
+  active_status?: string | null;
+  active_status_metadata?: Json | null;
+  active_status_started_at?: string | null;
+  active_status_ends_at?: string | null;
+};
+
+type ActiveStatusSnapshot = {
+  status: string | null;
+  metadata: Record<string, unknown> | null;
+  startedAt: string | null;
+  endsAt: string | null;
+  sessionId: string | null;
+  source: "profile" | "session";
+};
+
+type ActiveStatusCountdown = {
+  endsAt: string | null;
+  remainingMs: number | null;
+  remainingSeconds: number | null;
+  remainingMinutes: number | null;
+  isExpired: boolean;
+};
+
+type ActiveStatusState = ActiveStatusCountdown & {
+  status: string;
+  metadata: Record<string, unknown> | null;
+  startedAt: string | null;
+  sessionId: string | null;
+  source: "profile" | "session";
+};
+
+type StartTimedStatusInput = {
+  status: string;
+  durationMinutes: number;
+  metadata?: Json | Record<string, unknown> | null;
+  activity?: {
+    type: string;
+    message: string;
+    earnings?: number;
+    metadata?: ActivityInsert["metadata"];
+  } | null;
+};
+
+type ClearActiveStatusOptions = {
+  reason?: "manual" | "expired";
+  targetProfile?: PlayerProfile | null;
+  sessionId?: string | null;
+  skipProfileUpdate?: boolean;
+};
+
 type UseGameDataReturn = {
   profile: PlayerProfile | null;
   skills: PlayerSkills;
   attributes: PlayerAttributes | null;
+  activeStatus: ActiveStatusState | null;
   healthMetrics: PlayerHealthMetrics;
   healthConditions: PlayerHealthCondition[];
   healthHabits: PlayerHealthHabit[];
@@ -241,7 +331,15 @@ type UseGameDataReturn = {
   updateSkills: (updates: SkillsUpdate) => Promise<PlayerSkills>;
   updateXpWallet: (updates: XpWalletUpdate) => Promise<PlayerXpWallet>;
   updateAttributes: (updates: AttributesUpdate) => Promise<PlayerAttributes | null>;
-  addActivity: (type: string, message: string, earnings?: number, metadata?: ActivityInsert["metadata"]) => Promise<void>;
+  addActivity: (
+    type: string,
+    message: string,
+    earnings?: number,
+    metadata?: ActivityInsert["metadata"],
+    statusExtras?: { status?: string | null; durationMinutes?: number | null },
+  ) => Promise<void>;
+  getActiveStatusCountdown: () => ActiveStatusCountdown | null;
+  startTimedStatus: (input: StartTimedStatusInput) => Promise<ActiveStatusState | null>;
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
   claimDailyXp: (metadata?: Record<string, unknown>) => Promise<void>;
   spendAttributeXp: (input: SpendAttributeXpInput) => Promise<void>;
@@ -285,6 +383,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [skills, setSkills] = useState<PlayerSkills>(null);
   const [attributes, setAttributes] = useState<PlayerAttributes | null>(null);
+  const [activeStatus, setActiveStatus] = useState<ActiveStatusState | null>(null);
   const [healthMetrics, setHealthMetrics] = useState<PlayerHealthMetrics>(null);
   const [healthConditions, setHealthConditions] = useState<PlayerHealthCondition[]>([]);
   const [healthHabits, setHealthHabits] = useState<PlayerHealthHabit[]>([]);
@@ -304,6 +403,9 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const dailyXpGrantUnavailableRef = useRef(false);
   const playerSkillsTableMissingRef = useRef(false);
   const activityFeedSupportsProfileIdRef = useRef(true);
+  const statusSessionsUnavailableRef = useRef(false);
+  const profileStatusColumnsUnavailableRef = useRef(false);
+  const activeStatusSnapshotRef = useRef<ActiveStatusSnapshot | null>(null);
   type HealthTableKey = "metrics" | "conditions" | "habits" | "wellness";
   const healthTablesUnavailableRef = useRef<Record<HealthTableKey, boolean>>({
     metrics: false,
@@ -363,11 +465,520 @@ const useGameDataInternal = (): UseGameDataReturn => {
     return false;
   };
 
+  const profileSupportsStatusColumns = (
+    candidate: PlayerProfile | null,
+  ): candidate is ProfileWithStatusColumns => {
+    if (!candidate) {
+      return false;
+    }
+
+    const requiredColumns: Array<keyof ProfileWithStatusColumns> = [
+      "active_status",
+      "active_status_metadata",
+      "active_status_started_at",
+      "active_status_ends_at",
+    ];
+
+    return requiredColumns.every((column) =>
+      Object.prototype.hasOwnProperty.call(candidate, column),
+    );
+  };
+
+  const toPlainMetadata = (value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
+  };
+
+  const calculateCountdown = useCallback(
+    (endsAt: string | null): ActiveStatusCountdown => {
+      if (!endsAt) {
+        return {
+          endsAt: null,
+          remainingMs: null,
+          remainingSeconds: null,
+        remainingMinutes: null,
+        isExpired: false,
+      };
+    }
+
+    const parsed = new Date(endsAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return {
+        endsAt,
+        remainingMs: null,
+        remainingSeconds: null,
+        remainingMinutes: null,
+        isExpired: false,
+      };
+      }
+
+      const now = Date.now();
+      const diff = parsed.getTime() - now;
+      const remainingMs = diff <= 0 ? 0 : diff;
+
+      return {
+        endsAt,
+        remainingMs,
+        remainingSeconds: Math.max(0, Math.floor(remainingMs / 1000)),
+        remainingMinutes: Math.max(0, Math.ceil(remainingMs / 60000)),
+        isExpired: diff <= 0,
+      };
+    },
+    [],
+  );
+
+  const deriveActiveStatusState = useCallback(
+    (snapshot: ActiveStatusSnapshot | null): ActiveStatusState | null => {
+      if (!snapshot) {
+        return null;
+      }
+
+      const normalizedStatus = typeof snapshot.status === "string" ? snapshot.status.trim() : "";
+      if (!normalizedStatus) {
+        return null;
+      }
+
+      const countdown = calculateCountdown(snapshot.endsAt);
+      if (countdown.isExpired) {
+        return null;
+      }
+
+      return {
+        status: normalizedStatus,
+        metadata: snapshot.metadata,
+        startedAt: snapshot.startedAt,
+        sessionId: snapshot.sessionId,
+        source: snapshot.source,
+        ...countdown,
+      };
+    },
+    [calculateCountdown],
+  );
+
+  const mapSessionRowToSnapshot = (row: ProfileStatusRow | null): ActiveStatusSnapshot | null => {
+    if (!row) {
+      return null;
+    }
+
+    const status = typeof row.status === "string" ? row.status : null;
+    const startedAt = typeof row.started_at === "string" ? row.started_at : null;
+    const endsAt = typeof row.ends_at === "string" ? row.ends_at : null;
+    const metadata = toPlainMetadata(row.metadata);
+    const sessionId = typeof row.id === "string" ? row.id : null;
+
+    if (!status && !startedAt && !endsAt && !metadata) {
+      return null;
+    }
+
+    return {
+      status,
+      metadata,
+      startedAt,
+      endsAt,
+      sessionId,
+      source: "session",
+    };
+  };
+
+  const extractActiveStatusFromProfile = (candidate: PlayerProfile | null): ActiveStatusSnapshot | null => {
+    if (!profileSupportsStatusColumns(candidate)) {
+      return null;
+    }
+
+    const status = typeof candidate.active_status === "string" ? candidate.active_status : null;
+    const startedAt =
+      typeof candidate.active_status_started_at === "string" ? candidate.active_status_started_at : null;
+    const endsAt = typeof candidate.active_status_ends_at === "string" ? candidate.active_status_ends_at : null;
+    const metadata = toPlainMetadata(candidate.active_status_metadata);
+
+    if (!status && !startedAt && !endsAt && !metadata) {
+      return null;
+    }
+
+    return {
+      status,
+      metadata,
+      startedAt,
+      endsAt,
+      sessionId: null,
+      source: "profile",
+    };
+  };
+
+  const normalizeMetadataInput = (
+    value: Json | Record<string, unknown> | null | undefined,
+  ): Json | null => {
+    if (value === null || typeof value === "undefined") {
+      return null;
+    }
+
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      return value as Json;
+    }
+
+    if (Array.isArray(value)) {
+      return value as Json;
+    }
+
+    if (typeof value === "object") {
+      try {
+        return JSON.parse(JSON.stringify(value)) as Json;
+      } catch (serializationError) {
+        console.warn("Failed to serialize status metadata; falling back to null.", serializationError, value);
+        return null;
+      }
+    }
+
+    return null;
+  };
+
+  const mergeActivityMetadata = (
+    base: ActivityInsert["metadata"],
+    extras?: { status?: string | null; durationMinutes?: number | null },
+  ): ActivityInsert["metadata"] => {
+    const hasStatus = typeof extras?.status === "string" && extras.status.trim().length > 0;
+    const hasDuration = typeof extras?.durationMinutes === "number" && Number.isFinite(extras.durationMinutes);
+
+    if (!hasStatus && !hasDuration) {
+      return base ?? null;
+    }
+
+    const normalized: Record<string, unknown> =
+      base && typeof base === "object" && !Array.isArray(base) ? { ...(base as Record<string, unknown>) } : {};
+
+    if (hasStatus) {
+      normalized.status = extras?.status?.trim();
+    }
+
+    if (hasDuration) {
+      normalized.duration_minutes = extras?.durationMinutes;
+    }
+
+    if (base && typeof base !== "object") {
+      normalized.base_value = base;
+    } else if (Array.isArray(base)) {
+      normalized.base_list = base;
+    }
+
+    return normalized as ActivityInsert["metadata"];
+  };
+
+  const closeActiveStatusSession = useCallback(
+    async (
+      profileId: string,
+      {
+        sessionId,
+        updates,
+      }: { sessionId?: string | null; updates?: Partial<ProfileStatusUpdate> } = {},
+    ) => {
+      if (statusSessionsUnavailableRef.current) {
+        return;
+      }
+
+      const payload: Partial<ProfileStatusUpdate> = {
+        closed_at: new Date().toISOString(),
+        ...updates,
+      };
+
+      try {
+        let query = supabase.from("profile_status_sessions").update(payload);
+        if (sessionId) {
+          query = query.eq("id", sessionId);
+        } else {
+          query = query.eq("profile_id", profileId).is("closed_at", null);
+        }
+
+        const { error } = await query;
+
+        if (error) {
+          if (isSchemaCacheMissingTableError(error)) {
+            if (!statusSessionsUnavailableRef.current) {
+              statusSessionsUnavailableRef.current = true;
+              console.warn(
+                "Skipping profile status session updates - profile_status_sessions table missing from schema cache; ensure migrations have run.",
+                error,
+              );
+            }
+            return;
+          }
+
+          if (error.code !== "PGRST116") {
+            console.error("Failed to close active status session", error);
+          }
+        }
+      } catch (sessionError) {
+        console.error("Unexpected error closing active status session", sessionError);
+      }
+    },
+    [],
+  );
+
+  const clearActiveStatus = useCallback(
+    async ({
+      reason = "manual",
+      targetProfile,
+      sessionId,
+      skipProfileUpdate = false,
+    }: ClearActiveStatusOptions = {}) => {
+      const effectiveProfile = targetProfile ?? profile;
+      if (!effectiveProfile) {
+        activeStatusSnapshotRef.current = null;
+        setActiveStatus(null);
+        return null;
+      }
+
+      const profileId = effectiveProfile.id;
+      const currentSnapshot = activeStatusSnapshotRef.current;
+
+      const shouldBackfillEnd =
+        reason === "expired" && (!currentSnapshot || !currentSnapshot.endsAt);
+      const endTimestamp = new Date().toISOString();
+
+      await closeActiveStatusSession(profileId, {
+        sessionId: sessionId ?? currentSnapshot?.sessionId,
+        updates: shouldBackfillEnd ? { ends_at: endTimestamp } : undefined,
+      });
+
+      const clearedColumns: Partial<ProfileWithStatusColumns> = {
+        active_status: null,
+        active_status_metadata: null,
+        active_status_started_at: null,
+        active_status_ends_at: null,
+      };
+
+      if (!skipProfileUpdate && !profileStatusColumnsUnavailableRef.current) {
+        try {
+          const { data, error } = await supabase
+            .from("profiles")
+            .update(clearedColumns)
+            .eq("id", profileId)
+            .select("*")
+            .maybeSingle();
+
+          if (error) {
+            if (isSchemaCacheMissingColumnError(error)) {
+              if (!profileStatusColumnsUnavailableRef.current) {
+                profileStatusColumnsUnavailableRef.current = true;
+                console.warn(
+                  "Skipping active status profile updates - columns missing from schema cache; ensure migrations have run.",
+                  error,
+                );
+              }
+            } else {
+              throw error;
+            }
+          } else if (data) {
+            setProfile(data as PlayerProfile);
+          }
+        } catch (profileError) {
+          console.error("Failed to clear active status on profile", profileError);
+          throw profileError;
+        }
+      } else if (!skipProfileUpdate) {
+        setProfile((previous) => {
+          if (!previous || previous.id !== profileId) {
+            return previous;
+          }
+
+          return { ...previous, ...clearedColumns } as PlayerProfile;
+        });
+      }
+
+      activeStatusSnapshotRef.current = null;
+      setActiveStatus(null);
+
+      return null;
+    },
+    [closeActiveStatusSession, profile],
+  );
+
+  const getActiveStatusCountdown = useCallback((): ActiveStatusCountdown | null => {
+    const snapshot = activeStatusSnapshotRef.current;
+    if (!snapshot) {
+      return null;
+    }
+
+    const countdown = calculateCountdown(snapshot.endsAt);
+    return countdown.isExpired ? null : countdown;
+  }, [calculateCountdown]);
+
+  const startTimedStatus = useCallback(
+    async ({ status, durationMinutes, metadata = null, activity = null }: StartTimedStatusInput) => {
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      const normalizedStatus = typeof status === "string" ? status.trim() : "";
+      if (!normalizedStatus) {
+        throw new Error("Status is required to start a timed session");
+      }
+
+      const numericDuration = Number(durationMinutes);
+      if (!Number.isFinite(numericDuration) || numericDuration <= 0) {
+        throw new Error("A positive durationMinutes value is required to start a timed status");
+      }
+
+      await closeActiveStatusSession(profile.id, {
+        sessionId: activeStatusSnapshotRef.current?.sessionId,
+      });
+
+      const now = new Date();
+      const startedAtIso = now.toISOString();
+      const endsAtIso = new Date(now.getTime() + numericDuration * 60000).toISOString();
+      const metadataPayload = normalizeMetadataInput(metadata);
+
+      let sessionRow: ProfileStatusRow | null = null;
+
+      if (!statusSessionsUnavailableRef.current) {
+        try {
+          const insertPayload: ProfileStatusInsert = {
+            profile_id: profile.id,
+            status: normalizedStatus,
+            metadata: metadataPayload,
+            started_at: startedAtIso,
+            ends_at: endsAtIso,
+          };
+
+          const { data, error } = await supabase
+            .from("profile_status_sessions")
+            .insert(insertPayload)
+            .select("*")
+            .single();
+
+          if (error) {
+            if (isSchemaCacheMissingTableError(error)) {
+              if (!statusSessionsUnavailableRef.current) {
+                statusSessionsUnavailableRef.current = true;
+                console.warn(
+                  "Skipping profile status session logging - profile_status_sessions table missing from schema cache; ensure migrations have run.",
+                  error,
+                );
+              }
+            } else {
+              throw error;
+            }
+          } else if (data) {
+            sessionRow = data as ProfileStatusRow;
+          }
+        } catch (sessionError) {
+          console.error("Failed to create profile status session", sessionError);
+          throw sessionError;
+        }
+      }
+
+      let updatedProfile: PlayerProfile | null = null;
+
+      if (!profileStatusColumnsUnavailableRef.current) {
+        try {
+          const updatePayload: Partial<ProfileWithStatusColumns> = {
+            active_status: normalizedStatus,
+            active_status_metadata: metadataPayload,
+            active_status_started_at: startedAtIso,
+            active_status_ends_at: endsAtIso,
+          };
+
+          const { data, error } = await supabase
+            .from("profiles")
+            .update(updatePayload)
+            .eq("id", profile.id)
+            .select("*")
+            .single();
+
+          if (error) {
+            if (isSchemaCacheMissingColumnError(error)) {
+              if (!profileStatusColumnsUnavailableRef.current) {
+                profileStatusColumnsUnavailableRef.current = true;
+                console.warn(
+                  "Skipping active status profile updates - columns missing from schema cache; ensure migrations have run.",
+                  error,
+                );
+              }
+            } else {
+              throw error;
+            }
+          } else if (data) {
+            updatedProfile = data as PlayerProfile;
+            setProfile(updatedProfile);
+          }
+        } catch (profileError) {
+          console.error("Failed to update profile with active status", profileError);
+          throw profileError;
+        }
+      }
+
+      if (!updatedProfile) {
+        const fallbackUpdates: Partial<ProfileWithStatusColumns> = {
+          active_status: normalizedStatus,
+          active_status_metadata: metadataPayload,
+          active_status_started_at: startedAtIso,
+          active_status_ends_at: endsAtIso,
+        };
+
+        setProfile((previous) => {
+          if (!previous || previous.id !== profile.id) {
+            return previous;
+          }
+
+          return { ...previous, ...fallbackUpdates } as PlayerProfile;
+        });
+      }
+
+      const snapshot: ActiveStatusSnapshot | null = sessionRow
+        ? mapSessionRowToSnapshot(sessionRow)
+        : {
+            status: normalizedStatus,
+            metadata: toPlainMetadata(metadataPayload),
+            startedAt: startedAtIso,
+            endsAt: endsAtIso,
+            sessionId: sessionRow?.id ?? null,
+            source: sessionRow ? "session" : "profile",
+          };
+
+      if (!snapshot) {
+        activeStatusSnapshotRef.current = null;
+        setActiveStatus(null);
+        return null;
+      }
+
+      activeStatusSnapshotRef.current = snapshot;
+      const state = deriveActiveStatusState(snapshot);
+      setActiveStatus(state);
+
+      if (activity) {
+        await addActivity(
+          activity.type,
+          activity.message,
+          activity.earnings,
+          activity.metadata ?? null,
+          { status: normalizedStatus, durationMinutes: numericDuration },
+        );
+      }
+
+      return state;
+    },
+    [
+      addActivity,
+      closeActiveStatusSession,
+      deriveActiveStatusState,
+      isSchemaCacheMissingColumnError,
+      isSchemaCacheMissingTableError,
+      mapSessionRowToSnapshot,
+      normalizeMetadataInput,
+      profile,
+      toPlainMetadata,
+    ],
+  );
+
   const loadProfileDetails = useCallback(
     async (activeProfile: PlayerProfile | null) => {
       if (!user || !activeProfile) {
         setSkills(null);
         setAttributes(null);
+        activeStatusSnapshotRef.current = null;
+        setActiveStatus(null);
         setHealthMetrics(null);
         setHealthConditions([]);
         setHealthHabits([]);
@@ -541,6 +1152,17 @@ const useGameDataInternal = (): UseGameDataReturn => {
         return result;
       })();
 
+      const statusSessionPromise = statusSessionsUnavailableRef.current
+        ? Promise.resolve({ data: null, error: null })
+        : supabase
+            .from("profile_status_sessions")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .is("closed_at", null)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
       const [
         skillsResult,
         attributesResult,
@@ -554,6 +1176,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
         healthConditionsResult,
         healthHabitsResult,
         wellnessRecommendationsResult,
+        statusSessionResult,
       ] = await Promise.all([
         skillsPromise,
         supabase
@@ -587,6 +1210,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
         healthConditionsPromise,
         healthHabitsPromise,
         wellnessRecommendationsPromise,
+        statusSessionPromise,
       ]);
 
       const metricsUnavailable = markHealthTableUnavailable(
@@ -653,6 +1277,33 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (!wellnessUnavailable && wellnessRecommendationsResult.error) {
         console.error("Failed to load wellness recommendations", wellnessRecommendationsResult.error);
       }
+      if (statusSessionResult?.error) {
+        if (isSchemaCacheMissingTableError(statusSessionResult.error)) {
+          if (!statusSessionsUnavailableRef.current) {
+            statusSessionsUnavailableRef.current = true;
+            console.warn(
+              "Skipping profile status session load - profile_status_sessions table missing from schema cache; ensure migrations have run.",
+              statusSessionResult.error,
+            );
+          }
+        } else if (statusSessionResult.error.code !== "PGRST116") {
+          console.error("Failed to load active profile status session", statusSessionResult.error);
+        }
+      }
+
+      const hasStatusColumns = profileSupportsStatusColumns(effectiveProfile);
+      if (!hasStatusColumns) {
+        if (!profileStatusColumnsUnavailableRef.current) {
+          profileStatusColumnsUnavailableRef.current = true;
+          console.warn(
+            "Skipping active status hydration - profile columns missing from schema cache; ensure migrations have run.",
+            { profileId: effectiveProfile.id },
+          );
+        }
+      } else if (profileStatusColumnsUnavailableRef.current) {
+        profileStatusColumnsUnavailableRef.current = false;
+      }
+
       let shouldIgnoreDailyGrantError = false;
 
       if (dailyGrantResult.error) {
@@ -673,6 +1324,35 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (dailyGrantResult.error && shouldIgnoreDailyGrantError) {
         console.info("Daily XP grant data is unavailable on this schema version; skipping.");
       }
+
+      let resolvedStatusSnapshot: ActiveStatusSnapshot | null = null;
+
+      if (!statusSessionResult?.error && statusSessionResult?.data) {
+        resolvedStatusSnapshot = mapSessionRowToSnapshot(statusSessionResult.data as ProfileStatusRow);
+      }
+
+      if (!resolvedStatusSnapshot && hasStatusColumns) {
+        resolvedStatusSnapshot = extractActiveStatusFromProfile(effectiveProfile);
+      }
+
+      if (resolvedStatusSnapshot) {
+        const countdown = calculateCountdown(resolvedStatusSnapshot.endsAt);
+        if (countdown.isExpired) {
+          try {
+            await clearActiveStatus({
+              reason: "expired",
+              targetProfile: effectiveProfile,
+              sessionId: resolvedStatusSnapshot.sessionId,
+            });
+          } catch (statusClearError) {
+            console.error("Failed to clear expired active status", statusClearError);
+          }
+          resolvedStatusSnapshot = null;
+        }
+      }
+
+      activeStatusSnapshotRef.current = resolvedStatusSnapshot;
+      setActiveStatus(deriveActiveStatusState(resolvedStatusSnapshot));
 
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
@@ -803,7 +1483,16 @@ const useGameDataInternal = (): UseGameDataReturn => {
         setDailyXpStipend(null);
       }
     },
-    [user],
+    [
+      calculateCountdown,
+      clearActiveStatus,
+      deriveActiveStatusState,
+      extractActiveStatusFromProfile,
+      mapSessionRowToSnapshot,
+      profileSupportsStatusColumns,
+      resetHealthTableAvailability,
+      user,
+    ],
   );
 
   const fetchData = useCallback(async () => {
@@ -811,6 +1500,8 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setProfile(null);
       setSkills(null);
       setAttributes(null);
+      activeStatusSnapshotRef.current = null;
+      setActiveStatus(null);
       setHealthMetrics(null);
       setHealthConditions([]);
       setHealthHabits([]);
@@ -1283,6 +1974,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
       message: string,
       earnings: number | undefined = undefined,
       metadata: ActivityInsert["metadata"] = null,
+      statusExtras?: { status?: string | null; durationMinutes?: number | null },
     ) => {
       if (!user) {
         throw new Error("Authentication required to log activity");
@@ -1292,13 +1984,15 @@ const useGameDataInternal = (): UseGameDataReturn => {
         throw new Error("No active profile selected");
       }
 
+      const normalizedMetadata = mergeActivityMetadata(metadata, statusExtras);
+
       const payload: ActivityInsert = {
         user_id: user.id,
         profile_id: profile.id,
         activity_type: type,
         message,
         earnings: typeof earnings === "number" ? earnings : null,
-        metadata,
+        metadata: normalizedMetadata,
       };
 
       const { error: insertError } = await supabase.from("activity_feed").insert(payload);
@@ -1306,7 +2000,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
         throw insertError;
       }
     },
-    [profile, user],
+    [mergeActivityMetadata, profile, user],
   );
 
   const awardActionXp = useCallback(
@@ -1466,6 +2160,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
       profile,
       skills,
       attributes,
+      activeStatus,
       healthMetrics,
       healthConditions,
       healthHabits,
@@ -1487,6 +2182,8 @@ const useGameDataInternal = (): UseGameDataReturn => {
       updateXpWallet,
       updateAttributes,
       addActivity,
+      getActiveStatusCountdown,
+      startTimedStatus,
       awardActionXp,
       claimDailyXp,
       spendAttributeXp,
@@ -1497,6 +2194,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
       profile,
       skills,
       attributes,
+      activeStatus,
       healthMetrics,
       healthConditions,
       healthHabits,
@@ -1518,6 +2216,8 @@ const useGameDataInternal = (): UseGameDataReturn => {
       updateXpWallet,
       updateAttributes,
       addActivity,
+      getActiveStatusCountdown,
+      startTimedStatus,
       awardActionXp,
       claimDailyXp,
       spendAttributeXp,
