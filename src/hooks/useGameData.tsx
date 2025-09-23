@@ -401,6 +401,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantUnavailableRef = useRef(false);
+  const xpLedgerUnavailableRef = useRef(false);
   const playerSkillsTableMissingRef = useRef(false);
   const activityFeedSupportsProfileIdRef = useRef(true);
   const statusSessionsUnavailableRef = useRef(false);
@@ -426,7 +427,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
     return SCHEMA_CACHE_MISSING_COLUMN_CODES.has(code.toUpperCase());
   };
-  const isSchemaCacheMissingTableError = (error: unknown): error is { code?: string } =>
+  const isSchemaCacheMissingTableError = (
+    error: unknown,
+    _tableName?: string,
+  ): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
@@ -1208,6 +1212,15 @@ const useGameDataInternal = (): UseGameDataReturn => {
             .limit(1)
             .maybeSingle();
 
+      const ledgerPromise = xpLedgerUnavailableRef.current
+        ? Promise.resolve({ data: [], error: null })
+        : supabase
+            .from("xp_ledger")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .order("created_at", { ascending: false })
+            .limit(XP_LEDGER_FETCH_LIMIT);
+
       const [
         skillsResult,
         attributesResult,
@@ -1234,12 +1247,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
           .select("*")
           .eq("profile_id", effectiveProfile.id)
           .maybeSingle(),
-        supabase
-          .from("xp_ledger")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .order("created_at", { ascending: false })
-          .limit(XP_LEDGER_FETCH_LIMIT),
+        ledgerPromise,
         effectiveProfile.current_city_id
           ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -1298,8 +1306,20 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (walletResult.error) {
         console.error("Failed to load XP wallet", walletResult.error);
       }
+      let ledgerUnavailable = xpLedgerUnavailableRef.current;
       if (ledgerResult.error) {
-        console.error("Failed to load XP ledger", ledgerResult.error);
+        if (isSchemaCacheMissingTableError(ledgerResult.error, "xp_ledger")) {
+          if (!xpLedgerUnavailableRef.current) {
+            xpLedgerUnavailableRef.current = true;
+            console.warn(
+              "Skipping XP ledger load - xp_ledger table missing from schema cache; ensure migrations have run.",
+              ledgerResult.error,
+            );
+          }
+          ledgerUnavailable = true;
+        } else {
+          console.error("Failed to load XP ledger", ledgerResult.error);
+        }
       }
       if (cityResult && cityResult.error) {
         console.error("Failed to load city", cityResult.error);
@@ -1402,7 +1422,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
-      setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
+      const resolvedLedgerRows = ledgerUnavailable
+        ? []
+        : ((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
+      setXpLedger(resolvedLedgerRows);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
