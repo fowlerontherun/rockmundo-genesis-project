@@ -54,28 +54,34 @@ export type Database = {
         Row: {
           activity_type: string
           created_at: string | null
+          duration_minutes: number | null
           earnings: number | null
           id: string
           message: string
           metadata: Json | null
+          status: string | null
           user_id: string
         }
         Insert: {
           activity_type: string
           created_at?: string | null
+          duration_minutes?: number | null
           earnings?: number | null
           id?: string
           message: string
           metadata?: Json | null
+          status?: string | null
           user_id: string
         }
         Update: {
           activity_type?: string
           created_at?: string | null
+          duration_minutes?: number | null
           earnings?: number | null
           id?: string
           message?: string
           metadata?: Json | null
+          status?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1546,6 +1552,9 @@ export type Database = {
           bio: string | null
           cash: number | null
           current_activity: string | null
+          current_activity_duration_minutes: number | null
+          current_activity_ends_at: string | null
+          current_activity_started_at: string | null
           current_city_id: string | null
           primary_instrument: string | null
           travel_mode: string | null
@@ -1573,6 +1582,9 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           current_activity?: string | null
+          current_activity_duration_minutes?: number | null
+          current_activity_ends_at?: string | null
+          current_activity_started_at?: string | null
           current_city_id?: string | null
           display_name?: string | null
           experience?: number | null
@@ -1598,6 +1610,9 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           current_activity?: string | null
+          current_activity_duration_minutes?: number | null
+          current_activity_ends_at?: string | null
+          current_activity_started_at?: string | null
           current_city_id?: string | null
           created_at?: string | null
           display_name?: string | null
