@@ -1235,7 +1235,7 @@ const StreamingPlatforms = () => {
                               </div>
                               <div className="flex justify-between items-center text-sm">
                                 <span>Quality</span>
-                                <span className="text-accent">{song.quality_score}/100</span>
+                                <span className="text-accent">{song.quality_score}/1000</span>
                               </div>
                               <div className="flex justify-between items-center text-sm">
                                 <span>Status</span>
