@@ -222,6 +222,29 @@ const useProvideGameData = (): UseGameDataReturn => {
     "code" in error &&
     (error as { code?: string }).code === "PGRST204";
 
+  const isSchemaCacheMissingTableError = (
+    error: unknown,
+    tableName: string = "profile_daily_xp_grants",
+  ): error is { code?: string; message?: string | null; details?: string | null } => {
+    if (typeof error !== "object" || error === null) {
+      return false;
+    }
+
+    const candidate = error as { code?: string; message?: string | null; details?: string | null };
+    const haystack = [candidate.message, candidate.details]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+
+    if (haystack.includes(tableName.toLowerCase())) {
+      if (haystack.includes("schema cache") || haystack.includes("does not exist") || haystack.includes("not found")) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const sanitizeActivityFeedRows = useCallback(
     (
       rows: ActivityFeedRow[] | null | undefined,
