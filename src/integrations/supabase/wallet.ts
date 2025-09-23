@@ -47,12 +47,7 @@ export const giftWalletFunds = async ({
     throw error;
   }
 
-  const [result] = ((data as any) ?? []).map((row: any) => ({
-    senderProfileId: row.sender_profile_id,
-    senderBalance: row.sender_balance, 
-    recipientProfileId: row.recipient_profile_id,
-    recipientBalance: row.recipient_balance,
-  }));
+  const [result] = (data as GiftFundsResult[] | null) ?? [];
 
   if (!result) {
     throw new Error("Gift transfer did not return a result.");

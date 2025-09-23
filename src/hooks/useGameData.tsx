@@ -69,16 +69,6 @@ const ATTRIBUTE_COLUMNS: Array<keyof Database["public"]["Tables"]["player_attrib
 
 const DEFAULT_ATTRIBUTE_SCORE = 5;
 
-type SchemaAvailabilityCache = {
-  dailyXpSettingsMissing: boolean;
-  legacyGameConfigurationMissing: boolean;
-};
-
-const schemaAvailabilityCache: SchemaAvailabilityCache = {
-  dailyXpSettingsMissing: false,
-  legacyGameConfigurationMissing: false,
-};
-
 const ATTRIBUTE_COLUMN_MAP: Record<AttributeCategory, keyof Database["public"]["Tables"]["player_attributes"]["Row"]> = {
   creativity: "creative_insight",
   business: "business_acumen",
@@ -411,11 +401,6 @@ const useGameDataInternal = (): UseGameDataReturn => {
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantUnavailableRef = useRef(false);
-  const dailyXpSettingsUnavailableRef = useRef(schemaAvailabilityCache.dailyXpSettingsMissing);
-  const legacyGameConfigurationUnavailableRef = useRef(
-    schemaAvailabilityCache.legacyGameConfigurationMissing,
-  );
-  const xpLedgerUnavailableRef = useRef(false);
   const playerSkillsTableMissingRef = useRef(false);
   const activityFeedSupportsProfileIdRef = useRef(true);
   const statusSessionsUnavailableRef = useRef(false);
@@ -441,10 +426,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
     return SCHEMA_CACHE_MISSING_COLUMN_CODES.has(code.toUpperCase());
   };
-  const isSchemaCacheMissingTableError = (
-    error: unknown,
-    _tableName?: string,
-  ): error is { code?: string } =>
+  const isSchemaCacheMissingTableError = (error: unknown): error is { code?: string } =>
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
@@ -455,14 +437,14 @@ const useGameDataInternal = (): UseGameDataReturn => {
     "code" in error &&
     ["PGRST116", "PGRST205"].includes((error as { code?: string }).code ?? "");
 
-  const resetHealthTableAvailability = useCallback(() => {
+  const resetHealthTableAvailability = () => {
     healthTablesUnavailableRef.current = {
       metrics: false,
       conditions: false,
       habits: false,
       wellness: false,
     };
-  }, []);
+  };
 
   const markHealthTableUnavailable = (
     table: HealthTableKey,
@@ -483,36 +465,32 @@ const useGameDataInternal = (): UseGameDataReturn => {
     return false;
   };
 
-  const profileSupportsStatusColumns = useCallback(
-    (candidate: PlayerProfile | null): candidate is ProfileWithStatusColumns => {
-      if (!candidate) {
-        return false;
-      }
+  const profileSupportsStatusColumns = (
+    candidate: PlayerProfile | null,
+  ): candidate is ProfileWithStatusColumns => {
+    if (!candidate) {
+      return false;
+    }
 
-      const requiredColumns: Array<keyof ProfileWithStatusColumns> = [
-        "active_status",
-        "active_status_metadata",
-        "active_status_started_at",
-        "active_status_ends_at",
-      ];
+    const requiredColumns: Array<keyof ProfileWithStatusColumns> = [
+      "active_status",
+      "active_status_metadata",
+      "active_status_started_at",
+      "active_status_ends_at",
+    ];
 
-      return requiredColumns.every((column) =>
-        Object.prototype.hasOwnProperty.call(candidate, column),
-      );
-    },
-    [],
-  );
+    return requiredColumns.every((column) =>
+      Object.prototype.hasOwnProperty.call(candidate, column),
+    );
+  };
 
-  const toPlainMetadata = useCallback(
-    (value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null => {
-      if (!value || typeof value !== "object" || Array.isArray(value)) {
-        return null;
-      }
+  const toPlainMetadata = (value: Json | Record<string, unknown> | null | undefined): Record<string, unknown> | null => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
 
-      return value as Record<string, unknown>;
-    },
-    [],
-  );
+    return value as Record<string, unknown>;
+  };
 
   const calculateCountdown = useCallback(
     (endsAt: string | null): ActiveStatusCountdown => {
@@ -580,63 +558,57 @@ const useGameDataInternal = (): UseGameDataReturn => {
     [calculateCountdown],
   );
 
-  const mapSessionRowToSnapshot = useCallback(
-    (row: ProfileStatusRow | null): ActiveStatusSnapshot | null => {
-      if (!row) {
-        return null;
-      }
+  const mapSessionRowToSnapshot = (row: ProfileStatusRow | null): ActiveStatusSnapshot | null => {
+    if (!row) {
+      return null;
+    }
 
-      const status = typeof row.status === "string" ? row.status : null;
-      const startedAt = typeof row.started_at === "string" ? row.started_at : null;
-      const endsAt = typeof row.ends_at === "string" ? row.ends_at : null;
-      const metadata = toPlainMetadata(row.metadata);
-      const sessionId = typeof row.id === "string" ? row.id : null;
+    const status = typeof row.status === "string" ? row.status : null;
+    const startedAt = typeof row.started_at === "string" ? row.started_at : null;
+    const endsAt = typeof row.ends_at === "string" ? row.ends_at : null;
+    const metadata = toPlainMetadata(row.metadata);
+    const sessionId = typeof row.id === "string" ? row.id : null;
 
-      if (!status && !startedAt && !endsAt && !metadata) {
-        return null;
-      }
+    if (!status && !startedAt && !endsAt && !metadata) {
+      return null;
+    }
 
-      return {
-        status,
-        metadata,
-        startedAt,
-        endsAt,
-        sessionId,
-        source: "session",
-      };
-    },
-    [toPlainMetadata],
-  );
+    return {
+      status,
+      metadata,
+      startedAt,
+      endsAt,
+      sessionId,
+      source: "session",
+    };
+  };
 
-  const extractActiveStatusFromProfile = useCallback(
-    (candidate: PlayerProfile | null): ActiveStatusSnapshot | null => {
-      if (!profileSupportsStatusColumns(candidate)) {
-        return null;
-      }
+  const extractActiveStatusFromProfile = (candidate: PlayerProfile | null): ActiveStatusSnapshot | null => {
+    if (!profileSupportsStatusColumns(candidate)) {
+      return null;
+    }
 
-      const status = typeof candidate.active_status === "string" ? candidate.active_status : null;
-      const startedAt =
-        typeof candidate.active_status_started_at === "string" ? candidate.active_status_started_at : null;
-      const endsAt = typeof candidate.active_status_ends_at === "string" ? candidate.active_status_ends_at : null;
-      const metadata = toPlainMetadata(candidate.active_status_metadata);
+    const status = typeof candidate.active_status === "string" ? candidate.active_status : null;
+    const startedAt =
+      typeof candidate.active_status_started_at === "string" ? candidate.active_status_started_at : null;
+    const endsAt = typeof candidate.active_status_ends_at === "string" ? candidate.active_status_ends_at : null;
+    const metadata = toPlainMetadata(candidate.active_status_metadata);
 
-      if (!status && !startedAt && !endsAt && !metadata) {
-        return null;
-      }
+    if (!status && !startedAt && !endsAt && !metadata) {
+      return null;
+    }
 
-      return {
-        status,
-        metadata,
-        startedAt,
-        endsAt,
-        sessionId: null,
-        source: "profile",
-      };
-    },
-    [profileSupportsStatusColumns, toPlainMetadata],
-  );
+    return {
+      status,
+      metadata,
+      startedAt,
+      endsAt,
+      sessionId: null,
+      source: "profile",
+    };
+  };
 
-  const normalizeMetadataInput = useCallback((
+  const normalizeMetadataInput = (
     value: Json | Record<string, unknown> | null | undefined,
   ): Json | null => {
     if (value === null || typeof value === "undefined") {
@@ -661,7 +633,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
     }
 
     return null;
-  }, []);
+  };
 
   const mergeActivityMetadata = (
     base: ActivityInsert["metadata"],
@@ -1226,15 +1198,6 @@ const useGameDataInternal = (): UseGameDataReturn => {
             .limit(1)
             .maybeSingle();
 
-      const ledgerPromise = xpLedgerUnavailableRef.current
-        ? Promise.resolve({ data: [], error: null })
-        : supabase
-            .from("xp_ledger")
-            .select("*")
-            .eq("profile_id", effectiveProfile.id)
-            .order("created_at", { ascending: false })
-            .limit(XP_LEDGER_FETCH_LIMIT);
-
       const [
         skillsResult,
         attributesResult,
@@ -1261,7 +1224,12 @@ const useGameDataInternal = (): UseGameDataReturn => {
           .select("*")
           .eq("profile_id", effectiveProfile.id)
           .maybeSingle(),
-        ledgerPromise,
+        supabase
+          .from("xp_ledger")
+          .select("*")
+          .eq("profile_id", effectiveProfile.id)
+          .order("created_at", { ascending: false })
+          .limit(XP_LEDGER_FETCH_LIMIT),
         effectiveProfile.current_city_id
           ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -1320,20 +1288,8 @@ const useGameDataInternal = (): UseGameDataReturn => {
       if (walletResult.error) {
         console.error("Failed to load XP wallet", walletResult.error);
       }
-      let ledgerUnavailable = xpLedgerUnavailableRef.current;
       if (ledgerResult.error) {
-        if (isSchemaCacheMissingTableError(ledgerResult.error, "xp_ledger")) {
-          if (!xpLedgerUnavailableRef.current) {
-            xpLedgerUnavailableRef.current = true;
-            console.warn(
-              "Skipping XP ledger load - xp_ledger table missing from schema cache; ensure migrations have run.",
-              ledgerResult.error,
-            );
-          }
-          ledgerUnavailable = true;
-        } else {
-          console.error("Failed to load XP ledger", ledgerResult.error);
-        }
+        console.error("Failed to load XP ledger", ledgerResult.error);
       }
       if (cityResult && cityResult.error) {
         console.error("Failed to load city", cityResult.error);
@@ -1436,10 +1392,7 @@ const useGameDataInternal = (): UseGameDataReturn => {
       setSkills((skillsResult.data ?? null) as PlayerSkills);
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
-      const resolvedLedgerRows = ledgerUnavailable
-        ? []
-        : ((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
-      setXpLedger(resolvedLedgerRows);
+      setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
       setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
@@ -1472,51 +1425,34 @@ const useGameDataInternal = (): UseGameDataReturn => {
       let stipendErrored = false;
 
       try {
-        let dailySettingsMissing = dailyXpSettingsUnavailableRef.current;
+        const {
+          data: dailySettings,
+          error: dailySettingsError,
+        } = await supabase
+          .from("daily_xp_settings")
+          .select("*")
+          .eq("id", true)
+          .limit(1)
+          .maybeSingle();
 
-        if (!dailySettingsMissing) {
-          const {
-            data: dailySettings,
-            error: dailySettingsError,
-          } = await supabase
-            .from("daily_xp_settings")
-            .select("*")
-            .eq("id", true)
-            .limit(1)
-            .maybeSingle();
-
-          if (dailySettingsError) {
-            if (isSchemaCacheMissingTableError(dailySettingsError)) {
-              if (!dailyXpSettingsUnavailableRef.current) {
-                dailyXpSettingsUnavailableRef.current = true;
-                schemaAvailabilityCache.dailyXpSettingsMissing = true;
-                console.info(
-                  "Daily XP settings table missing from schema cache; falling back to legacy configuration table if available.",
-                  dailySettingsError,
-                );
-              }
-              dailySettingsMissing = true;
-            } else if (dailySettingsError.code !== "PGRST116") {
-              stipendErrored = true;
-              console.error("Failed to load daily XP settings", dailySettingsError);
-            }
-          } else if (dailySettings) {
-            if (dailyXpSettingsUnavailableRef.current) {
-              dailyXpSettingsUnavailableRef.current = false;
-              schemaAvailabilityCache.dailyXpSettingsMissing = false;
-            }
-            stipendResolved = true;
-            resolvedStipend = extractDailyXpStipend((dailySettings ?? null) as DailyXpConfigurationRow);
-          } else {
-            if (dailyXpSettingsUnavailableRef.current) {
-              dailyXpSettingsUnavailableRef.current = false;
-              schemaAvailabilityCache.dailyXpSettingsMissing = false;
-            }
-            stipendResolved = true;
+        if (dailySettingsError) {
+          if (isSchemaCacheMissingTableError(dailySettingsError)) {
+            console.info(
+              "Daily XP settings table missing from schema cache; falling back to legacy configuration table if available.",
+              dailySettingsError,
+            );
+          } else if (dailySettingsError.code !== "PGRST116") {
+            stipendErrored = true;
+            console.error("Failed to load daily XP settings", dailySettingsError);
           }
+        } else if (dailySettings) {
+          stipendResolved = true;
+          resolvedStipend = extractDailyXpStipend((dailySettings ?? null) as DailyXpConfigurationRow);
+        } else {
+          stipendResolved = true;
         }
 
-        if (!legacyGameConfigurationUnavailableRef.current && (!stipendResolved || resolvedStipend === null)) {
+        if (!stipendResolved || resolvedStipend === null) {
           const configClient = supabase as unknown as { from: (table: string) => any };
           const stipendAttempt = await configClient
             .from("game_configuration")
@@ -1527,29 +1463,20 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
           if (stipendAttempt?.error) {
             if (isSchemaCacheMissingTableError(stipendAttempt.error)) {
-              if (!legacyGameConfigurationUnavailableRef.current) {
-                legacyGameConfigurationUnavailableRef.current = true;
-                schemaAvailabilityCache.legacyGameConfigurationMissing = true;
-                console.info(
-                  "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
-                  stipendAttempt.error,
-                );
-              }
-              stipendResolved = true;
+              console.info(
+                "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
+                stipendAttempt.error,
+              );
             } else {
               stipendErrored = true;
               console.error("Failed to load daily XP configuration", stipendAttempt.error);
             }
           } else {
-            if (legacyGameConfigurationUnavailableRef.current) {
-              legacyGameConfigurationUnavailableRef.current = false;
-              schemaAvailabilityCache.legacyGameConfigurationMissing = false;
-            }
             stipendResolved = true;
             resolvedStipend = extractDailyXpStipend((stipendAttempt?.data ?? null) as DailyXpConfigurationRow);
           }
 
-          if (!legacyGameConfigurationUnavailableRef.current && (!stipendResolved || resolvedStipend === null)) {
+          if (!stipendResolved || resolvedStipend === null) {
             const stipendFallback = await configClient
               .from("game_configuration")
               .select("*")
@@ -1557,24 +1484,15 @@ const useGameDataInternal = (): UseGameDataReturn => {
 
             if (stipendFallback?.error) {
               if (isSchemaCacheMissingTableError(stipendFallback.error)) {
-                if (!legacyGameConfigurationUnavailableRef.current) {
-                  legacyGameConfigurationUnavailableRef.current = true;
-                  schemaAvailabilityCache.legacyGameConfigurationMissing = true;
-                  console.info(
-                    "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
-                    stipendFallback.error,
-                  );
-                }
-                stipendResolved = true;
+                console.info(
+                  "Legacy game configuration table missing from schema cache; daily XP stipend may not be configured on this environment.",
+                  stipendFallback.error,
+                );
               } else if (!stipendAttempt?.error) {
                 stipendErrored = true;
                 console.error("Failed to load daily XP configuration", stipendFallback.error);
               }
             } else if (Array.isArray(stipendFallback?.data)) {
-              if (legacyGameConfigurationUnavailableRef.current) {
-                legacyGameConfigurationUnavailableRef.current = false;
-                schemaAvailabilityCache.legacyGameConfigurationMissing = false;
-              }
               stipendResolved = true;
               for (const entry of stipendFallback.data as DailyXpConfigurationRow[]) {
                 const extracted = extractDailyXpStipend(entry);
@@ -1584,23 +1502,10 @@ const useGameDataInternal = (): UseGameDataReturn => {
                 }
               }
             } else if (stipendFallback?.data) {
-              if (legacyGameConfigurationUnavailableRef.current) {
-                legacyGameConfigurationUnavailableRef.current = false;
-                schemaAvailabilityCache.legacyGameConfigurationMissing = false;
-              }
               stipendResolved = true;
               resolvedStipend = extractDailyXpStipend(stipendFallback.data as DailyXpConfigurationRow);
             }
           }
-        }
-
-        if (
-          !stipendResolved &&
-          resolvedStipend === null &&
-          !stipendErrored &&
-          (dailySettingsMissing || legacyGameConfigurationUnavailableRef.current)
-        ) {
-          stipendResolved = true;
         }
       } catch (configurationError) {
         stipendErrored = true;

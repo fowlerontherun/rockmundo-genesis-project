@@ -59,7 +59,6 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
-          profile_id: string
           status: string | null
           user_id: string
         }
@@ -71,7 +70,6 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
-          profile_id: string
           status?: string | null
           user_id: string
         }
@@ -83,19 +81,10 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
-          profile_id?: string
           status?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "activity_feed_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       band_members: {
         Row: {
@@ -1519,41 +1508,6 @@ export type Database = {
         }
         Relationships: []
       }
-      profile_daily_xp_grants: {
-        Row: {
-          claimed_at: string
-          grant_date: string
-          id: string
-          metadata: Json
-          profile_id: string
-          xp_awarded: number
-        }
-        Insert: {
-          claimed_at?: string
-          grant_date: string
-          id?: string
-          metadata?: Json
-          profile_id: string
-          xp_awarded: number
-        }
-        Update: {
-          claimed_at?: string
-          grant_date?: string
-          id?: string
-          metadata?: Json
-          profile_id?: string
-          xp_awarded?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_daily_xp_grants_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       player_xp_wallet: {
         Row: {
           attribute_points_earned: number | null
@@ -1681,50 +1635,6 @@ export type Database = {
           weekly_bonus_streak?: number | null
         }
         Relationships: []
-      }
-      profile_status_sessions: {
-        Row: {
-          closed_at: string | null
-          created_at: string
-          ends_at: string | null
-          id: string
-          metadata: Json | null
-          profile_id: string
-          started_at: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          closed_at?: string | null
-          created_at?: string
-          ends_at?: string | null
-          id?: string
-          metadata?: Json | null
-          profile_id: string
-          started_at?: string | null
-          status: string
-          updated_at?: string
-        }
-        Update: {
-          closed_at?: string | null
-          created_at?: string
-          ends_at?: string | null
-          id?: string
-          metadata?: Json | null
-          profile_id?: string
-          started_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_status_sessions_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       skill_definitions: {
         Row: {

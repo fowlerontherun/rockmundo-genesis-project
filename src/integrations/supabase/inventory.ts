@@ -3,9 +3,8 @@ import type { Tables } from "@/lib/supabase-types";
 import type { FriendProfileRow } from "@/integrations/supabase/friends";
 
 export type InventoryTransferRow = Tables<"inventory_transfers">;
-// Note: These tables don't exist in the current schema, using fallback types
-export type PlayerSkillBookRow = { id: string; title: string; [key: string]: any };
-export type SkillBookRow = { id: string; title: string; [key: string]: any };
+export type PlayerSkillBookRow = Tables<"player_skill_books">;
+export type SkillBookRow = Tables<"skill_books">;
 
 export interface InventoryTransferWithRelations extends InventoryTransferRow {
   sender_profile?: FriendProfileRow | null;
@@ -17,14 +16,14 @@ export interface TransferInventoryItemsParams {
   senderProfileId: string;
   recipientProfileId: string;
   itemIds: string[];
-  inventoryTable?: "player_equipment";
+  inventoryTable?: "player_skill_books";
 }
 
 export const transferInventoryItems = async ({
   senderProfileId,
   recipientProfileId,
   itemIds,
-  inventoryTable = "player_equipment", // Use existing table
+  inventoryTable = "player_skill_books",
 }: TransferInventoryItemsParams): Promise<string[]> => {
   const { data, error } = await supabase.rpc("transfer_inventory_items", {
     p_sender_profile_id: senderProfileId,
@@ -73,7 +72,7 @@ export const fetchInventoryTransfersForProfile = async (
     throw error;
   }
 
-  const rows = (data as any ?? []) as InventoryTransferWithRelations[];
+  const rows = (data as InventoryTransferWithRelations[] | null) ?? [];
 
   const recipientBookIds = rows
     .filter((row) => row.item_table === "player_skill_books" && row.recipient_profile_id === profileId)
@@ -81,9 +80,17 @@ export const fetchInventoryTransfersForProfile = async (
 
   let bookDetails: (PlayerSkillBookRow & { skill_books: SkillBookRow | null })[] = [];
 
-  // Skip book details lookup for now since tables don't exist
   if (recipientBookIds.length > 0) {
-    bookDetails = [];
+    const { data: bookData, error: bookError } = await supabase
+      .from("player_skill_books")
+      .select("*, skill_books:skill_books(*)")
+      .in("id", recipientBookIds);
+
+    if (bookError) {
+      throw bookError;
+    }
+
+    bookDetails = (bookData as (PlayerSkillBookRow & { skill_books: SkillBookRow | null })[] | null) ?? [];
   }
 
   const bookLookup = bookDetails.reduce<Record<string, PlayerSkillBookRow & { skill_books: SkillBookRow | null }>>(

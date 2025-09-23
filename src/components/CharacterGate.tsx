@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useGameData } from "@/hooks/useGameDataSimplified";
+import { useGameData } from "@/hooks/useGameData";
 
 interface CharacterGateProps {
   children: ReactNode;

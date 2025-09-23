@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Navigation from "@/components/ui/navigation";
 import CharacterGate from "@/components/CharacterGate";
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameDataSimplified";
+import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import PlayerCommunityStats from "@/components/PlayerCommunityStats";

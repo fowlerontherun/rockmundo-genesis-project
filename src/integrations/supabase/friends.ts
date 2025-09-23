@@ -184,7 +184,10 @@ export const fetchAcceptedFriendsForProfile = async (
     throw error;
   }
 
-  const rows = (data ?? []) as any[];
+  const rows = (data ?? []) as (FriendshipRow & {
+    user_profile: FriendProfileRow | null;
+    friend_profile: FriendProfileRow | null;
+  })[];
 
   return rows
     .map<AcceptedFriendProfile | null>((row) => {

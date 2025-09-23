@@ -3,7 +3,7 @@ import { type PropsWithChildren, useCallback, useEffect, useMemo, useState } fro
 import { SKILL_TREE_DEFINITIONS, SKILL_TREE_RELATIONSHIPS } from "@/data/skillTree";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
-import { useGameData } from "@/hooks/useGameDataSimplified";
+import { useGameData } from "@/hooks/useGameData";
 
 import { SkillSystemContext } from "./SkillSystemContext";
 import {
