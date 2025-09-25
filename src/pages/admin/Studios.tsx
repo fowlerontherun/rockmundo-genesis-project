@@ -375,7 +375,7 @@ export default function Studios() {
                           </FormControl>
                           <SelectContent>
                             {cities.length === 0 ? (
-                              <SelectItem value="" disabled>
+                              <SelectItem value="__no_cities__" disabled>
                                 {isLoadingCities ? "Loading cities..." : "No cities available"}
                               </SelectItem>
                             ) : (
