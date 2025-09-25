@@ -56,6 +56,7 @@ type ActivityInsert = Database["public"]["Tables"]["activity_feed"]["Insert"];
 type ActivityInsertPayload = Omit<ActivityInsert, "profile_id"> & { profile_id?: string };
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
+type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
 type RawAttributes = PlayerAttributesRow | null;
 type PlayerAttributesInsert = Database["public"]["Tables"]["player_attributes"]["Insert"];
 type DailyXpGrantRow = Database["public"]["Tables"]["profile_daily_xp_grants"]["Row"];
@@ -276,6 +277,41 @@ const deriveSkillsFromProgress = (
   }
 
   return base;
+};
+
+const deriveSkillsFromLegacyRow = (row: PlayerSkillsRow | null | undefined): PlayerSkills | null => {
+  if (!row) {
+    return null;
+  }
+
+  const base = createDefaultSkills();
+  let mutated = false;
+
+  for (const [key, rawValue] of Object.entries(row)) {
+    const slug = normalizeSkillSlug(key);
+    if (!slug) {
+      continue;
+    }
+
+    const numericValue = coerceSkillValue(rawValue);
+    if (numericValue == null) {
+      continue;
+    }
+
+    base[slug] = numericValue;
+    mutated = true;
+
+    const legacyKey = resolveLegacySkillKey(slug);
+    if (legacyKey) {
+      const previous =
+        typeof base[legacyKey] === "number" && Number.isFinite(base[legacyKey])
+          ? (base[legacyKey] as number)
+          : FALLBACK_SKILL_VALUE;
+      base[legacyKey] = Math.max(previous, numericValue);
+    }
+  }
+
+  return mutated ? base : null;
 };
 
 const mapAttributes = (row: RawAttributes): PlayerAttributes => {
@@ -519,7 +555,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         }
 
         if (isRelationNotFoundError(result.error) || isSchemaCacheMissingColumnError(result.error) || isSchemaCacheMissingTableError(result.error)) {
-          console.warn(
+          console.info(
             "Falling back to legacy player_skills scope due to schema mismatch",
             result.error,
           );
@@ -541,7 +577,7 @@ const useProvideGameData = (): UseGameDataReturn => {
                 count: null,
                 status: 200,
                 statusText: "OK",
-              } as PostgrestSingleResponse<PlayerSkills>;
+              } as PostgrestSingleResponse<PlayerSkillsRow>;
             }
 
             return legacyResult;
@@ -552,7 +588,7 @@ const useProvideGameData = (): UseGameDataReturn => {
                 ...(legacyResult.data as Record<string, unknown>),
                 profile_id:
                   (legacyResult.data as Record<string, unknown>).profile_id ?? effectiveProfile.id,
-              } as Database["public"]["Tables"]["player_skills"]["Row"])
+              } as PlayerSkillsRow)
             : legacyResult.data;
 
           return {
@@ -603,55 +639,104 @@ const useProvideGameData = (): UseGameDataReturn => {
         return result;
       };
 
+      const skillProgressPromise = supabase
+        .from("skill_progress")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .order("current_level", { ascending: false, nullsFirst: false })
+        .order("current_xp", { ascending: false, nullsFirst: false });
+
+      const attributesPromise = supabase
+        .from("player_attributes")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .maybeSingle();
+
+      const walletPromise = supabase
+        .from("player_xp_wallet")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .maybeSingle();
+
+      const ledgerPromise = supabase
+        .from("experience_ledger")
+        .select("*")
+        .eq("profile_id", effectiveProfile.id)
+        .order("created_at", { ascending: false })
+        .limit(XP_LEDGER_FETCH_LIMIT);
+
+      const cityPromise = effectiveProfile.current_city_id
+        ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null });
+
+      const activitiesPromise = fetchActivitiesWithFallback();
+
+      const scopedActivitiesPromise = (() => {
+        let activityFeedQuery = supabase
+          .from("activity_feed")
+          .select("*")
+          .eq("user_id", user.id);
+
+        if (activityFeedSupportsProfileId) {
+          activityFeedQuery = activityFeedQuery.eq("profile_id", effectiveProfile.id);
+        }
+
+        return activityFeedQuery.order("created_at", { ascending: false }).limit(20);
+      })();
+
+      const skillProgressResult = await skillProgressPromise;
+
+      let legacySkillsFallback: PlayerSkills | null = null;
+      let skillProgressErrorToLog: unknown = null;
+
+      const resolvedSkillProgress = (skillProgressResult.data ?? []) as SkillProgressRow[];
+
+      let shouldFetchLegacySkills = false;
+      if (skillProgressResult.error) {
+        if (
+          isRelationNotFoundError(skillProgressResult.error) ||
+          isSchemaCacheMissingColumnError(skillProgressResult.error) ||
+          isSchemaCacheMissingTableError(skillProgressResult.error, "skill_progress")
+        ) {
+          shouldFetchLegacySkills = true;
+        } else {
+          skillProgressErrorToLog = skillProgressResult.error;
+        }
+      } else if (resolvedSkillProgress.length === 0) {
+        shouldFetchLegacySkills = true;
+      }
+
+      if (shouldFetchLegacySkills) {
+        const legacyResult = await fetchPlayerSkillsForProfile();
+        if (legacyResult.error) {
+          if (
+            !isRelationNotFoundError(legacyResult.error) &&
+            !isSchemaCacheMissingTableError(legacyResult.error)
+          ) {
+            skillProgressErrorToLog = legacyResult.error;
+          }
+        } else {
+          legacySkillsFallback = deriveSkillsFromLegacyRow(
+            (legacyResult.data ?? null) as PlayerSkillsRow | null,
+          );
+        }
+      }
+
       const [
-        skillsResult,
         attributesResult,
         walletResult,
-          ledgerResult,
-          cityResult,
-          activitiesResult,
-          skillProgressResult,
-        ] = await Promise.all([
-          fetchPlayerSkillsForProfile(),
-          supabase
-            .from("player_attributes")
-            .select("*")
-            .eq("profile_id", effectiveProfile.id)
-            .maybeSingle(),
-        supabase
-          .from("player_xp_wallet")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .maybeSingle(),
-        supabase
-          .from("experience_ledger")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .order("created_at", { ascending: false })
-          .limit(XP_LEDGER_FETCH_LIMIT),
-        effectiveProfile.current_city_id
-          ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
-        fetchActivitiesWithFallback(),
-        (() => {
-          let activityFeedQuery = supabase
-            .from("activity_feed")
-            .select("*")
-            .eq("user_id", user.id);
-
-          if (activityFeedSupportsProfileId) {
-            activityFeedQuery = activityFeedQuery.eq("profile_id", effectiveProfile.id);
-          }
-
-          return activityFeedQuery.order("created_at", { ascending: false }).limit(20);
-        })(),
-        supabase
-          .from("skill_progress")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .order("current_level", { ascending: false, nullsFirst: false })
-          .order("current_xp", { ascending: false, nullsFirst: false }),
+        ledgerResult,
+        cityResult,
+        activitiesResult,
+      ] = await Promise.all([
+        attributesPromise,
+        walletPromise,
+        ledgerPromise,
+        cityPromise,
+        activitiesPromise,
       ]);
+
+      await scopedActivitiesPromise;
 
       let dailyGrantResult: PostgrestSingleResponse<DailyXpGrantRow | null>;
       if (dailyXpGrantTableAvailableRef.current) {
@@ -684,8 +769,8 @@ const useProvideGameData = (): UseGameDataReturn => {
       if (cityResult && cityResult.error) {
         console.error("Failed to load city", cityResult.error);
       }
-      if (skillProgressResult.error) {
-        console.error("Failed to load skill progress", skillProgressResult.error);
+      if (skillProgressErrorToLog) {
+        console.error("Failed to load skill progress", skillProgressErrorToLog);
       }
       if (dailyGrantResult.error) {
         if (isSchemaCacheMissingTableError(dailyGrantResult.error)) {
@@ -741,9 +826,11 @@ const useProvideGameData = (): UseGameDataReturn => {
         nextActivities = rows;
       }
 
-      const resolvedSkillProgress = (skillProgressResult.data ?? []) as SkillProgressRow[];
       setSkillProgress(resolvedSkillProgress);
-      setSkills((previous) => deriveSkillsFromProgress(resolvedSkillProgress, previous));
+      const fallbackSkills = legacySkillsFallback;
+      setSkills((previous) =>
+        deriveSkillsFromProgress(resolvedSkillProgress, fallbackSkills ?? previous),
+      );
       setAttributes(mapAttributes((attributesResult.data ?? null) as RawAttributes));
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
       setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
