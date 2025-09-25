@@ -344,7 +344,7 @@ const useProvideGameData = (): UseGameDataReturn => {
     details?: string | null;
   } => {
     const code = getPostgrestErrorCode(error);
-    if (code === "PGRST201" || code === "PGRST202") {
+    if (code === "PGRST201" || code === "PGRST202" || code === "PGRST205") {
       return true;
     }
 
