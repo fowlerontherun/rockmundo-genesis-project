@@ -1,4 +1,4 @@
-import { Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users } from "lucide-react";
+import { AudioLines, Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -26,6 +26,13 @@ const adminSections = [
     href: "/admin/cities",
     action: "Manage cities",
     Icon: Building2,
+  },
+  {
+    title: "Studios",
+    description: "Curate recording studios and tune their booking-critical performance stats.",
+    href: "/admin/studios",
+    action: "Manage studios",
+    Icon: AudioLines,
   },
   {
     title: "Skill Books",

@@ -132,3 +132,4 @@ If `progress_per_slot` pushes the cumulative progress to `100%`, the song is mar
   4. Mood selection.
 - **Post-session report** summarising song progress and completion percentages.
 - **Notifications** dispatched to band members, session artists, and producers involved in the booking.
+- **Admin management** page lets staff add studios, setting their ratings and per-day pricing to feed the booking pool.
