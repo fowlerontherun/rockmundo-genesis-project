@@ -330,11 +330,6 @@ const useProvideGameData = (): UseGameDataReturn => {
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
     getPostgrestErrorCode(error) === "PGRST204";
 
-  const isSchemaCacheMissingTableError = (error: unknown): error is { code?: string } => {
-    const code = getPostgrestErrorCode(error);
-    return code === "PGRST201" || code === "PGRST202";
-  };
-
   const isRelationNotFoundError = (error: unknown): error is { code?: string } => {
     const code = getPostgrestErrorCode(error);
     return code === "PGRST116" || code === "42P01";
@@ -343,7 +338,16 @@ const useProvideGameData = (): UseGameDataReturn => {
   const isSchemaCacheMissingTableError = (
     error: unknown,
     tableName: string = "profile_daily_xp_grants",
-  ): error is { code?: string; message?: string | null; details?: string | null } => {
+  ): error is {
+    code?: string;
+    message?: string | null;
+    details?: string | null;
+  } => {
+    const code = getPostgrestErrorCode(error);
+    if (code === "PGRST201" || code === "PGRST202") {
+      return true;
+    }
+
     if (typeof error !== "object" || error === null) {
       return false;
     }
