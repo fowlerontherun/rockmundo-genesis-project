@@ -154,21 +154,24 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
+          profile_id: string | null;
           created_at: string;
           updated_at: string;
-        };
+        } & Record<string, string | number | boolean | null | undefined>;
         Insert: {
           id?: string;
           user_id: string;
+          profile_id?: string | null;
           created_at?: string;
           updated_at?: string;
-        };
+        } & Record<string, string | number | boolean | null | undefined>;
         Update: {
           id?: string;
           user_id?: string;
+          profile_id?: string | null;
           created_at?: string;
           updated_at?: string;
-        };
+        } & Record<string, string | number | boolean | null | undefined>;
       };
       player_attributes: {
         Row: {
