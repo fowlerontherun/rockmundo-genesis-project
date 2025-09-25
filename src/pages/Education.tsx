@@ -572,28 +572,6 @@ const Education = () => {
     error: playlistsError,
   } = useEducationVideoPlaylists();
 
-  const {
-    data: bandSessionRows,
-    isLoading: bandSessionsLoading,
-    error: bandSessionsError,
-  } = useQuery({
-    queryKey: ["education", "band-sessions"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("education_band_sessions")
-        .select("*")
-        .order("difficulty", { ascending: true })
-        .order("title", { ascending: true });
-
-      if (error) {
-        throw error;
-      }
-
-      return (data ?? []) as BandSessionRow[];
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-
   const videoPlaylists = playlistData ?? [];
   const lessonsErrorMessage =
     lessonsError instanceof Error
