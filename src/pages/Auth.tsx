@@ -270,23 +270,53 @@ const Auth = () => {
       const normalizedUsername = username.toLowerCase();
       const escapedUsernamePattern = normalizedUsername.replace(/_/g, "\\\\_");
 
-      const { data: existingProfiles, error: usernameLookupError } = await supabase
+      const {
+        data: existingProfiles,
+        error: usernameLookupError,
+      } = await supabase
         .from("public_profiles")
         .select("username")
         .ilike("username", escapedUsernamePattern)
         .limit(1);
 
+      let existingUsernameMatches = existingProfiles ?? null;
+
       if (usernameLookupError) {
-        console.error("Failed to verify username availability", {
-          error: usernameLookupError,
-          context: { username },
-        });
-        setError("We couldn't confirm that username is available. Please try again.");
-        setLoading(false);
-        return;
+        if (usernameLookupError.code === "PGRST205") {
+          console.warn("public_profiles view is unavailable, falling back to profiles table", {
+            error: usernameLookupError,
+          });
+
+          const {
+            data: fallbackProfiles,
+            error: fallbackError,
+          } = await supabase
+            .from("profiles")
+            .select("username")
+            .ilike("username", escapedUsernamePattern)
+            .limit(1);
+
+          if (fallbackError) {
+            console.warn("Fallback username check failed; continuing without pre-check", {
+              error: fallbackError,
+              context: { username },
+            });
+            existingUsernameMatches = null;
+          } else {
+            existingUsernameMatches = fallbackProfiles ?? null;
+          }
+        } else {
+          console.error("Failed to verify username availability", {
+            error: usernameLookupError,
+            context: { username },
+          });
+          setError("We couldn't confirm that username is available. Please try again.");
+          setLoading(false);
+          return;
+        }
       }
 
-      if (existingProfiles && existingProfiles.length > 0) {
+      if (existingUsernameMatches && existingUsernameMatches.length > 0) {
         setError("That username is already taken. Try another rockstar alias.");
         setLoading(false);
         return;
