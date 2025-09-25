@@ -282,6 +282,10 @@ const Auth = () => {
       });
 
       if (error) {
+        console.error("Supabase signUp failed", {
+          error,
+          context: { email, username, displayName }
+        });
         setError(error.message);
       } else if (data.user) {
         setUnverifiedEmail(email);
@@ -297,8 +301,11 @@ const Auth = () => {
           description: "Check your email to confirm your account",
         });
         // Don't navigate immediately - wait for email confirmation
+      } else {
+        console.warn("Supabase signUp returned without user", { data, email });
       }
     } catch (err) {
+      console.error("Unexpected error during signUp", err);
       const message = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(message);
     } finally {
