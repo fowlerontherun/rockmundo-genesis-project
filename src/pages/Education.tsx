@@ -464,7 +464,9 @@ const mentorOptions: MentorOption[] = [
   }
 ];
 
-const FALLBACK_BAND_SESSIONS: BandSession[] = [
+
+const DEFAULT_BAND_SESSIONS: BandSession[] = [
+
   {
     id: "band-sync-lock",
     title: "Sync Lock Intensive",
@@ -610,7 +612,11 @@ const Education = () => {
         : "";
 
   const bandSessions = useMemo<BandSession[]>(() => {
-    const sessions = (bandSessionRows ?? []).map((row) => {
+    if (!bandSessionRows || bandSessionRows.length === 0) {
+      return DEFAULT_BAND_SESSIONS;
+    }
+
+    const sessions = bandSessionRows.map((row) => {
       const focusSkills = Array.isArray(row.focus_skills)
         ? row.focus_skills.filter((skill): skill is PrimarySkill => isPrimarySkill(skill))
         : [];
