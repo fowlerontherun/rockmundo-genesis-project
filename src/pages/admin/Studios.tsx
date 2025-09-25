@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, PlusCircle, Trash2 } from "lucide-react";
+import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -122,6 +122,7 @@ export default function Studios() {
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [isLoadingStudios, setIsLoadingStudios] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingStudio, setEditingStudio] = useState<StudioRow | null>(null);
   const [deletingStudioId, setDeletingStudioId] = useState<string | null>(null);
 
   const studioForm = useForm<StudioFormValues>({
@@ -218,6 +219,9 @@ export default function Studios() {
   const handleSubmitStudio = useCallback(
     async (values: StudioFormValues) => {
       setIsSubmitting(true);
+      const isEditing = Boolean(editingStudio);
+      const editingId = editingStudio?.id;
+
       try {
         const payload = {
           name: values.name.trim(),
@@ -228,30 +232,62 @@ export default function Studios() {
           cost_per_day: Number(values.costPerDay),
         };
 
-        const { error } = await supabase.from("studios").insert(payload);
+        if (isEditing && editingId) {
+          const { error } = await supabase.from("studios").update(payload).eq("id", editingId);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        toast({
-          title: "Studio created",
-          description: `${values.name} is now ready to be booked.`,
-        });
+          toast({
+            title: "Studio updated",
+            description: `${values.name} has been saved.`,
+          });
+        } else {
+          const { error } = await supabase.from("studios").insert(payload);
+
+          if (error) throw error;
+
+          toast({
+            title: "Studio created",
+            description: `${values.name} is now ready to be booked.`,
+          });
+        }
 
         studioForm.reset({ ...studioDefaultValues, cityId: values.cityId });
+        setEditingStudio(null);
         await fetchStudios();
       } catch (error) {
-        console.error("Failed to create studio", error);
+        console.error(isEditing ? "Failed to update studio" : "Failed to create studio", error);
         toast({
           variant: "destructive",
-          title: "Studio creation failed",
+          title: isEditing ? "Studio update failed" : "Studio creation failed",
           description: "We couldn't save the studio. Please review the form and try again.",
         });
       } finally {
         setIsSubmitting(false);
       }
     },
-    [fetchStudios, studioForm, toast],
+    [editingStudio, fetchStudios, studioForm, toast],
   );
+
+  const handleEditStudio = useCallback(
+    (studio: StudioRow) => {
+      setEditingStudio(studio);
+      studioForm.reset({
+        name: studio.name,
+        cityId: studio.cityId ?? "",
+        quality: studio.quality !== null ? `${studio.quality}` : "",
+        engineerRating: studio.engineerRating !== null ? `${studio.engineerRating}` : "",
+        equipmentRating: studio.equipmentRating !== null ? `${studio.equipmentRating}` : "",
+        costPerDay: studio.costPerDay !== null ? `${studio.costPerDay}` : "",
+      });
+    },
+    [studioForm],
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    studioForm.reset({ ...studioDefaultValues });
+    setEditingStudio(null);
+  }, [studioForm]);
 
   const handleDeleteStudio = useCallback(
     async (studioId: string) => {
@@ -280,6 +316,12 @@ export default function Studios() {
   );
 
   const hasStudios = studios.length > 0;
+  const formTitle = editingStudio ? "Update studio" : "Create studio";
+  const formDescription = editingStudio
+    ? "Modify studio stats to keep booking projections accurate."
+    : "Configure a new recording space with ratings that influence session efficiency.";
+  const submitLabel = editingStudio ? "Save studio" : "Create studio";
+  const SubmitIcon = editingStudio ? Pencil : PlusCircle;
 
   return (
     <AdminRoute>
@@ -294,14 +336,17 @@ export default function Studios() {
         <div className="grid gap-6 lg:grid-cols-[380px,1fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Create studio</CardTitle>
-              <CardDescription>
-                Configure a new recording space with ratings that influence session efficiency.
-              </CardDescription>
+              <CardTitle>{formTitle}</CardTitle>
+              <CardDescription>{formDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...studioForm}>
                 <form className="space-y-4" onSubmit={studioForm.handleSubmit(handleSubmitStudio)}>
+                  {editingStudio ? (
+                    <div className="rounded-md border border-accent/40 bg-accent/5 p-3 text-sm text-accent">
+                      Editing {editingStudio.name}. Saving will update the existing studio profile.
+                    </div>
+                  ) : null}
                   <FormField
                     control={studioForm.control}
                     name="name"
@@ -407,19 +452,32 @@ export default function Studios() {
                     {baseEfficiencyNote}
                   </div>
 
-                  <Button className="w-full" disabled={isSubmitting || isLoadingCities} type="submit">
-                    {isSubmitting ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button className="w-full sm:flex-1" disabled={isSubmitting || isLoadingCities} type="submit">
+                      {isSubmitting ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         Saving...
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        <PlusCircle className="h-4 w-4" />
-                        Create studio
-                      </span>
-                    )}
-                  </Button>
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          <SubmitIcon className="h-4 w-4" />
+                          {submitLabel}
+                        </span>
+                      )}
+                    </Button>
+                    {editingStudio ? (
+                      <Button
+                        className="w-full sm:flex-1"
+                        disabled={isSubmitting}
+                        type="button"
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                      >
+                        Cancel edit
+                      </Button>
+                    ) : null}
+                  </div>
                 </form>
               </Form>
             </CardContent>
@@ -481,19 +539,29 @@ export default function Studios() {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              aria-label="Delete studio"
-                              disabled={deletingStudioId === studio.id}
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDeleteStudio(studio.id)}
-                            >
-                              {deletingStudioId === studio.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                aria-label={`Edit ${studio.name}`}
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleEditStudio(studio)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                aria-label="Delete studio"
+                                disabled={deletingStudioId === studio.id}
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteStudio(studio.id)}
+                              >
+                                {deletingStudioId === studio.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
