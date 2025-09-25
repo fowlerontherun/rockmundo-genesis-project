@@ -216,11 +216,27 @@ const useProvideGameData = (): UseGameDataReturn => {
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantTableAvailableRef = useRef(true);
+  const getPostgrestErrorCode = (error: unknown): string | null => {
+    if (typeof error !== "object" || error === null || !("code" in error)) {
+      return null;
+    }
+
+    const code = (error as { code?: unknown }).code;
+    return typeof code === "string" ? code : null;
+  };
+
   const isSchemaCacheMissingColumnError = (error: unknown): error is { code?: string } =>
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "PGRST204";
+    getPostgrestErrorCode(error) === "PGRST204";
+
+  const isSchemaCacheMissingTableError = (error: unknown): error is { code?: string } => {
+    const code = getPostgrestErrorCode(error);
+    return code === "PGRST201" || code === "PGRST202";
+  };
+
+  const isRelationNotFoundError = (error: unknown): error is { code?: string } => {
+    const code = getPostgrestErrorCode(error);
+    return code === "PGRST116" || code === "42P01";
+  };
 
   const sanitizeActivityFeedRows = useCallback(
     (
@@ -330,26 +346,79 @@ const useProvideGameData = (): UseGameDataReturn => {
         }
       }
 
-      const [
-        skillsResult,
-        attributesResult,
-        walletResult,
-        ledgerResult,
-        cityResult,
-        activitiesResult,
-        skillProgressResult,
-      ] = await Promise.all([
-        supabase
+      const fetchPlayerSkillsForProfile = async () => {
+        const result = await supabase
           .from("player_skills")
           .select("*")
           .eq("profile_id", effectiveProfile.id)
           .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("player_attributes")
-          .select("*")
-          .eq("profile_id", effectiveProfile.id)
-          .maybeSingle(),
+          .maybeSingle();
+
+        if (!result.error) {
+          return result;
+        }
+
+        if (isRelationNotFoundError(result.error) || isSchemaCacheMissingColumnError(result.error) || isSchemaCacheMissingTableError(result.error)) {
+          console.warn(
+            "Falling back to legacy player_skills scope due to schema mismatch",
+            result.error,
+          );
+
+          const legacyResult = await supabase
+            .from("player_skills")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (legacyResult.error) {
+            if (isRelationNotFoundError(legacyResult.error) || isSchemaCacheMissingTableError(legacyResult.error)) {
+              console.warn("Player skills table is unavailable; continuing with default skill state", legacyResult.error);
+              return {
+                data: null,
+                error: null,
+                count: null,
+                status: 200,
+                statusText: "OK",
+              } as PostgrestSingleResponse<PlayerSkills>;
+            }
+
+            return legacyResult;
+          }
+
+          const dataWithProfile = legacyResult.data
+            ? ({
+                ...(legacyResult.data as Record<string, unknown>),
+                profile_id:
+                  (legacyResult.data as Record<string, unknown>).profile_id ?? effectiveProfile.id,
+              } as Database["public"]["Tables"]["player_skills"]["Row"])
+            : legacyResult.data;
+
+          return {
+            ...legacyResult,
+            data: dataWithProfile,
+          };
+        }
+
+        return result;
+      };
+
+        const [
+          skillsResult,
+          attributesResult,
+          walletResult,
+          ledgerResult,
+          cityResult,
+          activitiesResult,
+          skillProgressResult,
+        ] = await Promise.all([
+          fetchPlayerSkillsForProfile(),
+          supabase
+            .from("player_attributes")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .maybeSingle(),
         supabase
           .from("player_xp_wallet")
           .select("*")
