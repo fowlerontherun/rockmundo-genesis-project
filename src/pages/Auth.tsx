@@ -271,8 +271,8 @@ const Auth = () => {
       const escapedUsernamePattern = normalizedUsername.replace(/_/g, "\\\\_");
 
       const { data: existingProfiles, error: usernameLookupError } = await supabase
-        .from("profiles")
-        .select("id")
+        .from("public_profiles")
+        .select("username")
         .ilike("username", escapedUsernamePattern)
         .limit(1);
 
@@ -300,7 +300,7 @@ const Auth = () => {
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            username,
+            username: normalizedUsername,
             display_name: displayName
           }
         }
@@ -311,7 +311,11 @@ const Auth = () => {
           error,
           context: { email, username, displayName }
         });
-        setError(error.message);
+        if (error.message === "Database error saving new user") {
+          setError("We couldn't create your account. That username might already be taken—try another stage name.");
+        } else {
+          setError(error.message);
+        }
       } else if (data.user) {
         setUnverifiedEmail(email);
         setStatus({
