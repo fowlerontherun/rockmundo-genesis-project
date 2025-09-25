@@ -367,6 +367,35 @@ const useProvideGameData = (): UseGameDataReturn => {
     return false;
   };
 
+  const isActivityFeedMissingProfileIdError = (
+    error: unknown,
+  ): error is { code?: string; message?: string | null; details?: string | null } => {
+    if (isSchemaCacheMissingColumnError(error)) {
+      return true;
+    }
+
+    const code = getPostgrestErrorCode(error);
+    if (code === "42703") {
+      return true;
+    }
+
+    if (typeof error !== "object" || error === null) {
+      return false;
+    }
+
+    const candidate = error as { message?: string | null; details?: string | null };
+    const haystack = [candidate.message, candidate.details]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+
+    if (!haystack) {
+      return false;
+    }
+
+    return haystack.includes("profile_id");
+  };
+
 
   const sanitizeActivityFeedRows = useCallback(
     (
@@ -535,10 +564,49 @@ const useProvideGameData = (): UseGameDataReturn => {
         return result;
       };
 
-        const [
-          skillsResult,
-          attributesResult,
-          walletResult,
+      const fetchActivitiesWithFallback = async () => {
+        if (!activityFeedSupportsProfileId) {
+          setSupportsActivityProfileFilter(false);
+          return supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(20);
+        }
+
+        const result = await supabase
+          .from("activity_feed")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("profile_id", effectiveProfile.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (!result.error) {
+          setSupportsActivityProfileFilter(true);
+          return result;
+        }
+
+        if (isActivityFeedMissingProfileIdError(result.error)) {
+          setSupportsActivityProfileFilter(false);
+          setActivityFeedSupportsProfileId(false);
+
+          return supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(20);
+        }
+
+        return result;
+      };
+
+      const [
+        skillsResult,
+        attributesResult,
+        walletResult,
           ledgerResult,
           cityResult,
           activitiesResult,
