@@ -126,45 +126,83 @@ BEGIN
     'Welcome to Rockmundo! Your musical journey begins now.'
   );
 
-  INSERT INTO public.player_attributes (
-    user_id,
-    profile_id,
-    physical_endurance,
-    mental_focus,
-    stage_presence,
-    crowd_engagement,
-    social_reach,
-    looks,
-    charisma,
-    musicality,
-    creativity,
-    technical,
-    business,
-    marketing,
-    composition,
-    attribute_points,
-    attribute_points_spent
-  )
-  VALUES (
-    NEW.id,
-    new_profile.id,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    5,
-    0,
-    0
-  )
-  ON CONFLICT (profile_id) DO NOTHING;
+  UPDATE public.player_attributes
+  SET
+    profile_id = new_profile.id,
+    physical_endurance = 5,
+    mental_focus = 5,
+    stage_presence = 5,
+    crowd_engagement = 5,
+    social_reach = 5,
+    looks = 5,
+    charisma = 5,
+    musicality = 5,
+    creativity = 5,
+    technical = 5,
+    business = 5,
+    marketing = 5,
+    composition = 5,
+    attribute_points = 0,
+    attribute_points_spent = 0
+  WHERE user_id = NEW.id;
+
+  IF NOT FOUND THEN
+    INSERT INTO public.player_attributes (
+      user_id,
+      profile_id,
+      physical_endurance,
+      mental_focus,
+      stage_presence,
+      crowd_engagement,
+      social_reach,
+      looks,
+      charisma,
+      musicality,
+      creativity,
+      technical,
+      business,
+      marketing,
+      composition,
+      attribute_points,
+      attribute_points_spent
+    )
+    VALUES (
+      NEW.id,
+      new_profile.id,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      5,
+      0,
+      0
+    )
+    ON CONFLICT ON CONSTRAINT player_attributes_user_id_key DO UPDATE SET
+      profile_id = EXCLUDED.profile_id,
+      physical_endurance = EXCLUDED.physical_endurance,
+      mental_focus = EXCLUDED.mental_focus,
+      stage_presence = EXCLUDED.stage_presence,
+      crowd_engagement = EXCLUDED.crowd_engagement,
+      social_reach = EXCLUDED.social_reach,
+      looks = EXCLUDED.looks,
+      charisma = EXCLUDED.charisma,
+      musicality = EXCLUDED.musicality,
+      creativity = EXCLUDED.creativity,
+      technical = EXCLUDED.technical,
+      business = EXCLUDED.business,
+      marketing = EXCLUDED.marketing,
+      composition = EXCLUDED.composition,
+      attribute_points = EXCLUDED.attribute_points,
+      attribute_points_spent = EXCLUDED.attribute_points_spent;
+  END IF;
 
   INSERT INTO public.player_achievements (user_id, achievement_id)
   SELECT NEW.id, id
