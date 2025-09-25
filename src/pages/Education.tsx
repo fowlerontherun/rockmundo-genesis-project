@@ -464,7 +464,7 @@ const mentorOptions: MentorOption[] = [
   }
 ];
 
-const bandSessions: BandSession[] = [
+const DEFAULT_BAND_SESSIONS: BandSession[] = [
   {
     id: "band-sync-lock",
     title: "Sync Lock Intensive",
@@ -551,6 +551,28 @@ const Education = () => {
     error: playlistsError,
   } = useEducationVideoPlaylists();
 
+  const {
+    data: bandSessionRows,
+    isLoading: bandSessionsLoading,
+    error: bandSessionsError,
+  } = useQuery({
+    queryKey: ["education", "band-sessions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("education_band_sessions")
+        .select("*")
+        .order("difficulty", { ascending: true })
+        .order("title", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []) as BandSessionRow[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
   const videoPlaylists = playlistData ?? [];
   const lessonsErrorMessage =
     lessonsError instanceof Error
@@ -566,7 +588,11 @@ const Education = () => {
         : "";
 
   const bandSessions = useMemo<BandSession[]>(() => {
-    const sessions = (bandSessionRows ?? []).map((row) => {
+    if (!bandSessionRows || bandSessionRows.length === 0) {
+      return DEFAULT_BAND_SESSIONS;
+    }
+
+    const sessions = bandSessionRows.map((row) => {
       const focusSkills = Array.isArray(row.focus_skills)
         ? row.focus_skills.filter((skill): skill is PrimarySkill => isPrimarySkill(skill))
         : [];
