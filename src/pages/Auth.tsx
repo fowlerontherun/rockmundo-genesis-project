@@ -282,7 +282,17 @@ const Auth = () => {
       let existingUsernameMatches = existingProfiles ?? null;
 
       if (usernameLookupError) {
-        if (usernameLookupError.code === "PGRST205") {
+        const isViewUnavailable = usernameLookupError.code === "PGRST205";
+        const isPermissionDenied =
+          usernameLookupError.code === "42501" ||
+          usernameLookupError.code === "PGRST301" ||
+          usernameLookupError.code === "PGRST302" ||
+          usernameLookupError.code === "PGRST303" ||
+          usernameLookupError.message?.toLowerCase().includes("permission denied") ||
+          usernameLookupError.message?.toLowerCase().includes("not authorized") ||
+          usernameLookupError.message?.toLowerCase().includes("not authorised");
+
+        if (isViewUnavailable) {
           console.warn("public_profiles view is unavailable, falling back to profiles table", {
             error: usernameLookupError,
           });
@@ -305,6 +315,12 @@ const Auth = () => {
           } else {
             existingUsernameMatches = fallbackProfiles ?? null;
           }
+        } else if (isPermissionDenied) {
+          console.warn("Username availability check is not authorized; continuing without pre-check", {
+            error: usernameLookupError,
+            context: { username },
+          });
+          existingUsernameMatches = null;
         } else {
           console.error("Failed to verify username availability", {
             error: usernameLookupError,
