@@ -53,34 +53,34 @@ const tabItems = [
     value: "books",
     label: "Books",
     icon: BookOpen,
-    blurb: "Deep dives, playbooks, and creative inspiration for every stage of your music journey."
+    blurb: "Quick reads for every stage."
   },
   {
     value: "university",
     label: "University",
     icon: GraduationCap,
-    blurb: "Accredited pathways and stackable certificates that sync with touring life."
+    blurb: "Programs that flex with tours."
 
   },
   {
     value: "videos",
     label: "YouTube Videos",
     icon: PlaySquare,
-    blurb: "High-impact playlists and channels to keep your technique sharp on demand."
+    blurb: "Playlists for fast drills."
 
   },
   {
     value: "mentors",
     label: "Mentors",
     icon: Users,
-    blurb: "Coaching collectives and expert rosters for personalized feedback loops."
+    blurb: "Experts on call for feedback."
 
   },
   {
     value: "band",
     label: "Band Learning",
     icon: Sparkles,
-    blurb: "Immersive programs that level up your entire crew together."
+    blurb: "Sessions that lift the whole crew."
   }
 ];
 
@@ -248,80 +248,77 @@ const sortLessons = (a: SkillLesson, b: SkillLesson) => {
 const bookJourneys = [
   {
     title: "Creative Foundations",
-    description:
-      "Build core musicianship and mindset habits so practice, performance, and writing feel effortless.",
+    description: "Lock in core chops and a calm headspace.",
     resources: [
       {
         name: "The Musician's Way",
         author: "Gerald Klickstein",
         focus: "Practice Systems",
-        takeaway: "Design repeatable practice rituals that translate directly to confident stage time."
+        takeaway: "Design repeatable practice that shows up on stage."
       },
       {
         name: "Effortless Mastery",
         author: "Kenny Werner",
         focus: "Mindset",
-        takeaway: "Rewire performance anxiety into calm focus with proven mental exercises."
+        takeaway: "Flip nerves into steady focus with quick drills."
       },
       {
         name: "Music Theory for Guitarists",
         author: "Tom Kolb",
         focus: "Theory Essentials",
-        takeaway: "Bridge fretboard fluency with modern harmony so ideas land faster."
+        takeaway: "Link fretboard fluency with modern harmony."
       }
     ]
   },
   {
     title: "Songcraft Lab",
-    description:
-      "Level up lyricism, arrangement, and production workflows that stand out in a crowded release cycle.",
+    description: "Sharpen lyrics, arrangements, and production fast.",
     resources: [
       {
         name: "Writing Better Lyrics",
         author: "Pat Pattison",
         focus: "Lyric Craft",
-        takeaway: "Follow semester-style prompts that sharpen storytelling and emotional arcs."
+        takeaway: "Use prompts that tighten storytelling fast."
       },
       {
         name: "Tunesmith",
         author: "Jimmy Webb",
         focus: "Composition",
-        takeaway: "Peek inside Grammy-winning processes and adapt them to your band's workflow."
+        takeaway: "Adapt Grammy-tested writing habits to your workflow."
       },
       {
         name: "How to Make It in the New Music Business",
         author: "Ari Herstand",
         focus: "Indie Strategy",
-        takeaway: "Turn your releases into campaigns with actionable marketing checklists."
+        takeaway: "Turn releases into simple marketing runs."
       }
     ]
   },
   {
     title: "Career Architect",
-    description:
-      "Navigate deals, branding, and financial strategy with resources tailored for modern rock artists.",
+    description: "Handle deals, branding, and cash with modern guides.",
     resources: [
       {
         name: "All You Need to Know About the Music Business",
         author: "Donald Passman",
         focus: "Contracts",
-        takeaway: "Understand royalties, licensing, and negotiation language before meetings happen."
+        takeaway: "Know royalties and contracts before the meeting."
       },
       {
         name: "Creative Quest",
         author: "Questlove",
         focus: "Creative Leadership",
-        takeaway: "Blend artistry and entrepreneurship through stories from a legendary collaborator."
+        takeaway: "Blend artistry and business through lived stories."
       },
       {
         name: "Company of One",
         author: "Paul Jarvis",
         focus: "Sustainable Growth",
-        takeaway: "Build a resilient music business without burning out your team or fan trust."
+        takeaway: "Grow a steady music business without burnout."
       }
     ],
     action: {
-      label: "Download release checklist",
+      label: "Grab release checklist",
       href: "https://notion.so"
     }
   }
@@ -331,54 +328,54 @@ const bookJourneys = [
 const universityRoutes = [
   {
     title: "Degree Pathways",
-    description: "Immersive programs that balance ensemble work, songwriting labs, and career coaching.",
+    description: "Immersive programs mixing ensembles, labs, and coaching.",
     highlights: [
       {
         program: "BFA in Contemporary Performance",
         school: "Berklee College of Music",
         focus: "Performance Lab",
-        details: "Daily ensemble rotations with songwriting bootcamps and showcase nights."
+        details: "Rotating ensembles with songwriting bootcamps."
       },
       {
         program: "BA in Music Business",
         school: "Middle Tennessee State University",
         focus: "Industry Leadership",
-        details: "Blend legal, marketing, and analytics courses with Nashville internship placements."
+        details: "Legal, marketing, and analytics courses plus Nashville internships."
 
       },
       {
         program: "BS in Music Production",
         school: "Full Sail University",
         focus: "Studio Technology",
-        details: "Hands-on studio tracking, mixing, and mastering alongside release simulations."
+        details: "Hands-on studio work with release simulations."
       }
     ],
     action: {
-      label: "Download program guide",
+      label: "Get program guide",
       href: "https://www.berklee.edu/majors"
     }
   },
   {
     title: "Micro-Credentials",
-    description: "Short sprints that stack with your touring schedule while keeping your skills sharp.",
+    description: "Short bursts that fit around touring.",
     highlights: [
       {
         program: "Modern Music Production",
         school: "Coursera x Berklee",
         focus: "12-Week Certificate",
-        details: "Project-based DAW mastery with mentor feedback on each mix."
+        details: "Project DAW work with mentor feedback."
       },
       {
         program: "Music Marketing Accelerator",
         school: "Soundfly",
         focus: "Mentor Guided",
-        details: "Launch funnels, fan journeys, and social ads with weekly strategy reviews."
+        details: "Launch funnels and social ads with weekly reviews."
       },
       {
         program: "Live Event Production",
         school: "Point Blank Music School",
         focus: "Hybrid",
-        details: "Route tours, advance shows, and manage crews with real-world case studies."
+        details: "Plan tours and crews through real case studies."
       }
     ],
     action: {
@@ -388,29 +385,29 @@ const universityRoutes = [
   },
   {
     title: "Semester Planner",
-    description: "Use this repeatable 15-week cadence to balance study, creation, and stage time.",
+    description: "Use this 15-week loop to balance study and shows.",
     highlights: [
       {
         program: "Weeks 1-5",
         school: "Skill Ramp-Up",
         focus: "Technique + Theory",
-        details: "Stack practice labs, ear training, and songwriting prompts."
+        details: "Stack practice labs, ear training, and prompts."
       },
       {
         program: "Weeks 6-10",
         school: "Creative Production",
         focus: "Studio Sprints",
-        details: "Batch arrange, record, and collaborate on portfolio-ready tracks."
+        details: "Batch arrange, record, and collaborate on tracks."
       },
       {
         program: "Weeks 11-15",
         school: "Career Launch",
         focus: "Showcase",
-        details: "Book showcases, refresh your EPK, and meet with advisors for next steps."
+        details: "Book showcases, refresh your EPK, meet advisors."
       }
     ],
     action: {
-      label: "Grab the planner template",
+      label: "Grab planner template",
       href: "https://calendar.google.com"
     }
   }
@@ -421,7 +418,7 @@ const mentorOptions: MentorOption[] = [
     id: "mentor-stage-architect",
     name: "Nova Reyes",
     focusSkill: "performance",
-    description: "Award-winning tour director who rebuilds stage shows from the ground up with cinematic pacing.",
+    description: "Tour director who rebuilds stage shows with cinematic pacing.",
     specialty: "Stagecraft Architect",
     cost: 850,
     cooldownHours: 72,
@@ -430,13 +427,13 @@ const mentorOptions: MentorOption[] = [
     attributeKeys: ["stage_presence", "musical_ability"],
     requiredSkillValue: 240,
     skillGainRatio: 0.9,
-    bonusDescription: "Large stage-presence scaling and stamina drills tailored for amphitheater audiences."
+    bonusDescription: "Big stage-presence gains plus stamina drills for large rooms."
   },
   {
     id: "mentor-song-catalyst",
     name: "Avery Quinn",
     focusSkill: "songwriting",
-    description: "Billboard-charting writer specializing in modern pop hooks and cinematic lyric arcs.",
+    description: "Charting writer known for tight hooks and cinematic lyrics.",
     specialty: "Story Catalyst",
     cost: 620,
     cooldownHours: 48,
@@ -445,13 +442,13 @@ const mentorOptions: MentorOption[] = [
     attributeKeys: ["creative_insight", "marketing_savvy"],
     requiredSkillValue: 180,
     skillGainRatio: 0.85,
-    bonusDescription: "Improves topline agility and positioning for sync placements and playlist pitches."
+    bonusDescription: "Boosts topline speed and sync-ready positioning."
   },
   {
     id: "mentor-vocal-innovator",
     name: "Lyric Sol",
     focusSkill: "vocals",
-    description: "Session vocalist famed for hybrid belting techniques and vocal health optimization on tour.",
+    description: "Session vocalist for hybrid belting and vocal health on tour.",
     specialty: "Vocal Innovator",
     cost: 540,
     cooldownHours: 36,
@@ -460,7 +457,7 @@ const mentorOptions: MentorOption[] = [
     attributeKeys: ["vocal_talent", "physical_endurance"],
     requiredSkillValue: 160,
     skillGainRatio: 0.8,
-    bonusDescription: "Adds sustain control exercises that accelerate range stability and nightly recovery."
+    bonusDescription: "Adds sustain drills that keep range steady and recovery quick."
   }
 ];
 
@@ -468,38 +465,38 @@ const FALLBACK_BAND_SESSIONS: BandSession[] = [
   {
     id: "band-sync-lock",
     title: "Sync Lock Intensive",
-    description: "Full-band groove lab focused on rhythmic lock, stop-time precision, and cue language.",
+    description: "Band groove lab on rhythmic lock, stop-time hits, and cues.",
     focusSkills: ["drums", "bass", "performance"],
     attributeKeys: ["rhythm_sense", "musical_ability"],
     baseXp: 280,
     durationMinutes: 75,
     cooldownHours: 24,
     difficulty: "intermediate",
-    synergyNotes: "Higher bonuses for tight rhythm section attributes and collaborative listening drills."
+    synergyNotes: "Bigger bonuses for tight rhythm attributes and active listening."
   },
   {
     id: "band-dynamic-story",
     title: "Dynamic Story Rehearsal",
-    description: "Design emotional arcs, transitions, and crowd prompts that carry headline-length sets.",
+    description: "Shape emotional arcs, transitions, and crowd prompts for long sets.",
     focusSkills: ["performance", "songwriting", "vocals"],
     attributeKeys: ["stage_presence", "creative_insight"],
     baseXp: 300,
     durationMinutes: 90,
     cooldownHours: 36,
     difficulty: "advanced",
-    synergyNotes: "Synergy scales with storytelling attributes and the band’s collective stage presence."
+    synergyNotes: "Synergy climbs with storytelling stats and shared stage presence."
   },
   {
     id: "band-arrangement-lab",
     title: "Arrangement Innovation Lab",
-    description: "Rework setlist anchors with harmony swaps, drop builds, and modular intros/outros.",
+    description: "Rework setlist anchors with quick harmony swaps and new builds.",
     focusSkills: ["songwriting", "guitar", "bass"],
     attributeKeys: ["creative_insight", "technical_mastery"],
     baseXp: 260,
     durationMinutes: 60,
     cooldownHours: 18,
     difficulty: "intermediate",
-    synergyNotes: "Amplified gains when composition skills and creative insight average above 200."
+    synergyNotes: "Gains spike when composition skills and insight average above 200."
   }
 ];
 
@@ -1304,8 +1301,8 @@ const Education = () => {
         <Badge variant="secondary" className="mb-3">Learning Engine</Badge>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Education</h1>
         <p className="mx-auto mt-3 max-w-3xl text-base text-muted-foreground sm:text-lg">
-          Craft a learning roadmap that keeps your artistry, business savvy, and band cohesion in sync. Dive into
-          curated resources, structured programs, and real mentors tailored for the Rockmundo universe.
+          Build a focused learning loop for your artistry and crew. Tap quick resources, tight programs, and mentors
+          shaped for Rockmundo.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button asChild>
@@ -1315,7 +1312,7 @@ const Education = () => {
           </Button>
           <Button asChild variant="outline">
             <a href="https://notion.so" target="_blank" rel="noreferrer">
-              Download study planner
+              Get study planner
             </a>
           </Button>
         </div>
@@ -1342,7 +1339,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Curated Reading Journeys</CardTitle>
               <CardDescription>
-                Progress from foundational chops to advanced career strategy with books we keep in every Rockmundo locker.
+                Move from essentials to strategy with our go-to reading stack.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -1418,7 +1415,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>YouTube Skill Training</CardTitle>
               <CardDescription>
-                Blend formal study with real-world shows, mentorship, and portfolio milestones.
+                Pair formal study with quick wins from shows and mentors.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 lg:grid-cols-3">
@@ -1484,7 +1481,7 @@ const Education = () => {
                 })
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No trainable skills are available yet. Unlock skills in your profile to see tailored lessons.
+                  No trainable skills yet. Unlock profile skills to see tailored lessons.
                 </p>
               )}
             </CardContent>
@@ -1494,7 +1491,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>YouTube Skill Intensives</CardTitle>
               <CardDescription>
-                Unlock curated lessons per skill. Rewards scale with difficulty, repeat focus, and your attribute loadout.
+                Unlock curated lessons per skill with rewards that scale by difficulty and focus.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1510,7 +1507,7 @@ const Education = () => {
                 </Alert>
               ) : availableSkillKeys.length === 0 ? (
                 <div className="rounded-lg border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
-                  No lessons have been published yet. Check back soon for fresh training drops.
+                  No lessons yet. Check back soon.
                 </div>
               ) : (
                 availableSkillKeys.map((skillKey) => {
@@ -1616,7 +1613,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Resource Playlists</CardTitle>
               <CardDescription>
-                Supplement your focused training with curated playlists and channels you can binge between sessions.
+                Supplement focused training with quick playlists and channels.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -1634,7 +1631,7 @@ const Education = () => {
                 </div>
               ) : videoPlaylists.length === 0 ? (
                 <div className="col-span-full rounded-lg border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
-                  No playlists are available yet. Add resources from the admin panel to surface recommendations.
+                  No playlists yet. Add resources in the admin panel.
                 </div>
               ) : (
                 videoPlaylists.map((collection) => (
@@ -1676,7 +1673,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Mentor Roster</CardTitle>
               <CardDescription>
-                Book targeted coaching sessions. Fees deduct from your cash balance and scale XP with your attributes.
+                Book targeted coaching sessions that scale XP with your attributes.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -1690,7 +1687,7 @@ const Education = () => {
                 </div>
               ) : sortedMentorOptions.length === 0 ? (
                 <div className="col-span-full rounded-lg border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                  No mentors are currently available. Check back soon!
+                  No mentors yet. Check back soon!
                 </div>
               ) : (
                 sortedMentorOptions.map((mentor) => {
@@ -1768,7 +1765,7 @@ const Education = () => {
             <CardHeader>
               <CardTitle>Band Readiness</CardTitle>
               <CardDescription>
-                Band intensives reuse your roster, share cooldowns, and scale with collective attributes.
+                Band intensives reuse your roster, share cooldowns, and scale with team attributes.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1897,7 +1894,7 @@ const Education = () => {
                 })
               ) : (
                 <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
-                  No band intensives are configured yet. Check back soon or add sessions from the admin panel.
+                  No band intensives yet. Check back soon or add sessions in the admin panel.
                 </div>
               )}
             </CardContent>
