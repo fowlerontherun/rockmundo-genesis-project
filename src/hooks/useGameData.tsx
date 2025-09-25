@@ -318,6 +318,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantTableAvailableRef = useRef(true);
+  const playerSkillsTableAvailableRef = useRef(true);
   const getPostgrestErrorCode = (error: unknown): string | null => {
     if (typeof error !== "object" || error === null || !("code" in error)) {
       return null;
@@ -506,7 +507,20 @@ const useProvideGameData = (): UseGameDataReturn => {
         }
       }
 
+      const createEmptySkillsResponse = (): PostgrestSingleResponse<PlayerSkills> =>
+        ({
+          data: null,
+          error: null,
+          count: null,
+          status: 200,
+          statusText: "OK",
+        }) as PostgrestSingleResponse<PlayerSkills>;
+
       const fetchPlayerSkillsForProfile = async () => {
+        if (!playerSkillsTableAvailableRef.current) {
+          return createEmptySkillsResponse();
+        }
+
         const result = await supabase
           .from("player_skills")
           .select("*")
@@ -518,7 +532,16 @@ const useProvideGameData = (): UseGameDataReturn => {
           return result;
         }
 
-        if (isRelationNotFoundError(result.error) || isSchemaCacheMissingColumnError(result.error) || isSchemaCacheMissingTableError(result.error)) {
+        if (isSchemaCacheMissingTableError(result.error, "player_skills")) {
+          playerSkillsTableAvailableRef.current = false;
+          console.warn(
+            "Player skills table is unavailable; continuing with default skill state",
+            result.error,
+          );
+          return createEmptySkillsResponse();
+        }
+
+        if (isRelationNotFoundError(result.error) || isSchemaCacheMissingColumnError(result.error)) {
           console.warn(
             "Falling back to legacy player_skills scope due to schema mismatch",
             result.error,
@@ -533,15 +556,21 @@ const useProvideGameData = (): UseGameDataReturn => {
             .maybeSingle();
 
           if (legacyResult.error) {
-            if (isRelationNotFoundError(legacyResult.error) || isSchemaCacheMissingTableError(legacyResult.error)) {
-              console.warn("Player skills table is unavailable; continuing with default skill state", legacyResult.error);
-              return {
-                data: null,
-                error: null,
-                count: null,
-                status: 200,
-                statusText: "OK",
-              } as PostgrestSingleResponse<PlayerSkills>;
+            if (isRelationNotFoundError(legacyResult.error)) {
+              console.warn(
+                "Legacy player_skills scope unavailable; continuing with default skill state",
+                legacyResult.error,
+              );
+              return createEmptySkillsResponse();
+            }
+
+            if (isSchemaCacheMissingTableError(legacyResult.error, "player_skills")) {
+              playerSkillsTableAvailableRef.current = false;
+              console.warn(
+                "Player skills table is unavailable; continuing with default skill state",
+                legacyResult.error,
+              );
+              return createEmptySkillsResponse();
             }
 
             return legacyResult;
