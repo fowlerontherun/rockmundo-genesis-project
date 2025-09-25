@@ -505,7 +505,7 @@ const bandSessions: BandSession[] = [
 
 const Education = () => {
   const { toast } = useToast();
-  const { profile, skills, attributes, refetch, addActivity, updateProfile } = useGameData();
+  const { profile, skills, attributes, refetch, addActivity, updateProfile, updateSkills } = useGameData();
 
   const {
     data: lessonRows,
@@ -884,17 +884,7 @@ const Education = () => {
   const applySkillGains = async (skillDeltas: Record<string, number>) => {
     if (!profile) return;
 
-    const payload: Record<string, unknown> = {
-      user_id: profile.user_id,
-      profile_id: profile.id,
-      updated_at: new Date().toISOString()
-    };
-
-    if (typeof skills?.id === "string") {
-      payload.id = skills.id;
-    }
-
-    const nextValues: Record<string, number> = {};
+    const updates: Record<string, number> = {};
 
     for (const [skillKey, delta] of Object.entries(skillDeltas)) {
       const numericDelta = Number(delta ?? 0);
@@ -902,23 +892,18 @@ const Education = () => {
         continue;
       }
 
-      const currentValue = nextValues[skillKey] ?? resolveSkillValue(skillKey);
+      const currentValue = updates[skillKey] ?? resolveSkillValue(skillKey);
       const nextValue = Math.min(1000, Math.round(currentValue + numericDelta));
-      nextValues[skillKey] = nextValue;
-      payload[skillKey] = nextValue;
+      if (nextValue !== currentValue) {
+        updates[skillKey] = nextValue;
+      }
     }
 
-    if (Object.keys(nextValues).length === 0) {
+    if (Object.keys(updates).length === 0) {
       return;
     }
 
-    const { error } = await supabase
-      .from("player_skills")
-      .upsert(payload, { onConflict: "profile_id" });
-
-    if (error) {
-      throw error;
-    }
+    await updateSkills(updates);
   };
 
   const fetchBandContext = useCallback(async () => {

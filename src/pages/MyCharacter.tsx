@@ -81,12 +81,29 @@ const ATTRIBUTE_COLUMN_KEY_MAP: Record<string, string> = {
   rhythm_sense: "rhythm_sense",
 };
 
-const formatSkillLabel = (slug: string) =>
-  slug
+const DEFAULT_SKILL_LABEL = "Skill";
+
+const formatSkillLabel = (rawSlug: unknown) => {
+  if (typeof rawSlug !== "string") {
+    return DEFAULT_SKILL_LABEL;
+  }
+
+  const trimmedSlug = rawSlug.trim();
+  if (trimmedSlug.length === 0) {
+    return DEFAULT_SKILL_LABEL;
+  }
+
+  const segments = trimmedSlug
     .split(/[_-]/)
-    .filter(segment => segment.length > 0)
-    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+
+  if (segments.length === 0) {
+    return trimmedSlug.charAt(0).toUpperCase() + trimmedSlug.slice(1);
+  }
+
+  return segments.map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1)).join(" ");
+};
 
 const MyCharacter = () => {
   const {
@@ -110,11 +127,33 @@ const MyCharacter = () => {
   const [skillXpAmount, setSkillXpAmount] = useState<number>(DEFAULT_SKILL_SPEND);
   const [skillSpendPending, setSkillSpendPending] = useState(false);
 
+  const trackedSkillProgress = useMemo(
+    () =>
+      Array.isArray(skillProgress)
+        ? skillProgress.filter(
+            (entry) => typeof entry?.skill_slug === "string" && entry.skill_slug.trim().length > 0,
+          )
+        : [],
+    [skillProgress],
+  );
+
   useEffect(() => {
-    if (!selectedSkill && Array.isArray(skillProgress) && skillProgress.length > 0) {
-      setSelectedSkill(skillProgress[0].skill_slug);
+    if (trackedSkillProgress.length === 0) {
+      if (selectedSkill) {
+        setSelectedSkill("");
+      }
+      return;
     }
-  }, [skillProgress, selectedSkill]);
+
+    if (!selectedSkill) {
+      setSelectedSkill(trackedSkillProgress[0].skill_slug);
+      return;
+    }
+
+    if (!trackedSkillProgress.some((entry) => entry.skill_slug === selectedSkill)) {
+      setSelectedSkill(trackedSkillProgress[0].skill_slug);
+    }
+  }, [trackedSkillProgress, selectedSkill]);
 
   const xpBalance = useMemo(() => Math.max(0, Number(xpWallet?.xp_balance ?? 0)), [xpWallet]);
   const lifetimeXp = useMemo(
@@ -136,8 +175,6 @@ const MyCharacter = () => {
     }
     return parsed.toLocaleString();
   }, [dailyXpGrant]);
-  const trackedSkillProgress = Array.isArray(skillProgress) ? skillProgress : [];
-
   const handleAttributeInputChange = (attributeKey: string, rawValue: string) => {
     const parsed = Number(rawValue);
     const normalized = Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
