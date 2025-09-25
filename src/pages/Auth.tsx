@@ -267,6 +267,31 @@ const Auth = () => {
         return;
       }
 
+      const normalizedUsername = username.toLowerCase();
+      const escapedUsernamePattern = normalizedUsername.replace(/_/g, "\\\\_");
+
+      const { data: existingProfiles, error: usernameLookupError } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("username", escapedUsernamePattern)
+        .limit(1);
+
+      if (usernameLookupError) {
+        console.error("Failed to verify username availability", {
+          error: usernameLookupError,
+          context: { username },
+        });
+        setError("We couldn't confirm that username is available. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (existingProfiles && existingProfiles.length > 0) {
+        setError("That username is already taken. Try another rockstar alias.");
+        setLoading(false);
+        return;
+      }
+
       const redirectUrl = `${origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
