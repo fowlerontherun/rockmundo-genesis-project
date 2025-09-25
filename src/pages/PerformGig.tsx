@@ -59,7 +59,7 @@ export default function PerformGig() {
   const { gigId } = useParams<{ gigId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, skills, attributes } = useGameData();
+  const { profile, skills, attributes, addActivity } = useGameData();
   const { toast } = useToast();
 
   const [gig, setGig] = useState<GigWithVenue | null>(null);
@@ -215,21 +215,17 @@ export default function PerformGig() {
         .eq('id', profile.id);
 
       // Add activity to feed
-      await supabase
-        .from('activity_feed')
-        .insert({
-          user_id: user.id,
-          profile_id: profile.id,
-          activity_type: 'gig_performance',
-          message: `Performed at ${gig.venues?.name ?? 'a venue'} and earned $${calculatedEarnings.toLocaleString()}`,
-          earnings: calculatedEarnings,
-          metadata: {
-            venue_name: gig.venues?.name ?? 'Unknown Venue',
-            performance_score: Math.round(finalScore),
-            show_type: currentShowType,
-            fan_gain: calculatedFanGain
-          }
-        });
+      await addActivity(
+        'gig_performance',
+        `Performed at ${gig.venues?.name ?? 'a venue'} and earned $${calculatedEarnings.toLocaleString()}`,
+        calculatedEarnings,
+        {
+          venue_name: gig.venues?.name ?? 'Unknown Venue',
+          performance_score: Math.round(finalScore),
+          show_type: currentShowType,
+          fan_gain: calculatedFanGain
+        }
+      );
 
       setShowResults(true);
 
