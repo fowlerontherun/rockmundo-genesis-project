@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Lock, User, AlertCircle, Guitar, Star } from "lucide-react";
+import { Mail, Lock, AlertCircle, Guitar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
@@ -43,9 +43,7 @@ const Auth = () => {
   
   const [signupData, setSignupData] = useState({
     email: "",
-    password: "",
-    username: "",
-    displayName: ""
+    password: ""
   });
 
   const getBrowserOrigin = () => {
@@ -233,23 +231,7 @@ const Auth = () => {
 
     try {
       const email = signupData.email.trim();
-      const username = signupData.username.trim();
-      const displayName = signupData.displayName.trim();
-      const password = signupData.password;
-
-      const usernamePattern = /^[a-zA-Z0-9_]+$/;
-
-      if (!usernamePattern.test(username)) {
-        setError("Usernames can only include letters, numbers, and underscores.");
-        setLoading(false);
-        return;
-      }
-
-      if (displayName.length < 2) {
-        setError("Choose a stage name with at least two characters.");
-        setLoading(false);
-        return;
-      }
+      const password = signupData.password.trim();
 
       const passwordAssessment = assessPasswordStrength(password);
 
@@ -267,77 +249,6 @@ const Auth = () => {
         return;
       }
 
-      const normalizedUsername = username.toLowerCase();
-      const escapedUsernamePattern = normalizedUsername.replace(/_/g, "\\\\_");
-
-      const {
-        data: existingProfiles,
-        error: usernameLookupError,
-      } = await supabase
-        .from("public_profiles")
-        .select("username")
-        .ilike("username", escapedUsernamePattern)
-        .limit(1);
-
-      let existingUsernameMatches = existingProfiles ?? null;
-
-      if (usernameLookupError) {
-        const isViewUnavailable = usernameLookupError.code === "PGRST205";
-        const isPermissionDenied =
-          usernameLookupError.code === "42501" ||
-          usernameLookupError.code === "PGRST301" ||
-          usernameLookupError.code === "PGRST302" ||
-          usernameLookupError.code === "PGRST303" ||
-          usernameLookupError.message?.toLowerCase().includes("permission denied") ||
-          usernameLookupError.message?.toLowerCase().includes("not authorized") ||
-          usernameLookupError.message?.toLowerCase().includes("not authorised");
-
-        if (isViewUnavailable) {
-          console.warn("public_profiles view is unavailable, falling back to profiles table", {
-            error: usernameLookupError,
-          });
-
-          const {
-            data: fallbackProfiles,
-            error: fallbackError,
-          } = await supabase
-            .from("profiles")
-            .select("username")
-            .ilike("username", escapedUsernamePattern)
-            .limit(1);
-
-          if (fallbackError) {
-            console.warn("Fallback username check failed; continuing without pre-check", {
-              error: fallbackError,
-              context: { username },
-            });
-            existingUsernameMatches = null;
-          } else {
-            existingUsernameMatches = fallbackProfiles ?? null;
-          }
-        } else if (isPermissionDenied) {
-          console.warn("Username availability check is not authorized; continuing without pre-check", {
-            error: usernameLookupError,
-            context: { username },
-          });
-          existingUsernameMatches = null;
-        } else {
-          console.error("Failed to verify username availability", {
-            error: usernameLookupError,
-            context: { username },
-          });
-          setError("We couldn't confirm that username is available. Please try again.");
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (existingUsernameMatches && existingUsernameMatches.length > 0) {
-        setError("That username is already taken. Try another rockstar alias.");
-        setLoading(false);
-        return;
-      }
-
       const redirectUrl = `${origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
@@ -345,23 +256,15 @@ const Auth = () => {
         password,
         options: {
           emailRedirectTo: redirectUrl,
-          data: {
-            username: normalizedUsername,
-            display_name: displayName
-          }
         }
       });
 
       if (error) {
         console.error("Supabase signUp failed", {
           error,
-          context: { email, username, displayName }
+          context: { email }
         });
-        if (error.message === "Database error saving new user") {
-          setError("We couldn't create your account. That username might already be taken—try another stage name.");
-        } else {
-          setError(error.message);
-        }
+        setError("We couldn't create your account. Please try again.");
       } else if (data.user) {
         setUnverifiedEmail(email);
         setStatus({
@@ -736,41 +639,6 @@ const Auth = () => {
                             value={signupData.email}
                             onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
                             required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-username" className="font-oswald text-sm">Username</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="signup-username"
-                            type="text"
-                            placeholder="rockstar123"
-                            className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
-                            value={signupData.username}
-                            onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
-                            required
-                            minLength={3}
-                            maxLength={20}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-displayname" className="font-oswald text-sm">Stage Name</Label>
-                        <div className="relative">
-                          <Star className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="signup-displayname"
-                            type="text"
-                            placeholder="Rock Legend"
-                            className="pl-10 h-11 bg-input/80 border-border/50 focus:border-primary"
-                            value={signupData.displayName}
-                            onChange={(e) => setSignupData({ ...signupData, displayName: e.target.value })}
-                            required
-                            maxLength={50}
                           />
                         </div>
                       </div>
