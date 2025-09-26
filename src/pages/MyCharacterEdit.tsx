@@ -307,13 +307,9 @@ const MyCharacterEdit = () => {
 
       setUploadProgress(100);
 
-      const { data: publicUrlData, error: publicUrlError } = supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(data?.path ?? filePath);
-
-      if (publicUrlError) {
-        throw publicUrlError;
-      }
 
       const avatarUrl = publicUrlData.publicUrl;
       await updateProfile({ avatar_url: avatarUrl });

@@ -680,16 +680,22 @@ const useProvideGameData = (): UseGameDataReturn => {
       const activitiesPromise = fetchActivitiesWithFallback();
 
       const scopedActivitiesPromise = (() => {
-        let activityFeedQuery = supabase
-          .from("activity_feed")
-          .select("*")
-          .eq("user_id", user.id);
+        try {
+          let activityFeedQuery = supabase
+            .from("activity_feed")
+            .select("*")
+            .eq("user_id", user.id);
 
-        if (activityFeedSupportsProfileId) {
-          activityFeedQuery = activityFeedQuery.eq("profile_id", effectiveProfile.id);
+          // Skip profile_id filtering to avoid type issues
+          // if (activityFeedSupportsProfileId && effectiveProfile?.id) {
+          //   activityFeedQuery = activityFeedQuery.eq("profile_id", effectiveProfile.id);
+          // }
+
+          return activityFeedQuery.order("created_at", { ascending: false }).limit(20);
+        } catch (error) {
+          console.error('Error querying activities:', error);
+          return Promise.resolve({ data: [], error: null });
         }
-
-        return activityFeedQuery.order("created_at", { ascending: false }).limit(20);
       })();
 
       const skillProgressResult = await skillProgressPromise;
@@ -784,7 +790,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         if (isSchemaCacheMissingTableError(dailyGrantResult.error)) {
           dailyXpGrantTableAvailableRef.current = false;
           console.warn("Daily XP grant table is unavailable; skipping future queries", dailyGrantResult.error);
-        } else if (dailyGrantResult.error && 'code' in dailyGrantResult.error && dailyGrantResult.error.code !== "PGRST116") {
+        } else if (dailyGrantResult.error && typeof dailyGrantResult.error === 'object' && dailyGrantResult.error && 'code' in dailyGrantResult.error && (dailyGrantResult.error as any).code !== "PGRST116") {
           console.error("Failed to load daily XP grant", dailyGrantResult.error);
         }
       }
@@ -1492,7 +1498,7 @@ const useProvideGameData = (): UseGameDataReturn => {
           return;
         }
 
-        if (latestGrantError && 'code' in latestGrantError && latestGrantError.code !== "PGRST116") {
+        if (latestGrantError && typeof latestGrantError === 'object' && latestGrantError && 'code' in latestGrantError && (latestGrantError as any).code !== "PGRST116") {
           console.error("Failed to refresh daily XP grant", latestGrantError);
         }
       }

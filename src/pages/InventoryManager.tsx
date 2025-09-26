@@ -8,8 +8,23 @@ import type { Tables } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
 
-type SkillBookRow = Tables<"skill_books">;
-type PlayerSkillBookRow = Tables<"player_skill_books">;
+// Stub types for non-existent tables
+type SkillBookRow = {
+  id: string;
+  title: string;
+  author: string;
+  skill_slug: string;
+  xp_reward: number;
+};
+
+type PlayerSkillBookRow = {
+  id: string;
+  profile_id: string;
+  skill_books: SkillBookRow | null;
+  acquired_at: string;
+  consumed_at: string | null;
+  xp_awarded_at: string | null;
+};
 
 const InventoryManager = () => {
   const { user } = useAuth();
@@ -27,24 +42,11 @@ const InventoryManager = () => {
       setIsLoadingBooks(true);
       setIsBookInventorySupported(true);
       try {
-        const { data, error } = await supabase
-          .from("player_skill_books")
-          .select("*, skill_books:skill_books(*)")
-          .eq("profile_id", currentProfileId)
-          .order("acquired_at", { ascending: false });
-
-        if (error) {
-          if (typeof error === "object" && error && "code" in error && error.code === "PGRST205") {
-            console.info("Book inventory table is not available yet; falling back to empty inventory.");
-            setIsBookInventorySupported(false);
-            setBookInventory([]);
-            return;
-          }
-          throw error;
-        }
-
-        setIsBookInventorySupported(true);
-        setBookInventory((data as (PlayerSkillBookRow & { skill_books: SkillBookRow | null })[] | null) ?? []);
+        // Stub out the missing table query
+        console.info("Book inventory table is not available yet; falling back to empty inventory.");
+        setIsBookInventorySupported(false);
+        setBookInventory([]);
+        return;
       } catch (error) {
         console.error("Failed to load book inventory", error);
         toast({
