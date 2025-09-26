@@ -52,8 +52,9 @@ Tracks each reservation window for a band.
 | `band_id` | FK to the booking band |
 | `start_date` / `end_date` | Inclusive booking window |
 | `mood` | Enum: `professional`, `party`, `chilled` |
-| `producer_id` | Nullable FK to the assigned producer |
-| `status` | Booking lifecycle state |
+| `producer_id` | Nullable FK to the assigned producer profile |
+| `status` | Enum: `pending`, `confirmed`, `in_progress`, `completed`, `cancelled` |
+| `total_cost` | Aggregated upfront booking and musician fees |
 
 ### `studio_booking_slots`
 Represents the two daily slots for every booking.
@@ -62,9 +63,10 @@ Represents the two daily slots for every booking.
 | --- | --- |
 | `id` | Primary key |
 | `booking_id` | FK to `studio_bookings` |
-| `date` | Specific day inside the booking window |
+| `slot_date` | Specific day inside the booking window |
 | `slot` | Enum: `morning`, `evening` |
 | `is_booked` | Boolean lock flag |
+| _Unique_ | `(booking_id, slot_date, slot)` |
 
 ### `studio_booking_artists`
 Associates characters to a booking.
@@ -73,8 +75,10 @@ Associates characters to a booking.
 | --- | --- |
 | `id` | Primary key |
 | `booking_id` | FK to `studio_bookings` |
-| `character_id` | FK to the participating character |
+| `character_id` | FK to the participating character profile |
 | `role` | Enum: `band_member`, `session_musician`, `producer` |
+| `daily_cost` | Snapshot of per-day compensation |
+| _Unique_ | `(booking_id, character_id, role)` |
 
 ### `studio_booking_songs`
 Stores progress snapshots per song worked during the booking.
@@ -84,8 +88,28 @@ Stores progress snapshots per song worked during the booking.
 | `id` | Primary key |
 | `booking_id` | FK to `studio_bookings` |
 | `song_id` | FK to the tracked song |
-| `progress_start` | Progress % entering the session |
-| `progress_end` | Progress % after the session |
+| `progress_start` | Progress % (0–100) entering the session |
+| `progress_end` | Progress % (0–100) after the session |
+| `momentum` | Rolling streak bonus applied during calculations |
+| _Unique_ | `(booking_id, song_id)` |
+
+### Status & Mood Reference
+
+- **Booking Status**
+  - `pending` → awaiting payment confirmation.
+  - `confirmed` → locked on the calendar and ready for sessions.
+  - `in_progress` → currently running.
+  - `completed` → all scheduled slots processed.
+  - `cancelled` → released slots and refunded as applicable.
+- **Moods** remain the same as outlined above; stored via the `studio_session_mood` enum.
+
+### Access Control
+
+Row Level Security (RLS) ensures:
+
+- Studios are publicly readable but only service/admin roles may manage them.
+- Bookings, slots, artists, and song progress are visible to the booking band's leader, members, invited participants, and privileged roles.
+- Only band leaders (or privileged roles) can mutate booking-related tables, keeping scheduling conflicts in check.
 
 ## 4. Session Mechanics
 At the end of each booked slot, compute recording progress.
