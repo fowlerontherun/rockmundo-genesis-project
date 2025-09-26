@@ -723,25 +723,49 @@ export interface Database {
       songs: {
         Row: {
           id: string;
+          user_id: string;
           title: string;
-          artist_id: string;
           genre: string;
+          lyrics: string | null;
+          audio_layers: Json[] | null;
+          quality_score: number;
+          status: string;
+          streams: number;
+          revenue: number;
+          chart_position: number | null;
+          release_date: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          title: string;
-          artist_id: string;
+          user_id: string;
+          title?: string;
           genre: string;
+          lyrics?: string | null;
+          audio_layers?: Json[] | null;
+          quality_score?: number;
+          status?: string;
+          streams?: number;
+          revenue?: number;
+          chart_position?: number | null;
+          release_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
+          user_id?: string;
           title?: string;
-          artist_id?: string;
           genre?: string;
+          lyrics?: string | null;
+          audio_layers?: Json[] | null;
+          quality_score?: number;
+          status?: string;
+          streams?: number;
+          revenue?: number;
+          chart_position?: number | null;
+          release_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
