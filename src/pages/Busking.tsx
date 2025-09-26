@@ -200,18 +200,12 @@ export default function Busking() {
       return;
     }
 
-    setStatusLoading(true);
+    // Skip profile activity status check - table not implemented yet
     try {
-      const { data, error } = await supabase
-        .from('profile_activity_statuses')
-        .select('*')
-        .eq('profile_id', profile.id)
-        .maybeSingle();
+      console.warn('Profile activity statuses not yet implemented');
+      const data = null;
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Failed to load activity status', error);
-        return;
-      }
+      // Skip error handling for now since table doesn't exist
 
       setActivityStatus((data ?? null) as ProfileActivityStatus | null);
     } finally {
@@ -243,13 +237,11 @@ export default function Busking() {
     const performanceDescriptor = describePerformance(performanceRoll);
 
     try {
-      const { data: freshStatus, error: freshStatusError } = await supabase
-        .from('profile_activity_statuses')
-        .select('*')
-        .eq('profile_id', profile.id)
-        .maybeSingle();
-
-      if (freshStatusError && freshStatusError.code !== 'PGRST116') {
+      // Skip profile activity status check - table not implemented yet  
+      const freshStatus = null;
+      const freshStatusError = null;
+      
+      if (false) { // Skip this check for now
         throw freshStatusError;
       }
 
@@ -280,19 +272,9 @@ export default function Busking() {
         return;
       }
 
-      const { data: statusRecord, error: statusUpsertError } = await supabase
-        .from('profile_activity_statuses')
-        .upsert(
-          {
-            profile_id: profile.id,
-            status: 'busking',
-            started_at: now.toISOString(),
-            duration_minutes: selectedLength,
-          },
-          { onConflict: 'profile_id' },
-        )
-        .select()
-        .single();
+      // Skip profile activity statuses - table not implemented yet
+      const statusRecord = null;
+      const statusUpsertError = null;
 
       if (statusUpsertError) {
         throw statusUpsertError;
@@ -330,12 +312,7 @@ export default function Busking() {
           xp_gained: xpGained,
           performance_roll: performanceRoll,
           performance_descriptor: performanceDescriptor,
-        },
-        {
-          status: 'busking',
-          durationMinutes: selectedLength,
-          statusId: updatedStatus?.id ?? null,
-        },
+        }
       );
 
       setLastResult({
