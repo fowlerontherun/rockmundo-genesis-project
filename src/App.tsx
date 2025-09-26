@@ -9,6 +9,7 @@ import { GameDataProvider } from "./hooks/useGameData";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import WorldPulsePage from "./pages/WorldPulse";
+import MusicStudio from "./pages/MusicStudio";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
@@ -17,7 +18,6 @@ const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const BandManager = lazyWithRetry(() => import("./pages/BandManager"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
-const MusicStudio = lazyWithRetry(() => import("./pages/MusicStudio"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
