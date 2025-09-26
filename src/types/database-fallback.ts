@@ -150,6 +150,56 @@ export interface Database {
           updated_at?: string;
         };
       };
+      jam_sessions: {
+        Row: {
+          id: string;
+          host_id: string;
+          name: string;
+          description?: string | null;
+          genre: string;
+          tempo: number;
+          max_participants: number;
+          current_participants: number;
+          participant_ids: string[];
+          skill_requirement: number;
+          is_private: boolean;
+          access_code?: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          host_id: string;
+          name: string;
+          description?: string | null;
+          genre: string;
+          tempo?: number;
+          max_participants?: number;
+          current_participants?: number;
+          participant_ids?: string[];
+          skill_requirement?: number;
+          is_private?: boolean;
+          access_code?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          host_id?: string;
+          name?: string;
+          description?: string | null;
+          genre?: string;
+          tempo?: number;
+          max_participants?: number;
+          current_participants?: number;
+          participant_ids?: string[];
+          skill_requirement?: number;
+          is_private?: boolean;
+          access_code?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       player_skills: {
         Row: {
           id: string;

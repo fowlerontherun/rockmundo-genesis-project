@@ -57,6 +57,7 @@ const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
+const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const Health = lazyWithRetry(() => import("./pages/Health"));
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
@@ -89,6 +90,7 @@ function App() {
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="band" element={<BandManager />} />
                     <Route path="gigs" element={<GigBooking />} />
+                    <Route path="jams" element={<JamSessions />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Busking />} />
                     <Route path="my-character" element={<MyCharacter />} />
