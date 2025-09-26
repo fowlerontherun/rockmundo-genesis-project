@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData } from "@/hooks/useGameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,9 +11,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Music, Plus, Edit, Trash2, Play, CheckCircle2, Clock } from "lucide-react";
+import {
+  Music,
+  Plus,
+  Edit,
+  Trash2,
+  Play,
+  CheckCircle2,
+  Clock,
+  ListMusic,
+  BarChart3,
+  NotebookPen,
+  Trophy,
+  Filter,
+  History,
+} from "lucide-react";
 import logger from "@/lib/logger";
+import { formatDistanceToNowStrict } from "date-fns";
 
 type SongwritingStatus = "draft" | "writing" | "ready_to_finish" | "completed";
 
@@ -21,6 +40,7 @@ interface SongwritingSession {
   started_at: string;
   locked_until: string;
   completed_at: string | null;
+  notes: string | null;
 }
 
 interface SongwritingProject {
@@ -34,6 +54,17 @@ interface SongwritingProject {
   created_at: string;
   updated_at: string;
   songwriting_sessions?: SongwritingSession[];
+}
+
+interface Song {
+  id: string;
+  title: string;
+  genre: string;
+  status: string;
+  quality_score: number;
+  streams: number;
+  revenue: number;
+  release_date: string | null;
 }
 
 type StatusConfig = {
@@ -58,10 +89,19 @@ const STATUS_THRESHOLDS: Record<Exclude<SongwritingStatus, "draft">, number> = {
 
 const Songwriting = () => {
   const { user } = useAuth();
+  const { activityStatus, startActivity, clearActivityStatus, refreshActivityStatus } = useGameData();
   const [projects, setProjects] = useState<SongwritingProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<SongwritingProject | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyProject, setHistoryProject] = useState<SongwritingProject | null>(null);
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [completionProject, setCompletionProject] = useState<SongwritingProject | null>(null);
+  const [completionNotes, setCompletionNotes] = useState("");
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [statusFilter, setStatusFilter] = useState<SongwritingStatus | "all">("all");
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     lyrics: "",
@@ -82,7 +122,7 @@ const Songwriting = () => {
       const { data, error } = await supabase
         .from("songwriting_projects")
         .select(
-          "id, title, lyrics, status, sessions_completed, locked_until, song_id, created_at, updated_at, songwriting_sessions(id, started_at, locked_until, completed_at)"
+          "id, title, lyrics, status, sessions_completed, locked_until, song_id, created_at, updated_at, songwriting_sessions(id, started_at, locked_until, completed_at, notes)"
         )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
@@ -105,6 +145,38 @@ const Songwriting = () => {
     }
   }, [user?.id]);
 
+  const fetchSongs = useCallback(async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    logger.info("Fetching songs for songwriting linking", {
+      userId: user.id,
+    });
+
+    try {
+      const { data, error } = await supabase
+        .from("songs")
+        .select("id, title, genre, status, quality_score, streams, revenue, release_date")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+      setSongs(data || []);
+
+      logger.info("Fetched songs for songwriting", {
+        userId: user.id,
+        songCount: data?.length ?? 0,
+      });
+    } catch (error) {
+      logger.error("Error fetching songs for songwriting", {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      toast.error("Failed to load songs for linking");
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user?.id) {
       return;
@@ -113,6 +185,52 @@ const Songwriting = () => {
     setLoading(true);
     fetchProjects();
   }, [fetchProjects, user?.id]);
+
+  useEffect(() => {
+    void refreshActivityStatus();
+  }, [refreshActivityStatus]);
+
+  const globalActivityLock = useMemo(() => {
+    if (!activityStatus || activityStatus.status === "idle") {
+      return { locked: false, endsAt: null as Date | null, label: null as string | null };
+    }
+
+    const label = activityStatus.status.replace(/_/g, " ");
+
+    if (typeof activityStatus.duration_minutes !== "number") {
+      return { locked: true, endsAt: null as Date | null, label };
+    }
+
+    const explicitEndsAt = activityStatus.ends_at ? new Date(activityStatus.ends_at) : null;
+    if (explicitEndsAt && !Number.isNaN(explicitEndsAt.getTime())) {
+      return { locked: explicitEndsAt.getTime() > Date.now(), endsAt: explicitEndsAt, label };
+    }
+
+    if (!activityStatus.started_at) {
+      return { locked: false, endsAt: null as Date | null, label };
+    }
+
+    const startedAt = new Date(activityStatus.started_at);
+    if (Number.isNaN(startedAt.getTime())) {
+      return { locked: false, endsAt: null as Date | null, label };
+    }
+
+    const computedEnds = new Date(startedAt.getTime() + activityStatus.duration_minutes * 60_000);
+    return { locked: computedEnds.getTime() > Date.now(), endsAt: computedEnds, label };
+  }, [activityStatus]);
+
+  const globalActivityCountdown = useMemo(() => {
+    if (!globalActivityLock.locked || !globalActivityLock.endsAt) {
+      return null;
+    }
+
+    try {
+      return formatDistanceToNowStrict(globalActivityLock.endsAt, { addSuffix: true });
+    } catch (error) {
+      console.error("Failed to compute activity lock countdown", error);
+      return null;
+    }
+  }, [globalActivityLock]);
 
   const determineNextStatus = (current: SongwritingStatus, completedSessions: number) => {
     if (current === "completed") {
@@ -197,6 +315,7 @@ const Songwriting = () => {
       setSelectedProject(null);
       setFormData({ title: "", lyrics: "", status: "draft", song_id: "" });
       fetchProjects();
+      fetchSongs();
     } catch (error) {
       logger.error("Error saving songwriting project", {
         userId: user.id,
@@ -266,6 +385,28 @@ const Songwriting = () => {
       return;
     }
 
+    if (globalActivityLock.locked) {
+      const statusLabel = globalActivityLock.label ?? "another activity";
+      const countdown = globalActivityCountdown
+        ? `You'll be free ${globalActivityCountdown}.`
+        : "Finish your current activity before starting a new sprint.";
+      toast.info(`You're currently busy with ${statusLabel}. ${countdown}`);
+      return;
+    }
+
+    let statusRegistered = false;
+
+    try {
+      await startActivity("songwriting_session", {
+        durationMinutes: SESSION_DURATION_MINUTES,
+        songId: project.song_id || null,
+      });
+      statusRegistered = true;
+    } catch (statusError) {
+      console.error("Error starting songwriting status:", statusError);
+      toast.info("Session started, but we couldn't update your availability status.");
+    }
+
     try {
       const lockedUntil = new Date(Date.now() + SESSION_DURATION_MINUTES * 60 * 1000).toISOString();
 
@@ -289,13 +430,26 @@ const Songwriting = () => {
 
       toast.success("Songwriting session started! Stay focused.");
       fetchProjects();
+      if (statusRegistered) {
+        void refreshActivityStatus();
+      }
     } catch (error) {
       console.error("Error starting songwriting session:", error);
       toast.error("Failed to start session");
+
+      if (statusRegistered) {
+        try {
+          await clearActivityStatus();
+        } catch (clearError) {
+          console.error("Failed to revert activity status after session error", clearError);
+        } finally {
+          void refreshActivityStatus();
+        }
+      }
     }
   };
 
-  const handleCompleteSession = async (project: SongwritingProject) => {
+  const handleCompleteSession = async (project: SongwritingProject, notes?: string) => {
     if (!user) return;
 
     const activeSession = project.songwriting_sessions?.find((session) => !session.completed_at);
@@ -311,7 +465,7 @@ const Songwriting = () => {
 
       const { error: sessionError } = await supabase
         .from("songwriting_sessions")
-        .update({ completed_at: completedAt })
+        .update({ completed_at: completedAt, notes: notes?.trim() ? notes.trim() : null })
         .eq("id", activeSession.id)
         .eq("user_id", user.id);
 
@@ -331,6 +485,15 @@ const Songwriting = () => {
 
       toast.success("Great job! Session completed.");
       fetchProjects();
+      if (activityStatus?.status === "songwriting_session") {
+        try {
+          await clearActivityStatus();
+        } catch (statusError) {
+          console.error("Failed to clear songwriting activity status", statusError);
+        } finally {
+          void refreshActivityStatus();
+        }
+      }
     } catch (error) {
       console.error("Error completing songwriting session:", error);
       toast.error("Failed to complete session");
@@ -362,6 +525,86 @@ const Songwriting = () => {
     };
   };
 
+  const totalProjects = projects.length;
+  const totalSessions = projects.reduce((sum, project) => sum + project.sessions_completed, 0);
+  const activeSprints = projects.filter((project) =>
+    project.songwriting_sessions?.some((session) => !session.completed_at)
+  ).length;
+  const completedProjects = projects.filter((project) => project.status === "completed").length;
+  const completionRate = totalProjects ? Math.round((completedProjects / totalProjects) * 100) : 0;
+  const totalFocusMinutes = totalSessions * SESSION_DURATION_MINUTES;
+
+  const filteredProjects = useMemo(() => {
+    const byStatus =
+      statusFilter === "all"
+        ? projects
+        : projects.filter((project) => project.status === statusFilter);
+
+    if (!showActiveOnly) {
+      return byStatus;
+    }
+
+    return byStatus.filter((project) =>
+      project.songwriting_sessions?.some((session) => !session.completed_at)
+    );
+  }, [projects, showActiveOnly, statusFilter]);
+
+  const formatCurrency = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
+
+  const formatNumber = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
+
+  const handleOpenCompletionDialog = (project: SongwritingProject) => {
+    setCompletionProject(project);
+    setCompletionNotes("");
+    setCompletionDialogOpen(true);
+  };
+
+  const handleOpenHistoryDialog = (project: SongwritingProject) => {
+    setHistoryProject(project);
+    setIsHistoryOpen(true);
+  };
+
+  const handleCompleteSessionWithNotes = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!completionProject) {
+      return;
+    }
+
+    await handleCompleteSession(completionProject, completionNotes);
+    setCompletionDialogOpen(false);
+    setCompletionProject(null);
+    setCompletionNotes("");
+  };
+
+  const handleCompletionDialogChange = (open: boolean) => {
+    setCompletionDialogOpen(open);
+    if (!open) {
+      setCompletionProject(null);
+      setCompletionNotes("");
+    }
+  };
+
+  const handleHistoryDialogChange = (open: boolean) => {
+    setIsHistoryOpen(open);
+    if (!open) {
+      setHistoryProject(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -383,11 +626,11 @@ const Songwriting = () => {
           <p className="text-muted-foreground mt-2">
             Build focused songwriting projects and track your creative momentum
           </p>
-        </div>
+      </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
               onClick={() => {
                 setSelectedProject(null);
                 setFormData({ title: "", lyrics: "", status: "draft", song_id: "" });
@@ -421,13 +664,31 @@ const Songwriting = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="song_id">Linked Song ID (optional)</Label>
-                  <Input
-                    id="song_id"
-                    value={formData.song_id}
-                    onChange={(e) => setFormData({ ...formData, song_id: e.target.value })}
-                    placeholder="Attach an existing song"
-                  />
+                  <Label htmlFor="song_id">Link to an existing song</Label>
+                  <Select
+                    value={formData.song_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, song_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger id="song_id">
+                      <SelectValue placeholder="Select a song (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No linked song</SelectItem>
+                      {songs.length === 0 ? (
+                        <SelectItem value="placeholder" disabled>
+                          No songs available yet
+                        </SelectItem>
+                      ) : (
+                        songs.map((song) => (
+                          <SelectItem key={song.id} value={song.id}>
+                            {song.title} · {song.genre}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -459,6 +720,9 @@ const Songwriting = () => {
                   placeholder="Write your lyrics here..."
                   className="min-h-32"
                 />
+                <div className="text-xs text-muted-foreground text-right">
+                  {formData.lyrics.trim() ? `${formData.lyrics.trim().split(/\s+/).length} words` : "0 words"}
+                </div>
               </div>
 
               <div className="flex justify-end gap-2">
@@ -473,6 +737,15 @@ const Songwriting = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {globalActivityLock.locked && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          You're currently busy with {globalActivityLock.label ?? "another activity"}.{" "}
+          {globalActivityCountdown
+            ? `You'll be free ${globalActivityCountdown}.`
+            : "Wrap up your current activity to start a new sprint."}
+        </div>
+      )}
 
       {projects.length === 0 ? (
         <Card>
@@ -490,12 +763,14 @@ const Songwriting = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => {
+          {filteredProjects.map((project) => {
             const activeSession = project.songwriting_sessions?.find((session) => !session.completed_at) || null;
             const { locked, message } = getLockMessage(project.locked_until);
             const progressTarget = STATUS_THRESHOLDS.completed;
             const progressValue = Math.min((project.sessions_completed / progressTarget) * 100, 100);
             const sessionsRemaining = Math.max(progressTarget - project.sessions_completed, 0);
+            const linkedSong = project.song_id ? songMap[project.song_id] : undefined;
+            const lyricsWordCount = project.lyrics?.trim() ? project.lyrics.trim().split(/\s+/).length : 0;
 
             return (
               <Card key={project.id} className="hover:shadow-md transition-shadow">
@@ -504,7 +779,15 @@ const Songwriting = () => {
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{project.title}</CardTitle>
                       <CardDescription>
-                        {project.song_id ? `Linked song: ${project.song_id}` : "No linked song"}
+                        {linkedSong ? (
+                          <span className="flex items-center gap-2">
+                            Linked song: <span className="font-medium">{linkedSong.title}</span>
+                          </span>
+                        ) : project.song_id ? (
+                          `Linked song: ${project.song_id}`
+                        ) : (
+                          "No linked song"
+                        )}
                       </CardDescription>
                     </div>
                     <Badge variant={getStatusBadgeVariant(project.status)}>
@@ -527,6 +810,37 @@ const Songwriting = () => {
                     </p>
                   </div>
 
+                  {linkedSong && (
+                    <div className="rounded-lg border p-3 text-xs space-y-2 bg-muted/40">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{linkedSong.genre}</span>
+                        <Badge variant="outline">{linkedSong.status}</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-muted-foreground">Quality</p>
+                          <p className="font-semibold">{linkedSong.quality_score}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Streams</p>
+                          <p className="font-semibold">{formatNumber.format(linkedSong.streams)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Revenue</p>
+                          <p className="font-semibold">{formatCurrency.format(linkedSong.revenue)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Release</p>
+                          <p className="font-semibold">
+                            {linkedSong.release_date
+                              ? new Date(linkedSong.release_date).toLocaleDateString()
+                              : "TBD"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className={locked ? "text-muted-foreground" : "text-emerald-600"}>{message}</span>
@@ -541,13 +855,20 @@ const Songwriting = () => {
                     </div>
                   )}
 
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Lyrics snapshot · {lyricsWordCount} words</span>
+                    <span>Created {new Date(project.created_at).toLocaleDateString()}</span>
+                  </div>
+
+                  <Separator className="my-2" />
+
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-2">
                       <Button
                         size="sm"
                         className="flex-1"
                         onClick={() => handleStartSession(project)}
-                        disabled={locked || !!activeSession}
+                        disabled={locked || !!activeSession || globalActivityLock.locked}
                       >
                         <Play className="h-3 w-3 mr-1" />
                         Start Sprint
@@ -556,7 +877,7 @@ const Songwriting = () => {
                         size="sm"
                         variant="outline"
                         className="flex-1"
-                        onClick={() => handleCompleteSession(project)}
+                        onClick={() => handleOpenCompletionDialog(project)}
                         disabled={!activeSession}
                       >
                         <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -569,6 +890,12 @@ const Songwriting = () => {
                         Active sprint started {new Date(activeSession.started_at).toLocaleTimeString()}.
                       </div>
                     )}
+                    {globalActivityLock.locked && (
+                      <div className="text-xs text-muted-foreground text-center">
+                        Global focus busy
+                        {globalActivityCountdown ? ` until ${globalActivityCountdown}` : ' with another activity.'}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-between items-center pt-2">
@@ -578,6 +905,15 @@ const Songwriting = () => {
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleDelete(project.id)}>
                         <Trash2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenHistoryDialog(project)}
+                        disabled={!project.songwriting_sessions?.length}
+                      >
+                        <History className="h-3 w-3 mr-1" />
+                        History
                       </Button>
                     </div>
 
@@ -591,6 +927,94 @@ const Songwriting = () => {
           })}
         </div>
       )}
+
+      <Dialog open={completionDialogOpen} onOpenChange={handleCompletionDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log your sprint notes</DialogTitle>
+            <DialogDescription>
+              Capture the breakthroughs from this focus session before marking it complete.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleCompleteSessionWithNotes}>
+            <div className="space-y-2">
+              <Label htmlFor="completion-notes">What did you accomplish?</Label>
+              <Textarea
+                id="completion-notes"
+                value={completionNotes}
+                onChange={(event) => setCompletionNotes(event.target.value)}
+                placeholder="Captured a new chorus hook, refined verse lyrics..."
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {completionNotes.trim() ? `${completionNotes.trim().split(/\s+/).length} words` : "0 words"}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setCompletionDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!completionProject}>
+                Complete Sprint
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHistoryOpen} onOpenChange={handleHistoryDialogChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {historyProject ? `Sprint history · ${historyProject.title}` : "Sprint history"}
+            </DialogTitle>
+            <DialogDescription>
+              Review every focus sprint, including timestamps and notes captured along the way.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-72 pr-4">
+            <div className="space-y-4">
+              {historyProject?.songwriting_sessions && historyProject.songwriting_sessions.length > 0 ? (
+                [...historyProject.songwriting_sessions]
+                  .sort(
+                    (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+                  )
+                  .map((session) => (
+                    <div key={session.id} className="rounded-md border p-3 text-sm space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">
+                            {new Date(session.started_at).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Locked until {new Date(session.locked_until).toLocaleTimeString()}
+                          </p>
+                        </div>
+                        <Badge variant={session.completed_at ? "default" : "secondary"}>
+                          {session.completed_at ? "Completed" : "In progress"}
+                        </Badge>
+                      </div>
+                      {session.completed_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Completed {new Date(session.completed_at).toLocaleString()}
+                        </p>
+                      )}
+                      {session.notes && (
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <p className="text-xs uppercase text-muted-foreground mb-1">Session notes</p>
+                          <p>{session.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No sprint history recorded yet. Complete a sprint to see it here.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
