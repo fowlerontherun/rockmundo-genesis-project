@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Music, Plus, Edit, Trash2, Play, CheckCircle2, Clock } from "lucide-react";
+import logger from "@/lib/logger";
 
 type SongwritingStatus = "draft" | "writing" | "ready_to_finish" | "completed";
 
@@ -73,6 +74,10 @@ const Songwriting = () => {
       return;
     }
 
+    logger.info("Fetching songwriting projects", {
+      userId: user.id
+    });
+
     try {
       const { data, error } = await supabase
         .from("songwriting_projects")
@@ -84,8 +89,16 @@ const Songwriting = () => {
 
       if (error) throw error;
       setProjects(data || []);
+
+      logger.info("Fetched songwriting projects successfully", {
+        userId: user.id,
+        projectCount: data?.length ?? 0
+      });
     } catch (error) {
-      console.error("Error fetching songwriting projects:", error);
+      logger.error("Error fetching songwriting projects", {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error)
+      });
       toast.error("Failed to load songwriting projects");
     } finally {
       setLoading(false);
@@ -125,6 +138,21 @@ const Songwriting = () => {
     e.preventDefault();
     if (!user) return;
 
+    const action = selectedProject ? "update" : "create";
+    const payload = {
+      title: formData.title,
+      status: formData.status,
+      song_id: formData.song_id || null,
+      lyricsLength: formData.lyrics.length
+    };
+
+    logger.info("Submitting songwriting project", {
+      userId: user.id,
+      action,
+      projectId: selectedProject?.id,
+      payload
+    });
+
     try {
       if (selectedProject) {
         const { error } = await supabase
@@ -141,6 +169,11 @@ const Songwriting = () => {
 
         if (error) throw error;
         toast.success("Project updated successfully!");
+        logger.info("Songwriting project updated", {
+          userId: user.id,
+          projectId: selectedProject.id,
+          payload
+        });
       } else {
         const { error } = await supabase
           .from("songwriting_projects")
@@ -154,6 +187,10 @@ const Songwriting = () => {
 
         if (error) throw error;
         toast.success("Project created successfully!");
+        logger.info("Songwriting project created", {
+          userId: user.id,
+          payload
+        });
       }
 
       setIsDialogOpen(false);
@@ -161,7 +198,13 @@ const Songwriting = () => {
       setFormData({ title: "", lyrics: "", status: "draft", song_id: "" });
       fetchProjects();
     } catch (error) {
-      console.error("Error saving songwriting project:", error);
+      logger.error("Error saving songwriting project", {
+        userId: user.id,
+        action,
+        projectId: selectedProject?.id,
+        payload,
+        error: error instanceof Error ? error.message : String(error)
+      });
       toast.error("Failed to save project");
     }
   };
@@ -180,6 +223,11 @@ const Songwriting = () => {
   const handleDelete = async (projectId: string) => {
     if (!confirm("Are you sure you want to delete this songwriting project?")) return;
 
+    logger.info("Deleting songwriting project", {
+      userId: user?.id,
+      projectId
+    });
+
     try {
       const { error } = await supabase
         .from("songwriting_projects")
@@ -189,9 +237,17 @@ const Songwriting = () => {
 
       if (error) throw error;
       toast.success("Project deleted successfully!");
+      logger.info("Songwriting project deleted", {
+        userId: user?.id,
+        projectId
+      });
       fetchProjects();
     } catch (error) {
-      console.error("Error deleting project:", error);
+      logger.error("Error deleting songwriting project", {
+        userId: user?.id,
+        projectId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       toast.error("Failed to delete project");
     }
   };
