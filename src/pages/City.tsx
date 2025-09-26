@@ -214,7 +214,9 @@ export const CityContent = ({
               </div>
               <div>
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">Local Bonus</div>
-                <div className="font-semibold text-green-600">{city.local_bonus}x</div>
+                <div className="font-semibold text-green-600">
+                  {Number.isFinite(city.local_bonus) ? `${city.local_bonus}%` : "—"}
+                </div>
               </div>
             </div>
           </div>
