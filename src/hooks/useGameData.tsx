@@ -469,6 +469,22 @@ const useProvideGameData = (): UseGameDataReturn => {
     return haystack.includes("profile_id");
   };
 
+  const isMissingTableResponse = (
+    status: number | null | undefined,
+    error: unknown,
+    tableName: string,
+  ): boolean => {
+    if (status === 404) {
+      return true;
+    }
+
+    if (!error) {
+      return false;
+    }
+
+    return isRelationNotFoundError(error) || isSchemaCacheMissingTableError(error, tableName);
+  };
+
 
   const sanitizeActivityFeedRows = useCallback(
     (
@@ -842,31 +858,41 @@ const useProvideGameData = (): UseGameDataReturn => {
         }
       }
 
-      if (activityStatusResult.error) {
-        if (
-          isRelationNotFoundError(activityStatusResult.error) ||
-          isSchemaCacheMissingTableError(activityStatusResult.error, "profile_activity_statuses")
-        ) {
-          activityStatusTableAvailableRef.current = false;
+      const activityStatusUnavailable = isMissingTableResponse(
+        activityStatusResult.status,
+        activityStatusResult.error,
+        "profile_activity_statuses",
+      );
 
-          console.warn(
-            "Profile activity status table is unavailable; skipping future queries",
-            activityStatusResult.error,
-          );
-          setActivityStatus(null);
+      if (activityStatusUnavailable) {
+        activityStatusTableAvailableRef.current = false;
 
-        } else if (
-          activityStatusResult.error &&
+        const debugInfo =
+          activityStatusResult.error ?? {
+            status: activityStatusResult.status,
+            statusText: activityStatusResult.statusText,
+          };
+
+        console.warn(
+          "Profile activity status table is unavailable; skipping future queries",
+          debugInfo,
+        );
+        setActivityStatus(null);
+      } else if (activityStatusResult.error) {
+        const errorCode =
           typeof activityStatusResult.error === "object" &&
           activityStatusResult.error &&
-          "code" in activityStatusResult.error &&
-          (activityStatusResult.error as { code?: string }).code !== "PGRST116"
-        ) {
+          "code" in activityStatusResult.error
+            ? (activityStatusResult.error as { code?: string }).code
+            : undefined;
+
+        if (errorCode === "PGRST116") {
+          setActivityStatus(null);
+        } else {
           console.error("Failed to load activity status", activityStatusResult.error);
         }
       } else {
         setActivityStatus((activityStatusResult.data ?? null) as ProfileActivityStatusRow | null);
-
       }
 
       let nextActivities: ActivityFeedRow[] = [];
@@ -1574,20 +1600,21 @@ const useProvideGameData = (): UseGameDataReturn => {
       return null;
     }
 
-    const { data, error } = await supabase
+    const { data, error, status, statusText } = await supabase
       .from("profile_activity_statuses")
       .select("*")
       .eq("profile_id", profileId)
       .maybeSingle();
 
-    if (error) {
-      if (isRelationNotFoundError(error) || isSchemaCacheMissingTableError(error, "profile_activity_statuses")) {
-        activityStatusTableAvailableRef.current = false;
-        console.warn("Profile activity status table is unavailable; skipping future queries", error);
-        setActivityStatus(null);
-        return null;
-      }
+    if (isMissingTableResponse(status, error, "profile_activity_statuses")) {
+      activityStatusTableAvailableRef.current = false;
+      const debugInfo = error ?? { status, statusText };
+      console.warn("Profile activity status table is unavailable; skipping future queries", debugInfo);
+      setActivityStatus(null);
+      return null;
+    }
 
+    if (error) {
       if (typeof error === "object" && error && "code" in error && (error as { code?: string }).code === "PGRST116") {
         setActivityStatus(null);
         return null;
@@ -1660,16 +1687,21 @@ const useProvideGameData = (): UseGameDataReturn => {
           .maybeSingle();
       }
 
+      if (isMissingTableResponse(result.status, result.error, "profile_activity_statuses")) {
+        activityStatusTableAvailableRef.current = false;
+
+        const debugInfo = result.error ?? {
+          status: result.status,
+          statusText: result.statusText,
+        };
+
+        console.warn("Profile activity status table is unavailable; skipping future queries", debugInfo);
+
+        setActivityStatus(null);
+        return null;
+      }
+
       if (result.error) {
-        if (isRelationNotFoundError(result.error) || isSchemaCacheMissingTableError(result.error, "profile_activity_statuses")) {
-          activityStatusTableAvailableRef.current = false;
-          console.warn("Profile activity status table is unavailable; skipping future queries", result.error);
-
-          setActivityStatus(null);
-          return null;
-        }
-
-
         console.error("Failed to start activity", result.error);
         throw result.error;
       }
