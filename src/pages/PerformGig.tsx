@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Music, DollarSign, Users, Star, Play, TrendingUp, Calendar, MapPin } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
+import { formatDistanceToNowStrict } from 'date-fns';
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -59,7 +60,16 @@ export default function PerformGig() {
   const { gigId } = useParams<{ gigId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, skills, attributes, addActivity } = useGameData();
+  const {
+    profile,
+    skills,
+    attributes,
+    addActivity,
+    activityStatus,
+    startActivity,
+    clearActivityStatus,
+    refreshActivityStatus,
+  } = useGameData();
   const { toast } = useToast();
 
   const [gig, setGig] = useState<GigWithVenue | null>(null);
@@ -76,6 +86,9 @@ export default function PerformGig() {
   const [earnings, setEarnings] = useState(0);
   const [fanGain, setFanGain] = useState(0);
   const [experienceGain, setExperienceGain] = useState(0);
+  const activityStatusStartedRef = useRef(false);
+  const activityStatusIdRef = useRef<string | null>(null);
+  const activityDurationRef = useRef<number | null>(null);
 
   const loadGig = useCallback(async () => {
     if (!gigId || !user) return;
@@ -123,9 +136,104 @@ export default function PerformGig() {
     void loadGig();
   }, [loadGig]);
 
+  useEffect(() => {
+    void refreshActivityStatus();
+  }, [refreshActivityStatus]);
+
+  const computedActivityEndsAt = useMemo(() => {
+    if (!activityStatus || activityStatus.status === 'idle') {
+      return null;
+    }
+
+    if (typeof activityStatus.duration_minutes !== 'number') {
+      return null;
+    }
+
+    const endsAt = activityStatus.ends_at ? new Date(activityStatus.ends_at) : null;
+    if (endsAt && !Number.isNaN(endsAt.getTime())) {
+      return endsAt;
+    }
+
+    if (!activityStatus.started_at) {
+      return null;
+    }
+
+    const startedAt = new Date(activityStatus.started_at);
+    if (Number.isNaN(startedAt.getTime())) {
+      return null;
+    }
+
+    return new Date(startedAt.getTime() + activityStatus.duration_minutes * 60_000);
+  }, [activityStatus]);
+
+  const isActivityLocked = useMemo(() => {
+    if (!activityStatus || activityStatus.status === 'idle') {
+      return false;
+    }
+
+    if (typeof activityStatus.duration_minutes !== 'number') {
+      return true;
+    }
+
+    if (!computedActivityEndsAt) {
+      return false;
+    }
+
+    return computedActivityEndsAt.getTime() > Date.now();
+  }, [activityStatus, computedActivityEndsAt]);
+
+  const activityLockCountdown = useMemo(() => {
+    if (!isActivityLocked || !computedActivityEndsAt) {
+      return null;
+    }
+
+    try {
+      return formatDistanceToNowStrict(computedActivityEndsAt, { addSuffix: true });
+    } catch (error) {
+      console.error('Failed to format activity lock countdown', error);
+      return null;
+    }
+  }, [computedActivityEndsAt, isActivityLocked]);
+
   const startPerformance = async () => {
     if (!stageSequence.length) return;
-    
+
+    if (isActivityLocked) {
+      const statusLabel = activityStatus?.status
+        ? activityStatus.status.replace(/_/g, ' ')
+        : 'another activity';
+      const countdownLabel = activityLockCountdown
+        ? `You'll be free ${activityLockCountdown}.`
+        : 'Finish your current activity before starting a new one.';
+
+      toast({
+        title: 'Already busy',
+        description: `You're currently busy with ${statusLabel}. ${countdownLabel}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const totalDurationMinutes = stageSequence.reduce((total, stage) => {
+      const duration = typeof stage.duration === 'number' ? stage.duration : 0;
+      return total + (Number.isFinite(duration) ? duration : 0);
+    }, 0);
+
+    try {
+      const statusRecord = await startActivity('gig_performance', {
+        durationMinutes: totalDurationMinutes,
+      });
+      activityStatusStartedRef.current = true;
+      activityStatusIdRef.current = statusRecord?.id ?? null;
+      activityDurationRef.current = totalDurationMinutes;
+    } catch (error) {
+      console.error('Failed to register gig activity status', error);
+      toast({
+        title: 'Unable to track activity',
+        description: 'Your performance will proceed, but status tracking may be out of sync.',
+      });
+    }
+
     setIsPerforming(true);
     setPerformanceStage(0);
     
@@ -215,6 +323,9 @@ export default function PerformGig() {
         .eq('id', profile.id);
 
       // Add activity to feed
+      const durationForFeed = activityDurationRef.current;
+      const statusIdForFeed = activityStatusIdRef.current;
+
       await addActivity(
         'gig_performance',
         `Performed at ${gig.venues?.name ?? 'a venue'} and earned $${calculatedEarnings.toLocaleString()}`,
@@ -224,6 +335,11 @@ export default function PerformGig() {
           performance_score: Math.round(finalScore),
           show_type: currentShowType,
           fan_gain: calculatedFanGain
+        },
+        {
+          status: 'gig_performance',
+          durationMinutes: typeof durationForFeed === 'number' ? durationForFeed : null,
+          statusId: statusIdForFeed ?? null
         }
       );
 
@@ -241,6 +357,19 @@ export default function PerformGig() {
         description: "Failed to save performance results",
         variant: "destructive"
       });
+    } finally {
+      if (activityStatusStartedRef.current) {
+        try {
+          await clearActivityStatus();
+          await refreshActivityStatus();
+        } catch (statusError) {
+          console.error('Failed to clear gig activity status', statusError);
+        } finally {
+          activityStatusStartedRef.current = false;
+          activityStatusIdRef.current = null;
+          activityDurationRef.current = null;
+        }
+      }
     }
   };
 
@@ -504,10 +633,15 @@ export default function PerformGig() {
       </Card>
 
       <div className="flex justify-center">
-        <Button onClick={startPerformance} size="lg" disabled={isPerforming}>
+        <Button onClick={startPerformance} size="lg" disabled={isPerforming || isActivityLocked}>
           <Play className="h-4 w-4 mr-2" />
           Start Performance
         </Button>
+        {isActivityLocked && activityLockCountdown && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Busy until {activityLockCountdown}
+          </p>
+        )}
       </div>
     </div>
   );
