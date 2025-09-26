@@ -1253,8 +1253,111 @@ export type Database = {
         }
         Relationships: []
       }
+      songwriting_projects: {
+        Row: {
+          created_at: string
+          id: string
+          locked_until: string | null
+          lyrics: string | null
+          sessions_completed: number
+          song_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locked_until?: string | null
+          lyrics?: string | null
+          sessions_completed?: number
+          song_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locked_until?: string | null
+          lyrics?: string | null
+          sessions_completed?: number
+          song_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songwriting_projects_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_projects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      songwriting_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          locked_until: string
+          notes: string | null
+          project_id: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          locked_until: string
+          notes?: string | null
+          project_id: string
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          locked_until?: string
+          notes?: string | null
+          project_id?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songwriting_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "songwriting_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       songs: {
         Row: {
+          audio_layers: Json[] | null
           chart_position: number | null
           created_at: string
           genre: string
@@ -1270,6 +1373,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_layers?: Json[] | null
           chart_position?: number | null
           created_at?: string
           genre: string
@@ -1285,6 +1389,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_layers?: Json[] | null
           chart_position?: number | null
           created_at?: string
           genre?: string

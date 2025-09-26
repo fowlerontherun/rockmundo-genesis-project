@@ -1,5 +1,6 @@
-// Working database types to override the problematic generated types
+import type { Json } from "@/integrations/supabase/types";
 
+// Working database types to override the problematic generated types
 export type RequirementValue = number | string | boolean | null;
 
 export type RequirementRecord = Record<string, RequirementValue>;
@@ -90,6 +91,7 @@ export interface Song {
   title: string;
   genre: string;
   lyrics: string | null;
+  audio_layers: Json[] | null;
   status: string;
   quality_score: number;
   streams: number;
