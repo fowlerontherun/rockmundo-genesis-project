@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useGameData } from '@/hooks/useGameData';
-import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
 
@@ -147,12 +146,19 @@ const formatSessionWindow = (startIso: string, endIso: string): string => {
 };
 
 export default function Busking() {
-  const { profile, updateProfile, addActivity, awardActionXp } = useGameData();
+  const {
+    profile,
+    updateProfile,
+    addActivity,
+    awardActionXp,
+    activityStatus,
+    refreshActivityStatus,
+    startActivity,
+  } = useGameData();
   const { toast } = useToast();
 
   const [selectedLocationId, setSelectedLocationId] = React.useState(buskingLocations[0]?.id ?? '');
   const [selectedLength, setSelectedLength] = React.useState<SessionLength>(SESSION_LENGTHS[0]);
-  const [activityStatus, setActivityStatus] = React.useState<ProfileActivityStatus | null>(null);
   const [statusLoading, setStatusLoading] = React.useState(false);
   const [isStartingSession, setIsStartingSession] = React.useState(false);
   const [lastResult, setLastResult] = React.useState<BuskingResult | null>(null);
@@ -195,23 +201,15 @@ export default function Busking() {
   }, [isBusy, statusEndsAt]);
 
   const loadActivityStatus = React.useCallback(async () => {
-    if (!profile?.id) {
-      setActivityStatus(null);
-      return;
-    }
-
-    // Skip profile activity status check - table not implemented yet
+    setStatusLoading(true);
     try {
-      console.warn('Profile activity statuses not yet implemented');
-      const data = null;
-
-      // Skip error handling for now since table doesn't exist
-
-      setActivityStatus((data ?? null) as ProfileActivityStatus | null);
+      await refreshActivityStatus();
+    } catch (error) {
+      console.error('Failed to load activity status', error);
     } finally {
       setStatusLoading(false);
     }
-  }, [profile?.id]);
+  }, [refreshActivityStatus]);
 
   React.useEffect(() => {
     void loadActivityStatus();
@@ -237,15 +235,7 @@ export default function Busking() {
     const performanceDescriptor = describePerformance(performanceRoll);
 
     try {
-      // Skip profile activity status check - table not implemented yet  
-      const freshStatus = null;
-      const freshStatusError = null;
-      
-      if (false) { // Skip this check for now
-        throw freshStatusError;
-      }
-
-      const normalizedStatus = (freshStatus ?? null) as ProfileActivityStatus | null;
+      const normalizedStatus = await refreshActivityStatus();
       const normalizedEndsAt = getStatusEndDate(normalizedStatus);
       const normalizedBusy = normalizedStatus
         ? normalizedStatus.duration_minutes === null || normalizedStatus.duration_minutes === undefined
@@ -254,7 +244,6 @@ export default function Busking() {
         : false;
 
       if (normalizedBusy) {
-        setActivityStatus(normalizedStatus);
         let availabilityLabel = 'after you wrap up your current activity';
         if (normalizedEndsAt) {
           try {
@@ -272,16 +261,17 @@ export default function Busking() {
         return;
       }
 
-      // Skip profile activity statuses - table not implemented yet
-      const statusRecord = null;
-      const statusUpsertError = null;
+      const metadata = {
+        location_id: activeLocation.id,
+        location_name: activeLocation.name,
+        duration_minutes: selectedLength,
+      };
 
-      if (statusUpsertError) {
-        throw statusUpsertError;
-      }
-
-      const updatedStatus = (statusRecord ?? null) as ProfileActivityStatus | null;
-      setActivityStatus(updatedStatus);
+      const updatedStatus = await startActivity({
+        status: 'busking_session',
+        durationMinutes: selectedLength,
+        metadata,
+      });
 
       if (xpGained > 0) {
         await awardActionXp({
@@ -312,6 +302,11 @@ export default function Busking() {
           xp_gained: xpGained,
           performance_roll: performanceRoll,
           performance_descriptor: performanceDescriptor,
+        },
+        {
+          status: updatedStatus?.status ?? 'busking_session',
+          durationMinutes: updatedStatus?.duration_minutes ?? selectedLength,
+          statusId: updatedStatus?.id ?? null,
         }
       );
 
@@ -355,6 +350,8 @@ export default function Busking() {
     updateProfile,
     addActivity,
     loadActivityStatus,
+    refreshActivityStatus,
+    startActivity,
   ]);
 
   const buttonDisabled = !profile || isStartingSession || statusLoading || isBusy;
