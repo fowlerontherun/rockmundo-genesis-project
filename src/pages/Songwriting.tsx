@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Music, Plus, Edit, Trash2, Play, CheckCircle2, Clock } from "lucide-react";
+import {
+  Music,
+  Plus,
+  Edit,
+  Trash2,
+  Play,
+  CheckCircle2,
+  Clock,
+  ListMusic,
+  BarChart3,
+  NotebookPen,
+  Trophy,
+  Filter,
+  History,
+} from "lucide-react";
 import logger from "@/lib/logger";
 
 type SongwritingStatus = "draft" | "writing" | "ready_to_finish" | "completed";
@@ -21,6 +38,7 @@ interface SongwritingSession {
   started_at: string;
   locked_until: string;
   completed_at: string | null;
+  notes: string | null;
 }
 
 interface SongwritingProject {
@@ -34,6 +52,17 @@ interface SongwritingProject {
   created_at: string;
   updated_at: string;
   songwriting_sessions?: SongwritingSession[];
+}
+
+interface Song {
+  id: string;
+  title: string;
+  genre: string;
+  status: string;
+  quality_score: number;
+  streams: number;
+  revenue: number;
+  release_date: string | null;
 }
 
 type StatusConfig = {
@@ -62,6 +91,14 @@ const Songwriting = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<SongwritingProject | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyProject, setHistoryProject] = useState<SongwritingProject | null>(null);
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [completionProject, setCompletionProject] = useState<SongwritingProject | null>(null);
+  const [completionNotes, setCompletionNotes] = useState("");
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [statusFilter, setStatusFilter] = useState<SongwritingStatus | "all">("all");
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     lyrics: "",
@@ -82,7 +119,7 @@ const Songwriting = () => {
       const { data, error } = await supabase
         .from("songwriting_projects")
         .select(
-          "id, title, lyrics, status, sessions_completed, locked_until, song_id, created_at, updated_at, songwriting_sessions(id, started_at, locked_until, completed_at)"
+          "id, title, lyrics, status, sessions_completed, locked_until, song_id, created_at, updated_at, songwriting_sessions(id, started_at, locked_until, completed_at, notes)"
         )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
@@ -105,6 +142,38 @@ const Songwriting = () => {
     }
   }, [user?.id]);
 
+  const fetchSongs = useCallback(async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    logger.info("Fetching songs for songwriting linking", {
+      userId: user.id,
+    });
+
+    try {
+      const { data, error } = await supabase
+        .from("songs")
+        .select("id, title, genre, status, quality_score, streams, revenue, release_date")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+      setSongs(data || []);
+
+      logger.info("Fetched songs for songwriting", {
+        userId: user.id,
+        songCount: data?.length ?? 0,
+      });
+    } catch (error) {
+      logger.error("Error fetching songs for songwriting", {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      toast.error("Failed to load songs for linking");
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user?.id) {
       return;
@@ -113,6 +182,37 @@ const Songwriting = () => {
     setLoading(true);
     fetchProjects();
   }, [fetchProjects, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    fetchSongs();
+  }, [fetchSongs, user?.id]);
+
+  const songMap = useMemo(() => {
+    return songs.reduce((acc, song) => {
+      acc[song.id] = song;
+      return acc;
+    }, {} as Record<string, Song>);
+  }, [songs]);
+
+  useEffect(() => {
+    if (completionProject) {
+      const updatedProject = projects.find((project) => project.id === completionProject.id) || null;
+      if (updatedProject !== completionProject) {
+        setCompletionProject(updatedProject);
+      }
+    }
+
+    if (historyProject) {
+      const updatedHistoryProject = projects.find((project) => project.id === historyProject.id) || null;
+      if (updatedHistoryProject !== historyProject) {
+        setHistoryProject(updatedHistoryProject);
+      }
+    }
+  }, [completionProject, historyProject, projects]);
 
   const determineNextStatus = (current: SongwritingStatus, completedSessions: number) => {
     if (current === "completed") {
@@ -197,6 +297,7 @@ const Songwriting = () => {
       setSelectedProject(null);
       setFormData({ title: "", lyrics: "", status: "draft", song_id: "" });
       fetchProjects();
+      fetchSongs();
     } catch (error) {
       logger.error("Error saving songwriting project", {
         userId: user.id,
@@ -295,7 +396,7 @@ const Songwriting = () => {
     }
   };
 
-  const handleCompleteSession = async (project: SongwritingProject) => {
+  const handleCompleteSession = async (project: SongwritingProject, notes?: string) => {
     if (!user) return;
 
     const activeSession = project.songwriting_sessions?.find((session) => !session.completed_at);
@@ -311,7 +412,7 @@ const Songwriting = () => {
 
       const { error: sessionError } = await supabase
         .from("songwriting_sessions")
-        .update({ completed_at: completedAt })
+        .update({ completed_at: completedAt, notes: notes?.trim() ? notes.trim() : null })
         .eq("id", activeSession.id)
         .eq("user_id", user.id);
 
@@ -360,6 +461,86 @@ const Songwriting = () => {
       locked: true,
       message: `Locked for ${diffMinutes} more minute${diffMinutes === 1 ? "" : "s"}.`
     };
+  };
+
+  const totalProjects = projects.length;
+  const totalSessions = projects.reduce((sum, project) => sum + project.sessions_completed, 0);
+  const activeSprints = projects.filter((project) =>
+    project.songwriting_sessions?.some((session) => !session.completed_at)
+  ).length;
+  const completedProjects = projects.filter((project) => project.status === "completed").length;
+  const completionRate = totalProjects ? Math.round((completedProjects / totalProjects) * 100) : 0;
+  const totalFocusMinutes = totalSessions * SESSION_DURATION_MINUTES;
+
+  const filteredProjects = useMemo(() => {
+    const byStatus =
+      statusFilter === "all"
+        ? projects
+        : projects.filter((project) => project.status === statusFilter);
+
+    if (!showActiveOnly) {
+      return byStatus;
+    }
+
+    return byStatus.filter((project) =>
+      project.songwriting_sessions?.some((session) => !session.completed_at)
+    );
+  }, [projects, showActiveOnly, statusFilter]);
+
+  const formatCurrency = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
+
+  const formatNumber = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
+
+  const handleOpenCompletionDialog = (project: SongwritingProject) => {
+    setCompletionProject(project);
+    setCompletionNotes("");
+    setCompletionDialogOpen(true);
+  };
+
+  const handleOpenHistoryDialog = (project: SongwritingProject) => {
+    setHistoryProject(project);
+    setIsHistoryOpen(true);
+  };
+
+  const handleCompleteSessionWithNotes = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!completionProject) {
+      return;
+    }
+
+    await handleCompleteSession(completionProject, completionNotes);
+    setCompletionDialogOpen(false);
+    setCompletionProject(null);
+    setCompletionNotes("");
+  };
+
+  const handleCompletionDialogChange = (open: boolean) => {
+    setCompletionDialogOpen(open);
+    if (!open) {
+      setCompletionProject(null);
+      setCompletionNotes("");
+    }
+  };
+
+  const handleHistoryDialogChange = (open: boolean) => {
+    setIsHistoryOpen(open);
+    if (!open) {
+      setHistoryProject(null);
+    }
   };
 
   if (loading) {
@@ -421,13 +602,31 @@ const Songwriting = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="song_id">Linked Song ID (optional)</Label>
-                  <Input
-                    id="song_id"
-                    value={formData.song_id}
-                    onChange={(e) => setFormData({ ...formData, song_id: e.target.value })}
-                    placeholder="Attach an existing song"
-                  />
+                  <Label htmlFor="song_id">Link to an existing song</Label>
+                  <Select
+                    value={formData.song_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, song_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger id="song_id">
+                      <SelectValue placeholder="Select a song (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No linked song</SelectItem>
+                      {songs.length === 0 ? (
+                        <SelectItem value="placeholder" disabled>
+                          No songs available yet
+                        </SelectItem>
+                      ) : (
+                        songs.map((song) => (
+                          <SelectItem key={song.id} value={song.id}>
+                            {song.title} · {song.genre}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -459,6 +658,9 @@ const Songwriting = () => {
                   placeholder="Write your lyrics here..."
                   className="min-h-32"
                 />
+                <div className="text-xs text-muted-foreground text-right">
+                  {formData.lyrics.trim() ? `${formData.lyrics.trim().split(/\s+/).length} words` : "0 words"}
+                </div>
               </div>
 
               <div className="flex justify-end gap-2">
@@ -474,7 +676,97 @@ const Songwriting = () => {
         </Dialog>
       </div>
 
-      {projects.length === 0 ? (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <ListMusic className="h-4 w-4" /> Total Projects
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{totalProjects}</div>
+            <p className="text-xs text-muted-foreground mt-1">{activeSprints} active focus sprint{activeSprints === 1 ? "" : "s"}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <NotebookPen className="h-4 w-4" /> Focus Sprints Logged
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{totalSessions}</div>
+            <p className="text-xs text-muted-foreground mt-1">{totalFocusMinutes} minutes of deep work</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" /> Completion Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{completionRate}%</div>
+            <p className="text-xs text-muted-foreground mt-1">{completedProjects} projects mastered</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Trophy className="h-4 w-4" /> Momentum
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{projects.filter((p) => p.status !== "draft").length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Projects beyond the draft stage</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center justify-between">
+            <span className="text-base font-semibold flex items-center gap-2">
+              <Filter className="h-4 w-4" /> Organize Your Sessions
+            </span>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="active-only"
+                  checked={showActiveOnly}
+                  onCheckedChange={(value) => setShowActiveOnly(Boolean(value))}
+                />
+                <Label htmlFor="active-only" className="text-xs font-normal cursor-pointer">
+                  Show active sprints only
+                </Label>
+              </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={statusFilter === "all" ? "default" : "outline"}
+              onClick={() => setStatusFilter("all")}
+            >
+              All Projects
+            </Button>
+            {STATUSES.map((status) => (
+              <Button
+                key={status.value}
+                size="sm"
+                variant={statusFilter === status.value ? "default" : "outline"}
+                onClick={() => setStatusFilter(status.value)}
+              >
+                {status.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Music className="h-12 w-12 text-muted-foreground mb-4" />
@@ -490,12 +782,14 @@ const Songwriting = () => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => {
+          {filteredProjects.map((project) => {
             const activeSession = project.songwriting_sessions?.find((session) => !session.completed_at) || null;
             const { locked, message } = getLockMessage(project.locked_until);
             const progressTarget = STATUS_THRESHOLDS.completed;
             const progressValue = Math.min((project.sessions_completed / progressTarget) * 100, 100);
             const sessionsRemaining = Math.max(progressTarget - project.sessions_completed, 0);
+            const linkedSong = project.song_id ? songMap[project.song_id] : undefined;
+            const lyricsWordCount = project.lyrics?.trim() ? project.lyrics.trim().split(/\s+/).length : 0;
 
             return (
               <Card key={project.id} className="hover:shadow-md transition-shadow">
@@ -504,7 +798,15 @@ const Songwriting = () => {
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{project.title}</CardTitle>
                       <CardDescription>
-                        {project.song_id ? `Linked song: ${project.song_id}` : "No linked song"}
+                        {linkedSong ? (
+                          <span className="flex items-center gap-2">
+                            Linked song: <span className="font-medium">{linkedSong.title}</span>
+                          </span>
+                        ) : project.song_id ? (
+                          `Linked song: ${project.song_id}`
+                        ) : (
+                          "No linked song"
+                        )}
                       </CardDescription>
                     </div>
                     <Badge variant={getStatusBadgeVariant(project.status)}>
@@ -527,6 +829,37 @@ const Songwriting = () => {
                     </p>
                   </div>
 
+                  {linkedSong && (
+                    <div className="rounded-lg border p-3 text-xs space-y-2 bg-muted/40">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{linkedSong.genre}</span>
+                        <Badge variant="outline">{linkedSong.status}</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-muted-foreground">Quality</p>
+                          <p className="font-semibold">{linkedSong.quality_score}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Streams</p>
+                          <p className="font-semibold">{formatNumber.format(linkedSong.streams)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Revenue</p>
+                          <p className="font-semibold">{formatCurrency.format(linkedSong.revenue)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Release</p>
+                          <p className="font-semibold">
+                            {linkedSong.release_date
+                              ? new Date(linkedSong.release_date).toLocaleDateString()
+                              : "TBD"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className={locked ? "text-muted-foreground" : "text-emerald-600"}>{message}</span>
@@ -540,6 +873,13 @@ const Songwriting = () => {
                       </p>
                     </div>
                   )}
+
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Lyrics snapshot · {lyricsWordCount} words</span>
+                    <span>Created {new Date(project.created_at).toLocaleDateString()}</span>
+                  </div>
+
+                  <Separator className="my-2" />
 
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-2">
@@ -556,7 +896,7 @@ const Songwriting = () => {
                         size="sm"
                         variant="outline"
                         className="flex-1"
-                        onClick={() => handleCompleteSession(project)}
+                        onClick={() => handleOpenCompletionDialog(project)}
                         disabled={!activeSession}
                       >
                         <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -579,6 +919,15 @@ const Songwriting = () => {
                       <Button size="sm" variant="outline" onClick={() => handleDelete(project.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenHistoryDialog(project)}
+                        disabled={!project.songwriting_sessions?.length}
+                      >
+                        <History className="h-3 w-3 mr-1" />
+                        History
+                      </Button>
                     </div>
 
                     <div className="text-xs text-muted-foreground">
@@ -591,6 +940,94 @@ const Songwriting = () => {
           })}
         </div>
       )}
+
+      <Dialog open={completionDialogOpen} onOpenChange={handleCompletionDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log your sprint notes</DialogTitle>
+            <DialogDescription>
+              Capture the breakthroughs from this focus session before marking it complete.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleCompleteSessionWithNotes}>
+            <div className="space-y-2">
+              <Label htmlFor="completion-notes">What did you accomplish?</Label>
+              <Textarea
+                id="completion-notes"
+                value={completionNotes}
+                onChange={(event) => setCompletionNotes(event.target.value)}
+                placeholder="Captured a new chorus hook, refined verse lyrics..."
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {completionNotes.trim() ? `${completionNotes.trim().split(/\s+/).length} words` : "0 words"}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setCompletionDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!completionProject}>
+                Complete Sprint
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHistoryOpen} onOpenChange={handleHistoryDialogChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {historyProject ? `Sprint history · ${historyProject.title}` : "Sprint history"}
+            </DialogTitle>
+            <DialogDescription>
+              Review every focus sprint, including timestamps and notes captured along the way.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-72 pr-4">
+            <div className="space-y-4">
+              {historyProject?.songwriting_sessions && historyProject.songwriting_sessions.length > 0 ? (
+                [...historyProject.songwriting_sessions]
+                  .sort(
+                    (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+                  )
+                  .map((session) => (
+                    <div key={session.id} className="rounded-md border p-3 text-sm space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">
+                            {new Date(session.started_at).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Locked until {new Date(session.locked_until).toLocaleTimeString()}
+                          </p>
+                        </div>
+                        <Badge variant={session.completed_at ? "default" : "secondary"}>
+                          {session.completed_at ? "Completed" : "In progress"}
+                        </Badge>
+                      </div>
+                      {session.completed_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Completed {new Date(session.completed_at).toLocaleString()}
+                        </p>
+                      )}
+                      {session.notes && (
+                        <div className="rounded-md bg-muted/40 p-2">
+                          <p className="text-xs uppercase text-muted-foreground mb-1">Session notes</p>
+                          <p>{session.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No sprint history recorded yet. Complete a sprint to see it here.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
