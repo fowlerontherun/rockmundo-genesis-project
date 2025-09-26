@@ -25,6 +25,66 @@ const MORALE_EFFECT_KEYS = new Set([
   "energy",
 ]);
 
+const SCHEMA_CACHE_MISSING_TABLE_CODES = new Set(["PGRST201", "PGRST202", "PGRST205"]);
+
+const getPostgrestErrorCode = (error: unknown): string | null => {
+  if (typeof error !== "object" || error === null) {
+    return null;
+  }
+
+  const candidate = error as { code?: unknown };
+  return typeof candidate.code === "string" ? candidate.code : null;
+};
+
+const isSchemaCacheMissingTableError = (error: unknown, tableName: string): boolean => {
+  if (!tableName) {
+    return false;
+  }
+
+  const normalizedTableName = tableName.toLowerCase();
+  const tableNameVariants = [normalizedTableName, `public.${normalizedTableName}`];
+  const code = getPostgrestErrorCode(error);
+
+  if (code && SCHEMA_CACHE_MISSING_TABLE_CODES.has(code)) {
+    if (typeof error === "object" && error !== null) {
+      const candidate = error as { message?: unknown; details?: unknown; hint?: unknown };
+      const haystack = [candidate.message, candidate.details, candidate.hint]
+        .filter((value): value is string => typeof value === "string")
+        .join(" ")
+        .toLowerCase();
+
+      if (haystack.length === 0) {
+        return true;
+      }
+
+      return tableNameVariants.some((name) => haystack.includes(name));
+    }
+
+    return true;
+  }
+
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const candidate = error as { message?: unknown; details?: unknown; hint?: unknown };
+  const haystack = [candidate.message, candidate.details, candidate.hint]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+
+  if (haystack.length === 0) {
+    return false;
+  }
+
+  const mentionsTable = tableNameVariants.some((name) => haystack.includes(name));
+  if (!mentionsTable) {
+    return false;
+  }
+
+  return haystack.includes("schema cache") || haystack.includes("does not exist") || haystack.includes("not found");
+};
+
 const parseNumericRecord = (record: Record<string, unknown> | null | undefined) => {
   if (!record || typeof record !== "object") {
     return {} as Record<string, number>;
@@ -702,6 +762,86 @@ const normalizeWorldEventRecord = (item: Record<string, unknown>): WorldEvent =>
   };
 };
 
+const sortWorldEventsByStartDate = (events: WorldEvent[]): WorldEvent[] =>
+  [...events].sort((a, b) => {
+    const startA = Date.parse(a.start_date);
+    const startB = Date.parse(b.start_date);
+
+    if (Number.isNaN(startA) || Number.isNaN(startB)) {
+      return 0;
+    }
+
+    return startA - startB;
+  });
+
+const adaptGameEventToWorldEventRecord = (item: Record<string, unknown>): Record<string, unknown> => {
+  const rewards = isRecord(item.rewards) ? item.rewards : null;
+  const requirements = isRecord(item.requirements) ? item.requirements : null;
+
+  const affectedCitiesSource = requirements?.cities ??
+    requirements?.city ??
+    requirements?.locations ??
+    rewards?.affected_cities ??
+    rewards?.cities ??
+    item.affected_cities;
+
+  const participationRewardSource = rewards?.participation_reward ??
+    rewards?.reward ??
+    rewards?.value;
+
+  const globalEffectsSource = rewards && isRecord(rewards["global_effects"])
+    ? (rewards["global_effects"] as Record<string, unknown>)
+    : rewards;
+
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    type: item.event_type,
+    start_date: item.start_date,
+    end_date: item.end_date,
+    affected_cities: parseStringArray(affectedCitiesSource),
+    global_effects: isRecord(globalEffectsSource) ? globalEffectsSource : {},
+    participation_reward: toNumber(participationRewardSource),
+    is_active: typeof item.is_active === "boolean" ? item.is_active : true,
+  };
+};
+
+const fetchWorldEventsWithFallback = async (): Promise<WorldEvent[]> => {
+  const primaryResponse = await supabase
+    .from("world_events")
+    .select("*")
+    .order("start_date", { ascending: true });
+
+  if (!primaryResponse.error) {
+    const normalized = (primaryResponse.data ?? [])
+      .map((item) => normalizeWorldEventRecord(item as Record<string, unknown>));
+    return sortWorldEventsByStartDate(normalized);
+  }
+
+  if (!isSchemaCacheMissingTableError(primaryResponse.error, "world_events")) {
+    throw primaryResponse.error;
+  }
+
+  const fallbackResponse = await supabase
+    .from("game_events")
+    .select("*")
+    .order("start_date", { ascending: true });
+
+  if (fallbackResponse.error) {
+    if (isSchemaCacheMissingTableError(fallbackResponse.error, "game_events")) {
+      return [];
+    }
+
+    throw fallbackResponse.error;
+  }
+
+  const normalizedFallback = (fallbackResponse.data ?? [])
+    .map((item) => normalizeWorldEventRecord(adaptGameEventToWorldEventRecord(item as Record<string, unknown>)));
+
+  return sortWorldEventsByStartDate(normalizedFallback);
+};
+
 const normalizeRandomEventRecord = (item: Record<string, unknown>, index: number): RandomEvent | null => {
   const rarityRaw = typeof item.rarity === "string" ? item.rarity : "";
   const rarity = RANDOM_EVENT_RARITIES.includes(rarityRaw as RandomEvent["rarity"]) ?
@@ -963,18 +1103,17 @@ const locationMatches = (needle: string, haystack: string) => {
 };
 
 export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentSnapshot> => {
-  const [citiesResponse, worldEventsResponse, randomEventsResponse] = await Promise.all([
+  const [citiesResponse, worldEvents, randomEventsResponse] = await Promise.all([
     supabase.from("cities").select("*").order("name", { ascending: true }),
-    supabase.from("world_events").select("*").order("start_date", { ascending: true }),
+    fetchWorldEventsWithFallback(),
     supabase.from("random_events").select("*").order("expiry", { ascending: true }),
   ]);
 
   if (citiesResponse.error) throw citiesResponse.error;
-  if (worldEventsResponse.error) throw worldEventsResponse.error;
   if (randomEventsResponse.error) throw randomEventsResponse.error;
 
   const weather: WeatherCondition[] = []; // Empty weather data since table doesn't exist
-  
+
   // Create mock cities data if no cities exist in database
   const citiesData = citiesResponse.data || [];
   const cities = citiesData.length > 0 
@@ -1047,19 +1186,6 @@ export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentS
           distanceKm: null,
         }
       ];
-
-  const worldEvents = (worldEventsResponse.data || [])
-    .map((item) => normalizeWorldEventRecord(item as Record<string, unknown>))
-    .sort((a, b) => {
-      const startA = Date.parse(a.start_date);
-      const startB = Date.parse(b.start_date);
-
-      if (Number.isNaN(startA) || Number.isNaN(startB)) {
-        return 0;
-      }
-
-      return startA - startB;
-    });
 
   const now = Date.now();
   const randomEvents = (randomEventsResponse.data || [])
@@ -1171,16 +1297,14 @@ export const fetchEnvironmentModifiers = async (
   location: string,
   isoDate: string,
 ): Promise<EnvironmentModifierSummary> => {
-  const [weatherResponse, worldEventsResponse] = await Promise.all([
+  const [weatherResponse, worldEvents] = await Promise.all([
     supabase.from("weather").select("*"),
-    supabase.from("world_events").select("*"),
+    fetchWorldEventsWithFallback(),
   ]);
 
   if (weatherResponse.error) throw weatherResponse.error;
-  if (worldEventsResponse.error) throw worldEventsResponse.error;
 
   const weather = (weatherResponse.data || []).map((item) => normalizeWeatherRecord(item as Record<string, unknown>));
-  const worldEvents = (worldEventsResponse.data || []).map((item) => normalizeWorldEventRecord(item as Record<string, unknown>));
 
   const targetDate = new Date(isoDate);
   const targetTime = targetDate.getTime();
