@@ -2,7 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy", "stormy", "snowy"] as const;
 const WORLD_EVENT_TYPES = ["festival", "competition", "disaster", "celebration", "economic"] as const;
-const RANDOM_EVENT_RARITIES = ["common", "rare", "epic", "legendary"] as const;
 
 const ATTENDANCE_EFFECT_KEYS = new Set([
   "attendance",
@@ -516,22 +515,6 @@ export interface WorldEvent {
   is_active: boolean;
 }
 
-export interface RandomEventChoice {
-  id: string;
-  text: string;
-  effects: Record<string, number>;
-  requirements?: Record<string, number>;
-}
-
-export interface RandomEvent {
-  id: string;
-  title: string;
-  description: string;
-  choices: RandomEventChoice[];
-  expiry: string;
-  rarity: (typeof RANDOM_EVENT_RARITIES)[number];
-}
-
 export interface AppliedEnvironmentEffect {
   source: "weather" | "world_event";
   id: string;
@@ -635,7 +618,6 @@ export interface WorldEnvironmentSnapshot {
   weather: WeatherCondition[];
   cities: City[];
   worldEvents: WorldEvent[];
-  randomEvents: RandomEvent[];
 }
 
 export const DEFAULT_TRAVEL_MODES: CityTravelMode[] = [
@@ -836,50 +818,6 @@ const fetchWorldEventsWithFallback = async (): Promise<WorldEvent[]> => {
     .map((item) => normalizeWorldEventRecord(adaptGameEventToWorldEventRecord(item as Record<string, unknown>)));
 
   return sortWorldEventsByStartDate(normalizedFallback);
-};
-
-const normalizeRandomEventRecord = (item: Record<string, unknown>, index: number): RandomEvent | null => {
-  const rarityRaw = typeof item.rarity === "string" ? item.rarity : "";
-  const rarity = RANDOM_EVENT_RARITIES.includes(rarityRaw as RandomEvent["rarity"]) ?
-    (rarityRaw as RandomEvent["rarity"]) : "common";
-
-  const expiry = typeof item.expiry === "string"
-    ? item.expiry
-    : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-  const choicesRaw = Array.isArray(item.choices) ? item.choices : [];
-  const choices = choicesRaw
-    .map((choice: Record<string, unknown>, choiceIndex: number) => {
-      const effects = parseNumericRecord(choice.effects as Record<string, unknown> | null | undefined);
-      const requirements = parseNumericRecord(choice.requirements as Record<string, unknown> | null | undefined);
-      const text = typeof choice.text === "string" ? choice.text : "";
-
-      if (!text.trim()) {
-        return null;
-      }
-
-      const choiceId = choice.id ?? `${item.id}-choice-${choiceIndex}`;
-
-      return {
-        id: String(choiceId),
-        text,
-        effects,
-        requirements: Object.keys(requirements).length > 0 ? requirements : undefined,
-      };
-    })
-    .filter((choice): choice is RandomEventChoice => Boolean(choice));
-
-  const title = typeof item.title === "string" ? item.title : "Random Event";
-  const description = typeof item.description === "string" ? item.description : "";
-
-  return {
-    id: String(item.id ?? `random-${index}`),
-    title,
-    description,
-    choices,
-    expiry,
-    rarity,
-  };
 };
 
 const toRecordArray = (value: unknown): Record<string, unknown>[] => {
@@ -1099,14 +1037,12 @@ const locationMatches = (needle: string, haystack: string) => {
 };
 
 export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentSnapshot> => {
-  const [citiesResponse, worldEvents, randomEventsResponse] = await Promise.all([
+  const [citiesResponse, worldEvents] = await Promise.all([
     supabase.from("cities").select("*").order("name", { ascending: true }),
     fetchWorldEventsWithFallback(),
-    supabase.from("random_events").select("*").order("expiry", { ascending: true }),
   ]);
 
   if (citiesResponse.error) throw citiesResponse.error;
-  if (randomEventsResponse.error) throw randomEventsResponse.error;
 
   const weather: WeatherCondition[] = []; // Empty weather data since table doesn't exist
 
@@ -1180,37 +1116,10 @@ export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentS
         }
       ];
 
-  const now = Date.now();
-  const randomEvents = (randomEventsResponse.data || [])
-    .map((item, index) => normalizeRandomEventRecord(item as Record<string, unknown>, index))
-    .filter((event): event is RandomEvent => {
-      if (!event) {
-        return false;
-      }
-
-      const expiryTime = Date.parse(event.expiry);
-      if (Number.isNaN(expiryTime)) {
-        return true;
-      }
-
-      return expiryTime > now;
-    })
-    .sort((a, b) => {
-      const expiryA = Date.parse(a.expiry);
-      const expiryB = Date.parse(b.expiry);
-
-      if (Number.isNaN(expiryA) || Number.isNaN(expiryB)) {
-        return 0;
-      }
-
-      return expiryA - expiryB;
-    });
-
   return {
     weather,
     cities,
     worldEvents,
-    randomEvents,
   };
 };
 
@@ -1398,5 +1307,4 @@ export type {
   WeatherCondition as WeatherConditionType,
   City as CityType,
   WorldEvent as WorldEventType,
-  RandomEvent as RandomEventType,
 };
