@@ -46,6 +46,8 @@ export type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["R
 export type ExperienceLedgerRow = any; // Will be updated when types regenerate
 export type UnlockedSkillsMap = Record<string, boolean>;
 export type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
+export type ProfileActivityStatus = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
+type ProfileActivityStatusInsert = Database["public"]["Tables"]["profile_activity_statuses"]["Insert"];
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 type SkillsUpdate = Record<string, number | null | undefined>;
@@ -76,6 +78,23 @@ export interface ProfileUpsertInput {
   stageName: string;
   bio: string;
   attributes?: Partial<PlayerAttributes>;
+}
+
+interface AddActivityOptions {
+  status?: string | null;
+  durationMinutes?: number | null;
+  statusId?: string | null;
+}
+
+interface StartActivityInput {
+  status: string;
+  startedAt?: string | Date | null;
+  durationMinutes?: number | null;
+  songId?: string | null;
+}
+
+interface ClearActivityStatusOptions {
+  status?: string;
 }
 
 const ATTRIBUTE_COLUMNS: Array<keyof PlayerAttributesInsert> = [
@@ -161,6 +180,7 @@ interface UseGameDataReturn {
   skillProgress: SkillProgressRow[];
   unlockedSkills: UnlockedSkillsMap;
   activities: ActivityFeedRow[];
+  activityStatus: ProfileActivityStatus | null;
   dailyXpGrant: DailyXpGrantRow | null;
   freshWeeklyBonusAvailable: boolean;
   currentCity: CityRow | null;
@@ -171,7 +191,16 @@ interface UseGameDataReturn {
   updateSkills: (updates: SkillsUpdate) => Promise<PlayerSkills>;
   updateXpWallet: (updates: XpWalletUpdate) => Promise<PlayerXpWallet>;
   updateAttributes: (updates: AttributesUpdate) => Promise<PlayerAttributes | null>;
-  addActivity: (type: string, message: string, earnings?: number, metadata?: ActivityInsert["metadata"]) => Promise<void>;
+  addActivity: (
+    type: string,
+    message: string,
+    earnings?: number,
+    metadata?: ActivityInsert["metadata"],
+    options?: AddActivityOptions,
+  ) => Promise<void>;
+  refreshActivityStatus: () => Promise<ProfileActivityStatus | null>;
+  startActivity: (input: StartActivityInput) => Promise<ProfileActivityStatus | null>;
+  clearActivityStatus: (options?: ClearActivityStatusOptions) => Promise<ProfileActivityStatus | null>;
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
   claimDailyXp: (metadata?: Record<string, unknown>) => Promise<void>;
   spendAttributeXp: (input: SpendAttributeXpInput) => Promise<void>;
@@ -355,6 +384,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const [skillProgress, setSkillProgress] = useState<SkillProgressRow[]>([]);
   const [unlockedSkills, setUnlockedSkills] = useState<UnlockedSkillsMap>({});
   const [activities, setActivities] = useState<ActivityFeedRow[]>([]);
+  const [activityStatus, setActivityStatus] = useState<ProfileActivityStatus | null>(null);
   const [dailyXpGrant, setDailyXpGrant] = useState<DailyXpGrantRow | null>(null);
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -364,6 +394,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const assigningDefaultCityRef = useRef(false);
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantTableAvailableRef = useRef(true);
+  const profileActivityStatusTableAvailableRef = useRef(true);
   const getPostgrestErrorCode = (error: unknown): string | null => {
     if (typeof error !== "object" || error === null || !("code" in error)) {
       return null;
@@ -481,6 +512,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         setSkillProgress([]);
         setUnlockedSkills({});
         setActivities([]);
+        setActivityStatus(null);
         setCurrentCity(null);
         setDailyXpGrant(null);
         setSupportsActivityProfileFilter(false);
@@ -679,6 +711,20 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       const activitiesPromise = fetchActivitiesWithFallback();
 
+      const activityStatusPromise = profileActivityStatusTableAvailableRef.current
+        ? supabase
+            .from("profile_activity_statuses")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .maybeSingle()
+        : Promise.resolve({
+            data: null,
+            error: null,
+            count: null,
+            status: 200,
+            statusText: "OK",
+          } as PostgrestSingleResponse<ProfileActivityStatus | null>);
+
       const scopedActivitiesPromise = (() => {
         try {
           let activityFeedQuery = supabase
@@ -742,12 +788,14 @@ const useProvideGameData = (): UseGameDataReturn => {
         ledgerResult,
         cityResult,
         activitiesResult,
+        activityStatusResult,
       ] = await Promise.all([
         attributesPromise,
         walletPromise,
         ledgerPromise,
         cityPromise,
         activitiesPromise,
+        activityStatusPromise,
       ]);
 
       await scopedActivitiesPromise;
@@ -793,6 +841,24 @@ const useProvideGameData = (): UseGameDataReturn => {
         } else if (dailyGrantResult.error && typeof dailyGrantResult.error === 'object' && dailyGrantResult.error && 'code' in dailyGrantResult.error && (dailyGrantResult.error as any).code !== "PGRST116") {
           console.error("Failed to load daily XP grant", dailyGrantResult.error);
         }
+      }
+
+      if (activityStatusResult.error) {
+        if (
+          isRelationNotFoundError(activityStatusResult.error) ||
+          isSchemaCacheMissingTableError(activityStatusResult.error, "profile_activity_statuses")
+        ) {
+          profileActivityStatusTableAvailableRef.current = false;
+          console.warn(
+            "Profile activity status table is unavailable; skipping future queries",
+            activityStatusResult.error,
+          );
+          setActivityStatus(null);
+        } else if (!isSchemaCacheMissingColumnError(activityStatusResult.error)) {
+          console.error("Failed to load activity status", activityStatusResult.error);
+        }
+      } else {
+        setActivityStatus((activityStatusResult.data ?? null) as ProfileActivityStatus | null);
       }
 
       let nextActivities: ActivityFeedRow[] = [];
@@ -875,6 +941,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       setSkillProgress([]);
       setUnlockedSkills({});
       setActivities([]);
+      setActivityStatus(null);
       setCurrentCity(null);
       setDailyXpGrant(null);
       setSupportsActivityProfileFilter(false);
@@ -953,6 +1020,45 @@ const useProvideGameData = (): UseGameDataReturn => {
       void supabase.removeChannel(channel);
     };
   }, [profile?.id, supportsActivityProfileFilter, user?.id]);
+
+  useEffect(() => {
+    const profileId = profile?.id;
+
+    if (!profileId) {
+      setActivityStatus(null);
+      return;
+    }
+
+    if (!profileActivityStatusTableAvailableRef.current) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`profile_activity_statuses:profile_id:${profileId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profile_activity_statuses",
+          filter: `profile_id=eq.${profileId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            setActivityStatus(null);
+            return;
+          }
+
+          const nextStatus = (payload.new ?? null) as ProfileActivityStatus | null;
+          setActivityStatus(nextStatus);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
 
 
   const updateAttributes = useCallback(
@@ -1373,12 +1479,6 @@ const useProvideGameData = (): UseGameDataReturn => {
     [profile],
   );
 
-  interface AddActivityOptions {
-    status?: string | null;
-    durationMinutes?: number | null;
-    statusId?: string | null;
-  }
-
   const addActivity = useCallback(
     async (
       type: string,
@@ -1440,6 +1540,194 @@ const useProvideGameData = (): UseGameDataReturn => {
       }
     },
     [profile, supportsActivityProfileFilter, user],
+  );
+
+  const refreshActivityStatus = useCallback(async () => {
+    if (!profile || !user) {
+      setActivityStatus(null);
+      return null;
+    }
+
+    if (!profileActivityStatusTableAvailableRef.current) {
+      setActivityStatus(null);
+      return null;
+    }
+
+    const response = await supabase
+      .from("profile_activity_statuses")
+      .select("*")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+
+    if (response.error) {
+      if (
+        isRelationNotFoundError(response.error) ||
+        isSchemaCacheMissingTableError(response.error, "profile_activity_statuses")
+      ) {
+        profileActivityStatusTableAvailableRef.current = false;
+        console.warn(
+          "Profile activity status table is unavailable; skipping future queries",
+          response.error,
+        );
+        setActivityStatus(null);
+        return null;
+      }
+
+      if (!isSchemaCacheMissingColumnError(response.error)) {
+        console.error("Failed to refresh activity status", response.error);
+      }
+
+      throw response.error;
+    }
+
+    const nextStatus = (response.data ?? null) as ProfileActivityStatus | null;
+    setActivityStatus(nextStatus);
+    return nextStatus;
+  }, [
+    profile,
+    profileActivityStatusTableAvailableRef,
+    supabase,
+    user,
+    isRelationNotFoundError,
+    isSchemaCacheMissingTableError,
+    isSchemaCacheMissingColumnError,
+  ]);
+
+  const startActivity = useCallback(
+    async (input: StartActivityInput) => {
+      if (!user) {
+        throw new Error("Authentication required to manage activity status");
+      }
+
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      if (!profileActivityStatusTableAvailableRef.current) {
+        setActivityStatus(null);
+        return null;
+      }
+
+      const startedAtValue = (() => {
+        if (input.startedAt instanceof Date) {
+          return input.startedAt.toISOString();
+        }
+
+        if (typeof input.startedAt === "string") {
+          return input.startedAt;
+        }
+
+        return new Date().toISOString();
+      })();
+
+      const durationValue =
+        typeof input.durationMinutes === "number" && Number.isFinite(input.durationMinutes)
+          ? Math.max(0, Math.round(input.durationMinutes))
+          : null;
+
+      const payload: ProfileActivityStatusInsert = {
+        profile_id: profile.id,
+        status: input.status,
+        started_at: startedAtValue,
+        duration_minutes: durationValue,
+        song_id: input.songId ?? null,
+      };
+
+      const { data, error } = await supabase
+        .from("profile_activity_statuses")
+        .upsert(payload, { onConflict: "profile_id" })
+        .select("*")
+        .maybeSingle();
+
+      if (error) {
+        if (
+          isRelationNotFoundError(error) ||
+          isSchemaCacheMissingTableError(error, "profile_activity_statuses")
+        ) {
+          profileActivityStatusTableAvailableRef.current = false;
+          console.warn(
+            "Profile activity status table is unavailable; skipping future queries",
+            error,
+          );
+          setActivityStatus(null);
+          return null;
+        }
+
+        throw error;
+      }
+
+      const nextStatus = (data ?? null) as ProfileActivityStatus | null;
+      setActivityStatus(nextStatus);
+      return nextStatus;
+    },
+    [
+      profile,
+      profileActivityStatusTableAvailableRef,
+      supabase,
+      user,
+      isRelationNotFoundError,
+      isSchemaCacheMissingTableError,
+    ],
+  );
+
+  const clearActivityStatus = useCallback(
+    async (options: ClearActivityStatusOptions = {}) => {
+      if (!user) {
+        throw new Error("Authentication required to manage activity status");
+      }
+
+      if (!profile) {
+        throw new Error("No active profile selected");
+      }
+
+      if (!profileActivityStatusTableAvailableRef.current) {
+        setActivityStatus(null);
+        return null;
+      }
+
+      const payload: ProfileActivityStatusInsert = {
+        profile_id: profile.id,
+        status: options.status ?? "idle",
+        started_at: new Date().toISOString(),
+        duration_minutes: null,
+        song_id: null,
+      };
+
+      const { data, error } = await supabase
+        .from("profile_activity_statuses")
+        .upsert(payload, { onConflict: "profile_id" })
+        .select("*")
+        .maybeSingle();
+
+      if (error) {
+        if (
+          isRelationNotFoundError(error) ||
+          isSchemaCacheMissingTableError(error, "profile_activity_statuses")
+        ) {
+          profileActivityStatusTableAvailableRef.current = false;
+          console.warn(
+            "Profile activity status table is unavailable; skipping future queries",
+            error,
+          );
+          setActivityStatus(null);
+          return null;
+        }
+
+        throw error;
+      }
+
+      const nextStatus = (data ?? null) as ProfileActivityStatus | null;
+      setActivityStatus(nextStatus);
+      return nextStatus;
+    },
+    [
+      profile,
+      profileActivityStatusTableAvailableRef,
+      supabase,
+      user,
+      isRelationNotFoundError,
+      isSchemaCacheMissingTableError,
+    ],
   );
 
   const awardActionXp = useCallback(
@@ -1600,6 +1888,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       skillProgress,
       unlockedSkills,
       activities,
+      activityStatus,
       dailyXpGrant,
       freshWeeklyBonusAvailable,
       currentCity,
@@ -1611,6 +1900,9 @@ const useProvideGameData = (): UseGameDataReturn => {
       updateXpWallet,
       updateAttributes,
       addActivity,
+      refreshActivityStatus,
+      startActivity,
+      clearActivityStatus,
       awardActionXp,
       claimDailyXp,
       spendAttributeXp,
@@ -1626,6 +1918,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       skillProgress,
       unlockedSkills,
       activities,
+      activityStatus,
       dailyXpGrant,
       freshWeeklyBonusAvailable,
       currentCity,
@@ -1637,6 +1930,9 @@ const useProvideGameData = (): UseGameDataReturn => {
       updateXpWallet,
       updateAttributes,
       addActivity,
+      refreshActivityStatus,
+      startActivity,
+      clearActivityStatus,
       awardActionXp,
       claimDailyXp,
       spendAttributeXp,
