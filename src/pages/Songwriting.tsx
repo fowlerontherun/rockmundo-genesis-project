@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useGameData } from "@/hooks/useGameData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import {
   History,
 } from "lucide-react";
 import logger from "@/lib/logger";
+import { formatDistanceToNowStrict } from "date-fns";
 
 type SongwritingStatus = "draft" | "writing" | "ready_to_finish" | "completed";
 
@@ -87,6 +89,7 @@ const STATUS_THRESHOLDS: Record<Exclude<SongwritingStatus, "draft">, number> = {
 
 const Songwriting = () => {
   const { user } = useAuth();
+  const { activityStatus, startActivity, clearActivityStatus, refreshActivityStatus } = useGameData();
   const [projects, setProjects] = useState<SongwritingProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<SongwritingProject | null>(null);
@@ -184,35 +187,50 @@ const Songwriting = () => {
   }, [fetchProjects, user?.id]);
 
   useEffect(() => {
-    if (!user?.id) {
-      return;
+    void refreshActivityStatus();
+  }, [refreshActivityStatus]);
+
+  const globalActivityLock = useMemo(() => {
+    if (!activityStatus || activityStatus.status === "idle") {
+      return { locked: false, endsAt: null as Date | null, label: null as string | null };
     }
 
-    fetchSongs();
-  }, [fetchSongs, user?.id]);
+    const label = activityStatus.status.replace(/_/g, " ");
 
-  const songMap = useMemo(() => {
-    return songs.reduce((acc, song) => {
-      acc[song.id] = song;
-      return acc;
-    }, {} as Record<string, Song>);
-  }, [songs]);
-
-  useEffect(() => {
-    if (completionProject) {
-      const updatedProject = projects.find((project) => project.id === completionProject.id) || null;
-      if (updatedProject !== completionProject) {
-        setCompletionProject(updatedProject);
-      }
+    if (typeof activityStatus.duration_minutes !== "number") {
+      return { locked: true, endsAt: null as Date | null, label };
     }
 
-    if (historyProject) {
-      const updatedHistoryProject = projects.find((project) => project.id === historyProject.id) || null;
-      if (updatedHistoryProject !== historyProject) {
-        setHistoryProject(updatedHistoryProject);
-      }
+    const explicitEndsAt = activityStatus.ends_at ? new Date(activityStatus.ends_at) : null;
+    if (explicitEndsAt && !Number.isNaN(explicitEndsAt.getTime())) {
+      return { locked: explicitEndsAt.getTime() > Date.now(), endsAt: explicitEndsAt, label };
     }
-  }, [completionProject, historyProject, projects]);
+
+    if (!activityStatus.started_at) {
+      return { locked: false, endsAt: null as Date | null, label };
+    }
+
+    const startedAt = new Date(activityStatus.started_at);
+    if (Number.isNaN(startedAt.getTime())) {
+      return { locked: false, endsAt: null as Date | null, label };
+    }
+
+    const computedEnds = new Date(startedAt.getTime() + activityStatus.duration_minutes * 60_000);
+    return { locked: computedEnds.getTime() > Date.now(), endsAt: computedEnds, label };
+  }, [activityStatus]);
+
+  const globalActivityCountdown = useMemo(() => {
+    if (!globalActivityLock.locked || !globalActivityLock.endsAt) {
+      return null;
+    }
+
+    try {
+      return formatDistanceToNowStrict(globalActivityLock.endsAt, { addSuffix: true });
+    } catch (error) {
+      console.error("Failed to compute activity lock countdown", error);
+      return null;
+    }
+  }, [globalActivityLock]);
 
   const determineNextStatus = (current: SongwritingStatus, completedSessions: number) => {
     if (current === "completed") {
@@ -367,6 +385,28 @@ const Songwriting = () => {
       return;
     }
 
+    if (globalActivityLock.locked) {
+      const statusLabel = globalActivityLock.label ?? "another activity";
+      const countdown = globalActivityCountdown
+        ? `You'll be free ${globalActivityCountdown}.`
+        : "Finish your current activity before starting a new sprint.";
+      toast.info(`You're currently busy with ${statusLabel}. ${countdown}`);
+      return;
+    }
+
+    let statusRegistered = false;
+
+    try {
+      await startActivity("songwriting_session", {
+        durationMinutes: SESSION_DURATION_MINUTES,
+        songId: project.song_id || null,
+      });
+      statusRegistered = true;
+    } catch (statusError) {
+      console.error("Error starting songwriting status:", statusError);
+      toast.info("Session started, but we couldn't update your availability status.");
+    }
+
     try {
       const lockedUntil = new Date(Date.now() + SESSION_DURATION_MINUTES * 60 * 1000).toISOString();
 
@@ -390,9 +430,22 @@ const Songwriting = () => {
 
       toast.success("Songwriting session started! Stay focused.");
       fetchProjects();
+      if (statusRegistered) {
+        void refreshActivityStatus();
+      }
     } catch (error) {
       console.error("Error starting songwriting session:", error);
       toast.error("Failed to start session");
+
+      if (statusRegistered) {
+        try {
+          await clearActivityStatus();
+        } catch (clearError) {
+          console.error("Failed to revert activity status after session error", clearError);
+        } finally {
+          void refreshActivityStatus();
+        }
+      }
     }
   };
 
@@ -432,6 +485,15 @@ const Songwriting = () => {
 
       toast.success("Great job! Session completed.");
       fetchProjects();
+      if (activityStatus?.status === "songwriting_session") {
+        try {
+          await clearActivityStatus();
+        } catch (statusError) {
+          console.error("Failed to clear songwriting activity status", statusError);
+        } finally {
+          void refreshActivityStatus();
+        }
+      }
     } catch (error) {
       console.error("Error completing songwriting session:", error);
       toast.error("Failed to complete session");
@@ -564,11 +626,11 @@ const Songwriting = () => {
           <p className="text-muted-foreground mt-2">
             Build focused songwriting projects and track your creative momentum
           </p>
-        </div>
+      </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
               onClick={() => {
                 setSelectedProject(null);
                 setFormData({ title: "", lyrics: "", status: "draft", song_id: "" });
@@ -676,97 +738,16 @@ const Songwriting = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <ListMusic className="h-4 w-4" /> Total Projects
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{totalProjects}</div>
-            <p className="text-xs text-muted-foreground mt-1">{activeSprints} active focus sprint{activeSprints === 1 ? "" : "s"}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <NotebookPen className="h-4 w-4" /> Focus Sprints Logged
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{totalSessions}</div>
-            <p className="text-xs text-muted-foreground mt-1">{totalFocusMinutes} minutes of deep work</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" /> Completion Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{completionRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">{completedProjects} projects mastered</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Trophy className="h-4 w-4" /> Momentum
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{projects.filter((p) => p.status !== "draft").length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Projects beyond the draft stage</p>
-          </CardContent>
-        </Card>
-      </div>
+      {globalActivityLock.locked && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          You're currently busy with {globalActivityLock.label ?? "another activity"}.{" "}
+          {globalActivityCountdown
+            ? `You'll be free ${globalActivityCountdown}.`
+            : "Wrap up your current activity to start a new sprint."}
+        </div>
+      )}
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between">
-            <span className="text-base font-semibold flex items-center gap-2">
-              <Filter className="h-4 w-4" /> Organize Your Sessions
-            </span>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="active-only"
-                  checked={showActiveOnly}
-                  onCheckedChange={(value) => setShowActiveOnly(Boolean(value))}
-                />
-                <Label htmlFor="active-only" className="text-xs font-normal cursor-pointer">
-                  Show active sprints only
-                </Label>
-              </div>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={statusFilter === "all" ? "default" : "outline"}
-              onClick={() => setStatusFilter("all")}
-            >
-              All Projects
-            </Button>
-            {STATUSES.map((status) => (
-              <Button
-                key={status.value}
-                size="sm"
-                variant={statusFilter === status.value ? "default" : "outline"}
-                onClick={() => setStatusFilter(status.value)}
-              >
-                {status.label}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {filteredProjects.length === 0 ? (
+      {projects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Music className="h-12 w-12 text-muted-foreground mb-4" />
@@ -887,7 +868,7 @@ const Songwriting = () => {
                         size="sm"
                         className="flex-1"
                         onClick={() => handleStartSession(project)}
-                        disabled={locked || !!activeSession}
+                        disabled={locked || !!activeSession || globalActivityLock.locked}
                       >
                         <Play className="h-3 w-3 mr-1" />
                         Start Sprint
@@ -907,6 +888,12 @@ const Songwriting = () => {
                     {activeSession && (
                       <div className="text-xs text-muted-foreground text-center">
                         Active sprint started {new Date(activeSession.started_at).toLocaleTimeString()}.
+                      </div>
+                    )}
+                    {globalActivityLock.locked && (
+                      <div className="text-xs text-muted-foreground text-center">
+                        Global focus busy
+                        {globalActivityCountdown ? ` until ${globalActivityCountdown}` : ' with another activity.'}
                       </div>
                     )}
                   </div>
