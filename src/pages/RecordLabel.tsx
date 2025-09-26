@@ -117,6 +117,7 @@ const RecordLabel = () => {
   const [benefitInput, setBenefitInput] = useState("");
   const [savingLabel, setSavingLabel] = useState(false);
   const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
+  const canManageLabels = !roleLoading && (typeof isAdminRole === 'function' ? isAdminRole() : Boolean(isAdminRole));
 
   const loadLabels = useCallback(async () => {
     try {
