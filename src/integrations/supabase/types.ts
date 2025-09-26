@@ -1406,6 +1406,227 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_booking_artists: {
+        Row: {
+          booking_id: string
+          character_id: string
+          daily_cost: number
+          id: string
+          role: Database["public"]["Enums"]["studio_booking_artist_role"]
+        }
+        Insert: {
+          booking_id: string
+          character_id: string
+          daily_cost?: number
+          id?: string
+          role: Database["public"]["Enums"]["studio_booking_artist_role"]
+        }
+        Update: {
+          booking_id?: string
+          character_id?: string
+          daily_cost?: number
+          id?: string
+          role?: Database["public"]["Enums"]["studio_booking_artist_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_booking_artists_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "studio_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_booking_artists_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_booking_slots: {
+        Row: {
+          booking_id: string
+          id: string
+          is_booked: boolean
+          slot: Database["public"]["Enums"]["studio_slot"]
+          slot_date: string
+        }
+        Insert: {
+          booking_id: string
+          id?: string
+          is_booked?: boolean
+          slot: Database["public"]["Enums"]["studio_slot"]
+          slot_date: string
+        }
+        Update: {
+          booking_id?: string
+          id?: string
+          is_booked?: boolean
+          slot?: Database["public"]["Enums"]["studio_slot"]
+          slot_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_booking_slots_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "studio_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_booking_songs: {
+        Row: {
+          booking_id: string
+          id: string
+          momentum: number
+          progress_end: number
+          progress_start: number
+          song_id: string
+        }
+        Insert: {
+          booking_id: string
+          id?: string
+          momentum?: number
+          progress_end?: number
+          progress_start?: number
+          song_id: string
+        }
+        Update: {
+          booking_id?: string
+          id?: string
+          momentum?: number
+          progress_end?: number
+          progress_start?: number
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_booking_songs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "studio_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_booking_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_bookings: {
+        Row: {
+          band_id: string
+          created_at: string
+          end_date: string
+          id: string
+          mood: Database["public"]["Enums"]["studio_session_mood"]
+          producer_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["studio_booking_status"]
+          studio_id: string
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          mood: Database["public"]["Enums"]["studio_session_mood"]
+          producer_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["studio_booking_status"]
+          studio_id: string
+          total_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          mood?: Database["public"]["Enums"]["studio_session_mood"]
+          producer_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["studio_booking_status"]
+          studio_id?: string
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_bookings_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_bookings_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "studio_bookings_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studios: {
+        Row: {
+          city_id: string
+          cost_per_day: number
+          created_at: string
+          engineer_rating: number
+          equipment_rating: number
+          id: string
+          name: string
+          quality: number
+          updated_at: string
+        }
+        Insert: {
+          city_id: string
+          cost_per_day: number
+          created_at?: string
+          engineer_rating: number
+          equipment_rating: number
+          id?: string
+          name: string
+          quality: number
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string
+          cost_per_day?: number
+          created_at?: string
+          engineer_rating?: number
+          equipment_rating?: number
+          id?: string
+          name?: string
+          quality?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studios_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       streaming_platforms: {
         Row: {
           created_at: string | null
@@ -1624,6 +1845,15 @@ export type Database = {
       chat_participant_status: "online" | "offline" | "typing" | "away"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       show_type_enum: "concert" | "festival" | "private" | "street"
+      studio_booking_artist_role: "band_member" | "session_musician" | "producer"
+      studio_booking_status:
+        | "pending"
+        | "confirmed"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      studio_session_mood: "professional" | "party" | "chilled"
+      studio_slot: "morning" | "evening"
     }
     CompositeTypes: {
       [_ in never]: never
