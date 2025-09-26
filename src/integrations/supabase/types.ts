@@ -1566,6 +1566,65 @@ export type Database = {
         }
         Relationships: []
       }
+      jam_sessions: {
+        Row: {
+          access_code: string | null
+          created_at: string
+          current_participants: number
+          description: string | null
+          genre: string
+          host_id: string
+          id: string
+          is_private: boolean
+          max_participants: number
+          name: string
+          participant_ids: string[]
+          skill_requirement: number
+          tempo: number
+          updated_at: string
+        }
+        Insert: {
+          access_code?: string | null
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          genre: string
+          host_id: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string
+        }
+        Update: {
+          access_code?: string | null
+          created_at?: string
+          current_participants?: number
+          description?: string | null
+          genre?: string
+          host_id?: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name?: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_sessions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           base_payment: number | null

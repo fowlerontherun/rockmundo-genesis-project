@@ -11,6 +11,7 @@ import {
   Users,
   Calendar,
   Music,
+  Music4,
   TrendingUp,
   Settings,
   LogOut,
@@ -87,6 +88,7 @@ const Navigation = () => {
       items: [
         { icon: Users, label: "Band Manager", path: "/band" },
         { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
+        { icon: Music4, label: "Jam Sessions", path: "/jams" },
         { icon: Share2, label: "Social Media", path: "/social" },
         { icon: Megaphone, label: "Public Relations", path: "/pr" },
         { icon: Users, label: "Fan Management", path: "/fans" },
@@ -120,6 +122,7 @@ const Navigation = () => {
     { icon: Calendar, label: "Gigs", path: "/gigs" },
     { icon: ListMusic, label: "Setlists", path: "/setlists" },
     { icon: Mic, label: "Busking", path: "/busking" },
+    { icon: Music4, label: "Jams", path: "/jams" },
     { icon: Plane, label: "Travel", path: "/travel" },
     { icon: Megaphone, label: "PR", path: "/pr" },
     { icon: User, label: "My Character", path: "/my-character" },

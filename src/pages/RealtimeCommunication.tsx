@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import ChatWindow from '@/components/realtime/ChatWindow';
 import { MessageSquare, Music } from 'lucide-react';
 
@@ -88,10 +90,13 @@ const RealtimeCommunication: React.FC = () => {
               <span>Jam Sessions</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Jam session features will be available soon.
+              Ready to collaborate? Explore active jam sessions and create your own rehearsal spaces with the community.
             </p>
+            <Button asChild>
+              <Link to="/jams">Open Jam Sessions</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
