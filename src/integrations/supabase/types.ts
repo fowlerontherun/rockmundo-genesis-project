@@ -256,45 +256,72 @@ export type Database = {
       }
       cities: {
         Row: {
+          bonuses: string | null
+          busking_value: number
           cost_of_living: number | null
           country: string
           created_at: string | null
           cultural_events: string[] | null
           dominant_genre: string | null
+          featured_studios: Json
+          featured_venues: Json
+          famous_resident: string | null
           id: string
           local_bonus: number | null
           music_scene: number | null
           name: string
           population: number | null
+          profile_description: string | null
+          transport_links: Json
+          travel_hub: string | null
           updated_at: string | null
+          unlocked: boolean
           venues: number | null
         }
         Insert: {
+          bonuses?: string | null
+          busking_value?: number
           cost_of_living?: number | null
           country: string
           created_at?: string | null
           cultural_events?: string[] | null
           dominant_genre?: string | null
+          featured_studios?: Json
+          featured_venues?: Json
+          famous_resident?: string | null
           id?: string
           local_bonus?: number | null
           music_scene?: number | null
           name: string
           population?: number | null
+          profile_description?: string | null
+          transport_links?: Json
+          travel_hub?: string | null
           updated_at?: string | null
+          unlocked?: boolean
           venues?: number | null
         }
         Update: {
+          bonuses?: string | null
+          busking_value?: number
           cost_of_living?: number | null
           country?: string
           created_at?: string | null
           cultural_events?: string[] | null
           dominant_genre?: string | null
+          featured_studios?: Json
+          featured_venues?: Json
+          famous_resident?: string | null
           id?: string
           local_bonus?: number | null
           music_scene?: number | null
           name?: string
           population?: number | null
+          profile_description?: string | null
+          transport_links?: Json
+          travel_hub?: string | null
           updated_at?: string | null
+          unlocked?: boolean
           venues?: number | null
         }
         Relationships: []
