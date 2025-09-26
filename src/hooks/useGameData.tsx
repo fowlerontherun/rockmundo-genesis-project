@@ -53,7 +53,17 @@ type AttributesUpdate = Partial<PlayerAttributes>;
 type XpWalletUpdate = Database["public"]["Tables"]["player_xp_wallet"]["Update"];
 type XpWalletInsert = Database["public"]["Tables"]["player_xp_wallet"]["Insert"];
 type ActivityInsert = Database["public"]["Tables"]["activity_feed"]["Insert"];
-type ActivityInsertPayload = Omit<ActivityInsert, "profile_id"> & { profile_id?: string };
+type ActivityInsertPayload = {
+  activity_type: string;
+  message: string;
+  user_id: string;
+  earnings?: number | null;
+  metadata?: Record<string, any>;
+  status?: string | null;
+  duration_minutes?: number | null;
+  status_id?: string | null;
+  profile_id?: string;
+};
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
 type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
@@ -546,7 +556,6 @@ const useProvideGameData = (): UseGameDataReturn => {
         const result = await supabase
           .from("player_skills")
           .select("*")
-          .eq("profile_id", effectiveProfile.id)
           .eq("user_id", user.id)
           .maybeSingle();
 

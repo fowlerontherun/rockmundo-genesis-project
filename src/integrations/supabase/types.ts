@@ -58,10 +58,6 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
-          duration_minutes: number | null
-          profile_id: string
-          status: string | null
-          status_id: string | null
           user_id: string
         }
         Insert: {
@@ -71,10 +67,6 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
-          duration_minutes?: number | null
-          profile_id: string
-          status?: string | null
-          status_id?: string | null
           user_id: string
         }
         Update: {
@@ -84,28 +76,9 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
-          duration_minutes?: number | null
-          profile_id?: string
-          status?: string | null
-          status_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "activity_feed_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activity_feed_status_id_fkey"
-            columns: ["status_id"]
-            isOneToOne: false
-            referencedRelation: "profile_activity_statuses"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       band_members: {
         Row: {
@@ -323,6 +296,45 @@ export type Database = {
           population?: number | null
           updated_at?: string | null
           venues?: number | null
+        }
+        Relationships: []
+      }
+      education_youtube_resources: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          difficulty_level: number | null
+          duration_minutes: number | null
+          id: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: number | null
+          duration_minutes?: number | null
+          id?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: number | null
+          duration_minutes?: number | null
+          id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          video_url?: string
         }
         Relationships: []
       }
@@ -861,6 +873,60 @@ export type Database = {
           },
         ]
       }
+      player_skills: {
+        Row: {
+          bass: number
+          business: number
+          composition: number
+          created_at: string
+          creativity: number
+          drums: number
+          guitar: number
+          id: string
+          marketing: number
+          performance: number
+          songwriting: number
+          technical: number
+          updated_at: string
+          user_id: string
+          vocals: number
+        }
+        Insert: {
+          bass?: number
+          business?: number
+          composition?: number
+          created_at?: string
+          creativity?: number
+          drums?: number
+          guitar?: number
+          id?: string
+          marketing?: number
+          performance?: number
+          songwriting?: number
+          technical?: number
+          updated_at?: string
+          user_id: string
+          vocals?: number
+        }
+        Update: {
+          bass?: number
+          business?: number
+          composition?: number
+          created_at?: string
+          creativity?: number
+          drums?: number
+          guitar?: number
+          id?: string
+          marketing?: number
+          performance?: number
+          songwriting?: number
+          technical?: number
+          updated_at?: string
+          user_id?: string
+          vocals?: number
+        }
+        Relationships: []
+      }
       player_streaming_accounts: {
         Row: {
           connected_at: string | null
@@ -950,54 +1016,35 @@ export type Database = {
           },
         ]
       }
-      profile_activity_statuses: {
+      profile_daily_xp_grants: {
         Row: {
           created_at: string
-          duration_minutes: number | null
-          ends_at: string | null
+          grant_date: string
           id: string
+          metadata: Json | null
           profile_id: string
-          song_id: string | null
-          started_at: string
-          status: string
-          updated_at: string
+          source: string
+          xp_amount: number
         }
         Insert: {
           created_at?: string
-          duration_minutes?: number | null
+          grant_date?: string
           id?: string
+          metadata?: Json | null
           profile_id: string
-          song_id?: string | null
-          started_at?: string
-          status: string
-          updated_at?: string
+          source: string
+          xp_amount?: number
         }
         Update: {
           created_at?: string
-          duration_minutes?: number | null
+          grant_date?: string
           id?: string
+          metadata?: Json | null
           profile_id?: string
-          song_id?: string | null
-          started_at?: string
-          status?: string
-          updated_at?: string
+          source?: string
+          xp_amount?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "profile_activity_statuses_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_activity_statuses_song_id_fkey"
-            columns: ["song_id"]
-            isOneToOne: false
-            referencedRelation: "songs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1005,6 +1052,7 @@ export type Database = {
           bio: string | null
           cash: number | null
           created_at: string | null
+          current_city_id: string | null
           display_name: string | null
           experience: number | null
           experience_at_last_weekly_bonus: number | null
@@ -1024,6 +1072,7 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           created_at?: string | null
+          current_city_id?: string | null
           display_name?: string | null
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
@@ -1043,6 +1092,7 @@ export type Database = {
           bio?: string | null
           cash?: number | null
           created_at?: string | null
+          current_city_id?: string | null
           display_name?: string | null
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null

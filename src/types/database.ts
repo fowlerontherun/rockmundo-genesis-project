@@ -30,6 +30,8 @@ export interface Profile {
   last_weekly_bonus_at: string | null;
   weekly_bonus_streak: number;
   weekly_bonus_metadata: Record<string, unknown>;
+  current_city_id: string | null;
+  age: number;
   created_at: string;
   updated_at: string;
 }
@@ -164,5 +166,28 @@ export interface PlayerEquipment {
   is_equipped: boolean;
   condition: number;
   purchased_at: string;
+  created_at: string;
+}
+
+export interface EducationYoutubeResource {
+  id: string;
+  title: string;
+  description: string | null;
+  video_url: string;
+  category: string | null;
+  difficulty_level: number;
+  duration_minutes: number | null;
+  tags: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileDailyXpGrant {
+  id: string;
+  profile_id: string;
+  grant_date: string;
+  xp_amount: number;
+  source: string;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
