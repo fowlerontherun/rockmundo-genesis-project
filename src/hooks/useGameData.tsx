@@ -624,7 +624,6 @@ const useProvideGameData = (): UseGameDataReturn => {
           .from("activity_feed")
           .select("*")
           .eq("user_id", user.id)
-          .eq("profile_id", effectiveProfile.id)
           .order("created_at", { ascending: false })
           .limit(20);
 
@@ -785,7 +784,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         if (isSchemaCacheMissingTableError(dailyGrantResult.error)) {
           dailyXpGrantTableAvailableRef.current = false;
           console.warn("Daily XP grant table is unavailable; skipping future queries", dailyGrantResult.error);
-        } else if (dailyGrantResult.error.code !== "PGRST116") {
+        } else if (dailyGrantResult.error && 'code' in dailyGrantResult.error && dailyGrantResult.error.code !== "PGRST116") {
           console.error("Failed to load daily XP grant", dailyGrantResult.error);
         }
       }
@@ -1493,7 +1492,7 @@ const useProvideGameData = (): UseGameDataReturn => {
           return;
         }
 
-        if (latestGrantError.code !== "PGRST116") {
+        if (latestGrantError && 'code' in latestGrantError && latestGrantError.code !== "PGRST116") {
           console.error("Failed to refresh daily XP grant", latestGrantError);
         }
       }
