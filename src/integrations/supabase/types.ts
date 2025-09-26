@@ -1045,31 +1045,28 @@ export type Database = {
       }
       profile_daily_xp_grants: {
         Row: {
-          created_at: string
+          claimed_at: string
           grant_date: string
           id: string
-          metadata: Json | null
+          metadata: Json
           profile_id: string
-          source: string
-          xp_amount: number
+          xp_awarded: number
         }
         Insert: {
-          created_at?: string
+          claimed_at?: string
           grant_date?: string
           id?: string
-          metadata?: Json | null
+          metadata?: Json
           profile_id: string
-          source: string
-          xp_amount?: number
+          xp_awarded: number
         }
         Update: {
-          created_at?: string
+          claimed_at?: string
           grant_date?: string
           id?: string
-          metadata?: Json | null
+          metadata?: Json
           profile_id?: string
-          source?: string
-          xp_amount?: number
+          xp_awarded?: number
         }
         Relationships: []
       }

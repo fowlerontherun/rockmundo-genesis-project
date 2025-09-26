@@ -188,8 +188,7 @@ export interface ProfileDailyXpGrant {
   id: string;
   profile_id: string;
   grant_date: string;
-  xp_amount: number;
-  source: string;
+  xp_awarded: number;
   metadata: Record<string, unknown>;
-  created_at: string;
+  claimed_at: string;
 }
