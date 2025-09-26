@@ -484,15 +484,12 @@ export interface City {
   country: string;
   description?: string;
   profileDescription?: string;
-  bonuses?: string;
-  unlocked?: boolean;
   population: number;
   music_scene: number;
   cost_of_living: number;
   dominant_genre: string;
   venues: number;
   local_bonus: number;
-  busking_value: number;
   cultural_events: string[];
   locations: CityLocation[];
   venueHighlights: CityVenueHighlight[];
@@ -502,6 +499,8 @@ export interface City {
   travelHub: string;
   travelOptions: TravelOption[];
   distanceKm: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface WorldEvent {
@@ -705,8 +704,6 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
   const description = typeof item.description === "string" ? item.description : undefined;
   const profileDescription =
     typeof item.profile_description === "string" ? item.profile_description : undefined;
-  const bonuses = typeof item.bonuses === "string" ? item.bonuses : undefined;
-  const unlocked = typeof item.unlocked === "boolean" ? item.unlocked : undefined;
 
   return {
     id: String(item.id ?? crypto.randomUUID()),
@@ -714,15 +711,12 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     country: typeof item.country === "string" ? item.country : "",
     description,
     profileDescription: profileDescription ?? description,
-    bonuses,
-    unlocked,
     population: toNumber(item.population),
     music_scene: toNumber(item.music_scene),
     cost_of_living: toNumber(item.cost_of_living),
     dominant_genre: typeof item.dominant_genre === "string" ? item.dominant_genre : "",
     venues: toNumber(item.venues),
-    local_bonus: toNumber(item.local_bonus, 1),
-    busking_value: toNumber(item.busking_value, 1),
+    local_bonus: toNumber(item.local_bonus),
     cultural_events: culturalEvents,
     locations,
     venueHighlights,
@@ -732,6 +726,8 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
     travelHub: travelHubRaw || travelOptions[0]?.name || "",
     travelOptions,
     distanceKm: null,
+    created_at: typeof item.created_at === "string" ? item.created_at : null,
+    updated_at: typeof item.updated_at === "string" ? item.updated_at : null,
   };
 };
 
@@ -1130,7 +1126,6 @@ export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentS
           dominant_genre: "Rock",
           venues: 250,
           local_bonus: 15,
-          busking_value: 45,
           cultural_events: ["Festival of London", "Camden Music Week"],
           locations: [],
           venueHighlights: [],
@@ -1152,7 +1147,6 @@ export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentS
           dominant_genre: "Hip Hop",
           venues: 300,
           local_bonus: 20,
-          busking_value: 60,
           cultural_events: ["NY Music Festival", "Brooklyn Music Week"],
           locations: [],
           venueHighlights: [],
@@ -1174,7 +1168,6 @@ export const fetchWorldEnvironmentSnapshot = async (): Promise<WorldEnvironmentS
           dominant_genre: "Electronic",
           venues: 180,
           local_bonus: 12,
-          busking_value: 35,
           cultural_events: ["Tokyo Music Festival", "Shibuya Sound Week"],
           locations: [],
           venueHighlights: [],
