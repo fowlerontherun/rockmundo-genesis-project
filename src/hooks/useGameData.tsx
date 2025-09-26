@@ -66,8 +66,6 @@ type ActivityInsertPayload = {
   status_id?: string | null;
   profile_id?: string;
 };
-type ProfileActivityStatusRow = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
-type ProfileActivityStatusInsert = Database["public"]["Tables"]["profile_activity_statuses"]["Insert"];
 type CityRow = Database["public"]["Tables"]["cities"]["Row"];
 type PlayerAttributesRow = Database["public"]["Tables"]["player_attributes"]["Row"];
 type PlayerSkillsRow = Database["public"]["Tables"]["player_skills"]["Row"];
@@ -90,13 +88,8 @@ interface AddActivityOptions {
 
 interface StartActivityInput {
   status: string;
-  startedAt?: string | Date | null;
   durationMinutes?: number | null;
-  songId?: string | null;
-}
-
-interface ClearActivityStatusOptions {
-  status?: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 const ATTRIBUTE_COLUMNS: Array<keyof PlayerAttributesInsert> = [
@@ -182,9 +175,8 @@ interface UseGameDataReturn {
   skillProgress: SkillProgressRow[];
   unlockedSkills: UnlockedSkillsMap;
   activities: ActivityFeedRow[];
-  activityStatus: ProfileActivityStatus | null;
-  dailyXpGrant: DailyXpGrantRow | null;
   activityStatus: ProfileActivityStatusRow | null;
+  dailyXpGrant: DailyXpGrantRow | null;
   freshWeeklyBonusAvailable: boolean;
   currentCity: CityRow | null;
   loading: boolean;
@@ -203,16 +195,6 @@ interface UseGameDataReturn {
   ) => Promise<void>;
   refreshActivityStatus: () => Promise<ProfileActivityStatusRow | null>;
   startActivity: (input: StartActivityInput) => Promise<ProfileActivityStatusRow | null>;
-  addActivity: (type: string, message: string, earnings?: number, metadata?: ActivityInsert["metadata"]) => Promise<void>;
-  activityStatus: ProfileActivityStatusRow | null;
-  refreshActivityStatus: () => Promise<void>;
-  startActivity: (
-    status: string,
-    options?: { durationMinutes?: number | null; startedAt?: string; songId?: string | null },
-  ) => Promise<ProfileActivityStatusRow | null>;
-  clearActivityStatus: () => Promise<void>;
-
-
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
   claimDailyXp: (metadata?: Record<string, unknown>) => Promise<void>;
   spendAttributeXp: (input: SpendAttributeXpInput) => Promise<void>;
@@ -398,7 +380,6 @@ const useProvideGameData = (): UseGameDataReturn => {
   const [activities, setActivities] = useState<ActivityFeedRow[]>([]);
   const [activityStatus, setActivityStatus] = useState<ProfileActivityStatusRow | null>(null);
   const [dailyXpGrant, setDailyXpGrant] = useState<DailyXpGrantRow | null>(null);
-  const [activityStatus, setActivityStatus] = useState<ProfileActivityStatusRow | null>(null);
   const [currentCity, setCurrentCity] = useState<CityRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -757,7 +738,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
           return activityFeedQuery.order("created_at", { ascending: false }).limit(20);
         } catch (error) {
-          console.error('Error querying activities:', error);
+          console.error("Error querying activities:", error);
           return Promise.resolve({ data: [], error: null });
         }
       })();
@@ -867,7 +848,6 @@ const useProvideGameData = (): UseGameDataReturn => {
           isSchemaCacheMissingTableError(activityStatusResult.error, "profile_activity_statuses")
         ) {
           activityStatusTableAvailableRef.current = false;
-          profileActivityStatusTableAvailableRef.current = false;
 
           console.warn(
             "Profile activity status table is unavailable; skipping future queries",
@@ -934,23 +914,6 @@ const useProvideGameData = (): UseGameDataReturn => {
         nextActivities = rows;
       }
 
-      if (activityStatusResult.error) {
-        if (isSchemaCacheMissingTableError(activityStatusResult.error, "profile_activity_statuses")) {
-          activityStatusTableAvailableRef.current = false;
-          console.warn(
-            "Profile activity status table is unavailable; skipping future queries",
-            activityStatusResult.error,
-          );
-          setActivityStatus(null);
-        } else if (getPostgrestErrorCode(activityStatusResult.error) === "PGRST116") {
-          setActivityStatus(null);
-        } else {
-          console.error("Failed to load profile activity status", activityStatusResult.error);
-        }
-      } else {
-        setActivityStatus((activityStatusResult.data ?? null) as ProfileActivityStatusRow | null);
-      }
-
       setSkillProgress(resolvedSkillProgress);
       const fallbackSkills = legacySkillsFallback;
       setSkills((previous) =>
@@ -960,9 +923,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       setXpWallet((walletResult.data ?? null) as PlayerXpWallet);
       setXpLedger((ledgerResult.data ?? []) as ExperienceLedgerRow[]);
       setCurrentCity((cityResult?.data ?? null) as CityRow | null);
-      setActivities((activitiesResult.data ?? []) as ActivityFeedRow[]);
       setActivities(nextActivities);
-      setSkillProgress((skillProgressResult.data ?? []) as SkillProgressRow[]);
 
       setUnlockedSkills({});
       const grantRow =
@@ -990,7 +951,6 @@ const useProvideGameData = (): UseGameDataReturn => {
       setCurrentCity(null);
       setDailyXpGrant(null);
       setSupportsActivityProfileFilter(false);
-      setActivityStatus(null);
       setLoading(false);
       return;
     }
@@ -1075,7 +1035,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       return;
     }
 
-    if (!profileActivityStatusTableAvailableRef.current) {
+    if (!activityStatusTableAvailableRef.current) {
       return;
     }
 
@@ -1882,7 +1842,6 @@ const useProvideGameData = (): UseGameDataReturn => {
       activities,
       activityStatus,
       dailyXpGrant,
-      activityStatus,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
@@ -1913,7 +1872,6 @@ const useProvideGameData = (): UseGameDataReturn => {
       activities,
       activityStatus,
       dailyXpGrant,
-      activityStatus,
       freshWeeklyBonusAvailable,
       currentCity,
       loading,
