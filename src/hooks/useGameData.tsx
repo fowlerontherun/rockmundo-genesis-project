@@ -195,6 +195,7 @@ interface UseGameDataReturn {
   ) => Promise<void>;
   refreshActivityStatus: () => Promise<ProfileActivityStatusRow | null>;
   startActivity: (input: StartActivityInput) => Promise<ProfileActivityStatusRow | null>;
+  clearActivityStatus: () => Promise<void>;
   awardActionXp: (input: AwardActionXpInput) => Promise<void>;
   claimDailyXp: (metadata?: Record<string, unknown>) => Promise<void>;
   spendAttributeXp: (input: SpendAttributeXpInput) => Promise<void>;
@@ -724,20 +725,22 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       const activitiesPromise = fetchActivitiesWithFallback();
 
-      const activityStatusPromise: Promise<PostgrestSingleResponse<ProfileActivityStatusRow | null>> =
-        activityStatusTableAvailableRef.current
-          ? supabase
-              .from("profile_activity_statuses")
-              .select("*")
-              .eq("profile_id", effectiveProfile.id)
-              .maybeSingle()
-          : Promise.resolve({
-              data: null,
-              error: null,
-              count: null,
-              status: 200,
-              statusText: "OK",
-            } as PostgrestSingleResponse<ProfileActivityStatusRow | null>);
+  const activityStatusPromise: Promise<PostgrestSingleResponse<ProfileActivityStatusRow | null>> =
+    activityStatusTableAvailableRef.current
+      ? (Promise.resolve(
+          supabase
+            .from("profile_activity_statuses")
+            .select("*")
+            .eq("profile_id", effectiveProfile.id)
+            .maybeSingle(),
+        ) as Promise<PostgrestSingleResponse<ProfileActivityStatusRow | null>>)
+      : Promise.resolve({
+          data: null,
+          error: null,
+          count: null,
+          status: 200,
+          statusText: "OK",
+        } as PostgrestSingleResponse<ProfileActivityStatusRow | null>);
 
 
       const scopedActivitiesPromise = (() => {
@@ -1629,6 +1632,34 @@ const useProvideGameData = (): UseGameDataReturn => {
     return nextStatus;
   }, [profile, isRelationNotFoundError, isSchemaCacheMissingTableError]);
 
+  const clearActivityStatus = useCallback(async (): Promise<void> => {
+    if (!profile) {
+      throw new Error("No active profile selected");
+    }
+
+    if (!activityStatusTableAvailableRef.current) {
+      setActivityStatus(null);
+      return;
+    }
+
+    const result = await supabase
+      .from("profile_activity_statuses")
+      .delete()
+      .eq("profile_id", profile.id);
+
+    if (isMissingTableResponse(result.status ?? null, result.error, "profile_activity_statuses")) {
+      activityStatusTableAvailableRef.current = false;
+      setActivityStatus(null);
+      return;
+    }
+
+    if (result.error && typeof result.error === "object" && "code" in result.error && result.error.code !== "PGRST116") {
+      throw result.error;
+    }
+
+    setActivityStatus(null);
+  }, [profile]);
+
   const startActivity = useCallback(
     async ({ status, durationMinutes, metadata }: StartActivityInput): Promise<ProfileActivityStatusRow | null> => {
 
@@ -1887,6 +1918,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       refreshActivityStatus,
       startActivity,
+      clearActivityStatus,
       awardActionXp,
       claimDailyXp,
       spendAttributeXp,
@@ -1916,6 +1948,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       addActivity,
       refreshActivityStatus,
       startActivity,
+      clearActivityStatus,
       awardActionXp,
       claimDailyXp,
       spendAttributeXp,

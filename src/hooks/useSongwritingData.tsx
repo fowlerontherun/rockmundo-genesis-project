@@ -239,9 +239,12 @@ export const useSongwritingData = () => {
 
       if (calcError) throw calcError;
 
-      const musicGain = progressCalc.music_gain;
-      const lyricsGain = progressCalc.lyrics_gain;
-      const xpEarned = progressCalc.xp_earned;
+      const progressResult = (progressCalc ?? {}) as Record<string, unknown>;
+      const coerceNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+
+      const musicGain = coerceNumber(progressResult.music_gain);
+      const lyricsGain = coerceNumber(progressResult.lyrics_gain);
+      const xpEarned = coerceNumber(progressResult.xp_earned);
 
       // Update session with results
       const { error: updateSessionError } = await supabase

@@ -220,7 +220,8 @@ export default function PerformGig() {
     }, 0);
 
     try {
-      const statusRecord = await startActivity('gig_performance', {
+      const statusRecord = await startActivity({
+        status: 'gig_performance',
         durationMinutes: totalDurationMinutes,
       });
       activityStatusStartedRef.current = true;

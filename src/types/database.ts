@@ -1,4 +1,4 @@
-import type { Json } from "@/integrations/supabase/types";
+import type { Json } from "@/types/database-fallback";
 
 // Working database types to override the problematic generated types
 export type RequirementValue = number | string | boolean | null;
