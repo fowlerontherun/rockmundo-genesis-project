@@ -194,6 +194,15 @@ const Songwriting = () => {
   }, [fetchProjects, user?.id]);
 
   useEffect(() => {
+    if (!user?.id) {
+      setSongs([]);
+      return;
+    }
+
+    void fetchSongs();
+  }, [fetchSongs, user?.id]);
+
+  useEffect(() => {
     void refreshActivityStatus();
   }, [refreshActivityStatus]);
 
