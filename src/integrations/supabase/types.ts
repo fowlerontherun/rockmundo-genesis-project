@@ -1306,11 +1306,12 @@ export type Database = {
           chart_position: number | null
           chord_progression_id: string | null
           created_at: string
+          estimated_completion_sessions: number
           genre: string
           id: string
           lyrics: string | null
-          lyrics_progress: number | null
-          music_progress: number | null
+          lyrics_progress: number
+          music_progress: number
           quality_score: number
           release_date: string | null
           revenue: number
@@ -1319,7 +1320,7 @@ export type Database = {
           streams: number
           theme_id: string | null
           title: string
-          total_sessions: number | null
+          total_sessions: number
           updated_at: string
           user_id: string
         }
@@ -1327,11 +1328,12 @@ export type Database = {
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
+          estimated_completion_sessions?: number
           genre: string
           id?: string
           lyrics?: string | null
-          lyrics_progress?: number | null
-          music_progress?: number | null
+          lyrics_progress?: number
+          music_progress?: number
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -1340,7 +1342,7 @@ export type Database = {
           streams?: number
           theme_id?: string | null
           title: string
-          total_sessions?: number | null
+          total_sessions?: number
           updated_at?: string
           user_id: string
         }
@@ -1348,11 +1350,12 @@ export type Database = {
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
+          estimated_completion_sessions?: number
           genre?: string
           id?: string
           lyrics?: string | null
-          lyrics_progress?: number | null
-          music_progress?: number | null
+          lyrics_progress?: number
+          music_progress?: number
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -1361,7 +1364,7 @@ export type Database = {
           streams?: number
           theme_id?: string | null
           title?: string
-          total_sessions?: number | null
+          total_sessions?: number
           updated_at?: string
           user_id?: string
         }
@@ -1393,63 +1396,66 @@ export type Database = {
         Row: {
           chord_progression_id: string | null
           created_at: string
+          estimated_completion_sessions: number
           estimated_sessions: number | null
           id: string
           initial_lyrics: string | null
-          is_locked: boolean | null
+          is_locked: boolean
           locked_until: string | null
           lyrics: string | null
-          lyrics_progress: number | null
-          music_progress: number | null
-          quality_score: number | null
+          lyrics_progress: number
+          music_progress: number
+          quality_score: number
           status: string | null
           song_id: string | null
-          sessions_completed: number | null
+          sessions_completed: number
           theme_id: string | null
           title: string
-          total_sessions: number | null
+          total_sessions: number
           updated_at: string
           user_id: string
         }
         Insert: {
           chord_progression_id?: string | null
           created_at?: string
+          estimated_completion_sessions?: number
           estimated_sessions?: number | null
           id?: string
           initial_lyrics?: string | null
-          is_locked?: boolean | null
+          is_locked?: boolean
           locked_until?: string | null
           lyrics?: string | null
-          lyrics_progress?: number | null
-          music_progress?: number | null
-          quality_score?: number | null
+          lyrics_progress?: number
+          music_progress?: number
+          quality_score?: number
           status?: string | null
           song_id?: string | null
-          sessions_completed?: number | null
+          sessions_completed?: number
           theme_id?: string | null
           title: string
-          total_sessions?: number | null
+          total_sessions?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           chord_progression_id?: string | null
           created_at?: string
+          estimated_completion_sessions?: number
           estimated_sessions?: number | null
           id?: string
           initial_lyrics?: string | null
-          is_locked?: boolean | null
+          is_locked?: boolean
           locked_until?: string | null
           lyrics?: string | null
-          lyrics_progress?: number | null
-          music_progress?: number | null
-          quality_score?: number | null
+          lyrics_progress?: number
+          music_progress?: number
+          quality_score?: number
           status?: string | null
           song_id?: string | null
-          sessions_completed?: number | null
+          sessions_completed?: number
           theme_id?: string | null
           title?: string
-          total_sessions?: number | null
+          total_sessions?: number
           updated_at?: string
           user_id?: string
         }
@@ -1482,8 +1488,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           id: string
-          lyrics_progress_gained: number | null
-          music_progress_gained: number | null
+          lyrics_progress_gained: number
+          music_progress_gained: number
           notes: string | null
           project_id: string
           locked_until: string | null
@@ -1491,14 +1497,14 @@ export type Database = {
           session_start: string
           started_at: string
           user_id: string
-          xp_earned: number | null
+          xp_earned: number
         }
         Insert: {
           completed_at?: string | null
           created_at?: string
           id?: string
-          lyrics_progress_gained?: number | null
-          music_progress_gained?: number | null
+          lyrics_progress_gained?: number
+          music_progress_gained?: number
           notes?: string | null
           project_id: string
           locked_until?: string | null
@@ -1506,14 +1512,14 @@ export type Database = {
           session_start?: string
           started_at?: string
           user_id: string
-          xp_earned?: number | null
+          xp_earned?: number
         }
         Update: {
           completed_at?: string | null
           created_at?: string
           id?: string
-          lyrics_progress_gained?: number | null
-          music_progress_gained?: number | null
+          lyrics_progress_gained?: number
+          music_progress_gained?: number
           notes?: string | null
           project_id?: string
           locked_until?: string | null
@@ -1521,7 +1527,7 @@ export type Database = {
           session_start?: string
           started_at?: string
           user_id?: string
-          xp_earned?: number | null
+          xp_earned?: number
         }
         Relationships: [
           {
