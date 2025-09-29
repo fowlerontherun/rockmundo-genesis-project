@@ -107,12 +107,14 @@ export const useSongwritingData = (userId?: string | null) => {
   const songThemesTableAvailableRef = useRef(true);
   const chordProgressionsTableAvailableRef = useRef(true);
   const songwritingProjectsTableAvailableRef = useRef(true);
+  const songwritingSessionsTableAvailableRef = useRef(true);
+  const songwritingSessionsStartedAtSupportedRef = useRef(true);
 
   const activeUserId = typeof userId === "string" && userId.length > 0 ? userId : null;
 
-  const isMissingTableError = (error: unknown, tableName: string): boolean => {
+  const normalizeErrorContext = (error: unknown) => {
     if (!error || typeof error !== "object") {
-      return false;
+      return null;
     }
 
     const candidate = error as {
@@ -122,26 +124,69 @@ export const useSongwritingData = (userId?: string | null) => {
       hint?: string | null;
     };
 
-    const knownMissingCodes = new Set(["PGRST201", "PGRST202", "PGRST205", "42P01"]);
-
-    if (candidate.code && knownMissingCodes.has(candidate.code)) {
-      return true;
-    }
-
     const haystack = [candidate.message, candidate.details, candidate.hint]
       .filter((value): value is string => typeof value === "string" && value.length > 0)
       .join(" ")
       .toLowerCase();
 
-    if (!haystack) {
+    return {
+      code: candidate.code,
+      haystack,
+    };
+  };
+
+  const isMissingTableError = (error: unknown, tableName: string): boolean => {
+    if (!error || typeof error !== "object") {
       return false;
     }
 
-    if (!haystack.includes(tableName.toLowerCase())) {
+    const context = normalizeErrorContext(error);
+
+    if (!context) {
       return false;
     }
 
-    return haystack.includes("schema cache") || haystack.includes("does not exist") || haystack.includes("not found");
+    const knownMissingCodes = new Set(["PGRST201", "PGRST202", "PGRST205", "42P01"]);
+
+    if (context.code && knownMissingCodes.has(context.code)) {
+      return true;
+    }
+
+    if (!context.haystack) {
+      return false;
+    }
+
+    if (!context.haystack.includes(tableName.toLowerCase())) {
+      return false;
+    }
+
+    return (
+      context.haystack.includes("schema cache") ||
+      context.haystack.includes("relation") ||
+      context.haystack.includes("table") ||
+      context.haystack.includes("not found")
+    );
+  };
+
+  const isMissingColumnError = (error: unknown, columnName: string): boolean => {
+    const context = normalizeErrorContext(error);
+
+    if (!context) {
+      return false;
+    }
+
+    if (context.code === "42703") {
+      return true;
+    }
+
+    if (!context.haystack) {
+      return false;
+    }
+
+    return (
+      context.haystack.includes(`${columnName.toLowerCase()}`) &&
+      (context.haystack.includes("column") || context.haystack.includes("does not exist"))
+    );
   };
 
   const markTableUnavailable = (
@@ -166,7 +211,7 @@ export const useSongwritingData = (userId?: string | null) => {
     }
 
     if (isMissingTableError(error, "songwriting_sessions")) {
-      markTableUnavailable(songwritingProjectsTableAvailableRef, "Songwriting sessions", error);
+      markTableUnavailable(songwritingSessionsTableAvailableRef, "Songwriting sessions", error);
       handled = true;
     }
 
@@ -238,32 +283,86 @@ export const useSongwritingData = (userId?: string | null) => {
         return [] as SongwritingProject[];
       }
 
-      const { data, error } = await supabase
-        .from("songwriting_projects")
-        .select(`
-          *,
-          song_themes (id, name, description, mood),
-          chord_progressions (id, name, progression, difficulty),
-          songwriting_sessions (
-            id,
-            project_id,
-            user_id,
-            session_start,
-            session_end,
-            started_at,
-            completed_at,
-            locked_until,
-            music_progress_gained,
-            lyrics_progress_gained,
-            xp_earned,
-            notes,
-            created_at
-          )
-        `)
-        .eq("user_id", activeUserId)
-        .order("created_at", { ascending: false });
+      const buildSelect = (includeSessions: boolean, includeStartedAt: boolean) => {
+        const selections = [
+          "*",
+          "song_themes (id, name, description, mood)",
+          "chord_progressions (id, name, progression, difficulty)",
+        ];
+
+        if (includeSessions) {
+          const sessionFields = [
+            "id",
+            "project_id",
+            "user_id",
+            "session_start",
+            "session_end",
+            includeStartedAt ? "started_at" : null,
+            "completed_at",
+            "locked_until",
+            "music_progress_gained",
+            "lyrics_progress_gained",
+            "xp_earned",
+            "notes",
+            "created_at",
+          ].filter((field): field is string => typeof field === "string" && field.length > 0);
+
+          selections.push(`songwriting_sessions (${sessionFields.join(",")})`);
+        }
+
+        return selections.join(",\n");
+      };
+
+      const performQuery = async (includeSessions: boolean, includeStartedAt: boolean) =>
+        supabase
+          .from("songwriting_projects")
+          .select(buildSelect(includeSessions, includeStartedAt))
+          .eq("user_id", activeUserId)
+          .order("created_at", { ascending: false });
+
+      const includeSessions = songwritingSessionsTableAvailableRef.current;
+      const includeStartedAt = includeSessions && songwritingSessionsStartedAtSupportedRef.current;
+
+      const { data, error } = await performQuery(includeSessions, includeStartedAt);
 
       if (error) {
+        if (includeSessions && includeStartedAt && isMissingColumnError(error, "started_at")) {
+          songwritingSessionsStartedAtSupportedRef.current = false;
+          console.warn(
+            "Songwriting sessions started_at column unavailable; falling back to legacy session_start.",
+            error,
+          );
+
+          const { data: fallbackData, error: fallbackError } = await performQuery(includeSessions, false);
+
+          if (fallbackError) {
+            if (handleMissingSongwritingTableError(fallbackError)) {
+              return [] as SongwritingProject[];
+            }
+            throw fallbackError;
+          }
+
+          songwritingProjectsTableAvailableRef.current = true;
+          return fallbackData as SongwritingProject[];
+        }
+
+        if (includeSessions && isMissingTableError(error, "songwriting_sessions")) {
+          songwritingSessionsTableAvailableRef.current = false;
+          console.warn("Songwriting sessions relation unavailable; refetching without session data.", error);
+
+          const { data: fallbackData, error: fallbackError } = await performQuery(false, false);
+
+          if (fallbackError) {
+            if (handleMissingSongwritingTableError(fallbackError)) {
+              return [] as SongwritingProject[];
+            }
+            throw fallbackError;
+          }
+
+          songwritingProjectsTableAvailableRef.current = true;
+          return fallbackData as SongwritingProject[];
+        }
+
         if (handleMissingSongwritingTableError(error)) {
           return [] as SongwritingProject[];
         }
@@ -502,14 +601,44 @@ export const useSongwritingData = (userId?: string | null) => {
           project_id: projectId,
           user_id: userId,
           session_start: startedAt.toISOString(),
-          started_at: startedAt.toISOString(),
+          ...(songwritingSessionsStartedAtSupportedRef.current
+            ? { started_at: startedAt.toISOString() }
+            : {}),
           locked_until: lockUntil.toISOString(),
           notes: null,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (songwritingSessionsStartedAtSupportedRef.current && isMissingColumnError(error, "started_at")) {
+          songwritingSessionsStartedAtSupportedRef.current = false;
+          console.warn(
+            "Songwriting sessions started_at column unavailable when creating a session; retrying without it.",
+            error,
+          );
+
+          const { data: legacyData, error: legacyError } = await supabase
+            .from("songwriting_sessions")
+            .insert({
+              project_id: projectId,
+              user_id: userId,
+              session_start: startedAt.toISOString(),
+              locked_until: lockUntil.toISOString(),
+              notes: null,
+            })
+            .select()
+            .single();
+
+          if (legacyError) {
+            throw legacyError;
+          }
+
+          return legacyData as SongwritingSession;
+        }
+
+        throw error;
+      }
       return data as SongwritingSession;
     },
     onSuccess: () => {
