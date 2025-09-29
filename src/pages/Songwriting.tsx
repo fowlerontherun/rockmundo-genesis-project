@@ -38,9 +38,11 @@ type SongwritingStatus = "draft" | "writing" | "ready_to_finish" | "completed";
 interface SongwritingSession {
   id: string;
   started_at: string;
-  locked_until: string;
+  locked_until: string | null;
   completed_at: string | null;
   notes: string | null;
+  legacy_session_start?: string | null;
+  legacy_session_end?: string | null;
 }
 
 interface SongwritingProject {
@@ -54,6 +56,9 @@ interface SongwritingProject {
   created_at: string;
   updated_at: string;
   songwriting_sessions?: SongwritingSession[];
+  legacy_total_sessions?: number;
+  legacy_is_locked?: boolean;
+  legacy_initial_lyrics?: string | null;
 }
 
 interface Song {
@@ -116,6 +121,104 @@ const Songwriting = () => {
     }, {});
   }, [songs]);
 
+  const normalizeSession = useCallback((session: Record<string, unknown>, projectLockedUntil: string | null): SongwritingSession => {
+    const startedAt =
+      (typeof session.started_at === "string" && session.started_at) ||
+      (typeof session.session_start === "string" && session.session_start) ||
+      (typeof session.created_at === "string" && session.created_at) ||
+      new Date().toISOString();
+
+    const completedAt =
+      (typeof session.completed_at === "string" && session.completed_at) ||
+      (typeof session.session_end === "string" && session.session_end) ||
+      null;
+
+    let lockedUntil: string | null =
+      (typeof session.locked_until === "string" && session.locked_until) || null;
+
+    if (!lockedUntil && !completedAt && projectLockedUntil) {
+      lockedUntil = projectLockedUntil;
+    }
+
+    const fallbackId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    return {
+      id: String(session.id ?? fallbackId),
+      started_at: startedAt,
+      locked_until: lockedUntil,
+      completed_at: completedAt,
+      notes: (typeof session.notes === "string" && session.notes) || null,
+      legacy_session_start:
+        (typeof session.session_start === "string" && session.session_start) || null,
+      legacy_session_end:
+        (typeof session.session_end === "string" && session.session_end) || null,
+    };
+  }, []);
+
+  const normalizeProject = useCallback(
+    (project: Record<string, unknown>): SongwritingProject => {
+      const lockedUntil = (typeof project.locked_until === "string" && project.locked_until) || null;
+
+      const sessionsRaw = Array.isArray(project.songwriting_sessions)
+        ? (project.songwriting_sessions as Record<string, unknown>[])
+        : [];
+
+      const normalizedSessions = sessionsRaw.map((session) => normalizeSession(session, lockedUntil));
+
+      const sessionsCompleted = (() => {
+        if (typeof project.sessions_completed === "number") {
+          return project.sessions_completed;
+        }
+
+        if (typeof project.sessions_completed === "string") {
+          const parsed = Number.parseInt(project.sessions_completed, 10);
+          if (Number.isFinite(parsed)) {
+            return parsed;
+          }
+        }
+
+        if (typeof project.total_sessions === "number") {
+          return project.total_sessions;
+        }
+
+        if (typeof project.total_sessions === "string") {
+          const parsed = Number.parseInt(project.total_sessions, 10);
+          if (Number.isFinite(parsed)) {
+            return parsed;
+          }
+        }
+
+        return normalizedSessions.filter((session) => Boolean(session.completed_at)).length;
+      })();
+
+      const fallbackId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      return {
+        id: String(project.id ?? fallbackId),
+        title: String(project.title ?? "Untitled Project"),
+        lyrics:
+          (typeof project.lyrics === "string" && project.lyrics) ||
+          (typeof project.initial_lyrics === "string" && project.initial_lyrics) ||
+          null,
+        status: (project.status as SongwritingStatus) ?? "draft",
+        sessions_completed: sessionsCompleted,
+        locked_until: lockedUntil,
+        song_id: (typeof project.song_id === "string" && project.song_id) || null,
+        created_at: String(project.created_at ?? new Date().toISOString()),
+        updated_at: String(project.updated_at ?? new Date().toISOString()),
+        songwriting_sessions: normalizedSessions,
+        legacy_total_sessions:
+          typeof project.total_sessions === "number"
+            ? project.total_sessions
+            : typeof project.total_sessions === "string"
+              ? Number.parseInt(project.total_sessions, 10)
+              : undefined,
+        legacy_is_locked: typeof project.is_locked === "boolean" ? project.is_locked : undefined,
+        legacy_initial_lyrics:
+          (typeof project.initial_lyrics === "string" && project.initial_lyrics) || null,
+      };
+    }, [normalizeSession]);
+
   const fetchProjects = useCallback(async () => {
     if (!user?.id) {
       return;
@@ -128,18 +231,19 @@ const Songwriting = () => {
     try {
       const { data, error } = await supabase
         .from("songwriting_projects")
-        .select(
-          "id, title, lyrics, status, sessions_completed, locked_until, song_id, created_at, updated_at, songwriting_sessions(id, started_at, locked_until, completed_at, notes)"
-        )
+        .select("*, songwriting_sessions(*)")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setProjects(Array.isArray(data) ? (data as SongwritingProject[]) : []);
+      const normalized = Array.isArray(data)
+        ? (data as Record<string, unknown>[]).map(normalizeProject)
+        : [];
+      setProjects(normalized);
 
       logger.info("Fetched songwriting projects successfully", {
         userId: user.id,
-        projectCount: data?.length ?? 0
+        projectCount: data?.length ?? 0,
       });
     } catch (error) {
       logger.error("Error fetching songwriting projects", {
@@ -150,7 +254,7 @@ const Songwriting = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [normalizeProject, user?.id]);
 
   const fetchSongs = useCallback(async () => {
     if (!user?.id) {
@@ -280,15 +384,25 @@ const Songwriting = () => {
 
     try {
       if (selectedProject) {
+        const projectUpdate: Record<string, unknown> = {
+          title: formData.title,
+          lyrics: formData.lyrics,
+          status: formData.status,
+          song_id: formData.song_id || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (selectedProject.legacy_initial_lyrics !== undefined) {
+          projectUpdate.initial_lyrics = formData.lyrics;
+        }
+
+        if (typeof selectedProject.legacy_total_sessions === "number") {
+          projectUpdate.total_sessions = selectedProject.legacy_total_sessions;
+        }
+
         const { error } = await supabase
           .from("songwriting_projects")
-          .update({
-            title: formData.title,
-            lyrics: formData.lyrics,
-            status: formData.status,
-            song_id: formData.song_id || null,
-            updated_at: new Date().toISOString()
-          })
+          .update(projectUpdate)
           .eq("id", selectedProject.id)
           .eq("user_id", user.id);
 
@@ -300,15 +414,21 @@ const Songwriting = () => {
           payload
         });
       } else {
+        const projectInsert: Record<string, unknown> = {
+          user_id: user.id,
+          title: formData.title,
+          lyrics: formData.lyrics,
+          status: formData.status,
+          song_id: formData.song_id || null,
+          sessions_completed: 0,
+        };
+
+        projectInsert.initial_lyrics = formData.lyrics;
+        projectInsert.total_sessions = 0;
+
         const { error } = await supabase
           .from("songwriting_projects")
-          .insert({
-            user_id: user.id,
-            title: formData.title,
-            lyrics: formData.lyrics,
-            status: formData.status,
-            song_id: formData.song_id || null
-          });
+          .insert(projectInsert);
 
         if (error) throw error;
         toast.success("Project created successfully!");
@@ -417,20 +537,34 @@ const Songwriting = () => {
 
     try {
       const lockedUntil = new Date(Date.now() + SESSION_DURATION_MINUTES * 60 * 1000).toISOString();
+      const sessionStart = new Date().toISOString();
+
+      const sessionInsert: Record<string, unknown> = {
+        project_id: project.id,
+        user_id: user.id,
+        started_at: sessionStart,
+        locked_until: lockedUntil,
+        session_start: sessionStart,
+      };
 
       const { error: sessionError } = await supabase
         .from("songwriting_sessions")
-        .insert({
-          project_id: project.id,
-          user_id: user.id,
-          locked_until: lockedUntil
-        });
+        .insert(sessionInsert);
 
       if (sessionError) throw sessionError;
 
+      const projectUpdate: Record<string, unknown> = {
+        locked_until: lockedUntil,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (typeof project.legacy_is_locked === "boolean") {
+        projectUpdate.is_locked = true;
+      }
+
       const { error: projectError } = await supabase
         .from("songwriting_projects")
-        .update({ locked_until: lockedUntil })
+        .update(projectUpdate)
         .eq("id", project.id)
         .eq("user_id", user.id);
 
@@ -471,21 +605,41 @@ const Songwriting = () => {
       const updatedSessions = project.sessions_completed + 1;
       const nextStatus = determineNextStatus(project.status, updatedSessions);
 
+      const sessionUpdate: Record<string, unknown> = {
+        completed_at: completedAt,
+        notes: notes?.trim() ? notes.trim() : null,
+      };
+
+      if (activeSession.legacy_session_end !== undefined) {
+        sessionUpdate.session_end = completedAt;
+      }
+
       const { error: sessionError } = await supabase
         .from("songwriting_sessions")
-        .update({ completed_at: completedAt, notes: notes?.trim() ? notes.trim() : null })
+        .update(sessionUpdate)
         .eq("id", activeSession.id)
         .eq("user_id", user.id);
 
       if (sessionError) throw sessionError;
 
+      const projectUpdate: Record<string, unknown> = {
+        sessions_completed: updatedSessions,
+        locked_until: null,
+        status: nextStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (typeof project.legacy_total_sessions === "number") {
+        projectUpdate.total_sessions = updatedSessions;
+      }
+
+      if (typeof project.legacy_is_locked === "boolean") {
+        projectUpdate.is_locked = false;
+      }
+
       const { error: projectError } = await supabase
         .from("songwriting_projects")
-        .update({
-          sessions_completed: updatedSessions,
-          locked_until: null,
-          status: nextStatus
-        })
+        .update(projectUpdate)
         .eq("id", project.id)
         .eq("user_id", user.id);
 

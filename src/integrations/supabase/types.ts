@@ -1398,10 +1398,13 @@ export type Database = {
           initial_lyrics: string | null
           is_locked: boolean | null
           locked_until: string | null
+          lyrics: string | null
           lyrics_progress: number | null
           music_progress: number | null
           quality_score: number | null
           status: string | null
+          song_id: string | null
+          sessions_completed: number | null
           theme_id: string | null
           title: string
           total_sessions: number | null
@@ -1416,10 +1419,13 @@ export type Database = {
           initial_lyrics?: string | null
           is_locked?: boolean | null
           locked_until?: string | null
+          lyrics?: string | null
           lyrics_progress?: number | null
           music_progress?: number | null
           quality_score?: number | null
           status?: string | null
+          song_id?: string | null
+          sessions_completed?: number | null
           theme_id?: string | null
           title: string
           total_sessions?: number | null
@@ -1434,10 +1440,13 @@ export type Database = {
           initial_lyrics?: string | null
           is_locked?: boolean | null
           locked_until?: string | null
+          lyrics?: string | null
           lyrics_progress?: number | null
           music_progress?: number | null
           quality_score?: number | null
           status?: string | null
+          song_id?: string | null
+          sessions_completed?: number | null
           theme_id?: string | null
           title?: string
           total_sessions?: number | null
@@ -1459,42 +1468,58 @@ export type Database = {
             referencedRelation: "song_themes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "songwriting_projects_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       songwriting_sessions: {
         Row: {
+          completed_at: string | null
           created_at: string
           id: string
           lyrics_progress_gained: number | null
           music_progress_gained: number | null
           notes: string | null
           project_id: string
+          locked_until: string | null
           session_end: string | null
           session_start: string
+          started_at: string
           user_id: string
           xp_earned: number | null
         }
         Insert: {
+          completed_at?: string | null
           created_at?: string
           id?: string
           lyrics_progress_gained?: number | null
           music_progress_gained?: number | null
           notes?: string | null
           project_id: string
+          locked_until?: string | null
           session_end?: string | null
           session_start?: string
+          started_at?: string
           user_id: string
           xp_earned?: number | null
         }
         Update: {
+          completed_at?: string | null
           created_at?: string
           id?: string
           lyrics_progress_gained?: number | null
           music_progress_gained?: number | null
           notes?: string | null
           project_id?: string
+          locked_until?: string | null
           session_end?: string | null
           session_start?: string
+          started_at?: string
           user_id?: string
           xp_earned?: number | null
         }
