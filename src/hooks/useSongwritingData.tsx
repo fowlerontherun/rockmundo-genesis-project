@@ -1,3 +1,4 @@
+import { MutableRefObject, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -89,15 +90,103 @@ export const useSongwritingData = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const songThemesTableAvailableRef = useRef(true);
+  const chordProgressionsTableAvailableRef = useRef(true);
+  const songwritingProjectsTableAvailableRef = useRef(true);
+
+  const isMissingTableError = (error: unknown, tableName: string): boolean => {
+    if (!error || typeof error !== "object") {
+      return false;
+    }
+
+    const candidate = error as {
+      code?: string;
+      message?: string | null;
+      details?: string | null;
+      hint?: string | null;
+    };
+
+    const knownMissingCodes = new Set(["PGRST201", "PGRST202", "PGRST205", "42P01"]);
+
+    if (candidate.code && knownMissingCodes.has(candidate.code)) {
+      return true;
+    }
+
+    const haystack = [candidate.message, candidate.details, candidate.hint]
+      .filter((value): value is string => typeof value === "string" && value.length > 0)
+      .join(" ")
+      .toLowerCase();
+
+    if (!haystack) {
+      return false;
+    }
+
+    if (!haystack.includes(tableName.toLowerCase())) {
+      return false;
+    }
+
+    return haystack.includes("schema cache") || haystack.includes("does not exist") || haystack.includes("not found");
+  };
+
+  const markTableUnavailable = (
+    tableRef: MutableRefObject<boolean>,
+    tableName: string,
+    error: unknown,
+  ) => {
+    tableRef.current = false;
+    const debugInfo =
+      typeof error === "object" && error !== null
+        ? error
+        : { error: String(error) };
+    console.warn(`${tableName} table is unavailable; using empty data.`, debugInfo);
+  };
+
+  const handleMissingSongwritingTableError = (error: unknown): boolean => {
+    let handled = false;
+
+    if (isMissingTableError(error, "songwriting_projects")) {
+      markTableUnavailable(songwritingProjectsTableAvailableRef, "Songwriting projects", error);
+      handled = true;
+    }
+
+    if (isMissingTableError(error, "songwriting_sessions")) {
+      markTableUnavailable(songwritingProjectsTableAvailableRef, "Songwriting sessions", error);
+      handled = true;
+    }
+
+    if (isMissingTableError(error, "song_themes")) {
+      markTableUnavailable(songThemesTableAvailableRef, "Song themes", error);
+      handled = true;
+    }
+
+    if (isMissingTableError(error, "chord_progressions")) {
+      markTableUnavailable(chordProgressionsTableAvailableRef, "Chord progressions", error);
+      handled = true;
+    }
+
+    return handled;
+  };
+
   const { data: themes, isLoading: isLoadingThemes } = useQuery({
     queryKey: ["song-themes"],
     queryFn: async () => {
+      if (!songThemesTableAvailableRef.current) {
+        return [] as SongTheme[];
+      }
+
       const { data, error } = await supabase
         .from("song_themes")
         .select("*")
         .order("name");
 
-      if (error) throw error;
+      if (error) {
+        if (handleMissingSongwritingTableError(error)) {
+          return [] as SongTheme[];
+        }
+        throw error;
+      }
+
+      songThemesTableAvailableRef.current = true;
       return data as SongTheme[];
     },
   });
@@ -105,12 +194,23 @@ export const useSongwritingData = () => {
   const { data: chordProgressions, isLoading: isLoadingChordProgressions } = useQuery({
     queryKey: ["chord-progressions"],
     queryFn: async () => {
+      if (!chordProgressionsTableAvailableRef.current) {
+        return [] as ChordProgression[];
+      }
+
       const { data, error } = await supabase
         .from("chord_progressions")
         .select("*")
         .order("difficulty", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        if (handleMissingSongwritingTableError(error)) {
+          return [] as ChordProgression[];
+        }
+        throw error;
+      }
+
+      chordProgressionsTableAvailableRef.current = true;
       return data as ChordProgression[];
     },
   });
@@ -118,6 +218,10 @@ export const useSongwritingData = () => {
   const { data: projects, isLoading: isLoadingProjects } = useQuery({
     queryKey: ["songwriting-projects"],
     queryFn: async () => {
+      if (!songwritingProjectsTableAvailableRef.current) {
+        return [] as SongwritingProject[];
+      }
+
       const { data, error } = await supabase
         .from("songwriting_projects")
         .select(`
@@ -142,13 +246,24 @@ export const useSongwritingData = () => {
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (handleMissingSongwritingTableError(error)) {
+          return [] as SongwritingProject[];
+        }
+        throw error;
+      }
+
+      songwritingProjectsTableAvailableRef.current = true;
       return data as SongwritingProject[];
     },
   });
 
   const createProject = useMutation({
     mutationFn: async (projectData: CreateProjectInput) => {
+      if (!songwritingProjectsTableAvailableRef.current) {
+        throw new Error("Songwriting projects are currently unavailable.");
+      }
+
       const { data: authData, error: authError } = await supabase.auth.getUser();
 
       if (authError) throw authError;
@@ -181,7 +296,10 @@ export const useSongwritingData = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        handleMissingSongwritingTableError(error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -194,7 +312,10 @@ export const useSongwritingData = () => {
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to create songwriting project",
+        description:
+          error instanceof Error && error.message.includes("unavailable")
+            ? "Songwriting projects are not available yet. Please try again later."
+            : "Failed to create songwriting project",
         variant: "destructive"
       });
       console.error("Create project error:", error);
