@@ -8,6 +8,7 @@ import {
   useSongwritingData,
   type SongwritingProject,
   type SongwritingSession,
+  getSongQualityDescriptor,
 } from "@/hooks/useSongwritingData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,11 +61,7 @@ interface ProjectFormState {
   title: string;
   theme_id: string;
   chord_progression_id: string;
-  estimated_sessions: number;
-  quality_score: number;
   initial_lyrics: string;
-  status: string;
-  song_id: string;
 }
 
 const MAX_PROGRESS = 2000;
@@ -74,11 +71,7 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   title: "",
   theme_id: "",
   chord_progression_id: "",
-  estimated_sessions: 3,
-  quality_score: 50,
   initial_lyrics: "",
-  status: "writing",
-  song_id: "",
 };
 
 const STATUS_METADATA: Record<string, { label: string; badge: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -302,11 +295,12 @@ const Songwriting = () => {
     (project.lyrics_progress ?? 0) >= MAX_PROGRESS
   ).length;
   const readyProjects = projectsList.filter((project) => READY_STATUSES.has((project.status || "").toLowerCase())).length;
-  const averageQuality = totalProjects
+  const averageQualityScore = totalProjects
     ? Math.round(
         projectsList.reduce((sum, project) => sum + (project.quality_score ?? 0), 0) / totalProjects
       )
     : 0;
+  const averageQualityDescriptor = getSongQualityDescriptor(averageQualityScore);
 
   const filteredProjects = useMemo(() => {
     return projectsList.filter((project) => {
@@ -360,11 +354,7 @@ const Songwriting = () => {
       title: project.title,
       theme_id: project.theme_id ?? "",
       chord_progression_id: project.chord_progression_id ?? "",
-      estimated_sessions: project.estimated_sessions ?? project.total_sessions ?? 3,
-      quality_score: project.quality_score ?? 50,
       initial_lyrics: project.lyrics ?? project.initial_lyrics ?? "",
-      status: project.status ?? "writing",
-      song_id: project.song_id ?? "",
     });
     setIsDialogOpen(true);
   };
@@ -392,13 +382,7 @@ const Songwriting = () => {
       title: formState.title.trim(),
       theme_id: formState.theme_id,
       chord_progression_id: formState.chord_progression_id,
-      estimated_sessions: Number.isFinite(formState.estimated_sessions)
-        ? formState.estimated_sessions
-        : 3,
-      quality_score: Math.min(100, Math.max(0, Math.round(formState.quality_score))),
-      status: formState.status,
       initial_lyrics: formState.initial_lyrics,
-      song_id: formState.song_id || null,
     };
 
     try {
@@ -408,15 +392,16 @@ const Songwriting = () => {
           title: payload.title,
           theme_id: payload.theme_id || null,
           chord_progression_id: payload.chord_progression_id || null,
-          estimated_sessions: payload.estimated_sessions,
-          quality_score: payload.quality_score,
-          status: payload.status,
           initial_lyrics: payload.initial_lyrics ?? null,
           lyrics: payload.initial_lyrics ?? null,
-          song_id: payload.song_id,
         });
       } else {
-        await createProject.mutateAsync(payload);
+        await createProject.mutateAsync({
+          title: payload.title,
+          theme_id: payload.theme_id || null,
+          chord_progression_id: payload.chord_progression_id || null,
+          initial_lyrics: payload.initial_lyrics ?? undefined,
+        });
       }
 
       setIsDialogOpen(false);
@@ -540,40 +525,20 @@ const Songwriting = () => {
               <DialogTitle>{selectedProject ? "Edit Songwriting Project" : "Create Songwriting Project"}</DialogTitle>
               <DialogDescription>
                 {selectedProject
-                  ? "Update your creative plan, adjust targets, or link the project to an existing song."
-                  : "Define the creative direction for your next hit before jumping into focus sprints."}
+                  ? "Update your creative plan or refresh the concept notes for this project."
+                  : "Define the creative direction and we'll forecast the focus sprints you'll need."}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="project-title">Project Title</Label>
-                  <Input
-                    id="project-title"
-                    value={formState.title}
-                    onChange={(event) => setFormState((previous) => ({ ...previous, title: event.target.value }))}
-                    placeholder="anthemic stadium rock banger"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-status">Status</Label>
-                  <Select
-                    value={formState.status}
-                    onValueChange={(value) => setFormState((previous) => ({ ...previous, status: value }))}
-                  >
-                    <SelectTrigger id="project-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="project-title">Project Title</Label>
+                <Input
+                  id="project-title"
+                  value={formState.title}
+                  onChange={(event) => setFormState((previous) => ({ ...previous, title: event.target.value }))}
+                  placeholder="anthemic stadium rock banger"
+                  required
+                />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -626,69 +591,8 @@ const Songwriting = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="project-estimate">Estimated Sessions</Label>
-                  <Input
-                    id="project-estimate"
-                    type="number"
-                    min={1}
-                    value={formState.estimated_sessions}
-                    onChange={(event) =>
-                      setFormState((previous) => ({
-                        ...previous,
-                        estimated_sessions: Number.parseInt(event.target.value, 10) || 1,
-                      }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Plan how many deep work sessions you expect to invest in this song.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-quality">Quality Target</Label>
-                  <Input
-                    id="project-quality"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={formState.quality_score}
-                    onChange={(event) =>
-                      setFormState((previous) => ({
-                        ...previous,
-                        quality_score: Number.parseInt(event.target.value, 10) || 0,
-                      }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">Set an ambition level for the finished song.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-song">Link to an existing song</Label>
-                  <Select
-                    value={formState.song_id || "none"}
-                    onValueChange={(value) =>
-                      setFormState((previous) => ({ ...previous, song_id: value === "none" ? "" : value }))
-                    }
-                  >
-                    <SelectTrigger id="project-song">
-                      <SelectValue placeholder="Optional" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No linked song</SelectItem>
-                      {songs.length === 0 ? (
-                        <SelectItem value="placeholder" disabled>
-                          No songs available yet
-                        </SelectItem>
-                      ) : (
-                        songs.map((song) => (
-                          <SelectItem key={song.id} value={song.id}>
-                            {song.title} · {song.genre}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 p-3 text-xs text-muted-foreground">
+                Save your project to let the game estimate session counts and progress targets based on your current skills and attributes.
               </div>
 
               <div className="space-y-2">
@@ -741,8 +645,8 @@ const Songwriting = () => {
                 Average Quality
                 <Trophy className="h-4 w-4" />
               </div>
-              <p className="mt-2 text-2xl font-semibold">{averageQuality}%</p>
-              <p className="text-xs text-muted-foreground">Based on progress across music and lyrics goals.</p>
+              <p className="mt-2 text-2xl font-semibold">{averageQualityDescriptor.label}</p>
+              <p className="text-xs text-muted-foreground">{averageQualityDescriptor.hint}</p>
             </div>
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -868,6 +772,17 @@ const Songwriting = () => {
               (project.music_progress ?? 0) >= MAX_PROGRESS &&
               (project.lyrics_progress ?? 0) >= MAX_PROGRESS &&
               !project.song_id;
+            const qualityDescriptor = getSongQualityDescriptor(project.quality_score ?? 0);
+            const totalSessions = project.total_sessions ?? 0;
+            const sessionTarget = Math.max(
+              project.estimated_completion_sessions ??
+                project.estimated_sessions ??
+                Math.max(totalSessions, 3),
+              1
+            );
+            const linkedSongQuality = linkedSong
+              ? getSongQualityDescriptor(linkedSong.quality_score ?? 0)
+              : null;
 
             return (
               <Card key={project.id} className="hover:shadow-md transition-shadow">
@@ -916,12 +831,16 @@ const Songwriting = () => {
                       <div>
                         <p>Sessions Logged</p>
                         <p className="text-base font-semibold text-foreground">
-                          {project.total_sessions ?? 0} / {project.estimated_sessions ?? 3}
+                          {totalSessions} / {sessionTarget}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Target adjusts with your growing skills.
                         </p>
                       </div>
                       <div>
                         <p>Quality</p>
-                        <p className="text-base font-semibold text-foreground">{project.quality_score ?? 0}%</p>
+                        <p className="text-base font-semibold text-foreground">{qualityDescriptor.label}</p>
+                        <p className="text-[11px] text-muted-foreground">{qualityDescriptor.hint}</p>
                       </div>
                     </div>
                   </div>
@@ -951,7 +870,9 @@ const Songwriting = () => {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Quality</p>
-                          <p className="font-semibold text-foreground">{linkedSong.quality_score}</p>
+                          <p className="font-semibold text-foreground">
+                            {linkedSongQuality ? linkedSongQuality.label : "Unknown"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Streams</p>
