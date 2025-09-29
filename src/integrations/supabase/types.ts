@@ -254,6 +254,30 @@ export type Database = {
         }
         Relationships: []
       }
+      chord_progressions: {
+        Row: {
+          created_at: string
+          difficulty: number | null
+          id: string
+          name: string
+          progression: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: number | null
+          id?: string
+          name: string
+          progression: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: number | null
+          id?: string
+          name?: string
+          progression?: string
+        }
+        Relationships: []
+      }
       cities: {
         Row: {
           cost_of_living: number | null
@@ -1018,28 +1042,31 @@ export type Database = {
       }
       profile_daily_xp_grants: {
         Row: {
-          claimed_at: string
+          created_at: string
           grant_date: string
           id: string
-          metadata: Json
+          metadata: Json | null
           profile_id: string
-          xp_awarded: number
+          source: string
+          xp_amount: number
         }
         Insert: {
-          claimed_at?: string
+          created_at?: string
           grant_date?: string
           id?: string
-          metadata?: Json
+          metadata?: Json | null
           profile_id: string
-          xp_awarded: number
+          source: string
+          xp_amount?: number
         }
         Update: {
-          claimed_at?: string
+          created_at?: string
           grant_date?: string
           id?: string
-          metadata?: Json
+          metadata?: Json | null
           profile_id?: string
-          xp_awarded?: number
+          source?: string
+          xp_amount?: number
         }
         Relationships: []
       }
@@ -1250,90 +1277,226 @@ export type Database = {
         }
         Relationships: []
       }
-      songwriting_projects: {
+      song_themes: {
         Row: {
           created_at: string
+          description: string | null
           id: string
-          locked_until: string | null
+          mood: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          mood?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          mood?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      songs: {
+        Row: {
+          chart_position: number | null
+          chord_progression_id: string | null
+          created_at: string
+          genre: string
+          id: string
           lyrics: string | null
-          sessions_completed: number
-          song_id: string | null
+          lyrics_progress: number | null
+          music_progress: number | null
+          quality_score: number
+          release_date: string | null
+          revenue: number
+          songwriting_project_id: string | null
           status: string
+          streams: number
+          theme_id: string | null
           title: string
+          total_sessions: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          chart_position?: number | null
+          chord_progression_id?: string | null
           created_at?: string
+          genre: string
           id?: string
-          locked_until?: string | null
           lyrics?: string | null
-          sessions_completed?: number
-          song_id?: string | null
+          lyrics_progress?: number | null
+          music_progress?: number | null
+          quality_score?: number
+          release_date?: string | null
+          revenue?: number
+          songwriting_project_id?: string | null
           status?: string
-          title?: string
+          streams?: number
+          theme_id?: string | null
+          title: string
+          total_sessions?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          chart_position?: number | null
+          chord_progression_id?: string | null
           created_at?: string
+          genre?: string
           id?: string
-          locked_until?: string | null
           lyrics?: string | null
-          sessions_completed?: number
-          song_id?: string | null
+          lyrics_progress?: number | null
+          music_progress?: number | null
+          quality_score?: number
+          release_date?: string | null
+          revenue?: number
+          songwriting_project_id?: string | null
           status?: string
+          streams?: number
+          theme_id?: string | null
           title?: string
+          total_sessions?: number | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "songwriting_projects_song_id_fkey"
-            columns: ["song_id"]
+            foreignKeyName: "songs_chord_progression_id_fkey"
+            columns: ["chord_progression_id"]
             isOneToOne: false
-            referencedRelation: "songs"
+            referencedRelation: "chord_progressions"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "songwriting_projects_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "songs_songwriting_project_id_fkey"
+            columns: ["songwriting_project_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedRelation: "songwriting_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songs_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "song_themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      songwriting_projects: {
+        Row: {
+          chord_progression_id: string | null
+          created_at: string
+          estimated_sessions: number | null
+          id: string
+          initial_lyrics: string | null
+          is_locked: boolean | null
+          locked_until: string | null
+          lyrics_progress: number | null
+          music_progress: number | null
+          quality_score: number | null
+          status: string | null
+          theme_id: string | null
+          title: string
+          total_sessions: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chord_progression_id?: string | null
+          created_at?: string
+          estimated_sessions?: number | null
+          id?: string
+          initial_lyrics?: string | null
+          is_locked?: boolean | null
+          locked_until?: string | null
+          lyrics_progress?: number | null
+          music_progress?: number | null
+          quality_score?: number | null
+          status?: string | null
+          theme_id?: string | null
+          title: string
+          total_sessions?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chord_progression_id?: string | null
+          created_at?: string
+          estimated_sessions?: number | null
+          id?: string
+          initial_lyrics?: string | null
+          is_locked?: boolean | null
+          locked_until?: string | null
+          lyrics_progress?: number | null
+          music_progress?: number | null
+          quality_score?: number | null
+          status?: string | null
+          theme_id?: string | null
+          title?: string
+          total_sessions?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songwriting_projects_chord_progression_id_fkey"
+            columns: ["chord_progression_id"]
+            isOneToOne: false
+            referencedRelation: "chord_progressions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_projects_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "song_themes"
+            referencedColumns: ["id"]
           },
         ]
       }
       songwriting_sessions: {
         Row: {
-          completed_at: string | null
           created_at: string
           id: string
-          locked_until: string
+          lyrics_progress_gained: number | null
+          music_progress_gained: number | null
           notes: string | null
           project_id: string
-          started_at: string
+          session_end: string | null
+          session_start: string
           user_id: string
+          xp_earned: number | null
         }
         Insert: {
-          completed_at?: string | null
           created_at?: string
           id?: string
-          locked_until: string
+          lyrics_progress_gained?: number | null
+          music_progress_gained?: number | null
           notes?: string | null
           project_id: string
-          started_at?: string
+          session_end?: string | null
+          session_start?: string
           user_id: string
+          xp_earned?: number | null
         }
         Update: {
-          completed_at?: string | null
           created_at?: string
           id?: string
-          locked_until?: string
+          lyrics_progress_gained?: number | null
+          music_progress_gained?: number | null
           notes?: string | null
           project_id?: string
-          started_at?: string
+          session_end?: string | null
+          session_start?: string
           user_id?: string
+          xp_earned?: number | null
         }
         Relationships: [
           {
@@ -1341,285 +1504,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "songwriting_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songwriting_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      songs: {
-        Row: {
-          audio_layers: Json[] | null
-          chart_position: number | null
-          created_at: string
-          genre: string
-          id: string
-          lyrics: string | null
-          quality_score: number
-          release_date: string | null
-          revenue: number
-          status: string
-          streams: number
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          audio_layers?: Json[] | null
-          chart_position?: number | null
-          created_at?: string
-          genre: string
-          id?: string
-          lyrics?: string | null
-          quality_score?: number
-          release_date?: string | null
-          revenue?: number
-          status?: string
-          streams?: number
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          audio_layers?: Json[] | null
-          chart_position?: number | null
-          created_at?: string
-          genre?: string
-          id?: string
-          lyrics?: string | null
-          quality_score?: number
-          release_date?: string | null
-          revenue?: number
-          status?: string
-          streams?: number
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      studio_booking_artists: {
-        Row: {
-          booking_id: string
-          character_id: string
-          daily_cost: number
-          id: string
-          role: Database["public"]["Enums"]["studio_booking_artist_role"]
-        }
-        Insert: {
-          booking_id: string
-          character_id: string
-          daily_cost?: number
-          id?: string
-          role: Database["public"]["Enums"]["studio_booking_artist_role"]
-        }
-        Update: {
-          booking_id?: string
-          character_id?: string
-          daily_cost?: number
-          id?: string
-          role?: Database["public"]["Enums"]["studio_booking_artist_role"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "studio_booking_artists_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "studio_bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "studio_booking_artists_character_id_fkey"
-            columns: ["character_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      studio_booking_slots: {
-        Row: {
-          booking_id: string
-          id: string
-          is_booked: boolean
-          slot: Database["public"]["Enums"]["studio_slot"]
-          slot_date: string
-        }
-        Insert: {
-          booking_id: string
-          id?: string
-          is_booked?: boolean
-          slot: Database["public"]["Enums"]["studio_slot"]
-          slot_date: string
-        }
-        Update: {
-          booking_id?: string
-          id?: string
-          is_booked?: boolean
-          slot?: Database["public"]["Enums"]["studio_slot"]
-          slot_date?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "studio_booking_slots_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "studio_bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      studio_booking_songs: {
-        Row: {
-          booking_id: string
-          id: string
-          momentum: number
-          progress_end: number
-          progress_start: number
-          song_id: string
-        }
-        Insert: {
-          booking_id: string
-          id?: string
-          momentum?: number
-          progress_end?: number
-          progress_start?: number
-          song_id: string
-        }
-        Update: {
-          booking_id?: string
-          id?: string
-          momentum?: number
-          progress_end?: number
-          progress_start?: number
-          song_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "studio_booking_songs_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "studio_bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "studio_booking_songs_song_id_fkey"
-            columns: ["song_id"]
-            isOneToOne: false
-            referencedRelation: "songs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      studio_bookings: {
-        Row: {
-          band_id: string
-          created_at: string
-          end_date: string
-          id: string
-          mood: Database["public"]["Enums"]["studio_session_mood"]
-          producer_id: string | null
-          start_date: string
-          status: Database["public"]["Enums"]["studio_booking_status"]
-          studio_id: string
-          total_cost: number
-          updated_at: string
-        }
-        Insert: {
-          band_id: string
-          created_at?: string
-          end_date: string
-          id?: string
-          mood: Database["public"]["Enums"]["studio_session_mood"]
-          producer_id?: string | null
-          start_date: string
-          status?: Database["public"]["Enums"]["studio_booking_status"]
-          studio_id: string
-          total_cost?: number
-          updated_at?: string
-        }
-        Update: {
-          band_id?: string
-          created_at?: string
-          end_date?: string
-          id?: string
-          mood?: Database["public"]["Enums"]["studio_session_mood"]
-          producer_id?: string | null
-          start_date?: string
-          status?: Database["public"]["Enums"]["studio_booking_status"]
-          studio_id?: string
-          total_cost?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "studio_bookings_band_id_fkey"
-            columns: ["band_id"]
-            isOneToOne: false
-            referencedRelation: "bands"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "studio_bookings_producer_id_fkey"
-            columns: ["producer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "studio_bookings_studio_id_fkey"
-            columns: ["studio_id"]
-            isOneToOne: false
-            referencedRelation: "studios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      studios: {
-        Row: {
-          city_id: string
-          cost_per_day: number
-          created_at: string
-          engineer_rating: number
-          equipment_rating: number
-          id: string
-          name: string
-          quality: number
-          updated_at: string
-        }
-        Insert: {
-          city_id: string
-          cost_per_day: number
-          created_at?: string
-          engineer_rating: number
-          equipment_rating: number
-          id?: string
-          name: string
-          quality: number
-          updated_at?: string
-        }
-        Update: {
-          city_id?: string
-          cost_per_day?: number
-          created_at?: string
-          engineer_rating?: number
-          equipment_rating?: number
-          id?: string
-          name?: string
-          quality?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "studios_city_id_fkey"
-            columns: ["city_id"]
-            isOneToOne: false
-            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
         ]
@@ -1784,65 +1668,6 @@ export type Database = {
         }
         Relationships: []
       }
-      jam_sessions: {
-        Row: {
-          access_code: string | null
-          created_at: string
-          current_participants: number
-          description: string | null
-          genre: string
-          host_id: string
-          id: string
-          is_private: boolean
-          max_participants: number
-          name: string
-          participant_ids: string[]
-          skill_requirement: number
-          tempo: number
-          updated_at: string
-        }
-        Insert: {
-          access_code?: string | null
-          created_at?: string
-          current_participants?: number
-          description?: string | null
-          genre: string
-          host_id: string
-          id?: string
-          is_private?: boolean
-          max_participants?: number
-          name: string
-          participant_ids?: string[]
-          skill_requirement?: number
-          tempo?: number
-          updated_at?: string
-        }
-        Update: {
-          access_code?: string | null
-          created_at?: string
-          current_participants?: number
-          description?: string | null
-          genre?: string
-          host_id?: string
-          id?: string
-          is_private?: boolean
-          max_participants?: number
-          name?: string
-          participant_ids?: string[]
-          skill_requirement?: number
-          tempo?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "jam_sessions_host_id_fkey"
-            columns: ["host_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
       venues: {
         Row: {
           base_payment: number | null
@@ -1884,6 +1709,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_songwriting_progress: {
+        Args: {
+          p_attr_creative_insight: number
+          p_attr_musical_ability: number
+          p_current_lyrics: number
+          p_current_music: number
+          p_skill_composition: number
+          p_skill_creativity: number
+          p_skill_songwriting: number
+        }
+        Returns: Json
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -1901,15 +1738,6 @@ export type Database = {
       chat_participant_status: "online" | "offline" | "typing" | "away"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       show_type_enum: "concert" | "festival" | "private" | "street"
-      studio_booking_artist_role: "band_member" | "session_musician" | "producer"
-      studio_booking_status:
-        | "pending"
-        | "confirmed"
-        | "in_progress"
-        | "completed"
-        | "cancelled"
-      studio_session_mood: "professional" | "party" | "chilled"
-      studio_slot: "morning" | "evening"
     }
     CompositeTypes: {
       [_ in never]: never
