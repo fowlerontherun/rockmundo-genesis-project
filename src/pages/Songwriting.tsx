@@ -109,6 +109,13 @@ const Songwriting = () => {
     song_id: ""
   });
 
+  const songMap = useMemo(() => {
+    return songs.reduce<Record<string, Song>>((accumulator, song) => {
+      accumulator[song.id] = song;
+      return accumulator;
+    }, {});
+  }, [songs]);
+
   const fetchProjects = useCallback(async () => {
     if (!user?.id) {
       return;
@@ -128,7 +135,7 @@ const Songwriting = () => {
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setProjects(data || []);
+      setProjects(Array.isArray(data) ? (data as SongwritingProject[]) : []);
 
       logger.info("Fetched songwriting projects successfully", {
         userId: user.id,
@@ -162,7 +169,7 @@ const Songwriting = () => {
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      setSongs(data || []);
+      setSongs(Array.isArray(data) ? (data as Song[]) : []);
 
       logger.info("Fetched songs for songwriting", {
         userId: user.id,
@@ -397,9 +404,10 @@ const Songwriting = () => {
     let statusRegistered = false;
 
     try {
-      await startActivity("songwriting_session", {
+      await startActivity({
+        status: "songwriting_session",
         durationMinutes: SESSION_DURATION_MINUTES,
-        songId: project.song_id || null,
+        metadata: project.song_id ? { song_id: project.song_id } : undefined,
       });
       statusRegistered = true;
     } catch (statusError) {
