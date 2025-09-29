@@ -161,7 +161,7 @@ const Songwriting = () => {
     startSession,
     completeSession,
     convertToSong,
-  } = useSongwritingData();
+  } = useSongwritingData(user?.id);
 
   const [songs, setSongs] = useState<Song[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");

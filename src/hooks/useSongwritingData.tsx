@@ -100,13 +100,15 @@ export const getSongQualityDescriptor = (score: number): SongQualityDescriptor &
   return { ...band, score: normalized };
 };
 
-export const useSongwritingData = () => {
+export const useSongwritingData = (userId?: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const songThemesTableAvailableRef = useRef(true);
   const chordProgressionsTableAvailableRef = useRef(true);
   const songwritingProjectsTableAvailableRef = useRef(true);
+
+  const activeUserId = typeof userId === "string" && userId.length > 0 ? userId : null;
 
   const isMissingTableError = (error: unknown, tableName: string): boolean => {
     if (!error || typeof error !== "object") {
@@ -230,9 +232,9 @@ export const useSongwritingData = () => {
   });
 
   const { data: projects, isLoading: isLoadingProjects } = useQuery({
-    queryKey: ["songwriting-projects"],
+    queryKey: ["songwriting-projects", activeUserId ?? "anonymous"],
     queryFn: async () => {
-      if (!songwritingProjectsTableAvailableRef.current) {
+      if (!songwritingProjectsTableAvailableRef.current || !activeUserId) {
         return [] as SongwritingProject[];
       }
 
@@ -258,6 +260,7 @@ export const useSongwritingData = () => {
             created_at
           )
         `)
+        .eq("user_id", activeUserId)
         .order("created_at", { ascending: false });
 
       if (error) {
