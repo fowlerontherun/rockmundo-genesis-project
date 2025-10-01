@@ -394,6 +394,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const dailyXpGrantTableAvailableRef = useRef(true);
   const activityStatusTableAvailableRef = useRef(true);
   const activityStatusMetadataSupportedRef = useRef(true);
+  const activityFeedSupportsDurationRef = useRef(true);
 
   const getPostgrestErrorCode = (error: unknown): string | null => {
     if (typeof error !== "object" || error === null || !("code" in error)) {
@@ -439,6 +440,44 @@ const useProvideGameData = (): UseGameDataReturn => {
       if (haystack.includes("schema cache") || haystack.includes("does not exist") || haystack.includes("not found")) {
         return true;
       }
+    }
+
+    return false;
+  };
+
+  const isMissingColumnError = (
+    error: unknown,
+    columnName: string,
+  ): error is {
+    code?: string;
+    message?: string | null;
+    details?: string | null;
+  } => {
+    if (typeof error !== "object" || error === null) {
+      return false;
+    }
+
+    const candidate = error as { code?: string; message?: string | null; details?: string | null };
+    const haystack = [candidate.message, candidate.details]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+
+    if (!haystack.includes(columnName.toLowerCase())) {
+      return false;
+    }
+
+    if (isSchemaCacheMissingColumnError(candidate)) {
+      return true;
+    }
+
+    const code = getPostgrestErrorCode(candidate);
+    if (code === "42703") {
+      return true;
+    }
+
+    if (haystack.includes("column") || haystack.includes("schema cache")) {
+      return true;
     }
 
     return false;
@@ -500,22 +539,41 @@ const useProvideGameData = (): UseGameDataReturn => {
       }
 
       let missingProfileId = false;
+      let missingDurationColumn = false;
 
       const normalized = rows.map((row) => {
-        const record = row as ActivityFeedRow & { profile_id?: string | null };
+        const record = row as ActivityFeedRow & {
+          profile_id?: string | null;
+          duration_minutes?: number | null;
+        };
         if (!record.profile_id) {
           missingProfileId = true;
+        }
+
+        if (!("duration_minutes" in record)) {
+          missingDurationColumn = true;
         }
 
         return {
           ...record,
           profile_id: record.profile_id ?? fallbackProfileId,
+          duration_minutes:
+            "duration_minutes" in record && typeof record.duration_minutes !== "undefined"
+              ? record.duration_minutes ?? null
+              : null,
         };
       });
 
+      if (missingDurationColumn && activityFeedSupportsDurationRef.current) {
+        activityFeedSupportsDurationRef.current = false;
+        console.warn(
+          "Activity feed duration_minutes column is unavailable; omitting duration metadata from future entries.",
+        );
+      }
+
       return { rows: normalized, missingProfileId };
     },
-    [],
+    [activityFeedSupportsDurationRef],
   );
 
   const loadProfileDetails = useCallback(
@@ -1541,25 +1599,28 @@ const useProvideGameData = (): UseGameDataReturn => {
         throw new Error("No active profile selected");
       }
 
-      const basePayload: any = {
+      const basePayload: Record<string, unknown> = {
         user_id: user.id,
         activity_type: type,
         message,
         earnings: typeof earnings === "number" ? earnings : null,
         metadata: metadata as any,
         status: options.status ?? null,
-        duration_minutes:
-          typeof options.durationMinutes === "number" && Number.isFinite(options.durationMinutes)
-            ? options.durationMinutes
-            : null,
         status_id: options.statusId ?? null,
       };
+
+      if (activityFeedSupportsDurationRef.current) {
+        basePayload.duration_minutes =
+          typeof options.durationMinutes === "number" && Number.isFinite(options.durationMinutes)
+            ? options.durationMinutes
+            : null;
+      }
 
       if (supportsActivityProfileFilter) {
         basePayload.profile_id = profile.id;
       }
 
-      const { error: insertError } = await supabase.from("activity_feed").insert(basePayload);
+      const { error: insertError } = await supabase.from("activity_feed").insert(basePayload as any);
 
       if (!insertError && basePayload.profile_id) {
         setSupportsActivityProfileFilter(true);
@@ -1572,9 +1633,31 @@ const useProvideGameData = (): UseGameDataReturn => {
           insertError,
         );
         setSupportsActivityProfileFilter(false);
-        const fallbackPayload: any = { ...basePayload };
+        const fallbackPayload: Record<string, unknown> = { ...basePayload };
         delete fallbackPayload.profile_id;
-        const { error: fallbackError } = await supabase.from("activity_feed").insert(fallbackPayload);
+        const { error: fallbackError } = await supabase.from("activity_feed").insert(fallbackPayload as any);
+        if (fallbackError) {
+          throw fallbackError;
+        }
+        return;
+      }
+
+      if (
+        insertError &&
+        activityFeedSupportsDurationRef.current &&
+        isMissingColumnError(insertError, "duration_minutes")
+      ) {
+        console.warn(
+          "Activity feed duration_minutes column missing during insert; retrying without duration metadata.",
+          insertError,
+        );
+
+        activityFeedSupportsDurationRef.current = false;
+
+        const fallbackPayload: Record<string, unknown> = { ...basePayload };
+        delete fallbackPayload.duration_minutes;
+
+        const { error: fallbackError } = await supabase.from("activity_feed").insert(fallbackPayload as any);
         if (fallbackError) {
           throw fallbackError;
         }
@@ -1585,7 +1668,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         throw insertError;
       }
     },
-    [profile, supportsActivityProfileFilter, user],
+    [profile, supportsActivityProfileFilter, user, activityFeedSupportsDurationRef, isMissingColumnError],
   );
 
   const refreshActivityStatus = useCallback(async (): Promise<ProfileActivityStatusRow | null> => {
