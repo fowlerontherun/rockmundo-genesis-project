@@ -28,7 +28,7 @@ export interface SongwritingProject {
   music_progress: number;
   lyrics_progress: number;
   total_sessions: number;
-  estimated_completion_sessions: number;
+  estimated_completion_sessions?: number | null;
   estimated_sessions?: number | null;
   quality_score: number;
   status: string | null;
@@ -109,6 +109,7 @@ export const useSongwritingData = (userId?: string | null) => {
   const songwritingProjectsTableAvailableRef = useRef(true);
   const songwritingSessionsTableAvailableRef = useRef(true);
   const songwritingSessionsStartedAtSupportedRef = useRef(true);
+  const songwritingEstimatedCompletionSupportedRef = useRef(true);
 
   const activeUserId = typeof userId === "string" && userId.length > 0 ? userId : null;
 
@@ -133,6 +134,55 @@ export const useSongwritingData = (userId?: string | null) => {
       code: candidate.code,
       haystack,
     };
+  };
+
+  const computeEstimatedCompletionSessions = (
+    project:
+      | {
+          estimated_completion_sessions?: number | null;
+          estimated_sessions?: number | null;
+          total_sessions?: number | null;
+        }
+      | null
+      | undefined,
+  ): number => {
+    const completionValue = project?.estimated_completion_sessions;
+    if (typeof completionValue === "number" && Number.isFinite(completionValue)) {
+      return completionValue;
+    }
+
+    const legacyValue = project?.estimated_sessions;
+    if (typeof legacyValue === "number" && Number.isFinite(legacyValue)) {
+      return legacyValue;
+    }
+
+    const totalSessions = project?.total_sessions;
+    if (typeof totalSessions === "number" && Number.isFinite(totalSessions)) {
+      return Math.max(1, totalSessions);
+    }
+
+    return 3;
+  };
+
+  const normalizeProjectRow = <T extends Record<string, unknown>>(project: T): T & {
+    estimated_completion_sessions: number;
+  } => ({
+    ...project,
+    estimated_completion_sessions: computeEstimatedCompletionSessions(
+      project as unknown as {
+        estimated_completion_sessions?: number | null;
+        estimated_sessions?: number | null;
+        total_sessions?: number | null;
+      },
+    ),
+  });
+
+  const normalizeProjects = (rows: unknown[] | null | undefined): SongwritingProject[] => {
+    if (!Array.isArray(rows)) {
+      return [] as SongwritingProject[];
+    }
+
+    return rows.map((row) => normalizeProjectRow(row as Record<string, unknown>)) as SongwritingProject[];
   };
 
   const isMissingTableError = (error: unknown, tableName: string): boolean => {
@@ -210,6 +260,15 @@ export const useSongwritingData = (userId?: string | null) => {
       handled = true;
     }
 
+    if (isMissingColumnError(error, "estimated_completion_sessions")) {
+      songwritingEstimatedCompletionSupportedRef.current = false;
+      console.warn(
+        "Songwriting projects estimated_completion_sessions column unavailable; falling back to legacy estimated_sessions.",
+        error,
+      );
+      handled = true;
+    }
+
     if (isMissingTableError(error, "songwriting_sessions")) {
       markTableUnavailable(songwritingSessionsTableAvailableRef, "Songwriting sessions", error);
       handled = true;
@@ -283,9 +342,36 @@ export const useSongwritingData = (userId?: string | null) => {
         return [] as SongwritingProject[];
       }
 
-      const buildSelect = (includeSessions: boolean, includeStartedAt: boolean) => {
+      const buildSelect = (
+        includeSessions: boolean,
+        includeStartedAt: boolean,
+        includeEstimatedCompletion: boolean,
+      ) => {
+        const projectFields = [
+          "id",
+          "user_id",
+          "title",
+          "theme_id",
+          "chord_progression_id",
+          "initial_lyrics",
+          "lyrics",
+          "music_progress",
+          "lyrics_progress",
+          "total_sessions",
+          includeEstimatedCompletion ? "estimated_completion_sessions" : null,
+          "estimated_sessions",
+          "quality_score",
+          "status",
+          "is_locked",
+          "locked_until",
+          "sessions_completed",
+          "song_id",
+          "created_at",
+          "updated_at",
+        ].filter((field): field is string => typeof field === "string" && field.length > 0);
+
         const selections = [
-          "*",
+          projectFields.join(","),
           "song_themes (id, name, description, mood)",
           "chord_progressions (id, name, progression, difficulty)",
         ];
@@ -313,19 +399,52 @@ export const useSongwritingData = (userId?: string | null) => {
         return selections.join(",\n");
       };
 
-      const performQuery = async (includeSessions: boolean, includeStartedAt: boolean) =>
+      const performQuery = async (
+        includeSessions: boolean,
+        includeStartedAt: boolean,
+        includeEstimatedCompletion: boolean,
+      ) =>
         supabase
           .from("songwriting_projects")
-          .select(buildSelect(includeSessions, includeStartedAt))
+          .select(buildSelect(includeSessions, includeStartedAt, includeEstimatedCompletion))
           .eq("user_id", activeUserId)
           .order("created_at", { ascending: false });
 
       const includeSessions = songwritingSessionsTableAvailableRef.current;
       const includeStartedAt = includeSessions && songwritingSessionsStartedAtSupportedRef.current;
+      const includeEstimatedCompletion = songwritingEstimatedCompletionSupportedRef.current;
 
-      const { data, error } = await performQuery(includeSessions, includeStartedAt);
+      const { data, error } = await performQuery(
+        includeSessions,
+        includeStartedAt,
+        includeEstimatedCompletion,
+      );
 
       if (error) {
+        if (includeEstimatedCompletion && isMissingColumnError(error, "estimated_completion_sessions")) {
+          songwritingEstimatedCompletionSupportedRef.current = false;
+          console.warn(
+            "Songwriting projects estimated_completion_sessions column unavailable during fetch; retrying without it.",
+            error,
+          );
+
+          const { data: fallbackData, error: fallbackError } = await performQuery(
+            includeSessions,
+            includeStartedAt,
+            false,
+          );
+
+          if (fallbackError) {
+            if (handleMissingSongwritingTableError(fallbackError)) {
+              return [] as SongwritingProject[];
+            }
+            throw fallbackError;
+          }
+
+          songwritingProjectsTableAvailableRef.current = true;
+          return normalizeProjects(fallbackData);
+        }
+
         if (includeSessions && includeStartedAt && isMissingColumnError(error, "started_at")) {
           songwritingSessionsStartedAtSupportedRef.current = false;
           console.warn(
@@ -333,7 +452,11 @@ export const useSongwritingData = (userId?: string | null) => {
             error,
           );
 
-          const { data: fallbackData, error: fallbackError } = await performQuery(includeSessions, false);
+          const { data: fallbackData, error: fallbackError } = await performQuery(
+            includeSessions,
+            false,
+            songwritingEstimatedCompletionSupportedRef.current,
+          );
 
           if (fallbackError) {
             if (handleMissingSongwritingTableError(fallbackError)) {
@@ -343,14 +466,18 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           songwritingProjectsTableAvailableRef.current = true;
-          return fallbackData as SongwritingProject[];
+          return normalizeProjects(fallbackData);
         }
 
         if (includeSessions && isMissingTableError(error, "songwriting_sessions")) {
           songwritingSessionsTableAvailableRef.current = false;
           console.warn("Songwriting sessions relation unavailable; refetching without session data.", error);
 
-          const { data: fallbackData, error: fallbackError } = await performQuery(false, false);
+          const { data: fallbackData, error: fallbackError } = await performQuery(
+            false,
+            false,
+            songwritingEstimatedCompletionSupportedRef.current,
+          );
 
           if (fallbackError) {
             if (handleMissingSongwritingTableError(fallbackError)) {
@@ -360,7 +487,7 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           songwritingProjectsTableAvailableRef.current = true;
-          return fallbackData as SongwritingProject[];
+          return normalizeProjects(fallbackData);
         }
 
         if (handleMissingSongwritingTableError(error)) {
@@ -370,7 +497,7 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       songwritingProjectsTableAvailableRef.current = true;
-      return data as SongwritingProject[];
+      return normalizeProjects(data);
     },
   });
 
@@ -428,14 +555,14 @@ export const useSongwritingData = (userId?: string | null) => {
 
       const estimatedSessions = estimateSessions();
 
-      const payload = {
+      const buildPayload = (includeEstimatedCompletion: boolean) => ({
         user_id: userId,
         title: projectData.title.trim(),
         theme_id: sanitizedThemeId,
         chord_progression_id: sanitizedProgressionId,
         initial_lyrics: sanitizedLyrics,
         lyrics: sanitizedLyrics,
-        estimated_completion_sessions: estimatedSessions,
+        ...(includeEstimatedCompletion ? { estimated_completion_sessions: estimatedSessions } : {}),
         estimated_sessions: estimatedSessions,
         quality_score: 1000,
         status: "draft",
@@ -445,19 +572,40 @@ export const useSongwritingData = (userId?: string | null) => {
         sessions_completed: 0,
         is_locked: false,
         locked_until: null,
-      };
+      });
 
-      const { data, error } = await supabase
-        .from("songwriting_projects")
-        .insert(payload as any)
-        .select()
-        .single();
+      const attemptInsert = (includeEstimatedCompletion: boolean) =>
+        supabase
+          .from("songwriting_projects")
+          .insert(buildPayload(includeEstimatedCompletion) as Record<string, unknown>)
+          .select()
+          .single();
+
+      const includeEstimatedCompletion = songwritingEstimatedCompletionSupportedRef.current;
+
+      let { data, error } = await attemptInsert(includeEstimatedCompletion);
+
+      if (error && includeEstimatedCompletion && isMissingColumnError(error, "estimated_completion_sessions")) {
+        songwritingEstimatedCompletionSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects estimated_completion_sessions column unavailable when creating; retrying without it.",
+          error,
+        );
+
+        const fallback = await attemptInsert(false);
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
         handleMissingSongwritingTableError(error);
         throw error;
       }
-      return data;
+
+      const normalized = data
+        ? (normalizeProjectRow(data as Record<string, unknown>) as SongwritingProject)
+        : null;
+      return normalized as SongwritingProject | null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
@@ -485,28 +633,61 @@ export const useSongwritingData = (userId?: string | null) => {
         throw new Error("Project id is required to update a songwriting project");
       }
 
-      const payload: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
+      const includeEstimatedCompletion = songwritingEstimatedCompletionSupportedRef.current;
+
+      const buildPayload = (includeEstimated: boolean) => {
+        const payload: Record<string, unknown> = {
+          updated_at: new Date().toISOString(),
+        };
+
+        (Object.entries(updates) as Array<[keyof UpdateProjectInput, unknown]>).forEach(([key, value]) => {
+          if (value === undefined) {
+            return;
+          }
+
+          if (key === "estimated_completion_sessions") {
+            if (includeEstimated) {
+              payload[key] = value;
+            }
+            payload.estimated_sessions = value;
+            return;
+          }
+
+          payload[key] = value;
+        });
+
+        if (!includeEstimated) {
+          delete payload.estimated_completion_sessions;
+        }
+
+        if (updates.estimated_completion_sessions !== undefined) {
+          payload.estimated_sessions = updates.estimated_completion_sessions;
+        }
+
+        if (payload.initial_lyrics !== undefined && payload.lyrics === undefined) {
+          payload.lyrics = payload.initial_lyrics;
+        }
+
+        return payload;
       };
 
-      (Object.entries(updates) as Array<[keyof UpdateProjectInput, unknown]>).forEach(([key, value]) => {
-        if (value !== undefined) {
-          payload[key] = value;
-        }
-      });
+      const attemptUpdate = (includeEstimated: boolean) =>
+        supabase
+          .from("songwriting_projects")
+          .update(buildPayload(includeEstimated) as Record<string, unknown>)
+          .eq("id", id);
 
-      if (updates.estimated_completion_sessions !== undefined) {
-        payload.estimated_sessions = updates.estimated_completion_sessions;
+      let { error } = await attemptUpdate(includeEstimatedCompletion);
+
+      if (error && includeEstimatedCompletion && isMissingColumnError(error, "estimated_completion_sessions")) {
+        songwritingEstimatedCompletionSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects estimated_completion_sessions column unavailable when updating; retrying without it.",
+          error,
+        );
+
+        ({ error } = await attemptUpdate(false));
       }
-
-      if (payload.initial_lyrics !== undefined && payload.lyrics === undefined) {
-        payload.lyrics = payload.initial_lyrics;
-      }
-
-      const { error } = await supabase
-        .from("songwriting_projects")
-        .update(payload as any)
-        .eq("id", id);
 
       if (error) throw error;
       return id;
@@ -591,7 +772,7 @@ export const useSongwritingData = (userId?: string | null) => {
           locked_until: lockUntil.toISOString(),
           status: project.status && project.status !== "draft" ? project.status : "writing",
           updated_at: startedAt.toISOString(),
-        } as any)
+        } as Record<string, unknown>)
         .eq("id", projectId);
 
       if (lockError) throw lockError;
@@ -607,7 +788,7 @@ export const useSongwritingData = (userId?: string | null) => {
             : {}),
           locked_until: lockUntil.toISOString(),
           notes: null,
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
 
@@ -627,7 +808,7 @@ export const useSongwritingData = (userId?: string | null) => {
               session_start: startedAt.toISOString(),
               locked_until: lockUntil.toISOString(),
               notes: null,
-            } as any)
+            } as Record<string, unknown>)
             .select()
             .single();
 
@@ -671,16 +852,51 @@ export const useSongwritingData = (userId?: string | null) => {
       if (sessionError) throw sessionError;
       if (!session) throw new Error("Session not found");
 
-      const { data: project, error: projectError } = await supabase
+      const buildProjectSelect = (includeEstimated: boolean) =>
+        [
+          "music_progress",
+          "lyrics_progress",
+          "total_sessions",
+          includeEstimated ? "estimated_completion_sessions" : null,
+          "estimated_sessions",
+          "quality_score",
+          "status",
+          "sessions_completed",
+          "theme_id",
+          "chord_progression_id",
+        ]
+          .filter((field): field is string => typeof field === "string" && field.length > 0)
+          .join(", ");
+
+      const includeEstimatedCompletion = songwritingEstimatedCompletionSupportedRef.current;
+
+      let { data: project, error: projectError } = await supabase
         .from("songwriting_projects")
-        .select(
-          "music_progress, lyrics_progress, total_sessions, estimated_completion_sessions, estimated_sessions, quality_score, status, sessions_completed, theme_id, chord_progression_id"
-        )
+        .select(buildProjectSelect(includeEstimatedCompletion))
         .eq("id", session.project_id)
         .maybeSingle();
 
+      if (projectError && includeEstimatedCompletion && isMissingColumnError(projectError, "estimated_completion_sessions")) {
+        songwritingEstimatedCompletionSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects estimated_completion_sessions column unavailable when completing session; retrying without it.",
+          projectError,
+        );
+
+        const fallback = await supabase
+          .from("songwriting_projects")
+          .select(buildProjectSelect(false))
+          .eq("id", session.project_id)
+          .maybeSingle();
+
+        project = fallback.data;
+        projectError = fallback.error;
+      }
+
       if (projectError) throw projectError;
       if (!project) throw new Error("Project not found");
+
+      project = normalizeProjectRow(project as Record<string, unknown>);
 
       const [{ data: skills, error: skillsError }, { data: attributes, error: attributesError }] =
         await Promise.all([
@@ -704,16 +920,20 @@ export const useSongwritingData = (userId?: string | null) => {
         throw attributesError;
       }
 
-      const { data: progressCalc, error: calcError } = await supabase
-        .rpc("calculate_songwriting_progress", {
-          p_skill_songwriting: skills?.songwriting || 1,
-          p_skill_creativity: skills?.creativity || 1,
-          p_skill_composition: skills?.composition || 1,
-          p_attr_creative_insight: attributes?.creative_insight || 10,
-          p_attr_musical_ability: attributes?.musical_ability || 10,
-          p_current_music: project.music_progress,
-          p_current_lyrics: project.lyrics_progress,
-        } as any);
+      const progressParameters: Record<string, unknown> = {
+        p_skill_songwriting: skills?.songwriting || 1,
+        p_skill_creativity: skills?.creativity || 1,
+        p_skill_composition: skills?.composition || 1,
+        p_attr_creative_insight: attributes?.creative_insight || 10,
+        p_attr_musical_ability: attributes?.musical_ability || 10,
+        p_current_music: project.music_progress,
+        p_current_lyrics: project.lyrics_progress,
+      };
+
+      const { data: progressCalc, error: calcError } = await supabase.rpc(
+        "calculate_songwriting_progress",
+        progressParameters,
+      );
 
       if (calcError) throw calcError;
 
@@ -796,22 +1016,43 @@ export const useSongwritingData = (userId?: string | null) => {
       computedQuality = Math.min(2000, Math.max(project.quality_score ?? 0, computedQuality));
       const qualityDescriptor = getSongQualityDescriptor(computedQuality);
 
-      const { error: updateProjectError } = await supabase
-        .from("songwriting_projects")
-        .update({
-          music_progress: newMusicProgress,
-          lyrics_progress: newLyricsProgress,
-          total_sessions: newTotalSessions,
-          sessions_completed: newSessionsCompleted,
-          estimated_completion_sessions: targetSessions,
-          estimated_sessions: targetSessions,
-          status: nextStatus,
-          is_locked: false,
-          locked_until: null,
-          quality_score: computedQuality,
-          updated_at: completedAt.toISOString(),
-        } as any)
-        .eq("id", session.project_id);
+      const buildUpdatePayload = (includeEstimated: boolean) => ({
+        music_progress: newMusicProgress,
+        lyrics_progress: newLyricsProgress,
+        total_sessions: newTotalSessions,
+        sessions_completed: newSessionsCompleted,
+        ...(includeEstimated ? { estimated_completion_sessions: targetSessions } : {}),
+        estimated_sessions: targetSessions,
+        status: nextStatus,
+        is_locked: false,
+        locked_until: null,
+        quality_score: computedQuality,
+        updated_at: completedAt.toISOString(),
+      });
+
+      const attemptProjectUpdate = (includeEstimated: boolean) =>
+        supabase
+          .from("songwriting_projects")
+          .update(buildUpdatePayload(includeEstimated) as Record<string, unknown>)
+          .eq("id", session.project_id);
+
+      let { error: updateProjectError } = await attemptProjectUpdate(
+        songwritingEstimatedCompletionSupportedRef.current,
+      );
+
+      if (
+        updateProjectError &&
+        songwritingEstimatedCompletionSupportedRef.current &&
+        isMissingColumnError(updateProjectError, "estimated_completion_sessions")
+      ) {
+        songwritingEstimatedCompletionSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects estimated_completion_sessions column unavailable when updating after session; retrying without it.",
+          updateProjectError,
+        );
+
+        ({ error: updateProjectError } = await attemptProjectUpdate(false));
+      }
 
       if (updateProjectError) throw updateProjectError;
 
