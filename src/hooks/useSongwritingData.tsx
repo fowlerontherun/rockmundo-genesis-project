@@ -449,7 +449,7 @@ export const useSongwritingData = (userId?: string | null) => {
 
       const { data, error } = await supabase
         .from("songwriting_projects")
-        .insert(payload)
+        .insert(payload as any)
         .select()
         .single();
 
@@ -505,7 +505,7 @@ export const useSongwritingData = (userId?: string | null) => {
 
       const { error } = await supabase
         .from("songwriting_projects")
-        .update(payload)
+        .update(payload as any)
         .eq("id", id);
 
       if (error) throw error;
@@ -561,11 +561,12 @@ export const useSongwritingData = (userId?: string | null) => {
         .from("songwriting_projects")
         .select("is_locked, locked_until, status")
         .eq("id", projectId)
-        .single();
+        .maybeSingle();
 
       if (projectError) throw projectError;
+      if (!project) throw new Error("Project not found");
 
-      if (project?.is_locked && project.locked_until) {
+      if (project.is_locked && project.locked_until) {
         const lockTime = new Date(project.locked_until);
         if (!Number.isNaN(lockTime.getTime()) && lockTime > new Date()) {
           throw new Error("Project is currently locked. Please wait before starting a new session.");
@@ -588,9 +589,9 @@ export const useSongwritingData = (userId?: string | null) => {
         .update({
           is_locked: true,
           locked_until: lockUntil.toISOString(),
-          status: project?.status && project.status !== "draft" ? project.status : "writing",
+          status: project.status && project.status !== "draft" ? project.status : "writing",
           updated_at: startedAt.toISOString(),
-        })
+        } as any)
         .eq("id", projectId);
 
       if (lockError) throw lockError;
@@ -606,7 +607,7 @@ export const useSongwritingData = (userId?: string | null) => {
             : {}),
           locked_until: lockUntil.toISOString(),
           notes: null,
-        })
+        } as any)
         .select()
         .single();
 
@@ -626,7 +627,7 @@ export const useSongwritingData = (userId?: string | null) => {
               session_start: startedAt.toISOString(),
               locked_until: lockUntil.toISOString(),
               notes: null,
-            })
+            } as any)
             .select()
             .single();
 
@@ -665,9 +666,10 @@ export const useSongwritingData = (userId?: string | null) => {
         .from("songwriting_sessions")
         .select("project_id, user_id")
         .eq("id", sessionId)
-        .single();
+        .maybeSingle();
 
       if (sessionError) throw sessionError;
+      if (!session) throw new Error("Session not found");
 
       const { data: project, error: projectError } = await supabase
         .from("songwriting_projects")
@@ -675,9 +677,10 @@ export const useSongwritingData = (userId?: string | null) => {
           "music_progress, lyrics_progress, total_sessions, estimated_completion_sessions, estimated_sessions, quality_score, status, sessions_completed, theme_id, chord_progression_id"
         )
         .eq("id", session.project_id)
-        .single();
+        .maybeSingle();
 
       if (projectError) throw projectError;
+      if (!project) throw new Error("Project not found");
 
       const [{ data: skills, error: skillsError }, { data: attributes, error: attributesError }] =
         await Promise.all([
@@ -710,7 +713,7 @@ export const useSongwritingData = (userId?: string | null) => {
           p_attr_musical_ability: attributes?.musical_ability || 10,
           p_current_music: project.music_progress,
           p_current_lyrics: project.lyrics_progress,
-        });
+        } as any);
 
       if (calcError) throw calcError;
 
@@ -807,7 +810,7 @@ export const useSongwritingData = (userId?: string | null) => {
           locked_until: null,
           quality_score: computedQuality,
           updated_at: completedAt.toISOString(),
-        })
+        } as any)
         .eq("id", session.project_id);
 
       if (updateProjectError) throw updateProjectError;

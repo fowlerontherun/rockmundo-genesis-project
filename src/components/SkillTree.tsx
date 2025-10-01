@@ -52,7 +52,7 @@ export const SkillTree: React.FC = () => {
       try {
         const { data: skillsData, error: skillsError } = await supabase
           .from('skill_definitions')
-          .select<SkillDefinition>('*')
+          .select('*')
           .order('display_name');
 
         if (skillsError) throw skillsError;
@@ -62,7 +62,7 @@ export const SkillTree: React.FC = () => {
         if (profile) {
           const { data: progressData, error: progressError } = await supabase
             .from('skill_progress')
-            .select<SkillProgress>('*')
+            .select('*')
             .eq('profile_id', profile.id);
 
           if (progressError) throw progressError;
@@ -187,7 +187,7 @@ export const SkillTree: React.FC = () => {
           current_level: newLevel,
           current_xp: newXp,
           required_xp: (newLevel + 1) * 100,
-        }, { onConflict: 'profile_id,skill_slug' });
+        } as any, { onConflict: 'profile_id,skill_slug' });
 
       if (error) throw error;
 

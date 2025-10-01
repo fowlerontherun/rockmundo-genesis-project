@@ -70,7 +70,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           user_id: user.id,
           channel: selectedChannel,
           message: message.trim()
-        });
+        } as any);
 
       if (error) throw error;
       

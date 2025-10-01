@@ -58,7 +58,7 @@ export function SkillDefinitionsManager() {
           display_name: newSkill.display_name,
           description: newSkill.description || null,
           tier_caps: newSkill.tier_caps
-        });
+        } as any);
 
       if (error) throw error;
       

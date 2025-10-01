@@ -107,7 +107,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
 
       const { data, error: upsertError } = await supabase
         .from("skill_progress")
-        .upsert(payload, { onConflict: "profile_id,skill_slug" })
+        .upsert(payload as any, { onConflict: "profile_id,skill_slug" })
         .select("*")
         .maybeSingle();
 

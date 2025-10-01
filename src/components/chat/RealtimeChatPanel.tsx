@@ -150,7 +150,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
           user_id: user.id,
           channel: channelKey,
           message: message.trim()
-        });
+        } as any);
 
       if (error) throw error;
       

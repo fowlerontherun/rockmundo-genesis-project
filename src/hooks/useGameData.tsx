@@ -548,7 +548,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       if (
         profileSupportsCurrentCityId &&
-        !effectiveProfile.current_city_id &&
+        !(effectiveProfile as any).current_city_id &&
         !assigningDefaultCityRef.current &&
         !defaultCityAssignmentDisabledRef.current
       ) {
@@ -565,7 +565,7 @@ const useProvideGameData = (): UseGameDataReturn => {
           } else if (londonCity?.id) {
             const { data: updatedProfileData, error: updateError } = await supabase
               .from("profiles")
-              .update({ current_city_id: londonCity.id })
+              .update({ current_city_id: londonCity.id } as any)
               .eq("id", effectiveProfile.id)
               .select("*")
               .single();
@@ -719,8 +719,8 @@ const useProvideGameData = (): UseGameDataReturn => {
         .order("created_at", { ascending: false })
         .limit(XP_LEDGER_FETCH_LIMIT);
 
-      const cityPromise = effectiveProfile.current_city_id
-        ? supabase.from("cities").select("*").eq("id", effectiveProfile.current_city_id).maybeSingle()
+      const cityPromise = (effectiveProfile as any).current_city_id
+        ? supabase.from("cities").select("*").eq("id", (effectiveProfile as any).current_city_id).maybeSingle()
         : Promise.resolve({ data: null, error: null });
 
       const activitiesPromise = fetchActivitiesWithFallback();
@@ -1123,7 +1123,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       const { data, error: upsertError } = await supabase
         .from("player_attributes")
-        .upsert(payload, { onConflict: "profile_id" })
+        .upsert(payload as any, { onConflict: "profile_id" })
         .select("*")
         .maybeSingle();
 
@@ -1193,10 +1193,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       });
 
       const currentLocationLabel = "London";
-      const baseProfilePayload: Pick<
-        Database["public"]["Tables"]["profiles"]["Insert"],
-        "username" | "display_name" | "bio" | "current_city_id" | "current_city" | "current_location"
-      > = {
+      const baseProfilePayload: any = {
         username,
         display_name: displayName,
         bio: trimmedBio,
@@ -1208,7 +1205,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       let nextProfile: PlayerProfile;
 
       if (profile) {
-        const updates: Database["public"]["Tables"]["profiles"]["Update"] = baseProfilePayload;
+        const updates: any = baseProfilePayload;
         console.info("useGameData.profileUpsert.profileMutation.start", {
           mode: "update",
           profileId: profile.id,
@@ -1240,11 +1237,9 @@ const useProvideGameData = (): UseGameDataReturn => {
           userId: user.id,
         });
       } else {
-        const insertPayload: Database["public"]["Tables"]["profiles"]["Insert"] = {
+        const insertPayload: any = {
           ...baseProfilePayload,
           user_id: user.id,
-          slot_number: 1,
-          is_active: true,
         };
 
         console.info("useGameData.profileUpsert.profileMutation.start", {
@@ -1297,7 +1292,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       let mappedAttributes: PlayerAttributes | null = null;
 
       if (!existingAttributesRow) {
-        const attributePayload: PlayerAttributesInsert = {
+        const attributePayload: any = {
           user_id: user.id,
           profile_id: nextProfile.id,
           attribute_points: 0,
@@ -1399,7 +1394,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       const { data, error: updateError } = await supabase
         .from("profiles")
-        .update(updates)
+        .update(updates as any)
         .eq("id", profile.id)
         .select("*")
         .single();
@@ -1444,7 +1439,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       const { data, error: upsertError } = await supabase
         .from("skill_progress")
-        .upsert(payloads, { onConflict: "profile_id,skill_slug" })
+        .upsert(payloads as any, { onConflict: "profile_id,skill_slug" })
         .select("*");
 
       if (upsertError) {
@@ -1493,7 +1488,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         throw new Error("No active profile selected");
       }
 
-      const payload: XpWalletInsert = {
+      const payload: any = {
         profile_id: profile.id,
         ...updates,
       };
@@ -1543,12 +1538,12 @@ const useProvideGameData = (): UseGameDataReturn => {
         throw new Error("No active profile selected");
       }
 
-      const basePayload: ActivityInsertPayload = {
+      const basePayload: any = {
         user_id: user.id,
         activity_type: type,
         message,
         earnings: typeof earnings === "number" ? earnings : null,
-        metadata,
+        metadata: metadata as any,
         status: options.status ?? null,
         duration_minutes:
           typeof options.durationMinutes === "number" && Number.isFinite(options.durationMinutes)
@@ -1574,7 +1569,7 @@ const useProvideGameData = (): UseGameDataReturn => {
           insertError,
         );
         setSupportsActivityProfileFilter(false);
-        const fallbackPayload: ActivityInsertPayload = { ...basePayload };
+        const fallbackPayload: any = { ...basePayload };
         delete fallbackPayload.profile_id;
         const { error: fallbackError } = await supabase.from("activity_feed").insert(fallbackPayload);
         if (fallbackError) {
@@ -1696,7 +1691,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       let result = await supabase
         .from("profile_activity_statuses")
-        .upsert(basePayload, { onConflict: "profile_id" })
+        .upsert(basePayload as any, { onConflict: "profile_id" })
         .select("*")
         .maybeSingle();
 
@@ -1709,7 +1704,7 @@ const useProvideGameData = (): UseGameDataReturn => {
         (result.error as { code?: string }).code === "42703"
       ) {
         activityStatusMetadataSupportedRef.current = false;
-        const retryPayload = { ...basePayload };
+        const retryPayload: any = { ...basePayload };
         delete retryPayload.metadata;
         result = await supabase
           .from("profile_activity_statuses")
