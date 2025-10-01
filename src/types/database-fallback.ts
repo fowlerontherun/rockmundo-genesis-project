@@ -82,6 +82,7 @@ export interface Database {
           duration_minutes?: number | null;
           ends_at?: string | null;
           song_id?: string | null;
+          metadata?: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -92,6 +93,7 @@ export interface Database {
           started_at?: string;
           duration_minutes?: number | null;
           song_id?: string | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -102,6 +104,7 @@ export interface Database {
           started_at?: string;
           duration_minutes?: number | null;
           song_id?: string | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -172,7 +175,7 @@ export interface Database {
           host_id: string;
           name: string;
           description?: string | null;
-          genre: string;
+          genre?: string;
           tempo?: number;
           max_participants?: number;
           current_participants?: number;
@@ -198,6 +201,135 @@ export interface Database {
           access_code?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      busking_locations: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description?: string | null;
+          neighborhood?: string | null;
+          recommended_skill: number;
+          base_payout: number;
+          fame_reward: number;
+          experience_reward: number;
+          risk_level: string;
+          ambiance?: string | null;
+          cooldown_minutes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          description?: string | null;
+          neighborhood?: string | null;
+          recommended_skill?: number;
+          base_payout?: number;
+          fame_reward?: number;
+          experience_reward?: number;
+          risk_level?: string;
+          ambiance?: string | null;
+          cooldown_minutes?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          name?: string;
+          description?: string | null;
+          neighborhood?: string | null;
+          recommended_skill?: number;
+          base_payout?: number;
+          fame_reward?: number;
+          experience_reward?: number;
+          risk_level?: string;
+          ambiance?: string | null;
+          cooldown_minutes?: number;
+          created_at?: string;
+        };
+      };
+      busking_modifiers: {
+        Row: {
+          id: string;
+          name: string;
+          description?: string | null;
+          rarity: string;
+          payout_multiplier: number;
+          fame_multiplier: number;
+          experience_bonus: number;
+          risk_modifier: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          rarity?: string;
+          payout_multiplier?: number;
+          fame_multiplier?: number;
+          experience_bonus?: number;
+          risk_modifier?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          rarity?: string;
+          payout_multiplier?: number;
+          fame_multiplier?: number;
+          experience_bonus?: number;
+          risk_modifier?: number;
+          created_at?: string;
+        };
+      };
+      busking_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          profile_id: string;
+          location_id: string;
+          modifier_id?: string | null;
+          duration_minutes: number;
+          success: boolean;
+          cash_earned: number;
+          fame_gained: number;
+          experience_gained: number;
+          performance_score: number;
+          metadata?: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          profile_id: string;
+          location_id: string;
+          modifier_id?: string | null;
+          duration_minutes: number;
+          success?: boolean;
+          cash_earned?: number;
+          fame_gained?: number;
+          experience_gained?: number;
+          performance_score?: number;
+          metadata?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          profile_id?: string;
+          location_id?: string;
+          modifier_id?: string | null;
+          duration_minutes?: number;
+          success?: boolean;
+          cash_earned?: number;
+          fame_gained?: number;
+          experience_gained?: number;
+          performance_score?: number;
+          metadata?: Json | null;
+          created_at?: string;
         };
       };
       player_skills: {

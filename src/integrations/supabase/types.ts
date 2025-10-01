@@ -58,6 +58,10 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
+          profile_id: string
+          status: string | null
+          duration_minutes: number | null
+          status_id: string | null
           user_id: string
         }
         Insert: {
@@ -67,6 +71,10 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
+          profile_id: string
+          status?: string | null
+          duration_minutes?: number | null
+          status_id?: string | null
           user_id: string
         }
         Update: {
@@ -76,9 +84,28 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
+          profile_id?: string
+          status?: string | null
+          duration_minutes?: number | null
+          status_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_feed_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "profile_activity_statuses"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       band_members: {
         Row: {
@@ -161,6 +188,160 @@ export type Database = {
         }
         Relationships: []
       }
+      busking_locations: {
+        Row: {
+          ambiance: string | null
+          base_payout: number
+          cooldown_minutes: number
+          created_at: string | null
+          description: string | null
+          experience_reward: number
+          fame_reward: number
+          id: string
+          name: string
+          neighborhood: string | null
+          recommended_skill: number
+          risk_level: string
+          slug: string
+        }
+        Insert: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string | null
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+          slug: string
+        }
+        Update: {
+          ambiance?: string | null
+          base_payout?: number
+          cooldown_minutes?: number
+          created_at?: string | null
+          description?: string | null
+          experience_reward?: number
+          fame_reward?: number
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          recommended_skill?: number
+          risk_level?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      busking_modifiers: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          experience_bonus: number
+          fame_multiplier: number
+          id: string
+          name: string
+          payout_multiplier: number
+          rarity: string
+          risk_modifier: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          experience_bonus?: number
+          fame_multiplier?: number
+          id?: string
+          name?: string
+          payout_multiplier?: number
+          rarity?: string
+          risk_modifier?: number
+        }
+        Relationships: []
+      }
+      busking_sessions: {
+        Row: {
+          cash_earned: number
+          created_at: string | null
+          duration_minutes: number
+          experience_gained: number
+          fame_gained: number
+          id: string
+          location_id: string
+          metadata: Json | null
+          modifier_id: string | null
+          performance_score: number
+          profile_id: string
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          cash_earned?: number
+          created_at?: string | null
+          duration_minutes: number
+          experience_gained?: number
+          fame_gained?: number
+          id?: string
+          location_id: string
+          metadata?: Json | null
+          modifier_id?: string | null
+          performance_score?: number
+          profile_id: string
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          cash_earned?: number
+          created_at?: string | null
+          duration_minutes?: number
+          experience_gained?: number
+          fame_gained?: number
+          id?: string
+          location_id?: string
+          metadata?: Json | null
+          modifier_id?: string | null
+          performance_score?: number
+          profile_id?: string
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "busking_sessions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "busking_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_modifier_id_fkey"
+            columns: ["modifier_id"]
+            isOneToOne: false
+            referencedRelation: "busking_modifiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "busking_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       chart_entries: {
         Row: {
           chart_date: string | null
@@ -199,6 +380,65 @@ export type Database = {
           weeks_on_chart?: number | null
         }
         Relationships: []
+      }
+      jam_sessions: {
+        Row: {
+          access_code: string | null
+          created_at: string | null
+          current_participants: number
+          description: string | null
+          genre: string
+          host_id: string
+          id: string
+          is_private: boolean
+          max_participants: number
+          name: string
+          participant_ids: string[]
+          skill_requirement: number
+          tempo: number
+          updated_at: string | null
+        }
+        Insert: {
+          access_code?: string | null
+          created_at?: string | null
+          current_participants?: number
+          description?: string | null
+          genre?: string
+          host_id: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string | null
+        }
+        Update: {
+          access_code?: string | null
+          created_at?: string | null
+          current_participants?: number
+          description?: string | null
+          genre?: string
+          host_id?: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name?: string
+          participant_ids?: string[]
+          skill_requirement?: number
+          tempo?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_sessions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       chat_messages: {
         Row: {
@@ -1038,6 +1278,59 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      profile_activity_statuses: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number | null
+          ends_at: string | null
+          id: string
+          metadata: Json | null
+          profile_id: string
+          song_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          metadata?: Json | null
+          profile_id: string
+          song_id?: string | null
+          started_at?: string | null
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          ends_at?: string | null
+          id?: string
+          metadata?: Json | null
+          profile_id?: string
+          song_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_activity_statuses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_activity_statuses_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          }
         ]
       }
       profile_daily_xp_grants: {
