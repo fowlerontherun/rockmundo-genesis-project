@@ -369,6 +369,9 @@ const mapAttributes = (row: RawAttributes): PlayerAttributes => {
 
 const GameDataContext = createContext<UseGameDataReturn | undefined>(undefined);
 
+export const useOptionalGameData = (): UseGameDataReturn | undefined =>
+  useContext(GameDataContext);
+
 const useProvideGameData = (): UseGameDataReturn => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
@@ -1966,7 +1969,7 @@ export const GameDataProvider = ({ children }: GameDataProviderProps) => {
 };
 
 export const useGameData = (): UseGameDataReturn => {
-  const context = useContext(GameDataContext);
+  const context = useOptionalGameData();
 
   if (!context) {
     throw new Error("useGameData must be used within a GameDataProvider");

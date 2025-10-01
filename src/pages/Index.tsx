@@ -3,14 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth-context";
-import { useGameData } from "@/hooks/useGameData";
+import { useOptionalGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: dataLoading, error } = useGameData();
+  const gameData = useOptionalGameData();
+  const profile = gameData?.profile ?? null;
+  const dataLoading = gameData?.loading ?? true;
+  const error = gameData?.error;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -19,12 +22,16 @@ const Index = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
+    if (!gameData) {
+      return;
+    }
+
     if (!authLoading && !dataLoading && user) {
       navigate(profile ? "/dashboard" : "/my-character");
     }
-  }, [authLoading, dataLoading, user, profile, navigate]);
+  }, [authLoading, dataLoading, gameData, navigate, profile, user]);
 
-  if (authLoading || dataLoading) {
+  if (!gameData || authLoading || dataLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-stage">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
