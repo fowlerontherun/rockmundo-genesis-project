@@ -35,6 +35,7 @@ import {
   Megaphone,
   Store,
   Guitar,
+  Award,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -74,6 +75,7 @@ const Navigation = () => {
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
         { icon: ListMusic, label: "Setlist Designer", path: "/setlists" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
+        { icon: Award, label: "Awards", path: "/awards" },
         { icon: Building2, label: "Venue Management", path: "/venues" },
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
         { icon: MapPin, label: "City Overview", path: cityOverviewPath },
@@ -122,6 +124,7 @@ const Navigation = () => {
     { icon: Calendar, label: "Gigs", path: "/gigs" },
     { icon: ListMusic, label: "Setlists", path: "/setlists" },
     { icon: Mic, label: "Busking", path: "/busking" },
+    { icon: Award, label: "Awards", path: "/awards" },
     { icon: Music4, label: "Jams", path: "/jams" },
     { icon: Plane, label: "Travel", path: "/travel" },
     { icon: Megaphone, label: "PR", path: "/pr" },
