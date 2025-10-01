@@ -10,12 +10,12 @@ import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 import WorldPulsePage from "./pages/WorldPulse";
 import MusicStudio from "./pages/MusicStudio";
+import BandManager from "./pages/BandManager";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
-const BandManager = lazyWithRetry(() => import("./pages/BandManager"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
