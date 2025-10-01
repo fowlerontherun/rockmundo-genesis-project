@@ -111,6 +111,7 @@ export const useSongwritingData = (userId?: string | null) => {
   const songwritingSessionsStartedAtSupportedRef = useRef(true);
   const songwritingLyricsColumnSupportedRef = useRef(true);
   const songwritingEstimatedCompletionSupportedRef = useRef(true);
+  const songwritingSessionsCompletedSupportedRef = useRef(true);
 
   const activeUserId = typeof userId === "string" && userId.length > 0 ? userId : null;
 
@@ -186,6 +187,20 @@ export const useSongwritingData = (userId?: string | null) => {
       normalized["lyrics"] =
         (normalized["initial_lyrics"] as string | null | undefined) ?? null;
     }
+
+    const rawSessionsCompleted = normalized["sessions_completed"];
+    const normalizedSessionsCompleted =
+      typeof rawSessionsCompleted === "number" && Number.isFinite(rawSessionsCompleted)
+        ? rawSessionsCompleted
+        : (() => {
+            const totalSessions = normalized["total_sessions"];
+            if (typeof totalSessions === "number" && Number.isFinite(totalSessions)) {
+              return Math.max(0, totalSessions);
+            }
+            return 0;
+          })();
+
+    normalized["sessions_completed"] = normalizedSessionsCompleted;
 
     return normalized as T & { estimated_completion_sessions: number };
   };
@@ -267,6 +282,18 @@ export const useSongwritingData = (userId?: string | null) => {
 
   const handleMissingSongwritingTableError = (error: unknown): boolean => {
     let handled = false;
+
+    if (
+      songwritingSessionsCompletedSupportedRef.current &&
+      isMissingColumnError(error, "sessions_completed")
+    ) {
+      songwritingSessionsCompletedSupportedRef.current = false;
+      console.warn(
+        "Songwriting projects sessions_completed column unavailable; continuing without it.",
+        error,
+      );
+      handled = true;
+    }
 
     if (isMissingTableError(error, "songwriting_projects")) {
       markTableUnavailable(songwritingProjectsTableAvailableRef, "Songwriting projects", error);
@@ -386,7 +413,7 @@ export const useSongwritingData = (userId?: string | null) => {
           "status",
           "is_locked",
           "locked_until",
-          "sessions_completed",
+          songwritingSessionsCompletedSupportedRef.current ? "sessions_completed" : null,
           "song_id",
           "created_at",
           "updated_at",
@@ -443,6 +470,33 @@ export const useSongwritingData = (userId?: string | null) => {
       );
 
       if (error) {
+        if (
+          songwritingSessionsCompletedSupportedRef.current &&
+          isMissingColumnError(error, "sessions_completed")
+        ) {
+          songwritingSessionsCompletedSupportedRef.current = false;
+          console.warn(
+            "Songwriting projects sessions_completed column unavailable during fetch; retrying without it.",
+            error,
+          );
+
+          const { data: fallbackData, error: fallbackError } = await performQuery(
+            includeSessions,
+            includeStartedAt,
+            includeEstimatedCompletion,
+          );
+
+          if (fallbackError) {
+            if (handleMissingSongwritingTableError(fallbackError)) {
+              return [] as SongwritingProject[];
+            }
+            throw fallbackError;
+          }
+
+          songwritingProjectsTableAvailableRef.current = true;
+          return normalizeProjects(fallbackData);
+        }
+
         if (songwritingLyricsColumnSupportedRef.current && isMissingColumnError(error, "lyrics")) {
           songwritingLyricsColumnSupportedRef.current = false;
           console.warn(
@@ -614,10 +668,13 @@ export const useSongwritingData = (userId?: string | null) => {
           music_progress: 0,
           lyrics_progress: 0,
           total_sessions: 0,
-          sessions_completed: 0,
           is_locked: false,
           locked_until: null,
         };
+
+        if (songwritingSessionsCompletedSupportedRef.current) {
+          payload.sessions_completed = 0;
+        }
 
         if (songwritingLyricsColumnSupportedRef.current) {
           payload.lyrics = sanitizedLyrics;
@@ -647,6 +704,18 @@ export const useSongwritingData = (userId?: string | null) => {
         songwritingEstimatedCompletionSupportedRef.current = false;
         console.warn(
           "Songwriting projects estimated_completion_sessions column unavailable when creating; retrying without it.",
+          error,
+        );
+
+        const fallback = await attemptInsert();
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (error && songwritingSessionsCompletedSupportedRef.current && isMissingColumnError(error, "sessions_completed")) {
+        songwritingSessionsCompletedSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects sessions_completed column unavailable when creating; retrying without it.",
           error,
         );
 
@@ -776,6 +845,16 @@ export const useSongwritingData = (userId?: string | null) => {
         );
 
         ({ error } = await attemptUpdate(false));
+      }
+
+      if (error && songwritingSessionsCompletedSupportedRef.current && isMissingColumnError(error, "sessions_completed")) {
+        songwritingSessionsCompletedSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects sessions_completed column unavailable when updating; retrying without it.",
+          error,
+        );
+
+        ({ error } = await attemptUpdate(songwritingEstimatedCompletionSupportedRef.current));
       }
 
       if (error && songwritingLyricsColumnSupportedRef.current && isMissingColumnError(error, "lyrics")) {
@@ -960,7 +1039,7 @@ export const useSongwritingData = (userId?: string | null) => {
           "estimated_sessions",
           "quality_score",
           "status",
-          "sessions_completed",
+          songwritingSessionsCompletedSupportedRef.current ? "sessions_completed" : null,
           "theme_id",
           "chord_progression_id",
         ]
@@ -985,6 +1064,27 @@ export const useSongwritingData = (userId?: string | null) => {
         const fallback = await supabase
           .from("songwriting_projects")
           .select(buildProjectSelect(false))
+          .eq("id", session.project_id)
+          .maybeSingle();
+
+        project = fallback.data;
+        projectError = fallback.error;
+      }
+
+      if (
+        projectError &&
+        songwritingSessionsCompletedSupportedRef.current &&
+        isMissingColumnError(projectError, "sessions_completed")
+      ) {
+        songwritingSessionsCompletedSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects sessions_completed column unavailable when completing session fetch; retrying without it.",
+          projectError,
+        );
+
+        const fallback = await supabase
+          .from("songwriting_projects")
+          .select(buildProjectSelect(songwritingEstimatedCompletionSupportedRef.current))
           .eq("id", session.project_id)
           .maybeSingle();
 
@@ -1068,7 +1168,11 @@ export const useSongwritingData = (userId?: string | null) => {
       const isComplete = newMusicProgress >= maxProgress && newLyricsProgress >= maxProgress;
 
       const newTotalSessions = (project.total_sessions ?? 0) + 1;
-      const newSessionsCompleted = (project.sessions_completed ?? 0) + 1;
+      const previousSessionsCompleted =
+        typeof project.sessions_completed === "number" && Number.isFinite(project.sessions_completed)
+          ? project.sessions_completed
+          : Math.max(0, project.total_sessions ?? 0);
+      const newSessionsCompleted = previousSessionsCompleted + 1;
       const targetSessions =
         project.estimated_completion_sessions ??
         project.estimated_sessions ??
@@ -1119,7 +1223,9 @@ export const useSongwritingData = (userId?: string | null) => {
         music_progress: newMusicProgress,
         lyrics_progress: newLyricsProgress,
         total_sessions: newTotalSessions,
-        sessions_completed: newSessionsCompleted,
+        ...(songwritingSessionsCompletedSupportedRef.current
+          ? { sessions_completed: newSessionsCompleted }
+          : {}),
         ...(includeEstimated ? { estimated_completion_sessions: targetSessions } : {}),
         estimated_sessions: targetSessions,
         status: nextStatus,
@@ -1151,6 +1257,22 @@ export const useSongwritingData = (userId?: string | null) => {
         );
 
         ({ error: updateProjectError } = await attemptProjectUpdate(false));
+      }
+
+      if (
+        updateProjectError &&
+        songwritingSessionsCompletedSupportedRef.current &&
+        isMissingColumnError(updateProjectError, "sessions_completed")
+      ) {
+        songwritingSessionsCompletedSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects sessions_completed column unavailable when completing a session; retrying without it.",
+          updateProjectError,
+        );
+
+        ({ error: updateProjectError } = await attemptProjectUpdate(
+          songwritingEstimatedCompletionSupportedRef.current,
+        ));
       }
 
       if (updateProjectError) throw updateProjectError;
