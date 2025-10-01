@@ -19,7 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/types/database-fallback";
+import type { Database } from "@/lib/supabase-types";
 import { Loader2, Lock, Music4 } from "lucide-react";
 
 type JamSessionRow = Database["public"]["Tables"]["jam_sessions"]["Row"];
