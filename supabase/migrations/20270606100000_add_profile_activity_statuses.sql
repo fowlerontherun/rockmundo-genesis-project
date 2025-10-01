@@ -80,3 +80,5 @@ ALTER TABLE public.activity_feed
 ALTER TABLE public.activity_feed
   ADD CONSTRAINT IF NOT EXISTS activity_feed_duration_check
   CHECK (duration_minutes IS NULL OR duration_minutes >= 0);
+
+NOTIFY pgrst, 'reload schema';

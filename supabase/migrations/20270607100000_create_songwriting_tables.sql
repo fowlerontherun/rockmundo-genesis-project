@@ -96,3 +96,5 @@ CREATE POLICY "Songwriting sessions can be deleted by owners"
   ON public.songwriting_sessions
   FOR DELETE
   USING (user_id = auth.uid());
+
+NOTIFY pgrst, 'reload schema';

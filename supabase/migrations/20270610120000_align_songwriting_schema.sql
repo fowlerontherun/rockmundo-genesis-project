@@ -69,3 +69,5 @@ CREATE INDEX IF NOT EXISTS songwriting_sessions_started_at_idx
 -- Validate the new check constraint once existing data is in place
 ALTER TABLE public.songwriting_projects
   VALIDATE CONSTRAINT songwriting_projects_sessions_completed_check;
+
+NOTIFY pgrst, 'reload schema';

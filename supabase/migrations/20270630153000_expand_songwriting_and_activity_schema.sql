@@ -147,3 +147,5 @@ WHERE
   music_progress IS NULL
   OR lyrics_progress IS NULL
   OR total_sessions IS NULL;
+
+NOTIFY pgrst, 'reload schema';

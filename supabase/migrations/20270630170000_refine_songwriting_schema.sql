@@ -171,4 +171,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+NOTIFY pgrst, 'reload schema';
 COMMIT;
