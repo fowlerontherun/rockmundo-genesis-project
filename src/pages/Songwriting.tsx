@@ -65,7 +65,7 @@ interface ProjectFormState {
 }
 
 const MAX_PROGRESS = 2000;
-const SESSION_DURATION_MINUTES = 60;
+const SESSION_DURATION_MINUTES = 80;
 
 const DEFAULT_FORM_STATE: ProjectFormState = {
   title: "",
@@ -422,7 +422,7 @@ const Songwriting = () => {
 
   const handleStartSession = async (project: SongwritingProject) => {
     try {
-      await startSession.mutateAsync(project.id);
+      await startSession.mutateAsync({ projectId: project.id });
       await startActivity({
         status: "songwriting_session",
         durationMinutes: SESSION_DURATION_MINUTES,
@@ -456,6 +456,7 @@ const Songwriting = () => {
       await completeSession.mutateAsync({
         sessionId: activeSession.id,
         notes: completionNotes,
+        effortHours: activeSession.effort_hours ?? undefined,
       });
 
       setCompletionProject(null);
