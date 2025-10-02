@@ -149,6 +149,7 @@ serve(async (req) => {
 
     const profileState = await loadActiveProfile(client, user.id);
     let result: ProfileState;
+    let actionResult: Record<string, unknown> = {};
 
     switch (action) {
       case "claim_daily_xp":
@@ -166,8 +167,8 @@ serve(async (req) => {
         );
         break;
 
-      case "spend_skill_xp":
-        result = await handleSpendSkillXp(
+      case "spend_skill_xp": {
+        const { state, skillProgress } = await handleSpendSkillXp(
           client,
           user.id,
           profileState,
@@ -175,7 +176,10 @@ serve(async (req) => {
           params.xp ?? 25,
           params.metadata,
         );
+        result = state;
+        actionResult = { skill_progress: skillProgress };
         break;
+      }
 
       default:
         throw new Error(`Unknown action: ${action}`);
@@ -189,7 +193,7 @@ serve(async (req) => {
         wallet: result.wallet,
         attributes: result.attributes,
         cooldowns: {},
-        result: {},
+        result: actionResult,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -4,6 +4,7 @@ import { fetchProfileState, type ProfileState } from "./index.ts";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type WalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"];
+type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
 
 export async function handleClaimDailyXp(
   client: SupabaseClient<Database>,
@@ -128,7 +129,7 @@ export async function handleSpendSkillXp(
   skillSlug: string,
   xpAmount: number,
   metadata: Record<string, unknown> = {},
-): Promise<ProfileState> {
+): Promise<{ state: ProfileState; skillProgress: SkillProgressRow }> {
   const profileId = profileState.profile.id;
   const currentBalance = profileState.wallet?.xp_balance ?? 0;
 
@@ -162,6 +163,8 @@ export async function handleSpendSkillXp(
   }
 
   // Update skill progress
+  const newRequiredXp = Math.floor(100 * Math.pow(1.5, newLevel));
+
   const { error: skillError } = await client
     .from("skill_progress")
     .upsert({
@@ -169,13 +172,28 @@ export async function handleSpendSkillXp(
       skill_slug: skillSlug,
       current_xp: remainingXp,
       current_level: newLevel,
-      required_xp: requiredXp,
+       required_xp: newRequiredXp,
       last_practiced_at: new Date().toISOString(),
       metadata: metadata || {},
     }, { onConflict: "profile_id,skill_slug" });
 
   if (skillError) {
     throw new Error(skillError.message || "Failed to update skill");
+  }
+
+  const { data: updatedSkillProgress, error: fetchSkillError } = await client
+    .from("skill_progress")
+    .select("*")
+    .eq("profile_id", profileId)
+    .eq("skill_slug", skillSlug)
+    .maybeSingle();
+
+  if (fetchSkillError) {
+    throw new Error(fetchSkillError.message || "Failed to fetch updated skill progress");
+  }
+
+  if (!updatedSkillProgress) {
+    throw new Error("Updated skill progress not found");
   }
 
   // Deduct from wallet
@@ -193,5 +211,7 @@ export async function handleSpendSkillXp(
     throw new Error(walletError.message || "Failed to deduct XP");
   }
 
-  return await fetchProfileState(client, profileId);
+  const state = await fetchProfileState(client, profileId);
+
+  return { state, skillProgress: updatedSkillProgress };
 }
