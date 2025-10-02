@@ -98,6 +98,16 @@ export interface Song {
   revenue: number;
   chart_position: number | null;
   release_date: string | null;
+  lyrics_strength?: number | null;
+  melody_strength?: number | null;
+  rhythm_strength?: number | null;
+  arrangement_strength?: number | null;
+  production_potential?: number | null;
+  inspiration_modifiers?: string[] | null;
+  mood_modifiers?: string[] | null;
+  co_writers?: string[] | null;
+  split_percentages?: number[] | null;
+  rating_revealed_at?: string | null;
   created_at: string;
   updated_at: string;
 }
