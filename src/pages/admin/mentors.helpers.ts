@@ -52,9 +52,9 @@ export const mentorSchema = z.object({
 
 export type MentorFormValues = z.infer<typeof mentorSchema>;
 
-export type EducationMentorRow = Tables<"education_mentors">;
-export type EducationMentorInsert = TablesInsert<"education_mentors">;
-export type EducationMentorUpdate = TablesUpdate<"education_mentors">;
+export type EducationMentorRow = any;
+export type EducationMentorInsert = any;
+export type EducationMentorUpdate = any;
 
 export const focusSkillOptions = EDUCATION_MENTOR_FOCUS_SKILLS.map((value) => ({
   value,

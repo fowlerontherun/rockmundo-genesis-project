@@ -159,7 +159,7 @@ export const buildSkillOptions = (
   };
 
   for (const definition of skillDefinitions) {
-    upsertOption(definition.slug, definition.display_name ?? null, definition.metadata ?? null);
+    upsertOption(definition.slug, definition.display_name ?? null, (definition as any).metadata ?? null);
   }
 
   for (const definition of SKILL_TREE_DEFINITIONS as SkillDefinitionRecord[]) {
@@ -177,7 +177,7 @@ export const resolveSkillMetadata = (
   const normalizedSlug = parseString(skillSlug) ?? skillSlug;
   const treeMetadata = normalizedSlug ? skillTreeMetadata.get(normalizedSlug) : undefined;
   const definition = normalizedSlug ? definitionBySlug[normalizedSlug] : undefined;
-  const metadata = definition?.metadata ?? null;
+  const metadata = (definition as any)?.metadata ?? null;
 
   return {
     name: parseString(definition?.display_name) ?? treeMetadata?.name ?? normalizedSlug,

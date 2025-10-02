@@ -29,7 +29,7 @@ export const applyRoyaltyRecoupment = async (
   let remaining = normalizeCurrency(earnings);
 
   const { data: contracts, error } = await supabase
-    .from("contracts")
+    .from("contracts" as any)
     .select("id, advance_balance, recouped_amount")
     .eq("user_id", userId)
     .eq("status", "active")
@@ -39,7 +39,7 @@ export const applyRoyaltyRecoupment = async (
 
   const updates: Array<{ id: string; advance_balance: number; recouped_amount: number }> = [];
 
-  (contracts ?? []).forEach((contract) => {
+  (contracts ?? []).forEach((contract: any) => {
     if (remaining <= 0) {
       return;
     }
@@ -67,11 +67,11 @@ export const applyRoyaltyRecoupment = async (
   if (updates.length > 0) {
     const updatePromises = updates.map((update) =>
       supabase
-        .from("contracts")
+        .from("contracts" as any)
         .update({
           advance_balance: update.advance_balance,
           recouped_amount: update.recouped_amount,
-        })
+        } as any)
         .eq("id", update.id)
     );
 

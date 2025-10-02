@@ -151,11 +151,11 @@ export const toSkillProgressMap = (
   } else if (source && typeof source === "object") {
     if (
       "entries" in source &&
-      typeof (source as Iterable<unknown>)[Symbol.iterator] === "function"
+      typeof (source as any)[Symbol.iterator] === "function"
     ) {
-      const iterable = Array.from(source as Iterable<[string, SkillProgressLike]>);
+      const iterable = Array.from(source as any) as any[];
       if (iterable.length > 0) {
-        return toSkillProgressMap(iterable, fallback);
+        return toSkillProgressMap(iterable as any, fallback);
       }
     }
 

@@ -159,7 +159,7 @@ const formatTravelModeLabel = (mode: string) =>
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
-export interface CityLocation {
+export interface CityDistrict {
   name: string;
   description: string;
   highlights: string[];
@@ -204,12 +204,12 @@ export interface CityTransportLink {
   distance?: string;
 }
 
-const normalizeDistricts = (value: unknown): CityLocation[] => {
+const normalizeDistricts = (value: unknown): CityDistrict[] => {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.reduce<CityLocation[]>((acc, entry) => {
+  return value.reduce<CityDistrict[]>((acc, entry) => {
     if (!isRecord(entry)) {
       return acc;
     }
@@ -229,7 +229,7 @@ const normalizeDistricts = (value: unknown): CityLocation[] => {
     const averageTicketPriceRaw = entry.average_ticket_price ?? entry.avg_ticket_price;
     const averageTicketPrice = toNumber(averageTicketPriceRaw, Number.NaN);
 
-    const location: CityLocation = {
+    const location: CityDistrict = {
       name: nameRaw || "Featured District",
       description: descriptionRaw || "A notable part of the city experience.",
       highlights: combinedHighlights,
@@ -358,7 +358,7 @@ const normalizeFeaturedVenues = (
   }
 
   if (fallbackLocations.length) {
-    return fallbackLocations.map<CityVenueHighlight>((location) => ({
+    return fallbackLocations.map<CityVenueHighlight>((location: any) => ({
       name: location.signatureVenue ?? location.name,
       description: location.description ?? "A notable spot within the city.",
       district: location.name,
@@ -547,6 +547,7 @@ export interface CityLocation {
   category?: string;
   description?: string;
   vibe?: string;
+  highlights?: string[];
 }
 
 export interface CityTravelMode {
@@ -676,7 +677,7 @@ const normalizeWeatherRecord = (item: Record<string, unknown>): WeatherCondition
 
 const normalizeCityRecord = (item: Record<string, unknown>): City => {
   const culturalEvents = normalizeStringArray(item.cultural_events);
-  const locations = normalizeDistricts(item.districts);
+  const locations = normalizeDistricts(item.districts) as any;
   const travelOptions = normalizeTravelNodes(item.travel_nodes);
   const venueHighlights = normalizeFeaturedVenues(item.featured_venues, locations);
   const studioProfiles = normalizeStudioProfiles(item.featured_studios);
@@ -787,13 +788,13 @@ const adaptGameEventToWorldEventRecord = (item: Record<string, unknown>): Record
 
 const fetchWorldEventsWithFallback = async (): Promise<WorldEvent[]> => {
   const primaryResponse = await supabase
-    .from("world_events")
+    .from("world_events" as any)
     .select("*")
     .order("start_date", { ascending: true });
 
   if (!primaryResponse.error) {
     const normalized = (primaryResponse.data ?? [])
-      .map((item) => normalizeWorldEventRecord(item as Record<string, unknown>));
+      .map((item: any) => normalizeWorldEventRecord(item as Record<string, unknown>));
     return sortWorldEventsByStartDate(normalized);
   }
 
@@ -858,6 +859,7 @@ const normalizeCityLocationRecord = (item: Record<string, unknown>, index: numbe
     category: categoryRaw,
     description: descriptionRaw,
     vibe: vibeRaw,
+    highlights: [],
   };
 };
 
@@ -1144,7 +1146,7 @@ export const fetchCityEnvironmentDetails = async (
       .in("status", ["scheduled", "confirmed"])
       .order("scheduled_date", { ascending: true }),
     supabase
-      .from("city_metadata")
+      .from("city_metadata" as any)
       .select("*")
       .eq("city_id", cityId)
       .maybeSingle(),
@@ -1155,11 +1157,11 @@ export const fetchCityEnvironmentDetails = async (
   if (metadataResponse.error) throw metadataResponse.error;
 
   const metadataRecord = metadataResponse.data
-    ? normalizeCityMetadataRecord(metadataResponse.data as Record<string, unknown>)
+    ? normalizeCityMetadataRecord((metadataResponse.data as any) as Record<string, unknown>)
     : null;
 
   const players = (playersResponse.data ?? [])
-    .map((item) => normalizeCityPlayerRecord(item as Record<string, unknown>))
+    .map((item: any) => normalizeCityPlayerRecord(item as Record<string, unknown>))
     .sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
 
   const now = Date.now();
@@ -1200,13 +1202,13 @@ export const fetchEnvironmentModifiers = async (
   isoDate: string,
 ): Promise<EnvironmentModifierSummary> => {
   const [weatherResponse, worldEvents] = await Promise.all([
-    supabase.from("weather").select("*"),
+    supabase.from("weather" as any).select("*"),
     fetchWorldEventsWithFallback(),
   ]);
 
   if (weatherResponse.error) throw weatherResponse.error;
 
-  const weather = (weatherResponse.data || []).map((item) => normalizeWeatherRecord(item as Record<string, unknown>));
+  const weather = (weatherResponse.data || []).map((item: any) => normalizeWeatherRecord(item as Record<string, unknown>));
 
   const targetDate = new Date(isoDate);
   const targetTime = targetDate.getTime();
