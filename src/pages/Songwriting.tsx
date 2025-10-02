@@ -1558,6 +1558,7 @@ const Songwriting = () => {
                 project.creative_brief?.rating_revealed_at ||
                 linkedSong?.rating_revealed_at,
             );
+            const qualityDescriptor = linkedSongQuality ?? ratingDescriptor;
             const inspirationTags = project.creative_brief?.inspiration_modifiers ?? [];
             const moodTags = project.creative_brief?.mood_modifiers ?? [];
             const inspirationLabels = inspirationTags.map((id) => inspirationTagMap[id]?.label ?? id);
@@ -1691,38 +1692,40 @@ const Songwriting = () => {
                       </div>
 
                       {(inspirationLabels.length > 0 || moodLabels.length > 0) && (
-                        <div className="rounded-md border p-3 space-y-3">
-                          {inspirationLabels.length > 0 && (
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Inspiration</p>
-                              <div className="flex flex-wrap gap-2">
-                                {inspirationLabels.map((label) => (
-                                  <Badge key={label} variant="outline">
-                                    {label}
-                                  </Badge>
-                                ))}
+                        <>
+                          <div className="rounded-md border p-3 space-y-3">
+                            {inspirationLabels.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Inspiration</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {inspirationLabels.map((label) => (
+                                    <Badge key={label} variant="outline">
+                                      {label}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                          {moodLabels.length > 0 && (
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Mood</p>
-                              <div className="flex flex-wrap gap-2">
-                                {moodLabels.map((label) => (
-                                  <Badge key={label} variant="outline">
-                                    {label}
-                                  </Badge>
-                                ))}
+                            )}
+                            {moodLabels.length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Mood</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {moodLabels.map((label) => (
+                                    <Badge key={label} variant="outline">
+                                      {label}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Rating</p>
-                          <p className="font-semibold text-foreground">
-                            {linkedSongQuality ? linkedSongQuality.label : "Unknown"}
-                          </p>
-                        </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Rating</p>
+                            <p className="font-semibold text-foreground">
+                              {linkedSongQuality ? linkedSongQuality.label : "Unknown"}
+                            </p>
+                          </div>
+                        </>
                       )}
                     </div>
 
