@@ -210,7 +210,7 @@ export const useSongwritingData = (userId?: string | null) => {
       return [] as SongwritingProject[];
     }
 
-    return rows.map((row) => normalizeProjectRow(row as Record<string, unknown>)) as SongwritingProject[];
+    return rows.map((row) => normalizeProjectRow(row as Record<string, unknown>)) as any;
   };
 
   const isMissingTableError = (error: unknown, tableName: string): boolean => {
@@ -690,7 +690,7 @@ export const useSongwritingData = (userId?: string | null) => {
       const attemptInsert = () =>
         supabase
           .from("songwriting_projects")
-          .insert(buildPayload())
+          .insert(buildPayload() as any)
           .select()
           .single();
 
@@ -742,9 +742,9 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       const normalized = data
-        ? (normalizeProjectRow(data as Record<string, unknown>) as SongwritingProject)
+        ? (normalizeProjectRow(data as any) as any)
         : null;
-      return normalized as SongwritingProject | null;
+      return normalized as any;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
@@ -966,7 +966,7 @@ export const useSongwritingData = (userId?: string | null) => {
             : {}),
           locked_until: lockUntil.toISOString(),
           notes: null,
-        } as Record<string, unknown>)
+        } as any)
         .select()
         .single();
 
@@ -986,7 +986,7 @@ export const useSongwritingData = (userId?: string | null) => {
               session_start: startedAt.toISOString(),
               locked_until: lockUntil.toISOString(),
               notes: null,
-            } as Record<string, unknown>)
+            } as any)
             .select()
             .single();
 
@@ -1095,7 +1095,7 @@ export const useSongwritingData = (userId?: string | null) => {
       if (projectError) throw projectError;
       if (!project) throw new Error("Project not found");
 
-      project = normalizeProjectRow(project as Record<string, unknown>);
+      project = normalizeProjectRow(project as any) as any;
 
       const [{ data: skills, error: skillsError }, { data: attributes, error: attributesError }] =
         await Promise.all([
@@ -1125,13 +1125,13 @@ export const useSongwritingData = (userId?: string | null) => {
         p_skill_composition: skills?.composition || 1,
         p_attr_creative_insight: attributes?.creative_insight || 10,
         p_attr_musical_ability: attributes?.musical_ability || 10,
-        p_current_music: project.music_progress,
-        p_current_lyrics: project.lyrics_progress,
+        p_current_music: (project as any).music_progress ?? 0,
+        p_current_lyrics: (project as any).lyrics_progress ?? 0,
       };
 
       const { data: progressCalc, error: calcError } = await supabase.rpc(
         "calculate_songwriting_progress",
-        progressParameters,
+        progressParameters as any,
       );
 
       if (calcError) throw calcError;
@@ -1161,25 +1161,26 @@ export const useSongwritingData = (userId?: string | null) => {
       if (updateSessionError) throw updateSessionError;
 
       const maxProgress = 2000;
-      const currentMusic = project.music_progress ?? 0;
-      const currentLyrics = project.lyrics_progress ?? 0;
+      const proj = project as any;
+      const currentMusic = proj.music_progress ?? 0;
+      const currentLyrics = proj.lyrics_progress ?? 0;
       const newMusicProgress = Math.min(maxProgress, currentMusic + musicGain);
       const newLyricsProgress = Math.min(maxProgress, currentLyrics + lyricsGain);
       const isComplete = newMusicProgress >= maxProgress && newLyricsProgress >= maxProgress;
 
-      const newTotalSessions = (project.total_sessions ?? 0) + 1;
+      const newTotalSessions = (proj.total_sessions ?? 0) + 1;
       const previousSessionsCompleted =
-        typeof project.sessions_completed === "number" && Number.isFinite(project.sessions_completed)
-          ? project.sessions_completed
-          : Math.max(0, project.total_sessions ?? 0);
+        typeof proj.sessions_completed === "number" && Number.isFinite(proj.sessions_completed)
+          ? proj.sessions_completed
+          : Math.max(0, proj.total_sessions ?? 0);
       const newSessionsCompleted = previousSessionsCompleted + 1;
       const targetSessions =
-        project.estimated_completion_sessions ??
-        project.estimated_sessions ??
+        proj.estimated_completion_sessions ??
+        proj.estimated_sessions ??
         Math.max(newTotalSessions, 3);
       const completionRatio = targetSessions > 0 ? newTotalSessions / targetSessions : 0;
 
-      let nextStatus = project.status ?? "draft";
+      let nextStatus = proj.status ?? "draft";
       if (isComplete) {
         nextStatus = "completed";
       } else if (completionRatio >= 1) {
@@ -1203,7 +1204,7 @@ export const useSongwritingData = (userId?: string | null) => {
       const consistencyModifier =
         1 + Math.min(0.12, newSessionsCompleted / Math.max(newTotalSessions, 1) * 0.06);
       const themeModifier =
-        1 + (project.theme_id ? 0.04 : 0) + (project.chord_progression_id ? 0.04 : 0);
+        1 + (proj.theme_id ? 0.04 : 0) + (proj.chord_progression_id ? 0.04 : 0);
 
       const progressComponent = 0.45 * Math.min(1, progressRatio);
       const skillComponent = 0.35 * Math.min(1, skillAverage / 120);
@@ -1216,7 +1217,7 @@ export const useSongwritingData = (userId?: string | null) => {
           consistencyModifier *
           themeModifier
       );
-      computedQuality = Math.min(2000, Math.max(project.quality_score ?? 0, computedQuality));
+      computedQuality = Math.min(2000, Math.max(proj.quality_score ?? 0, computedQuality));
       const qualityDescriptor = getSongQualityDescriptor(computedQuality);
 
       const buildUpdatePayload = (includeEstimated: boolean) => ({
@@ -1378,7 +1379,7 @@ export const useSongwritingData = (userId?: string | null) => {
 
       if (projectError) throw projectError;
 
-      const normalizedProject = normalizeProjectRow(project as Record<string, unknown>) as SongwritingProject;
+      const normalizedProject = normalizeProjectRow(project as any) as any;
       const qualityDescriptor = getSongQualityDescriptor(normalizedProject.quality_score ?? 0);
       const estimatedSessions =
         normalizedProject.estimated_completion_sessions ??

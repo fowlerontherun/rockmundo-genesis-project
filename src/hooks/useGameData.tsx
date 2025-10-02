@@ -701,10 +701,10 @@ const useProvideGameData = (): UseGameDataReturn => {
 
           const dataWithProfile = legacyResult.data
             ? ({
-                ...(legacyResult.data as Record<string, unknown>),
+                ...(legacyResult.data as any),
                 profile_id:
-                  (legacyResult.data as Record<string, unknown>).profile_id ?? effectiveProfile.id,
-              } as PlayerSkillsRow)
+                  (legacyResult.data as any).profile_id ?? effectiveProfile.id,
+              } as any)
             : legacyResult.data;
 
           return {
@@ -1178,7 +1178,7 @@ const useProvideGameData = (): UseGameDataReturn => {
       ]>) {
         const value = updates[category];
         if (typeof value === "number" && Number.isFinite(value)) {
-          payload[column] = value;
+          (payload as any)[column] = value;
         }
       }
 

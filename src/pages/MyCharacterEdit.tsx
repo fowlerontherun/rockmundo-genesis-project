@@ -312,7 +312,7 @@ const MyCharacterEdit = () => {
         .getPublicUrl(data?.path ?? filePath);
 
       const avatarUrl = publicUrlData.publicUrl;
-      await updateProfile({ avatar_url: avatarUrl });
+      await updateProfile({ avatar_url: avatarUrl } as any);
       await refetch();
 
       toast({
@@ -348,7 +348,7 @@ const MyCharacterEdit = () => {
   }
 
   const displayName = profile?.display_name || profile?.username || "Performer";
-  const avatarUrl = profile?.avatar_url ?? undefined;
+  const avatarUrl = (profile as any)?.avatar_url ?? undefined;
   const lifetimeXp = Number((xpWallet as XpWalletRow | null)?.lifetime_xp ?? 0);
   const xpSpent = Number((xpWallet as XpWalletRow | null)?.xp_spent ?? 0);
 

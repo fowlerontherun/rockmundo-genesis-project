@@ -107,7 +107,7 @@ const JamSessions = () => {
       return;
     }
 
-    setJamSessions((data as JamSessionWithHost[]) ?? []);
+    setJamSessions((data as any) ?? []);
     setLoadingSessions(false);
   }, [toast]);
 
@@ -237,7 +237,7 @@ const JamSessions = () => {
 
     setJoiningSessionId(session.id);
 
-    const { data, error } = await supabase.rpc("join_jam_session", {
+    const { data, error } = await (supabase.rpc as any)("join_jam_session", {
       p_session_id: session.id,
     });
 
@@ -257,8 +257,8 @@ const JamSessions = () => {
         existing.id === session.id
           ? {
               ...existing,
-              current_participants: data?.current_participants ?? existing.current_participants,
-              participant_ids: data?.participant_ids ?? existing.participant_ids,
+              current_participants: (data as any)?.current_participants ?? existing.current_participants,
+              participant_ids: (data as any)?.participant_ids ?? (existing as any).participant_ids,
             }
           : existing
       )

@@ -98,7 +98,7 @@ const GigBooking = () => {
     }
 
     if (memberRecord?.bands) {
-      return memberRecord.bands as BandRow;
+      return memberRecord.bands as any;
     }
 
     return null;
@@ -125,7 +125,7 @@ const GigBooking = () => {
       return;
     }
 
-    setUpcomingGigs((data ?? []) as GigWithVenue[]);
+    setUpcomingGigs((data ?? []) as any);
   }, [toast]);
 
   const loadData = useCallback(async () => {

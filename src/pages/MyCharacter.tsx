@@ -46,7 +46,7 @@ const sanitizeAttributeLabel = (label: string) =>
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
-const PROFILE_META_FIELDS: Array<{ key: keyof PlayerProfile; label: string; icon: ElementType }> = [
+const PROFILE_META_FIELDS: Array<{ key: any; label: string; icon: ElementType }> = [
   { key: "current_location", label: "Hometown", icon: MapPin },
   { key: "age", label: "Age", icon: Cake },
   { key: "genre", label: "Primary Genre", icon: Music },

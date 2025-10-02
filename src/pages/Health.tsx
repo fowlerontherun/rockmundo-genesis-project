@@ -46,7 +46,7 @@ const getBodyShape = (fitness: number) => {
 const HealthPage = () => {
   const { profile, attributes, loading } = useGameData();
 
-  const healthValue = clampToPercent(profile?.health ?? 72);
+  const healthValue = clampToPercent((profile as any)?.health ?? 72);
   const averageAttribute = attributes
     ? clampToPercent(
         Object.values(attributes).reduce((sum, value) => sum + (value ?? 0), 0) /

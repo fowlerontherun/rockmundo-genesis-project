@@ -16,7 +16,7 @@ const scheduleLabels: Record<keyof (typeof awardShows)[number]["schedule"], stri
 export default function AwardShows() {
   const { profile } = useGameData();
   const stageIdentity =
-    profile?.stage_name || profile?.display_name || profile?.username || "your project";
+    (profile as any)?.stage_name || profile?.display_name || profile?.username || "your project";
 
   return (
     <div className="container mx-auto space-y-12 px-4 py-10">

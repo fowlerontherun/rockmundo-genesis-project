@@ -295,7 +295,7 @@ const Dashboard = () => {
       }
     };
 
-    const birthCityId = profile?.city_of_birth ?? null;
+    const birthCityId = (profile as any)?.city_of_birth ?? null;
 
     if (birthCityId) {
       void loadCity(birthCityId);
@@ -306,7 +306,7 @@ const Dashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, [profile?.city_of_birth]);
+  }, [(profile as any)?.city_of_birth]);
 
   const trackedSkillProgress = useMemo<SkillProgressRow[]>(
     () => (Array.isArray(skillProgress) ? skillProgress.filter(entry => entry && entry.skill_slug) : []),
@@ -373,7 +373,7 @@ const Dashboard = () => {
     return null;
   }
 
-  const profileGenderLabel = genderLabels[profile.gender ?? "prefer_not_to_say"] ?? genderLabels.prefer_not_to_say;
+  const profileGenderLabel = genderLabels[(profile as any).gender ?? "prefer_not_to_say"] ?? genderLabels.prefer_not_to_say;
 
   const parseDate = (value?: string | null) => {
     if (!value) return null;

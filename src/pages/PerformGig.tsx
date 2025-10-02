@@ -116,7 +116,7 @@ export default function PerformGig() {
 
       if (data) {
         const showType = data.show_type ?? 'concert';
-        setGig(data);
+        setGig(data as any);
         setCurrentShowType(showType);
         setStageSequence(getStagePreset(showType));
       }
