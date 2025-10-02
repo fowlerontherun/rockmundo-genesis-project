@@ -8,6 +8,7 @@ const SONGWRITING_SCHEMA_FEATURES = {
   estimatedCompletion: "estimated-completion",
   sessionsCompleted: "sessions-completed",
   sessionsStartedAt: "sessions-started-at",
+  creativeBrief: "creative-brief",
 } as const;
 
 type SongwritingSchemaFeature =
@@ -133,6 +134,35 @@ export interface SongwritingProject {
   song_themes?: SongTheme;
   chord_progressions?: ChordProgression;
   songwriting_sessions?: SongwritingSession[];
+  creative_brief?: SongwritingCreativeBrief | null;
+}
+
+export interface SongwritingCreativeBrief {
+  genre?: string | null;
+  purpose?: string | null;
+  writing_mode?: string | null;
+  familiarity_tags?: string[] | null;
+  co_writers?: Array<{
+    id: string;
+    name: string;
+    role?: string | null;
+    familiarity?: string | null;
+    split?: number | null;
+    contribution_focus?: string[] | null;
+  }>;
+  producers?: string[] | null;
+  session_musicians?: string[] | null;
+  inspiration_modifiers?: string[] | null;
+  mood_modifiers?: string[] | null;
+  effort_level?: string | null;
+  rating_revealed_at?: string | null;
+  core_attributes?: {
+    lyrics?: number | null;
+    melody?: number | null;
+    rhythm?: number | null;
+    arrangement?: number | null;
+    production?: number | null;
+  } | null;
 }
 
 export interface SongwritingSession {
@@ -155,6 +185,7 @@ type CreateProjectInput = {
   theme_id: string | null;
   chord_progression_id: string | null;
   initial_lyrics?: string;
+  creative_brief?: SongwritingCreativeBrief | null;
 };
 
 type UpdateProjectInput = {
@@ -169,12 +200,30 @@ type UpdateProjectInput = {
   initial_lyrics?: string | null;
   lyrics?: string | null;
   song_id?: string | null;
+  creative_brief?: SongwritingCreativeBrief | null;
 };
 
 type CompleteSessionInput = {
   sessionId: string;
   notes?: string;
 };
+
+type StartSessionInput = {
+  projectId: string;
+  effortHours: number;
+  facilitator?: string | null;
+};
+
+type PauseSessionInput = {
+  sessionId: string;
+};
+
+type ResumeSessionInput = {
+  projectId: string;
+  effortHours: number;
+};
+
+export const SONG_RATING_RANGE = { min: 0, max: 1000 } as const;
 
 const QUALITY_BANDS = [
   { min: 0, max: 299, label: "Amateur", hint: "Rough idea – keep iterating." },
@@ -211,6 +260,9 @@ export const useSongwritingData = (userId?: string | null) => {
   );
   const songwritingSessionsCompletedSupportedRef = useRef(
     readSchemaSupportFlag(SONGWRITING_SCHEMA_FEATURES.sessionsCompleted, true),
+  );
+  const songwritingCreativeBriefSupportedRef = useRef(
+    readSchemaSupportFlag(SONGWRITING_SCHEMA_FEATURES.creativeBrief, true),
   );
 
   const activeUserId = typeof userId === "string" && userId.length > 0 ? userId : null;
@@ -321,6 +373,10 @@ export const useSongwritingData = (userId?: string | null) => {
 
     normalized["sessions_completed"] = normalizedSessionsCompleted;
 
+    if (!normalized["creative_brief"] || typeof normalized["creative_brief"] !== "object") {
+      normalized["creative_brief"] = null;
+    }
+
     return normalized as T & { estimated_completion_sessions: number };
   };
 
@@ -415,6 +471,10 @@ export const useSongwritingData = (userId?: string | null) => {
     persistSchemaSupportFromRef(
       songwritingSessionsStartedAtSupportedRef,
       SONGWRITING_SCHEMA_FEATURES.sessionsStartedAt,
+    );
+    persistSchemaSupportFlag(
+      SONGWRITING_SCHEMA_FEATURES.creativeBrief,
+      songwritingCreativeBriefSupportedRef.current,
     );
   };
 
@@ -577,6 +637,7 @@ export const useSongwritingData = (userId?: string | null) => {
           "song_id",
           "created_at",
           "updated_at",
+          songwritingCreativeBriefSupportedRef.current ? "creative_brief" : null,
         ].filter((field): field is string => typeof field === "string" && field.length > 0);
 
         const selections = [
@@ -801,6 +862,10 @@ export const useSongwritingData = (userId?: string | null) => {
       const sanitizedThemeId = projectData.theme_id || null;
       const sanitizedProgressionId = projectData.chord_progression_id || null;
       const sanitizedLyrics = projectData.initial_lyrics?.trim() || null;
+      const sanitizedCreativeBrief =
+        songwritingCreativeBriefSupportedRef.current && projectData.creative_brief
+          ? projectData.creative_brief
+          : null;
 
       const [{ data: skills, error: skillsError }, { data: attributes, error: attributesError }] = await Promise.all([
         supabase
@@ -866,6 +931,10 @@ export const useSongwritingData = (userId?: string | null) => {
           payload.estimated_completion_sessions = estimatedSessions;
         }
 
+        if (songwritingCreativeBriefSupportedRef.current) {
+          payload.creative_brief = sanitizedCreativeBrief;
+        }
+
         return payload;
       };
 
@@ -922,6 +991,18 @@ export const useSongwritingData = (userId?: string | null) => {
         );
         console.warn(
           "Songwriting projects lyrics column unavailable when creating; retrying without it.",
+          error,
+        );
+
+        const fallback = await attemptInsert();
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (error && songwritingCreativeBriefSupportedRef.current && isMissingColumnError(error, "creative_brief")) {
+        songwritingCreativeBriefSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects creative_brief column unavailable when creating; retrying without it.",
           error,
         );
 
@@ -994,6 +1075,13 @@ export const useSongwritingData = (userId?: string | null) => {
             return;
           }
 
+          if (key === "creative_brief") {
+            if (songwritingCreativeBriefSupportedRef.current) {
+              payload.creative_brief = value;
+            }
+            return;
+          }
+
           payload[key] = value;
         });
 
@@ -1015,6 +1103,10 @@ export const useSongwritingData = (userId?: string | null) => {
 
         if (!songwritingLyricsColumnSupportedRef.current) {
           delete payload.lyrics;
+        }
+
+        if (!songwritingCreativeBriefSupportedRef.current) {
+          delete payload.creative_brief;
         }
 
         return payload;
@@ -1054,6 +1146,16 @@ export const useSongwritingData = (userId?: string | null) => {
         );
         console.warn(
           "Songwriting projects sessions_completed column unavailable when updating; retrying without it.",
+          error,
+        );
+
+        ({ error } = await attemptUpdate(songwritingEstimatedCompletionSupportedRef.current));
+      }
+
+      if (error && songwritingCreativeBriefSupportedRef.current && isMissingColumnError(error, "creative_brief")) {
+        songwritingCreativeBriefSupportedRef.current = false;
+        console.warn(
+          "Songwriting projects creative_brief column unavailable when updating; retrying without it.",
           error,
         );
 
@@ -1123,7 +1225,7 @@ export const useSongwritingData = (userId?: string | null) => {
   });
 
   const startSession = useMutation({
-    mutationFn: async (projectId: string) => {
+    mutationFn: async ({ projectId, effortHours }: StartSessionInput) => {
       const { data: project, error: projectError } = await supabase
         .from("songwriting_projects")
         .select("is_locked, locked_until, status")
@@ -1148,8 +1250,9 @@ export const useSongwritingData = (userId?: string | null) => {
         throw new Error("User must be signed in to start a songwriting session.");
       }
 
+      const sanitizedEffort = Number.isFinite(effortHours) ? Math.max(1, effortHours) : 6;
       const startedAt = new Date();
-      const lockUntil = new Date(startedAt.getTime() + 60 * 60 * 1000);
+      const lockUntil = new Date(startedAt.getTime() + sanitizedEffort * 60 * 60 * 1000);
 
       const { error: lockError } = await supabase
         .from("songwriting_projects")
@@ -1213,11 +1316,15 @@ export const useSongwritingData = (userId?: string | null) => {
       }
       return data as SongwritingSession;
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      const effortHours = variables?.effortHours ?? 6;
+      const roundedHours = Math.max(1, Math.round(effortHours));
       toast({
         title: "Session Started",
-        description: "Your songwriting session has begun! You're locked in for 1 hour."
+        description: `Your songwriting session has begun! You're locked in for ${roundedHours} hour${
+          roundedHours === 1 ? '' : 's'
+        } of focused work.`,
       });
     },
     onError: (error) => {
@@ -1229,6 +1336,51 @@ export const useSongwritingData = (userId?: string | null) => {
         variant: "destructive"
       });
     }
+  });
+
+  const pauseSession = useMutation({
+    mutationFn: async ({ sessionId }: PauseSessionInput) => {
+      const { data: session, error: sessionError } = await supabase
+        .from("songwriting_sessions")
+        .select("project_id")
+        .eq("id", sessionId)
+        .maybeSingle();
+
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error("Session not found");
+
+      const now = new Date().toISOString();
+
+      const { error: sessionUpdateError } = await supabase
+        .from("songwriting_sessions")
+        .update({ session_end: now })
+        .eq("id", sessionId);
+
+      if (sessionUpdateError) throw sessionUpdateError;
+
+      const { error: projectUpdateError } = await supabase
+        .from("songwriting_projects")
+        .update({ is_locked: false, locked_until: now })
+        .eq("id", session.project_id);
+
+      if (projectUpdateError) throw projectUpdateError;
+
+      return { projectId: session.project_id, pausedAt: now };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      toast({
+        title: "Session Paused",
+        description: "Your sprint is paused. Resume when you're ready to dive back in.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to pause session",
+        variant: "destructive",
+      });
+    },
   });
 
   const completeSession = useMutation({
@@ -1797,6 +1949,7 @@ export const useSongwritingData = (userId?: string | null) => {
     updateProject,
     deleteProject,
     startSession,
+    pauseSession,
     completeSession,
     convertToSong,
   };
