@@ -153,6 +153,15 @@ const JamSessions = () => {
       return;
     }
 
+    if (!profile?.id) {
+      toast({
+        title: "Profile not ready",
+        description: "We couldn't find your profile information. Please try again shortly.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!formState.name || !formState.genre) {
       toast({
         title: "Missing information",
@@ -172,7 +181,7 @@ const JamSessions = () => {
     setCreatingSession(true);
 
     const payload: Database["public"]["Tables"]["jam_sessions"]["Insert"] = {
-      host_id: user.id,
+      host_id: profile.id,
       name: formState.name.trim(),
       description: formState.description.trim() || null,
       genre: formState.genre,
@@ -457,7 +466,7 @@ const JamSessions = () => {
               </div>
             ) : (
               jamSessions.map((session) => {
-                const isHost = session.host_id === user?.id;
+                const isHost = session.host_id === profile?.id;
                 const alreadyJoined = session.participant_ids?.includes(user?.id ?? "");
                 const isFull = (session.current_participants ?? 0) >= session.max_participants;
 
