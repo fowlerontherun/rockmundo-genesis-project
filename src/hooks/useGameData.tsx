@@ -1923,50 +1923,43 @@ const useProvideGameData = (): UseGameDataReturn => {
         setXpWallet(response.wallet as PlayerXpWallet);
       }
 
-      const { data: updatedSkill, error: updatedSkillError } = await supabase
-        .from("skill_progress")
-        .select("*")
-        .eq("profile_id", profile.id)
-        .eq("skill_slug", skillSlug)
-        .maybeSingle();
+      let updatedSkillProgress: SkillProgressRow | null = null;
 
-      if (updatedSkillError && updatedSkillError.code !== "PGRST116") {
-        console.error("Failed to refresh skill progress", updatedSkillError);
-      } else if (updatedSkill) {
+      if (response.result && typeof response.result === "object") {
+        const { skill_progress: skillProgressResult } = response.result as {
+          skill_progress?: SkillProgressRow | null;
+        };
+        if (skillProgressResult) {
+          updatedSkillProgress = skillProgressResult;
+        }
+      }
+
+      if (!updatedSkillProgress) {
+        const { data: fetchedSkill, error: updatedSkillError } = await supabase
+          .from("skill_progress")
+          .select("*")
+          .eq("profile_id", profile.id)
+          .eq("skill_slug", skillSlug)
+          .maybeSingle();
+
+        if (updatedSkillError && updatedSkillError.code !== "PGRST116") {
+          console.error("Failed to refresh skill progress", updatedSkillError);
+        } else if (fetchedSkill) {
+          updatedSkillProgress = fetchedSkill as SkillProgressRow;
+        }
+      }
+
+      if (updatedSkillProgress) {
         setSkillProgress((previous) => {
           const next = Array.isArray(previous) ? [...previous] : [];
           const index = next.findIndex((entry) => entry.skill_slug === skillSlug);
           if (index >= 0) {
-            next[index] = updatedSkill as SkillProgressRow;
+            next[index] = updatedSkillProgress as SkillProgressRow;
           } else {
-            next.push(updatedSkill as SkillProgressRow);
+            next.push(updatedSkillProgress as SkillProgressRow);
           }
           return next;
         });
-      }
-
-      if (response.result && typeof response.result === "object") {
-        const result = response.result as Record<string, unknown>;
-        if (typeof result.current_level === "number" || typeof result.current_xp === "number") {
-          setSkillProgress((previous) => {
-            const next = Array.isArray(previous) ? [...previous] : [];
-            const index = next.findIndex((entry) => entry.skill_slug === skillSlug);
-            if (index >= 0) {
-              next[index] = {
-                ...next[index],
-                current_level:
-                  typeof result.current_level === "number" ? result.current_level : next[index].current_level,
-                current_xp:
-                  typeof result.current_xp === "number" ? result.current_xp : next[index].current_xp,
-                required_xp:
-                  typeof result.required_xp === "number" ? result.required_xp : next[index].required_xp,
-                updated_at: new Date().toISOString(),
-                last_practiced_at: new Date().toISOString(),
-              };
-            }
-            return next;
-          });
-        }
       }
     },
     [profile],
