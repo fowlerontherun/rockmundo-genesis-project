@@ -105,14 +105,24 @@ export interface SongwritingProject {
   title: string;
   theme_id: string | null;
   chord_progression_id: string | null;
+  genre_id: string | null;
+  genre_familiarity: number;
+  song_purpose_id: string | null;
+  writing_mode_id: string | null;
   initial_lyrics: string | null;
   lyrics?: string | null;
   music_progress: number;
   lyrics_progress: number;
+  lyrics_quality: number;
+  melody_quality: number;
+  rhythm_quality: number;
+  arrangement_quality: number;
+  production_potential: number;
   total_sessions: number;
   estimated_completion_sessions?: number | null;
   estimated_sessions?: number | null;
   quality_score: number;
+  song_rating: number;
   status: string | null;
   is_locked: boolean;
   locked_until: string | null;
@@ -167,17 +177,17 @@ type CompleteSessionInput = {
 };
 
 const QUALITY_BANDS = [
-  { min: 0, max: 599, label: "Amateur", hint: "Rough idea – keep iterating." },
-  { min: 600, max: 1099, label: "Rising", hint: "Momentum is building." },
-  { min: 1100, max: 1499, label: "Professional", hint: "Great craftsmanship on display." },
-  { min: 1500, max: 1800, label: "Hit Potential", hint: "Strong release candidate." },
-  { min: 1801, max: 2000, label: "Masterpiece", hint: "A career highlight." },
+  { min: 0, max: 299, label: "Amateur", hint: "Rough idea – keep iterating." },
+  { min: 300, max: 549, label: "Rising", hint: "Momentum is building." },
+  { min: 550, max: 749, label: "Professional", hint: "Great craftsmanship on display." },
+  { min: 750, max: 900, label: "Hit Potential", hint: "Strong release candidate." },
+  { min: 901, max: 1000, label: "Masterpiece", hint: "A career highlight." },
 ] as const;
 
 export type SongQualityDescriptor = (typeof QUALITY_BANDS)[number];
 
 export const getSongQualityDescriptor = (score: number): SongQualityDescriptor & { score: number } => {
-  const normalized = Number.isFinite(score) ? Math.max(0, Math.min(2000, Math.round(score))) : 0;
+  const normalized = Number.isFinite(score) ? Math.max(0, Math.min(1000, Math.round(score))) : 0;
   const band = QUALITY_BANDS.find((entry) => normalized >= entry.min && normalized <= entry.max) ?? QUALITY_BANDS[0];
   return { ...band, score: normalized };
 };
@@ -269,6 +279,25 @@ export const useSongwritingData = (userId?: string | null) => {
         },
       ),
     } as Record<string, unknown>;
+
+    const zeroableFields = [
+      "music_progress",
+      "lyrics_progress",
+      "lyrics_quality",
+      "melody_quality",
+      "rhythm_quality",
+      "arrangement_quality",
+      "production_potential",
+      "genre_familiarity",
+      "song_rating",
+    ];
+
+    zeroableFields.forEach((field) => {
+      const value = normalized[field];
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        normalized[field] = 0;
+      }
+    });
 
     if (
       normalized["lyrics"] === undefined &&
@@ -523,14 +552,24 @@ export const useSongwritingData = (userId?: string | null) => {
           "title",
           "theme_id",
           "chord_progression_id",
+          "genre_id",
+          "genre_familiarity",
+          "song_purpose_id",
+          "writing_mode_id",
           "initial_lyrics",
           songwritingLyricsColumnSupportedRef.current ? "lyrics" : null,
           "music_progress",
           "lyrics_progress",
+          "lyrics_quality",
+          "melody_quality",
+          "rhythm_quality",
+          "arrangement_quality",
+          "production_potential",
           "total_sessions",
           includeEstimatedCompletion ? "estimated_completion_sessions" : null,
           "estimated_sessions",
           "quality_score",
+          "song_rating",
           "status",
           "is_locked",
           "locked_until",
@@ -1207,6 +1246,12 @@ export const useSongwritingData = (userId?: string | null) => {
         [
           "music_progress",
           "lyrics_progress",
+          "lyrics_quality",
+          "melody_quality",
+          "rhythm_quality",
+          "arrangement_quality",
+          "production_potential",
+          "song_rating",
           "total_sessions",
           includeEstimated ? "estimated_completion_sessions" : null,
           "estimated_sessions",
@@ -1215,6 +1260,10 @@ export const useSongwritingData = (userId?: string | null) => {
           songwritingSessionsCompletedSupportedRef.current ? "sessions_completed" : null,
           "theme_id",
           "chord_progression_id",
+          "genre_id",
+          "genre_familiarity",
+          "song_purpose_id",
+          "writing_mode_id",
         ]
           .filter((field): field is string => typeof field === "string" && field.length > 0)
           .join(", ");
@@ -1278,19 +1327,27 @@ export const useSongwritingData = (userId?: string | null) => {
 
       project = normalizeProjectRow(project as any) as any;
 
-      const [{ data: skills, error: skillsError }, { data: attributes, error: attributesError }] =
-        await Promise.all([
-          supabase
-            .from("player_skills")
-            .select("songwriting, creativity, composition")
-            .eq("user_id", session.user_id)
-            .maybeSingle(),
-          supabase
-            .from("player_attributes")
-            .select("creative_insight, musical_ability")
-            .eq("user_id", session.user_id)
-            .maybeSingle(),
-        ]);
+      const [
+        { data: skills, error: skillsError },
+        { data: attributes, error: attributesError },
+        { data: profile, error: profileError },
+      ] = await Promise.all([
+        supabase
+          .from("player_skills")
+          .select("songwriting, creativity, composition, vocals, guitar, bass, drums")
+          .eq("user_id", session.user_id)
+          .maybeSingle(),
+        supabase
+          .from("player_attributes")
+          .select("creative_insight, musical_ability, rhythm_sense, mental_focus, creativity")
+          .eq("user_id", session.user_id)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("health")
+          .eq("user_id", session.user_id)
+          .maybeSingle(),
+      ]);
 
       if (skillsError && skillsError.code !== "PGRST116") {
         throw skillsError;
@@ -1300,14 +1357,49 @@ export const useSongwritingData = (userId?: string | null) => {
         throw attributesError;
       }
 
+      if (profileError && profileError.code !== "PGRST116") {
+        throw profileError;
+      }
+
+      const instrumentalSkills = [skills?.guitar, skills?.bass, skills?.drums]
+        .filter((value): value is number => typeof value === "number")
+        .map((value) => (Number.isFinite(value) ? value : 0));
+
+      const averageInstrumentalSkill =
+        instrumentalSkills.length > 0
+          ? instrumentalSkills.reduce((sum, value) => sum + value, 0) / instrumentalSkills.length
+          : skills?.guitar || skills?.composition || 1;
+
+      const clampToRange = (value: number | null | undefined, min: number, max: number, fallback: number) => {
+        if (typeof value !== "number" || !Number.isFinite(value)) {
+          return fallback;
+        }
+        return Math.min(max, Math.max(min, value));
+      };
+
+      const projected = project as any;
+
       const progressParameters: Record<string, unknown> = {
         p_skill_songwriting: skills?.songwriting || 1,
         p_skill_creativity: skills?.creativity || 1,
         p_skill_composition: skills?.composition || 1,
+        p_skill_vocals: skills?.vocals || 1,
+        p_skill_instrumental: averageInstrumentalSkill || 1,
         p_attr_creative_insight: attributes?.creative_insight || 10,
         p_attr_musical_ability: attributes?.musical_ability || 10,
-        p_current_music: (project as any).music_progress ?? 0,
-        p_current_lyrics: (project as any).lyrics_progress ?? 0,
+        p_attr_rhythm_sense: attributes?.rhythm_sense || 10,
+        p_current_music: projected.music_progress ?? 0,
+        p_current_lyrics: projected.lyrics_progress ?? 0,
+        p_current_lyrics_quality: projected.lyrics_quality ?? 0,
+        p_current_melody_quality: projected.melody_quality ?? 0,
+        p_current_rhythm_quality: projected.rhythm_quality ?? 0,
+        p_current_arrangement_quality: projected.arrangement_quality ?? 0,
+        p_current_production_potential: projected.production_potential ?? 0,
+        p_current_song_rating: projected.song_rating ?? 0,
+        p_genre_familiarity: clampToRange(projected.genre_familiarity, 0, 100, 0),
+        p_mood_state: clampToRange(attributes?.mental_focus, 0, 1000, 600) / 10,
+        p_health: clampToRange(profile?.health, 0, 100, 72),
+        p_inspiration: clampToRange(attributes?.creativity, 0, 1000, 550) / 10,
       };
 
       const { data: progressCalc, error: calcError } = await supabase.rpc(
@@ -1322,6 +1414,12 @@ export const useSongwritingData = (userId?: string | null) => {
 
       const musicGain = coerceNumber(progressResult.music_gain);
       const lyricsGain = coerceNumber(progressResult.lyrics_gain);
+      const lyricsQualityGain = coerceNumber(progressResult.lyrics_quality_gain);
+      const melodyQualityGain = coerceNumber(progressResult.melody_quality_gain);
+      const rhythmQualityGain = coerceNumber(progressResult.rhythm_quality_gain);
+      const arrangementQualityGain = coerceNumber(progressResult.arrangement_quality_gain);
+      const productionPotentialGain = coerceNumber(progressResult.production_potential_gain);
+      const songRatingGain = coerceNumber(progressResult.song_rating_gain);
       const xpEarned = coerceNumber(progressResult.xp_earned);
 
       const completedAt = new Date();
@@ -1348,6 +1446,16 @@ export const useSongwritingData = (userId?: string | null) => {
       const newMusicProgress = Math.min(maxProgress, currentMusic + musicGain);
       const newLyricsProgress = Math.min(maxProgress, currentLyrics + lyricsGain);
       const isComplete = newMusicProgress >= maxProgress && newLyricsProgress >= maxProgress;
+
+      const clampQuality = (current: number, gain: number) =>
+        Math.min(1000, Math.max(0, (typeof current === "number" && Number.isFinite(current) ? current : 0) + gain));
+
+      const newLyricsQuality = clampQuality(proj.lyrics_quality, lyricsQualityGain);
+      const newMelodyQuality = clampQuality(proj.melody_quality, melodyQualityGain);
+      const newRhythmQuality = clampQuality(proj.rhythm_quality, rhythmQualityGain);
+      const newArrangementQuality = clampQuality(proj.arrangement_quality, arrangementQualityGain);
+      const newProductionPotential = clampQuality(proj.production_potential, productionPotentialGain);
+      const newSongRating = clampQuality(proj.song_rating, songRatingGain);
 
       const newTotalSessions = (proj.total_sessions ?? 0) + 1;
       const previousSessionsCompleted =
@@ -1398,12 +1506,19 @@ export const useSongwritingData = (userId?: string | null) => {
           consistencyModifier *
           themeModifier
       );
-      computedQuality = Math.min(2000, Math.max(proj.quality_score ?? 0, computedQuality));
-      const qualityDescriptor = getSongQualityDescriptor(computedQuality);
+      const ratingDrivenQuality = Math.round(newSongRating * 2);
+      computedQuality = Math.min(2000, Math.max(proj.quality_score ?? 0, computedQuality, ratingDrivenQuality));
+      const ratingDescriptor = getSongQualityDescriptor(newSongRating);
 
       const buildUpdatePayload = (includeEstimated: boolean) => ({
         music_progress: newMusicProgress,
         lyrics_progress: newLyricsProgress,
+        lyrics_quality: newLyricsQuality,
+        melody_quality: newMelodyQuality,
+        rhythm_quality: newRhythmQuality,
+        arrangement_quality: newArrangementQuality,
+        production_potential: newProductionPotential,
+        song_rating: newSongRating,
         total_sessions: newTotalSessions,
         ...(songwritingSessionsCompletedSupportedRef.current
           ? { sessions_completed: newSessionsCompleted }
@@ -1472,12 +1587,24 @@ export const useSongwritingData = (userId?: string | null) => {
       return {
         musicGain,
         lyricsGain,
+        lyricsQualityGain,
+        melodyQualityGain,
+        rhythmQualityGain,
+        arrangementQualityGain,
+        productionPotentialGain,
+        songRatingGain,
         xpEarned,
         isComplete,
         newMusicProgress,
         newLyricsProgress,
+        newLyricsQuality,
+        newMelodyQuality,
+        newRhythmQuality,
+        newArrangementQuality,
+        newProductionPotential,
+        newSongRating,
         qualityScore: computedQuality,
-        qualityDescriptor,
+        ratingDescriptor,
       };
     },
     onSuccess: (result) => {
@@ -1486,12 +1613,12 @@ export const useSongwritingData = (userId?: string | null) => {
       if (result.isComplete) {
         toast({
           title: "Song Completed!",
-          description: `Your project hit 100% on both tracks. Quality locked at ${result.qualityDescriptor.label}.`
+          description: `Your project hit 100% on both tracks. Rating now ${result.ratingDescriptor.label} (${result.ratingDescriptor.score}).`
         });
       } else {
         toast({
           title: "Session Complete",
-          description: `Progress made! Music +${result.musicGain}, Lyrics +${result.lyricsGain}, XP +${result.xpEarned}. Quality now ${result.qualityDescriptor.label}.`
+          description: `Progress made! Music +${result.musicGain}, Lyrics +${result.lyricsGain}, XP +${result.xpEarned}. Rating now ${result.ratingDescriptor.label} (${result.ratingDescriptor.score}).`
         });
       }
     },
@@ -1514,16 +1641,26 @@ export const useSongwritingData = (userId?: string | null) => {
           "title",
           "theme_id",
           "chord_progression_id",
+          "genre_id",
+          "genre_familiarity",
+          "song_purpose_id",
+          "writing_mode_id",
           "initial_lyrics",
           songwritingLyricsColumnSupportedRef.current ? "lyrics" : null,
           "music_progress",
           "lyrics_progress",
+          "lyrics_quality",
+          "melody_quality",
+          "rhythm_quality",
+          "arrangement_quality",
+          "production_potential",
           songwritingEstimatedCompletionSupportedRef.current
             ? "estimated_completion_sessions"
             : null,
           "estimated_sessions",
           "total_sessions",
           "quality_score",
+          "song_rating",
           "status",
           "song_id",
         ].filter((field): field is string => typeof field === "string" && field.length > 0);
@@ -1579,7 +1716,7 @@ export const useSongwritingData = (userId?: string | null) => {
       if (projectError) throw projectError;
 
       const normalizedProject = normalizeProjectRow(project as any) as any;
-      const qualityDescriptor = getSongQualityDescriptor(normalizedProject.quality_score ?? 0);
+      const ratingDescriptor = getSongQualityDescriptor(normalizedProject.song_rating ?? 0);
       const estimatedSessions =
         normalizedProject.estimated_completion_sessions ??
         normalizedProject.estimated_sessions ??
@@ -1592,12 +1729,22 @@ export const useSongwritingData = (userId?: string | null) => {
           user_id: normalizedProject.user_id,
           title: normalizedProject.title,
           genre: normalizedProject.song_themes?.name || 'Unknown',
+          genre_id: normalizedProject.genre_id,
+          genre_familiarity: normalizedProject.genre_familiarity ?? 0,
           lyrics: normalizedProject.lyrics || normalizedProject.initial_lyrics,
-          quality_score: qualityDescriptor.score,
+          quality_score: Math.max(normalizedProject.quality_score ?? 0, ratingDescriptor.score * 2),
+          song_rating: ratingDescriptor.score,
           music_progress: normalizedProject.music_progress,
           lyrics_progress: normalizedProject.lyrics_progress,
+          lyrics_quality: normalizedProject.lyrics_quality ?? 0,
+          melody_quality: normalizedProject.melody_quality ?? 0,
+          rhythm_quality: normalizedProject.rhythm_quality ?? 0,
+          arrangement_quality: normalizedProject.arrangement_quality ?? 0,
+          production_potential: normalizedProject.production_potential ?? 0,
           theme_id: normalizedProject.theme_id,
           chord_progression_id: normalizedProject.chord_progression_id,
+          song_purpose_id: normalizedProject.song_purpose_id,
+          writing_mode_id: normalizedProject.writing_mode_id,
           total_sessions: normalizedProject.total_sessions,
           estimated_completion_sessions: estimatedSessions,
           songwriting_project_id: normalizedProject.id,
@@ -1612,6 +1759,8 @@ export const useSongwritingData = (userId?: string | null) => {
         .update({
           status: 'completed',
           song_id: data.id,
+          song_rating: ratingDescriptor.score,
+          quality_score: Math.max(normalizedProject.quality_score ?? 0, ratingDescriptor.score * 2),
           updated_at: new Date().toISOString(),
         })
         .eq("id", projectId);
