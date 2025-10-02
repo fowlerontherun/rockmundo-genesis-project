@@ -1664,9 +1664,6 @@ export const useSongwritingData = (userId?: string | null) => {
             return;
           }
 
-          payload[key] = value;
-        });
-
           if (key === "purpose") {
             if (includeExtendedMetadata && sanitizedPurposeUpdate !== undefined) {
               payload.purpose = sanitizedPurposeUpdate;
@@ -2460,7 +2457,7 @@ export const useSongwritingData = (userId?: string | null) => {
       const melodyQualityGain = coerceNumber(progressResult.melody_quality_gain);
       const rhythmQualityGain = coerceNumber(progressResult.rhythm_quality_gain);
       const arrangementQualityGain = coerceNumber(progressResult.arrangement_quality_gain);
-      const productionPotentialGain = coerceNumber(progressResult.production_potential_gain);
+      let productionPotentialGain = coerceNumber(progressResult.production_potential_gain);
       const songRatingGain = coerceNumber(progressResult.song_rating_gain);
       const xpEarned = coerceNumber(progressResult.xp_earned);
 
@@ -2683,28 +2680,6 @@ export const useSongwritingData = (userId?: string | null) => {
       computedQuality = Math.min(2000, Math.max(proj.quality_score ?? 0, computedQuality, ratingDrivenQuality));
       const ratingDescriptor = getSongQualityDescriptor(newSongRating);
 
-      const buildUpdatePayload = (includeEstimated: boolean) => ({
-        music_progress: newMusicProgress,
-        lyrics_progress: newLyricsProgress,
-        lyrics_quality: newLyricsQuality,
-        melody_quality: newMelodyQuality,
-        rhythm_quality: newRhythmQuality,
-        arrangement_quality: newArrangementQuality,
-        production_potential: newProductionPotential,
-        song_rating: newSongRating,
-        total_sessions: newTotalSessions,
-        ...(songwritingSessionsCompletedSupportedRef.current
-          ? { sessions_completed: newSessionsCompleted }
-          : {}),
-        ...(includeEstimated ? { estimated_completion_sessions: targetSessions } : {}),
-        estimated_sessions: targetSessions,
-        status: nextStatus,
-        is_locked: false,
-        locked_until: null,
-        quality_score: computedQuality,
-        updated_at: completedAt.toISOString(),
-      });
-
       const computedSongRating = computeSongRatingFromScores(updatedAttributeScores);
       const ratingShouldReveal = shouldRevealSongRating(nextStatus);
       const previousRatingVisible = Boolean(normalizedProject.rating_visible);
@@ -2727,7 +2702,10 @@ export const useSongwritingData = (userId?: string | null) => {
         toNumberOrNull(normalizedProject.production_potential) ??
         toNumberOrNull(normalizedProject.initial_production_potential) ??
         0;
-      const productionPotentialGain = Math.round((musicGain + lyricsGain) / 45);
+      const derivedProductionPotentialGain = Math.round((musicGain + lyricsGain) / 45);
+      if (productionPotentialGain <= 0 && derivedProductionPotentialGain > 0) {
+        productionPotentialGain = derivedProductionPotentialGain;
+      }
       const nextProductionPotential = clampNumber(
         currentProductionPotential + productionPotentialGain,
         0,
