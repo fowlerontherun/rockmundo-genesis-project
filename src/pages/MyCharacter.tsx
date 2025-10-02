@@ -163,13 +163,13 @@ const MyCharacter = () => {
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const hasClaimedDailyXp = (dailyXpGrant?.grant_date ?? null) === todayIso;
   const todaysStipend = hasClaimedDailyXp
-    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? DAILY_XP_STIPEND))
+    ? Math.max(0, Number((dailyXpGrant as any)?.xp_awarded ?? dailyXpGrant?.xp_amount ?? DAILY_XP_STIPEND))
     : DAILY_XP_STIPEND;
   const lastClaimedAtLabel = useMemo(() => {
-    if (!dailyXpGrant?.claimed_at) {
+    if (!(dailyXpGrant as any)?.claimed_at) {
       return null;
     }
-    const parsed = new Date(dailyXpGrant.claimed_at);
+    const parsed = new Date((dailyXpGrant as any).claimed_at ?? dailyXpGrant.created_at);
     if (Number.isNaN(parsed.getTime())) {
       return null;
     }

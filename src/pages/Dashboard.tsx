@@ -141,9 +141,9 @@ const Dashboard = () => {
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const dailyXpClaimedToday = (dailyXpGrant?.grant_date ?? null) === todayIso;
   const dailyXpAmount = dailyXpClaimedToday
-    ? Math.max(0, Number(dailyXpGrant?.xp_awarded ?? DAILY_XP_STIPEND))
+    ? Math.max(0, Number((dailyXpGrant as any)?.xp_awarded ?? dailyXpGrant?.xp_amount ?? DAILY_XP_STIPEND))
     : DAILY_XP_STIPEND;
-  const dailyXpClaimedAtLabel = dailyXpGrant?.claimed_at ? formatNotificationDate(dailyXpGrant.claimed_at) : undefined;
+  const dailyXpClaimedAtLabel = (dailyXpGrant as any)?.claimed_at ? formatNotificationDate((dailyXpGrant as any).claimed_at) : undefined;
   const spendableXpBalance = Math.max(0, Number(xpWallet?.xp_balance ?? 0));
 
   const handleChatTabChange = useCallback((value: string) => {

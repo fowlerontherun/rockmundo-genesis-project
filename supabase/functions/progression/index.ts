@@ -1,6 +1,7 @@
 import { serve } from "../_shared/deno/std@0.168.0/http/server.ts";
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
+import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp } from "./handlers.ts";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type WalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
@@ -106,7 +107,7 @@ export const loadActiveProfile = async (
   }
 
   const profile = profileResponse.data;
-  if (!profile) {
+  if (!profile || !profile.id) {
     throw new Error("No profile found for user");
   }
 
@@ -119,10 +120,75 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("No authorization header");
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const client = createClient<Database>(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    const { data: { user }, error: userError } = await client.auth.getUser();
+    if (userError || !user) {
+      throw new Error("Unauthorized");
+    }
+
+    const body = await req.json();
+    const { action, ...params } = body;
+
+    const profileState = await loadActiveProfile(client, user.id);
+    let result: ProfileState;
+
+    switch (action) {
+      case "claim_daily_xp":
+        result = await handleClaimDailyXp(client, user.id, profileState, params.metadata);
+        break;
+
+      case "spend_attribute_xp":
+        result = await handleSpendAttributeXp(
+          client,
+          user.id,
+          profileState,
+          params.attribute_key,
+          params.xp ?? 10,
+          params.metadata,
+        );
+        break;
+
+      case "spend_skill_xp":
+        result = await handleSpendSkillXp(
+          client,
+          user.id,
+          profileState,
+          params.skill_slug,
+          params.xp ?? 25,
+          params.metadata,
+        );
+        break;
+
+      default:
+        throw new Error(`Unknown action: ${action}`);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Progression system temporarily disabled",
+        action,
+        profile: result.profile,
+        wallet: result.wallet,
+        attributes: result.attributes,
+        cooldowns: {},
         result: {},
       }),
       {
@@ -138,7 +204,7 @@ serve(async (req) => {
         error: message,
       }),
       {
-        status: 500,
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );

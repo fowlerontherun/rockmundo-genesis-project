@@ -11,26 +11,26 @@ const PLAYLIST_QUERY_KEY = ["education", "youtube-resources"] as const;
 
 const mapResourceRow = (row: YoutubeResourceRow): VideoResource => ({
   id: row.id,
-  name: row.resource_name,
-  format: row.resource_format,
-  focus: row.resource_focus,
-  url: row.resource_url,
-  summary: row.resource_summary ?? "",
-  sortOrder: row.resource_sort_order ?? 0,
+  name: row.title,
+  format: row.category ?? "",
+  focus: row.tags?.join(", ") ?? "",
+  url: row.video_url,
+  summary: row.description ?? "",
+  sortOrder: row.difficulty_level ?? 0,
 });
 
 const buildPlaylists = (rows: YoutubeResourceRow[]): VideoPlaylist[] => {
   const groups = new Map<string, VideoPlaylist>();
 
   for (const row of rows) {
-    const key = row.collection_key;
+    const key = row.category ?? "general";
     const existing = groups.get(key);
 
     const playlist = existing ?? {
       key,
-      title: row.collection_title,
-      description: row.collection_description ?? "",
-      sortOrder: row.collection_sort_order ?? 0,
+      title: row.category ?? "General",
+      description: "",
+      sortOrder: 0,
       resources: [],
     };
 
@@ -66,10 +66,9 @@ export const useEducationVideoPlaylists = (): UseQueryResult<VideoPlaylist[]> =>
       const { data, error } = await supabase
         .from("education_youtube_resources")
         .select("*")
-        .order("collection_sort_order", { ascending: true, nullsFirst: true })
-        .order("collection_title", { ascending: true })
-        .order("resource_sort_order", { ascending: true, nullsFirst: true })
-        .order("resource_name", { ascending: true });
+        .order("category", { ascending: true })
+        .order("difficulty_level", { ascending: true })
+        .order("title", { ascending: true });
 
       if (error) {
         throw error;
