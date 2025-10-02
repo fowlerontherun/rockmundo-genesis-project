@@ -95,7 +95,8 @@ const DEFAULT_STATUS_ORDER = [
   "completed",
 ];
 
-const READY_STATUSES = new Set(["ready_to_finish", "arranging", "completed", "complete"]);
+const ACTIVE_STATUSES = new Set(["writing", "arranging"]);
+const RELEASE_READY_STATUSES = new Set(["ready_to_finish", "demo", "completed", "complete"]);
 
 const formatWordCount = (value: string) => {
   if (!value.trim()) return "0 words";
@@ -288,13 +289,17 @@ const Songwriting = () => {
   const totalProjects = projectsList.length;
   const totalSessions = projectsList.reduce((sum, project) => sum + (project.total_sessions ?? 0), 0);
   const focusMinutes = totalSessions * SESSION_DURATION_MINUTES;
-  const activeProjects = projectsList.filter((project) => !READY_STATUSES.has((project.status || "").toLowerCase())).length;
+  const activeProjects = projectsList.filter((project) =>
+    ACTIVE_STATUSES.has((project.status || "").toLowerCase())
+  ).length;
   const completedProjects = projectsList.filter((project) =>
-    READY_STATUSES.has((project.status || "").toLowerCase()) &&
+    RELEASE_READY_STATUSES.has((project.status || "").toLowerCase()) &&
     (project.music_progress ?? 0) >= MAX_PROGRESS &&
     (project.lyrics_progress ?? 0) >= MAX_PROGRESS
   ).length;
-  const readyProjects = projectsList.filter((project) => READY_STATUSES.has((project.status || "").toLowerCase())).length;
+  const readyProjects = projectsList.filter((project) =>
+    RELEASE_READY_STATUSES.has((project.status || "").toLowerCase())
+  ).length;
   const averageQualityScore = totalProjects
     ? Math.round(
         projectsList.reduce((sum, project) => sum + (project.quality_score ?? 0), 0) / totalProjects
@@ -315,7 +320,7 @@ const Songwriting = () => {
       const matchesActive = !showActiveOnly || Boolean(activeSession);
       const lockState = computeLockState(project.locked_until ?? null);
       const matchesLocked = !showLockedOnly || lockState.locked;
-      const matchesReady = !showReadyOnly || READY_STATUSES.has(status);
+      const matchesReady = !showReadyOnly || RELEASE_READY_STATUSES.has(status);
 
       return matchesStatus && matchesTheme && matchesActive && matchesLocked && matchesReady;
     });
