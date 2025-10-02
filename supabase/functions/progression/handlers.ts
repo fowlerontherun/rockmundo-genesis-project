@@ -144,10 +144,12 @@ export async function handleSpendSkillXp(
     .eq("skill_slug", skillSlug)
     .maybeSingle();
 
+  const calculateRequiredXp = (level: number) => Math.floor(100 * Math.pow(1.5, level));
+
   const currentXp = skill?.current_xp ?? 0;
   const currentLevel = skill?.current_level ?? 0;
   const newXp = currentXp + xpAmount;
-  const requiredXp = skill?.required_xp ?? 100;
+  let requiredXp = skill?.required_xp ?? calculateRequiredXp(currentLevel);
 
   let newLevel = currentLevel;
   let remainingXp = newXp;
@@ -156,6 +158,7 @@ export async function handleSpendSkillXp(
   while (remainingXp >= requiredXp) {
     remainingXp -= requiredXp;
     newLevel += 1;
+    requiredXp = calculateRequiredXp(newLevel);
   }
 
   // Update skill progress
@@ -166,7 +169,7 @@ export async function handleSpendSkillXp(
       skill_slug: skillSlug,
       current_xp: remainingXp,
       current_level: newLevel,
-      required_xp: Math.floor(100 * Math.pow(1.5, newLevel)),
+      required_xp: requiredXp,
       last_practiced_at: new Date().toISOString(),
       metadata: metadata || {},
     }, { onConflict: "profile_id,skill_slug" });
