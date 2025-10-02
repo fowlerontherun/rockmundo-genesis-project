@@ -52,6 +52,9 @@ interface Song {
   genre: string;
   status: string;
   quality_score: number;
+  song_rating?: number;
+  genre_id?: string | null;
+  genre_familiarity?: number | null;
   streams: number;
   revenue: number;
   release_date: string | null;
@@ -189,7 +192,9 @@ const Songwriting = () => {
     try {
       const { data, error } = await supabase
         .from("songs")
-        .select("id, title, genre, status, quality_score, streams, revenue, release_date")
+        .select(
+          "id, title, genre, status, quality_score, song_rating, genre_id, genre_familiarity, streams, revenue, release_date"
+        )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
 
@@ -777,7 +782,7 @@ const Songwriting = () => {
               (project.music_progress ?? 0) >= MAX_PROGRESS &&
               (project.lyrics_progress ?? 0) >= MAX_PROGRESS &&
               !project.song_id;
-            const qualityDescriptor = getSongQualityDescriptor(project.quality_score ?? 0);
+            const ratingDescriptor = getSongQualityDescriptor(project.song_rating ?? project.quality_score ?? 0);
             const totalSessions = project.total_sessions ?? 0;
             const sessionTarget = Math.max(
               project.estimated_completion_sessions ??
@@ -786,7 +791,7 @@ const Songwriting = () => {
               1
             );
             const linkedSongQuality = linkedSong
-              ? getSongQualityDescriptor(linkedSong.quality_score ?? 0)
+              ? getSongQualityDescriptor(linkedSong.song_rating ?? linkedSong.quality_score ?? 0)
               : null;
 
             return (
@@ -843,9 +848,9 @@ const Songwriting = () => {
                         </p>
                       </div>
                       <div>
-                        <p>Quality</p>
-                        <p className="text-base font-semibold text-foreground">{qualityDescriptor.label}</p>
-                        <p className="text-[11px] text-muted-foreground">{qualityDescriptor.hint}</p>
+                        <p>Rating</p>
+                        <p className="text-base font-semibold text-foreground">{ratingDescriptor.label}</p>
+                        <p className="text-[11px] text-muted-foreground">{ratingDescriptor.hint}</p>
                       </div>
                     </div>
                   </div>
@@ -874,7 +879,7 @@ const Songwriting = () => {
                           <p className="font-semibold text-foreground">{linkedSong.genre}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Quality</p>
+                          <p className="text-muted-foreground">Rating</p>
                           <p className="font-semibold text-foreground">
                             {linkedSongQuality ? linkedSongQuality.label : "Unknown"}
                           </p>
