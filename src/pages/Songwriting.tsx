@@ -57,6 +57,9 @@ interface Song {
   genre: string;
   status: string;
   quality_score: number;
+  song_rating?: number;
+  genre_id?: string | null;
+  genre_familiarity?: number | null;
   streams: number;
   revenue: number;
   release_date: string | null;
@@ -381,7 +384,7 @@ const Songwriting = () => {
       const { data, error } = await supabase
         .from("songs")
         .select(
-          "id, title, genre, status, quality_score, streams, revenue, release_date, lyrics_strength, melody_strength, rhythm_strength, arrangement_strength, production_potential, inspiration_modifiers, mood_modifiers, co_writers, split_percentages, rating_revealed_at",
+          "id, title, genre, status, quality_score, song_rating, genre_id, genre_familiarity, streams, revenue, release_date"
         )
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false });
@@ -1528,7 +1531,7 @@ const Songwriting = () => {
               (project.music_progress ?? 0) >= PROGRESS_TARGET &&
               (project.lyrics_progress ?? 0) >= PROGRESS_TARGET &&
               !project.song_id;
-            const qualityDescriptor = getSongQualityDescriptor(project.quality_score ?? 0);
+            const ratingDescriptor = getSongQualityDescriptor(project.song_rating ?? project.quality_score ?? 0);
             const totalSessions = project.total_sessions ?? 0;
             const sessionTarget = Math.max(
               project.estimated_completion_sessions ??
@@ -1537,7 +1540,7 @@ const Songwriting = () => {
               1
             );
             const linkedSongQuality = linkedSong
-              ? getSongQualityDescriptor(linkedSong.quality_score ?? 0)
+              ? getSongQualityDescriptor(linkedSong.song_rating ?? linkedSong.quality_score ?? 0)
               : null;
             const coreAttributes = computeCoreAttributes(project);
             const participantState = sessionParticipants[project.id] ?? {
@@ -1612,9 +1615,9 @@ const Songwriting = () => {
                         <p className="text-[11px] text-muted-foreground">Target adjusts with your growing skills.</p>
                       </div>
                       <div>
-                        <p>Quality</p>
-                        <p className="text-base font-semibold text-foreground">{qualityDescriptor.label}</p>
-                        <p className="text-[11px] text-muted-foreground">{qualityDescriptor.hint}</p>
+                        <p>Rating</p>
+                        <p className="text-base font-semibold text-foreground">{ratingDescriptor.label}</p>
+                        <p className="text-[11px] text-muted-foreground">{ratingDescriptor.hint}</p>
                       </div>
                     </div>
                   </div>
@@ -1713,102 +1716,11 @@ const Songwriting = () => {
                             </div>
                           )}
                         </div>
-                      )}
-
-                      {linkedSong && (
-                        <div className="rounded-lg border p-3 text-xs space-y-2 bg-muted/30">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-foreground">{linkedSong.title}</span>
-                            <Badge variant="outline">{linkedSong.status}</Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <p className="text-muted-foreground">Genre</p>
-                              <p className="font-semibold text-foreground">{linkedSong.genre}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Quality</p>
-                              <p className="font-semibold text-foreground">
-                                {linkedSongQuality ? linkedSongQuality.label : "Unknown"}
-                              </p>
-                            </div>
-                            {linkedSong.production_potential != null && (
-                              <div>
-                                <p className="text-muted-foreground">Production potential</p>
-                                <p className="font-semibold text-foreground">{linkedSong.production_potential}</p>
-                              </div>
-                            )}
-                            <div>
-                              <p className="text-muted-foreground">Streams</p>
-                              <p className="font-semibold text-foreground">{formatNumber.format(linkedSong.streams)}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Revenue</p>
-                              <p className="font-semibold text-foreground">{formatCurrency.format(linkedSong.revenue)}</p>
-                            </div>
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">Release</p>
-                              <p className="font-semibold text-foreground">
-                                {linkedSong.release_date
-                                  ? new Date(linkedSong.release_date).toLocaleDateString()
-                                  : "TBD"}
-                              </p>
-                            </div>
-                            {linkedSong.rating_revealed_at && (
-                              <div className="col-span-2">
-                                <p className="text-muted-foreground">Rating revealed</p>
-                                <p className="font-semibold text-foreground">
-                                  {new Date(linkedSong.rating_revealed_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                            )}
-                            {(linkedSong.lyrics_strength != null ||
-                              linkedSong.melody_strength != null ||
-                              linkedSong.rhythm_strength != null ||
-                              linkedSong.arrangement_strength != null) && (
-                              <div className="col-span-2 grid grid-cols-2 gap-2">
-                                {linkedSong.lyrics_strength != null && (
-                                  <div>
-                                    <p className="text-muted-foreground">Lyrics strength</p>
-                                    <p className="font-semibold text-foreground">{linkedSong.lyrics_strength}</p>
-                                  </div>
-                                )}
-                                {linkedSong.melody_strength != null && (
-                                  <div>
-                                    <p className="text-muted-foreground">Melody strength</p>
-                                    <p className="font-semibold text-foreground">{linkedSong.melody_strength}</p>
-                                  </div>
-                                )}
-                                {linkedSong.rhythm_strength != null && (
-                                  <div>
-                                    <p className="text-muted-foreground">Rhythm strength</p>
-                                    <p className="font-semibold text-foreground">{linkedSong.rhythm_strength}</p>
-                                  </div>
-                                )}
-                                {linkedSong.arrangement_strength != null && (
-                                  <div>
-                                    <p className="text-muted-foreground">Arrangement strength</p>
-                                    <p className="font-semibold text-foreground">{linkedSong.arrangement_strength}</p>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {linkedSong.co_writers && linkedSong.co_writers.length > 0 && (
-                              <div className="col-span-2">
-                                <p className="text-muted-foreground">Co-writers</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {linkedSong.co_writers.map((name, index) => (
-                                    <Badge key={`${name}-${index}`} variant="outline">
-                                      {name}
-                                      {linkedSong.split_percentages?.[index] != null
-                                        ? ` · ${linkedSong.split_percentages[index]}%`
-                                        : ""}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                        <div>
+                          <p className="text-muted-foreground">Rating</p>
+                          <p className="font-semibold text-foreground">
+                            {linkedSongQuality ? linkedSongQuality.label : "Unknown"}
+                          </p>
                         </div>
                       )}
                     </div>

@@ -31,6 +31,9 @@ export interface Database {
           weekly_bonus_metadata?: Json;
           created_at: string;
           updated_at: string;
+          current_city_id?: string | null;
+          current_location?: string;
+          health?: number;
         };
         Insert: {
           id?: string;
@@ -51,6 +54,9 @@ export interface Database {
           weekly_bonus_metadata?: Json;
           created_at?: string;
           updated_at?: string;
+          current_city_id?: string | null;
+          current_location?: string;
+          health?: number;
         };
         Update: {
           id?: string;
@@ -71,6 +77,9 @@ export interface Database {
           weekly_bonus_metadata?: Json;
           created_at?: string;
           updated_at?: string;
+          current_city_id?: string | null;
+          current_location?: string;
+          health?: number;
         };
       };
       profile_activity_statuses: {
