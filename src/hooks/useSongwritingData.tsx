@@ -1402,7 +1402,7 @@ export const useSongwritingData = (userId?: string | null) => {
           total_sessions: normalizedProject.total_sessions,
           estimated_completion_sessions: estimatedSessions,
           songwriting_project_id: normalizedProject.id,
-          status: 'completed'
+          status: 'released'
         })
         .select()
         .single();
