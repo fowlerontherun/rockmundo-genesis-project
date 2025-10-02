@@ -558,6 +558,8 @@ export const useSongwritingData = (userId?: string | null) => {
   const chordProgressionsTableAvailableRef = useRef(true);
   const songwritingProjectsTableAvailableRef = useRef(true);
   const songwritingSessionsTableAvailableRef = useRef(true);
+  const songsTableAvailableRef = useRef(true);
+  const songsTableWarningLoggedRef = useRef(false);
   const songwritingSessionsStartedAtSupportedRef = useRef(
     readSchemaSupportFlag(SONGWRITING_SCHEMA_FEATURES.sessionsStartedAt, true),
   );
@@ -762,6 +764,47 @@ export const useSongwritingData = (userId?: string | null) => {
         ? error
         : { error: String(error) };
     console.warn(`${tableName} table is unavailable; using empty data.`, debugInfo);
+  };
+
+  const createSongsUnavailableError = () => {
+    const unavailableError = new Error(
+      "Song conversions are not available in this environment yet.",
+    ) as Error & { code?: string };
+    unavailableError.code = "SONGS_TABLE_UNAVAILABLE";
+    return unavailableError;
+  };
+
+  const logSongsTableUnavailable = (debugInfo: unknown) => {
+    songsTableAvailableRef.current = false;
+
+    if (songsTableWarningLoggedRef.current) {
+      return;
+    }
+
+    songsTableWarningLoggedRef.current = true;
+    console.warn("Songs table is unavailable; skipping future queries", debugInfo);
+  };
+
+  const ensureSongsTableAvailable = (
+    status: number | null | undefined,
+    error: unknown,
+    statusText: string | null | undefined,
+  ) => {
+    if (!songsTableAvailableRef.current) {
+      throw createSongsUnavailableError();
+    }
+
+    const tableMissing =
+      (typeof status === "number" && status === 404) || isMissingTableError(error, "songs");
+
+    if (tableMissing) {
+      const debugInfo =
+        error && typeof error === "object"
+          ? error
+          : { status, statusText, error };
+      logSongsTableUnavailable(debugInfo);
+      throw createSongsUnavailableError();
+    }
   };
 
   const persistSongwritingSchemaSupport = () => {
@@ -2978,6 +3021,10 @@ export const useSongwritingData = (userId?: string | null) => {
 
   const convertToSong = useMutation({
     mutationFn: async (projectId: string) => {
+      if (!songsTableAvailableRef.current) {
+        throw createSongsUnavailableError();
+      }
+
       const buildProjectSelect = () => {
         const fields = [
           "id",
@@ -3151,7 +3198,14 @@ export const useSongwritingData = (userId?: string | null) => {
           .select()
           .single();
 
-      let { data, error } = await attemptSongInsert();
+      let {
+        data,
+        error,
+        status,
+        statusText,
+      } = await attemptSongInsert();
+
+      ensureSongsTableAvailable(status ?? null, error, statusText ?? null);
 
       if (
         error &&
@@ -3169,8 +3223,9 @@ export const useSongwritingData = (userId?: string | null) => {
         );
 
         const fallback = await attemptSongInsert({ includeExtendedMetadata: false });
-        data = fallback.data;
-        error = fallback.error;
+        ({ data, error, status, statusText } = fallback);
+
+        ensureSongsTableAvailable(status ?? null, error, statusText ?? null);
       }
 
       if (
@@ -3192,8 +3247,9 @@ export const useSongwritingData = (userId?: string | null) => {
         );
 
         const fallback = await attemptSongInsert({ includeAttributeScores: false });
-        data = fallback.data;
-        error = fallback.error;
+        ({ data, error, status, statusText } = fallback);
+
+        ensureSongsTableAvailable(status ?? null, error, statusText ?? null);
       }
 
       if (
@@ -3218,11 +3274,18 @@ export const useSongwritingData = (userId?: string | null) => {
         );
 
         const fallback = await attemptSongInsert({ includeRatingFlags: false });
-        data = fallback.data;
-        error = fallback.error;
+        ({ data, error, status, statusText } = fallback);
+
+        ensureSongsTableAvailable(status ?? null, error, statusText ?? null);
       }
 
-      if (error) throw error;
+      if (error) {
+        ensureSongsTableAvailable(status ?? null, error, statusText ?? null);
+        throw error;
+      }
+
+      songsTableAvailableRef.current = true;
+      songsTableWarningLoggedRef.current = false;
       const { error: linkError } = await supabase
         .from("songwriting_projects")
         .update({
@@ -3246,11 +3309,19 @@ export const useSongwritingData = (userId?: string | null) => {
       });
     },
     onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create song from project",
-        variant: "destructive"
-      });
+      if ((error as { code?: string } | null)?.code === "SONGS_TABLE_UNAVAILABLE") {
+        toast({
+          title: "Song library unavailable",
+          description:
+            "Songs can't be created yet because the core songs table hasn't been provisioned.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create song from project",
+          variant: "destructive",
+        });
+      }
       console.error("Convert to song error:", error);
     }
   });
