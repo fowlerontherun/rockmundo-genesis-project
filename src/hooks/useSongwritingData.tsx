@@ -3,6 +3,88 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+const SONGWRITING_SCHEMA_FEATURES = {
+  lyrics: "lyrics-column",
+  estimatedCompletion: "estimated-completion",
+  sessionsCompleted: "sessions-completed",
+  sessionsStartedAt: "sessions-started-at",
+} as const;
+
+type SongwritingSchemaFeature =
+  (typeof SONGWRITING_SCHEMA_FEATURES)[keyof typeof SONGWRITING_SCHEMA_FEATURES];
+
+const SCHEMA_SUPPORT_STORAGE_PREFIX = "songwriting:schema-support:";
+
+const getSchemaSupportStorageKey = (feature: SongwritingSchemaFeature) =>
+  `${SCHEMA_SUPPORT_STORAGE_PREFIX}${feature}`;
+
+const readSchemaSupportFlag = (
+  feature: SongwritingSchemaFeature,
+  fallback: boolean,
+): boolean => {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(
+      getSchemaSupportStorageKey(feature),
+    );
+
+    if (storedValue === "1") {
+      return true;
+    }
+
+    if (storedValue === "0") {
+      return false;
+    }
+  } catch (storageError) {
+    console.debug("Unable to read songwriting schema support flag.", {
+      feature,
+      error: storageError,
+    });
+  }
+
+  return fallback;
+};
+
+const persistSchemaSupportFlag = (
+  feature: SongwritingSchemaFeature,
+  value: boolean,
+) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      getSchemaSupportStorageKey(feature),
+      value ? "1" : "0",
+    );
+  } catch (storageError) {
+    console.debug("Unable to persist songwriting schema support flag.", {
+      feature,
+      error: storageError,
+    });
+  }
+};
+
+const updateSchemaSupportRef = (
+  ref: MutableRefObject<boolean>,
+  feature: SongwritingSchemaFeature,
+  value: boolean,
+) => {
+  ref.current = value;
+  persistSchemaSupportFlag(feature, value);
+};
+
+const persistSchemaSupportFromRef = (
+  ref: MutableRefObject<boolean>,
+  feature: SongwritingSchemaFeature,
+) => {
+  persistSchemaSupportFlag(feature, ref.current);
+};
+
 export interface SongTheme {
   id: string;
   name: string;
@@ -108,10 +190,18 @@ export const useSongwritingData = (userId?: string | null) => {
   const chordProgressionsTableAvailableRef = useRef(true);
   const songwritingProjectsTableAvailableRef = useRef(true);
   const songwritingSessionsTableAvailableRef = useRef(true);
-  const songwritingSessionsStartedAtSupportedRef = useRef(true);
-  const songwritingLyricsColumnSupportedRef = useRef(true);
-  const songwritingEstimatedCompletionSupportedRef = useRef(true);
-  const songwritingSessionsCompletedSupportedRef = useRef(true);
+  const songwritingSessionsStartedAtSupportedRef = useRef(
+    readSchemaSupportFlag(SONGWRITING_SCHEMA_FEATURES.sessionsStartedAt, true),
+  );
+  const songwritingLyricsColumnSupportedRef = useRef(
+    readSchemaSupportFlag(SONGWRITING_SCHEMA_FEATURES.lyrics, true),
+  );
+  const songwritingEstimatedCompletionSupportedRef = useRef(
+    readSchemaSupportFlag(SONGWRITING_SCHEMA_FEATURES.estimatedCompletion, true),
+  );
+  const songwritingSessionsCompletedSupportedRef = useRef(
+    readSchemaSupportFlag(SONGWRITING_SCHEMA_FEATURES.sessionsCompleted, true),
+  );
 
   const activeUserId = typeof userId === "string" && userId.length > 0 ? userId : null;
 
@@ -280,6 +370,25 @@ export const useSongwritingData = (userId?: string | null) => {
     console.warn(`${tableName} table is unavailable; using empty data.`, debugInfo);
   };
 
+  const persistSongwritingSchemaSupport = () => {
+    persistSchemaSupportFromRef(
+      songwritingLyricsColumnSupportedRef,
+      SONGWRITING_SCHEMA_FEATURES.lyrics,
+    );
+    persistSchemaSupportFromRef(
+      songwritingEstimatedCompletionSupportedRef,
+      SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+    );
+    persistSchemaSupportFromRef(
+      songwritingSessionsCompletedSupportedRef,
+      SONGWRITING_SCHEMA_FEATURES.sessionsCompleted,
+    );
+    persistSchemaSupportFromRef(
+      songwritingSessionsStartedAtSupportedRef,
+      SONGWRITING_SCHEMA_FEATURES.sessionsStartedAt,
+    );
+  };
+
   const handleMissingSongwritingTableError = (error: unknown): boolean => {
     let handled = false;
 
@@ -287,7 +396,11 @@ export const useSongwritingData = (userId?: string | null) => {
       songwritingSessionsCompletedSupportedRef.current &&
       isMissingColumnError(error, "sessions_completed")
     ) {
-      songwritingSessionsCompletedSupportedRef.current = false;
+      updateSchemaSupportRef(
+        songwritingSessionsCompletedSupportedRef,
+        SONGWRITING_SCHEMA_FEATURES.sessionsCompleted,
+        false,
+      );
       console.warn(
         "Songwriting projects sessions_completed column unavailable; continuing without it.",
         error,
@@ -301,7 +414,11 @@ export const useSongwritingData = (userId?: string | null) => {
     }
 
     if (isMissingColumnError(error, "lyrics")) {
-      songwritingLyricsColumnSupportedRef.current = false;
+      updateSchemaSupportRef(
+        songwritingLyricsColumnSupportedRef,
+        SONGWRITING_SCHEMA_FEATURES.lyrics,
+        false,
+      );
       console.warn(
         "Songwriting projects lyrics column unavailable; falling back to initial_lyrics.",
         error,
@@ -310,7 +427,11 @@ export const useSongwritingData = (userId?: string | null) => {
     }
 
     if (isMissingColumnError(error, "estimated_completion_sessions")) {
-      songwritingEstimatedCompletionSupportedRef.current = false;
+      updateSchemaSupportRef(
+        songwritingEstimatedCompletionSupportedRef,
+        SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+        false,
+      );
       console.warn(
         "Songwriting projects estimated_completion_sessions column unavailable; falling back to legacy estimated_sessions.",
         error,
@@ -474,7 +595,11 @@ export const useSongwritingData = (userId?: string | null) => {
           songwritingSessionsCompletedSupportedRef.current &&
           isMissingColumnError(error, "sessions_completed")
         ) {
-          songwritingSessionsCompletedSupportedRef.current = false;
+          updateSchemaSupportRef(
+            songwritingSessionsCompletedSupportedRef,
+            SONGWRITING_SCHEMA_FEATURES.sessionsCompleted,
+            false,
+          );
           console.warn(
             "Songwriting projects sessions_completed column unavailable during fetch; retrying without it.",
             error,
@@ -494,11 +619,16 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           songwritingProjectsTableAvailableRef.current = true;
+          persistSongwritingSchemaSupport();
           return normalizeProjects(fallbackData);
         }
 
         if (songwritingLyricsColumnSupportedRef.current && isMissingColumnError(error, "lyrics")) {
-          songwritingLyricsColumnSupportedRef.current = false;
+          updateSchemaSupportRef(
+            songwritingLyricsColumnSupportedRef,
+            SONGWRITING_SCHEMA_FEATURES.lyrics,
+            false,
+          );
           console.warn(
             "Songwriting projects lyrics column unavailable; refetching without it.",
             error,
@@ -518,11 +648,16 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           songwritingProjectsTableAvailableRef.current = true;
+          persistSongwritingSchemaSupport();
           return normalizeProjects(fallbackData);
         }
 
         if (includeEstimatedCompletion && isMissingColumnError(error, "estimated_completion_sessions")) {
-          songwritingEstimatedCompletionSupportedRef.current = false;
+          updateSchemaSupportRef(
+            songwritingEstimatedCompletionSupportedRef,
+            SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+            false,
+          );
           console.warn(
             "Songwriting projects estimated_completion_sessions column unavailable during fetch; retrying without it.",
             error,
@@ -542,11 +677,16 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           songwritingProjectsTableAvailableRef.current = true;
+          persistSongwritingSchemaSupport();
           return normalizeProjects(fallbackData);
         }
 
         if (includeSessions && includeStartedAt && isMissingColumnError(error, "started_at")) {
-          songwritingSessionsStartedAtSupportedRef.current = false;
+          updateSchemaSupportRef(
+            songwritingSessionsStartedAtSupportedRef,
+            SONGWRITING_SCHEMA_FEATURES.sessionsStartedAt,
+            false,
+          );
           console.warn(
             "Songwriting sessions started_at column unavailable; falling back to legacy session_start.",
             error,
@@ -566,6 +706,7 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           songwritingProjectsTableAvailableRef.current = true;
+          persistSongwritingSchemaSupport();
           return normalizeProjects(fallbackData);
         }
 
@@ -587,6 +728,7 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           songwritingProjectsTableAvailableRef.current = true;
+          persistSongwritingSchemaSupport();
           return normalizeProjects(fallbackData);
         }
 
@@ -597,6 +739,7 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       songwritingProjectsTableAvailableRef.current = true;
+      persistSongwritingSchemaSupport();
       return normalizeProjects(data);
     },
   });
@@ -701,7 +844,11 @@ export const useSongwritingData = (userId?: string | null) => {
         songwritingEstimatedCompletionSupportedRef.current &&
         isMissingColumnError(error, "estimated_completion_sessions")
       ) {
-        songwritingEstimatedCompletionSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingEstimatedCompletionSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+          false,
+        );
         console.warn(
           "Songwriting projects estimated_completion_sessions column unavailable when creating; retrying without it.",
           error,
@@ -713,7 +860,11 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       if (error && songwritingSessionsCompletedSupportedRef.current && isMissingColumnError(error, "sessions_completed")) {
-        songwritingSessionsCompletedSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingSessionsCompletedSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.sessionsCompleted,
+          false,
+        );
         console.warn(
           "Songwriting projects sessions_completed column unavailable when creating; retrying without it.",
           error,
@@ -725,7 +876,11 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       if (error && songwritingLyricsColumnSupportedRef.current && isMissingColumnError(error, "lyrics")) {
-        songwritingLyricsColumnSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingLyricsColumnSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.lyrics,
+          false,
+        );
         console.warn(
           "Songwriting projects lyrics column unavailable when creating; retrying without it.",
           error,
@@ -744,6 +899,7 @@ export const useSongwritingData = (userId?: string | null) => {
       const normalized = data
         ? (normalizeProjectRow(data as any) as any)
         : null;
+      persistSongwritingSchemaSupport();
       return normalized as any;
     },
     onSuccess: () => {
@@ -838,7 +994,11 @@ export const useSongwritingData = (userId?: string | null) => {
         songwritingEstimatedCompletionSupportedRef.current &&
         isMissingColumnError(error, "estimated_completion_sessions")
       ) {
-        songwritingEstimatedCompletionSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingEstimatedCompletionSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+          false,
+        );
         console.warn(
           "Songwriting projects estimated_completion_sessions column unavailable when updating; retrying without it.",
           error,
@@ -848,7 +1008,11 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       if (error && songwritingSessionsCompletedSupportedRef.current && isMissingColumnError(error, "sessions_completed")) {
-        songwritingSessionsCompletedSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingSessionsCompletedSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.sessionsCompleted,
+          false,
+        );
         console.warn(
           "Songwriting projects sessions_completed column unavailable when updating; retrying without it.",
           error,
@@ -858,7 +1022,11 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       if (error && songwritingLyricsColumnSupportedRef.current && isMissingColumnError(error, "lyrics")) {
-        songwritingLyricsColumnSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingLyricsColumnSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.lyrics,
+          false,
+        );
         console.warn(
           "Songwriting projects lyrics column unavailable when updating; retrying without it.",
           error,
@@ -868,6 +1036,7 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       if (error) throw error;
+      persistSongwritingSchemaSupport();
       return id;
     },
     onSuccess: () => {
@@ -972,7 +1141,11 @@ export const useSongwritingData = (userId?: string | null) => {
 
       if (error) {
         if (songwritingSessionsStartedAtSupportedRef.current && isMissingColumnError(error, "started_at")) {
-          songwritingSessionsStartedAtSupportedRef.current = false;
+          updateSchemaSupportRef(
+            songwritingSessionsStartedAtSupportedRef,
+            SONGWRITING_SCHEMA_FEATURES.sessionsStartedAt,
+            false,
+          );
           console.warn(
             "Songwriting sessions started_at column unavailable when creating a session; retrying without it.",
             error,
@@ -1055,7 +1228,11 @@ export const useSongwritingData = (userId?: string | null) => {
         .maybeSingle();
 
       if (projectError && includeEstimatedCompletion && isMissingColumnError(projectError, "estimated_completion_sessions")) {
-        songwritingEstimatedCompletionSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingEstimatedCompletionSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+          false,
+        );
         console.warn(
           "Songwriting projects estimated_completion_sessions column unavailable when completing session; retrying without it.",
           projectError,
@@ -1076,7 +1253,11 @@ export const useSongwritingData = (userId?: string | null) => {
         songwritingSessionsCompletedSupportedRef.current &&
         isMissingColumnError(projectError, "sessions_completed")
       ) {
-        songwritingSessionsCompletedSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingSessionsCompletedSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.sessionsCompleted,
+          false,
+        );
         console.warn(
           "Songwriting projects sessions_completed column unavailable when completing session fetch; retrying without it.",
           projectError,
@@ -1251,7 +1432,11 @@ export const useSongwritingData = (userId?: string | null) => {
         songwritingEstimatedCompletionSupportedRef.current &&
         isMissingColumnError(updateProjectError, "estimated_completion_sessions")
       ) {
-        songwritingEstimatedCompletionSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingEstimatedCompletionSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+          false,
+        );
         console.warn(
           "Songwriting projects estimated_completion_sessions column unavailable when updating after session; retrying without it.",
           updateProjectError,
@@ -1265,7 +1450,11 @@ export const useSongwritingData = (userId?: string | null) => {
         songwritingSessionsCompletedSupportedRef.current &&
         isMissingColumnError(updateProjectError, "sessions_completed")
       ) {
-        songwritingSessionsCompletedSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingSessionsCompletedSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.sessionsCompleted,
+          false,
+        );
         console.warn(
           "Songwriting projects sessions_completed column unavailable when completing a session; retrying without it.",
           updateProjectError,
@@ -1277,6 +1466,8 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       if (updateProjectError) throw updateProjectError;
+
+      persistSongwritingSchemaSupport();
 
       return {
         musicGain,
@@ -1358,7 +1549,11 @@ export const useSongwritingData = (userId?: string | null) => {
         songwritingEstimatedCompletionSupportedRef.current &&
         isMissingColumnError(projectError, "estimated_completion_sessions")
       ) {
-        songwritingEstimatedCompletionSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingEstimatedCompletionSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
+          false,
+        );
         console.warn(
           "Songwriting projects estimated_completion_sessions column unavailable when converting; retrying without it.",
           projectError,
@@ -1368,7 +1563,11 @@ export const useSongwritingData = (userId?: string | null) => {
       }
 
       if (projectError && songwritingLyricsColumnSupportedRef.current && isMissingColumnError(projectError, "lyrics")) {
-        songwritingLyricsColumnSupportedRef.current = false;
+        updateSchemaSupportRef(
+          songwritingLyricsColumnSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.lyrics,
+          false,
+        );
         console.warn(
           "Songwriting projects lyrics column unavailable when converting; retrying without it.",
           projectError,
@@ -1418,6 +1617,7 @@ export const useSongwritingData = (userId?: string | null) => {
         .eq("id", projectId);
 
       if (linkError) throw linkError;
+      persistSongwritingSchemaSupport();
       return data;
     },
     onSuccess: () => {
