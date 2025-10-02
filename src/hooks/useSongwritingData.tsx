@@ -86,6 +86,294 @@ const persistSchemaSupportFromRef = (
   persistSchemaSupportFlag(feature, ref.current);
 };
 
+type SongAttributeKey = "concept" | "lyrics" | "melody" | "production" | "performance";
+
+export type SongAttributeScores = Record<SongAttributeKey, number>;
+
+export interface SongOwnershipMetadata {
+  ownerUserId: string;
+  ownerProfileId?: string | null;
+  coWriterUserIds?: string[];
+  coWriterSplits?: number[] | null;
+}
+
+const SONG_ATTRIBUTE_KEYS: SongAttributeKey[] = [
+  "concept",
+  "lyrics",
+  "melody",
+  "production",
+  "performance",
+];
+
+const ATTRIBUTE_COLUMN_ALIASES: Record<SongAttributeKey, string[]> = {
+  concept: ["concept_score", "concept_rating", "concept_strength", "concept"],
+  lyrics: ["lyrics_score", "lyrics_rating", "lyricism_score", "lyrics"],
+  melody: ["melody_score", "melody_rating", "composition_score", "melody"],
+  production: ["production_score", "production_rating", "studio_score", "production"],
+  performance: ["performance_score", "performance_rating", "delivery_score", "performance"],
+};
+
+const MIN_SESSION_HOURS = 6;
+const MAX_SESSION_HOURS = 12;
+const DEFAULT_SESSION_HOURS = 8;
+
+const clampNumber = (value: number, lower: number, upper: number) =>
+  Math.max(lower, Math.min(upper, value));
+
+const toNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
+const sanitizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter((entry): entry is string => entry.length > 0);
+};
+
+const sanitizeGenreSelection = (value: unknown): string[] => {
+  const normalized = sanitizeStringArray(value);
+  if (normalized.length === 0) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  normalized.forEach((genre) => {
+    const key = genre.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push(genre);
+  });
+
+  return result;
+};
+
+const hasInstrumentFamiliarity = (
+  skills:
+    | null
+    | undefined
+    | Partial<Record<"guitar" | "bass" | "drums" | "vocals" | "songwriting", number>>,
+): boolean => {
+  if (!skills) {
+    return false;
+  }
+
+  const instrumentKeys: Array<"guitar" | "bass" | "drums" | "vocals"> = [
+    "guitar",
+    "bass",
+    "drums",
+    "vocals",
+  ];
+
+  return instrumentKeys.some((key) => {
+    const value = skills[key];
+    const parsed = toNumberOrNull(value ?? null);
+    return parsed !== null && parsed >= 10;
+  });
+};
+
+const validateGenreSelection = (
+  genres: string[] | null | undefined,
+  skills:
+    | null
+    | undefined
+    | Partial<Record<"guitar" | "bass" | "drums" | "vocals" | "songwriting", number>>,
+) => {
+  if (!genres || genres.length === 0) {
+    return;
+  }
+
+  if (hasInstrumentFamiliarity(skills)) {
+    return;
+  }
+
+  throw new Error(
+    "You need at least one instrument at familiarity 10 or above before targeting specific genres.",
+  );
+};
+
+const sanitizeCoWriterMetadata = (
+  coWriters: string[] | null | undefined,
+  rawSplits: number[] | null | undefined,
+): { coWriters: string[] | null; splits: number[] | null } => {
+  const sanitizedCoWriters = sanitizeStringArray(coWriters).map((value) => value.trim());
+
+  if (sanitizedCoWriters.length === 0) {
+    return { coWriters: null, splits: null };
+  }
+
+  const sanitizedSplits = Array.isArray(rawSplits)
+    ? rawSplits.map((value) => clampNumber(toNumberOrNull(value) ?? 0, 0, 100))
+    : [];
+
+  if (sanitizedSplits.length > 0 && sanitizedSplits.length !== sanitizedCoWriters.length) {
+    throw new Error("Each co-writer must have a corresponding royalty split percentage.");
+  }
+
+  const totalSplits = sanitizedSplits.reduce((total, value) => total + value, 0);
+  if (totalSplits > 100.0001) {
+    throw new Error("Co-writer royalty splits cannot exceed 100%. Please adjust the distribution.");
+  }
+
+  return {
+    coWriters: sanitizedCoWriters,
+    splits: sanitizedSplits.length > 0 ? sanitizedSplits : null,
+  };
+};
+
+const extractAttributeScores = (record: Record<string, unknown>): SongAttributeScores => {
+  const attributeScores: Partial<SongAttributeScores> = {};
+
+  const rawScores = record["attribute_scores"];
+  if (rawScores && typeof rawScores === "object" && !Array.isArray(rawScores)) {
+    SONG_ATTRIBUTE_KEYS.forEach((key) => {
+      const rawValue = (rawScores as Record<string, unknown>)[key];
+      const parsed = toNumberOrNull(rawValue);
+      if (parsed !== null) {
+        attributeScores[key] = parsed;
+      }
+    });
+  }
+
+  SONG_ATTRIBUTE_KEYS.forEach((key) => {
+    if (attributeScores[key] !== undefined) {
+      return;
+    }
+
+    const aliases = ATTRIBUTE_COLUMN_ALIASES[key];
+    for (const alias of aliases) {
+      if (record[alias] === undefined) {
+        continue;
+      }
+
+      const parsed = toNumberOrNull(record[alias]);
+      if (parsed !== null) {
+        attributeScores[key] = parsed;
+        break;
+      }
+    }
+  });
+
+  const normalized: SongAttributeScores = {
+    concept: attributeScores.concept ?? 0,
+    lyrics: attributeScores.lyrics ?? 0,
+    melody: attributeScores.melody ?? 0,
+    production: attributeScores.production ?? 0,
+    performance: attributeScores.performance ?? 0,
+  };
+
+  return normalized;
+};
+
+const computeSongRatingFromScores = (scores: SongAttributeScores | null | undefined): number => {
+  if (!scores) {
+    return 0;
+  }
+
+  const sum = SONG_ATTRIBUTE_KEYS.reduce((total, key) => {
+    const value = scores[key];
+    if (typeof value !== "number" || Number.isNaN(value)) {
+      return total;
+    }
+    const clamped = clampNumber(value, 0, 200);
+    return total + clamped;
+  }, 0);
+
+  if (sum <= 0) {
+    return 0;
+  }
+
+  const normalized = (sum / (SONG_ATTRIBUTE_KEYS.length * 200)) * 1000;
+  return Math.round(clampNumber(normalized, 0, 1000));
+};
+
+const shouldRevealSongRating = (status: string | null | undefined): boolean => {
+  if (!status) {
+    return false;
+  }
+
+  const normalized = status.toLowerCase();
+  return (
+    normalized === "rehearsal" ||
+    normalized === "rehearsing" ||
+    normalized === "recording" ||
+    normalized === "mixing" ||
+    normalized === "mastering" ||
+    normalized === "released" ||
+    normalized === "completed"
+  );
+};
+
+const buildOwnershipMetadata = (
+  project: Record<string, unknown>,
+  fallbackUserId: string,
+): SongOwnershipMetadata => {
+  const coWriterUserIds = sanitizeStringArray(project["co_writers"]);
+  const coWriterSplitsRaw = project["co_writer_splits"];
+  const coWriterSplits = Array.isArray(coWriterSplitsRaw)
+    ? coWriterSplitsRaw
+        .map((value) => toNumberOrNull(value) ?? 0)
+        .map((value) => clampNumber(value, 0, 100))
+    : null;
+
+  const ownerProfileId =
+    typeof project["rating_owner_profile_id"] === "string"
+      ? (project["rating_owner_profile_id"] as string)
+      : null;
+
+  return {
+    ownerUserId: fallbackUserId,
+    ownerProfileId,
+    coWriterUserIds,
+    coWriterSplits,
+  };
+};
+
+const sanitizeEffortHours = (value: number | null | undefined): number => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return DEFAULT_SESSION_HOURS;
+  }
+
+  return clampNumber(Math.round(value), MIN_SESSION_HOURS, MAX_SESSION_HOURS);
+};
+
+const computeAttributeModifier = (
+  score: number | null | undefined,
+  baseline = 50,
+  spread = 250,
+): number => {
+  if (typeof score !== "number" || Number.isNaN(score)) {
+    return 1;
+  }
+
+  const modifier = 1 + (score - baseline) / spread;
+  return clampNumber(modifier, 0.7, 1.4);
+};
+
+const MOOD_INFLUENCED_ATTRIBUTES: SongAttributeKey[] = ["lyrics", "performance"];
+const HEALTH_INFLUENCED_ATTRIBUTES: SongAttributeKey[] = ["production", "performance"];
+const INSPIRATION_INFLUENCED_ATTRIBUTES: SongAttributeKey[] = [
+  "concept",
+  "melody",
+  "lyrics",
+];
+
 export interface SongTheme {
   id: string;
   name: string;
@@ -178,6 +466,17 @@ export interface SongwritingSession {
   lyrics_progress_gained: number;
   xp_earned: number;
   notes: string | null;
+  effort_hours?: number | null;
+  duration_minutes?: number | null;
+  pause_state?: string | null;
+  paused_at?: string | null;
+  resumed_at?: string | null;
+  attribute_gains?: SongAttributeScores | null;
+  mood_modifier?: number | null;
+  health_modifier?: number | null;
+  inspiration_modifier?: number | null;
+  co_writer_contributions?: Record<string, number> | null;
+  royalty_split_snapshot?: Record<string, number> | null;
 }
 
 type CreateProjectInput = {
@@ -206,6 +505,16 @@ type UpdateProjectInput = {
 type CompleteSessionInput = {
   sessionId: string;
   notes?: string;
+  effortHours?: number | null;
+  paused?: boolean;
+  resumeAt?: string | null;
+  coWriterAdjustments?: Record<string, number> | null;
+};
+
+type StartSessionInput = {
+  projectId: string;
+  effortHours?: number | null;
+  resumeSessionId?: string | null;
 };
 
 type StartSessionInput = {
@@ -528,6 +837,72 @@ export const useSongwritingData = (userId?: string | null) => {
       handled = true;
     }
 
+    if (
+      songwritingProjectExtendedMetadataSupportedRef.current &&
+      [
+        "purpose",
+        "mode",
+        "genres",
+        "co_writers",
+        "co_writer_splits",
+        "initial_production_potential",
+        "production_potential",
+        "production_potential_revealed",
+      ].some((column) => isMissingColumnError(error, column))
+    ) {
+      updateSchemaSupportRef(
+        songwritingProjectExtendedMetadataSupportedRef,
+        SONGWRITING_SCHEMA_FEATURES.projectExtendedMetadata,
+        false,
+      );
+      console.warn(
+        "Songwriting projects extended metadata columns unavailable; disabling extended metadata support.",
+        error,
+      );
+      handled = true;
+    }
+
+    if (
+      songwritingProjectAttributeScoresSupportedRef.current &&
+      SONG_ATTRIBUTE_KEYS.some((key) =>
+        ATTRIBUTE_COLUMN_ALIASES[key].some((column) => isMissingColumnError(error, column)),
+      )
+    ) {
+      updateSchemaSupportRef(
+        songwritingProjectAttributeScoresSupportedRef,
+        SONGWRITING_SCHEMA_FEATURES.projectAttributeScores,
+        false,
+      );
+      console.warn(
+        "Songwriting projects attribute score columns unavailable; falling back to legacy scoring.",
+        error,
+      );
+      handled = true;
+    }
+
+    if (
+      songwritingProjectRatingFlagsSupportedRef.current &&
+      [
+        "rating_hidden",
+        "rating_visible",
+        "rating_revealed_at",
+        "rating_revealed_stage",
+        "rating_owner_profile_id",
+        "rating_owner_user_id",
+      ].some((column) => isMissingColumnError(error, column))
+    ) {
+      updateSchemaSupportRef(
+        songwritingProjectRatingFlagsSupportedRef,
+        SONGWRITING_SCHEMA_FEATURES.projectRatingFlags,
+        false,
+      );
+      console.warn(
+        "Songwriting projects rating metadata columns unavailable; disabling rating flag support.",
+        error,
+      );
+      handled = true;
+    }
+
     if (isMissingTableError(error, "songwriting_sessions")) {
       markTableUnavailable(songwritingSessionsTableAvailableRef, "Songwriting sessions", error);
       handled = true;
@@ -661,6 +1036,17 @@ export const useSongwritingData = (userId?: string | null) => {
             "xp_earned",
             "notes",
             "created_at",
+            songwritingSessionExtendedTrackingSupportedRef.current ? "effort_hours" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "duration_minutes" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "pause_state" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "paused_at" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "resumed_at" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "attribute_gains" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "mood_modifier" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "health_modifier" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "inspiration_modifier" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "co_writer_contributions" : null,
+            songwritingSessionExtendedTrackingSupportedRef.current ? "royalty_split_snapshot" : null,
           ].filter((field): field is string => typeof field === "string" && field.length > 0);
 
           selections.push(`songwriting_sessions (${sessionFields.join(",")})`);
@@ -902,7 +1288,21 @@ export const useSongwritingData = (userId?: string | null) => {
 
       const estimatedSessions = estimateSessions();
 
-      const buildPayload = () => {
+      try {
+        validateGenreSelection(sanitizedGenres, skills);
+      } catch (validationError) {
+        throw validationError;
+      }
+
+      const buildPayload = ({
+        includeExtendedMetadata = songwritingProjectExtendedMetadataSupportedRef.current,
+        includeAttributeScores = songwritingProjectAttributeScoresSupportedRef.current,
+        includeRatingFlags = songwritingProjectRatingFlagsSupportedRef.current,
+      }: {
+        includeExtendedMetadata?: boolean;
+        includeAttributeScores?: boolean;
+        includeRatingFlags?: boolean;
+      } = {}) => {
         const payload: Record<string, unknown> = {
           user_id: userId,
           title: projectData.title.trim(),
@@ -938,10 +1338,14 @@ export const useSongwritingData = (userId?: string | null) => {
         return payload;
       };
 
-      const attemptInsert = () =>
+      const attemptInsert = (options?: {
+        includeExtendedMetadata?: boolean;
+        includeAttributeScores?: boolean;
+        includeRatingFlags?: boolean;
+      }) =>
         supabase
           .from("songwriting_projects")
-          .insert(buildPayload() as any)
+          .insert(buildPayload(options) as any)
           .select()
           .single();
 
@@ -963,6 +1367,84 @@ export const useSongwritingData = (userId?: string | null) => {
         );
 
         const fallback = await attemptInsert();
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (
+        error &&
+        songwritingProjectExtendedMetadataSupportedRef.current &&
+        [
+          "purpose",
+          "mode",
+          "genres",
+          "co_writers",
+          "co_writer_splits",
+          "initial_production_potential",
+          "production_potential",
+        ].some((column) => isMissingColumnError(error, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectExtendedMetadataSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectExtendedMetadata,
+          false,
+        );
+        console.warn(
+          "Songwriting projects extended metadata columns unavailable when creating; retrying without them.",
+          error,
+        );
+
+        const fallback = await attemptInsert({ includeExtendedMetadata: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (
+        error &&
+        songwritingProjectAttributeScoresSupportedRef.current &&
+        (isMissingColumnError(error, "attribute_scores") ||
+          SONG_ATTRIBUTE_KEYS.some((key) =>
+            ATTRIBUTE_COLUMN_ALIASES[key].some((column) => isMissingColumnError(error, column)),
+          ))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectAttributeScoresSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectAttributeScores,
+          false,
+        );
+        console.warn(
+          "Songwriting projects attribute_scores column unavailable when creating; retrying without it.",
+          error,
+        );
+
+        const fallback = await attemptInsert({ includeAttributeScores: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (
+        error &&
+        songwritingProjectRatingFlagsSupportedRef.current &&
+        [
+          "rating_hidden",
+          "rating_visible",
+          "rating_revealed_at",
+          "rating_revealed_stage",
+          "rating_owner_user_id",
+          "rating_owner_profile_id",
+        ].some((column) => isMissingColumnError(error, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectRatingFlagsSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectRatingFlags,
+          false,
+        );
+        console.warn(
+          "Songwriting projects rating metadata columns unavailable when creating; retrying without them.",
+          error,
+        );
+
+        const fallback = await attemptInsert({ includeRatingFlags: false });
         data = fallback.data;
         error = fallback.error;
       }
@@ -1048,7 +1530,107 @@ export const useSongwritingData = (userId?: string | null) => {
         throw new Error("Project id is required to update a songwriting project");
       }
 
-      const buildPayload = (includeEstimated: boolean) => {
+      let sanitizedGenresUpdate: string[] | undefined;
+      let sanitizedPurposeUpdate: string | null | undefined;
+      let sanitizedModeUpdate: string | null | undefined;
+      let sanitizedInitialProductionPotentialUpdate: number | null | undefined;
+      let sanitizedProductionPotentialUpdate: number | null | undefined;
+      let sanitizedCoWriterMetadata:
+        | { coWriters: string[] | null; splits: number[] | null }
+        | undefined;
+      let sanitizedAttributeScoresUpdate: Partial<SongAttributeScores> | null | undefined;
+
+      if (updates.genres !== undefined) {
+        sanitizedGenresUpdate = sanitizeGenreSelection(updates.genres);
+
+        try {
+          const { data: authData, error: authError } = await supabase.auth.getUser();
+          if (authError) {
+            throw authError;
+          }
+
+          const userId = authData.user?.id;
+          if (userId) {
+            const { data: skillRow, error: skillError } = await supabase
+              .from("player_skills")
+              .select("guitar, bass, drums, vocals, songwriting")
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            if (skillError && skillError.code !== "PGRST116") {
+              throw skillError;
+            }
+
+            validateGenreSelection(sanitizedGenresUpdate, skillRow ?? undefined);
+          }
+        } catch (validationError) {
+          throw validationError;
+        }
+      }
+
+      if (updates.purpose !== undefined) {
+        sanitizedPurposeUpdate =
+          typeof updates.purpose === "string" && updates.purpose.trim().length > 0
+            ? updates.purpose.trim()
+            : null;
+      }
+
+      if (updates.mode !== undefined) {
+        sanitizedModeUpdate =
+          typeof updates.mode === "string" && updates.mode.trim().length > 0
+            ? updates.mode.trim()
+            : null;
+      }
+
+      if (updates.initial_production_potential !== undefined) {
+        const parsed = toNumberOrNull(updates.initial_production_potential);
+        sanitizedInitialProductionPotentialUpdate =
+          parsed === null ? null : clampNumber(parsed, 0, 100);
+      }
+
+      if (updates.production_potential !== undefined) {
+        const parsed = toNumberOrNull(updates.production_potential);
+        sanitizedProductionPotentialUpdate = parsed === null ? null : clampNumber(parsed, 0, 100);
+      }
+
+      if (updates.co_writers !== undefined || updates.co_writer_splits !== undefined) {
+        sanitizedCoWriterMetadata = sanitizeCoWriterMetadata(
+          updates.co_writers ?? null,
+          updates.co_writer_splits ?? null,
+        );
+      }
+
+      if (updates.attribute_scores !== undefined) {
+        if (updates.attribute_scores === null) {
+          sanitizedAttributeScoresUpdate = null;
+        } else {
+          const sanitized: Partial<SongAttributeScores> = {};
+          SONG_ATTRIBUTE_KEYS.forEach((key) => {
+            const candidate = updates.attribute_scores?.[key];
+            if (candidate === undefined) {
+              return;
+            }
+            const parsed = toNumberOrNull(candidate);
+            if (parsed !== null) {
+              sanitized[key] = clampNumber(parsed, 0, 200);
+            }
+          });
+          sanitizedAttributeScoresUpdate = sanitized;
+        }
+      }
+
+      const buildPayload = (
+        includeEstimated: boolean,
+        {
+          includeExtendedMetadata = songwritingProjectExtendedMetadataSupportedRef.current,
+          includeAttributeScores = songwritingProjectAttributeScoresSupportedRef.current,
+          includeRatingFlags = songwritingProjectRatingFlagsSupportedRef.current,
+        }: {
+          includeExtendedMetadata?: boolean;
+          includeAttributeScores?: boolean;
+          includeRatingFlags?: boolean;
+        } = {},
+      ) => {
         const payload: Record<string, unknown> = {
           updated_at: new Date().toISOString(),
         };
@@ -1085,6 +1667,67 @@ export const useSongwritingData = (userId?: string | null) => {
           payload[key] = value;
         });
 
+          if (key === "purpose") {
+            if (includeExtendedMetadata && sanitizedPurposeUpdate !== undefined) {
+              payload.purpose = sanitizedPurposeUpdate;
+            }
+            return;
+          }
+
+          if (key === "mode") {
+            if (includeExtendedMetadata && sanitizedModeUpdate !== undefined) {
+              payload.mode = sanitizedModeUpdate;
+            }
+            return;
+          }
+
+          if (key === "co_writers" || key === "co_writer_splits") {
+            if (includeExtendedMetadata && sanitizedCoWriterMetadata) {
+              payload.co_writers = sanitizedCoWriterMetadata.coWriters ?? [];
+              payload.co_writer_splits = sanitizedCoWriterMetadata.splits
+                ? sanitizedCoWriterMetadata.splits
+                : (sanitizedCoWriterMetadata.coWriters ?? []).map(() => 0);
+            }
+            return;
+          }
+
+          if (key === "initial_production_potential") {
+            if (
+              includeExtendedMetadata &&
+              sanitizedInitialProductionPotentialUpdate !== undefined
+            ) {
+              payload.initial_production_potential = sanitizedInitialProductionPotentialUpdate;
+            }
+            return;
+          }
+
+          if (key === "production_potential") {
+            if (includeExtendedMetadata && sanitizedProductionPotentialUpdate !== undefined) {
+              payload.production_potential = sanitizedProductionPotentialUpdate;
+            }
+            return;
+          }
+
+          if (key === "attribute_scores") {
+            if (includeAttributeScores && sanitizedAttributeScoresUpdate !== undefined) {
+              if (sanitizedAttributeScoresUpdate === null) {
+                payload.attribute_scores = null;
+              } else {
+                payload.attribute_scores = {
+                  concept: sanitizedAttributeScoresUpdate.concept ?? 0,
+                  lyrics: sanitizedAttributeScoresUpdate.lyrics ?? 0,
+                  melody: sanitizedAttributeScoresUpdate.melody ?? 0,
+                  production: sanitizedAttributeScoresUpdate.production ?? 0,
+                  performance: sanitizedAttributeScoresUpdate.performance ?? 0,
+                } satisfies SongAttributeScores;
+              }
+            }
+            return;
+          }
+
+          payload[key] = value;
+        });
+
         if (!includeEstimated) {
           delete payload.estimated_completion_sessions;
         }
@@ -1112,10 +1755,17 @@ export const useSongwritingData = (userId?: string | null) => {
         return payload;
       };
 
-      const attemptUpdate = (includeEstimated: boolean) =>
+      const attemptUpdate = (
+        includeEstimated: boolean,
+        options?: {
+          includeExtendedMetadata?: boolean;
+          includeAttributeScores?: boolean;
+          includeRatingFlags?: boolean;
+        },
+      ) =>
         supabase
           .from("songwriting_projects")
-          .update(buildPayload(includeEstimated) as Record<string, unknown>)
+          .update(buildPayload(includeEstimated, options) as Record<string, unknown>)
           .eq("id", id);
 
       let { error } = await attemptUpdate(songwritingEstimatedCompletionSupportedRef.current);
@@ -1174,6 +1824,87 @@ export const useSongwritingData = (userId?: string | null) => {
         );
 
         ({ error } = await attemptUpdate(songwritingEstimatedCompletionSupportedRef.current));
+      }
+
+      if (
+        error &&
+        songwritingProjectExtendedMetadataSupportedRef.current &&
+        [
+          "purpose",
+          "mode",
+          "genres",
+          "co_writers",
+          "co_writer_splits",
+          "initial_production_potential",
+          "production_potential",
+        ].some((column) => isMissingColumnError(error, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectExtendedMetadataSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectExtendedMetadata,
+          false,
+        );
+        console.warn(
+          "Songwriting projects extended metadata columns unavailable when updating; retrying without them.",
+          error,
+        );
+
+        ({ error } = await attemptUpdate(
+          songwritingEstimatedCompletionSupportedRef.current,
+          { includeExtendedMetadata: false },
+        ));
+      }
+
+      if (
+        error &&
+        songwritingProjectAttributeScoresSupportedRef.current &&
+        (isMissingColumnError(error, "attribute_scores") ||
+          SONG_ATTRIBUTE_KEYS.some((key) =>
+            ATTRIBUTE_COLUMN_ALIASES[key].some((column) => isMissingColumnError(error, column)),
+          ))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectAttributeScoresSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectAttributeScores,
+          false,
+        );
+        console.warn(
+          "Songwriting projects attribute_scores column unavailable when updating; retrying without it.",
+          error,
+        );
+
+        ({ error } = await attemptUpdate(
+          songwritingEstimatedCompletionSupportedRef.current,
+          { includeAttributeScores: false },
+        ));
+      }
+
+      if (
+        error &&
+        songwritingProjectRatingFlagsSupportedRef.current &&
+        [
+          "rating_hidden",
+          "rating_visible",
+          "rating_revealed_at",
+          "rating_revealed_stage",
+          "rating_owner_user_id",
+          "rating_owner_profile_id",
+        ].some((column) => isMissingColumnError(error, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectRatingFlagsSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectRatingFlags,
+          false,
+        );
+        console.warn(
+          "Songwriting projects rating metadata columns unavailable when updating; retrying without them.",
+          error,
+        );
+
+        ({ error } = await attemptUpdate(
+          songwritingEstimatedCompletionSupportedRef.current,
+          { includeRatingFlags: false },
+        ));
       }
 
       if (error) throw error;
@@ -1235,7 +1966,7 @@ export const useSongwritingData = (userId?: string | null) => {
       if (projectError) throw projectError;
       if (!project) throw new Error("Project not found");
 
-      if (project.is_locked && project.locked_until) {
+      if (!resumeSessionId && project.is_locked && project.locked_until) {
         const lockTime = new Date(project.locked_until);
         if (!Number.isNaN(lockTime.getTime()) && lockTime > new Date()) {
           throw new Error("Project is currently locked. Please wait before starting a new session.");
@@ -1266,6 +1997,91 @@ export const useSongwritingData = (userId?: string | null) => {
 
       if (lockError) throw lockError;
 
+      if (resumeSessionId) {
+        const { data: existingSession, error: existingSessionError } = await supabase
+          .from("songwriting_sessions")
+          .select(
+            [
+              "id",
+              "project_id",
+              "user_id",
+              "session_start",
+              "locked_until",
+              songwritingSessionExtendedTrackingSupportedRef.current ? "pause_state" : null,
+            ]
+              .filter((field): field is string => typeof field === "string" && field.length > 0)
+              .join(","),
+          )
+          .eq("id", resumeSessionId)
+          .maybeSingle();
+
+        if (existingSessionError) {
+          throw existingSessionError;
+        }
+
+        if (!existingSession || existingSession.project_id !== projectId) {
+          throw new Error("Unable to resume session: session not found or does not match project.");
+        }
+
+        const resumePayload: Record<string, unknown> = {
+          locked_until: lockUntil.toISOString(),
+        };
+
+        if (songwritingSessionExtendedTrackingSupportedRef.current) {
+          resumePayload.effort_hours = sanitizedEffortHours;
+          resumePayload.duration_minutes = sessionDurationMinutes;
+          resumePayload.pause_state = "active";
+          resumePayload.resumed_at = startedAt.toISOString();
+        }
+
+        const { data: resumedData, error: resumeError } = await supabase
+          .from("songwriting_sessions")
+          .update(resumePayload)
+          .eq("id", resumeSessionId)
+          .select()
+          .single();
+
+        if (
+          resumeError &&
+          songwritingSessionExtendedTrackingSupportedRef.current &&
+          [
+            "effort_hours",
+            "duration_minutes",
+            "pause_state",
+            "resumed_at",
+          ].some((column) => isMissingColumnError(resumeError, column))
+        ) {
+          updateSchemaSupportRef(
+            songwritingSessionExtendedTrackingSupportedRef,
+            SONGWRITING_SCHEMA_FEATURES.sessionExtendedTracking,
+            false,
+          );
+          console.warn(
+            "Songwriting session extended tracking columns unavailable when resuming; retrying without them.",
+            resumeError,
+          );
+
+          const { data: fallbackData, error: fallbackResumeError } = await supabase
+            .from("songwriting_sessions")
+            .update({ locked_until: lockUntil.toISOString() })
+            .eq("id", resumeSessionId)
+            .select()
+            .single();
+
+          if (fallbackResumeError) {
+            throw fallbackResumeError;
+          }
+
+          return fallbackData as SongwritingSession;
+        }
+
+        if (resumeError) {
+          throw resumeError;
+        }
+
+        return resumedData as SongwritingSession;
+      }
+
       const { data, error } = await supabase
         .from("songwriting_sessions")
         .insert({
@@ -1277,6 +2093,13 @@ export const useSongwritingData = (userId?: string | null) => {
             : {}),
           locked_until: lockUntil.toISOString(),
           notes: null,
+          ...(songwritingSessionExtendedTrackingSupportedRef.current
+            ? {
+                effort_hours: sanitizedEffortHours,
+                duration_minutes: sessionDurationMinutes,
+                pause_state: "active",
+              }
+            : {}),
         } as any)
         .select()
         .single();
@@ -1310,6 +2133,44 @@ export const useSongwritingData = (userId?: string | null) => {
           }
 
           return legacyData as SongwritingSession;
+        }
+
+        if (
+          songwritingSessionExtendedTrackingSupportedRef.current &&
+          ["effort_hours", "duration_minutes", "pause_state"].some((column) =>
+            isMissingColumnError(error, column),
+          )
+        ) {
+          updateSchemaSupportRef(
+            songwritingSessionExtendedTrackingSupportedRef,
+            SONGWRITING_SCHEMA_FEATURES.sessionExtendedTracking,
+            false,
+          );
+          console.warn(
+            "Songwriting sessions extended tracking columns unavailable when creating a session; retrying without them.",
+            error,
+          );
+
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("songwriting_sessions")
+            .insert({
+              project_id: projectId,
+              user_id: userId,
+              session_start: startedAt.toISOString(),
+              ...(songwritingSessionsStartedAtSupportedRef.current
+                ? { started_at: startedAt.toISOString() }
+                : {}),
+              locked_until: lockUntil.toISOString(),
+              notes: null,
+            } as any)
+            .select()
+            .single();
+
+          if (fallbackError) {
+            throw fallbackError;
+          }
+
+          return fallbackData as SongwritingSession;
         }
 
         throw error;
@@ -1384,15 +2245,40 @@ export const useSongwritingData = (userId?: string | null) => {
   });
 
   const completeSession = useMutation({
-    mutationFn: async ({ sessionId, notes }: CompleteSessionInput) => {
+    mutationFn: async ({
+      sessionId,
+      notes,
+      effortHours,
+      paused,
+      resumeAt,
+      coWriterAdjustments,
+    }: CompleteSessionInput) => {
+      const sessionSelect = [
+        "project_id",
+        "user_id",
+        songwritingSessionExtendedTrackingSupportedRef.current ? "effort_hours" : null,
+        songwritingSessionExtendedTrackingSupportedRef.current ? "duration_minutes" : null,
+        songwritingSessionExtendedTrackingSupportedRef.current ? "pause_state" : null,
+        songwritingSessionExtendedTrackingSupportedRef.current ? "co_writer_contributions" : null,
+        songwritingSessionExtendedTrackingSupportedRef.current ? "royalty_split_snapshot" : null,
+      ]
+        .filter((field): field is string => typeof field === "string" && field.length > 0)
+        .join(",");
+
       const { data: session, error: sessionError } = await supabase
         .from("songwriting_sessions")
-        .select("project_id, user_id")
+        .select(sessionSelect)
         .eq("id", sessionId)
         .maybeSingle();
 
       if (sessionError) throw sessionError;
       if (!session) throw new Error("Session not found");
+
+      const inferredEffortHours = songwritingSessionExtendedTrackingSupportedRef.current
+        ? toNumberOrNull((session as Record<string, unknown>).effort_hours) ?? undefined
+        : undefined;
+      const sanitizedEffortHours = sanitizeEffortHours(effortHours ?? inferredEffortHours);
+      const sessionDurationMinutes = sanitizedEffortHours * 60;
 
       const buildProjectSelect = (includeEstimated: boolean) =>
         [
@@ -1428,7 +2314,11 @@ export const useSongwritingData = (userId?: string | null) => {
         .eq("id", session.project_id)
         .maybeSingle();
 
-      if (projectError && includeEstimatedCompletion && isMissingColumnError(projectError, "estimated_completion_sessions")) {
+      if (
+        projectError &&
+        includeEstimatedCompletion &&
+        isMissingColumnError(projectError, "estimated_completion_sessions")
+      ) {
         updateSchemaSupportRef(
           songwritingEstimatedCompletionSupportedRef,
           SONGWRITING_SCHEMA_FEATURES.estimatedCompletion,
@@ -1574,27 +2464,157 @@ export const useSongwritingData = (userId?: string | null) => {
       const songRatingGain = coerceNumber(progressResult.song_rating_gain);
       const xpEarned = coerceNumber(progressResult.xp_earned);
 
+      const attributeGainsRaw = progressResult.attribute_gains;
+      const parsedAttributeGains: Partial<SongAttributeScores> = {};
+      if (attributeGainsRaw && typeof attributeGainsRaw === "object" && !Array.isArray(attributeGainsRaw)) {
+        SONG_ATTRIBUTE_KEYS.forEach((key) => {
+          const parsed = toNumberOrNull((attributeGainsRaw as Record<string, unknown>)[key]);
+          if (parsed !== null) {
+            parsedAttributeGains[key] = parsed;
+          }
+        });
+      }
+
+      const adjustedAttributeGains: SongAttributeScores = {
+        concept: 0,
+        lyrics: 0,
+        melody: 0,
+        production: 0,
+        performance: 0,
+      };
+
+      SONG_ATTRIBUTE_KEYS.forEach((key) => {
+        let baseGain = parsedAttributeGains[key] ?? 0;
+        if (MOOD_INFLUENCED_ATTRIBUTES.includes(key)) {
+          baseGain *= moodModifier;
+        }
+        if (HEALTH_INFLUENCED_ATTRIBUTES.includes(key)) {
+          baseGain *= healthModifier;
+        }
+        if (INSPIRATION_INFLUENCED_ATTRIBUTES.includes(key)) {
+          baseGain *= inspirationModifier;
+        }
+        adjustedAttributeGains[key] = Math.round(baseGain);
+      });
+
       const completedAt = new Date();
+
+      const sessionUpdatePayload: Record<string, unknown> = {
+        session_end: completedAt.toISOString(),
+        completed_at: completedAt.toISOString(),
+        locked_until: null,
+        music_progress_gained: musicGain,
+        lyrics_progress_gained: lyricsGain,
+        xp_earned: xpEarned,
+        notes: notes?.trim() ? notes.trim() : null,
+      };
+
+      const normalizedSession = session as Record<string, unknown>;
+
+      const computeCoWriterSnapshots = () => {
+        const coWriterIds = Array.isArray(normalizedProject.co_writers)
+          ? (normalizedProject.co_writers as string[])
+          : [];
+        const coWriterSplits = Array.isArray(normalizedProject.co_writer_splits)
+          ? (normalizedProject.co_writer_splits as number[])
+          : [];
+        const ownerUserId = typeof normalizedProject.user_id === "string" ? normalizedProject.user_id : session.user_id;
+
+        if (coWriterIds.length === 0) {
+          return { contributions: null as Record<string, number> | null, splits: null as Record<string, number> | null };
+        }
+
+        const contributions: Record<string, number> = {};
+        const splitsSnapshot: Record<string, number> = {};
+        const totalSplit = coWriterSplits.reduce((total, value) => total + value, 0);
+        const ownerSplit = clampNumber(100 - totalSplit, 0, 100);
+        const gainBase = Math.max(0, musicGain + lyricsGain);
+        const contributionUnit = gainBase / 100;
+
+        coWriterIds.forEach((coWriterId, index) => {
+          const split = clampNumber(toNumberOrNull(coWriterSplits[index]) ?? 0, 0, 100);
+          const adjustment = coWriterAdjustments?.[coWriterId] ?? 0;
+          contributions[coWriterId] = Math.round(split * contributionUnit + adjustment);
+          splitsSnapshot[coWriterId] = split;
+        });
+
+        const ownerAdjustment = coWriterAdjustments?.[ownerUserId] ?? 0;
+        contributions[ownerUserId] = Math.round(ownerSplit * contributionUnit + ownerAdjustment);
+        splitsSnapshot[ownerUserId] = ownerSplit;
+
+        return { contributions, splits: splitsSnapshot };
+      };
+
+      let coWriterSnapshots: { contributions: Record<string, number> | null; splits: Record<string, number> | null } =
+        { contributions: null, splits: null };
+
+      if (songwritingSessionExtendedTrackingSupportedRef.current) {
+        sessionUpdatePayload.effort_hours = sanitizedEffortHours;
+        sessionUpdatePayload.duration_minutes = sessionDurationMinutes;
+        sessionUpdatePayload.pause_state = paused ? "paused" : "completed";
+        sessionUpdatePayload.attribute_gains = adjustedAttributeGains;
+        sessionUpdatePayload.mood_modifier = moodModifier;
+        sessionUpdatePayload.health_modifier = healthModifier;
+        sessionUpdatePayload.inspiration_modifier = inspirationModifier;
+
+        coWriterSnapshots = computeCoWriterSnapshots();
+        sessionUpdatePayload.co_writer_contributions = coWriterSnapshots.contributions;
+        sessionUpdatePayload.royalty_split_snapshot = coWriterSnapshots.splits;
+      }
 
       const { error: updateSessionError } = await supabase
         .from("songwriting_sessions")
-        .update({
-          session_end: completedAt.toISOString(),
-          completed_at: completedAt.toISOString(),
-          locked_until: null,
-          music_progress_gained: musicGain,
-          lyrics_progress_gained: lyricsGain,
-          xp_earned: xpEarned,
-          notes: notes?.trim() ? notes.trim() : null,
-        })
+        .update(sessionUpdatePayload)
         .eq("id", sessionId);
 
-      if (updateSessionError) throw updateSessionError;
+      if (
+        updateSessionError &&
+        songwritingSessionExtendedTrackingSupportedRef.current &&
+        [
+          "effort_hours",
+          "duration_minutes",
+          "pause_state",
+          "attribute_gains",
+          "mood_modifier",
+          "health_modifier",
+          "inspiration_modifier",
+          "co_writer_contributions",
+          "royalty_split_snapshot",
+        ].some((column) => isMissingColumnError(updateSessionError, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingSessionExtendedTrackingSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.sessionExtendedTracking,
+          false,
+        );
+        console.warn(
+          "Songwriting sessions extended tracking columns unavailable when completing; retrying without them.",
+          updateSessionError,
+        );
+
+        const { error: fallbackSessionError } = await supabase
+          .from("songwriting_sessions")
+          .update({
+            session_end: completedAt.toISOString(),
+            completed_at: completedAt.toISOString(),
+            locked_until: null,
+            music_progress_gained: musicGain,
+            lyrics_progress_gained: lyricsGain,
+            xp_earned: xpEarned,
+            notes: notes?.trim() ? notes.trim() : null,
+          })
+          .eq("id", sessionId);
+
+        if (fallbackSessionError) {
+          throw fallbackSessionError;
+        }
+      } else if (updateSessionError) {
+        throw updateSessionError;
+      }
 
       const maxProgress = 2000;
-      const proj = project as any;
-      const currentMusic = proj.music_progress ?? 0;
-      const currentLyrics = proj.lyrics_progress ?? 0;
+      const currentMusic = normalizedProject.music_progress ?? 0;
+      const currentLyrics = normalizedProject.lyrics_progress ?? 0;
       const newMusicProgress = Math.min(maxProgress, currentMusic + musicGain);
       const newLyricsProgress = Math.min(maxProgress, currentLyrics + lyricsGain);
       const isComplete = newMusicProgress >= maxProgress && newLyricsProgress >= maxProgress;
@@ -1611,17 +2631,18 @@ export const useSongwritingData = (userId?: string | null) => {
 
       const newTotalSessions = (proj.total_sessions ?? 0) + 1;
       const previousSessionsCompleted =
-        typeof proj.sessions_completed === "number" && Number.isFinite(proj.sessions_completed)
-          ? proj.sessions_completed
-          : Math.max(0, proj.total_sessions ?? 0);
+        typeof normalizedProject.sessions_completed === "number" &&
+        Number.isFinite(normalizedProject.sessions_completed)
+          ? normalizedProject.sessions_completed
+          : Math.max(0, normalizedProject.total_sessions ?? 0);
       const newSessionsCompleted = previousSessionsCompleted + 1;
       const targetSessions =
-        proj.estimated_completion_sessions ??
-        proj.estimated_sessions ??
+        normalizedProject.estimated_completion_sessions ??
+        normalizedProject.estimated_sessions ??
         Math.max(newTotalSessions, 3);
       const completionRatio = targetSessions > 0 ? newTotalSessions / targetSessions : 0;
 
-      let nextStatus = proj.status ?? "draft";
+      let nextStatus = normalizedProject.status ?? "draft";
       if (isComplete) {
         nextStatus = "completed";
       } else if (completionRatio >= 1) {
@@ -1645,7 +2666,7 @@ export const useSongwritingData = (userId?: string | null) => {
       const consistencyModifier =
         1 + Math.min(0.12, newSessionsCompleted / Math.max(newTotalSessions, 1) * 0.06);
       const themeModifier =
-        1 + (proj.theme_id ? 0.04 : 0) + (proj.chord_progression_id ? 0.04 : 0);
+        1 + (normalizedProject.theme_id ? 0.04 : 0) + (normalizedProject.chord_progression_id ? 0.04 : 0);
 
       const progressComponent = 0.45 * Math.min(1, progressRatio);
       const skillComponent = 0.35 * Math.min(1, skillAverage / 120);
@@ -1656,7 +2677,7 @@ export const useSongwritingData = (userId?: string | null) => {
           (progressComponent + skillComponent + attributeComponent) *
           efficiencyModifier *
           consistencyModifier *
-          themeModifier
+          themeModifier,
       );
       const ratingDrivenQuality = Math.round(newSongRating * 2);
       computedQuality = Math.min(2000, Math.max(proj.quality_score ?? 0, computedQuality, ratingDrivenQuality));
@@ -1684,10 +2705,115 @@ export const useSongwritingData = (userId?: string | null) => {
         updated_at: completedAt.toISOString(),
       });
 
-      const attemptProjectUpdate = (includeEstimated: boolean) =>
+      const computedSongRating = computeSongRatingFromScores(updatedAttributeScores);
+      const ratingShouldReveal = shouldRevealSongRating(nextStatus);
+      const previousRatingVisible = Boolean(normalizedProject.rating_visible);
+      const ratingVisible = ratingShouldReveal || previousRatingVisible;
+      const ratingHidden = !ratingVisible;
+      const previousRevealedAt =
+        typeof normalizedProject.rating_revealed_at === "string"
+          ? normalizedProject.rating_revealed_at
+          : null;
+      const ratingRevealedAt = ratingVisible
+        ? previousRevealedAt ?? completedAt.toISOString()
+        : null;
+      const ratingRevealedStage = ratingVisible
+        ? normalizedProject.rating_revealed_stage ?? nextStatus
+        : null;
+      const ratingOwnerUserId =
+        normalizedProject.rating_owner_user_id ?? normalizedProject.user_id ?? session.user_id;
+
+      const currentProductionPotential =
+        toNumberOrNull(normalizedProject.production_potential) ??
+        toNumberOrNull(normalizedProject.initial_production_potential) ??
+        0;
+      const productionPotentialGain = Math.round((musicGain + lyricsGain) / 45);
+      const nextProductionPotential = clampNumber(
+        currentProductionPotential + productionPotentialGain,
+        0,
+        100,
+      );
+      const productionPotentialRevealed =
+        normalizedProject.production_potential_revealed || nextStatus !== "draft";
+      const productionPotentialRevealedAt = productionPotentialRevealed
+        ? normalizedProject.production_potential_revealed_at ?? completedAt.toISOString()
+        : normalizedProject.production_potential_revealed_at ?? null;
+
+      let updatedProjectContributions: Record<string, number> | null = null;
+      if (coWriterSnapshots.contributions) {
+        const existing =
+          (normalizedProject.co_writer_contributions as Record<string, number> | null) ?? {};
+        updatedProjectContributions = { ...existing };
+        Object.entries(coWriterSnapshots.contributions).forEach(([coWriterId, contribution]) => {
+          const previous = toNumberOrNull(updatedProjectContributions?.[coWriterId]) ?? 0;
+          updatedProjectContributions![coWriterId] = previous + contribution;
+        });
+      }
+
+      const buildUpdatePayload = (
+        includeEstimated: boolean,
+        {
+          includeExtendedMetadata = songwritingProjectExtendedMetadataSupportedRef.current,
+          includeAttributeScores = songwritingProjectAttributeScoresSupportedRef.current,
+          includeRatingFlags = songwritingProjectRatingFlagsSupportedRef.current,
+        }: {
+          includeExtendedMetadata?: boolean;
+          includeAttributeScores?: boolean;
+          includeRatingFlags?: boolean;
+        } = {},
+      ) => {
+        const payload: Record<string, unknown> = {
+          music_progress: newMusicProgress,
+          lyrics_progress: newLyricsProgress,
+          total_sessions: newTotalSessions,
+          ...(songwritingSessionsCompletedSupportedRef.current
+            ? { sessions_completed: newSessionsCompleted }
+            : {}),
+          ...(includeEstimated ? { estimated_completion_sessions: targetSessions } : {}),
+          estimated_sessions: targetSessions,
+          status: nextStatus,
+          is_locked: false,
+          locked_until: null,
+          quality_score: computedQuality,
+          updated_at: completedAt.toISOString(),
+        };
+
+        if (includeExtendedMetadata) {
+          payload.production_potential = nextProductionPotential;
+          payload.production_potential_revealed = productionPotentialRevealed;
+          payload.production_potential_revealed_at = productionPotentialRevealedAt;
+          if (updatedProjectContributions) {
+            payload.co_writer_contributions = updatedProjectContributions;
+          }
+        }
+
+        if (includeAttributeScores) {
+          payload.attribute_scores = updatedAttributeScores;
+        }
+
+        if (includeRatingFlags) {
+          payload.rating_hidden = ratingHidden;
+          payload.rating_visible = ratingVisible;
+          payload.rating_revealed_at = ratingRevealedAt;
+          payload.rating_revealed_stage = ratingRevealedStage;
+          payload.rating_owner_user_id = ratingOwnerUserId;
+          payload.rating_owner_profile_id = normalizedProject.rating_owner_profile_id ?? null;
+        }
+
+        return payload;
+      };
+
+      const attemptProjectUpdate = (
+        includeEstimated: boolean,
+        options?: {
+          includeExtendedMetadata?: boolean;
+          includeAttributeScores?: boolean;
+          includeRatingFlags?: boolean;
+        },
+      ) =>
         supabase
           .from("songwriting_projects")
-          .update(buildUpdatePayload(includeEstimated) as Record<string, unknown>)
+          .update(buildUpdatePayload(includeEstimated, options) as Record<string, unknown>)
           .eq("id", session.project_id);
 
       let { error: updateProjectError } = await attemptProjectUpdate(
@@ -1732,6 +2858,84 @@ export const useSongwritingData = (userId?: string | null) => {
         ));
       }
 
+      if (
+        updateProjectError &&
+        songwritingProjectExtendedMetadataSupportedRef.current &&
+        [
+          "production_potential",
+          "production_potential_revealed",
+          "production_potential_revealed_at",
+          "co_writer_contributions",
+        ].some((column) => isMissingColumnError(updateProjectError, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectExtendedMetadataSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectExtendedMetadata,
+          false,
+        );
+        console.warn(
+          "Songwriting projects extended metadata columns unavailable when updating after session; retrying without them.",
+          updateProjectError,
+        );
+
+        ({ error: updateProjectError } = await attemptProjectUpdate(
+          songwritingEstimatedCompletionSupportedRef.current,
+          { includeExtendedMetadata: false },
+        ));
+      }
+
+      if (
+        updateProjectError &&
+        songwritingProjectAttributeScoresSupportedRef.current &&
+        (isMissingColumnError(updateProjectError, "attribute_scores") ||
+          SONG_ATTRIBUTE_KEYS.some((key) =>
+            ATTRIBUTE_COLUMN_ALIASES[key].some((column) => isMissingColumnError(updateProjectError, column)),
+          ))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectAttributeScoresSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectAttributeScores,
+          false,
+        );
+        console.warn(
+          "Songwriting projects attribute_scores column unavailable when updating after session; retrying without it.",
+          updateProjectError,
+        );
+
+        ({ error: updateProjectError } = await attemptProjectUpdate(
+          songwritingEstimatedCompletionSupportedRef.current,
+          { includeAttributeScores: false },
+        ));
+      }
+
+      if (
+        updateProjectError &&
+        songwritingProjectRatingFlagsSupportedRef.current &&
+        [
+          "rating_hidden",
+          "rating_visible",
+          "rating_revealed_at",
+          "rating_revealed_stage",
+          "rating_owner_user_id",
+          "rating_owner_profile_id",
+        ].some((column) => isMissingColumnError(updateProjectError, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectRatingFlagsSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectRatingFlags,
+          false,
+        );
+        console.warn(
+          "Songwriting projects rating metadata columns unavailable when updating after session; retrying without them.",
+          updateProjectError,
+        );
+
+        ({ error: updateProjectError } = await attemptProjectUpdate(
+          songwritingEstimatedCompletionSupportedRef.current,
+          { includeRatingFlags: false },
+        ));
+      }
+
       if (updateProjectError) throw updateProjectError;
 
       persistSongwritingSchemaSupport();
@@ -1761,6 +2965,16 @@ export const useSongwritingData = (userId?: string | null) => {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+
+      const attributeSummary = SONG_ATTRIBUTE_KEYS.map((key) => {
+        const gain = result.attributeGains?.[key] ?? 0;
+        const label = key.charAt(0).toUpperCase() + key.slice(1);
+        return `${label} +${gain}`;
+      }).join(", ");
+
+      const ratingDescription = result.ratingVisible
+        ? `Song rating ${result.songRating ?? 0}/1000 revealed.`
+        : "Song rating still hidden until rehearsal or recording.";
 
       if (result.isComplete) {
         toast({
@@ -1815,6 +3029,16 @@ export const useSongwritingData = (userId?: string | null) => {
           "song_rating",
           "status",
           "song_id",
+          songwritingProjectExtendedMetadataSupportedRef.current ? "genres" : null,
+          songwritingProjectExtendedMetadataSupportedRef.current ? "co_writers" : null,
+          songwritingProjectExtendedMetadataSupportedRef.current ? "co_writer_splits" : null,
+          songwritingProjectAttributeScoresSupportedRef.current ? "attribute_scores" : null,
+          songwritingProjectRatingFlagsSupportedRef.current ? "rating_hidden" : null,
+          songwritingProjectRatingFlagsSupportedRef.current ? "rating_visible" : null,
+          songwritingProjectRatingFlagsSupportedRef.current ? "rating_revealed_at" : null,
+          songwritingProjectRatingFlagsSupportedRef.current ? "rating_owner_user_id" : null,
+          songwritingProjectRatingFlagsSupportedRef.current ? "rating_owner_profile_id" : null,
+          songwritingProjectExtendedMetadataSupportedRef.current ? "co_writer_contributions" : null,
         ].filter((field): field is string => typeof field === "string" && field.length > 0);
 
         return [
@@ -1874,10 +3098,20 @@ export const useSongwritingData = (userId?: string | null) => {
         normalizedProject.estimated_sessions ??
         normalizedProject.total_sessions ?? 0;
 
-      // Create the final song
-      const { data, error } = await supabase
-        .from("songs")
-        .insert({
+      const primaryGenre = Array.isArray(normalizedProject.genres) && normalizedProject.genres.length > 0
+        ? normalizedProject.genres[0]
+        : normalizedProject.song_themes?.name || "Unknown";
+
+      const buildSongPayload = ({
+        includeExtendedMetadata = songwritingProjectExtendedMetadataSupportedRef.current,
+        includeAttributeScores = songwritingProjectAttributeScoresSupportedRef.current,
+        includeRatingFlags = songwritingProjectRatingFlagsSupportedRef.current,
+      }: {
+        includeExtendedMetadata?: boolean;
+        includeAttributeScores?: boolean;
+        includeRatingFlags?: boolean;
+      } = {}) => {
+        const payload: Record<string, unknown> = {
           user_id: normalizedProject.user_id,
           title: normalizedProject.title,
           genre: normalizedProject.song_themes?.name || 'Unknown',
@@ -1900,10 +3134,115 @@ export const useSongwritingData = (userId?: string | null) => {
           total_sessions: normalizedProject.total_sessions,
           estimated_completion_sessions: estimatedSessions,
           songwriting_project_id: normalizedProject.id,
-          status: 'released'
-        })
-        .select()
-        .single();
+          status: "released",
+        };
+
+        if (includeExtendedMetadata) {
+          if (Array.isArray(normalizedProject.co_writers)) {
+            payload.co_writers = normalizedProject.co_writers;
+          }
+          if (Array.isArray(normalizedProject.co_writer_splits)) {
+            payload.split_percentages = normalizedProject.co_writer_splits;
+          }
+        }
+
+        if (includeAttributeScores && normalizedProject.attribute_scores) {
+          payload.attribute_scores = normalizedProject.attribute_scores;
+        }
+
+        if (includeRatingFlags) {
+          payload.rating_hidden = normalizedProject.rating_hidden ?? null;
+          payload.rating_visible = normalizedProject.rating_visible ?? null;
+          payload.rating_revealed_at = normalizedProject.rating_revealed_at ?? null;
+          payload.rating_owner_user_id =
+            normalizedProject.rating_owner_user_id ?? normalizedProject.user_id;
+          payload.rating_owner_profile_id = normalizedProject.rating_owner_profile_id ?? null;
+        }
+
+        return payload;
+      };
+
+      const attemptSongInsert = (options?: {
+        includeExtendedMetadata?: boolean;
+        includeAttributeScores?: boolean;
+        includeRatingFlags?: boolean;
+      }) =>
+        supabase
+          .from("songs")
+          .insert(buildSongPayload(options))
+          .select()
+          .single();
+
+      let { data, error } = await attemptSongInsert();
+
+      if (
+        error &&
+        songwritingProjectExtendedMetadataSupportedRef.current &&
+        (isMissingColumnError(error, "co_writers") || isMissingColumnError(error, "split_percentages"))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectExtendedMetadataSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectExtendedMetadata,
+          false,
+        );
+        console.warn(
+          "Songs extended metadata columns unavailable when converting; retrying without them.",
+          error,
+        );
+
+        const fallback = await attemptSongInsert({ includeExtendedMetadata: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (
+        error &&
+        songwritingProjectAttributeScoresSupportedRef.current &&
+        (isMissingColumnError(error, "attribute_scores") ||
+          SONG_ATTRIBUTE_KEYS.some((key) =>
+            ATTRIBUTE_COLUMN_ALIASES[key].some((column) => isMissingColumnError(error, column)),
+          ))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectAttributeScoresSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectAttributeScores,
+          false,
+        );
+        console.warn(
+          "Songs attribute_scores column unavailable when converting; retrying without it.",
+          error,
+        );
+
+        const fallback = await attemptSongInsert({ includeAttributeScores: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (
+        error &&
+        songwritingProjectRatingFlagsSupportedRef.current &&
+        [
+          "rating_hidden",
+          "rating_visible",
+          "rating_revealed_at",
+          "rating_owner_user_id",
+          "rating_owner_profile_id",
+        ].some((column) => isMissingColumnError(error, column))
+      ) {
+        updateSchemaSupportRef(
+          songwritingProjectRatingFlagsSupportedRef,
+          SONGWRITING_SCHEMA_FEATURES.projectRatingFlags,
+          false,
+        );
+        console.warn(
+          "Songs rating metadata columns unavailable when converting; retrying without them.",
+          error,
+        );
+
+        const fallback = await attemptSongInsert({ includeRatingFlags: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) throw error;
       const { error: linkError } = await supabase

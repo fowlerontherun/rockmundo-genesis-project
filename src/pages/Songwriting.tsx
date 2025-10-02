@@ -952,6 +952,7 @@ const Songwriting = () => {
       await completeSession.mutateAsync({
         sessionId: activeSession.id,
         notes: completionNotes,
+        effortHours: activeSession.effort_hours ?? undefined,
       });
 
       setCompletionProject(null);
