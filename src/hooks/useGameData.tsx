@@ -393,6 +393,7 @@ const useProvideGameData = (): UseGameDataReturn => {
   const defaultCityAssignmentDisabledRef = useRef(false);
   const dailyXpGrantTableAvailableRef = useRef(true);
   const activityStatusTableAvailableRef = useRef(true);
+  const activityStatusWarningLoggedRef = useRef(false);
   const activityStatusMetadataSupportedRef = useRef(true);
   const activityFeedSupportsDurationRef = useRef(true);
 
@@ -526,6 +527,17 @@ const useProvideGameData = (): UseGameDataReturn => {
     }
 
     return isRelationNotFoundError(error) || isSchemaCacheMissingTableError(error, tableName);
+  };
+
+  const logActivityStatusTableUnavailable = (debugInfo: unknown) => {
+    activityStatusTableAvailableRef.current = false;
+
+    if (activityStatusWarningLoggedRef.current) {
+      return;
+    }
+
+    activityStatusWarningLoggedRef.current = true;
+    console.warn("Profile activity status table is unavailable; skipping future queries", debugInfo);
   };
 
 
@@ -929,18 +941,13 @@ const useProvideGameData = (): UseGameDataReturn => {
       );
 
       if (activityStatusUnavailable) {
-        activityStatusTableAvailableRef.current = false;
-
         const debugInfo =
           activityStatusResult.error ?? {
             status: activityStatusResult.status,
             statusText: activityStatusResult.statusText,
           };
 
-        console.warn(
-          "Profile activity status table is unavailable; skipping future queries",
-          debugInfo,
-        );
+        logActivityStatusTableUnavailable(debugInfo);
         setActivityStatus(null);
       } else if (activityStatusResult.error) {
         const errorCode =
@@ -956,6 +963,8 @@ const useProvideGameData = (): UseGameDataReturn => {
           console.error("Failed to load activity status", activityStatusResult.error);
         }
       } else {
+        activityStatusTableAvailableRef.current = true;
+        activityStatusWarningLoggedRef.current = false;
         setActivityStatus((activityStatusResult.data ?? null) as ProfileActivityStatusRow | null);
       }
 
@@ -1691,9 +1700,8 @@ const useProvideGameData = (): UseGameDataReturn => {
       .maybeSingle();
 
     if (isMissingTableResponse(status, error, "profile_activity_statuses")) {
-      activityStatusTableAvailableRef.current = false;
       const debugInfo = error ?? { status, statusText };
-      console.warn("Profile activity status table is unavailable; skipping future queries", debugInfo);
+      logActivityStatusTableUnavailable(debugInfo);
       setActivityStatus(null);
       return null;
     }
@@ -1709,6 +1717,8 @@ const useProvideGameData = (): UseGameDataReturn => {
     }
 
     const nextStatus = (data ?? null) as ProfileActivityStatusRow | null;
+    activityStatusTableAvailableRef.current = true;
+    activityStatusWarningLoggedRef.current = false;
     setActivityStatus(nextStatus);
     return nextStatus;
   }, [profile, isRelationNotFoundError, isSchemaCacheMissingTableError]);
@@ -1729,7 +1739,9 @@ const useProvideGameData = (): UseGameDataReturn => {
       .eq("profile_id", profile.id);
 
     if (isMissingTableResponse(result.status ?? null, result.error, "profile_activity_statuses")) {
-      activityStatusTableAvailableRef.current = false;
+      const debugInfo =
+        result.error ?? { status: result.status ?? null, statusText: result.statusText ?? null };
+      logActivityStatusTableUnavailable(debugInfo);
       setActivityStatus(null);
       return;
     }
@@ -1738,6 +1750,8 @@ const useProvideGameData = (): UseGameDataReturn => {
       throw result.error;
     }
 
+    activityStatusTableAvailableRef.current = true;
+    activityStatusWarningLoggedRef.current = false;
     setActivityStatus(null);
   }, [profile]);
 
@@ -1750,7 +1764,10 @@ const useProvideGameData = (): UseGameDataReturn => {
 
 
       if (!activityStatusTableAvailableRef.current) {
-        console.warn("Profile activity status table is unavailable; skipping activity start");
+        if (!activityStatusWarningLoggedRef.current) {
+          console.warn("Profile activity status table is unavailable; skipping activity start");
+          activityStatusWarningLoggedRef.current = true;
+        }
 
         return null;
       }
@@ -1800,14 +1817,12 @@ const useProvideGameData = (): UseGameDataReturn => {
       }
 
       if (isMissingTableResponse(result.status, result.error, "profile_activity_statuses")) {
-        activityStatusTableAvailableRef.current = false;
-
         const debugInfo = result.error ?? {
           status: result.status,
           statusText: result.statusText,
         };
 
-        console.warn("Profile activity status table is unavailable; skipping future queries", debugInfo);
+        logActivityStatusTableUnavailable(debugInfo);
 
         setActivityStatus(null);
         return null;
@@ -1819,6 +1834,8 @@ const useProvideGameData = (): UseGameDataReturn => {
       }
 
       const nextStatus = (result.data ?? null) as ProfileActivityStatusRow | null;
+      activityStatusTableAvailableRef.current = true;
+      activityStatusWarningLoggedRef.current = false;
       setActivityStatus(nextStatus);
       return nextStatus;
     },
