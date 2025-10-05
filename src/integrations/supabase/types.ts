@@ -727,6 +727,65 @@ export type Database = {
         }
         Relationships: []
       }
+      jam_sessions: {
+        Row: {
+          access_code: string | null
+          created_at: string | null
+          current_participants: number
+          description: string | null
+          genre: string
+          host_id: string
+          id: string
+          is_private: boolean
+          max_participants: number
+          name: string
+          skill_requirement: number
+          status: string
+          tempo: number
+          updated_at: string | null
+        }
+        Insert: {
+          access_code?: string | null
+          created_at?: string | null
+          current_participants?: number
+          description?: string | null
+          genre: string
+          host_id: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name: string
+          skill_requirement?: number
+          status?: string
+          tempo?: number
+          updated_at?: string | null
+        }
+        Update: {
+          access_code?: string | null
+          created_at?: string | null
+          current_participants?: number
+          description?: string | null
+          genre?: string
+          host_id?: string
+          id?: string
+          is_private?: boolean
+          max_participants?: number
+          name?: string
+          skill_requirement?: number
+          status?: string
+          tempo?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_sessions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_achievements: {
         Row: {
           achievement_id: string
@@ -1033,6 +1092,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "player_xp_wallet_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_activity_statuses: {
+        Row: {
+          activity_type: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          profile_id: string
+          started_at: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          activity_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          profile_id: string
+          started_at?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          activity_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          profile_id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_activity_statuses_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
