@@ -58,10 +58,6 @@ export type Database = {
           id: string
           message: string
           metadata: Json | null
-          profile_id: string
-          status: string | null
-          duration_minutes: number | null
-          status_id: string | null
           user_id: string
         }
         Insert: {
@@ -71,10 +67,6 @@ export type Database = {
           id?: string
           message: string
           metadata?: Json | null
-          profile_id: string
-          status?: string | null
-          duration_minutes?: number | null
-          status_id?: string | null
           user_id: string
         }
         Update: {
@@ -84,28 +76,9 @@ export type Database = {
           id?: string
           message?: string
           metadata?: Json | null
-          profile_id?: string
-          status?: string | null
-          duration_minutes?: number | null
-          status_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "activity_feed_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activity_feed_status_id_fkey"
-            columns: ["status_id"]
-            isOneToOne: false
-            referencedRelation: "profile_activity_statuses"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       band_members: {
         Row: {
@@ -188,160 +161,6 @@ export type Database = {
         }
         Relationships: []
       }
-      busking_locations: {
-        Row: {
-          ambiance: string | null
-          base_payout: number
-          cooldown_minutes: number
-          created_at: string | null
-          description: string | null
-          experience_reward: number
-          fame_reward: number
-          id: string
-          name: string
-          neighborhood: string | null
-          recommended_skill: number
-          risk_level: string
-          slug: string
-        }
-        Insert: {
-          ambiance?: string | null
-          base_payout?: number
-          cooldown_minutes?: number
-          created_at?: string | null
-          description?: string | null
-          experience_reward?: number
-          fame_reward?: number
-          id?: string
-          name: string
-          neighborhood?: string | null
-          recommended_skill?: number
-          risk_level?: string
-          slug: string
-        }
-        Update: {
-          ambiance?: string | null
-          base_payout?: number
-          cooldown_minutes?: number
-          created_at?: string | null
-          description?: string | null
-          experience_reward?: number
-          fame_reward?: number
-          id?: string
-          name?: string
-          neighborhood?: string | null
-          recommended_skill?: number
-          risk_level?: string
-          slug?: string
-        }
-        Relationships: []
-      }
-      busking_modifiers: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          experience_bonus: number
-          fame_multiplier: number
-          id: string
-          name: string
-          payout_multiplier: number
-          rarity: string
-          risk_modifier: number
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          experience_bonus?: number
-          fame_multiplier?: number
-          id?: string
-          name: string
-          payout_multiplier?: number
-          rarity?: string
-          risk_modifier?: number
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          experience_bonus?: number
-          fame_multiplier?: number
-          id?: string
-          name?: string
-          payout_multiplier?: number
-          rarity?: string
-          risk_modifier?: number
-        }
-        Relationships: []
-      }
-      busking_sessions: {
-        Row: {
-          cash_earned: number
-          created_at: string | null
-          duration_minutes: number
-          experience_gained: number
-          fame_gained: number
-          id: string
-          location_id: string
-          metadata: Json | null
-          modifier_id: string | null
-          performance_score: number
-          profile_id: string
-          success: boolean
-          user_id: string
-        }
-        Insert: {
-          cash_earned?: number
-          created_at?: string | null
-          duration_minutes: number
-          experience_gained?: number
-          fame_gained?: number
-          id?: string
-          location_id: string
-          metadata?: Json | null
-          modifier_id?: string | null
-          performance_score?: number
-          profile_id: string
-          success?: boolean
-          user_id: string
-        }
-        Update: {
-          cash_earned?: number
-          created_at?: string | null
-          duration_minutes?: number
-          experience_gained?: number
-          fame_gained?: number
-          id?: string
-          location_id?: string
-          metadata?: Json | null
-          modifier_id?: string | null
-          performance_score?: number
-          profile_id?: string
-          success?: boolean
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "busking_sessions_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "busking_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "busking_sessions_modifier_id_fkey"
-            columns: ["modifier_id"]
-            isOneToOne: false
-            referencedRelation: "busking_modifiers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "busking_sessions_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       chart_entries: {
         Row: {
           chart_date: string | null
@@ -380,65 +199,6 @@ export type Database = {
           weeks_on_chart?: number | null
         }
         Relationships: []
-      }
-      jam_sessions: {
-        Row: {
-          access_code: string | null
-          created_at: string | null
-          current_participants: number
-          description: string | null
-          genre: string
-          host_id: string
-          id: string
-          is_private: boolean
-          max_participants: number
-          name: string
-          participant_ids: string[]
-          skill_requirement: number
-          tempo: number
-          updated_at: string | null
-        }
-        Insert: {
-          access_code?: string | null
-          created_at?: string | null
-          current_participants?: number
-          description?: string | null
-          genre?: string
-          host_id: string
-          id?: string
-          is_private?: boolean
-          max_participants?: number
-          name: string
-          participant_ids?: string[]
-          skill_requirement?: number
-          tempo?: number
-          updated_at?: string | null
-        }
-        Update: {
-          access_code?: string | null
-          created_at?: string | null
-          current_participants?: number
-          description?: string | null
-          genre?: string
-          host_id?: string
-          id?: string
-          is_private?: boolean
-          max_participants?: number
-          name?: string
-          participant_ids?: string[]
-          skill_requirement?: number
-          tempo?: number
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "jam_sessions_host_id_fkey"
-            columns: ["host_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
       }
       chat_messages: {
         Row: {
@@ -1280,59 +1040,6 @@ export type Database = {
           },
         ]
       }
-      profile_activity_statuses: {
-        Row: {
-          created_at: string | null
-          duration_minutes: number | null
-          ends_at: string | null
-          id: string
-          metadata: Json | null
-          profile_id: string
-          song_id: string | null
-          started_at: string | null
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          duration_minutes?: number | null
-          id?: string
-          metadata?: Json | null
-          profile_id: string
-          song_id?: string | null
-          started_at?: string | null
-          status: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          duration_minutes?: number | null
-          ends_at?: string | null
-          id?: string
-          metadata?: Json | null
-          profile_id?: string
-          song_id?: string | null
-          started_at?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profile_activity_statuses_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_activity_statuses_song_id_fkey"
-            columns: ["song_id"]
-            isOneToOne: false
-            referencedRelation: "songs"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       profile_daily_xp_grants: {
         Row: {
           created_at: string
@@ -1370,13 +1077,11 @@ export type Database = {
           cash: number | null
           created_at: string | null
           current_city_id: string | null
-          current_location: string
           display_name: string | null
           experience: number | null
           experience_at_last_weekly_bonus: number | null
           fame: number | null
           fans: number | null
-          health: number | null
           id: string
           last_weekly_bonus_at: string | null
           level: number | null
@@ -1392,13 +1097,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           current_city_id?: string | null
-          current_location?: string
           display_name?: string | null
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
-          health?: number | null
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
@@ -1414,13 +1117,11 @@ export type Database = {
           cash?: number | null
           created_at?: string | null
           current_city_id?: string | null
-          current_location?: string
           display_name?: string | null
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
-          health?: number | null
           id?: string
           last_weekly_bonus_at?: string | null
           level?: number | null
@@ -1576,30 +1277,6 @@ export type Database = {
         }
         Relationships: []
       }
-      song_genre_catalog: {
-        Row: {
-          created_at: string
-          description: string | null
-          display_name: string
-          id: string
-          slug: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          display_name: string
-          id?: string
-          slug: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          display_name?: string
-          id?: string
-          slug?: string
-        }
-        Relationships: []
-      }
       song_themes: {
         Row: {
           created_at: string
@@ -1624,156 +1301,69 @@ export type Database = {
         }
         Relationships: []
       }
-      song_purposes: {
-        Row: {
-          created_at: string
-          description: string | null
-          focus_area: string | null
-          id: string
-          label: string
-          slug: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          focus_area?: string | null
-          id?: string
-          label: string
-          slug: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          focus_area?: string | null
-          id?: string
-          label?: string
-          slug?: string
-        }
-        Relationships: []
-      }
-      song_writing_modes: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_collaborative: boolean
-          label: string
-          slug: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_collaborative?: boolean
-          label: string
-          slug: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_collaborative?: boolean
-          label?: string
-          slug?: string
-        }
-        Relationships: []
-      }
       songs: {
         Row: {
-          arrangement_quality: number
           chart_position: number | null
           chord_progression_id: string | null
           created_at: string
-          estimated_completion_sessions: number
           genre: string
-          genre_familiarity: number
-          genre_id: string | null
           id: string
           lyrics: string | null
-          lyrics_progress: number
-          lyrics_quality: number
-          melody_quality: number
-          music_progress: number
-          production_potential: number
+          lyrics_progress: number | null
+          music_progress: number | null
           quality_score: number
           release_date: string | null
           revenue: number
-          rhythm_quality: number
-          song_purpose_id: string | null
-          song_rating: number
           songwriting_project_id: string | null
           status: string
           streams: number
           theme_id: string | null
           title: string
-          total_sessions: number
+          total_sessions: number | null
           updated_at: string
           user_id: string
-          writing_mode_id: string | null
         }
         Insert: {
-          arrangement_quality?: number
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
-          estimated_completion_sessions?: number
           genre: string
-          genre_familiarity?: number
-          genre_id?: string | null
           id?: string
           lyrics?: string | null
-          lyrics_progress?: number
-          lyrics_quality?: number
-          melody_quality?: number
-          music_progress?: number
-          production_potential?: number
+          lyrics_progress?: number | null
+          music_progress?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
-          rhythm_quality?: number
-          song_purpose_id?: string | null
-          song_rating?: number
           songwriting_project_id?: string | null
           status?: string
           streams?: number
           theme_id?: string | null
           title: string
-          total_sessions?: number
+          total_sessions?: number | null
           updated_at?: string
           user_id: string
-          writing_mode_id?: string | null
         }
         Update: {
-          arrangement_quality?: number
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
-          estimated_completion_sessions?: number
           genre?: string
-          genre_familiarity?: number
-          genre_id?: string | null
           id?: string
           lyrics?: string | null
-          lyrics_progress?: number
-          lyrics_quality?: number
-          melody_quality?: number
-          music_progress?: number
-          production_potential?: number
+          lyrics_progress?: number | null
+          music_progress?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
-          rhythm_quality?: number
-          song_purpose_id?: string | null
-          song_rating?: number
           songwriting_project_id?: string | null
           status?: string
           streams?: number
           theme_id?: string | null
           title?: string
-          total_sessions?: number
+          total_sessions?: number | null
           updated_at?: string
           user_id?: string
-          writing_mode_id?: string | null
         }
         Relationships: [
           {
@@ -1797,125 +1387,86 @@ export type Database = {
             referencedRelation: "song_themes"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "songs_genre_id_fkey"
-            columns: ["genre_id"]
-            isOneToOne: false
-            referencedRelation: "song_genre_catalog"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songs_song_purpose_id_fkey"
-            columns: ["song_purpose_id"]
-            isOneToOne: false
-            referencedRelation: "song_purposes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songs_writing_mode_id_fkey"
-            columns: ["writing_mode_id"]
-            isOneToOne: false
-            referencedRelation: "song_writing_modes"
-            referencedColumns: ["id"]
-          }
         ]
       }
       songwriting_projects: {
         Row: {
-          arrangement_quality: number
           chord_progression_id: string | null
           created_at: string
-          estimated_completion_sessions: number
+          creative_brief: Json | null
           estimated_sessions: number | null
-          genre_familiarity: number
-          genre_id: string | null
+          genres: string[] | null
           id: string
           initial_lyrics: string | null
-          is_locked: boolean
+          is_locked: boolean | null
           locked_until: string | null
           lyrics: string | null
-          lyrics_progress: number
-          lyrics_quality: number
-          melody_quality: number
-          music_progress: number
-          production_potential: number
-          quality_score: number
-          rhythm_quality: number
+          lyrics_progress: number | null
+          mode: string | null
+          music_progress: number | null
+          purpose: string | null
+          quality_score: number | null
+          sessions_completed: number | null
           song_id: string | null
-          song_purpose_id: string | null
-          song_rating: number
-          sessions_completed: number
+          song_rating: number | null
           status: string | null
           theme_id: string | null
           title: string
-          total_sessions: number
+          total_sessions: number | null
           updated_at: string
           user_id: string
-          writing_mode_id: string | null
         }
         Insert: {
-          arrangement_quality?: number
           chord_progression_id?: string | null
           created_at?: string
-          estimated_completion_sessions?: number
+          creative_brief?: Json | null
           estimated_sessions?: number | null
-          genre_familiarity?: number
-          genre_id?: string | null
+          genres?: string[] | null
           id?: string
           initial_lyrics?: string | null
-          is_locked?: boolean
+          is_locked?: boolean | null
           locked_until?: string | null
           lyrics?: string | null
-          lyrics_progress?: number
-          lyrics_quality?: number
-          melody_quality?: number
-          music_progress?: number
-          production_potential?: number
-          quality_score?: number
-          rhythm_quality?: number
+          lyrics_progress?: number | null
+          mode?: string | null
+          music_progress?: number | null
+          purpose?: string | null
+          quality_score?: number | null
+          sessions_completed?: number | null
           song_id?: string | null
-          song_purpose_id?: string | null
-          song_rating?: number
-          sessions_completed?: number
+          song_rating?: number | null
           status?: string | null
           theme_id?: string | null
           title: string
-          total_sessions?: number
+          total_sessions?: number | null
           updated_at?: string
           user_id: string
-          writing_mode_id?: string | null
         }
         Update: {
-          arrangement_quality?: number
           chord_progression_id?: string | null
           created_at?: string
-          estimated_completion_sessions?: number
+          creative_brief?: Json | null
           estimated_sessions?: number | null
-          genre_familiarity?: number
-          genre_id?: string | null
+          genres?: string[] | null
           id?: string
           initial_lyrics?: string | null
-          is_locked?: boolean
+          is_locked?: boolean | null
           locked_until?: string | null
           lyrics?: string | null
-          lyrics_progress?: number
-          lyrics_quality?: number
-          melody_quality?: number
-          music_progress?: number
-          production_potential?: number
-          quality_score?: number
-          rhythm_quality?: number
+          lyrics_progress?: number | null
+          mode?: string | null
+          music_progress?: number | null
+          purpose?: string | null
+          quality_score?: number | null
+          sessions_completed?: number | null
           song_id?: string | null
-          song_purpose_id?: string | null
-          song_rating?: number
-          sessions_completed?: number
+          song_rating?: number | null
           status?: string | null
           theme_id?: string | null
           title?: string
-          total_sessions?: number
+          total_sessions?: number | null
           updated_at?: string
           user_id?: string
-          writing_mode_id?: string | null
         }
         Relationships: [
           {
@@ -1926,13 +1477,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "songwriting_projects_theme_id_fkey"
-            columns: ["theme_id"]
-            isOneToOne: false
-            referencedRelation: "song_themes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "songwriting_projects_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
@@ -1940,74 +1484,12 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "songwriting_projects_genre_id_fkey"
-            columns: ["genre_id"]
+            foreignKeyName: "songwriting_projects_theme_id_fkey"
+            columns: ["theme_id"]
             isOneToOne: false
-            referencedRelation: "song_genre_catalog"
+            referencedRelation: "song_themes"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "songwriting_projects_song_purpose_id_fkey"
-            columns: ["song_purpose_id"]
-            isOneToOne: false
-            referencedRelation: "song_purposes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songwriting_projects_writing_mode_id_fkey"
-            columns: ["writing_mode_id"]
-            isOneToOne: false
-            referencedRelation: "song_writing_modes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      songwriting_project_collaborators: {
-        Row: {
-          contribution_scope: string | null
-          created_at: string
-          id: string
-          profile_id: string
-          project_id: string
-          role: string | null
-          royalty_split: number
-          updated_at: string
-        }
-        Insert: {
-          contribution_scope?: string | null
-          created_at?: string
-          id?: string
-          profile_id: string
-          project_id: string
-          role?: string | null
-          royalty_split?: number
-          updated_at?: string
-        }
-        Update: {
-          contribution_scope?: string | null
-          created_at?: string
-          id?: string
-          profile_id?: string
-          project_id?: string
-          role?: string | null
-          royalty_split?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "songwriting_project_collaborators_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songwriting_project_collaborators_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "songwriting_projects"
-            referencedColumns: ["id"]
-          }
         ]
       }
       songwriting_sessions: {
@@ -2015,46 +1497,46 @@ export type Database = {
           completed_at: string | null
           created_at: string
           id: string
-          lyrics_progress_gained: number
-          music_progress_gained: number
+          locked_until: string | null
+          lyrics_progress_gained: number | null
+          music_progress_gained: number | null
           notes: string | null
           project_id: string
-          locked_until: string | null
           session_end: string | null
           session_start: string
           started_at: string
           user_id: string
-          xp_earned: number
+          xp_earned: number | null
         }
         Insert: {
           completed_at?: string | null
           created_at?: string
           id?: string
-          lyrics_progress_gained?: number
-          music_progress_gained?: number
+          locked_until?: string | null
+          lyrics_progress_gained?: number | null
+          music_progress_gained?: number | null
           notes?: string | null
           project_id: string
-          locked_until?: string | null
           session_end?: string | null
           session_start?: string
           started_at?: string
           user_id: string
-          xp_earned?: number
+          xp_earned?: number | null
         }
         Update: {
           completed_at?: string | null
           created_at?: string
           id?: string
-          lyrics_progress_gained?: number
-          music_progress_gained?: number
+          locked_until?: string | null
+          lyrics_progress_gained?: number | null
+          music_progress_gained?: number | null
           notes?: string | null
           project_id?: string
-          locked_until?: string | null
           session_end?: string | null
           session_start?: string
           started_at?: string
           user_id?: string
-          xp_earned?: number
+          xp_earned?: number | null
         }
         Relationships: [
           {
@@ -2064,64 +1546,6 @@ export type Database = {
             referencedRelation: "songwriting_projects"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      songwriting_session_contributors: {
-        Row: {
-          created_at: string
-          id: string
-          minutes_participated: number
-          profile_id: string
-          project_id: string
-          role: string | null
-          royalty_split: number
-          session_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          minutes_participated?: number
-          profile_id: string
-          project_id: string
-          role?: string | null
-          royalty_split?: number
-          session_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          minutes_participated?: number
-          profile_id?: string
-          project_id?: string
-          role?: string | null
-          royalty_split?: number
-          session_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "songwriting_session_contributors_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songwriting_session_contributors_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "songwriting_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "songwriting_session_contributors_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "songwriting_sessions"
-            referencedColumns: ["id"]
-          }
         ]
       }
       streaming_platforms: {
@@ -2329,24 +1753,11 @@ export type Database = {
         Args: {
           p_attr_creative_insight: number
           p_attr_musical_ability: number
-          p_attr_rhythm_sense: number
-          p_current_arrangement_quality: number
           p_current_lyrics: number
-          p_current_lyrics_quality: number
-          p_current_melody_quality: number
           p_current_music: number
-          p_current_production_potential: number
-          p_current_rhythm_quality: number
-          p_current_song_rating: number
-          p_genre_familiarity: number
-          p_health: number
-          p_inspiration: number
-          p_mood_state: number
           p_skill_composition: number
           p_skill_creativity: number
-          p_skill_instrumental: number
           p_skill_songwriting: number
-          p_skill_vocals: number
         }
         Returns: Json
       }

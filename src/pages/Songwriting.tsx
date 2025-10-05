@@ -595,7 +595,7 @@ const Songwriting = () => {
           songFilterStrategyRef.current = filterIndex;
           songOrderIndexRef.current = orderIndex;
 
-          const resolvedSongs = Array.isArray(data) ? (data as Song[]) : [];
+          const resolvedSongs = Array.isArray(data) ? (data as unknown as Song[]) : [];
           setSongs(resolvedSongs);
           return;
         }
