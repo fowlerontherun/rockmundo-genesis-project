@@ -61,8 +61,6 @@ const DEFAULT_SKILL_SPEND = 25;
 
 const ATTRIBUTE_COLUMN_KEY_MAP: Record<string, string> = {
   creativity: "creative_insight",
-  business: "business_acumen",
-  marketing: "marketing_savvy",
   technical: "technical_mastery",
   charisma: "charisma",
   looks: "looks",
@@ -73,8 +71,6 @@ const ATTRIBUTE_COLUMN_KEY_MAP: Record<string, string> = {
   stage_presence: "stage_presence",
   crowd_engagement: "crowd_engagement",
   social_reach: "social_reach",
-  business_acumen: "business_acumen",
-  marketing_savvy: "marketing_savvy",
   creative_insight: "creative_insight",
   technical_mastery: "technical_mastery",
   vocal_talent: "vocal_talent",

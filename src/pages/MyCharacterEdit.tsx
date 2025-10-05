@@ -19,8 +19,6 @@ type AttributeKey = keyof PlayerAttributes;
 
 const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   creativity: "Creativity",
-  business: "Business",
-  marketing: "Marketing",
   technical: "Technical",
   charisma: "Charisma",
   looks: "Looks",
@@ -30,8 +28,6 @@ const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   stage_presence: "Stage Presence",
   crowd_engagement: "Crowd Engagement",
   social_reach: "Social Reach",
-  business_acumen: "Business Acumen",
-  marketing_savvy: "Marketing Savvy",
 };
 
 const ATTRIBUTE_KEYS = Object.keys(ATTRIBUTE_LABELS) as AttributeKey[];

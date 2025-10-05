@@ -123,8 +123,6 @@ export interface PlayerSkills {
   performance: number;
   creativity: number;
   technical: number;
-  business: number;
-  marketing: number;
   composition: number;
   created_at: string;
   updated_at: string;

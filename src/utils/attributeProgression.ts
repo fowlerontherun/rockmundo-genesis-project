@@ -4,9 +4,7 @@ export type AttributeSnapshot = Tables<'player_attributes'>;
 
 export type AttributeKey = keyof Pick<
   AttributeSnapshot,
-  | 'business_acumen'
   | 'creative_insight'
-  | 'marketing_savvy'
   | 'musical_ability'
   | 'rhythm_sense'
   | 'stage_presence'
@@ -24,8 +22,6 @@ export const ATTRIBUTE_KEYS: AttributeKey[] = [
   'stage_presence',
   'creative_insight',
   'technical_mastery',
-  'business_acumen',
-  'marketing_savvy',
 ];
 
 export const ATTRIBUTE_METADATA: Record<AttributeKey, {
@@ -63,16 +59,6 @@ export const ATTRIBUTE_METADATA: Record<AttributeKey, {
     description: 'Studio expertise, production prowess, and sound engineering instincts.',
     relatedSkills: ['technical', 'songwriting'],
   },
-  business_acumen: {
-    label: 'Business Acumen',
-    description: 'Negotiation savvy, strategic planning, and deal-making confidence.',
-    relatedSkills: ['business'],
-  },
-  marketing_savvy: {
-    label: 'Marketing Savvy',
-    description: 'Brand vision, campaign insight, and community-building instincts.',
-    relatedSkills: ['marketing'],
-  },
 };
 
 export const SKILL_ATTRIBUTE_MAP: Record<string, AttributeKey> = {
@@ -85,8 +71,6 @@ export const SKILL_ATTRIBUTE_MAP: Record<string, AttributeKey> = {
   composition: 'creative_insight',
   creativity: 'creative_insight',
   technical: 'technical_mastery',
-  business: 'business_acumen',
-  marketing: 'marketing_savvy',
 };
 
 export const getAttributeTrainingCost = (currentValue: number) =>

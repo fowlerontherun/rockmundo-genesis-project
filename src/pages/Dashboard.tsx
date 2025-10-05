@@ -133,9 +133,7 @@ const Dashboard = () => {
     "physical_endurance",
     "stage_presence",
     "crowd_engagement",
-    "social_reach",
-    "business_acumen",
-    "marketing_savvy"
+    "social_reach"
   ];
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);

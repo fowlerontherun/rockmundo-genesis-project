@@ -829,14 +829,12 @@ export type Database = {
         Row: {
           attribute_points: number | null
           attribute_points_spent: number | null
-          business_acumen: number | null
           charisma: number | null
           created_at: string | null
           creative_insight: number | null
           crowd_engagement: number | null
           id: string
           looks: number | null
-          marketing_savvy: number | null
           mental_focus: number | null
           musical_ability: number | null
           musicality: number | null
@@ -853,14 +851,12 @@ export type Database = {
         Insert: {
           attribute_points?: number | null
           attribute_points_spent?: number | null
-          business_acumen?: number | null
           charisma?: number | null
           created_at?: string | null
           creative_insight?: number | null
           crowd_engagement?: number | null
           id?: string
           looks?: number | null
-          marketing_savvy?: number | null
           mental_focus?: number | null
           musical_ability?: number | null
           musicality?: number | null
@@ -877,14 +873,12 @@ export type Database = {
         Update: {
           attribute_points?: number | null
           attribute_points_spent?: number | null
-          business_acumen?: number | null
           charisma?: number | null
           created_at?: string | null
           creative_insight?: number | null
           crowd_engagement?: number | null
           id?: string
           looks?: number | null
-          marketing_savvy?: number | null
           mental_focus?: number | null
           musical_ability?: number | null
           musicality?: number | null
@@ -959,14 +953,12 @@ export type Database = {
       player_skills: {
         Row: {
           bass: number
-          business: number
           composition: number
           created_at: string
           creativity: number
           drums: number
           guitar: number
           id: string
-          marketing: number
           performance: number
           songwriting: number
           technical: number
@@ -976,14 +968,12 @@ export type Database = {
         }
         Insert: {
           bass?: number
-          business?: number
           composition?: number
           created_at?: string
           creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
           songwriting?: number
           technical?: number
@@ -993,14 +983,12 @@ export type Database = {
         }
         Update: {
           bass?: number
-          business?: number
           composition?: number
           created_at?: string
           creativity?: number
           drums?: number
           guitar?: number
           id?: string
-          marketing?: number
           performance?: number
           songwriting?: number
           technical?: number

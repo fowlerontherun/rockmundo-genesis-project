@@ -26,8 +26,6 @@ export type PlayerProfile = Database["public"]["Tables"]["profiles"]["Row"];
 export type PlayerSkills = Partial<Record<string, number>>;
 type AttributeCategory =
   | "creativity"
-  | "business"
-  | "marketing"
   | "technical"
   | "charisma"
   | "looks"
@@ -36,9 +34,7 @@ type AttributeCategory =
   | "physical_endurance"
   | "stage_presence"
   | "crowd_engagement"
-  | "social_reach"
-  | "business_acumen"
-  | "marketing_savvy";
+  | "social_reach";
 
 export type PlayerAttributes = Record<AttributeCategory, number>;
 export type PlayerXpWallet = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
@@ -93,12 +89,10 @@ interface StartActivityInput {
 }
 
 const ATTRIBUTE_COLUMNS: Array<keyof PlayerAttributesInsert> = [
-  "business_acumen",
   "charisma",
   "creative_insight",
   "crowd_engagement",
   "looks",
-  "marketing_savvy",
   "mental_focus",
   "musical_ability",
   "musicality",
@@ -114,8 +108,6 @@ const DEFAULT_ATTRIBUTE_SCORE = 5;
 
 const ATTRIBUTE_COLUMN_MAP: Record<AttributeCategory, keyof PlayerAttributesRow> = {
   creativity: "creative_insight",
-  business: "business_acumen",
-  marketing: "marketing_savvy",
   technical: "technical_mastery",
   charisma: "charisma",
   looks: "looks",
@@ -125,8 +117,6 @@ const ATTRIBUTE_COLUMN_MAP: Record<AttributeCategory, keyof PlayerAttributesRow>
   stage_presence: "stage_presence",
   crowd_engagement: "crowd_engagement",
   social_reach: "social_reach",
-  business_acumen: "business_acumen",
-  marketing_savvy: "marketing_savvy",
 };
 
 const XP_LEDGER_FETCH_LIMIT = 20;
@@ -222,8 +212,6 @@ const LEGACY_SKILL_KEYS = [
   "performance",
   "creativity",
   "technical",
-  "business",
-  "marketing",
   "composition",
 ] as const;
 
