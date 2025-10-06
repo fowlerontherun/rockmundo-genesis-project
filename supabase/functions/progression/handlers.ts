@@ -92,13 +92,11 @@ export async function handleSpendAttributeXp(
   // Update attribute
   const { error: attrError } = await client
     .from("player_attributes")
-    .upsert({
-      ...attrs,
-      profile_id: profileId,
-      user_id: userId,
+    .update({
       [attributeKey]: newValue,
       attribute_points_spent: (attrs?.attribute_points_spent ?? 0) + 1,
-    }, { onConflict: "profile_id" });
+    })
+    .eq("profile_id", profileId);
 
   if (attrError) {
     throw new Error(attrError.message || "Failed to update attribute");
@@ -107,13 +105,12 @@ export async function handleSpendAttributeXp(
   // Deduct from wallet
   const { error: walletError } = await client
     .from("player_xp_wallet")
-    .upsert({
-      profile_id: profileId,
+    .update({
       xp_balance: currentBalance - xpAmount,
       xp_spent: (profileState.wallet?.xp_spent ?? 0) + xpAmount,
-      lifetime_xp: profileState.wallet?.lifetime_xp ?? 0,
       last_recalculated: new Date().toISOString(),
-    }, { onConflict: "profile_id" });
+    })
+    .eq("profile_id", profileId);
 
   if (walletError) {
     throw new Error(walletError.message || "Failed to deduct XP");
@@ -199,13 +196,12 @@ export async function handleSpendSkillXp(
   // Deduct from wallet
   const { error: walletError } = await client
     .from("player_xp_wallet")
-    .upsert({
-      profile_id: profileId,
+    .update({
       xp_balance: currentBalance - xpAmount,
       xp_spent: (profileState.wallet?.xp_spent ?? 0) + xpAmount,
-      lifetime_xp: profileState.wallet?.lifetime_xp ?? 0,
       last_recalculated: new Date().toISOString(),
-    }, { onConflict: "profile_id" });
+    })
+    .eq("profile_id", profileId);
 
   if (walletError) {
     throw new Error(walletError.message || "Failed to deduct XP");
