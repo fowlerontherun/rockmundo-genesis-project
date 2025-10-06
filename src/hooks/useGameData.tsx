@@ -31,10 +31,15 @@ type AttributeCategory =
   | "looks"
   | "mental_focus"
   | "musicality"
+  | "musical_ability"
   | "physical_endurance"
   | "stage_presence"
   | "crowd_engagement"
-  | "social_reach";
+  | "social_reach"
+  | "creative_insight"
+  | "technical_mastery"
+  | "vocal_talent"
+  | "rhythm_sense";
 
 export type PlayerAttributes = Record<AttributeCategory, number>;
 export type PlayerXpWallet = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
@@ -113,10 +118,15 @@ const ATTRIBUTE_COLUMN_MAP: Record<AttributeCategory, keyof PlayerAttributesRow>
   looks: "looks",
   mental_focus: "mental_focus",
   musicality: "musicality",
+  musical_ability: "musical_ability",
   physical_endurance: "physical_endurance",
   stage_presence: "stage_presence",
   crowd_engagement: "crowd_engagement",
   social_reach: "social_reach",
+  creative_insight: "creative_insight",
+  technical_mastery: "technical_mastery",
+  vocal_talent: "vocal_talent",
+  rhythm_sense: "rhythm_sense",
 };
 
 const XP_LEDGER_FETCH_LIMIT = 20;

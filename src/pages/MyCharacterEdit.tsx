@@ -24,10 +24,15 @@ const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   looks: "Looks",
   mental_focus: "Mental Focus",
   musicality: "Musicality",
+  musical_ability: "Musical Ability",
   physical_endurance: "Physical Endurance",
   stage_presence: "Stage Presence",
   crowd_engagement: "Crowd Engagement",
   social_reach: "Social Reach",
+  creative_insight: "Creative Insight",
+  technical_mastery: "Technical Mastery",
+  vocal_talent: "Vocal Talent",
+  rhythm_sense: "Rhythm Sense",
 };
 
 const ATTRIBUTE_KEYS = Object.keys(ATTRIBUTE_LABELS) as AttributeKey[];
