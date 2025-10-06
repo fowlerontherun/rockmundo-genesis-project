@@ -1778,7 +1778,8 @@ const useProvideGameData = (): UseGameDataReturn => {
 
       const basePayload: Record<string, unknown> = {
         profile_id: profile.id,
-        status,
+        activity_type: status,
+        status: "active",
         duration_minutes: normalizedDuration,
         started_at: new Date().toISOString(),
       };
