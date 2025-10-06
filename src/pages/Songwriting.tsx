@@ -545,7 +545,7 @@ const Songwriting = () => {
           SONG_SELECT_VARIANTS[selectIndex] ?? SONG_SELECT_VARIANTS[SONG_SELECT_VARIANTS.length - 1];
         const selectClause = selectColumns.join(", ");
 
-        let query = supabase.from("songs").select(selectClause);
+        let query: any = supabase.from("songs").select(selectClause);
         let appliedFilterIndex = filterIndex;
         let filterApplied = false;
 

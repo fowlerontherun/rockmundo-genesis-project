@@ -739,6 +739,7 @@ export type Database = {
           is_private: boolean
           max_participants: number
           name: string
+          participant_ids: string[] | null
           skill_requirement: number
           status: string
           tempo: number
@@ -755,6 +756,7 @@ export type Database = {
           is_private?: boolean
           max_participants?: number
           name: string
+          participant_ids?: string[] | null
           skill_requirement?: number
           status?: string
           tempo?: number
@@ -771,6 +773,7 @@ export type Database = {
           is_private?: boolean
           max_participants?: number
           name?: string
+          participant_ids?: string[] | null
           skill_requirement?: number
           status?: string
           tempo?: number
@@ -1092,6 +1095,8 @@ export type Database = {
           activity_type: string
           completed_at: string | null
           created_at: string | null
+          duration_minutes: number | null
+          ends_at: string | null
           id: string
           metadata: Json | null
           profile_id: string
@@ -1103,6 +1108,8 @@ export type Database = {
           activity_type: string
           completed_at?: string | null
           created_at?: string | null
+          duration_minutes?: number | null
+          ends_at?: string | null
           id?: string
           metadata?: Json | null
           profile_id: string
@@ -1114,6 +1121,8 @@ export type Database = {
           activity_type?: string
           completed_at?: string | null
           created_at?: string | null
+          duration_minutes?: number | null
+          ends_at?: string | null
           id?: string
           metadata?: Json | null
           profile_id?: string

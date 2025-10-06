@@ -31,6 +31,7 @@ type JamSessionWithHost = JamSessionRow & {
     display_name: string | null;
     avatar_url: string | null;
   } | null;
+  participant_ids?: string[];
 };
 
 interface FormState {

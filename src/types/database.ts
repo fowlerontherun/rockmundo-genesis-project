@@ -200,3 +200,17 @@ export interface ProfileDailyXpGrant {
   metadata: Record<string, unknown>;
   claimed_at: string;
 }
+
+export interface ProfileActivityStatus {
+  id: string;
+  profile_id: string;
+  activity_type: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  duration_minutes: number | null;
+  ends_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
