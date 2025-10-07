@@ -2250,6 +2250,7 @@ export type Database = {
       songs: {
         Row: {
           ai_generated_lyrics: boolean | null
+          arrangement_strength: number | null
           band_id: string | null
           catalog_status: string | null
           chart_position: number | null
@@ -2259,13 +2260,17 @@ export type Database = {
           id: string
           lyrics: string | null
           lyrics_progress: number | null
+          lyrics_strength: number | null
           market_listing_id: string | null
+          melody_strength: number | null
           music_progress: number | null
           original_writer_id: string | null
           ownership_type: string | null
+          production_potential: number | null
           quality_score: number
           release_date: string | null
           revenue: number
+          rhythm_strength: number | null
           song_rating: number | null
           songwriting_project_id: string | null
           status: string
@@ -2278,6 +2283,7 @@ export type Database = {
         }
         Insert: {
           ai_generated_lyrics?: boolean | null
+          arrangement_strength?: number | null
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
@@ -2287,13 +2293,17 @@ export type Database = {
           id?: string
           lyrics?: string | null
           lyrics_progress?: number | null
+          lyrics_strength?: number | null
           market_listing_id?: string | null
+          melody_strength?: number | null
           music_progress?: number | null
           original_writer_id?: string | null
           ownership_type?: string | null
+          production_potential?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
+          rhythm_strength?: number | null
           song_rating?: number | null
           songwriting_project_id?: string | null
           status?: string
@@ -2306,6 +2316,7 @@ export type Database = {
         }
         Update: {
           ai_generated_lyrics?: boolean | null
+          arrangement_strength?: number | null
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
@@ -2315,13 +2326,17 @@ export type Database = {
           id?: string
           lyrics?: string | null
           lyrics_progress?: number | null
+          lyrics_strength?: number | null
           market_listing_id?: string | null
+          melody_strength?: number | null
           music_progress?: number | null
           original_writer_id?: string | null
           ownership_type?: string | null
+          production_potential?: number | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
+          rhythm_strength?: number | null
           song_rating?: number | null
           songwriting_project_id?: string | null
           status?: string

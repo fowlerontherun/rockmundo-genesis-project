@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Music,
   Plus,
@@ -54,6 +56,7 @@ import {
   Lightbulb,
   BadgeCheck,
   LockOpen,
+  Lock,
 } from "lucide-react";
 import logger from "@/lib/logger";
 
@@ -476,7 +479,7 @@ const getProgressPercent = (value?: number | null) => {
 };
 const Songwriting = () => {
   const { user } = useAuth();
-  const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills } = useGameData();
+  const { profile, activityStatus, startActivity, clearActivityStatus, refreshActivityStatus, skills, attributes: rawAttributes } = useGameData();
   const {
     themes,
     chordProgressions,
@@ -492,6 +495,16 @@ const Songwriting = () => {
     completeSession,
     convertToSong,
   } = useSongwritingData(user?.id);
+
+  // Map attributes to required format
+  const attributes = useMemo(() => {
+    if (!rawAttributes) return null;
+    return {
+      creative_insight: rawAttributes.creative_insight || 10,
+      musical_ability: rawAttributes.musical_ability || 10,
+      technical_mastery: rawAttributes.technical_mastery || 10
+    };
+  }, [rawAttributes]);
 
   const [songs, setSongs] = useState<Song[]>([]);
   const songsTableAvailableRef = useRef(true);
@@ -516,6 +529,24 @@ const Songwriting = () => {
     Record<string, { coWriters: string[]; producers: string[]; musicians: string[] }>
   >({});
   const [rehearsalUnlocks, setRehearsalUnlocks] = useState<Record<string, boolean>>({});
+  
+  // Song completion dialog state
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [completedProject, setCompletedProject] = useState<SongwritingProject | null>(null);
+  const [completionQuality, setCompletionQuality] = useState<any>(null);
+  const [completionXp, setCompletionXp] = useState(0);
+  
+  // Check if player can start songwriting
+  const canWrite = useMemo(() => {
+    return canStartSongwriting(skills || {});
+  }, [skills]);
+  
+  // Filter genres by unlocked skills
+  const availableGenres = useMemo(() => {
+    return MUSIC_GENRES.filter(genre => 
+      canWriteGenre(genre, skills || {})
+    );
+  }, [skills]);
 
   const fetchSongs = useCallback(async () => {
     const userId = user?.id ?? null;
@@ -1240,6 +1271,12 @@ const Songwriting = () => {
         sessionId: activeSession.id,
         notes: completionNotes,
         effortHours: activeSession.effort_hours ?? undefined,
+        skillLevels: skills || {},
+        attributes: attributes || {
+          creative_insight: 10,
+          musical_ability: 10,
+          technical_mastery: 10
+        }
       });
 
       setCompletionProject(null);
@@ -1258,18 +1295,18 @@ const Songwriting = () => {
 
   const handleConvertProject = async (project: SongwritingProject, catalogStatus: string = 'private', bandId?: string) => {
     try {
-      // Calculate final quality for the song
+      // Calculate final quality using actual player data
       const quality = calculateSongQuality({
         genre: project.genres?.[0] || 'Rock',
-        skillLevels: {}, // TODO: Get from player data
-        attributes: {
+        skillLevels: skills || {},
+        attributes: attributes || {
           creative_insight: 10,
           musical_ability: 10,
           technical_mastery: 10
         },
-        sessionHours: 8,
-        coWriters: 0,
-        aiLyrics: project.lyrics?.includes('[AI Generated]') || false
+        sessionHours: (project.total_sessions || 0) * 6,
+        coWriters: project.creative_brief?.co_writers?.length || 0,
+        aiLyrics: project.lyrics?.includes('[AI]') || false
       });
 
       await convertToSong.mutateAsync({
@@ -1299,6 +1336,39 @@ const Songwriting = () => {
       setHistoryProject(null);
     }
   };
+  // Check if player can access songwriting
+  if (!canWrite) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Songwriting Studio - Locked
+            </CardTitle>
+            <CardDescription>
+              You need to train your basic composing skills to unlock songwriting.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Required: <strong>Songwriting Basic Composing</strong> level 10 or higher
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Head to the Skills page to train your songwriting abilities and unlock this feature.
+            </p>
+            <Button asChild>
+              <Link to="/skills">
+                <Music className="mr-2 h-4 w-4" />
+                Train Skills
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   if (isLoadingProjects && projectsList.length === 0) {
     return (
       <div className="container mx-auto p-6">
@@ -1673,6 +1743,29 @@ const Songwriting = () => {
                   className="min-h-32"
                 />
                 <p className="text-right text-xs text-muted-foreground">{formatWordCount(formState.initial_lyrics)}</p>
+                
+                {/* AI Lyrics Generator */}
+                <div className="pt-2">
+                  <AILyricsGenerator
+                    title={selectedProject?.title || formState.title}
+                    theme={selectedProject?.song_themes?.name || ''}
+                    genre={formState.genre}
+                    chordProgression={selectedProject?.chord_progressions?.progression || ''}
+                    onLyricsGenerated={(lyrics) => {
+                      setFormState(prev => ({
+                        ...prev,
+                        initial_lyrics: prev.initial_lyrics ? `${prev.initial_lyrics}\n\n[AI Generated]\n${lyrics}` : `[AI Generated]\n${lyrics}`
+                      }));
+                      if (selectedProject) {
+                        updateProject.mutate({
+                          id: selectedProject.id,
+                          initial_lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`,
+                          lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`
+                        });
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2">
@@ -2276,6 +2369,47 @@ const Songwriting = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Song Completion Dialog */}
+      <SongCompletionDialog
+        open={showCompletionDialog}
+        onOpenChange={(open) => {
+          setShowCompletionDialog(open);
+          if (!open) {
+            setCompletedProject(null);
+            setCompletionQuality(null);
+            setCompletionXp(0);
+          }
+        }}
+        quality={completionQuality}
+        xpEarned={completionXp}
+        isInBand={false}
+        onKeepPrivate={() => {
+          if (completedProject) {
+            handleConvertProject(completedProject, 'private');
+            setShowCompletionDialog(false);
+          }
+        }}
+        onAddToBand={() => {
+          if (completedProject) {
+            toast.info("Band catalog feature coming soon!");
+            setShowCompletionDialog(false);
+          }
+        }}
+        onListForSale={() => {
+          if (completedProject) {
+            handleConvertProject(completedProject, 'for_sale');
+            setShowCompletionDialog(false);
+            toast.success("Song listed on marketplace!");
+          }
+        }}
+        onGift={() => {
+          if (completedProject) {
+            toast.info("Gifting feature coming soon!");
+            setShowCompletionDialog(false);
+          }
+        }}
+      />
 
       <Dialog open={isHistoryOpen} onOpenChange={handleHistoryDialogChange}>
         <DialogContent className="max-w-2xl">
