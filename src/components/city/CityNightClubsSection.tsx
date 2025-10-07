@@ -1,8 +1,10 @@
-import { Disc3, GlassWater, Mic2, Sparkles, Users } from "lucide-react";
 
+import { useEffect, useState } from "react";
+import { Disc3, GlassWater, ListMusic, Mic2, Sparkles, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CityNightClub } from "@/utils/worldEnvironment";
 
 interface CityNightClubsSectionProps {
@@ -53,6 +55,50 @@ const formatSetLength = (value: number | null | undefined): string | null => {
 const getQualityLabel = (qualityLevel: number) => QUALITY_LABELS[qualityLevel] ?? `Tier ${qualityLevel}`;
 
 export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps) => {
+  const [selectedSongByClub, setSelectedSongByClub] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setSelectedSongByClub((previous) => {
+      const next: Record<string, string> = {};
+      let changed = false;
+
+      nightClubs.forEach((club) => {
+        if (!club.djSlot.availableSongs.length) {
+          if (previous[club.id]) {
+            changed = true;
+          }
+          return;
+        }
+
+        const existingSelection = previous[club.id];
+        const hasExisting = existingSelection
+          ? club.djSlot.availableSongs.some((song) => song.id === existingSelection)
+          : false;
+        const fallbackSelection = club.djSlot.availableSongs[0]?.id ?? "";
+        const nextSelection = hasExisting ? existingSelection : fallbackSelection;
+
+        if (nextSelection) {
+          next[club.id] = nextSelection;
+        }
+
+        if (nextSelection !== existingSelection) {
+          changed = true;
+        }
+      });
+
+      const previousKeys = Object.keys(previous);
+      const nextKeys = Object.keys(next);
+      if (!changed && previousKeys.length === nextKeys.length) {
+        const mismatch = previousKeys.some((key) => previous[key] !== next[key]);
+        if (!mismatch) {
+          return previous;
+        }
+      }
+
+      return next;
+    });
+  }, [nightClubs]);
+
   if (!nightClubs.length) {
     return (
       <Card>
@@ -87,6 +133,16 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
           const djPayoutLabel = formatCurrencyValue(club.djSlot.payout ?? null);
           const setLengthLabel = formatSetLength(club.djSlot.setLengthMinutes ?? null);
           const liveInteractionsLabel = club.liveInteractionsEnabled ? "Live interactions enabled" : "Live interactions paused";
+          const availableSongs = club.djSlot.availableSongs ?? [];
+          const selectedSongId = selectedSongByClub[club.id];
+          const selectedSong = selectedSongId
+            ? availableSongs.find((song) => song.id === selectedSongId)
+            : undefined;
+          const hasSongLibrary = availableSongs.length > 0;
+          const queueButtonLabel = selectedSong
+            ? `Queue with ${selectedSong.title}`
+            : "Queue for DJ Slot";
+
 
           return (
             <div
