@@ -2266,6 +2266,7 @@ export type Database = {
           quality_score: number
           release_date: string | null
           revenue: number
+          song_rating: number | null
           songwriting_project_id: string | null
           status: string
           streams: number
@@ -2293,6 +2294,7 @@ export type Database = {
           quality_score?: number
           release_date?: string | null
           revenue?: number
+          song_rating?: number | null
           songwriting_project_id?: string | null
           status?: string
           streams?: number
@@ -2320,6 +2322,7 @@ export type Database = {
           quality_score?: number
           release_date?: string | null
           revenue?: number
+          song_rating?: number | null
           songwriting_project_id?: string | null
           status?: string
           streams?: number

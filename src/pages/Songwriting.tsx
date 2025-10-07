@@ -794,35 +794,47 @@ const Songwriting = () => {
   }, [songs]);
 
   useEffect(() => {
+    // Only update if projects actually changed (by checking length and IDs)
+    const projectIds = projectsList.map(p => p.id).join(',');
+    
     setEffortSelections((previous) => {
       const nextSelections = { ...previous };
+      let hasChanges = false;
+      
       projectsList.forEach((project) => {
         if (!project.id || nextSelections[project.id]) {
           return;
         }
+        hasChanges = true;
         const defaultEffort = SESSION_EFFORT_OPTIONS.find(
           (option) => option.id === (project.creative_brief?.effort_level as SessionEffortOption["id"]),
         );
         nextSelections[project.id] = defaultEffort?.id ?? DEFAULT_EFFORT_OPTION.id;
       });
-      return nextSelections;
+      
+      return hasChanges ? nextSelections : previous;
     });
 
     setSessionParticipants((previous) => {
       const nextParticipants = { ...previous };
+      let hasChanges = false;
+      
       projectsList.forEach((project) => {
         if (!project.id || nextParticipants[project.id]) {
           return;
         }
+        hasChanges = true;
         nextParticipants[project.id] = {
           coWriters: project.creative_brief?.co_writers?.map((writer) => writer.id) ?? [],
           producers: project.creative_brief?.producers ?? [],
           musicians: project.creative_brief?.session_musicians ?? [],
         };
       });
-      return nextParticipants;
+      
+      return hasChanges ? nextParticipants : previous;
     });
-  }, [projectsList]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects]); // Use projects from query, not computed projectsList
 
   useEffect(() => {
     setRehearsalUnlocks((previous) => {
