@@ -140,6 +140,25 @@ export const SkillTree: React.FC = () => {
           skill.slug.includes('strings') ||
           skill.slug.includes('woodwinds') ||
           skill.slug.includes('electronic_instruments') ||
+          skill.slug.includes('string_instruments') ||
+          skill.slug.includes('advanced_strings') ||
+          skill.slug.includes('modern_bass') ||
+          skill.slug.includes('keyboard_piano') ||
+          skill.slug.includes('synths_keys') ||
+          skill.slug.includes('percussion_drums') ||
+          skill.slug.includes('electronic_percussion') ||
+          skill.slug.includes('wind_instruments') ||
+          skill.slug.includes('brass_instruments') ||
+          skill.slug.includes('world_folk') ||
+          skill.slug.includes('dj_live') ||
+          skill.slug.includes('electronic_sampling') ||
+          skill.slug.includes('vocal_performance') ||
+          skill.slug.includes('vocal_fx') ||
+          skill.slug.includes('hybrid_experimental') ||
+          skill.slug.includes('orchestral_cinematic') ||
+          skill.slug.includes('digital_music_tools') ||
+          skill.slug.includes('sound_engineering') ||
+          skill.slug.includes('songwriting_arrangement') ||
           skill.slug.includes('dj') ||
           skill.slug.includes('midi') ||
           skill.slug.includes('piano') ||
