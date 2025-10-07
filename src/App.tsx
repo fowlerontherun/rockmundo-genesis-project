@@ -47,6 +47,8 @@ const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
+const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
+const UniversityDetail = lazyWithRetry(() => import("./pages/UniversityDetail"));
 const AdminCities = lazyWithRetry(() => import("./pages/admin/Cities"));
 const AdminSkillBooks = lazyWithRetry(() => import("./pages/admin/SkillBooks"));
 const AdminStudios = lazyWithRetry(() => import("./pages/admin/Studios"));
@@ -128,6 +130,8 @@ function App() {
                     <Route path="admin" element={<Admin />} />
                     <Route path="admin/experience-rewards" element={<AdminExperienceRewards />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
+                    <Route path="admin/courses" element={<AdminCourses />} />
+                    <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/cities" element={<AdminCities />} />
                     <Route path="admin/skill-books" element={<AdminSkillBooks />} />
                     <Route path="admin/studios" element={<AdminStudios />} />

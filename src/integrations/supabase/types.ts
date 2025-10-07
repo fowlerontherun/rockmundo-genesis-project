@@ -1052,6 +1052,114 @@ export type Database = {
           },
         ]
       }
+      player_university_attendance: {
+        Row: {
+          attendance_date: string
+          created_at: string | null
+          enrollment_id: string
+          id: string
+          was_locked_out: boolean | null
+          xp_earned: number
+        }
+        Insert: {
+          attendance_date: string
+          created_at?: string | null
+          enrollment_id: string
+          id?: string
+          was_locked_out?: boolean | null
+          xp_earned: number
+        }
+        Update: {
+          attendance_date?: string
+          created_at?: string | null
+          enrollment_id?: string
+          id?: string
+          was_locked_out?: boolean | null
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_university_attendance_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "player_university_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_university_enrollments: {
+        Row: {
+          actual_completion_date: string | null
+          course_id: string
+          created_at: string | null
+          days_attended: number | null
+          enrolled_at: string | null
+          id: string
+          payment_amount: number
+          profile_id: string
+          scheduled_end_date: string
+          status: Database["public"]["Enums"]["enrollment_status"] | null
+          total_xp_earned: number | null
+          university_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          course_id: string
+          created_at?: string | null
+          days_attended?: number | null
+          enrolled_at?: string | null
+          id?: string
+          payment_amount: number
+          profile_id: string
+          scheduled_end_date: string
+          status?: Database["public"]["Enums"]["enrollment_status"] | null
+          total_xp_earned?: number | null
+          university_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_completion_date?: string | null
+          course_id?: string
+          created_at?: string | null
+          days_attended?: number | null
+          enrolled_at?: string | null
+          id?: string
+          payment_amount?: number
+          profile_id?: string
+          scheduled_end_date?: string
+          status?: Database["public"]["Enums"]["enrollment_status"] | null
+          total_xp_earned?: number | null
+          university_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_university_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "university_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_university_enrollments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_university_enrollments_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_xp_wallet: {
         Row: {
           attribute_points_earned: number | null
@@ -1799,6 +1907,101 @@ export type Database = {
           },
         ]
       }
+      universities: {
+        Row: {
+          city: string | null
+          course_cost_modifier: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          prestige: number | null
+          quality_of_learning: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          city?: string | null
+          course_cost_modifier?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          prestige?: number | null
+          quality_of_learning?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string | null
+          course_cost_modifier?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          prestige?: number | null
+          quality_of_learning?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      university_courses: {
+        Row: {
+          base_duration_days: number | null
+          base_price: number
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_enrollments: number | null
+          name: string
+          required_skill_level: number | null
+          skill_slug: string
+          university_id: string
+          updated_at: string | null
+          xp_per_day_max: number | null
+          xp_per_day_min: number | null
+        }
+        Insert: {
+          base_duration_days?: number | null
+          base_price: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_enrollments?: number | null
+          name: string
+          required_skill_level?: number | null
+          skill_slug: string
+          university_id: string
+          updated_at?: string | null
+          xp_per_day_max?: number | null
+          xp_per_day_min?: number | null
+        }
+        Update: {
+          base_duration_days?: number | null
+          base_price?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_enrollments?: number | null
+          name?: string
+          required_skill_level?: number | null
+          skill_slug?: string
+          university_id?: string
+          updated_at?: string | null
+          xp_per_day_max?: number | null
+          xp_per_day_min?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_courses_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1888,6 +2091,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       chat_participant_status: "online" | "offline" | "typing" | "away"
+      enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       show_type_enum: "concert" | "festival" | "private" | "street"
     }
@@ -2019,6 +2223,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       chat_participant_status: ["online", "offline", "typing", "away"],
+      enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],
       friendship_status: ["pending", "accepted", "declined", "blocked"],
       show_type_enum: ["concert", "festival", "private", "street"],
     },

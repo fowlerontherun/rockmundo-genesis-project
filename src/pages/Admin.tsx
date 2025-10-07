@@ -1,4 +1,4 @@
-import { AudioLines, Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users } from "lucide-react";
+import { AudioLines, Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -19,6 +19,13 @@ const adminSections = [
     href: "/admin/universities",
     action: "Manage universities",
     Icon: GraduationCap,
+  },
+  {
+    title: "University Courses",
+    description: "Configure courses, prerequisites, pricing, and XP rewards for each university.",
+    href: "/admin/courses",
+    action: "Manage courses",
+    Icon: BookOpen,
   },
   {
     title: "Cities",
