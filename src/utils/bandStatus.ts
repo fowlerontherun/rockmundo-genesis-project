@@ -10,7 +10,7 @@ export async function getUserActiveBand(userId: string): Promise<any | null> {
   try {
     const { data, error } = await supabase
       .from('band_members')
-      .select('band_id, bands!inner(*)')
+      .select('band_id, bands!band_members_band_id_fkey!inner(*)')
       .eq('user_id', userId)
       .eq('bands.status', 'active')
       .limit(1)
@@ -44,7 +44,7 @@ export async function getUserBands(userId: string) {
         instrument_role,
         vocal_role,
         is_touring_member,
-        bands(*)
+        bands!band_members_band_id_fkey(*)
       `)
       .eq('user_id', userId)
       .order('joined_at', { ascending: false });
