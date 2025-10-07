@@ -8,14 +8,15 @@ export const BandLearningTab = () => {
   const tracks = useEducationBandLearningTracks();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Band Learning Lab</CardTitle>
-        <CardDescription>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold">Band Learning Lab</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
           Align your entire crew with immersive intensives, monthly focus cycles, and actionable feedback loops.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {tracks.map((track) => (
           <Card key={track.title} className="border-dashed">
             <CardHeader className="space-y-2">
@@ -46,7 +47,7 @@ export const BandLearningTab = () => {
             </CardContent>
           </Card>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

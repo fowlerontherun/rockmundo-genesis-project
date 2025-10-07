@@ -21,25 +21,20 @@ const Education = () => {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <header className="space-y-6 text-center md:text-left">
+      <header className="space-y-4 text-center md:text-left">
         <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
           Education Hub
         </div>
-        <div className="space-y-3">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Build your creative intelligence
-          </h1>
-          <p className="mx-auto max-w-3xl text-sm text-muted-foreground md:text-base">
-            Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.
-          </p>
-        </div>
-        <p className="mx-auto max-w-2xl text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground md:text-left">
-          Choose a learning lane below to kickstart your next breakthrough.
+        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          Build your creative intelligence
+        </h1>
+        <p className="max-w-3xl text-muted-foreground">
+          Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.
         </p>
       </header>
 
-      <Tabs defaultValue={defaultValue} className="mt-10 space-y-8">
-        <TabsList className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <Tabs defaultValue={defaultValue} className="mt-8 space-y-6">
+        <TabsList className="grid w-full gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
 
@@ -47,13 +42,10 @@ const Education = () => {
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="flex items-start gap-3 rounded-xl border bg-background/60 px-4 py-3 text-left shadow-sm transition hover:bg-background/80 data-[state=active]:border-primary data-[state=active]:bg-primary/10"
+                className="flex items-center justify-center gap-2 py-2.5"
               >
-                <Icon className="mt-0.5 h-5 w-5 text-primary" aria-hidden="true" />
-                <span className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold">{tab.label}</span>
-                  <span className="text-xs text-muted-foreground">{tab.description}</span>
-                </span>
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                <span className="text-sm font-medium">{tab.label}</span>
               </TabsTrigger>
             );
           })}

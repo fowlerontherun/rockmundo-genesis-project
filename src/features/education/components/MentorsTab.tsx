@@ -8,14 +8,15 @@ export const MentorsTab = () => {
   const programs = useEducationMentorPrograms();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Guided Mentorship</CardTitle>
-        <CardDescription>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold">Guided Mentorship</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
           Partner with mentors who accelerate your growth with actionable feedback and steady accountability.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {programs.map((program) => (
           <Card key={program.title} className="border-dashed">
             <CardHeader className="space-y-2">
@@ -49,7 +50,7 @@ export const MentorsTab = () => {
             </CardContent>
           </Card>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

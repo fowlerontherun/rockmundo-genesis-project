@@ -24,14 +24,15 @@ export const VideosTab = () => {
         : "";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Stream Your Lessons</CardTitle>
-        <CardDescription>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold">Stream Your Lessons</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
           Mix binge-worthy channels with structured playlists so every practice session has purpose.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {isLoading ? (
           <div className="col-span-full flex items-center justify-center py-8 text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -50,25 +51,25 @@ export const VideosTab = () => {
           </div>
         ) : (
           playlists.map((playlist) => (
-            <Card key={playlist.key} className="border-dashed">
-              <CardHeader className="space-y-2">
+            <Card key={playlist.key} className="transition-all hover:border-primary/50 hover:shadow-md">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-lg">{playlist.title}</CardTitle>
-                <CardDescription>{playlist.description}</CardDescription>
+                <CardDescription className="leading-relaxed">{playlist.description}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {playlist.resources.map((resource) => (
                   <div key={resource.id} className="space-y-3 rounded-lg border bg-muted/30 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold">{resource.name}</p>
                         <p className="text-xs text-muted-foreground">{resource.format}</p>
                       </div>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="shrink-0 text-xs">
                         {resource.focus}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{resource.summary}</p>
-                    <Button asChild variant="link" className="h-auto px-0 text-xs font-semibold">
+                    <p className="text-sm leading-relaxed text-muted-foreground">{resource.summary}</p>
+                    <Button asChild variant="link" className="h-auto px-0 text-sm font-semibold">
                       <a href={resource.url} target="_blank" rel="noreferrer">
                         Watch now
                       </a>
@@ -79,7 +80,7 @@ export const VideosTab = () => {
             </Card>
           ))
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

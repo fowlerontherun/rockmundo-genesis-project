@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Clock, DollarSign, Lock } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSkillBooks } from "@/hooks/useSkillBooks";
 import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import type { Tables } from "@/lib/supabase-types";
 
 type SkillBook = Tables<"skill_books">;
@@ -63,129 +57,133 @@ export const BooksTab = () => {
   };
 
   const groupedBooks = books?.reduce((acc, book) => {
-    const cat = book.category || "Other";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(book);
+    const skillSlug = book.skill_slug || "Other";
+    if (!acc[skillSlug]) acc[skillSlug] = [];
+    acc[skillSlug].push(book);
     return acc;
   }, {} as Record<string, SkillBook[]>);
 
-  if (isLoading) {
-    return <div className="text-center py-8">Loading books...</div>;
-  }
-
   return (
-    <>
-      <Card className="p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2">Your Library</h2>
-          <p className="text-muted-foreground">
-            Build a foundational library for musicianship, songwriting, and career growth
-          </p>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold">Your Library</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Skill books offer passive learning. Choose how long to read each day, then let daily attendance build experience
+          over time until completion unlocks the skill gain.
+        </p>
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading your library...
         </div>
+      )}
 
-        {activeSession && (
-          <div className="mb-6 p-4 bg-primary/10 rounded-lg">
-            <h3 className="font-semibold mb-2">Currently Reading</h3>
-            <p className="text-sm">
-              {activeSession.skill_books?.title} by {activeSession.skill_books?.author}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Progress: {activeSession.days_read} days
-            </p>
-          </div>
-        )}
+      {!isLoading && activeSession && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-base">Currently Reading</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-semibold">{activeSession.skill_books?.title}</p>
+                <p className="text-sm text-muted-foreground">by {activeSession.skill_books?.author}</p>
+              </div>
+              <Badge variant="outline">
+                Day {activeSession.days_read}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {groupedBooks && Object.entries(groupedBooks).map(([category, categoryBooks]) => (
-          <div key={category} className="mb-8">
-            <h3 className="text-xl font-semibold mb-4">{category}</h3>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {categoryBooks.map((book) => {
-                const owned = isPurchased(book.id);
-                
+      {!isLoading && Object.entries(groupedBooks || {}).map(([skillSlug, booksInSkill]) => {
+        return (
+          <div key={skillSlug} className="space-y-4">
+            <h3 className="text-lg font-semibold capitalize">
+              {skillSlug}
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {booksInSkill.map((book) => {
+                const purchased = isPurchased(book.id);
+
                 return (
                   <Card
                     key={book.id}
-                    className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                    className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
                     onClick={() => setSelectedBook(book)}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                      {owned && <Badge>Owned</Badge>}
-                    </div>
-                    <h4 className="font-semibold mb-1">{book.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-3">{book.author}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {book.base_reading_days} days
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        {book.price}
-                      </span>
-                    </div>
-                    {book.required_skill_level > 0 && (
-                      <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
-                        <Lock className="h-3 w-3" />
-                        Requires level {book.required_skill_level}
+                    <CardHeader className="pb-3">
+                      <CardTitle className="line-clamp-2 text-base leading-snug">{book.title}</CardTitle>
+                      <CardDescription className="text-sm">by {book.author}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{book.base_reading_days} days</span>
+                        <span className="font-semibold">${book.price}</span>
                       </div>
-                    )}
+                      <Badge variant={purchased ? "default" : "secondary"} className="w-full justify-center">
+                        {purchased ? "Owned" : `Requires Level ${book.required_skill_level}`}
+                      </Badge>
+                    </CardContent>
                   </Card>
                 );
               })}
             </div>
           </div>
-        ))}
-      </Card>
+        );
+      })}
 
-      <Dialog open={!!selectedBook} onOpenChange={() => setSelectedBook(null)}>
-        <DialogContent>
+      <Dialog open={!!selectedBook} onOpenChange={(open) => !open && setSelectedBook(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{selectedBook?.title}</DialogTitle>
-            <DialogDescription>By {selectedBook?.author}</DialogDescription>
+            <DialogTitle className="text-xl">{selectedBook?.title}</DialogTitle>
+            <DialogDescription>by {selectedBook?.author}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm">{selectedBook?.description}</p>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-semibold">Skill:</span>{" "}
-                {selectedBook?.skill_slug}
-              </div>
-              <div>
-                <span className="font-semibold">Reading Time:</span>{" "}
-                {selectedBook?.base_reading_days} days
-              </div>
-              <div>
-                <span className="font-semibold">Price:</span> ${selectedBook?.price}
-              </div>
-              <div>
-                <span className="font-semibold">Skill Gain:</span>{" "}
-                {selectedBook && Math.round(Number(selectedBook.skill_percentage_gain) * 100)}%
-              </div>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold">Description</h4>
+              <p className="text-sm leading-relaxed text-muted-foreground">{selectedBook?.description}</p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              You'll read for 1 hour at 11 PM each night
-            </p>
-            <div className="flex gap-2">
-              {isPurchased(selectedBook?.id || "") ? (
-                canStartReading() ? (
-                  <Button onClick={handleStartReading} className="w-full">
-                    Start Reading
-                  </Button>
-                ) : (
-                  <Button disabled className="w-full">
-                    {activeSession ? "Already Reading Another Book" : "Owned"}
-                  </Button>
-                )
-              ) : (
-                <Button onClick={() => selectedBook && handlePurchase(selectedBook)} className="w-full">
-                  Purchase for ${selectedBook?.price}
-                </Button>
-              )}
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Skill</span>
+                <Badge variant="outline" className="capitalize">
+                  {selectedBook?.skill_slug}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Reading Time</span>
+                <span className="text-sm font-semibold">{selectedBook?.base_reading_days} days</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Price</span>
+                <span className="text-sm font-semibold">${selectedBook?.price}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Skill Gain</span>
+                <span className="text-sm font-semibold">
+                  {selectedBook && Math.round(Number(selectedBook.skill_percentage_gain) * 100)}%
+                </span>
+              </div>
             </div>
           </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            {selectedBook && !isPurchased(selectedBook.id) && (
+              <Button onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
+                Purchase for ${selectedBook.price}
+              </Button>
+            )}
+            {selectedBook && isPurchased(selectedBook.id) && canStartReading() && (
+              <Button onClick={handleStartReading} className="w-full sm:w-auto">
+                Start Reading
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
