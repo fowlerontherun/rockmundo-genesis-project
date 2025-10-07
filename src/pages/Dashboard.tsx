@@ -25,6 +25,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useGameData, type PlayerAttributes, type SkillProgressRow } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
+import { CurrentLocationWidget } from "@/components/city/CurrentLocationWidget";
 import type { Database } from "@/lib/supabase-types";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
@@ -614,6 +615,9 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Location Widget */}
+        <CurrentLocationWidget city={currentCity} loading={loading} />
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,226 +1,223 @@
+import { useState, useEffect } from "react";
+import { MapPin, Clock, DollarSign, History } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { useContext } from "react";
+import { AuthContext } from "@/hooks/use-auth-context";
 
-const flights = [
-  {
-    destination: "Los Angeles",
-    departure: "09:10",
-    arrival: "12:45",
-    duration: "3h 35m",
-    economy: "$285",
-    business: "$540",
-    first: "$890",
-  },
-  {
-    destination: "New York",
-    departure: "13:20",
-    arrival: "17:55",
-    duration: "4h 35m",
-    economy: "$320",
-    business: "$610",
-    first: "$975",
-  },
-  {
-    destination: "Austin",
-    departure: "18:05",
-    arrival: "20:10",
-    duration: "2h 5m",
-    economy: "$210",
-    business: "$420",
-    first: "$760",
-  },
-];
-
-const trains = [
-  {
-    destination: "Chicago",
-    schedule: "Daily 07:30 departure",
-    duration: "5h 20m",
-    fare: "$135 (reserved coach) / $220 (sleeper)",
-  },
-  {
-    destination: "Seattle",
-    schedule: "Mon, Wed, Fri 11:45 departure",
-    duration: "8h 15m",
-    fare: "$180 (business) / $260 (first class dome)",
-  },
-  {
-    destination: "Portland",
-    schedule: "Daily 16:10 departure",
-    duration: "3h 45m",
-    fare: "$98 (coach) / $155 (business)",
-  },
-];
-
-const rideshares = [
-  {
-    category: "UberX",
-    capacity: "4 passengers",
-    estimate: "$22 - $28",
-  },
-  {
-    category: "UberXL",
-    capacity: "6 passengers",
-    estimate: "$34 - $42",
-  },
-  {
-    category: "Uber Black",
-    capacity: "4 passengers",
-    estimate: "$58 - $72",
-  },
-];
+interface TravelHistoryEntry {
+  id: string;
+  from_city: { name: string; country: string } | null;
+  to_city: { name: string; country: string };
+  transport_type: string;
+  cost_paid: number;
+  travel_duration_hours: number;
+  departure_time: string;
+  arrival_time: string;
+  created_at: string;
+}
 
 const Travel = () => {
+  const { user } = useContext(AuthContext);
+  const [currentCity, setCurrentCity] = useState<any>(null);
+  const [travelHistory, setTravelHistory] = useState<TravelHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTravelData = async () => {
+      if (!user) return;
+
+      try {
+        // Load current city
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("current_city_id, cities:current_city_id(*)")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profile?.cities) {
+          setCurrentCity(profile.cities);
+        }
+
+        // Load travel history
+        const { data: history } = await supabase
+          .from("player_travel_history")
+          .select(`
+            *,
+            from_city:from_city_id(name, country),
+            to_city:to_city_id(name, country)
+          `)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (history) {
+          setTravelHistory(history as any);
+        }
+      } catch (error) {
+        console.error("Error loading travel data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTravelData();
+  }, [user]);
+
+  const formatDateTime = (dateString: string) => {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(dateString));
+  };
+
+  const formatDuration = (hours: number) => {
+    if (hours < 1) {
+      return `${Math.round(hours * 60)}m`;
+    }
+    return `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`;
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-48 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Travel Planner</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Travel Hub</h1>
         <p className="text-muted-foreground">
-          Placeholder logistics hub for coordinating regional travel and transport around upcoming shows.
+          Manage your location and plan your journey across the music world.
         </p>
       </header>
 
-      <Card>
+      <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
-          <CardTitle>Flights</CardTitle>
-          <CardDescription>Sample itineraries for quick hops between major tour cities.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            Current Location
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Destination</TableHead>
-                <TableHead className="hidden sm:table-cell">Departure</TableHead>
-                <TableHead className="hidden sm:table-cell">Arrival</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead className="text-right">Economy</TableHead>
-                <TableHead className="text-right">Business</TableHead>
-                <TableHead className="text-right">First Class</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {flights.map((flight) => (
-                <TableRow key={flight.destination}>
-                  <TableCell className="font-medium">{flight.destination}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{flight.departure}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{flight.arrival}</TableCell>
-                  <TableCell>{flight.duration}</TableCell>
-                  <TableCell className="text-right font-medium">{flight.economy}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{flight.business}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{flight.first}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="space-y-4">
+          {currentCity ? (
+            <>
+              <div>
+                <h2 className="text-2xl font-bold">{currentCity.name}</h2>
+                <p className="text-muted-foreground">{currentCity.country}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">Music Scene: {currentCity.music_scene}%</Badge>
+                <Badge variant="outline">Population: {(currentCity.population / 1_000_000).toFixed(1)}M</Badge>
+                <Badge variant="outline">Cost of Living: {currentCity.cost_of_living}%</Badge>
+              </div>
+              <div className="flex gap-3">
+                <Button asChild>
+                  <Link to={`/cities/${currentCity.id}`}>Explore City</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/cities">View All Cities</Link>
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Alert>
+              <MapPin className="h-4 w-4" />
+              <AlertTitle>No Location Set</AlertTitle>
+              <AlertDescription>
+                You haven't set your current location yet. All players start in London by default.
+                <Button variant="link" asChild className="pl-0">
+                  <Link to="/cities">Explore cities to set your location</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Trains</CardTitle>
-          <CardDescription>Regional rail options for lower-carbon travel between key markets.</CardDescription>
+          <CardTitle>Travel Between Cities</CardTitle>
+          <CardDescription>
+            More cities are being added to the map. Soon you'll be able to travel between major music hubs worldwide!
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Destination</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead className="text-right">Fare</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trains.map((train) => (
-                <TableRow key={train.destination}>
-                  <TableCell className="font-medium">{train.destination}</TableCell>
-                  <TableCell className="text-muted-foreground">{train.schedule}</TableCell>
-                  <TableCell>{train.duration}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{train.fare}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertTitle>Coming Soon</AlertTitle>
+            <AlertDescription>
+              Inter-city travel will be available once more cities are added to the system. For now, explore your current city and prepare for your future tours!
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Rideshare</CardTitle>
-          <CardDescription>Local transport estimates for venue transfers and airport pickups.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vehicle</TableHead>
-                <TableHead className="hidden sm:table-cell">Capacity</TableHead>
-                <TableHead className="text-right">Estimated Cost</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rideshares.map((ride) => (
-                <TableRow key={ride.category}>
-                  <TableCell className="font-medium">{ride.category}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{ride.capacity}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{ride.estimate}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
+      {travelHistory.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Private Jet</CardTitle>
-            <CardDescription>Availability snapshot for premium routing and last-minute bookings.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Travel History
+            </CardTitle>
+            <CardDescription>Your recent journeys across the music world</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <p>
-              Charter partner indicates a midsize Citation Latitude available with 12 hours notice. Includes onboard Wi-Fi,
-              light catering, and two checked instrument cases. Additional fuel stop required on coast-to-coast legs.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Base Rate</p>
-                <p className="text-lg font-semibold text-foreground">$6,500 / hr</p>
-              </div>
-              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground/80">Crew Fees</p>
-                <p className="text-lg font-semibold text-foreground">$1,200 (per leg)</p>
-              </div>
-            </div>
-            <p>
-              Ground concierge can align hangar access with tour gear logistics. Pending confirmation on weekend runway
-              maintenance at LAX; consider Van Nuys as alternate.
-            </p>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Route</TableHead>
+                  <TableHead>Transport</TableHead>
+                  <TableHead className="hidden sm:table-cell">Duration</TableHead>
+                  <TableHead className="hidden sm:table-cell">Cost</TableHead>
+                  <TableHead className="text-right">Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {travelHistory.map((trip) => (
+                  <TableRow key={trip.id}>
+                    <TableCell className="font-medium">
+                      <div className="space-y-1">
+                        {trip.from_city && (
+                          <div className="text-xs text-muted-foreground">
+                            From: {trip.from_city.name}
+                          </div>
+                        )}
+                        <div>To: {trip.to_city.name}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{trip.transport_type}</Badge>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {formatDuration(trip.travel_duration_hours)}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      ${trip.cost_paid.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {formatDateTime(trip.departure_time)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Band Vehicle</CardTitle>
-            <CardDescription>Mini-bus configuration for regional runouts and day-trip promo stops.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <p>
-              12-passenger Sprinter with custom band wrap, reclining seats, rear gear bay, and onboard power for mobile
-              production. Driver rostered for up to 10 hours daily with mandated rest windows tracked via tour manager app.
-            </p>
-            <ul className="list-disc space-y-2 pl-5">
-              <li>Daily rental: $580 including insurance and mileage up to 250mi.</li>
-              <li>Optional trailer for additional backline adds $120 per day.</li>
-              <li>Coordinate load-in times with venue ops to reserve curbside staging.</li>
-            </ul>
-            <p>
-              Placeholder telemetry dashboard will surface fuel efficiency, maintenance reminders, and crew seating charts in
-              future iterations.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      )}
     </div>
   );
 };

@@ -13,6 +13,9 @@ import {
   type City as CityRecord,
   type CityEnvironmentDetails,
 } from "@/utils/worldEnvironment";
+import { supabase } from "@/integrations/supabase/client";
+import { CityDistrictsSection } from "@/components/city/CityDistrictsSection";
+import { CityStudiosSection } from "@/components/city/CityStudiosSection";
 
 type CityRouteParams = {
   cityId?: string;
@@ -26,6 +29,9 @@ interface CityContentProps {
   error: string | null;
   detailsError: string | null;
   onRetry: () => void;
+  districts: any[];
+  studios: any[];
+  playerCount: number;
 }
 
 export interface CityPageLoadResult {
@@ -94,6 +100,9 @@ export const CityContent = ({
   error,
   detailsError,
   onRetry,
+  districts,
+  studios,
+  playerCount,
 }: CityContentProps) => {
   const culturalEvents = useMemo(
     () => (city?.cultural_events ?? []).filter((event) => typeof event === "string" && event.trim().length > 0),
@@ -170,6 +179,11 @@ export const CityContent = ({
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{city.country}</Badge>
+            {playerCount > 0 && (
+              <Badge variant="outline" className="bg-primary/10 text-primary">
+                {playerCount} {playerCount === 1 ? "player" : "players"} here
+              </Badge>
+            )}
             {signatureSound && (
               <Badge variant="outline" className="bg-primary/5 text-primary">
                 Signature sound: {signatureSound}
@@ -230,76 +244,10 @@ export const CityContent = ({
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            Key District Highlights
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
-          {venueHighlights.length ? (
-            venueHighlights.map((venue) => (
-              <div key={venue.name} className="space-y-3 rounded-lg border border-border/60 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">{venue.name}</h3>
-                    <p className="text-sm text-muted-foreground">{venue.district}</p>
-                  </div>
-                  {venue.capacity && <Badge variant="outline">{venue.capacity}</Badge>}
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">{venue.description}</p>
-              </div>
-            ))
-          ) : (
-            <div className="md:col-span-3 rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-              Venue highlights are still being compiled for this city.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <CityDistrictsSection districts={districts} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Music className="h-5 w-5 text-primary" />
-              Studios &amp; Creative Spaces
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {studioProfiles.length ? (
-              studioProfiles.map((studio) => (
-                <div key={studio.name} className="space-y-2 rounded-lg border border-border/60 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-base font-semibold">{studio.name}</h3>
-                      {studio.neighborhood && (
-                        <p className="text-sm text-muted-foreground">{studio.neighborhood}</p>
-                      )}
-                    </div>
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  {studio.specialties.length ? (
-                    <div className="flex flex-wrap gap-2">
-                      {studio.specialties.map((specialty) => (
-                        <Badge key={`${studio.name}-${specialty}`} variant="secondary">
-                          {specialty}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">No specialties recorded yet.</p>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
-                Studio profiles are still being curated for this city.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <CityStudiosSection studios={studios} />
 
         <Card>
           <CardHeader>
@@ -379,6 +327,9 @@ export default function City() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [studios, setStudios] = useState<any[]>([]);
+  const [playerCount, setPlayerCount] = useState<number>(0);
 
   const loadCity = useCallback(
     async (options: { signal?: { cancelled: boolean } } = {}) => {
@@ -417,23 +368,38 @@ export default function City() {
         setLoading(false);
         setDetailsLoading(true);
 
-        try {
-          const cityDetails = await fetchCityEnvironmentDetails(matchedCity.id, {
+        // Load districts, studios, and player count in parallel
+        const [districtsResult, studiosResult, playerCountResult, cityDetails] = await Promise.allSettled([
+          supabase.from("city_districts").select("*").eq("city_id", matchedCity.id).order("name"),
+          supabase.from("city_studios").select("*, district:city_districts(name)").eq("city_id", matchedCity.id).order("quality_rating", { ascending: false }),
+          supabase.from("profiles").select("id", { count: "exact", head: true }).eq("current_city_id", matchedCity.id),
+          fetchCityEnvironmentDetails(matchedCity.id, {
             cityName: matchedCity.name,
             country: matchedCity.country,
-          });
-          if (!options.signal?.cancelled) {
-            setDetails(cityDetails);
+          })
+        ]);
+
+        if (!options.signal?.cancelled) {
+          if (districtsResult.status === "fulfilled" && districtsResult.value.data) {
+            setDistricts(districtsResult.value.data);
           }
-        } catch (detailsFetchError) {
-          if (!options.signal?.cancelled) {
-            console.error(`Failed to load city environment details for ${matchedCity.name}`, detailsFetchError);
+          
+          if (studiosResult.status === "fulfilled" && studiosResult.value.data) {
+            setStudios(studiosResult.value.data);
+          }
+          
+          if (playerCountResult.status === "fulfilled" && playerCountResult.value.count !== null) {
+            setPlayerCount(playerCountResult.value.count);
+          }
+          
+          if (cityDetails.status === "fulfilled") {
+            setDetails(cityDetails.value);
+          } else if (cityDetails.status === "rejected") {
+            console.error(`Failed to load city environment details for ${matchedCity.name}`, cityDetails.reason);
             setDetailsError("We couldn't load extended city details right now.");
           }
-        } finally {
-          if (!options.signal?.cancelled) {
-            setDetailsLoading(false);
-          }
+          
+          setDetailsLoading(false);
         }
       } catch (snapshotError) {
         if (!options.signal?.cancelled) {
@@ -472,6 +438,9 @@ export default function City() {
       loading={loading}
       error={error}
       detailsError={detailsError}
+      districts={districts}
+      studios={studios}
+      playerCount={playerCount}
       onRetry={() => {
         void loadCity();
       }}

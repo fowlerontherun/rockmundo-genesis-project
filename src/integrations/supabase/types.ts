@@ -682,6 +682,155 @@ export type Database = {
         }
         Relationships: []
       }
+      city_districts: {
+        Row: {
+          city_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          music_scene_rating: number | null
+          name: string
+          rent_cost: number | null
+          safety_rating: number | null
+          vibe: string | null
+        }
+        Insert: {
+          city_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          music_scene_rating?: number | null
+          name: string
+          rent_cost?: number | null
+          safety_rating?: number | null
+          vibe?: string | null
+        }
+        Update: {
+          city_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          music_scene_rating?: number | null
+          name?: string
+          rent_cost?: number | null
+          safety_rating?: number | null
+          vibe?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_districts_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_studios: {
+        Row: {
+          available_slots: number | null
+          city_id: string
+          created_at: string | null
+          district_id: string | null
+          equipment_rating: number | null
+          hourly_rate: number
+          id: string
+          name: string
+          quality_rating: number | null
+          specialties: string[] | null
+        }
+        Insert: {
+          available_slots?: number | null
+          city_id: string
+          created_at?: string | null
+          district_id?: string | null
+          equipment_rating?: number | null
+          hourly_rate: number
+          id?: string
+          name: string
+          quality_rating?: number | null
+          specialties?: string[] | null
+        }
+        Update: {
+          available_slots?: number | null
+          city_id?: string
+          created_at?: string | null
+          district_id?: string | null
+          equipment_rating?: number | null
+          hourly_rate?: number
+          id?: string
+          name?: string
+          quality_rating?: number | null
+          specialties?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_studios_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_studios_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "city_districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_transport_routes: {
+        Row: {
+          base_cost: number
+          comfort_rating: number | null
+          created_at: string | null
+          duration_hours: number
+          frequency: string | null
+          from_city_id: string
+          id: string
+          to_city_id: string
+          transport_type: string
+        }
+        Insert: {
+          base_cost: number
+          comfort_rating?: number | null
+          created_at?: string | null
+          duration_hours: number
+          frequency?: string | null
+          from_city_id: string
+          id?: string
+          to_city_id: string
+          transport_type: string
+        }
+        Update: {
+          base_cost?: number
+          comfort_rating?: number | null
+          created_at?: string | null
+          duration_hours?: number
+          frequency?: string | null
+          from_city_id?: string
+          id?: string
+          to_city_id?: string
+          transport_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_transport_routes_from_city_id_fkey"
+            columns: ["from_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_transport_routes_to_city_id_fkey"
+            columns: ["to_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       education_youtube_resources: {
         Row: {
           category: string | null
@@ -1687,6 +1836,70 @@ export type Database = {
           },
         ]
       }
+      player_travel_history: {
+        Row: {
+          arrival_time: string
+          cost_paid: number
+          created_at: string | null
+          departure_time: string
+          from_city_id: string | null
+          id: string
+          profile_id: string | null
+          to_city_id: string
+          transport_type: string
+          travel_duration_hours: number
+          user_id: string
+        }
+        Insert: {
+          arrival_time: string
+          cost_paid: number
+          created_at?: string | null
+          departure_time: string
+          from_city_id?: string | null
+          id?: string
+          profile_id?: string | null
+          to_city_id: string
+          transport_type: string
+          travel_duration_hours: number
+          user_id: string
+        }
+        Update: {
+          arrival_time?: string
+          cost_paid?: number
+          created_at?: string | null
+          departure_time?: string
+          from_city_id?: string | null
+          id?: string
+          profile_id?: string | null
+          to_city_id?: string
+          transport_type?: string
+          travel_duration_hours?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_travel_history_from_city_id_fkey"
+            columns: ["from_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_travel_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_travel_history_to_city_id_fkey"
+            columns: ["to_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_university_attendance: {
         Row: {
           attendance_date: string
@@ -1986,7 +2199,15 @@ export type Database = {
           weekly_bonus_metadata?: Json | null
           weekly_bonus_streak?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_city_id_fkey"
+            columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shift_history: {
         Row: {
@@ -2972,6 +3193,7 @@ export type Database = {
         Row: {
           base_payment: number | null
           capacity: number | null
+          city_id: string | null
           created_at: string | null
           id: string
           location: string | null
@@ -2983,6 +3205,7 @@ export type Database = {
         Insert: {
           base_payment?: number | null
           capacity?: number | null
+          city_id?: string | null
           created_at?: string | null
           id?: string
           location?: string | null
@@ -2994,6 +3217,7 @@ export type Database = {
         Update: {
           base_payment?: number | null
           capacity?: number | null
+          city_id?: string | null
           created_at?: string | null
           id?: string
           location?: string | null
@@ -3002,7 +3226,15 @@ export type Database = {
           requirements?: Json | null
           venue_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "venues_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
