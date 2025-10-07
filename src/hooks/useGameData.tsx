@@ -1613,8 +1613,6 @@ const useProvideGameData = (): UseGameDataReturn => {
         message,
         earnings: typeof earnings === "number" ? earnings : null,
         metadata: metadata as any,
-        status: options.status ?? null,
-        status_id: options.statusId ?? null,
       };
 
       if (activityFeedSupportsDurationRef.current) {
