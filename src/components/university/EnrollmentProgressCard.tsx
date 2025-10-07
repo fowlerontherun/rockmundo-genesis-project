@@ -48,7 +48,11 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
   const totalDays = enrollment.university_courses.base_duration_days;
   const daysAttended = enrollment.days_attended;
   const progressPercentage = (daysAttended / totalDays) * 100;
-  const daysRemaining = differenceInDays(new Date(enrollment.scheduled_end_date), new Date());
+  
+  // Validate scheduled_end_date before using it
+  const endDate = enrollment.scheduled_end_date ? new Date(enrollment.scheduled_end_date) : null;
+  const isValidEndDate = endDate && !isNaN(endDate.getTime());
+  const daysRemaining = isValidEndDate ? differenceInDays(endDate, new Date()) : 0;
   const avgXpPerDay = daysAttended > 0 ? Math.round(enrollment.total_xp_earned / daysAttended) : 0;
 
   const getStatusColor = (status: string) => {
@@ -124,7 +128,7 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
             </div>
             <p className="text-2xl font-bold">{Math.max(0, daysRemaining)}</p>
             <p className="text-xs text-muted-foreground">
-              Ends {format(new Date(enrollment.scheduled_end_date), "MMM d, yyyy")}
+              {isValidEndDate ? `Ends ${format(endDate, "MMM d, yyyy")}` : "No end date"}
             </p>
           </div>
 
@@ -160,35 +164,40 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
               {enrollment.player_university_attendance
                 .slice(-5)
                 .reverse()
-                .map((record, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between rounded-lg border bg-muted/20 p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                          record.was_locked_out
-                            ? "bg-destructive/20 text-destructive"
-                            : "bg-primary/20 text-primary"
-                        }`}
-                      >
-                        {record.was_locked_out ? "✗" : "✓"}
+                .map((record, idx) => {
+                  const attendanceDate = record.attendance_date ? new Date(record.attendance_date) : null;
+                  const isValidDate = attendanceDate && !isNaN(attendanceDate.getTime());
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded-lg border bg-muted/20 p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                            record.was_locked_out
+                              ? "bg-destructive/20 text-destructive"
+                              : "bg-primary/20 text-primary"
+                          }`}
+                        >
+                          {record.was_locked_out ? "✗" : "✓"}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {isValidDate ? format(attendanceDate, "EEEE, MMM d") : "Invalid date"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {record.was_locked_out ? "Missed class" : "Attended"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">
-                          {format(new Date(record.attendance_date), "EEEE, MMM d")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {record.was_locked_out ? "Missed class" : "Attended"}
-                        </p>
+                      <div className="text-right">
+                        <p className="font-semibold text-primary">+{record.xp_earned} XP</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-primary">+{record.xp_earned} XP</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
         )}
