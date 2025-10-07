@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import Auth from "./pages/Auth";
@@ -17,6 +17,7 @@ const Index = lazyWithRetry(() => import("./pages/Index"));
 const PerformGig = lazyWithRetry(() => import("./pages/PerformGig"));
 const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
 const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
+const Performance = lazyWithRetry(() => import("./pages/Performance"));
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
@@ -142,6 +143,10 @@ function App() {
                     <Route path="admin/mentors" element={<AdminMentors />} />
                     <Route path="admin/jobs" element={<AdminJobs />} />
                     <Route path="employment" element={<Employment />} />
+                    <Route path="performance" element={<Performance />} />
+                    <Route path="performance/gig/:gigId" element={<PerformGig />} />
+                    <Route path="busking" element={<Navigate to="/performance?tab=busking" replace />} />
+                    <Route path="jams" element={<Navigate to="/performance?tab=jams" replace />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
                     <Route path="songs" element={<SongManager />} />

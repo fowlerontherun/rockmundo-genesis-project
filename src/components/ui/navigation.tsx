@@ -70,6 +70,7 @@ const Navigation = () => {
     {
       title: "Live Performance & Touring",
       items: [
+        { icon: Music, label: "Performance", path: "/performance" },
         { icon: Calendar, label: "Gig Booking", path: "/gigs" },
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
         { icon: ListMusic, label: "Setlist Designer", path: "/setlists" },
