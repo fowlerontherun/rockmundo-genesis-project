@@ -55,8 +55,6 @@ const Navigation = () => {
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: User, label: "My Character", path: "/my-character" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
-        { icon: Trophy, label: "Achievements", path: "/achievements" },
-        { icon: HeartPulse, label: "Health", path: "/health" },
       ],
     },
     {
