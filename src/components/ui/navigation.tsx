@@ -88,7 +88,6 @@ const Navigation = () => {
       title: "Community & Audience",
       items: [
         { icon: Users, label: "Band Manager", path: "/band" },
-        { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
         { icon: Share2, label: "Social Media", path: "/social" },
         { icon: Megaphone, label: "Public Relations", path: "/pr" },
         { icon: Users, label: "Fan Management", path: "/fans" },
