@@ -141,7 +141,7 @@ function App() {
                     <Route path="gear" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
-                    <Route path="health" element={<Health />} />
+                    <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>

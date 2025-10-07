@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
+import { HealthSection } from "@/components/character/HealthSection";
 
 const formatDate = (input: string | null | undefined) => {
   if (!input) {
@@ -114,6 +116,7 @@ const MyCharacter = () => {
     loading,
     error,
     currentCity,
+    awardActionXp,
   } = useGameData();
   const { toast } = useToast();
   const [claimingDailyXp, setClaimingDailyXp] = useState(false);
@@ -362,7 +365,7 @@ const MyCharacter = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">My Character</h1>
-          <p className="text-muted-foreground">A snapshot of your artist profile and core skills.</p>
+          <p className="text-muted-foreground">Your artist profile, health, and development.</p>
         </div>
         <div className="flex flex-col gap-3 md:items-end">
           <div className="flex flex-wrap items-center gap-3">
@@ -381,44 +384,141 @@ const MyCharacter = () => {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Daily XP Stipend
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Claim your daily XP and invest it into attributes or skills below.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Wallet balance</p>
-              <p className="text-2xl font-semibold">{xpBalance.toLocaleString()} XP</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Today's stipend</p>
-              <p className="text-2xl font-semibold">{todaysStipend.toLocaleString()} XP</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Lifetime XP</p>
-              <p className="text-2xl font-semibold">{lifetimeXp.toLocaleString()} XP</p>
-            </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="development">Development</TabsTrigger>
+          <TabsTrigger value="health">Health</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,320px),1fr]">
+            <Card>
+              <CardHeader className="flex flex-col items-center text-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-semibold text-primary">
+                  {profileInitials}
+                </div>
+                <div className="mt-4 space-y-1">
+                  <h2 className="text-2xl font-semibold">{displayName}</h2>
+                  {profile.username && profile.username !== displayName && (
+                    <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {profile.bio ? (
+                  <p className="text-sm text-muted-foreground">{profile.bio}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Add a bio to share your origin story.</p>
+                )}
+
+                <Separator />
+
+                <div className="space-y-3 text-sm">
+                  {PROFILE_META_FIELDS.map(({ key, label, icon: Icon }) => {
+                    const value = profile[key];
+
+                    if (value === null || value === undefined || value === "") {
+                      return null;
+                    }
+
+                    return (
+                      <div key={key as string} className="flex items-center gap-3">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{label}:</span>
+                        <span className="text-muted-foreground">{String(value)}</span>
+                      </div>
+                    );
+                  })}
+                  {currentCityLabel && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Current City:</span>
+                      <span className="text-muted-foreground">{currentCityLabel}</span>
+                    </div>
+                  )}
+                  {joinedDate && (
+                    <div className="flex items-center gap-3">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Joined:</span>
+                      <span className="text-muted-foreground">{joinedDate}</span>
+                    </div>
+                  )}
+                  {updatedDate && (
+                    <div className="flex items-center gap-3">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Last Active:</span>
+                      <span className="text-muted-foreground">{updatedDate}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mic className="h-5 w-5" />
+                  Quick Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Health</span>
+                  <Badge>{profile.health ?? 100}%</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Energy</span>
+                  <Badge>{profile.energy ?? 100}%</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Cash</span>
+                  <Badge>${profile.cash?.toLocaleString() ?? 0}</Badge>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-muted-foreground">
-              {hasClaimedDailyXp
-                ? `You've already claimed today's stipend${lastClaimedAtLabel ? ` (${lastClaimedAtLabel})` : ""}.`
-                : "You have a fresh XP stipend waiting to be claimed."}
-            </div>
-            <Button onClick={handleClaimDailyXp} disabled={claimingDailyXp || hasClaimedDailyXp}>
-              {claimingDailyXp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {hasClaimedDailyXp ? "Stipend claimed" : "Claim daily XP"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="development" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Daily XP Stipend
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Claim your daily XP and invest it into attributes or skills below.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Wallet balance</p>
+                  <p className="text-2xl font-semibold">{xpBalance.toLocaleString()} XP</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Today's stipend</p>
+                  <p className="text-2xl font-semibold">{todaysStipend.toLocaleString()} XP</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Lifetime XP</p>
+                  <p className="text-2xl font-semibold">{lifetimeXp.toLocaleString()} XP</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {hasClaimedDailyXp
+                    ? `You've already claimed today's stipend${lastClaimedAtLabel ? ` (${lastClaimedAtLabel})` : ""}.`
+                    : "You have a fresh XP stipend waiting to be claimed."}
+                </div>
+                <Button onClick={handleClaimDailyXp} disabled={claimingDailyXp || hasClaimedDailyXp}>
+                  {claimingDailyXp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {hasClaimedDailyXp ? "Stipend claimed" : "Claim daily XP"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,320px),1fr]">
         <Card>
@@ -618,6 +718,12 @@ const MyCharacter = () => {
           )}
         </CardContent>
       </Card>
+    </TabsContent>
+
+    <TabsContent value="health" className="space-y-6 mt-6">
+      <HealthSection profile={profile} attributes={attributes} awardActionXp={awardActionXp} />
+    </TabsContent>
+  </Tabs>
     </div>
   );
 };
