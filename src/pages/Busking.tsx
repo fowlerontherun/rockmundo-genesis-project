@@ -213,7 +213,8 @@ export default function Busking() {
 
   React.useEffect(() => {
     void loadActivityStatus();
-  }, [loadActivityStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStartBusking = React.useCallback(async () => {
     if (!profile) {
