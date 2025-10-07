@@ -48,7 +48,6 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
       const newEnergy = Math.max(0, energy - 15);
       const { error } = await supabase.from("profiles").update({ health: newHealth, energy: newEnergy, last_health_update: new Date().toISOString() }).eq("id", profile.id);
       if (error) throw error;
-      await awardActionXp({ amount: 5, category: "wellness", actionKey: "yoga_session", metadata: { duration_minutes: 30, stress_reduction: 10, activity_type: "yoga_session" } });
       return { health: newHealth, energy: newEnergy };
     },
     onSuccess: ({ health, energy }) => {
@@ -70,7 +69,6 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
       const newEnergy = Math.max(0, energy - 25);
       const { error } = await supabase.from("profiles").update({ health: newHealth, energy: newEnergy, last_health_update: new Date().toISOString() }).eq("id", profile.id);
       if (error) throw error;
-      await awardActionXp({ amount: 10, category: "fitness", actionKey: "running_5k", metadata: { duration_minutes: duration, fitness_level: fitness, activity_type: "running_5k" } });
       return { health: newHealth, energy: newEnergy, duration };
     },
     onSuccess: ({ health, energy, duration }) => {
@@ -183,7 +181,7 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
                   <h4 className="font-semibold">Yoga Routine (30 min)</h4>
                   <p className="text-sm text-muted-foreground">Reduce stress, improve flexibility</p>
                 </div>
-                <Badge variant="outline">+8 Health, -15 Energy, +5 XP</Badge>
+                <Badge variant="outline">+8 Health, -15 Energy</Badge>
               </div>
               <Button
                 onClick={() => yogaMutation.mutate()}
@@ -201,7 +199,7 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
                   <h4 className="font-semibold">Run 5k ({Math.max(20, Math.round(35 - Math.min(15, fitness / 10)))} min)</h4>
                   <p className="text-sm text-muted-foreground">Improve fitness and endurance</p>
                 </div>
-                <Badge variant="outline">+12 Health, -25 Energy, +10 XP</Badge>
+                <Badge variant="outline">+12 Health, -25 Energy</Badge>
               </div>
               <Button
                 onClick={() => runMutation.mutate()}

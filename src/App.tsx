@@ -21,7 +21,7 @@ const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
-const Achievements = lazyWithRetry(() => import("./pages/Achievements"));
+
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
@@ -60,7 +60,7 @@ const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"))
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
-const Health = lazyWithRetry(() => import("./pages/Health"));
+
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
@@ -100,7 +100,7 @@ function App() {
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="equipment" element={<EquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
-                    <Route path="achievements" element={<Achievements />} />
+                    
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
                     <Route path="tours" element={<TourManager />} />

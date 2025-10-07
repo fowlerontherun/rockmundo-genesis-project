@@ -27,6 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
 import { HealthSection } from "@/components/character/HealthSection";
+import { AchievementsSection } from "@/components/character/AchievementsSection";
 
 const formatDate = (input: string | null | undefined) => {
   if (!input) {
@@ -385,10 +386,11 @@ const MyCharacter = () => {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="development">Development</TabsTrigger>
           <TabsTrigger value="health">Health</TabsTrigger>
+          <TabsTrigger value="achievements">Achievements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
@@ -722,6 +724,10 @@ const MyCharacter = () => {
 
     <TabsContent value="health" className="space-y-6 mt-6">
       <HealthSection profile={profile} attributes={attributes} awardActionXp={awardActionXp} />
+    </TabsContent>
+
+    <TabsContent value="achievements" className="space-y-6 mt-6">
+      <AchievementsSection />
     </TabsContent>
   </Tabs>
     </div>
