@@ -14,7 +14,11 @@ import { Users, User } from 'lucide-react';
 import { INSTRUMENT_ROLES, VOCAL_ROLES } from '@/utils/touringMembers';
 import { MUSIC_GENRES } from '@/data/genres';
 
-export function BandCreationForm() {
+interface BandCreationFormProps {
+  onBandCreated?: () => void;
+}
+
+export function BandCreationForm({ onBandCreated }: BandCreationFormProps = {}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -71,7 +75,11 @@ export function BandCreationForm() {
         description: `${bandName} has been created successfully.`,
       });
 
-      navigate('/band-manager');
+      if (onBandCreated) {
+        onBandCreated();
+      } else {
+        navigate('/band-manager');
+      }
     } catch (error: any) {
       console.error('Error creating band:', error);
       toast({

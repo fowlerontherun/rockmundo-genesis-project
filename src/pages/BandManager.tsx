@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { BandCreationForm } from '@/components/band/BandCreationForm';
@@ -9,40 +11,74 @@ import { BandOverview } from '@/components/band/BandOverview';
 import { BandMemberCard } from '@/components/band/BandMemberCard';
 import { AddTouringMember } from '@/components/band/AddTouringMember';
 import { ChemistryDisplay } from '@/components/band/ChemistryDisplay';
+import { BandSettingsTab } from '@/components/band/BandSettingsTab';
+import { BandStatusBanner } from '@/components/band/BandStatusBanner';
 import { Users, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getUserBands } from '@/utils/bandStatus';
+import { reactivateBand } from '@/utils/bandHiatus';
+import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
 
 export default function BandManager() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [userBand, setUserBand] = useState<any>(null);
+  const [userBands, setUserBands] = useState<any[]>([]);
+  const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
+  const [selectedBand, setSelectedBand] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      loadUserBand();
+      loadUserBands();
     }
   }, [user]);
 
-  const loadUserBand = async () => {
+  useEffect(() => {
+    if (selectedBandId) {
+      loadBandDetails(selectedBandId);
+    }
+  }, [selectedBandId]);
+
+  const loadUserBands = async () => {
     if (!user) return;
 
     try {
-      const { data: bandMember } = await supabase
-        .from('band_members')
-        .select('band_id, bands(*)')
-        .eq('user_id', user.id)
-        .single();
+      const bands = await getUserBands(user.id);
+      
+      // Filter out disbanded bands
+      const activeBands = bands.filter((b: any) => b.bands.status !== 'disbanded');
+      setUserBands(activeBands);
 
-      if (bandMember?.bands) {
-        setUserBand(bandMember.bands);
-        await loadBandMembers(bandMember.band_id);
+      // Auto-select first active band, or first hiatus band
+      const activeFirst = activeBands.find((b: any) => b.bands.status === 'active');
+      const defaultBand = activeFirst || activeBands[0];
+      
+      if (defaultBand) {
+        setSelectedBandId(defaultBand.band_id);
       }
     } catch (error) {
-      console.error('Error loading band:', error);
+      console.error('Error loading bands:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBandDetails = async (bandId: string) => {
+    try {
+      // Load band data
+      const { data: band } = await supabase
+        .from('bands')
+        .select('*')
+        .eq('id', bandId)
+        .single();
+
+      if (band) {
+        setSelectedBand(band);
+        await loadBandMembers(bandId);
+      }
+    } catch (error) {
+      console.error('Error loading band details:', error);
     }
   };
 
@@ -76,13 +112,41 @@ export default function BandManager() {
         description: 'The band member has been removed',
       });
 
-      if (userBand) {
-        await loadBandMembers(userBand.id);
+      if (selectedBandId) {
+        await loadBandMembers(selectedBandId);
       }
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to remove member',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!user || !selectedBandId) return;
+
+    try {
+      const result = await reactivateBand(selectedBandId, user.id);
+      
+      if (result.success) {
+        toast({
+          title: 'Band Reactivated',
+          description: 'Your band is now active again',
+        });
+        await loadUserBands();
+      } else if (result.conflicts && result.conflicts.length > 0) {
+        toast({
+          title: 'Conflicts Detected',
+          description: `${result.conflicts.length} member(s) need to resolve conflicts with other bands`,
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to reactivate band',
         variant: 'destructive',
       });
     }
@@ -96,39 +160,77 @@ export default function BandManager() {
     );
   }
 
-  if (!userBand) {
+  if (!selectedBand || userBands.length === 0) {
     return (
       <div className="container mx-auto p-6 max-w-2xl">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Band Manager</h1>
           <p className="text-muted-foreground">Create a band or become a solo artist to begin</p>
         </div>
-        <BandCreationForm />
+        <BandCreationForm onBandCreated={loadUserBands} />
       </div>
     );
   }
 
-  const isLeader = userBand.leader_id === user?.id;
+  const isLeader = selectedBand.leader_id === user?.id;
 
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Music className="h-8 w-8" />
-          {userBand.is_solo_artist ? (userBand.artist_name || userBand.name) : userBand.name}
-        </h1>
-        <p className="text-muted-foreground">{userBand.genre} • {userBand.is_solo_artist ? 'Solo Artist' : 'Band'}</p>
+      <div className="mb-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Music className="h-8 w-8" />
+              {selectedBand.is_solo_artist ? (selectedBand.artist_name || selectedBand.name) : selectedBand.name}
+            </h1>
+            <p className="text-muted-foreground">
+              {selectedBand.genre} • {selectedBand.is_solo_artist ? 'Solo Artist' : 'Band'}
+            </p>
+          </div>
+          
+          {/* Band Selector (if user has multiple bands) */}
+          {userBands.length > 1 && (
+            <Select value={selectedBandId || ''} onValueChange={setSelectedBandId}>
+              <SelectTrigger className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {userBands.map((band) => (
+                  <SelectItem key={band.band_id} value={band.band_id}>
+                    <div className="flex items-center gap-2">
+                      <span>{band.bands.name}</span>
+                      <Badge className={getBandStatusColor(band.bands.status)}>
+                        {getBandStatusLabel(band.bands.status)}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* Status Banner for Hiatus */}
+        <BandStatusBanner
+          status={selectedBand.status}
+          hiatusStartedAt={selectedBand.hiatus_started_at}
+          hiatusEndsAt={selectedBand.hiatus_ends_at}
+          hiatusReason={selectedBand.hiatus_reason}
+          isLeader={isLeader}
+          onReactivate={handleReactivate}
+        />
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">My Band</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="chemistry">Chemistry</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <BandOverview bandId={userBand.id} />
+          <BandOverview bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
@@ -138,13 +240,13 @@ export default function BandManager() {
                 <div>
                   <CardTitle>Band Members</CardTitle>
                   <CardDescription>
-                    {members.length} of {userBand.max_members} members
+                    {members.length} of {selectedBand.max_members} members
                   </CardDescription>
                 </div>
-                {isLeader && (
+                {isLeader && selectedBand.status === 'active' && (
                   <AddTouringMember 
-                    bandId={userBand.id} 
-                    onAdded={() => loadBandMembers(userBand.id)} 
+                    bandId={selectedBand.id} 
+                    onAdded={() => loadBandMembers(selectedBand.id)} 
                   />
                 )}
               </div>
@@ -154,10 +256,10 @@ export default function BandManager() {
                 <BandMemberCard
                   key={member.id}
                   member={member}
-                  isLeader={member.user_id === userBand.leader_id}
-                  canManage={isLeader}
+                  isLeader={member.user_id === selectedBand.leader_id}
+                  canManage={isLeader && selectedBand.status === 'active'}
                   onRemove={
-                    isLeader && member.user_id !== userBand.leader_id
+                    isLeader && member.user_id !== selectedBand.leader_id && selectedBand.status === 'active'
                       ? () => handleRemoveMember(member.id)
                       : undefined
                   }
@@ -168,7 +270,17 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="chemistry" className="space-y-4">
-          <ChemistryDisplay bandId={userBand.id} />
+          <ChemistryDisplay bandId={selectedBand.id} />
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <BandSettingsTab
+            bandId={selectedBand.id}
+            isLeader={isLeader}
+            bandStatus={selectedBand.status}
+            isSoloArtist={selectedBand.is_solo_artist}
+            onBandUpdate={loadUserBands}
+          />
         </TabsContent>
       </Tabs>
     </div>

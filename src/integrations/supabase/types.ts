@@ -150,6 +150,41 @@ export type Database = {
           },
         ]
       }
+      band_history: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          triggered_by: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_history_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_leadership_votes: {
         Row: {
           band_id: string
@@ -198,6 +233,7 @@ export type Database = {
           is_touring_member: boolean | null
           joined_at: string | null
           leadership_votes: number | null
+          member_status: string | null
           role: string
           salary: number | null
           skill_contribution: number | null
@@ -215,6 +251,7 @@ export type Database = {
           is_touring_member?: boolean | null
           joined_at?: string | null
           leadership_votes?: number | null
+          member_status?: string | null
           role: string
           salary?: number | null
           skill_contribution?: number | null
@@ -232,6 +269,7 @@ export type Database = {
           is_touring_member?: boolean | null
           joined_at?: string | null
           leadership_votes?: number | null
+          member_status?: string | null
           role?: string
           salary?: number | null
           skill_contribution?: number | null
@@ -269,6 +307,10 @@ export type Database = {
           fame: number | null
           fame_multiplier: number | null
           genre: string | null
+          hiatus_ends_at: string | null
+          hiatus_notification_sent: boolean | null
+          hiatus_reason: string | null
+          hiatus_started_at: string | null
           hidden_skill_rating: number | null
           id: string
           is_solo_artist: boolean | null
@@ -283,6 +325,7 @@ export type Database = {
           next_leadership_vote: string | null
           performance_count: number | null
           popularity: number | null
+          status: Database["public"]["Enums"]["band_status"]
           updated_at: string | null
           weekly_fans: number | null
         }
@@ -297,6 +340,10 @@ export type Database = {
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
+          hiatus_ends_at?: string | null
+          hiatus_notification_sent?: boolean | null
+          hiatus_reason?: string | null
+          hiatus_started_at?: string | null
           hidden_skill_rating?: number | null
           id?: string
           is_solo_artist?: boolean | null
@@ -311,6 +358,7 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          status?: Database["public"]["Enums"]["band_status"]
           updated_at?: string | null
           weekly_fans?: number | null
         }
@@ -325,6 +373,10 @@ export type Database = {
           fame?: number | null
           fame_multiplier?: number | null
           genre?: string | null
+          hiatus_ends_at?: string | null
+          hiatus_notification_sent?: boolean | null
+          hiatus_reason?: string | null
+          hiatus_started_at?: string | null
           hidden_skill_rating?: number | null
           id?: string
           is_solo_artist?: boolean | null
@@ -339,6 +391,7 @@ export type Database = {
           next_leadership_vote?: string | null
           performance_count?: number | null
           popularity?: number | null
+          status?: Database["public"]["Enums"]["band_status"]
           updated_at?: string | null
           weekly_fans?: number | null
         }
@@ -2859,6 +2912,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      band_status: "active" | "on_hiatus" | "disbanded"
       book_reading_status: "reading" | "completed" | "abandoned"
       chat_participant_status: "online" | "offline" | "typing" | "away"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
@@ -2992,6 +3046,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      band_status: ["active", "on_hiatus", "disbanded"],
       book_reading_status: ["reading", "completed", "abandoned"],
       chat_participant_status: ["online", "offline", "typing", "away"],
       enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],

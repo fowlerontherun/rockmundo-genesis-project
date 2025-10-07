@@ -17,6 +17,7 @@ export const CHEMISTRY_EVENTS: Record<string, ChemistryEvent> = {
   FAILED_GIG: { type: 'conflict', change: -2, description: 'Poor gig performance' },
   UNPAID_TOURING: { type: 'conflict', change: -1, description: 'Unpaid touring members' },
   INACTIVITY: { type: 'conflict', change: -1, description: 'Band inactivity' },
+  HIATUS_DECAY: { type: 'hiatus', change: -0.5, description: 'Band on hiatus - slow chemistry decay' },
 };
 
 export async function updateBandChemistry(
