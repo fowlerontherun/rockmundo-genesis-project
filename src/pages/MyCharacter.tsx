@@ -511,7 +511,7 @@ const MyCharacter = () => {
                       <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                         <div
                           className="h-2 rounded-full bg-primary transition-all"
-                          style={{ width: `${Math.min(100, Math.max(0, displayScore))}%` }}
+                          style={{ width: `${Math.min(100, Math.max(0, ((displayScore - 5) / (1000 - 5)) * 100))}%` }}
                         />
                       </div>
                       <div className="flex items-center gap-2">
