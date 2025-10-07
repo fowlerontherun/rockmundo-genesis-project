@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.book-reading-attendance]
 verify_jwt = false
+
+[functions.shift-clock-out]
+verify_jwt = false

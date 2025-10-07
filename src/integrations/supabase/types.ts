@@ -789,6 +789,72 @@ export type Database = {
           },
         ]
       }
+      jobs: {
+        Row: {
+          category: string
+          company_name: string
+          created_at: string | null
+          current_employees: number | null
+          description: string | null
+          end_time: string
+          energy_cost_per_shift: number | null
+          fame_impact_per_shift: number | null
+          health_impact_per_shift: number | null
+          hourly_wage: number
+          id: string
+          is_active: boolean | null
+          max_employees: number | null
+          required_level: number | null
+          required_skills: Json | null
+          start_time: string
+          title: string
+          updated_at: string | null
+          work_days: Json
+        }
+        Insert: {
+          category: string
+          company_name: string
+          created_at?: string | null
+          current_employees?: number | null
+          description?: string | null
+          end_time: string
+          energy_cost_per_shift?: number | null
+          fame_impact_per_shift?: number | null
+          health_impact_per_shift?: number | null
+          hourly_wage: number
+          id?: string
+          is_active?: boolean | null
+          max_employees?: number | null
+          required_level?: number | null
+          required_skills?: Json | null
+          start_time: string
+          title: string
+          updated_at?: string | null
+          work_days: Json
+        }
+        Update: {
+          category?: string
+          company_name?: string
+          created_at?: string | null
+          current_employees?: number | null
+          description?: string | null
+          end_time?: string
+          energy_cost_per_shift?: number | null
+          fame_impact_per_shift?: number | null
+          health_impact_per_shift?: number | null
+          hourly_wage?: number
+          id?: string
+          is_active?: boolean | null
+          max_employees?: number | null
+          required_level?: number | null
+          required_skills?: Json | null
+          start_time?: string
+          title?: string
+          updated_at?: string | null
+          work_days?: Json
+        }
+        Relationships: []
+      }
       player_achievements: {
         Row: {
           achievement_id: string
@@ -1054,6 +1120,63 @@ export type Database = {
             columns: ["purchase_id"]
             isOneToOne: false
             referencedRelation: "player_book_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_employment: {
+        Row: {
+          created_at: string | null
+          hired_at: string | null
+          id: string
+          job_id: string
+          last_shift_at: string | null
+          profile_id: string
+          shifts_completed: number | null
+          status: string
+          terminated_at: string | null
+          total_earnings: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          hired_at?: string | null
+          id?: string
+          job_id: string
+          last_shift_at?: string | null
+          profile_id: string
+          shifts_completed?: number | null
+          status?: string
+          terminated_at?: string | null
+          total_earnings?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          hired_at?: string | null
+          id?: string
+          job_id?: string
+          last_shift_at?: string | null
+          profile_id?: string
+          shifts_completed?: number | null
+          status?: string
+          terminated_at?: string | null
+          total_earnings?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_employment_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_employment_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1505,6 +1628,76 @@ export type Database = {
           weekly_bonus_streak?: number | null
         }
         Relationships: []
+      }
+      shift_history: {
+        Row: {
+          clock_in_time: string
+          clock_out_time: string | null
+          created_at: string | null
+          earnings: number
+          employment_id: string
+          fame_impact: number | null
+          health_impact: number | null
+          id: string
+          job_id: string
+          profile_id: string
+          shift_date: string
+          status: string | null
+          xp_earned: number | null
+        }
+        Insert: {
+          clock_in_time: string
+          clock_out_time?: string | null
+          created_at?: string | null
+          earnings: number
+          employment_id: string
+          fame_impact?: number | null
+          health_impact?: number | null
+          id?: string
+          job_id: string
+          profile_id: string
+          shift_date: string
+          status?: string | null
+          xp_earned?: number | null
+        }
+        Update: {
+          clock_in_time?: string
+          clock_out_time?: string | null
+          created_at?: string | null
+          earnings?: number
+          employment_id?: string
+          fame_impact?: number | null
+          health_impact?: number | null
+          id?: string
+          job_id?: string
+          profile_id?: string
+          shift_date?: string
+          status?: string | null
+          xp_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_history_employment_id_fkey"
+            columns: ["employment_id"]
+            isOneToOne: false
+            referencedRelation: "player_employment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       skill_books: {
         Row: {

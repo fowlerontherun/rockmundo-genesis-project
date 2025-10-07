@@ -1,4 +1,4 @@
-import { AudioLines, Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users, BookOpen } from "lucide-react";
+import { AudioLines, Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users, BookOpen, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -68,6 +68,13 @@ const adminSections = [
     href: "/admin/mentors",
     action: "Manage mentors",
     Icon: Users,
+  },
+  {
+    title: "Jobs",
+    description: "Create and manage employment opportunities with schedules, salaries, and impacts.",
+    href: "/admin/jobs",
+    action: "Manage jobs",
+    Icon: Briefcase,
   },
 ] as const;
 

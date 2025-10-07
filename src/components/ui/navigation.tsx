@@ -36,6 +36,7 @@ import {
   Store,
   Guitar,
   Award,
+  Briefcase,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -104,6 +105,7 @@ const Navigation = () => {
         { icon: Guitar, label: "My Gear", path: "/gear" },
         { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
         { icon: Store, label: "Inventory", path: "/inventory" },
+        { icon: Briefcase, label: "Employment", path: "/employment" },
         { icon: DollarSign, label: "Finances", path: "/finances" },
         { icon: ShoppingCart, label: "Merchandise", path: "/merchandise" },
         { icon: DollarSign, label: "Underworld", path: "/underworld" },

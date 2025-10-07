@@ -55,7 +55,9 @@ const AdminStudios = lazyWithRetry(() => import("./pages/admin/Studios"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const AdminBandLearning = lazyWithRetry(() => import("./pages/admin/BandLearning"));
 const AdminMentors = lazyWithRetry(() => import("./pages/admin/Mentors"));
+const AdminJobs = lazyWithRetry(() => import("./pages/admin/Jobs"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
+const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
@@ -138,6 +140,8 @@ function App() {
                     <Route path="admin/youtube-videos" element={<AdminYoutubeVideos />} />
                     <Route path="admin/band-learning" element={<AdminBandLearning />} />
                     <Route path="admin/mentors" element={<AdminMentors />} />
+                    <Route path="admin/jobs" element={<AdminJobs />} />
+                    <Route path="employment" element={<Employment />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
                     <Route path="songs" element={<SongManager />} />
