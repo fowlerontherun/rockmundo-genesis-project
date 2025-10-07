@@ -197,8 +197,7 @@ export const buildSeedRecords = (): SkillBookInsert[] => {
       skill_slug: slug,
       title: parseString(definition.display_name) ?? slug,
       description: definition.description ?? null,
-      cost: BOOK_SEED_COSTS[tier] ?? BOOK_SEED_COSTS.Basic,
-      xp_value: BOOK_XP_VALUE,
+      price: BOOK_SEED_COSTS[tier] ?? BOOK_SEED_COSTS.Basic,
       is_active: true,
     } satisfies SkillBookInsert;
   });

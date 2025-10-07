@@ -905,6 +905,159 @@ export type Database = {
           },
         ]
       }
+      player_book_purchases: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          profile_id: string | null
+          purchase_price: number
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          profile_id?: string | null
+          purchase_price: number
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          profile_id?: string | null
+          purchase_price?: number
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_book_purchases_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "skill_books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_book_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_book_reading_attendance: {
+        Row: {
+          created_at: string
+          id: string
+          reading_date: string
+          reading_session_id: string
+          skill_xp_earned: number
+          was_locked_out: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reading_date: string
+          reading_session_id: string
+          skill_xp_earned: number
+          was_locked_out?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reading_date?: string
+          reading_session_id?: string
+          skill_xp_earned?: number
+          was_locked_out?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_book_reading_attendance_reading_session_id_fkey"
+            columns: ["reading_session_id"]
+            isOneToOne: false
+            referencedRelation: "player_book_reading_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_book_reading_sessions: {
+        Row: {
+          actual_completion_date: string | null
+          book_id: string
+          created_at: string
+          days_read: number
+          id: string
+          profile_id: string | null
+          purchase_id: string
+          scheduled_end_date: string
+          started_at: string
+          status: Database["public"]["Enums"]["book_reading_status"]
+          total_skill_xp_earned: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          book_id: string
+          created_at?: string
+          days_read?: number
+          id?: string
+          profile_id?: string | null
+          purchase_id: string
+          scheduled_end_date: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["book_reading_status"]
+          total_skill_xp_earned?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_completion_date?: string | null
+          book_id?: string
+          created_at?: string
+          days_read?: number
+          id?: string
+          profile_id?: string | null
+          purchase_id?: string
+          scheduled_end_date?: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["book_reading_status"]
+          total_skill_xp_earned?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_book_reading_sessions_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "skill_books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_book_reading_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_book_reading_sessions_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "player_book_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_equipment: {
         Row: {
           condition: number | null
@@ -1352,6 +1505,68 @@ export type Database = {
           weekly_bonus_streak?: number | null
         }
         Relationships: []
+      }
+      skill_books: {
+        Row: {
+          author: string | null
+          base_reading_days: number
+          category: string | null
+          created_at: string
+          daily_reading_time: number
+          description: string | null
+          id: string
+          is_active: boolean
+          price: number
+          reading_hour: number
+          required_skill_level: number
+          skill_percentage_gain: number
+          skill_slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author?: string | null
+          base_reading_days?: number
+          category?: string | null
+          created_at?: string
+          daily_reading_time?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          price: number
+          reading_hour?: number
+          required_skill_level?: number
+          skill_percentage_gain?: number
+          skill_slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string | null
+          base_reading_days?: number
+          category?: string | null
+          created_at?: string
+          daily_reading_time?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          price?: number
+          reading_hour?: number
+          required_skill_level?: number
+          skill_percentage_gain?: number
+          skill_slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_books_skill_slug_fkey"
+            columns: ["skill_slug"]
+            isOneToOne: false
+            referencedRelation: "skill_definitions"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       skill_definitions: {
         Row: {
@@ -2090,6 +2305,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      book_reading_status: "reading" | "completed" | "abandoned"
       chat_participant_status: "online" | "offline" | "typing" | "away"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
@@ -2222,6 +2438,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      book_reading_status: ["reading", "completed", "abandoned"],
       chat_participant_status: ["online", "offline", "typing", "away"],
       enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],
       friendship_status: ["pending", "accepted", "declined", "blocked"],

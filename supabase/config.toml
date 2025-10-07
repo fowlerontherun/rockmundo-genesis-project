@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.progression]
 verify_jwt = false
+
+[functions.book-reading-attendance]
+verify_jwt = false
