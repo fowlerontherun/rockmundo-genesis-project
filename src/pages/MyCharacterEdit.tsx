@@ -457,32 +457,31 @@ const MyCharacterEdit = () => {
                 </div>
 
                 <div className="grid gap-4">
-                  {ATTRIBUTE_KEYS.map((key) => {
+                {ATTRIBUTE_KEYS.map((key) => {
                     const currentValue = readAttributeValue(key);
+                    const progressPercentage = ((currentValue - 5) / (1000 - 5)) * 100;
                     return (
                       <div
                         key={key}
-                        className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+                        className="grid gap-3 rounded-md border p-3"
                       >
-                        <div>
+                        <div className="flex items-center justify-between">
                           <Label htmlFor={`attribute-${key}`}>{ATTRIBUTE_LABELS[key]}</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Current: <span className="font-medium">{formatNumber(currentValue)}</span>
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id={`attribute-${key}`}
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              step={1}
+                              value={allocationInputs[key]}
+                              onChange={(event) => handleAllocationChange(key, event.target.value)}
+                              className="w-24"
+                            />
+                            <span className="text-sm text-muted-foreground">XP</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 sm:justify-end">
-                          <Input
-                            id={`attribute-${key}`}
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            step={1}
-                            value={allocationInputs[key]}
-                            onChange={(event) => handleAllocationChange(key, event.target.value)}
-                            className="w-24"
-                          />
-                          <span className="text-sm text-muted-foreground">XP</span>
-                        </div>
+                        <Progress value={progressPercentage} className="h-2" />
                       </div>
                     );
                   })}
