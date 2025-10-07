@@ -80,30 +80,165 @@ export type Database = {
         }
         Relationships: []
       }
-      band_members: {
+      band_chemistry_events: {
         Row: {
           band_id: string
+          chemistry_change: number
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
           id: string
-          joined_at: string | null
-          role: string
-          salary: number | null
-          user_id: string
         }
         Insert: {
           band_id: string
+          chemistry_change: number
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
           id?: string
-          joined_at?: string | null
-          role: string
-          salary?: number | null
-          user_id: string
         }
         Update: {
           band_id?: string
+          chemistry_change?: number
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
           id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_chemistry_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_fame_events: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          fame_gained: number
+          id: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          fame_gained: number
+          id?: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          fame_gained?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_fame_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_leadership_votes: {
+        Row: {
+          band_id: string
+          candidate_user_id: string
+          created_at: string | null
+          id: string
+          vote_date: string
+          vote_round: number
+          voter_user_id: string
+        }
+        Insert: {
+          band_id: string
+          candidate_user_id: string
+          created_at?: string | null
+          id?: string
+          vote_date?: string
+          vote_round: number
+          voter_user_id: string
+        }
+        Update: {
+          band_id?: string
+          candidate_user_id?: string
+          created_at?: string | null
+          id?: string
+          vote_date?: string
+          vote_round?: number
+          voter_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_leadership_votes_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_members: {
+        Row: {
+          band_id: string
+          can_be_leader: boolean | null
+          chemistry_contribution: number | null
+          id: string
+          instrument_role: string
+          is_touring_member: boolean | null
+          joined_at: string | null
+          leadership_votes: number | null
+          role: string
+          salary: number | null
+          skill_contribution: number | null
+          touring_member_cost: number | null
+          touring_member_tier: number | null
+          user_id: string | null
+          vocal_role: string | null
+        }
+        Insert: {
+          band_id: string
+          can_be_leader?: boolean | null
+          chemistry_contribution?: number | null
+          id?: string
+          instrument_role?: string
+          is_touring_member?: boolean | null
           joined_at?: string | null
+          leadership_votes?: number | null
+          role: string
+          salary?: number | null
+          skill_contribution?: number | null
+          touring_member_cost?: number | null
+          touring_member_tier?: number | null
+          user_id?: string | null
+          vocal_role?: string | null
+        }
+        Update: {
+          band_id?: string
+          can_be_leader?: boolean | null
+          chemistry_contribution?: number | null
+          id?: string
+          instrument_role?: string
+          is_touring_member?: boolean | null
+          joined_at?: string | null
+          leadership_votes?: number | null
           role?: string
           salary?: number | null
-          user_id?: string
+          skill_contribution?: number | null
+          touring_member_cost?: number | null
+          touring_member_tier?: number | null
+          user_id?: string | null
+          vocal_role?: string | null
         }
         Relationships: [
           {
@@ -124,37 +259,85 @@ export type Database = {
       }
       bands: {
         Row: {
+          artist_name: string | null
+          chemistry_level: number | null
+          cohesion_score: number | null
+          collective_fame_earned: number | null
           created_at: string | null
+          days_together: number | null
           description: string | null
+          fame: number | null
+          fame_multiplier: number | null
           genre: string | null
+          hidden_skill_rating: number | null
           id: string
+          is_solo_artist: boolean | null
+          jam_count: number | null
+          last_chemistry_update: string | null
+          last_fame_calculation: string | null
           leader_id: string
+          leadership_votes_history: Json | null
+          logo_url: string | null
           max_members: number | null
           name: string
+          next_leadership_vote: string | null
+          performance_count: number | null
           popularity: number | null
           updated_at: string | null
           weekly_fans: number | null
         }
         Insert: {
+          artist_name?: string | null
+          chemistry_level?: number | null
+          cohesion_score?: number | null
+          collective_fame_earned?: number | null
           created_at?: string | null
+          days_together?: number | null
           description?: string | null
+          fame?: number | null
+          fame_multiplier?: number | null
           genre?: string | null
+          hidden_skill_rating?: number | null
           id?: string
+          is_solo_artist?: boolean | null
+          jam_count?: number | null
+          last_chemistry_update?: string | null
+          last_fame_calculation?: string | null
           leader_id: string
+          leadership_votes_history?: Json | null
+          logo_url?: string | null
           max_members?: number | null
           name: string
+          next_leadership_vote?: string | null
+          performance_count?: number | null
           popularity?: number | null
           updated_at?: string | null
           weekly_fans?: number | null
         }
         Update: {
+          artist_name?: string | null
+          chemistry_level?: number | null
+          cohesion_score?: number | null
+          collective_fame_earned?: number | null
           created_at?: string | null
+          days_together?: number | null
           description?: string | null
+          fame?: number | null
+          fame_multiplier?: number | null
           genre?: string | null
+          hidden_skill_rating?: number | null
           id?: string
+          is_solo_artist?: boolean | null
+          jam_count?: number | null
+          last_chemistry_update?: string | null
+          last_fame_calculation?: string | null
           leader_id?: string
+          leadership_votes_history?: Json | null
+          logo_url?: string | null
           max_members?: number | null
           name?: string
+          next_leadership_vote?: string | null
+          performance_count?: number | null
           popularity?: number | null
           updated_at?: string | null
           weekly_fans?: number | null

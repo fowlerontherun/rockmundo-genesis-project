@@ -323,6 +323,35 @@ export default function PerformGig() {
         })
         .eq('id', profile.id);
 
+      // Update band fame and chemistry
+      if (gig.band_id) {
+        const { awardBandFame } = await import('@/utils/bandFame');
+        const { updateBandChemistry } = await import('@/utils/bandChemistry');
+        
+        const gigFame = Math.round(10 + (finalScore / 100) * 90 + (venueCapacity / 10));
+        await awardBandFame(gig.band_id, gigFame, 'gig_performance', {
+          gig_id: gig.id,
+          venue: gig.venues?.name,
+          score: finalScore
+        });
+        
+        const chemistryEvent = finalScore >= 70 ? 'GIG_PERFORMED' : 'FAILED_GIG';
+        await updateBandChemistry(gig.band_id, chemistryEvent as any);
+        
+        const { data: band } = await supabase
+          .from('bands')
+          .select('performance_count')
+          .eq('id', gig.band_id)
+          .single();
+        
+        if (band) {
+          await supabase
+            .from('bands')
+            .update({ performance_count: (band.performance_count || 0) + 1 })
+            .eq('id', gig.band_id);
+        }
+      }
+
       // Add activity to feed
       const durationForFeed = activityDurationRef.current;
       const statusIdForFeed = activityStatusIdRef.current;
