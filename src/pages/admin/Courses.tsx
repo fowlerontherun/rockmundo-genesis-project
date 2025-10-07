@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { useMergedSkillDefinitions } from "@/utils/skillDefinitions";
 
 interface Course {
   id: string;
@@ -113,6 +114,8 @@ export default function Courses() {
       return data as SkillDefinition[];
     },
   });
+
+  const { list: skillOptions, map: skillOptionMap } = useMergedSkillDefinitions(skills ?? []);
 
   const saveMutation = useMutation({
     mutationFn: async (values: typeof formData) => {
@@ -205,9 +208,10 @@ export default function Courses() {
     return universities?.find((u) => u.id === id)?.name || "Unknown";
   };
 
-  const getSkillName = (slug: string) => {
-    return skills?.find((s) => s.slug === slug)?.display_name || slug;
-  };
+  const getSkillName = useCallback(
+    (slug: string) => skillOptionMap.get(slug)?.displayName || slug,
+    [skillOptionMap],
+  );
 
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
@@ -316,9 +320,9 @@ export default function Courses() {
                     <SelectValue placeholder="Select skill" />
                   </SelectTrigger>
                   <SelectContent>
-                    {skills?.map((skill) => (
+                    {skillOptions.map((skill) => (
                       <SelectItem key={skill.slug} value={skill.slug}>
-                        {skill.display_name}
+                        {skill.displayName}
                       </SelectItem>
                     ))}
                   </SelectContent>

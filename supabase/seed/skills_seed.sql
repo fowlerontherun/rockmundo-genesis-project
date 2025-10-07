@@ -1179,7 +1179,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_basic_brass', 'Basic Brass', ARRAY['instruments_professional_brass']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
+VALUES ('instruments_basic_brass_instruments', 'Brass Instruments', ARRAY['instruments_professional_brass_instruments']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1193,7 +1193,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_basic_dj_performance', 'Basic DJ Controller Skills', ARRAY['instruments_professional_dj_performance']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
+VALUES ('instruments_basic_dj_live', 'DJ & Live Production', ARRAY['instruments_professional_dj_live']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1207,7 +1207,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_basic_electronic_instruments', 'Basic Electronic Instruments', ARRAY['instruments_professional_electronic_instruments']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
+VALUES ('instruments_basic_synths_keys', 'Synths & Electronic Keys', ARRAY['instruments_professional_synths_keys']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1249,7 +1249,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_basic_keyboard', 'Basic Keyboard', ARRAY['instruments_professional_keyboard']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
+VALUES ('instruments_basic_keyboard_piano', 'Keyboard & Piano Foundations', ARRAY['instruments_professional_keyboard_piano']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1277,7 +1277,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_basic_percussions', 'Basic Percussions', ARRAY['instruments_professional_percussions']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
+VALUES ('instruments_basic_percussion_drums', 'Percussion & Drums', ARRAY['instruments_professional_percussion_drums']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1333,7 +1333,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_basic_strings', 'Basic Strings', ARRAY['instruments_professional_strings']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
+VALUES ('instruments_basic_string_instruments', 'Basic String Instruments', ARRAY['instruments_professional_string_instruments']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1347,7 +1347,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_basic_woodwinds', 'Basic Woodwinds', ARRAY['instruments_professional_woodwinds']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
+VALUES ('instruments_basic_wind_instruments', 'Wind Instruments', ARRAY['instruments_professional_wind_instruments']::text[], NULL, 0, 0, 6, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1361,7 +1361,91 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_mastery_dj', 'DJ Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
+VALUES ('instruments_mastery_brass_instruments', 'Brass Instrument Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
+ON CONFLICT (skill_id) DO UPDATE
+SET
+  skill_name = EXCLUDED.skill_name,
+  skill_child_id = EXCLUDED.skill_child_id,
+  skill_parent_id = EXCLUDED.skill_parent_id,
+  learning_impact = EXCLUDED.learning_impact,
+  performance_impact = EXCLUDED.performance_impact,
+  xp_impact = EXCLUDED.xp_impact,
+  recording_impact = EXCLUDED.recording_impact,
+  writing_impact = EXCLUDED.writing_impact,
+  fame_impact = EXCLUDED.fame_impact,
+  sales_impact = EXCLUDED.sales_impact;
+INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
+VALUES ('instruments_mastery_keyboard_piano', 'Keyboard & Piano Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
+ON CONFLICT (skill_id) DO UPDATE
+SET
+  skill_name = EXCLUDED.skill_name,
+  skill_child_id = EXCLUDED.skill_child_id,
+  skill_parent_id = EXCLUDED.skill_parent_id,
+  learning_impact = EXCLUDED.learning_impact,
+  performance_impact = EXCLUDED.performance_impact,
+  xp_impact = EXCLUDED.xp_impact,
+  recording_impact = EXCLUDED.recording_impact,
+  writing_impact = EXCLUDED.writing_impact,
+  fame_impact = EXCLUDED.fame_impact,
+  sales_impact = EXCLUDED.sales_impact;
+INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
+VALUES ('instruments_mastery_percussion_drums', 'Percussion & Drum Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
+ON CONFLICT (skill_id) DO UPDATE
+SET
+  skill_name = EXCLUDED.skill_name,
+  skill_child_id = EXCLUDED.skill_child_id,
+  skill_parent_id = EXCLUDED.skill_parent_id,
+  learning_impact = EXCLUDED.learning_impact,
+  performance_impact = EXCLUDED.performance_impact,
+  xp_impact = EXCLUDED.xp_impact,
+  recording_impact = EXCLUDED.recording_impact,
+  writing_impact = EXCLUDED.writing_impact,
+  fame_impact = EXCLUDED.fame_impact,
+  sales_impact = EXCLUDED.sales_impact;
+INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
+VALUES ('instruments_mastery_string_instruments', 'String Instruments Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
+ON CONFLICT (skill_id) DO UPDATE
+SET
+  skill_name = EXCLUDED.skill_name,
+  skill_child_id = EXCLUDED.skill_child_id,
+  skill_parent_id = EXCLUDED.skill_parent_id,
+  learning_impact = EXCLUDED.learning_impact,
+  performance_impact = EXCLUDED.performance_impact,
+  xp_impact = EXCLUDED.xp_impact,
+  recording_impact = EXCLUDED.recording_impact,
+  writing_impact = EXCLUDED.writing_impact,
+  fame_impact = EXCLUDED.fame_impact,
+  sales_impact = EXCLUDED.sales_impact;
+INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
+VALUES ('instruments_mastery_wind_instruments', 'Wind Instrument Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
+ON CONFLICT (skill_id) DO UPDATE
+SET
+  skill_name = EXCLUDED.skill_name,
+  skill_child_id = EXCLUDED.skill_child_id,
+  skill_parent_id = EXCLUDED.skill_parent_id,
+  learning_impact = EXCLUDED.learning_impact,
+  performance_impact = EXCLUDED.performance_impact,
+  xp_impact = EXCLUDED.xp_impact,
+  recording_impact = EXCLUDED.recording_impact,
+  writing_impact = EXCLUDED.writing_impact,
+  fame_impact = EXCLUDED.fame_impact,
+  sales_impact = EXCLUDED.sales_impact;
+INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
+VALUES ('instruments_mastery_synths_keys', 'Synth & Keys Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
+ON CONFLICT (skill_id) DO UPDATE
+SET
+  skill_name = EXCLUDED.skill_name,
+  skill_child_id = EXCLUDED.skill_child_id,
+  skill_parent_id = EXCLUDED.skill_parent_id,
+  learning_impact = EXCLUDED.learning_impact,
+  performance_impact = EXCLUDED.performance_impact,
+  xp_impact = EXCLUDED.xp_impact,
+  recording_impact = EXCLUDED.recording_impact,
+  writing_impact = EXCLUDED.writing_impact,
+  fame_impact = EXCLUDED.fame_impact,
+  sales_impact = EXCLUDED.sales_impact;
+INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
+VALUES ('instruments_mastery_dj_live', 'DJ & Live Production Mastery', ARRAY[]::text[], NULL, 0, 0, 14, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1459,7 +1543,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_professional_brass', 'Professional Brass', ARRAY[]::text[], 'instruments_basic_brass', 0, 0, 10, 0, 0, 0, 0)
+VALUES ('instruments_professional_brass_instruments', 'Professional Brass Instruments', ARRAY['instruments_mastery_brass_instruments']::text[], 'instruments_basic_brass_instruments', 0, 0, 10, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1473,7 +1557,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_professional_dj_performance', 'Professional DJing', ARRAY[]::text[], 'instruments_basic_dj_performance', 0, 0, 10, 0, 0, 0, 0)
+VALUES ('instruments_professional_dj_live', 'Professional DJ & Live Production', ARRAY['instruments_mastery_dj_live']::text[], 'instruments_basic_dj_live', 0, 0, 10, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1487,7 +1571,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_professional_electronic_instruments', 'Professional Electronic Instruments', ARRAY[]::text[], 'instruments_basic_electronic_instruments', 0, 0, 10, 0, 0, 0, 0)
+VALUES ('instruments_professional_synths_keys', 'Professional Synth Performance', ARRAY['instruments_mastery_synths_keys']::text[], 'instruments_basic_synths_keys', 0, 0, 10, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1529,7 +1613,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_professional_keyboard', 'Professional Keyboard', ARRAY[]::text[], 'instruments_basic_keyboard', 0, 0, 10, 0, 0, 0, 0)
+VALUES ('instruments_professional_keyboard_piano', 'Professional Keyboard & Piano', ARRAY['instruments_mastery_keyboard_piano']::text[], 'instruments_basic_keyboard_piano', 0, 0, 10, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1557,7 +1641,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_professional_percussions', 'Professional Percussions', ARRAY[]::text[], 'instruments_basic_percussions', 0, 0, 10, 0, 0, 0, 0)
+VALUES ('instruments_professional_percussion_drums', 'Professional Percussion & Drums', ARRAY['instruments_mastery_percussion_drums']::text[], 'instruments_basic_percussion_drums', 0, 0, 10, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1613,7 +1697,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_professional_strings', 'Professional Strings', ARRAY[]::text[], 'instruments_basic_strings', 0, 0, 10, 0, 0, 0, 0)
+VALUES ('instruments_professional_string_instruments', 'Professional String Instruments', ARRAY['instruments_mastery_string_instruments']::text[], 'instruments_basic_string_instruments', 0, 0, 10, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,
@@ -1627,7 +1711,7 @@ SET
   fame_impact = EXCLUDED.fame_impact,
   sales_impact = EXCLUDED.sales_impact;
 INSERT INTO public.skills (skill_id, skill_name, skill_child_id, skill_parent_id, learning_impact, performance_impact, xp_impact, recording_impact, writing_impact, fame_impact, sales_impact)
-VALUES ('instruments_professional_woodwinds', 'Professional Woodwinds', ARRAY[]::text[], 'instruments_basic_woodwinds', 0, 0, 10, 0, 0, 0, 0)
+VALUES ('instruments_professional_wind_instruments', 'Professional Wind Instruments', ARRAY['instruments_mastery_wind_instruments']::text[], 'instruments_basic_wind_instruments', 0, 0, 10, 0, 0, 0, 0)
 ON CONFLICT (skill_id) DO UPDATE
 SET
   skill_name = EXCLUDED.skill_name,

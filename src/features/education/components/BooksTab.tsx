@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
 type SkillBook = Tables<"skill_books">;
+type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 
 export const BooksTab = () => {
   const { user } = useAuth();
   const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
-  const [selectedBook, setSelectedBook] = useState<SkillBook | null>(null);
+  const typedBooks = books as EnrichedSkillBook[] | undefined;
+  const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
 
   const isPurchased = (bookId: string) => 
     purchases?.some((p) => p.book_id === bookId);
@@ -56,12 +58,16 @@ export const BooksTab = () => {
     setSelectedBook(null);
   };
 
-  const groupedBooks = books?.reduce((acc, book) => {
-    const skillSlug = book.skill_slug || "Other";
-    if (!acc[skillSlug]) acc[skillSlug] = [];
-    acc[skillSlug].push(book);
-    return acc;
-  }, {} as Record<string, SkillBook[]>);
+  const groupedBooks = useMemo(
+    () =>
+      typedBooks?.reduce((acc, book) => {
+        const skillSlug = book.skill_slug || "other";
+        if (!acc[skillSlug]) acc[skillSlug] = [];
+        acc[skillSlug].push(book);
+        return acc;
+      }, {} as Record<string, EnrichedSkillBook[]>) ?? null,
+    [typedBooks],
+  );
 
   return (
     <div className="space-y-8">
@@ -99,11 +105,17 @@ export const BooksTab = () => {
         </Card>
       )}
 
-      {!isLoading && Object.entries(groupedBooks || {}).map(([skillSlug, booksInSkill]) => {
+      {!isLoading && groupedBooks &&
+        Object.entries(groupedBooks).map(([skillSlug, booksInSkill]) => {
+          const groupLabel =
+            booksInSkill[0]?.skill_display_name ||
+            booksInSkill[0]?.skill_slug ||
+            skillSlug;
+
         return (
           <div key={skillSlug} className="space-y-4">
-            <h3 className="text-lg font-semibold capitalize">
-              {skillSlug}
+            <h3 className="text-lg font-semibold">
+              {groupLabel}
             </h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {booksInSkill.map((book) => {
@@ -147,13 +159,13 @@ export const BooksTab = () => {
               <h4 className="text-sm font-semibold">Description</h4>
               <p className="text-sm leading-relaxed text-muted-foreground">{selectedBook?.description}</p>
             </div>
-            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Skill</span>
-                <Badge variant="outline" className="capitalize">
-                  {selectedBook?.skill_slug}
-                </Badge>
-              </div>
+              <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Skill</span>
+                  <Badge variant="outline">
+                    {selectedBook?.skill_display_name ?? selectedBook?.skill_slug}
+                  </Badge>
+                </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Reading Time</span>
                 <span className="text-sm font-semibold">{selectedBook?.base_reading_days} days</span>
