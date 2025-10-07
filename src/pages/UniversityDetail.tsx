@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users } from "lucide-react";
+import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
+import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface University {
   id: string;
@@ -99,6 +101,46 @@ export default function UniversityDetail() {
     enabled: !!profile?.id,
   });
 
+  // Fetch current enrollment at this university
+  const { data: currentEnrollment } = useQuery({
+    queryKey: ["university_enrollment", id, profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      
+      const { data, error } = await supabase
+        .from("player_university_enrollments")
+        .select(`
+          id,
+          status,
+          days_attended,
+          total_xp_earned,
+          scheduled_end_date,
+          payment_amount,
+          university_courses (
+            name,
+            base_duration_days
+          ),
+          universities (
+            name
+          ),
+          player_university_attendance (
+            attendance_date,
+            xp_earned,
+            was_locked_out
+          )
+        `)
+        .eq("university_id", id)
+        .eq("profile_id", profile.id)
+        .in("status", ["enrolled", "in_progress"])
+        .order("enrolled_at", { ascending: false })
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") throw error;
+      return data;
+    },
+    enabled: !!profile?.id && !!id,
+  });
+
   const enrollMutation = useMutation({
     mutationFn: async (courseId: string) => {
       if (!profile || !university) throw new Error("Missing profile or university");
@@ -145,11 +187,11 @@ export default function UniversityDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["university_enrollment"] });
       toast({
         title: "Enrollment Successful!",
         description: "You're enrolled! Classes start at 10am tomorrow.",
       });
-      navigate("/education");
     },
     onError: (error: any) => {
       toast({
@@ -196,6 +238,33 @@ export default function UniversityDetail() {
     return "";
   };
 
+  const dropCourseMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentEnrollment) return;
+      
+      const { error } = await supabase
+        .from("player_university_enrollments")
+        .update({ status: "dropped" })
+        .eq("id", currentEnrollment.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Course Dropped",
+        description: "You have withdrawn from the course.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["university_enrollment"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!university) {
     return <div className="p-6">Loading...</div>;
   }
@@ -207,6 +276,14 @@ export default function UniversityDetail() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Education
         </Button>
+
+        {/* Show enrollment progress if user is enrolled */}
+        {currentEnrollment && (
+          <EnrollmentProgressCard
+            enrollment={currentEnrollment as any}
+            onDropCourse={() => dropCourseMutation.mutate()}
+          />
+        )}
 
         <Card>
           <CardHeader>
@@ -228,10 +305,18 @@ export default function UniversityDetail() {
           </CardContent>
         </Card>
 
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Available Courses</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {courses?.map((course) => {
+        {/* Collapse course list if enrolled */}
+        {currentEnrollment ? (
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <ChevronDown className="mr-2 h-4 w-4" />
+                Browse Other Courses at {university.name}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {courses?.map((course) => {
               const duration = calculateDuration(course.base_duration_days);
               const price = calculatePrice(course.base_price);
               const enrollmentMsg = getEnrollmentMessage(course);
@@ -279,8 +364,64 @@ export default function UniversityDetail() {
                 </Card>
               );
             })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        ) : (
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Available Courses</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {courses?.map((course) => {
+                const duration = calculateDuration(course.base_duration_days);
+                const price = calculatePrice(course.base_price);
+                const enrollmentMsg = getEnrollmentMessage(course);
+
+                return (
+                  <Card key={course.id}>
+                    <CardHeader>
+                      <CardTitle>{course.name}</CardTitle>
+                      <CardDescription>{course.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>{duration} days</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <span>${price.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span>Level {course.required_skill_level}+ required</span>
+                        </div>
+                      </div>
+
+                      {enrollmentMsg && (
+                        <p className="text-sm text-destructive">{enrollmentMsg}</p>
+                      )}
+
+                      <Button
+                        className="w-full"
+                        disabled={!canEnroll(course) || enrollMutation.isPending}
+                        onClick={() => enrollMutation.mutate(course.id)}
+                      >
+                        {enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
