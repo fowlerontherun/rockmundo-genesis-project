@@ -11,6 +11,8 @@ import { BandOverview } from '@/components/band/BandOverview';
 import { BandMemberCard } from '@/components/band/BandMemberCard';
 import { AddTouringMember } from '@/components/band/AddTouringMember';
 import { ChemistryDisplay } from '@/components/band/ChemistryDisplay';
+import { BandChat } from '@/components/band/BandChat';
+import { BandEarnings } from '@/components/band/BandEarnings';
 import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
@@ -226,6 +228,8 @@ export default function BandManager() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
+          <TabsTrigger value="chat">Chat</TabsTrigger>
+          <TabsTrigger value="earnings">Earnings</TabsTrigger>
           <TabsTrigger value="chemistry">Chemistry</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -275,6 +279,14 @@ export default function BandManager() {
               ))}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="chat" className="space-y-4">
+          <BandChat bandId={selectedBand.id} />
+        </TabsContent>
+
+        <TabsContent value="earnings" className="space-y-4">
+          <BandEarnings bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="chemistry" className="space-y-4">

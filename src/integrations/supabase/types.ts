@@ -80,6 +80,38 @@ export type Database = {
         }
         Relationships: []
       }
+      band_chat_messages: {
+        Row: {
+          band_id: string
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_chat_messages_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_chemistry_events: {
         Row: {
           band_id: string
@@ -108,6 +140,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "band_chemistry_events_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_earnings: {
+        Row: {
+          amount: number
+          band_id: string
+          created_at: string
+          description: string | null
+          earned_by_user_id: string | null
+          id: string
+          metadata: Json | null
+          source: string
+        }
+        Insert: {
+          amount: number
+          band_id: string
+          created_at?: string
+          description?: string | null
+          earned_by_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          source: string
+        }
+        Update: {
+          amount?: number
+          band_id?: string
+          created_at?: string
+          description?: string | null
+          earned_by_user_id?: string | null
+          id?: string
+          metadata?: Json | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_earnings_band_id_fkey"
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
@@ -345,6 +418,7 @@ export type Database = {
       bands: {
         Row: {
           artist_name: string | null
+          band_balance: number | null
           chemistry_level: number | null
           cohesion_score: number | null
           collective_fame_earned: number | null
@@ -378,6 +452,7 @@ export type Database = {
         }
         Insert: {
           artist_name?: string | null
+          band_balance?: number | null
           chemistry_level?: number | null
           cohesion_score?: number | null
           collective_fame_earned?: number | null
@@ -411,6 +486,7 @@ export type Database = {
         }
         Update: {
           artist_name?: string | null
+          band_balance?: number | null
           chemistry_level?: number | null
           cohesion_score?: number | null
           collective_fame_earned?: number | null
