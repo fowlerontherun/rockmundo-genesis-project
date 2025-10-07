@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, GraduationCap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface University {
   id: string;
@@ -22,6 +24,52 @@ interface CourseCount {
 }
 
 export const UniversityTab = () => {
+  const { user } = useAuth();
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: currentEnrollment } = useQuery({
+    queryKey: ["current_enrollment", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null;
+      
+      const { data, error } = await supabase
+        .from("player_university_enrollments")
+        .select(`
+          id,
+          university_id,
+          course_id,
+          university_courses (
+            name
+          ),
+          universities (
+            name
+          )
+        `)
+        .eq("profile_id", profile.id)
+        .in("status", ["enrolled", "in_progress"])
+        .order("enrolled_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") throw error;
+      return data;
+    },
+    enabled: !!profile?.id,
+  });
+
   const { data: universities, isLoading } = useQuery({
     queryKey: ["universities"],
     queryFn: async () => {
@@ -70,6 +118,19 @@ export const UniversityTab = () => {
           Explore universities across the globe and unlock new learning pathways, each contributing unique skills and reputation to your journey.
         </p>
       </div>
+
+      {currentEnrollment && (
+        <Alert className="border-primary/50 bg-primary/10">
+          <GraduationCap className="h-4 w-4" />
+          <AlertDescription>
+            You are currently enrolled in <strong>{currentEnrollment.university_courses?.name}</strong> at{" "}
+            <strong>{currentEnrollment.universities?.name}</strong>.{" "}
+            <Link to={`/university/${currentEnrollment.university_id}`} className="underline hover:text-primary">
+              View enrollment details
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {isLoading && (
         <div className="flex items-center justify-center py-12 text-muted-foreground">

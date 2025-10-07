@@ -101,9 +101,9 @@ export default function UniversityDetail() {
     enabled: !!profile?.id,
   });
 
-  // Fetch current enrollment at this university
+  // Fetch ANY current enrollment (not just this university)
   const { data: currentEnrollment } = useQuery({
-    queryKey: ["university_enrollment", id, profile?.id],
+    queryKey: ["current_enrollment", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null;
       
@@ -112,6 +112,8 @@ export default function UniversityDetail() {
         .select(`
           id,
           status,
+          course_id,
+          university_id,
           days_attended,
           total_xp_earned,
           scheduled_end_date,
@@ -129,21 +131,26 @@ export default function UniversityDetail() {
             was_locked_out
           )
         `)
-        .eq("university_id", id)
         .eq("profile_id", profile.id)
         .in("status", ["enrolled", "in_progress"])
         .order("enrolled_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") throw error;
       return data;
     },
-    enabled: !!profile?.id && !!id,
+    enabled: !!profile?.id,
   });
 
   const enrollMutation = useMutation({
     mutationFn: async (courseId: string) => {
       if (!profile || !university) throw new Error("Missing profile or university");
+
+      // Check if already enrolled in ANY course
+      if (currentEnrollment) {
+        throw new Error("You are already enrolled in a course. Complete or quit it first.");
+      }
 
       const course = courses?.find((c) => c.id === courseId);
       if (!course) throw new Error("Course not found");
@@ -187,7 +194,7 @@ export default function UniversityDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["university_enrollment"] });
+      queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
       toast({
         title: "Enrollment Successful!",
         description: "You're enrolled! Classes start at 10am tomorrow.",
@@ -254,7 +261,7 @@ export default function UniversityDetail() {
         title: "Course Dropped",
         description: "You have withdrawn from the course.",
       });
-      queryClient.invalidateQueries({ queryKey: ["university_enrollment"] });
+      queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
     },
     onError: (error: Error) => {
       toast({
@@ -279,10 +286,22 @@ export default function UniversityDetail() {
 
         {/* Show enrollment progress if user is enrolled */}
         {currentEnrollment && (
-          <EnrollmentProgressCard
-            enrollment={currentEnrollment as any}
-            onDropCourse={() => dropCourseMutation.mutate()}
-          />
+          <div className="space-y-4">
+            <EnrollmentProgressCard
+              enrollment={currentEnrollment as any}
+              onDropCourse={() => dropCourseMutation.mutate()}
+            />
+            {currentEnrollment.university_id !== id && (
+              <Card className="border-amber-500/50 bg-amber-500/10">
+                <CardContent className="py-4">
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    You are currently enrolled at <strong>{currentEnrollment.universities?.name}</strong>. 
+                    Complete or quit that course before enrolling here.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
 
         <Card>
@@ -305,8 +324,8 @@ export default function UniversityDetail() {
           </CardContent>
         </Card>
 
-        {/* Collapse course list if enrolled */}
-        {currentEnrollment ? (
+        {/* Collapse course list if enrolled at THIS university */}
+        {currentEnrollment && currentEnrollment.university_id === id ? (
           <Collapsible>
             <CollapsibleTrigger asChild>
               <Button variant="outline" className="w-full">
@@ -355,10 +374,10 @@ export default function UniversityDetail() {
 
                     <Button
                       className="w-full"
-                      disabled={!canEnroll(course) || enrollMutation.isPending}
+                      disabled={!canEnroll(course) || enrollMutation.isPending || !!currentEnrollment}
                       onClick={() => enrollMutation.mutate(course.id)}
                     >
-                      {enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
+                      {currentEnrollment ? "Already Enrolled Elsewhere" : enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -410,10 +429,10 @@ export default function UniversityDetail() {
 
                       <Button
                         className="w-full"
-                        disabled={!canEnroll(course) || enrollMutation.isPending}
+                        disabled={!canEnroll(course) || enrollMutation.isPending || !!currentEnrollment}
                         onClick={() => enrollMutation.mutate(course.id)}
                       >
-                        {enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
+                        {currentEnrollment ? "Already Enrolled Elsewhere" : enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
                       </Button>
                     </CardContent>
                   </Card>
