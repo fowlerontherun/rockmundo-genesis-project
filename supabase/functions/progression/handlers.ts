@@ -27,7 +27,13 @@ export async function handleClaimDailyXp(
     throw new Error("Daily XP already claimed today");
   }
 
-  const dailyAmount = 150;
+  // Calculate daily XP based on account age
+  const profileCreatedAt = new Date(profileState.profile.created_at);
+  const now = new Date();
+  const daysSinceCreation = Math.floor((now.getTime() - profileCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
+  const isFirstMonth = daysSinceCreation < 30;
+  
+  const dailyAmount = isFirstMonth ? 10 : 5;
 
   // Create grant record
   const { error: grantError } = await client
@@ -87,14 +93,14 @@ export async function handleSpendAttributeXp(
     .maybeSingle();
 
   const currentValue = (attrs as any)?.[attributeKey] ?? 10;
-  const newValue = currentValue + 1;
+  const newValue = currentValue + xpAmount;
 
   // Update attribute
   const { error: attrError } = await client
     .from("player_attributes")
     .update({
       [attributeKey]: newValue,
-      attribute_points_spent: (attrs?.attribute_points_spent ?? 0) + 1,
+      attribute_points_spent: (attrs?.attribute_points_spent ?? 0) + xpAmount,
     })
     .eq("profile_id", profileId);
 
