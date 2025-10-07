@@ -80,7 +80,6 @@ const Navigation = () => {
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
         { icon: MapPin, label: "City Overview", path: cityOverviewPath },
         { icon: Globe, label: "World Map", path: "/cities" },
-        { icon: Mic, label: "Busking", path: "/busking" },
         { icon: Plane, label: "Travel Planner", path: "/travel" },
         { icon: Globe, label: "Tour System", path: "/tours-system" },
       ],
@@ -90,7 +89,6 @@ const Navigation = () => {
       items: [
         { icon: Users, label: "Band Manager", path: "/band" },
         { icon: Heart, label: "Band Chemistry", path: "/chemistry" },
-        { icon: Music4, label: "Jam Sessions", path: "/jams" },
         { icon: Share2, label: "Social Media", path: "/social" },
         { icon: Megaphone, label: "Public Relations", path: "/pr" },
         { icon: Users, label: "Fan Management", path: "/fans" },
@@ -122,11 +120,10 @@ const Navigation = () => {
 
   const mobileShortcuts = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
+    { icon: Music, label: "Performance", path: "/performance" },
     { icon: Calendar, label: "Gigs", path: "/gigs" },
     { icon: ListMusic, label: "Setlists", path: "/setlists" },
-    { icon: Mic, label: "Busking", path: "/busking" },
     { icon: Award, label: "Awards", path: "/awards" },
-    { icon: Music4, label: "Jams", path: "/jams" },
     { icon: Plane, label: "Travel", path: "/travel" },
     { icon: Megaphone, label: "PR", path: "/pr" },
     { icon: User, label: "My Character", path: "/my-character" },
