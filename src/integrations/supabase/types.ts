@@ -1178,13 +1178,17 @@ export type Database = {
           created_at: string | null
           current_city_id: string | null
           display_name: string | null
+          energy: number
           experience: number | null
           experience_at_last_weekly_bonus: number | null
           fame: number | null
           fans: number | null
+          health: number
           id: string
+          last_health_update: string | null
           last_weekly_bonus_at: string | null
           level: number | null
+          rest_required_until: string | null
           updated_at: string | null
           user_id: string
           username: string
@@ -1198,13 +1202,17 @@ export type Database = {
           created_at?: string | null
           current_city_id?: string | null
           display_name?: string | null
+          energy?: number
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number
           id?: string
+          last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
+          rest_required_until?: string | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -1218,13 +1226,17 @@ export type Database = {
           created_at?: string | null
           current_city_id?: string | null
           display_name?: string | null
+          energy?: number
           experience?: number | null
           experience_at_last_weekly_bonus?: number | null
           fame?: number | null
           fans?: number | null
+          health?: number
           id?: string
+          last_health_update?: string | null
           last_weekly_bonus_at?: string | null
           level?: number | null
+          rest_required_until?: string | null
           updated_at?: string | null
           user_id?: string
           username?: string

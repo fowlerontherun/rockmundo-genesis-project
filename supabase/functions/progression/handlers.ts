@@ -233,6 +233,43 @@ export async function handleAwardActionXp(
     throw new Error("XP amount must be positive");
   }
 
+  // Calculate health drain if metadata includes duration
+  let healthDrain = 0;
+  if (metadata.duration_minutes && typeof metadata.duration_minutes === "number") {
+    const activityType = metadata.activity_type as string || actionKey;
+    const healthCosts: Record<string, number> = {
+      busking_session: 5,
+      gig: 8,
+      recording: 4,
+      jam_session: 3,
+      songwriting: 2,
+      travel: 6,
+      default: 3,
+    };
+    
+    const hourlyRate = healthCosts[activityType] || healthCosts.default;
+    const hours = metadata.duration_minutes / 60;
+    healthDrain = Math.round(hourlyRate * hours);
+  }
+
+  // Update profile health if needed
+  if (healthDrain > 0) {
+    const currentHealth = profileState.profile.health ?? 100;
+    const newHealth = Math.max(0, currentHealth - healthDrain);
+    
+    const { error: healthError } = await client
+      .from("profiles")
+      .update({
+        health: newHealth,
+        last_health_update: new Date().toISOString(),
+      })
+      .eq("id", profileId);
+    
+    if (healthError) {
+      console.error("Failed to update health:", healthError);
+    }
+  }
+
   // Update wallet with new XP
   const currentBalance = profileState.wallet?.xp_balance ?? 0;
   const currentLifetime = profileState.wallet?.lifetime_xp ?? 0;
@@ -261,6 +298,7 @@ export async function handleAwardActionXp(
       metadata: {
         category,
         action_key: actionKey,
+        health_drain: healthDrain,
         ...metadata,
       },
     });

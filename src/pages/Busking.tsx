@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, History, Music, Coins } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,8 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useGameData } from '@/hooks/useGameData';
-import type { Database } from '@/lib/supabase-types';
+import type { Database, Tables } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const SESSION_LENGTHS = [30, 60, 120] as const;
 
@@ -154,10 +156,30 @@ export default function Busking() {
     activityStatus,
     refreshActivityStatus,
     startActivity,
+    user,
   } = useGameData();
   const { toast } = useToast();
 
   const [selectedLocationId, setSelectedLocationId] = React.useState(buskingLocations[0]?.id ?? '');
+  const [showHistory, setShowHistory] = React.useState(false);
+  
+  const { data: buskingHistory } = useQuery({
+    queryKey: ["busking-history", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("activity_feed")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("activity_type", "busking_session")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data as Tables<"activity_feed">[];
+    },
+    enabled: !!user && showHistory,
+  });
   const [selectedLength, setSelectedLength] = React.useState<SessionLength>(SESSION_LENGTHS[0]);
   const [statusLoading, setStatusLoading] = React.useState(false);
   const [isStartingSession, setIsStartingSession] = React.useState(false);
@@ -528,6 +550,62 @@ export default function Busking() {
               )}
             </div>
           </section>
+
+          {showHistory && (
+            <section className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Busking History
+              </h3>
+              {buskingHistory && buskingHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {buskingHistory.map((session) => {
+                    const metadata = session.metadata as any || {};
+                    return (
+                      <Card key={session.id} className="p-4 bg-muted/30">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Music className="h-4 w-4 text-primary" />
+                              <span className="font-medium">
+                                {metadata.location_name || "Unknown Location"}
+                              </span>
+                              <Badge variant="outline">
+                                {metadata.duration_minutes || 0} min
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(session.created_at).toLocaleString()}
+                            </p>
+                            {metadata.performance_descriptor && (
+                              <p className="text-sm italic text-muted-foreground">
+                                "{metadata.performance_descriptor}"
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right space-y-1">
+                            <div className="flex items-center gap-1 text-sm font-semibold text-green-600">
+                              <Coins className="h-4 w-4" />
+                              ${session.earnings || 0}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              +{metadata.xp_gained || 0} XP
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="p-6 bg-muted/20">
+                  <p className="text-sm text-muted-foreground text-center">
+                    No busking sessions yet. Get out there and perform!
+                  </p>
+                </Card>
+              )}
+            </section>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -167,6 +167,7 @@ const isWeeklyBonusFresh = (ledger: ExperienceLedgerRow[]): boolean => {
 };
 
 interface UseGameDataReturn {
+  user: any; // Auth user object
   profile: PlayerProfile | null;
   skills: PlayerSkills | null;
   attributes: PlayerAttributes | null;
@@ -1985,6 +1986,7 @@ const useProvideGameData = (): UseGameDataReturn => {
 
   const value: UseGameDataReturn = useMemo(
     () => ({
+      user,
       profile,
       skills,
       attributes,
