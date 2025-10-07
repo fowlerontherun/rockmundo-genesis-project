@@ -217,3 +217,57 @@ export async function handleSpendSkillXp(
 
   return { state, skillProgress: updatedSkillProgress };
 }
+
+export async function handleAwardActionXp(
+  client: SupabaseClient<Database>,
+  userId: string,
+  profileState: ProfileState,
+  amount: number,
+  category: string = "performance",
+  actionKey: string = "gameplay_action",
+  metadata: Record<string, unknown> = {},
+): Promise<ProfileState> {
+  const profileId = profileState.profile.id;
+
+  if (amount <= 0) {
+    throw new Error("XP amount must be positive");
+  }
+
+  // Update wallet with new XP
+  const currentBalance = profileState.wallet?.xp_balance ?? 0;
+  const currentLifetime = profileState.wallet?.lifetime_xp ?? 0;
+
+  const { error: walletError } = await client
+    .from("player_xp_wallet")
+    .upsert({
+      profile_id: profileId,
+      xp_balance: currentBalance + amount,
+      lifetime_xp: currentLifetime + amount,
+      last_recalculated: new Date().toISOString(),
+    }, { onConflict: "profile_id" });
+
+  if (walletError) {
+    throw new Error(walletError.message || "Failed to update XP wallet");
+  }
+
+  // Log the XP grant
+  const { error: ledgerError } = await client
+    .from("experience_ledger")
+    .insert({
+      user_id: userId,
+      profile_id: profileId,
+      activity_type: actionKey,
+      xp_amount: amount,
+      metadata: {
+        category,
+        action_key: actionKey,
+        ...metadata,
+      },
+    });
+
+  if (ledgerError) {
+    console.error("Failed to log XP in ledger:", ledgerError);
+  }
+
+  return await fetchProfileState(client, profileId);
+}

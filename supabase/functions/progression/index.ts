@@ -1,7 +1,7 @@
 import { serve } from "../_shared/deno/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
-import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp } from "./handlers.ts";
+import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp, handleAwardActionXp } from "./handlers.ts";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type WalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
@@ -180,6 +180,18 @@ serve(async (req) => {
         actionResult = { skill_progress: skillProgress };
         break;
       }
+
+      case "award_action_xp":
+        result = await handleAwardActionXp(
+          client,
+          user.id,
+          profileState,
+          params.amount,
+          params.category,
+          params.action_key,
+          params.metadata,
+        );
+        break;
 
       default:
         throw new Error(`Unknown action: ${action}`);
