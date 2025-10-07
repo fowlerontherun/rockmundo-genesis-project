@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth-context';
 import { Users, User } from 'lucide-react';
 import { INSTRUMENT_ROLES, VOCAL_ROLES } from '@/utils/touringMembers';
+import { MUSIC_GENRES } from '@/data/genres';
 
 export function BandCreationForm() {
   const { user } = useAuth();
@@ -155,13 +156,11 @@ export function BandCreationForm() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Rock">Rock</SelectItem>
-                <SelectItem value="Pop">Pop</SelectItem>
-                <SelectItem value="Jazz">Jazz</SelectItem>
-                <SelectItem value="Blues">Blues</SelectItem>
-                <SelectItem value="Metal">Metal</SelectItem>
-                <SelectItem value="Alternative">Alternative</SelectItem>
-                <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
+                {MUSIC_GENRES.map((genreOption) => (
+                  <SelectItem key={genreOption} value={genreOption}>
+                    {genreOption}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

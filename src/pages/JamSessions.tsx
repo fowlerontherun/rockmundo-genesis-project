@@ -21,6 +21,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
 import { Loader2, Lock, Music4 } from "lucide-react";
+import { MUSIC_GENRES } from "@/data/genres";
 
 type JamSessionRow = Database["public"]["Tables"]["jam_sessions"]["Row"];
 
@@ -56,16 +57,8 @@ const DEFAULT_FORM_STATE: FormState = {
   accessCode: "",
 };
 
-const GENRE_OPTIONS = [
-  "Rock",
-  "Pop",
-  "Metal",
-  "Jazz",
-  "Blues",
-  "Funk",
-  "Electronic",
-  "Folk",
-];
+// Use centralized genre list from skill tree
+const GENRE_OPTIONS = MUSIC_GENRES;
 
 const JamSessions = () => {
   const { user } = useAuth();

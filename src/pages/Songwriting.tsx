@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { MUSIC_GENRES, getGenreSkillSlug } from "@/data/genres";
 import {
   Dialog,
   DialogContent,
@@ -294,18 +295,12 @@ type NamedOption = {
   defaultSplit?: number;
 };
 
-const GENRE_LIBRARY: Array<{ id: string; label: string; relatedSkill?: string }> = [
-  { id: "pop", label: "Pop", relatedSkill: "songwriting_pop" },
-  { id: "rock", label: "Rock", relatedSkill: "songwriting_rock" },
-  { id: "rnb", label: "R&B", relatedSkill: "songwriting_rnb" },
-  { id: "country", label: "Country", relatedSkill: "songwriting_country" },
-  { id: "electronic", label: "Electronic", relatedSkill: "songwriting_electronic" },
-  { id: "hiphop", label: "Hip-Hop", relatedSkill: "songwriting_hiphop" },
-  { id: "folk", label: "Folk", relatedSkill: "songwriting_folk" },
-  { id: "soul", label: "Soul", relatedSkill: "songwriting_soul" },
-  { id: "latin", label: "Latin", relatedSkill: "songwriting_latin" },
-  { id: "jazz", label: "Jazz", relatedSkill: "songwriting_jazz" },
-];
+// Genre library - use centralized genre list from skill tree
+const GENRE_LIBRARY = MUSIC_GENRES.map(genre => ({
+  id: genre.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+  label: genre,
+  relatedSkill: getGenreSkillSlug(genre, 'basic')
+}));
 
 const SONG_PURPOSE_OPTIONS: NamedOption[] = [
   { id: "single", label: "Flagship Single", description: "Craft a lead single engineered for fan excitement." },
