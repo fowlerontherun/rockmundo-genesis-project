@@ -1,4 +1,16 @@
-import { AudioLines, Building2, Gift, GraduationCap, NotebookPen, PlaySquare, Sparkles, Users, BookOpen, Briefcase } from "lucide-react";
+import {
+  AudioLines,
+  Building2,
+  Disc3,
+  Gift,
+  GraduationCap,
+  NotebookPen,
+  PlaySquare,
+  Sparkles,
+  Users,
+  BookOpen,
+  Briefcase,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { AdminRoute } from "@/components/AdminRoute";
@@ -40,6 +52,13 @@ const adminSections = [
     href: "/admin/studios",
     action: "Manage studios",
     Icon: AudioLines,
+  },
+  {
+    title: "Night Clubs",
+    description: "Curate nightlife venues, DJ slot requirements, and social actions by city.",
+    href: "/admin/night-clubs",
+    action: "Manage night clubs",
+    Icon: Disc3,
   },
   {
     title: "Skill Books",
