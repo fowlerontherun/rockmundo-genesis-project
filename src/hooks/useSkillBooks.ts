@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/lib/supabase-types";
+import { mergeSkillDefinitions } from "@/utils/skillDefinitions";
 
 export type SkillBook = Tables<"skill_books">;
 export type BookPurchase = Tables<"player_book_purchases">;
@@ -28,11 +29,24 @@ export const useSkillBooks = () => {
         .from("skill_definitions")
         .select("slug, display_name");
 
+      const { map: mergedSkillMap } = mergeSkillDefinitions(skillsData ?? []);
+
       // Map books with skill info
-      return booksData?.map(book => ({
-        ...book,
-        skill_definitions: skillsData?.find(s => s.slug === book.skill_slug) || null
-      })) || [];
+      return (
+        booksData?.map((book) => {
+          const fallback = book.skill_slug ? mergedSkillMap.get(book.skill_slug) : null;
+
+          return {
+            ...book,
+            skill_definitions:
+              skillsData?.find((s) => s.slug === book.skill_slug) ??
+              (fallback
+                ? { slug: fallback.slug, display_name: fallback.displayName }
+                : null),
+            skill_display_name: fallback?.displayName ?? book.skill_slug,
+          };
+        }) || []
+      );
     },
   });
 
