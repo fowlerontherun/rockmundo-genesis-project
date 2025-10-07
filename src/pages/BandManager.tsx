@@ -11,6 +11,7 @@ import { BandOverview } from '@/components/band/BandOverview';
 import { BandMemberCard } from '@/components/band/BandMemberCard';
 import { AddTouringMember } from '@/components/band/AddTouringMember';
 import { ChemistryDisplay } from '@/components/band/ChemistryDisplay';
+import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
 import { Users, Music } from 'lucide-react';
@@ -244,10 +245,17 @@ export default function BandManager() {
                   </CardDescription>
                 </div>
                 {isLeader && selectedBand.status === 'active' && (
-                  <AddTouringMember 
-                    bandId={selectedBand.id} 
-                    onAdded={() => loadBandMembers(selectedBand.id)} 
-                  />
+                  <div className="flex gap-2">
+                    <InviteFriendToBand
+                      bandId={selectedBand.id}
+                      bandName={selectedBand.name}
+                      currentUserId={user!.id}
+                    />
+                    <AddTouringMember 
+                      bandId={selectedBand.id} 
+                      onAdded={() => loadBandMembers(selectedBand.id)} 
+                    />
+                  </div>
                 )}
               </div>
             </CardHeader>

@@ -185,6 +185,53 @@ export type Database = {
           },
         ]
       }
+      band_invitations: {
+        Row: {
+          band_id: string
+          created_at: string
+          id: string
+          instrument_role: string
+          invited_user_id: string
+          inviter_user_id: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          vocal_role: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          id?: string
+          instrument_role?: string
+          invited_user_id: string
+          inviter_user_id: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          vocal_role?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          id?: string
+          instrument_role?: string
+          invited_user_id?: string
+          inviter_user_id?: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          vocal_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_invitations_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_leadership_votes: {
         Row: {
           band_id: string
