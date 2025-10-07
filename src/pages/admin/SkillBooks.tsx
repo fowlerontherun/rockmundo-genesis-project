@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/lib/supabase-types";
+import { useMergedSkillDefinitions } from "@/utils/skillDefinitions";
 
 type SkillBook = Tables<"skill_books">;
 
@@ -83,6 +84,16 @@ const SkillBooks = () => {
       return data;
     },
   });
+
+  const { list: skillOptions, map: skillOptionMap } = useMergedSkillDefinitions(skills ?? []);
+
+  const getSkillDisplayName = useCallback(
+    (slug: string) =>
+      skillOptionMap.get(slug)?.displayName ||
+      skills?.find((skill) => skill.slug === slug)?.display_name ||
+      slug,
+    [skillOptionMap, skills],
+  );
 
   const createOrUpdateBook = useMutation({
     mutationFn: async (book: typeof formData & { id?: string }) => {
@@ -224,9 +235,9 @@ const SkillBooks = () => {
                       <SelectValue placeholder="Select skill" />
                     </SelectTrigger>
                     <SelectContent>
-                      {skills?.map((skill) => (
+                      {skillOptions.map((skill) => (
                         <SelectItem key={skill.slug} value={skill.slug}>
-                          {skill.display_name}
+                          {skill.displayName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -335,9 +346,9 @@ const SkillBooks = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Skills</SelectItem>
-              {skills?.map((skill) => (
+              {skillOptions.map((skill) => (
                 <SelectItem key={skill.slug} value={skill.slug}>
-                  {skill.display_name}
+                  {skill.displayName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -375,7 +386,7 @@ const SkillBooks = () => {
                 <TableRow key={book.id}>
                   <TableCell className="font-medium">{book.title}</TableCell>
                   <TableCell>{book.author}</TableCell>
-                  <TableCell>{book.skill_definitions?.display_name}</TableCell>
+                  <TableCell>{getSkillDisplayName(book.skill_slug)}</TableCell>
                   <TableCell>{book.category}</TableCell>
                   <TableCell>${book.price}</TableCell>
                   <TableCell>{book.base_reading_days}d</TableCell>

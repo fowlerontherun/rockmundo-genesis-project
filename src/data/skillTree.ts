@@ -678,6 +678,446 @@ const instrumentsConfigs: TieredSkillConfig[] = [
         slug: createSlug("instruments", "Professional", "Electronic Strings")
       }
     }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "String Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Basic String Instruments",
+        description: "Strum and pluck acoustic guitar, banjo, mandolin, and ukulele with confident timing.",
+        slug: "instruments_basic_string_instruments"
+      },
+      Professional: {
+        name: "Professional String Instruments",
+        description: "Arrange folk ensembles with fluid chord transitions, strumming patterns, and nuanced dynamics.",
+        slug: "instruments_professional_string_instruments"
+      },
+      Mastery: {
+        name: "String Instruments Mastery",
+        description: "Deliver expressive fingerstyle showcases, advanced chord vocabulary, and acoustic improvisation.",
+        slug: "instruments_mastery_string_instruments"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Advanced String Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Advanced String Instruments",
+        description: "Transition to electric and extended-range strings with controlled tone and articulation.",
+        slug: "instruments_basic_advanced_strings",
+        prerequisites: [
+          { slug: "instruments_professional_string_instruments", requiredValue: 500 }
+        ]
+      },
+      Professional: {
+        name: "Professional Advanced Strings",
+        description: "Blend electric guitar, bass, and Chapman Stick textures with expressive phrasing and tone design.",
+        slug: "instruments_professional_advanced_strings"
+      },
+      Mastery: {
+        name: "Advanced String Mastery",
+        description: "Execute shredding, tapping, harmonics, and live FX control for arena-ready performances.",
+        slug: "instruments_mastery_advanced_strings"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Modern Bass Techniques",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Modern Bass Techniques",
+        description: "Lock into the pocket with groove-minded fingerstyle, pick, and synth bass foundations.",
+        slug: "instruments_basic_modern_bass"
+      },
+      Professional: {
+        name: "Professional Modern Bass",
+        description: "Develop slap and pop fluency, walking bass vocabulary, and tight ensemble precision.",
+        slug: "instruments_professional_modern_bass"
+      },
+      Mastery: {
+        name: "Modern Bass Mastery",
+        description: "Command funk precision, compression artistry, and improvisational bass leadership.",
+        slug: "instruments_mastery_modern_bass"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Keyboard & Piano Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Keyboard & Piano Foundations",
+        description: "Strengthen piano, organ, and electric piano fundamentals with solid technique and timing.",
+        slug: "instruments_basic_keyboard_piano"
+      },
+      Professional: {
+        name: "Professional Keyboard & Piano",
+        description: "Deliver stage-ready performances with confident voicings, hand independence, and stylistic range.",
+        slug: "instruments_professional_keyboard_piano"
+      },
+      Mastery: {
+        name: "Keyboard & Piano Mastery",
+        description: "Improvise across classical, jazz, and pop repertoires with show-stopping dynamics.",
+        slug: "instruments_mastery_keyboard_piano"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Synths & Electronic Keys",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Synths & Electronic Keys",
+        description: "Explore analog, FM, and wavetable synth basics with performance-ready patch control.",
+        slug: "instruments_basic_synths_keys"
+      },
+      Professional: {
+        name: "Professional Synth Performance",
+        description: "Design expressive patches, modulation routings, and stacked textures for live sets.",
+        slug: "instruments_professional_synths_keys"
+      },
+      Mastery: {
+        name: "Synth & Keys Mastery",
+        description: "Craft immersive sound design with evolving layers, real-time macro control, and hybrid rigs.",
+        slug: "instruments_mastery_synths_keys"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Percussion & Drums",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Percussion & Drums",
+        description: "Build rhythmic accuracy, foundational rudiments, and kit independence.",
+        slug: "instruments_basic_percussion_drums"
+      },
+      Professional: {
+        name: "Professional Percussion & Drums",
+        description: "Blend cajón, congas, and drum kit grooves with consistent pocket and articulation.",
+        slug: "instruments_professional_percussion_drums"
+      },
+      Mastery: {
+        name: "Percussion & Drum Mastery",
+        description: "Lead ensembles with polyrhythms, explosive fills, and tempo management mastery.",
+        slug: "instruments_mastery_percussion_drums"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Electronic Percussion",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Electronic Percussion",
+        description: "Trigger drum machines, samplers, and grooveboxes with reliable timing and feel.",
+        slug: "instruments_basic_electronic_percussion"
+      },
+      Professional: {
+        name: "Professional Electronic Percussion",
+        description: "Program intricate beats, manage quantization, and sculpt live electronic percussion sets.",
+        slug: "instruments_professional_electronic_percussion"
+      },
+      Mastery: {
+        name: "Electronic Percussion Mastery",
+        description: "Deliver hybrid performances with loop craftsmanship, live remixing, and trigger mastery.",
+        slug: "instruments_mastery_electronic_percussion"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Wind Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Wind Instruments",
+        description: "Refine breath support, embouchure, and tone across flute, clarinet, oboe, and saxophone.",
+        slug: "instruments_basic_wind_instruments"
+      },
+      Professional: {
+        name: "Professional Wind Instruments",
+        description: "Expand vibrato control, scale fluency, and ensemble phrasing for winds.",
+        slug: "instruments_professional_wind_instruments"
+      },
+      Mastery: {
+        name: "Wind Instrument Mastery",
+        description: "Improvise lyrical solos with jazz phrasing, advanced articulation, and tonal finesse.",
+        slug: "instruments_mastery_wind_instruments"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Brass Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Brass Instruments",
+        description: "Build range, breath efficiency, and tone projection on trumpet, trombone, horn, and tuba.",
+        slug: "instruments_basic_brass_instruments"
+      },
+      Professional: {
+        name: "Professional Brass Instruments",
+        description: "Shape ensembles with mute techniques, stylistic articulation, and dynamic balance.",
+        slug: "instruments_professional_brass_instruments"
+      },
+      Mastery: {
+        name: "Brass Instrument Mastery",
+        description: "Lead brass sections with jazz improvisation, expanded range, and expressive tone sculpting.",
+        slug: "instruments_mastery_brass_instruments"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "World & Folk Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "World & Folk Instruments",
+        description: "Discover sitar, tabla, pan pipes, and other folk instruments with cultural context and respect.",
+        slug: "instruments_basic_world_folk"
+      },
+      Professional: {
+        name: "Professional World & Folk",
+        description: "Interpret traditional scales, rhythmic cycles, and ensemble etiquette across global instruments.",
+        slug: "instruments_professional_world_folk"
+      },
+      Mastery: {
+        name: "World & Folk Mastery",
+        description: "Fuse authentic repertoires with modern genres while maintaining cultural integrity.",
+        slug: "instruments_mastery_world_folk"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "DJ & Live Production",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "DJ & Live Production",
+        description: "Beatmatch on controllers and turntables while managing EQ and cue workflows.",
+        slug: "instruments_basic_dj_live"
+      },
+      Professional: {
+        name: "Professional DJ & Live Production",
+        description: "Integrate scratching, FX units, and hybrid sets for club-ready performances.",
+        slug: "instruments_professional_dj_live"
+      },
+      Mastery: {
+        name: "DJ & Live Production Mastery",
+        description: "Deliver seamless live transitions, storytelling mixes, and festival-grade energy.",
+        slug: "instruments_mastery_dj_live"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Electronic Production & Sampling",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Electronic Production & Sampling",
+        description: "Sequence ideas with samplers, DAW controllers, and live clip launching fundamentals.",
+        slug: "instruments_basic_electronic_sampling"
+      },
+      Professional: {
+        name: "Professional Electronic Production",
+        description: "Arrange tracks, sculpt automation, and manipulate samples for performance impact.",
+        slug: "instruments_professional_electronic_sampling"
+      },
+      Mastery: {
+        name: "Electronic Production Mastery",
+        description: "Command live performance FX, resampling workflows, and on-the-fly arrangement skills.",
+        slug: "instruments_mastery_electronic_sampling"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Vocal & Performance Skills",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Vocal & Performance Skills",
+        description: "Develop pitch accuracy, breath management, and confident lead or backing vocals.",
+        slug: "instruments_basic_vocal_performance"
+      },
+      Professional: {
+        name: "Professional Vocal Performance",
+        description: "Blend harmonies, stage movement, and vocal dynamics across ensemble settings.",
+        slug: "instruments_professional_vocal_performance"
+      },
+      Mastery: {
+        name: "Vocal Performance Mastery",
+        description: "Command stages with expressive phrasing, show-ready presence, and adaptive harmonizing.",
+        slug: "instruments_mastery_vocal_performance"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Vocal Effects & Technology",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Vocal Effects & Technology",
+        description: "Route vocoders, talkboxes, and vocal processors with clean signal flow.",
+        slug: "instruments_basic_vocal_fx"
+      },
+      Professional: {
+        name: "Professional Vocal Effects",
+        description: "Dial harmonizers, auto-tune, and loopers in sync with live arrangements.",
+        slug: "instruments_professional_vocal_fx"
+      },
+      Mastery: {
+        name: "Vocal Effects Mastery",
+        description: "Orchestrate creative vocal FX layering, live timing, and adaptive routing strategies.",
+        slug: "instruments_mastery_vocal_fx"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Hybrid & Experimental Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Hybrid & Experimental Instruments",
+        description: "Experiment with theremins, motion controllers, and MPE devices for expressive control.",
+        slug: "instruments_basic_hybrid_experimental"
+      },
+      Professional: {
+        name: "Professional Hybrid Instrumentalist",
+        description: "Integrate spatial gestures, custom mappings, and responsive sound design in performance.",
+        slug: "instruments_professional_hybrid_experimental"
+      },
+      Mastery: {
+        name: "Hybrid Instrument Mastery",
+        description: "Innovate with experimental techniques, signal flow design, and immersive instrument rigs.",
+        slug: "instruments_mastery_hybrid_experimental"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Orchestral & Cinematic Instruments",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Orchestral & Cinematic Instruments",
+        description: "Refine bow control, ensemble timing, and expressive dynamics across orchestral sections.",
+        slug: "instruments_basic_orchestral_cinematic"
+      },
+      Professional: {
+        name: "Professional Orchestral & Cinematic",
+        description: "Lead strings, winds, and harp performances with nuanced vibrato and phrasing.",
+        slug: "instruments_professional_orchestral_cinematic"
+      },
+      Mastery: {
+        name: "Orchestral & Cinematic Mastery",
+        description: "Craft cinematic expression with dynamic swells, ensemble leadership, and scoring instincts.",
+        slug: "instruments_mastery_orchestral_cinematic"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Digital Music Tools",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Digital Music Tools",
+        description: "Streamline sessions in Logic, Ableton, FL Studio, and more with productive workflows.",
+        slug: "instruments_basic_digital_music_tools"
+      },
+      Professional: {
+        name: "Professional Digital Music Tools",
+        description: "Automate mixes, manage multitrack templates, and optimize plugin chains.",
+        slug: "instruments_professional_digital_music_tools"
+      },
+      Mastery: {
+        name: "Digital Music Tools Mastery",
+        description: "Build performance-ready DAW rigs with layered sound design, automation, and mastering polish.",
+        slug: "instruments_mastery_digital_music_tools"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Sound Engineering & Studio",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Sound Engineering & Studio",
+        description: "Set up studio consoles, mic chains, and gain staging for clean recordings.",
+        slug: "instruments_basic_sound_engineering"
+      },
+      Professional: {
+        name: "Professional Sound Engineering",
+        description: "Shape EQ, compression, and mixing balances for professional sessions.",
+        slug: "instruments_professional_sound_engineering"
+      },
+      Mastery: {
+        name: "Sound Engineering Mastery",
+        description: "Direct studio workflows with outboard FX, mastering chains, and production leadership.",
+        slug: "instruments_mastery_sound_engineering"
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Songwriting & Arrangement",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Songwriting & Arrangement Skills",
+        description: "Compose chord progressions, melodies, and rhythmic motifs tailored for ensembles.",
+        slug: "instruments_basic_songwriting_arrangement"
+      },
+      Professional: {
+        name: "Professional Songwriting & Arrangement",
+        description: "Craft genre-adaptable arrangements with counter-melodies and dynamic pacing.",
+        slug: "instruments_professional_songwriting_arrangement"
+      },
+      Mastery: {
+        name: "Songwriting & Arrangement Mastery",
+        description: "Design cinematic compositions with seamless flow, advanced harmony, and ensemble direction.",
+        slug: "instruments_mastery_songwriting_arrangement"
+      }
+    }
   }
 ];
 
@@ -695,7 +1135,9 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         slug: createSlug("instruments", "Mastery", "Lead Vocals"),
         prerequisites: [
           { slug: createSlug("instruments", "Professional", "Singing"), requiredValue: 650 },
-          { slug: createSlug("instruments", "Professional", "Rapping"), requiredValue: 600 }
+          { slug: createSlug("instruments", "Professional", "Rapping"), requiredValue: 600 },
+          { slug: "instruments_professional_vocal_performance", requiredValue: 650 },
+          { slug: "instruments_professional_vocal_fx", requiredValue: 600 }
         ]
       }
     }
@@ -716,7 +1158,16 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
           { slug: createSlug("instruments", "Professional", "Percussions"), requiredValue: 650 },
           { slug: createSlug("instruments", "Professional", "Strings"), requiredValue: 650 },
           { slug: createSlug("instruments", "Professional", "Woodwinds"), requiredValue: 600 },
-          { slug: createSlug("instruments", "Professional", "Electronic Instruments"), requiredValue: 600 }
+          { slug: createSlug("instruments", "Professional", "Electronic Instruments"), requiredValue: 600 },
+          { slug: "instruments_professional_string_instruments", requiredValue: 650 },
+          { slug: "instruments_professional_advanced_strings", requiredValue: 650 },
+          { slug: "instruments_professional_modern_bass", requiredValue: 600 },
+          { slug: "instruments_professional_keyboard_piano", requiredValue: 650 },
+          { slug: "instruments_professional_synths_keys", requiredValue: 600 },
+          { slug: "instruments_professional_percussion_drums", requiredValue: 650 },
+          { slug: "instruments_professional_electronic_percussion", requiredValue: 600 },
+          { slug: "instruments_professional_world_folk", requiredValue: 550 },
+          { slug: "instruments_professional_orchestral_cinematic", requiredValue: 650 }
         ]
       }
     }
@@ -733,7 +1184,8 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         description: "Headliner-level DJ sets with intricate blends and storytelling.",
         slug: createSlug("instruments", "Mastery", "DJ"),
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "DJ Performance"), requiredValue: 650 }
+          { slug: createSlug("instruments", "Professional", "DJ Performance"), requiredValue: 650 },
+          { slug: "instruments_professional_dj_live", requiredValue: 650 }
         ]
       }
     }
@@ -750,7 +1202,9 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         description: "Design expressive MIDI performances that feel organic.",
         slug: createSlug("instruments", "Mastery", "MIDI"),
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "MIDI Performance"), requiredValue: 650 }
+          { slug: createSlug("instruments", "Professional", "MIDI Performance"), requiredValue: 650 },
+          { slug: "instruments_professional_digital_music_tools", requiredValue: 600 },
+          { slug: "instruments_professional_electronic_sampling", requiredValue: 600 }
         ]
       }
     }
@@ -767,7 +1221,9 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         description: "Flip samples live with flawless timing and musicality.",
         slug: createSlug("instruments", "Mastery", "Sampler"),
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Sampler Drum Machine"), requiredValue: 650 }
+          { slug: createSlug("instruments", "Professional", "Sampler Drum Machine"), requiredValue: 650 },
+          { slug: "instruments_professional_electronic_percussion", requiredValue: 600 },
+          { slug: "instruments_professional_electronic_sampling", requiredValue: 600 }
         ]
       }
     }
@@ -784,7 +1240,9 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         description: "Fuse acoustic power with electronic precision effortlessly.",
         slug: createSlug("instruments", "Mastery", "Hybrid Drumming"),
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Hybrid Drums"), requiredValue: 650 }
+          { slug: createSlug("instruments", "Professional", "Hybrid Drums"), requiredValue: 650 },
+          { slug: "instruments_professional_percussion_drums", requiredValue: 650 },
+          { slug: "instruments_professional_electronic_percussion", requiredValue: 600 }
         ]
       }
     }
@@ -801,7 +1259,9 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
         description: "Deliver futuristic string performances with immersive sound design.",
         slug: createSlug("instruments", "Mastery", "Electronic Strings"),
         prerequisites: [
-          { slug: createSlug("instruments", "Professional", "Electronic Strings"), requiredValue: 650 }
+          { slug: createSlug("instruments", "Professional", "Electronic Strings"), requiredValue: 650 },
+          { slug: "instruments_professional_advanced_strings", requiredValue: 650 },
+          { slug: "instruments_professional_synths_keys", requiredValue: 600 }
         ]
       }
     }
