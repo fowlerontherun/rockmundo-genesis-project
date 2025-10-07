@@ -281,15 +281,52 @@ export const useSongwritingData = (userId?: string | null) => {
     }
   });
 
-  // Complete session
+  // Complete session with skill-based quality
   const completeSession = useMutation({
-    mutationFn: async ({ sessionId, notes, effortHours = 6 }: { sessionId: string; notes?: string; effortHours?: number }) => {
-      // Calculate progress gains (simplified)
-      const musicGain = Math.floor(Math.random() * 500) + 500;
-      const lyricsGain = Math.floor(Math.random() * 500) + 500;
+    mutationFn: async ({ 
+      sessionId, 
+      notes, 
+      effortHours = 6,
+      skillLevels,
+      attributes 
+    }: { 
+      sessionId: string; 
+      notes?: string; 
+      effortHours?: number;
+      skillLevels?: Record<string, number>;
+      attributes?: { creative_insight: number; musical_ability: number; technical_mastery: number };
+    }) => {
+      // Get session and project data
+      const { data: session, error: sessionError } = await supabase
+        .from('songwriting_sessions')
+        .select('project_id')
+        .eq('id', sessionId)
+        .single();
+      
+      if (sessionError) throw sessionError;
+      
+      // Calculate skill-based progress if skills provided
+      let musicGain = 0;
+      let lyricsGain = 0;
+      
+      if (skillLevels && attributes) {
+        const basicComposing = skillLevels['songwriting_basic_composing'] || 0;
+        const basicLyrics = skillLevels['songwriting_basic_lyrics'] || 0;
+        
+        // Base progress scales with skills
+        const baseProgress = 400 + Math.floor(Math.random() * 200);
+        musicGain = Math.floor(baseProgress * (1 + basicComposing / 200));
+        lyricsGain = Math.floor(baseProgress * (1 + basicLyrics / 200));
+      } else {
+        // Fallback to simple calculation
+        musicGain = Math.floor(Math.random() * 500) + 500;
+        lyricsGain = Math.floor(Math.random() * 500) + 500;
+      }
+      
       const xpEarned = Math.floor((musicGain + lyricsGain) / 10);
       
-      const { data: session, error: sessionError } = await supabase
+      // Update session
+      await supabase
         .from('songwriting_sessions')
         .update({
           session_end: new Date().toISOString(),
@@ -298,11 +335,7 @@ export const useSongwritingData = (userId?: string | null) => {
           xp_earned: xpEarned,
           notes: notes || null,
         })
-        .eq('id', sessionId)
-        .select('project_id')
-        .single();
-      
-      if (sessionError) throw sessionError;
+        .eq('id', sessionId);
       
       // Update project progress
       const { data: project } = await supabase
@@ -324,14 +357,13 @@ export const useSongwritingData = (userId?: string | null) => {
             total_sessions: (project.total_sessions || 0) + 1,
             sessions_completed: (project.sessions_completed || 0) + 1,
             status: completed ? 'completed' : 'writing',
-            quality_score: Math.floor(((newMusicProgress + newLyricsProgress) / 4000) * 1000),
             is_locked: false,
             locked_until: null,
           })
           .eq('id', session.project_id);
       }
       
-      return session;
+      return { sessionId, musicGain, lyricsGain, xpEarned };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
@@ -343,10 +375,69 @@ export const useSongwritingData = (userId?: string | null) => {
     }
   });
 
-  // Convert to song (stubbed)
+  // Convert to song with quality calculation
   const convertToSong = useMutation({
-    mutationFn: async (projectId: string) => {
-      throw new Error("Song conversion not yet implemented");
+    mutationFn: async ({ 
+      projectId, 
+      quality,
+      catalogStatus = 'private',
+      bandId 
+    }: { 
+      projectId: string; 
+      quality: any;
+      catalogStatus?: string;
+      bandId?: string;
+    }) => {
+      if (!userId) throw new Error("User ID required");
+      
+      const { data: project } = await supabase
+        .from('songwriting_projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+      
+      if (!project) throw new Error("Project not found");
+      
+      // Create song record
+      const { data: song, error: songError } = await supabase
+        .from('songs')
+        .insert({
+          user_id: userId,
+          original_writer_id: userId,
+          title: project.title,
+          genre: project.genres?.[0] || null,
+          lyrics: project.lyrics,
+          quality_score: quality.totalQuality,
+          lyrics_strength: quality.lyricsStrength,
+          melody_strength: quality.melodyStrength,
+          rhythm_strength: quality.rhythmStrength,
+          arrangement_strength: quality.arrangementStrength,
+          production_potential: quality.productionPotential,
+          ownership_type: bandId ? 'band' : 'personal',
+          catalog_status: catalogStatus,
+          band_id: bandId || null,
+          ai_generated_lyrics: project.lyrics?.includes('[AI Generated]') || false,
+        })
+        .select()
+        .single();
+      
+      if (songError) throw songError;
+      
+      // Link song to project
+      await supabase
+        .from('songwriting_projects')
+        .update({ song_id: song.id, status: 'converted' })
+        .eq('id', projectId);
+      
+      return song;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['songwriting-projects'] });
+      toast({ title: "Song Created!", description: "Added to your catalog" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: "Failed to create song", variant: "destructive" });
+      console.error("Convert to song error:", error);
     }
   });
 

@@ -2088,6 +2088,141 @@ export type Database = {
         }
         Relationships: []
       }
+      song_market_bids: {
+        Row: {
+          bid_amount: number
+          bid_time: string | null
+          bidder_id: string
+          id: string
+          is_winning: boolean | null
+          listing_id: string
+        }
+        Insert: {
+          bid_amount: number
+          bid_time?: string | null
+          bidder_id: string
+          id?: string
+          is_winning?: boolean | null
+          listing_id: string
+        }
+        Update: {
+          bid_amount?: number
+          bid_time?: string | null
+          bidder_id?: string
+          id?: string
+          is_winning?: boolean | null
+          listing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_market_bids_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "song_market_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      song_market_listings: {
+        Row: {
+          auction_end_date: string | null
+          buyer_id: string | null
+          buyout_price: number | null
+          created_at: string | null
+          current_bid: number | null
+          current_bidder_id: string | null
+          id: string
+          listing_type: string
+          reserve_price: number | null
+          seller_id: string
+          sold_at: string | null
+          sold_price: number | null
+          song_id: string
+          starting_price: number
+          status: string
+        }
+        Insert: {
+          auction_end_date?: string | null
+          buyer_id?: string | null
+          buyout_price?: number | null
+          created_at?: string | null
+          current_bid?: number | null
+          current_bidder_id?: string | null
+          id?: string
+          listing_type: string
+          reserve_price?: number | null
+          seller_id: string
+          sold_at?: string | null
+          sold_price?: number | null
+          song_id: string
+          starting_price: number
+          status?: string
+        }
+        Update: {
+          auction_end_date?: string | null
+          buyer_id?: string | null
+          buyout_price?: number | null
+          created_at?: string | null
+          current_bid?: number | null
+          current_bidder_id?: string | null
+          id?: string
+          listing_type?: string
+          reserve_price?: number | null
+          seller_id?: string
+          sold_at?: string | null
+          sold_price?: number | null
+          song_id?: string
+          starting_price?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_market_listings_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      song_sales_royalties: {
+        Row: {
+          buyer_id: string
+          id: string
+          original_writer_id: string
+          royalty_percentage: number
+          sale_price: number
+          sold_at: string | null
+          song_id: string
+        }
+        Insert: {
+          buyer_id: string
+          id?: string
+          original_writer_id: string
+          royalty_percentage?: number
+          sale_price: number
+          sold_at?: string | null
+          song_id: string
+        }
+        Update: {
+          buyer_id?: string
+          id?: string
+          original_writer_id?: string
+          royalty_percentage?: number
+          sale_price?: number
+          sold_at?: string | null
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_sales_royalties_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       song_themes: {
         Row: {
           created_at: string
@@ -2114,6 +2249,9 @@ export type Database = {
       }
       songs: {
         Row: {
+          ai_generated_lyrics: boolean | null
+          band_id: string | null
+          catalog_status: string | null
           chart_position: number | null
           chord_progression_id: string | null
           created_at: string
@@ -2121,7 +2259,10 @@ export type Database = {
           id: string
           lyrics: string | null
           lyrics_progress: number | null
+          market_listing_id: string | null
           music_progress: number | null
+          original_writer_id: string | null
+          ownership_type: string | null
           quality_score: number
           release_date: string | null
           revenue: number
@@ -2135,6 +2276,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_generated_lyrics?: boolean | null
+          band_id?: string | null
+          catalog_status?: string | null
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
@@ -2142,7 +2286,10 @@ export type Database = {
           id?: string
           lyrics?: string | null
           lyrics_progress?: number | null
+          market_listing_id?: string | null
           music_progress?: number | null
+          original_writer_id?: string | null
+          ownership_type?: string | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -2156,6 +2303,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_generated_lyrics?: boolean | null
+          band_id?: string | null
+          catalog_status?: string | null
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
@@ -2163,7 +2313,10 @@ export type Database = {
           id?: string
           lyrics?: string | null
           lyrics_progress?: number | null
+          market_listing_id?: string | null
           music_progress?: number | null
+          original_writer_id?: string | null
+          ownership_type?: string | null
           quality_score?: number
           release_date?: string | null
           revenue?: number
@@ -2177,6 +2330,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "songs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "songs_chord_progression_id_fkey"
             columns: ["chord_progression_id"]

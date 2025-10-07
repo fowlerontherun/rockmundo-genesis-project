@@ -31,6 +31,7 @@ const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
+const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
@@ -124,6 +125,7 @@ function App() {
                     <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
+                    <Route path="song-market" element={<SongMarket />} />
                     <Route path="band-enhanced" element={<EnhancedBandManager />} />
                     <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
                     <Route path="fans-enhanced" element={<EnhancedFanManagement />} />

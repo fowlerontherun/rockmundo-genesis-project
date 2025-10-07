@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.shift-clock-out]
 verify_jwt = false
+
+[functions.generate-song-lyrics]
+verify_jwt = false

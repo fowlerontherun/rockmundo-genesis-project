@@ -19,6 +19,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { MUSIC_GENRES, getGenreSkillSlug } from "@/data/genres";
+import { calculateSongQuality, canStartSongwriting, canWriteGenre } from "@/utils/songQuality";
+import { getSongRating } from "@/data/songRatings";
+import { AILyricsGenerator } from "@/components/songwriting/AILyricsGenerator";
+import { SongQualityBreakdown } from "@/components/songwriting/SongQualityBreakdown";
+import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
 import {
   Dialog,
   DialogContent,
@@ -1239,9 +1244,28 @@ const Songwriting = () => {
     }
   };
 
-  const handleConvertProject = async (project: SongwritingProject) => {
+  const handleConvertProject = async (project: SongwritingProject, catalogStatus: string = 'private', bandId?: string) => {
     try {
-      await convertToSong.mutateAsync(project.id);
+      // Calculate final quality for the song
+      const quality = calculateSongQuality({
+        genre: project.genres?.[0] || 'Rock',
+        skillLevels: {}, // TODO: Get from player data
+        attributes: {
+          creative_insight: 10,
+          musical_ability: 10,
+          technical_mastery: 10
+        },
+        sessionHours: 8,
+        coWriters: 0,
+        aiLyrics: project.lyrics?.includes('[AI Generated]') || false
+      });
+
+      await convertToSong.mutateAsync({
+        projectId: project.id,
+        quality,
+        catalogStatus,
+        bandId
+      });
     } catch (error) {
       logger.error("Failed to convert songwriting project", {
         projectId: project.id,
