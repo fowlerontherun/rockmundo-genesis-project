@@ -227,20 +227,12 @@ export interface NightClubNPCProfile {
   availability?: string | null;
 }
 
-export interface NightClubSongOption {
-  id: string;
-  title: string;
-  genre?: string | null;
-}
-
 export interface NightClubDjSlotConfig {
   fameRequirement: number;
   payout?: number | null;
   schedule?: string | null;
   setLengthMinutes?: number | null;
   perks?: string[];
-  songIds: string[];
-  availableSongs: NightClubSongOption[];
 }
 
 export interface CityNightClub {
@@ -650,77 +642,15 @@ const parseNightClubNpcProfiles = (value: unknown): NightClubNPCProfile[] => {
   return [];
 };
 
-const parseNightClubSongIds = (value: unknown): string[] => {
-  if (!value) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return value.reduce<string[]>((acc, entry) => {
-      if (typeof entry === "string") {
-        const trimmed = entry.trim();
-        if (trimmed) {
-          acc.push(trimmed);
-        }
-        return acc;
-      }
-
-      if (isRecord(entry) && typeof entry.id === "string") {
-        const trimmed = entry.id.trim();
-        if (trimmed) {
-          acc.push(trimmed);
-        }
-      }
-
-      return acc;
-    }, []);
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return parseNightClubSongIds(parsed);
-      }
-    } catch (error) {
-      console.warn("Unable to parse song IDs from DJ slot config string", error);
-    }
-
-    return value
-      .split(/[,\n\t\s]+/)
-      .map((segment) => segment.trim())
-      .filter((segment) => segment.length > 0);
-  }
-
-  if (isRecord(value)) {
-    if (Array.isArray(value.ids)) {
-      return parseNightClubSongIds(value.ids);
-    }
-
-    if (Array.isArray(value.song_ids)) {
-      return parseNightClubSongIds(value.song_ids);
-    }
-  }
-
-  return [];
-};
-
 const parseNightClubDjSlotConfig = (
   rawConfig: unknown,
   qualityLevel: number,
 ): NightClubDjSlotConfig => {
-  const boundedQuality = Math.max(1, Math.min(5, Math.round(qualityLevel)));
-  const baseRequirement = boundedQuality * 250;
+  const baseRequirement = Math.max(1, qualityLevel) * 250;
 
   if (!isRecord(rawConfig)) {
     return {
       fameRequirement: baseRequirement,
-      payout: null,
-      schedule: null,
-      setLengthMinutes: null,
-      perks: [],
-      songIds: [],
-      availableSongs: [],
     };
   }
 
@@ -746,9 +676,6 @@ const parseNightClubDjSlotConfig = (
       : typeof rawConfig.timeslot === "string"
         ? rawConfig.timeslot
         : undefined;
-  const songIds = parseNightClubSongIds(
-    rawConfig.song_ids ?? rawConfig.songIds ?? rawConfig.songs ?? rawConfig.available_song_ids,
-  );
 
   return {
     fameRequirement: Number.isNaN(fameRequirementValue) ? baseRequirement : fameRequirementValue,
@@ -756,8 +683,6 @@ const parseNightClubDjSlotConfig = (
     schedule: scheduleRaw ?? null,
     setLengthMinutes: Number.isNaN(setLengthValue) ? null : setLengthValue,
     perks,
-    songIds,
-    availableSongs: [],
   };
 };
 
@@ -1527,58 +1452,6 @@ export const fetchCityEnvironmentDetails = async (
   const nightClubs = nightClubsResponse.error
     ? []
     : (nightClubsResponse.data ?? []).map((item: any) => normalizeNightClubRecord(item as Record<string, unknown>));
-
-  const aggregatedSongIds = new Set<string>();
-  nightClubs.forEach((club) => {
-    club.djSlot.songIds.forEach((songId) => {
-      if (songId) {
-        aggregatedSongIds.add(songId);
-      }
-    });
-  });
-
-  if (aggregatedSongIds.size > 0) {
-    const { data: songsData, error: songsError } = await supabase
-      .from("songs")
-      .select("id, title, genre, status")
-      .in("id", Array.from(aggregatedSongIds));
-
-    if (songsError) {
-      if (!isSchemaCacheMissingTableError(songsError, "songs")) {
-        console.error("Failed to fetch released songs for night clubs", songsError);
-      }
-    } else if (Array.isArray(songsData)) {
-      const songsById = songsData.reduce<Record<string, NightClubSongOption>>((acc, song) => {
-        if (!song || typeof song !== "object") {
-          return acc;
-        }
-
-        const record = song as Record<string, unknown>;
-        const status = typeof record.status === "string" ? record.status : null;
-        const id = typeof record.id === "string" ? record.id : null;
-
-        if (status !== "released" || !id) {
-          return acc;
-        }
-
-        const title = typeof record.title === "string" ? record.title : "Untitled release";
-        const genre = typeof record.genre === "string" ? record.genre : null;
-
-        acc[id] = {
-          id,
-          title,
-          genre,
-        };
-        return acc;
-      }, {});
-
-      nightClubs.forEach((club) => {
-        club.djSlot.availableSongs = club.djSlot.songIds
-          .map((songId) => songsById[songId])
-          .filter((song): song is NightClubSongOption => Boolean(song));
-      });
-    }
-  }
 
   return {
     cityId,

@@ -1,6 +1,6 @@
+
 import { useEffect, useState } from "react";
 import { Disc3, GlassWater, ListMusic, Mic2, Sparkles, Users } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -143,6 +143,7 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
             ? `Queue with ${selectedSong.title}`
             : "Queue for DJ Slot";
 
+
           return (
             <div
               key={club.id}
@@ -183,45 +184,8 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                   )}
                 </div>
                 <div className="flex flex-col gap-2 md:items-end">
-                  {hasSongLibrary ? (
-                    <div className="flex w-full flex-col gap-1 md:w-[260px]">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Choose your track
-                      </span>
-                      <Select
-                        value={selectedSongId ?? undefined}
-                        onValueChange={(value) =>
-                          setSelectedSongByClub((prev) => ({
-                            ...prev,
-                            [club.id]: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="w-full text-left">
-                          <SelectValue placeholder="Pick a released song" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableSongs.map((song) => (
-                            <SelectItem key={song.id} value={song.id}>
-                              {song.title}
-                              {song.genre ? ` · ${song.genre}` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : (
-                    <div className="w-full text-xs text-muted-foreground md:text-right">
-                      City managers must assign released songs before DJs can perform here.
-                    </div>
-                  )}
-                  <Button
-                    size="sm"
-                    className="w-full md:w-auto"
-                    variant="default"
-                    disabled={!hasSongLibrary}
-                  >
-                    <Mic2 className="mr-2 h-4 w-4" /> {queueButtonLabel}
+                  <Button size="sm" className="w-full md:w-auto" variant="default">
+                    <Mic2 className="mr-2 h-4 w-4" /> Queue for DJ Slot
                   </Button>
                   <Button size="sm" variant="outline" className="w-full md:w-auto">
                     <Sparkles className="mr-2 h-4 w-4" /> Visit as Guest
@@ -272,22 +236,6 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                           <span className="text-xs text-muted-foreground">{drink.effect}</span>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {availableSongs.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <ListMusic className="h-4 w-4 text-primary" /> Released Song Library
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {availableSongs.map((song) => (
-                      <Badge key={song.id} variant="outline">
-                        {song.title}
-                        {song.genre ? ` · ${song.genre}` : ""}
-                      </Badge>
                     ))}
                   </div>
                 </div>
