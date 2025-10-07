@@ -204,6 +204,60 @@ export interface CityTransportLink {
   distance?: string;
 }
 
+export interface NightClubGuestAction {
+  id: string;
+  label: string;
+  description?: string;
+  energyCost?: number | null;
+}
+
+export interface NightClubDrink {
+  id: string;
+  name: string;
+  price: number | null;
+  effect?: string | null;
+}
+
+export interface NightClubNPCProfile {
+  id: string;
+  name: string;
+  role?: string | null;
+  personality?: string | null;
+  dialogueHooks?: string[];
+  availability?: string | null;
+}
+
+export interface NightClubSongOption {
+  id: string;
+  title: string;
+  genre?: string | null;
+}
+
+export interface NightClubDjSlotConfig {
+  fameRequirement: number;
+  payout?: number | null;
+  schedule?: string | null;
+  setLengthMinutes?: number | null;
+  perks?: string[];
+  songIds: string[];
+  availableSongs: NightClubSongOption[];
+}
+
+export interface CityNightClub {
+  id: string;
+  cityId: string;
+  name: string;
+  description?: string | null;
+  qualityLevel: number;
+  capacity?: number | null;
+  coverCharge?: number | null;
+  guestActions: NightClubGuestAction[];
+  drinkMenu: NightClubDrink[];
+  npcProfiles: NightClubNPCProfile[];
+  djSlot: NightClubDjSlotConfig;
+  liveInteractionsEnabled: boolean;
+}
+
 const normalizeDistricts = (value: unknown): CityDistrict[] => {
   if (!Array.isArray(value)) {
     return [];
@@ -461,6 +515,281 @@ const normalizeTransportEntries = (
   return [];
 };
 
+const parseNightClubGuestActions = (value: unknown): NightClubGuestAction[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.reduce<NightClubGuestAction[]>((acc, entry, index) => {
+      if (typeof entry === "string") {
+        acc.push({
+          id: `guest-action-${index}`,
+          label: entry,
+        });
+        return acc;
+      }
+
+      if (!isRecord(entry)) {
+        return acc;
+      }
+
+      const labelRaw = typeof entry.label === "string" ? entry.label : (typeof entry.name === "string" ? entry.name : "Guest action");
+      const descriptionRaw = typeof entry.description === "string" ? entry.description : undefined;
+      const energyCostValue = toNumber(entry.energy_cost ?? entry.energyCost, Number.NaN);
+
+      acc.push({
+        id: String(entry.id ?? `guest-action-${index}`),
+        label: labelRaw,
+        description: descriptionRaw,
+        energyCost: Number.isNaN(energyCostValue) ? null : energyCostValue,
+      });
+      return acc;
+    }, []);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.split(",").map((entry, index) => ({
+      id: `guest-action-${index}`,
+      label: entry.trim(),
+    }));
+  }
+
+  return [];
+};
+
+const parseNightClubDrinkMenu = (value: unknown): NightClubDrink[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.reduce<NightClubDrink[]>((acc, entry, index) => {
+      if (typeof entry === "string") {
+        acc.push({
+          id: `drink-${index}`,
+          name: entry,
+          price: null,
+        });
+        return acc;
+      }
+
+      if (!isRecord(entry)) {
+        return acc;
+      }
+
+      const nameRaw = typeof entry.name === "string" ? entry.name : (typeof entry.label === "string" ? entry.label : "Signature Drink");
+      const effectRaw = typeof entry.effect === "string" ? entry.effect : (typeof entry.bonus === "string" ? entry.bonus : undefined);
+      const priceValue = toNumber(entry.price ?? entry.cost ?? entry.value, Number.NaN);
+
+      acc.push({
+        id: String(entry.id ?? `drink-${index}`),
+        name: nameRaw,
+        effect: effectRaw ?? null,
+        price: Number.isNaN(priceValue) ? null : priceValue,
+      });
+      return acc;
+    }, []);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.split(",").map((entry, index) => ({
+      id: `drink-${index}`,
+      name: entry.trim(),
+      price: null,
+    }));
+  }
+
+  return [];
+};
+
+const parseNightClubNpcProfiles = (value: unknown): NightClubNPCProfile[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.reduce<NightClubNPCProfile[]>((acc, entry, index) => {
+      if (typeof entry === "string") {
+        acc.push({
+          id: `npc-${index}`,
+          name: entry,
+        });
+        return acc;
+      }
+
+      if (!isRecord(entry)) {
+        return acc;
+      }
+
+      const nameRaw = typeof entry.name === "string" ? entry.name : (typeof entry.handle === "string" ? entry.handle : "Club NPC");
+      const roleRaw = typeof entry.role === "string" ? entry.role : (typeof entry.title === "string" ? entry.title : undefined);
+      const personalityRaw = typeof entry.personality === "string" ? entry.personality : (typeof entry.vibe === "string" ? entry.vibe : undefined);
+      const availabilityRaw = typeof entry.schedule === "string" ? entry.schedule : (typeof entry.availability === "string" ? entry.availability : undefined);
+      const dialogueHooks = normalizeStringArray(entry.dialogue ?? entry.dialogue_hooks ?? entry.prompts);
+
+      acc.push({
+        id: String(entry.id ?? `npc-${index}`),
+        name: nameRaw,
+        role: roleRaw ?? null,
+        personality: personalityRaw ?? null,
+        availability: availabilityRaw ?? null,
+        dialogueHooks: dialogueHooks,
+      });
+      return acc;
+    }, []);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.split(",").map((entry, index) => ({
+      id: `npc-${index}`,
+      name: entry.trim(),
+    }));
+  }
+
+  return [];
+};
+
+const parseNightClubSongIds = (value: unknown): string[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.reduce<string[]>((acc, entry) => {
+      if (typeof entry === "string") {
+        const trimmed = entry.trim();
+        if (trimmed) {
+          acc.push(trimmed);
+        }
+        return acc;
+      }
+
+      if (isRecord(entry) && typeof entry.id === "string") {
+        const trimmed = entry.id.trim();
+        if (trimmed) {
+          acc.push(trimmed);
+        }
+      }
+
+      return acc;
+    }, []);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parseNightClubSongIds(parsed);
+      }
+    } catch (error) {
+      console.warn("Unable to parse song IDs from DJ slot config string", error);
+    }
+
+    return value
+      .split(/[,\n\t\s]+/)
+      .map((segment) => segment.trim())
+      .filter((segment) => segment.length > 0);
+  }
+
+  if (isRecord(value)) {
+    if (Array.isArray(value.ids)) {
+      return parseNightClubSongIds(value.ids);
+    }
+
+    if (Array.isArray(value.song_ids)) {
+      return parseNightClubSongIds(value.song_ids);
+    }
+  }
+
+  return [];
+};
+
+const parseNightClubDjSlotConfig = (
+  rawConfig: unknown,
+  qualityLevel: number,
+): NightClubDjSlotConfig => {
+  const boundedQuality = Math.max(1, Math.min(5, Math.round(qualityLevel)));
+  const baseRequirement = boundedQuality * 250;
+
+  if (!isRecord(rawConfig)) {
+    return {
+      fameRequirement: baseRequirement,
+      payout: null,
+      schedule: null,
+      setLengthMinutes: null,
+      perks: [],
+      songIds: [],
+      availableSongs: [],
+    };
+  }
+
+  const perks = normalizeStringArray(
+    rawConfig.perks ?? rawConfig.rewards ?? rawConfig.bonuses ?? rawConfig.set_perks,
+  );
+  const payoutValue = toNumber(
+    rawConfig.payout ?? rawConfig.payment ?? rawConfig.fee ?? rawConfig.reward,
+    Number.NaN,
+  );
+  const setLengthValue = toNumber(
+    rawConfig.set_length_minutes ?? rawConfig.setLength ?? rawConfig.duration_minutes ?? rawConfig.duration,
+    Number.NaN,
+  );
+  const fameRequirementValue = toNumber(
+    rawConfig.minimum_fame ?? rawConfig.fame_requirement ?? rawConfig.requirements?.fame,
+    Number.NaN,
+  );
+  const scheduleRaw = typeof rawConfig.schedule === "string"
+    ? rawConfig.schedule
+    : typeof rawConfig.window === "string"
+      ? rawConfig.window
+      : typeof rawConfig.timeslot === "string"
+        ? rawConfig.timeslot
+        : undefined;
+  const songIds = parseNightClubSongIds(
+    rawConfig.song_ids ?? rawConfig.songIds ?? rawConfig.songs ?? rawConfig.available_song_ids,
+  );
+
+  return {
+    fameRequirement: Number.isNaN(fameRequirementValue) ? baseRequirement : fameRequirementValue,
+    payout: Number.isNaN(payoutValue) ? null : payoutValue,
+    schedule: scheduleRaw ?? null,
+    setLengthMinutes: Number.isNaN(setLengthValue) ? null : setLengthValue,
+    perks,
+    songIds,
+    availableSongs: [],
+  };
+};
+
+const normalizeNightClubRecord = (item: Record<string, unknown>): CityNightClub => {
+  const qualityValue = toNumber(item.quality_level ?? item.quality ?? item.level, 1);
+  const boundedQuality = Number.isNaN(qualityValue) ? 1 : Math.min(5, Math.max(1, Math.round(qualityValue)));
+  const capacityValue = toNumber(item.capacity, Number.NaN);
+  const coverChargeValue = toNumber(item.cover_charge ?? item.cover ?? item.entry_fee, Number.NaN);
+  const metadataRecord = isRecord(item.metadata) ? (item.metadata as Record<string, unknown>) : null;
+  const liveInteractionsValue = metadataRecord?.live_interactions_enabled ?? metadataRecord?.liveInteractionsEnabled;
+
+  const guestActions = parseNightClubGuestActions(item.guest_actions ?? metadataRecord?.guest_actions);
+  const drinkMenu = parseNightClubDrinkMenu(item.drink_menu ?? metadataRecord?.drink_menu);
+  const npcProfiles = parseNightClubNpcProfiles(item.npc_profiles ?? metadataRecord?.npc_profiles);
+  const djSlot = parseNightClubDjSlotConfig(item.dj_slot_config ?? metadataRecord?.dj_slot_config, boundedQuality);
+
+  return {
+    id: String(item.id ?? crypto.randomUUID()),
+    cityId: typeof item.city_id === "string" ? item.city_id : String(item.city_id ?? ""),
+    name: typeof item.name === "string" ? item.name : "Night Club",
+    description: typeof item.description === "string" ? item.description : null,
+    qualityLevel: boundedQuality,
+    capacity: Number.isNaN(capacityValue) ? null : capacityValue,
+    coverCharge: Number.isNaN(coverChargeValue) ? null : coverChargeValue,
+    guestActions,
+    drinkMenu,
+    npcProfiles,
+    djSlot,
+    liveInteractionsEnabled: typeof liveInteractionsValue === "boolean" ? liveInteractionsValue : true,
+  };
+};
+
 export interface WeatherCondition {
   id: string;
   city: string;
@@ -608,6 +937,7 @@ export interface CityEnvironmentDetails {
   travelModes: CityTravelMode[];
   players: CityPlayer[];
   gigs: CityGig[];
+  nightClubs: CityNightClub[];
 }
 
 export interface FetchCityEnvironmentOptions {
@@ -1131,7 +1461,7 @@ export const fetchCityEnvironmentDetails = async (
 ): Promise<CityEnvironmentDetails> => {
   const { cityName, country } = options;
 
-  const [playersResponse, gigsResponse, metadataResponse] = await Promise.all([
+  const [playersResponse, gigsResponse, metadataResponse, nightClubsResponse] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -1150,11 +1480,20 @@ export const fetchCityEnvironmentDetails = async (
       .select("*")
       .eq("city_id", cityId)
       .maybeSingle(),
+    supabase
+      .from<Record<string, unknown>>("city_night_clubs")
+      .select("*")
+      .eq("city_id", cityId)
+      .order("quality_level", { ascending: false })
+      .order("created_at", { ascending: true }),
   ]);
 
   if (playersResponse.error) throw playersResponse.error;
   if (gigsResponse.error) throw gigsResponse.error;
   if (metadataResponse.error) throw metadataResponse.error;
+  if (nightClubsResponse.error && !isSchemaCacheMissingTableError(nightClubsResponse.error, "city_night_clubs")) {
+    throw nightClubsResponse.error;
+  }
 
   const metadataRecord = metadataResponse.data
     ? normalizeCityMetadataRecord((metadataResponse.data as any) as Record<string, unknown>)
@@ -1185,6 +1524,62 @@ export const fetchCityEnvironmentDetails = async (
 
   const locations = metadataRecord?.locations ?? [];
 
+  const nightClubs = nightClubsResponse.error
+    ? []
+    : (nightClubsResponse.data ?? []).map((item: any) => normalizeNightClubRecord(item as Record<string, unknown>));
+
+  const aggregatedSongIds = new Set<string>();
+  nightClubs.forEach((club) => {
+    club.djSlot.songIds.forEach((songId) => {
+      if (songId) {
+        aggregatedSongIds.add(songId);
+      }
+    });
+  });
+
+  if (aggregatedSongIds.size > 0) {
+    const { data: songsData, error: songsError } = await supabase
+      .from("songs")
+      .select("id, title, genre, status")
+      .in("id", Array.from(aggregatedSongIds));
+
+    if (songsError) {
+      if (!isSchemaCacheMissingTableError(songsError, "songs")) {
+        console.error("Failed to fetch released songs for night clubs", songsError);
+      }
+    } else if (Array.isArray(songsData)) {
+      const songsById = songsData.reduce<Record<string, NightClubSongOption>>((acc, song) => {
+        if (!song || typeof song !== "object") {
+          return acc;
+        }
+
+        const record = song as Record<string, unknown>;
+        const status = typeof record.status === "string" ? record.status : null;
+        const id = typeof record.id === "string" ? record.id : null;
+
+        if (status !== "released" || !id) {
+          return acc;
+        }
+
+        const title = typeof record.title === "string" ? record.title : "Untitled release";
+        const genre = typeof record.genre === "string" ? record.genre : null;
+
+        acc[id] = {
+          id,
+          title,
+          genre,
+        };
+        return acc;
+      }, {});
+
+      nightClubs.forEach((club) => {
+        club.djSlot.availableSongs = club.djSlot.songIds
+          .map((songId) => songsById[songId])
+          .filter((song): song is NightClubSongOption => Boolean(song));
+      });
+    }
+  }
+
   return {
     cityId,
     cityName,
@@ -1194,6 +1589,7 @@ export const fetchCityEnvironmentDetails = async (
     travelModes,
     players,
     gigs,
+    nightClubs,
   };
 };
 

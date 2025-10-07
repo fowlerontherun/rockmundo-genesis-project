@@ -12,10 +12,12 @@ import {
   fetchCityEnvironmentDetails,
   type City as CityRecord,
   type CityEnvironmentDetails,
+  type CityNightClub,
 } from "@/utils/worldEnvironment";
 import { supabase } from "@/integrations/supabase/client";
 import { CityDistrictsSection } from "@/components/city/CityDistrictsSection";
 import { CityStudiosSection } from "@/components/city/CityStudiosSection";
+import { CityNightClubsSection } from "@/components/city/CityNightClubsSection";
 
 type CityRouteParams = {
   cityId?: string;
@@ -32,6 +34,7 @@ interface CityContentProps {
   districts: any[];
   studios: any[];
   playerCount: number;
+  nightClubs: CityNightClub[];
 }
 
 export interface CityPageLoadResult {
@@ -103,6 +106,7 @@ export const CityContent = ({
   districts,
   studios,
   playerCount,
+  nightClubs,
 }: CityContentProps) => {
   const culturalEvents = useMemo(
     () => (city?.cultural_events ?? []).filter((event) => typeof event === "string" && event.trim().length > 0),
@@ -249,6 +253,8 @@ export const CityContent = ({
       <div className="grid gap-6 lg:grid-cols-2">
         <CityStudiosSection studios={studios} />
 
+        <CityNightClubsSection nightClubs={nightClubs} />
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -330,6 +336,7 @@ export default function City() {
   const [districts, setDistricts] = useState<any[]>([]);
   const [studios, setStudios] = useState<any[]>([]);
   const [playerCount, setPlayerCount] = useState<number>(0);
+  const [nightClubs, setNightClubs] = useState<CityNightClub[]>([]);
 
   const loadCity = useCallback(
     async (options: { signal?: { cancelled: boolean } } = {}) => {
@@ -343,6 +350,7 @@ export default function City() {
       setError(null);
       setDetailsError(null);
       setDetailsLoading(false);
+      setNightClubs([]);
 
       try {
         const snapshot = await fetchWorldEnvironmentSnapshot();
@@ -394,9 +402,11 @@ export default function City() {
           
           if (cityDetails.status === "fulfilled") {
             setDetails(cityDetails.value);
+            setNightClubs(cityDetails.value.nightClubs ?? []);
           } else if (cityDetails.status === "rejected") {
             console.error(`Failed to load city environment details for ${matchedCity.name}`, cityDetails.reason);
             setDetailsError("We couldn't load extended city details right now.");
+            setNightClubs([]);
           }
           
           setDetailsLoading(false);
@@ -441,6 +451,7 @@ export default function City() {
       districts={districts}
       studios={studios}
       playerCount={playerCount}
+      nightClubs={nightClubs}
       onRetry={() => {
         void loadCity();
       }}
