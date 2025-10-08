@@ -3,8 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/lib/supabase-types";
 import { useAuth } from "@/hooks/use-auth-context";
 import { fetchPrimaryProfileForUser } from "@/integrations/supabase/friends";
 
@@ -32,9 +30,7 @@ const InventoryManager = () => {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isLoadingBooks, setIsLoadingBooks] = useState(false);
-  const [bookInventory, setBookInventory] = useState<
-    (PlayerSkillBookRow & { skill_books: SkillBookRow | null })[]
-  >([]);
+  const [bookInventory, setBookInventory] = useState<PlayerSkillBookRow[]>([]);
   const [isBookInventorySupported, setIsBookInventorySupported] = useState(true);
 
   const loadBookInventory = useCallback(

@@ -11,6 +11,7 @@ import { lazyWithRetry } from "./utils/lazyWithRetry";
 import WorldPulsePage from "./pages/WorldPulse";
 import MusicStudio from "./pages/MusicStudio";
 import BandManager from "./pages/BandManager";
+import InventoryManager from "./pages/InventoryManager";
 
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
@@ -62,7 +63,6 @@ const AdminJobs = lazyWithRetry(() => import("./pages/admin/Jobs"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
-const InventoryManager = lazyWithRetry(() => import("./pages/InventoryManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
