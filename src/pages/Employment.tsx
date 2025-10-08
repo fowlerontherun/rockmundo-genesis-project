@@ -343,6 +343,10 @@ export default function Employment() {
 
   const autoAttendEnabled = Boolean((currentEmployment as any)?.auto_clock_in);
 
+  const alternativeJobs = (availableJobs ?? []).filter((job) =>
+    job.id !== ((currentEmployment?.jobs as any)?.id)
+  );
+
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -569,25 +573,19 @@ export default function Employment() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
-              {availableJobs && otherJobs.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
-                  No other jobs found for this category.
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {otherJobs.map((job) => (
-                    <Card key={job.id} className="opacity-60">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{job.title}</CardTitle>
-                        <CardDescription>{job.company_name}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground">Quit your current job to apply here</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {alternativeJobs.map((job) => (
+                  <Card key={job.id} className="opacity-60">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{job.title}</CardTitle>
+                      <CardDescription>{job.company_name}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">Quit your current job to apply here</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </CollapsibleContent>
           </Collapsible>
         )}
