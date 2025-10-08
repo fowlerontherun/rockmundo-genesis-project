@@ -726,6 +726,65 @@ export type Database = {
           },
         ]
       }
+      city_night_clubs: {
+        Row: {
+          capacity: number | null
+          city_id: string
+          cover_charge: number | null
+          created_at: string | null
+          description: string | null
+          dj_slot_config: Json | null
+          drink_menu: Json | null
+          guest_actions: Json | null
+          id: string
+          metadata: Json | null
+          name: string
+          npc_profiles: Json | null
+          quality_level: number
+          updated_at: string | null
+        }
+        Insert: {
+          capacity?: number | null
+          city_id: string
+          cover_charge?: number | null
+          created_at?: string | null
+          description?: string | null
+          dj_slot_config?: Json | null
+          drink_menu?: Json | null
+          guest_actions?: Json | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          npc_profiles?: Json | null
+          quality_level?: number
+          updated_at?: string | null
+        }
+        Update: {
+          capacity?: number | null
+          city_id?: string
+          cover_charge?: number | null
+          created_at?: string | null
+          description?: string | null
+          dj_slot_config?: Json | null
+          drink_menu?: Json | null
+          guest_actions?: Json | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          npc_profiles?: Json | null
+          quality_level?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_night_clubs_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       city_studios: {
         Row: {
           available_slots: number | null
