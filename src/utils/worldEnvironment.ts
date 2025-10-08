@@ -665,8 +665,9 @@ const parseNightClubDjSlotConfig = (
     rawConfig.set_length_minutes ?? rawConfig.setLength ?? rawConfig.duration_minutes ?? rawConfig.duration,
     Number.NaN,
   );
+  const requirementsRecord = isRecord(rawConfig.requirements) ? rawConfig.requirements : null;
   const fameRequirementValue = toNumber(
-    rawConfig.minimum_fame ?? rawConfig.fame_requirement ?? rawConfig.requirements?.fame,
+    rawConfig.minimum_fame ?? rawConfig.fame_requirement ?? (requirementsRecord ? requirementsRecord.fame : undefined),
     Number.NaN,
   );
   const scheduleRaw = typeof rawConfig.schedule === "string"
@@ -1406,7 +1407,7 @@ export const fetchCityEnvironmentDetails = async (
       .eq("city_id", cityId)
       .maybeSingle(),
     supabase
-      .from<Record<string, unknown>>("city_night_clubs")
+      .from("city_night_clubs")
       .select("*")
       .eq("city_id", cityId)
       .order("quality_level", { ascending: false })

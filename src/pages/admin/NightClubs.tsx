@@ -269,7 +269,7 @@ const NightClubsAdmin = () => {
     setLoadingError(null);
 
     const { data, error } = await supabase
-      .from<NightClubRow>("city_night_clubs")
+      .from("city_night_clubs")
       .select("*, city:cities(name)")
       .order("quality_level", { ascending: false })
       .order("name", { ascending: true });
@@ -281,7 +281,7 @@ const NightClubsAdmin = () => {
       return;
     }
 
-    setNightClubs(data ?? []);
+    setNightClubs((data ?? []) as NightClubRow[]);
     setIsLoading(false);
   }, []);
 
