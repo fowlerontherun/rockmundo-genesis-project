@@ -1693,6 +1693,7 @@ export type Database = {
       }
       player_employment: {
         Row: {
+          auto_clock_in: boolean
           created_at: string | null
           hired_at: string | null
           id: string
@@ -1706,6 +1707,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          auto_clock_in?: boolean
           created_at?: string | null
           hired_at?: string | null
           id?: string
@@ -1719,6 +1721,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          auto_clock_in?: boolean
           created_at?: string | null
           hired_at?: string | null
           id?: string

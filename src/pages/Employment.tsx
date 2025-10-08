@@ -6,12 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, AlertCircle, CalendarCheck } from "lucide-react";
+import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, AlertCircle, CalendarCheck, Filter } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format, parseISO } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import type { Database } from "@/lib/supabase-types";
+
+type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
+type EmploymentWithJob = Database["public"]["Tables"]["player_employment"]["Row"] & {
+  jobs: JobRow | null;
+};
+type ShiftHistoryWithJob = Database["public"]["Tables"]["shift_history"]["Row"] & {
+  jobs: Pick<JobRow, "title" | "company_name"> | null;
+};
 
 export default function Employment() {
   const { toast } = useToast();
@@ -36,7 +45,7 @@ export default function Employment() {
     },
   });
 
-  const { data: currentEmployment } = useQuery({
+  const { data: currentEmployment } = useQuery<EmploymentWithJob | null>({
     queryKey: ["current-employment", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null;
@@ -52,15 +61,15 @@ export default function Employment() {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data as EmploymentWithJob | null;
     },
     enabled: !!profile?.id,
   });
 
-  const { data: shiftHistory } = useQuery({
+  const { data: shiftHistory } = useQuery<ShiftHistoryWithJob[]>({
     queryKey: ["shift-history", profile?.id],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!profile?.id) return [] as ShiftHistoryWithJob[];
 
       const { data, error } = await supabase
         .from("shift_history")
@@ -73,12 +82,12 @@ export default function Employment() {
         .limit(10);
 
       if (error) throw error;
-      return data;
+      return (data ?? []) as ShiftHistoryWithJob[];
     },
     enabled: !!profile?.id,
   });
 
-  const { data: availableJobs } = useQuery({
+  const { data: availableJobs } = useQuery<JobRow[]>({
     queryKey: ["available-jobs"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -88,12 +97,12 @@ export default function Employment() {
         .order("hourly_wage", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return (data ?? []) as JobRow[];
     },
   });
 
-  const categories = useMemo(() => {
-    if (!availableJobs) return [] as string[];
+  const categories = useMemo<string[]>(() => {
+    if (!availableJobs) return [];
     return Array.from(
       new Set(
         availableJobs
@@ -103,17 +112,11 @@ export default function Employment() {
     );
   }, [availableJobs]);
 
-  const filteredJobs = useMemo(() => {
-    if (!availableJobs) return [] as typeof availableJobs;
+  const filteredJobs = useMemo<JobRow[]>(() => {
+    if (!availableJobs) return [];
     if (categoryFilter === "all") return availableJobs;
     return availableJobs.filter((job) => job.category === categoryFilter);
   }, [availableJobs, categoryFilter]);
-
-  const otherJobs = useMemo(() => {
-    if (!currentEmployment) return [] as typeof filteredJobs;
-    const currentJobId = (currentEmployment.jobs as any)?.id;
-    return filteredJobs.filter((job) => job.id !== currentJobId);
-  }, [filteredJobs, currentEmployment]);
 
   const { data: activityStatus } = useQuery({
     queryKey: ["activity-status", profile?.id],
@@ -183,7 +186,7 @@ export default function Employment() {
       if (error) throw error;
 
       // Decrement current_employees
-      const job = currentEmployment.jobs as any;
+      const job = currentEmployment.jobs;
       if (job) {
         await supabase
           .from("jobs")
@@ -205,7 +208,8 @@ export default function Employment() {
     mutationFn: async () => {
       if (!currentEmployment || !profile) throw new Error("Missing data");
       
-      const job = currentEmployment.jobs as any;
+      const job = currentEmployment.jobs;
+      if (!job) throw new Error("Job details not found");
       const [startHour, startMin] = job.start_time.split(':').map(Number);
       const [endHour, endMin] = job.end_time.split(':').map(Number);
       const hours = (endHour + endMin / 60) - (startHour + startMin / 60);
@@ -269,7 +273,7 @@ export default function Employment() {
     mutationFn: async () => {
       if (!currentEmployment) throw new Error("No current employment");
 
-      const autoAttendEnabled = Boolean((currentEmployment as any)?.auto_clock_in);
+      const autoAttendEnabled = Boolean(currentEmployment.auto_clock_in);
       const { data, error } = await supabase
         .from("player_employment")
         .update({ auto_clock_in: !autoAttendEnabled })
@@ -280,7 +284,7 @@ export default function Employment() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: EmploymentWithJob) => {
       queryClient.invalidateQueries({ queryKey: ["current-employment"] });
       toast({
         title: data.auto_clock_in ? "Always attend enabled" : "Always attend disabled",
@@ -308,7 +312,8 @@ export default function Employment() {
 
   const getNextShiftTime = () => {
     if (!currentEmployment) return null;
-    const job = currentEmployment.jobs as any;
+    const job = currentEmployment.jobs;
+    if (!job) return null;
     const workDays = Array.isArray(job.work_days) ? job.work_days : [];
     
     const now = new Date();
@@ -341,11 +346,17 @@ export default function Employment() {
     return minutesUntil <= 15 && minutesUntil >= 0;
   };
 
-  const autoAttendEnabled = Boolean((currentEmployment as any)?.auto_clock_in);
+  const autoAttendEnabled = Boolean(currentEmployment?.auto_clock_in);
 
   const alternativeJobs = (availableJobs ?? []).filter((job) =>
-    job.id !== ((currentEmployment?.jobs as any)?.id)
+    job.id !== (currentEmployment?.jobs?.id)
   );
+
+  const currentJob = currentEmployment?.jobs ?? null;
+  const healthImpact = currentJob?.health_impact_per_shift ?? 0;
+  const fameImpact = currentJob?.fame_impact_per_shift ?? 0;
+  const energyCost = currentJob?.energy_cost_per_shift ?? 0;
+  const hourlyWage = currentJob?.hourly_wage ?? 0;
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -400,9 +411,9 @@ export default function Employment() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5" />
-                    {(currentEmployment.jobs as any)?.title}
+                    {currentJob?.title}
                   </CardTitle>
-                  <CardDescription>{(currentEmployment.jobs as any)?.company_name}</CardDescription>
+                  <CardDescription>{currentJob?.company_name}</CardDescription>
                 </div>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -431,7 +442,7 @@ export default function Employment() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Hourly Wage</p>
-                    <p className="font-semibold">${(currentEmployment.jobs as any)?.hourly_wage}/hr</p>
+                    <p className="font-semibold">${hourlyWage}/hr</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -453,8 +464,8 @@ export default function Employment() {
                   <div>
                     <p className="text-sm text-muted-foreground">Work Days</p>
                     <p className="font-semibold capitalize">
-                      {Array.isArray((currentEmployment.jobs as any)?.work_days) 
-                        ? (currentEmployment.jobs as any).work_days.slice(0, 3).join(", ")
+                      {Array.isArray(currentJob?.work_days)
+                        ? (currentJob.work_days as string[]).slice(0, 3).join(", ")
                         : "N/A"}
                     </p>
                   </div>
@@ -463,16 +474,16 @@ export default function Employment() {
 
               <div className="flex gap-4 text-sm">
                 <span className="flex items-center gap-1">
-                  <Heart className={`h-4 w-4 ${(currentEmployment.jobs as any)?.health_impact_per_shift < 0 ? 'text-destructive' : 'text-green-600'}`} />
-                  Health: {(currentEmployment.jobs as any)?.health_impact_per_shift > 0 ? "+" : ""}{(currentEmployment.jobs as any)?.health_impact_per_shift}
+                  <Heart className={`h-4 w-4 ${healthImpact < 0 ? 'text-destructive' : 'text-green-600'}`} />
+                  Health: {healthImpact > 0 ? "+" : ""}{healthImpact}
                 </span>
                 <span className="flex items-center gap-1">
                   <Star className="h-4 w-4 text-primary" />
-                  Fame: {(currentEmployment.jobs as any)?.fame_impact_per_shift > 0 ? "+" : ""}{(currentEmployment.jobs as any)?.fame_impact_per_shift}
+                  Fame: {fameImpact > 0 ? "+" : ""}{fameImpact}
                 </span>
                 <span className="flex items-center gap-1">
                   <Zap className="h-4 w-4 text-muted-foreground" />
-                  Energy: -{(currentEmployment.jobs as any)?.energy_cost_per_shift}
+                  Energy: -{energyCost}
                 </span>
               </div>
 
@@ -601,7 +612,7 @@ export default function Employment() {
                 {shiftHistory.map((shift) => (
                   <div key={shift.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
-                      <p className="font-medium">{(shift.jobs as any)?.title}</p>
+                      <p className="font-medium">{shift.jobs?.title ?? "Unknown job"}</p>
                       <p className="text-sm text-muted-foreground">
                         {format(parseISO(shift.shift_date), 'MMM d, yyyy')}
                       </p>
