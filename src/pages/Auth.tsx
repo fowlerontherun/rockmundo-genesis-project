@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Lock, AlertCircle, Guitar } from "lucide-react";
+import { Mail, Lock, AlertCircle, Guitar, Users, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import logo from "@/assets/rockmundo-new-logo.png";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 
 type AuthTab = "login" | "signup" | "forgot";
 
@@ -35,6 +37,21 @@ const Auth = () => {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [resendingVerification, setResendingVerification] = useState(false);
+
+  const {
+    totalPlayers,
+    onlinePlayers,
+    loading: presenceLoading,
+    error: presenceError,
+  } = usePlayerPresenceStats({ refreshInterval: 45_000 });
+
+  const formatPresenceValue = (value: number | null) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value.toLocaleString();
+    }
+
+    return "—";
+  };
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -482,6 +499,54 @@ const Auth = () => {
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
             <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
+                  <div className="rounded-full bg-primary/10 p-2 text-primary">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground/80 font-oswald">
+                      Registered Players
+                    </p>
+                    {presenceLoading ? (
+                      <Skeleton className="mt-1 h-6 w-20" />
+                    ) : (
+                      <p className="text-2xl font-bebas tracking-wide text-foreground">
+                        {formatPresenceValue(totalPlayers)}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground/70">
+                      Musicians who have joined Rockmundo.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
+                  <div className="rounded-full bg-primary/10 p-2 text-primary">
+                    <Activity className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground/80 font-oswald">
+                      Players Online Now
+                    </p>
+                    {presenceLoading ? (
+                      <Skeleton className="mt-1 h-6 w-20" />
+                    ) : (
+                      <p className="text-2xl font-bebas tracking-wide text-foreground">
+                        {formatPresenceValue(onlinePlayers)}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground/70">
+                      Currently exploring the Rockmundo world.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {presenceError && (
+                <p className="text-center text-xs font-oswald text-destructive/80">
+                  {presenceError}
+                </p>
+              )}
+
               {status && (
                 <Alert
                   variant={status.variant === "error" ? "destructive" : "default"}

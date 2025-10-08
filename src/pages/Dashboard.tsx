@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
+import { formatDistanceToNowStrict } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
+  Activity,
   Music,
   Users,
   Calendar,
@@ -27,8 +29,11 @@ import { supabase } from "@/integrations/supabase/client";
 import RealtimeChatPanel from "@/components/chat/RealtimeChatPanel";
 import { CurrentLocationWidget } from "@/components/city/CurrentLocationWidget";
 import type { Database } from "@/lib/supabase-types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
+type ProfileActivityStatusRow = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
 
 type ChatScope = "general" | "city";
 
@@ -98,6 +103,59 @@ const formatSkillName = (slug: string) =>
     .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
 
+const toDisplayLabel = (value: string | null | undefined) => {
+  if (!value) {
+    return null;
+  }
+
+  return value
+    .split(/[_-]/)
+    .filter(segment => segment.length > 0)
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+};
+
+const getStatusEndDate = (status: ProfileActivityStatusRow | null): Date | null => {
+  if (!status || status.status === "idle") {
+    return null;
+  }
+
+  if (status.ends_at) {
+    const parsed = new Date(status.ends_at);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  if (!status.started_at || typeof status.duration_minutes !== "number") {
+    return null;
+  }
+
+  const startedAt = new Date(status.started_at);
+  if (Number.isNaN(startedAt.getTime())) {
+    return null;
+  }
+
+  return new Date(startedAt.getTime() + status.duration_minutes * 60_000);
+};
+
+const getMetadataString = (metadata: ProfileActivityStatusRow["metadata"], ...keys: string[]): string | null => {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const record = metadata as Record<string, unknown>;
+
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+};
+
 const DAILY_XP_STIPEND = 150;
 
 const Dashboard = () => {
@@ -112,6 +170,7 @@ const Dashboard = () => {
     freshWeeklyBonusAvailable,
     currentCity,
     activities,
+    activityStatus,
     loading,
     error
   } = useGameData();
@@ -125,6 +184,83 @@ const Dashboard = () => {
     general: false,
     city: false
   });
+
+  const {
+    totalPlayers,
+    onlinePlayers,
+    loading: presenceLoading,
+    error: presenceError,
+  } = usePlayerPresenceStats();
+
+  const formatPresenceValue = useCallback((value: number | null) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value.toLocaleString();
+    }
+
+    return "—";
+  }, []);
+
+  const statusEndsAt = useMemo(() => getStatusEndDate(activityStatus), [activityStatus]);
+
+  const activityCountdown = useMemo(() => {
+    if (!activityStatus || activityStatus.status === "idle" || !statusEndsAt) {
+      return null;
+    }
+
+    if (statusEndsAt.getTime() <= Date.now()) {
+      return null;
+    }
+
+    try {
+      return formatDistanceToNowStrict(statusEndsAt, { addSuffix: true });
+    } catch (countdownError) {
+      console.error("Failed to format activity countdown", countdownError);
+      return null;
+    }
+  }, [activityStatus, statusEndsAt]);
+
+  const isBusy = useMemo(() => {
+    if (!activityStatus || activityStatus.status === "idle") {
+      return false;
+    }
+
+    if (!statusEndsAt) {
+      return true;
+    }
+
+    return statusEndsAt.getTime() > Date.now();
+  }, [activityStatus, statusEndsAt]);
+
+  const activityLabel = useMemo(() => toDisplayLabel(activityStatus?.status) ?? "You're ready to rock", [activityStatus]);
+
+  const activityTypeLabel = useMemo(() => toDisplayLabel(activityStatus?.activity_type), [activityStatus]);
+  const activityLocationLabel = useMemo(
+    () =>
+      getMetadataString(
+        activityStatus?.metadata ?? null,
+        "location_name",
+        "job_title",
+        "activity_name",
+        "venue_name",
+      ),
+    [activityStatus],
+  );
+
+  const activitySubtitle = useMemo(() => {
+    if (!isBusy) {
+      return "Start a gig, rehearsal, or job to keep building momentum.";
+    }
+
+    const parts = [activityTypeLabel, activityLocationLabel].filter(
+      (part): part is string => typeof part === "string" && part.length > 0,
+    );
+
+    if (parts.length === 0) {
+      return "Activity in progress";
+    }
+
+    return parts.join(" · ");
+  }, [activityTypeLabel, activityLocationLabel, isBusy]);
 
   const attributeKeys: (keyof PlayerAttributes)[] = [
     "charisma",
@@ -505,6 +641,73 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-primary/20 bg-card/80 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-primary/10 p-2 text-primary">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Registered Players</p>
+                {presenceLoading ? (
+                  <Skeleton className="mt-2 h-7 w-20" />
+                ) : (
+                  <p className="text-2xl font-bebas tracking-wide text-foreground">
+                    {formatPresenceValue(totalPlayers)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground/70">Musicians who have joined Rockmundo.</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-primary/20 bg-card/80 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-primary/10 p-2 text-primary">
+                <Activity className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Players Online Now</p>
+                {presenceLoading ? (
+                  <Skeleton className="mt-2 h-7 w-20" />
+                ) : (
+                  <p className="text-2xl font-bebas tracking-wide text-foreground">
+                    {formatPresenceValue(onlinePlayers)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground/70">Currently exploring the world alongside you.</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-primary/20 bg-card/80 p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Current Activity</p>
+                <p className="text-xl font-bebas tracking-wide text-foreground">{activityLabel}</p>
+                <p className="text-xs text-muted-foreground/80">{activitySubtitle}</p>
+                {isBusy && activityCountdown && (
+                  <p className="mt-2 text-xs font-medium text-primary">Wraps up {activityCountdown}</p>
+                )}
+              </div>
+              <Badge
+                variant={isBusy ? "secondary" : "outline"}
+                className={
+                  isBusy
+                    ? "border-primary/30 bg-primary/15 text-primary"
+                    : "border-border/60 text-muted-foreground"
+                }
+              >
+                {isBusy ? "In Progress" : "Idle"}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {presenceError && (
+          <p className="text-sm font-oswald text-destructive/80">
+            {presenceError}
+          </p>
+        )}
 
         <Alert className="border-primary/40 bg-primary/5 text-foreground">
           <Sparkles className="h-4 w-4" />
