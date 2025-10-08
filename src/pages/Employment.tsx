@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, AlertCircle, Filter } from "lucide-react";
+import { Briefcase, Clock, DollarSign, Heart, Star, Zap, Calendar, TrendingUp, AlertCircle, CalendarCheck } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -265,6 +265,39 @@ export default function Employment() {
     },
   });
 
+  const toggleAutoAttendMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentEmployment) throw new Error("No current employment");
+
+      const autoAttendEnabled = Boolean((currentEmployment as any)?.auto_clock_in);
+      const { data, error } = await supabase
+        .from("player_employment")
+        .update({ auto_clock_in: !autoAttendEnabled })
+        .eq("id", currentEmployment.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["current-employment"] });
+      toast({
+        title: data.auto_clock_in ? "Always attend enabled" : "Always attend disabled",
+        description: data.auto_clock_in
+          ? "We'll automatically clock you in when your shifts start."
+          : "Automatic clock-ins have been turned off.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating preference",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const canApply = (job: any) => {
     if (!profile) return false;
     if (currentEmployment) return false;
@@ -307,6 +340,8 @@ export default function Employment() {
     
     return minutesUntil <= 15 && minutesUntil >= 0;
   };
+
+  const autoAttendEnabled = Boolean((currentEmployment as any)?.auto_clock_in);
 
   return (
     <div className="min-h-screen bg-gradient-stage p-6">
@@ -437,13 +472,22 @@ export default function Employment() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button 
-                  onClick={() => clockInMutation.mutate()} 
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={() => clockInMutation.mutate()}
                   disabled={!canClockIn()}
                 >
                   <Clock className="mr-2 h-4 w-4" />
                   Clock In
+                </Button>
+                <Button
+                  variant={autoAttendEnabled ? "secondary" : "outline"}
+                  onClick={() => toggleAutoAttendMutation.mutate()}
+                  disabled={toggleAutoAttendMutation.isPending}
+                  className={autoAttendEnabled ? "bg-emerald-600 text-white hover:bg-emerald-700" : undefined}
+                >
+                  <CalendarCheck className="mr-2 h-4 w-4" />
+                  {autoAttendEnabled ? "Always Attend On" : "Always Attend Work"}
                 </Button>
                 {!canClockIn() && !activityStatus && (
                   <p className="text-sm text-muted-foreground">
