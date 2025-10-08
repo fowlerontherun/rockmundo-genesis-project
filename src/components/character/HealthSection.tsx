@@ -1,37 +1,153 @@
 import { useMemo } from "react";
+import { formatDistanceToNowStrict } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Heart, Activity, Brain, Coffee, Clock, AlertTriangle, } from "lucide-react";
+import { Heart, Activity, Brain, Coffee, Clock, AlertTriangle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getHealthStatus, calculateTimeToFullRecovery } from "@/utils/healthSystem";
-import type { PlayerProfile, PlayerAttributes } from "@/hooks/useGameData";
+import type {
+  PlayerProfile,
+  PlayerAttributes,
+  ProfileActivityStatus,
+} from "@/hooks/useGameData";
+
+const getStatusEndDate = (status: ProfileActivityStatus | null): Date | null => {
+  if (!status || status.status === "idle") {
+    return null;
+  }
+
+  if (status.ends_at) {
+    const parsed = new Date(status.ends_at);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  if (!status.started_at || typeof status.duration_minutes !== "number") {
+    return null;
+  }
+
+  const startedAt = new Date(status.started_at);
+  if (Number.isNaN(startedAt.getTime())) {
+    return null;
+  }
+
+  return new Date(startedAt.getTime() + status.duration_minutes * 60_000);
+};
 
 interface HealthSectionProps {
   profile: PlayerProfile;
   attributes: PlayerAttributes | null;
-  awardActionXp: (input: any) => Promise<void>;
+  activityStatus: ProfileActivityStatus | null;
+  startActivity: (
+    input: {
+      status: string;
+      durationMinutes?: number | null;
+      metadata?: Record<string, unknown> | null;
+    },
+  ) => Promise<ProfileActivityStatus | null>;
 }
 
-export function HealthSection({ profile, attributes, awardActionXp }: HealthSectionProps) {
+export function HealthSection({
+  profile,
+  attributes,
+  activityStatus,
+  startActivity,
+}: HealthSectionProps) {
   const queryClient = useQueryClient();
 
   const health = profile.health ?? 100;
   const energy = profile.energy ?? 100;
   const healthStatus = getHealthStatus(health);
   const hoursToFullRecovery = calculateTimeToFullRecovery(health);
-  const stress = useMemo(() => Math.max(0, Math.min(100, 100 - (attributes?.mental_focus || 10))), [attributes]);
-  const fitness = useMemo(() => Math.max(0, Math.min(100, attributes?.physical_endurance || 10)), [attributes]);
+  const stress = useMemo(
+    () => Math.max(0, Math.min(100, 100 - (attributes?.mental_focus || 10))),
+    [attributes],
+  );
+  const fitness = useMemo(
+    () => Math.max(0, Math.min(100, attributes?.physical_endurance || 10)),
+    [attributes],
+  );
+
+  const statusEndsAt = useMemo(() => getStatusEndDate(activityStatus), [activityStatus]);
+
+  const isBusy = useMemo(() => {
+    if (!activityStatus || activityStatus.status === "idle") {
+      return false;
+    }
+
+    if (typeof activityStatus.duration_minutes !== "number") {
+      return true;
+    }
+
+    if (!statusEndsAt) {
+      return false;
+    }
+
+    return statusEndsAt.getTime() > Date.now();
+  }, [activityStatus, statusEndsAt]);
+
+  const busyStatusLabel = useMemo(() => {
+    if (!activityStatus || activityStatus.status === "idle") {
+      return null;
+    }
+
+    return activityStatus.status.replace(/_/g, " ");
+  }, [activityStatus]);
+
+  const busyCountdownLabel = useMemo(() => {
+    if (!isBusy || !statusEndsAt) {
+      return null;
+    }
+
+    try {
+      return formatDistanceToNowStrict(statusEndsAt, { addSuffix: true });
+    } catch (error) {
+      console.error("Failed to format activity countdown", error);
+      return null;
+    }
+  }, [isBusy, statusEndsAt]);
+
+  const ensureNotBusy = () => {
+    if (!isBusy) {
+      return false;
+    }
+
+    const countdown = busyCountdownLabel ? ` You'll be free ${busyCountdownLabel}.` : "";
+    const label = busyStatusLabel ?? "another activity";
+    toast.error(`You're currently busy with ${label}.${countdown}`.trim());
+    return true;
+  };
 
   const restMutation = useMutation({
     mutationFn: async () => {
+      const durationMinutes = 60;
+
+      const statusRecord = await startActivity({
+        status: "resting",
+        durationMinutes,
+        metadata: { source: "health_tab", activity: "rest" },
+      });
+
+      if (!statusRecord) {
+        console.warn("Activity status could not be recorded for rest (1 hour)");
+      }
+
       const newHealth = Math.min(100, health + 10);
       const newEnergy = Math.min(100, energy + 15);
-      const { error } = await supabase.from("profiles").update({ health: newHealth, energy: newEnergy, last_health_update: new Date().toISOString() }).eq("id", profile.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          health: newHealth,
+          energy: newEnergy,
+          last_health_update: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
       if (error) throw error;
       return { health: newHealth, energy: newEnergy };
     },
@@ -39,14 +155,38 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
       queryClient.invalidateQueries({ queryKey: ["game-profile"] });
       toast.success(`Rested for 1 hour. Health: ${health}%, Energy: ${energy}%`);
     },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Unable to rest right now.";
+      toast.error(message);
+    },
   });
 
   const yogaMutation = useMutation({
     mutationFn: async () => {
       if (energy < 15) throw new Error("Not enough energy for yoga (need 15 energy)");
+
+      const durationMinutes = 30;
+
+      const statusRecord = await startActivity({
+        status: "yoga_routine",
+        durationMinutes,
+        metadata: { source: "health_tab", activity: "yoga" },
+      });
+
+      if (!statusRecord) {
+        console.warn("Activity status could not be recorded for yoga routine");
+      }
+
       const newHealth = Math.min(100, health + 8);
       const newEnergy = Math.max(0, energy - 15);
-      const { error } = await supabase.from("profiles").update({ health: newHealth, energy: newEnergy, last_health_update: new Date().toISOString() }).eq("id", profile.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          health: newHealth,
+          energy: newEnergy,
+          last_health_update: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
       if (error) throw error;
       return { health: newHealth, energy: newEnergy };
     },
@@ -54,20 +194,40 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
       queryClient.invalidateQueries({ queryKey: ["game-profile"] });
       toast.success(`Completed 30-minute yoga session! Health: ${health}%, Energy: ${energy}%`);
     },
-    onError: (error: any) => toast.error(error.message),
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Unable to start yoga right now.";
+      toast.error(message);
+    },
   });
 
   const runMutation = useMutation({
     mutationFn: async () => {
       if (energy < 25) throw new Error("Not enough energy for a 5k run (need 25 energy)");
-      
+
       const baseDuration = 35;
       const durationReduction = Math.min(15, fitness / 10);
       const duration = Math.max(20, Math.round(baseDuration - durationReduction));
-      
+
+      const statusRecord = await startActivity({
+        status: "running_5k",
+        durationMinutes: duration,
+        metadata: { source: "health_tab", activity: "run_5k" },
+      });
+
+      if (!statusRecord) {
+        console.warn("Activity status could not be recorded for 5k run");
+      }
+
       const newHealth = Math.min(100, health + 12);
       const newEnergy = Math.max(0, energy - 25);
-      const { error } = await supabase.from("profiles").update({ health: newHealth, energy: newEnergy, last_health_update: new Date().toISOString() }).eq("id", profile.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          health: newHealth,
+          energy: newEnergy,
+          last_health_update: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
       if (error) throw error;
       return { health: newHealth, energy: newEnergy, duration };
     },
@@ -75,7 +235,10 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
       queryClient.invalidateQueries({ queryKey: ["game-profile"] });
       toast.success(`Completed 5k run in ${duration} minutes! Health: ${health}%, Energy: ${energy}%`);
     },
-    onError: (error: any) => toast.error(error.message),
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Unable to start your run right now.";
+      toast.error(message);
+    },
   });
 
   return (
@@ -157,6 +320,15 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
             <CardDescription>Improve your health through various activities</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {isBusy && (
+              <Alert>
+                <Clock className="h-4 w-4" />
+                <AlertDescription>
+                  You're currently busy with {busyStatusLabel ?? "another activity"}
+                  {busyCountdownLabel ? ` and will be free ${busyCountdownLabel}.` : "."}
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="rounded-lg border p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
@@ -166,8 +338,11 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
                 <Badge variant="outline">+10 Health, +15 Energy</Badge>
               </div>
               <Button
-                onClick={() => restMutation.mutate()}
-                disabled={restMutation.isPending || health >= 100}
+                onClick={() => {
+                  if (ensureNotBusy()) return;
+                  restMutation.mutate();
+                }}
+                disabled={restMutation.isPending || health >= 100 || isBusy}
                 className="w-full"
               >
                 <Coffee className="h-4 w-4 mr-2" />
@@ -184,8 +359,11 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
                 <Badge variant="outline">+8 Health, -15 Energy</Badge>
               </div>
               <Button
-                onClick={() => yogaMutation.mutate()}
-                disabled={yogaMutation.isPending || energy < 15}
+                onClick={() => {
+                  if (ensureNotBusy()) return;
+                  yogaMutation.mutate();
+                }}
+                disabled={yogaMutation.isPending || energy < 15 || isBusy}
                 className="w-full"
                 variant="secondary"
               >
@@ -202,8 +380,11 @@ export function HealthSection({ profile, attributes, awardActionXp }: HealthSect
                 <Badge variant="outline">+12 Health, -25 Energy</Badge>
               </div>
               <Button
-                onClick={() => runMutation.mutate()}
-                disabled={runMutation.isPending || energy < 25}
+                onClick={() => {
+                  if (ensureNotBusy()) return;
+                  runMutation.mutate();
+                }}
+                disabled={runMutation.isPending || energy < 25 || isBusy}
                 className="w-full"
                 variant="secondary"
               >

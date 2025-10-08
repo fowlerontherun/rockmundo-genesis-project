@@ -117,7 +117,8 @@ const MyCharacter = () => {
     loading,
     error,
     currentCity,
-    awardActionXp,
+    activityStatus,
+    startActivity,
   } = useGameData();
   const { toast } = useToast();
   const [claimingDailyXp, setClaimingDailyXp] = useState(false);
@@ -723,7 +724,12 @@ const MyCharacter = () => {
     </TabsContent>
 
     <TabsContent value="health" className="space-y-6 mt-6">
-      <HealthSection profile={profile} attributes={attributes} awardActionXp={awardActionXp} />
+      <HealthSection
+        profile={profile}
+        attributes={attributes}
+        activityStatus={activityStatus}
+        startActivity={startActivity}
+      />
     </TabsContent>
 
     <TabsContent value="achievements" className="space-y-6 mt-6">
