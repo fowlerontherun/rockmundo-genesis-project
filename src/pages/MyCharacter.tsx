@@ -119,6 +119,7 @@ const MyCharacter = () => {
     currentCity,
     activityStatus,
     startActivity,
+    clearActivityStatus,
   } = useGameData();
   const { toast } = useToast();
   const [claimingDailyXp, setClaimingDailyXp] = useState(false);
@@ -729,6 +730,7 @@ const MyCharacter = () => {
         attributes={attributes}
         activityStatus={activityStatus}
         startActivity={startActivity}
+        clearActivityStatus={clearActivityStatus}
       />
     </TabsContent>
 

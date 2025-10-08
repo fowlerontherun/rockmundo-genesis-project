@@ -51,6 +51,7 @@ interface HealthSectionProps {
       metadata?: Record<string, unknown> | null;
     },
   ) => Promise<ProfileActivityStatus | null>;
+  clearActivityStatus: () => Promise<void>;
 }
 
 export function HealthSection({
@@ -58,6 +59,7 @@ export function HealthSection({
   attributes,
   activityStatus,
   startActivity,
+  clearActivityStatus,
 }: HealthSectionProps) {
   const queryClient = useQueryClient();
 
@@ -140,15 +142,28 @@ export function HealthSection({
 
       const newHealth = Math.min(100, health + 10);
       const newEnergy = Math.min(100, energy + 15);
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          health: newHealth,
-          energy: newEnergy,
-          last_health_update: new Date().toISOString(),
-        })
-        .eq("id", profile.id);
-      if (error) throw error;
+
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            health: newHealth,
+            energy: newEnergy,
+            last_health_update: new Date().toISOString(),
+          })
+          .eq("id", profile.id);
+        if (error) throw error;
+      } catch (error) {
+        if (statusRecord) {
+          try {
+            await clearActivityStatus();
+          } catch (clearError) {
+            console.error("Failed to clear activity status after rest failure", clearError);
+          }
+        }
+        throw error;
+      }
+
       return { health: newHealth, energy: newEnergy };
     },
     onSuccess: ({ health, energy }) => {
@@ -179,15 +194,28 @@ export function HealthSection({
 
       const newHealth = Math.min(100, health + 8);
       const newEnergy = Math.max(0, energy - 15);
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          health: newHealth,
-          energy: newEnergy,
-          last_health_update: new Date().toISOString(),
-        })
-        .eq("id", profile.id);
-      if (error) throw error;
+
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            health: newHealth,
+            energy: newEnergy,
+            last_health_update: new Date().toISOString(),
+          })
+          .eq("id", profile.id);
+        if (error) throw error;
+      } catch (error) {
+        if (statusRecord) {
+          try {
+            await clearActivityStatus();
+          } catch (clearError) {
+            console.error("Failed to clear activity status after yoga failure", clearError);
+          }
+        }
+        throw error;
+      }
+
       return { health: newHealth, energy: newEnergy };
     },
     onSuccess: ({ health, energy }) => {
@@ -220,15 +248,28 @@ export function HealthSection({
 
       const newHealth = Math.min(100, health + 12);
       const newEnergy = Math.max(0, energy - 25);
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          health: newHealth,
-          energy: newEnergy,
-          last_health_update: new Date().toISOString(),
-        })
-        .eq("id", profile.id);
-      if (error) throw error;
+
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            health: newHealth,
+            energy: newEnergy,
+            last_health_update: new Date().toISOString(),
+          })
+          .eq("id", profile.id);
+        if (error) throw error;
+      } catch (error) {
+        if (statusRecord) {
+          try {
+            await clearActivityStatus();
+          } catch (clearError) {
+            console.error("Failed to clear activity status after run failure", clearError);
+          }
+        }
+        throw error;
+      }
+
       return { health: newHealth, energy: newEnergy, duration };
     },
     onSuccess: ({ health, energy, duration }) => {
