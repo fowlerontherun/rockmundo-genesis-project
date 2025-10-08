@@ -2188,10 +2188,12 @@ export type Database = {
       profiles: {
         Row: {
           age: number
+          avatar_url: string | null
           bio: string | null
           cash: number | null
           created_at: string | null
           current_city_id: string | null
+          current_location: string | null
           display_name: string | null
           energy: number
           experience: number | null
@@ -2212,10 +2214,12 @@ export type Database = {
         }
         Insert: {
           age?: number
+          avatar_url?: string | null
           bio?: string | null
           cash?: number | null
           created_at?: string | null
           current_city_id?: string | null
+          current_location?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
@@ -2236,10 +2240,12 @@ export type Database = {
         }
         Update: {
           age?: number
+          avatar_url?: string | null
           bio?: string | null
           cash?: number | null
           created_at?: string | null
           current_city_id?: string | null
+          current_location?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
