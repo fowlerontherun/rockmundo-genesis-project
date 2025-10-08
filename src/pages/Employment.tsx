@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format, parseISO } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Employment() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAvailableJobs, setShowAvailableJobs] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -89,6 +91,29 @@ export default function Employment() {
       return data;
     },
   });
+
+  const categories = useMemo(() => {
+    if (!availableJobs) return [] as string[];
+    return Array.from(
+      new Set(
+        availableJobs
+          .map((job) => job.category)
+          .filter((category): category is string => Boolean(category))
+      )
+    );
+  }, [availableJobs]);
+
+  const filteredJobs = useMemo(() => {
+    if (!availableJobs) return [] as typeof availableJobs;
+    if (categoryFilter === "all") return availableJobs;
+    return availableJobs.filter((job) => job.category === categoryFilter);
+  }, [availableJobs, categoryFilter]);
+
+  const otherJobs = useMemo(() => {
+    if (!currentEmployment) return [] as typeof filteredJobs;
+    const currentJobId = (currentEmployment.jobs as any)?.id;
+    return filteredJobs.filter((job) => job.id !== currentJobId);
+  }, [filteredJobs, currentEmployment]);
 
   const { data: activityStatus } = useQuery({
     queryKey: ["activity-status", profile?.id],
@@ -335,6 +360,35 @@ export default function Employment() {
           </Alert>
         )}
 
+        {availableJobs && availableJobs.length > 0 && (
+          <div className="flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <span>
+                    {categoryFilter === "all"
+                      ? "All Categories"
+                      : `Category: ${categoryFilter}`}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Filter by category</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <DropdownMenuRadioItem value="all">All Categories</DropdownMenuRadioItem>
+                  {categories.map((category) => (
+                    <DropdownMenuRadioItem key={category} value={category}>
+                      {category}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         {currentEmployment && (
           <Card>
             <CardHeader>
@@ -447,9 +501,15 @@ export default function Employment() {
           </Card>
         )}
 
-        {!currentEmployment && (
+        {!currentEmployment && availableJobs && filteredJobs.length === 0 && (
+          <div className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
+            No jobs found for this category.
+          </div>
+        )}
+
+        {!currentEmployment && filteredJobs.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {availableJobs?.map((job) => (
+            {filteredJobs.map((job) => (
               <Card key={job.id}>
                 <CardHeader>
                   <CardTitle className="text-lg">{job.title}</CardTitle>
@@ -509,19 +569,25 @@ export default function Employment() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {availableJobs?.filter(j => j.id !== (currentEmployment.jobs as any)?.id).map((job) => (
-                  <Card key={job.id} className="opacity-60">
-                    <CardHeader>
-                      <CardTitle className="text-lg">{job.title}</CardTitle>
-                      <CardDescription>{job.company_name}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">Quit your current job to apply here</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              {availableJobs && otherJobs.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-muted-foreground/40 p-6 text-center text-sm text-muted-foreground">
+                  No other jobs found for this category.
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {otherJobs.map((job) => (
+                    <Card key={job.id} className="opacity-60">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{job.title}</CardTitle>
+                        <CardDescription>{job.company_name}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">Quit your current job to apply here</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CollapsibleContent>
           </Collapsible>
         )}
