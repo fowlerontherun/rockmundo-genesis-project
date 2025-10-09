@@ -48,6 +48,10 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
   const totalDays = enrollment.university_courses.base_duration_days;
   const daysAttended = enrollment.days_attended;
   const progressPercentage = (daysAttended / totalDays) * 100;
+  const paymentAmount =
+    typeof enrollment.payment_amount === "number" && !Number.isNaN(enrollment.payment_amount)
+      ? enrollment.payment_amount
+      : 0;
   
   // Validate scheduled_end_date before using it
   const endDate = enrollment.scheduled_end_date ? new Date(enrollment.scheduled_end_date) : null;
@@ -148,7 +152,7 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
               <DollarSign className="h-4 w-4" />
               <span className="text-xs font-medium">Amount Paid</span>
             </div>
-            <p className="text-2xl font-bold">${enrollment.payment_amount.toLocaleString()}</p>
+            <p className="text-2xl font-bold">${paymentAmount.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">Course fee</p>
           </div>
         </div>
