@@ -45,9 +45,13 @@ interface EnrollmentProgressCardProps {
 }
 
 export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentProgressCardProps) {
+  const attendanceRecords = Array.isArray(enrollment.player_university_attendance)
+    ? enrollment.player_university_attendance
+    : [];
+
   const totalDays = enrollment.university_courses.base_duration_days;
   const daysAttended = enrollment.days_attended;
-  const progressPercentage = (daysAttended / totalDays) * 100;
+  const progressPercentage = totalDays > 0 ? (daysAttended / totalDays) * 100 : 0;
   const paymentAmount =
     typeof enrollment.payment_amount === "number" && !Number.isNaN(enrollment.payment_amount)
       ? enrollment.payment_amount
@@ -158,14 +162,14 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
         </div>
 
         {/* Attendance History */}
-        {enrollment.player_university_attendance.length > 0 && (
+        {attendanceRecords.length > 0 && (
           <div className="space-y-3">
             <h4 className="flex items-center gap-2 font-semibold">
               <BookOpen className="h-4 w-4" />
               Recent Attendance
             </h4>
             <div className="space-y-2">
-              {enrollment.player_university_attendance
+              {attendanceRecords
                 .slice(-5)
                 .reverse()
                 .map((record, idx) => {
