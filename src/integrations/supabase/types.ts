@@ -1693,7 +1693,6 @@ export type Database = {
       }
       player_employment: {
         Row: {
-          auto_clock_in: boolean
           created_at: string | null
           hired_at: string | null
           id: string
@@ -1707,7 +1706,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          auto_clock_in?: boolean
           created_at?: string | null
           hired_at?: string | null
           id?: string
@@ -1721,7 +1719,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          auto_clock_in?: boolean
           created_at?: string | null
           hired_at?: string | null
           id?: string
@@ -2191,12 +2188,10 @@ export type Database = {
       profiles: {
         Row: {
           age: number
-          avatar_url: string | null
           bio: string | null
           cash: number | null
           created_at: string | null
           current_city_id: string | null
-          current_location: string | null
           display_name: string | null
           energy: number
           experience: number | null
@@ -2217,12 +2212,10 @@ export type Database = {
         }
         Insert: {
           age?: number
-          avatar_url?: string | null
           bio?: string | null
           cash?: number | null
           created_at?: string | null
           current_city_id?: string | null
-          current_location?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
@@ -2243,12 +2236,10 @@ export type Database = {
         }
         Update: {
           age?: number
-          avatar_url?: string | null
           bio?: string | null
           cash?: number | null
           created_at?: string | null
           current_city_id?: string | null
-          current_location?: string | null
           display_name?: string | null
           energy?: number
           experience?: number | null
@@ -3259,11 +3250,14 @@ export type Database = {
       }
       venues: {
         Row: {
+          amenities: Json | null
           base_payment: number | null
           capacity: number | null
           city_id: string | null
           created_at: string | null
+          description: string | null
           id: string
+          image_url: string | null
           location: string | null
           name: string
           prestige_level: number | null
@@ -3271,11 +3265,14 @@ export type Database = {
           venue_type: string | null
         }
         Insert: {
+          amenities?: Json | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          image_url?: string | null
           location?: string | null
           name: string
           prestige_level?: number | null
@@ -3283,11 +3280,14 @@ export type Database = {
           venue_type?: string | null
         }
         Update: {
+          amenities?: Json | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          image_url?: string | null
           location?: string | null
           name?: string
           prestige_level?: number | null

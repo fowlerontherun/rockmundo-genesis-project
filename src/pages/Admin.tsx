@@ -10,6 +10,7 @@ import {
   Users,
   BookOpen,
   Briefcase,
+  Music2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -94,6 +95,13 @@ const adminSections = [
     href: "/admin/jobs",
     action: "Manage jobs",
     Icon: Briefcase,
+  },
+  {
+    title: "Venues",
+    description: "Manage performance venues, capacities, prestige levels, and booking requirements.",
+    href: "/admin/venues",
+    action: "Manage venues",
+    Icon: Music2,
   },
 ] as const;
 
