@@ -101,6 +101,7 @@ export function useUniversityAttendance(profileId: string | undefined) {
       );
 
       const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
 
       // Create attendance record
       const { error: attendanceError } = await supabase
@@ -126,8 +127,83 @@ export function useUniversityAttendance(profileId: string | undefined) {
 
       if (updateError) throw updateError;
 
+      // Award XP to skill
+      const { data: skillProgress } = await supabase
+        .from("skill_progress")
+        .select("id, current_xp, current_level, required_xp")
+        .eq("profile_id", profileId)
+        .eq("skill_slug", course.skill_slug)
+        .maybeSingle();
+
+      if (skillProgress) {
+        const newCurrentXp = skillProgress.current_xp + xpEarned;
+        let newLevel = skillProgress.current_level;
+        let newRequiredXp = skillProgress.required_xp;
+
+        // Level up if enough XP
+        if (newCurrentXp >= skillProgress.required_xp) {
+          newLevel += 1;
+          newRequiredXp = Math.floor(skillProgress.required_xp * 1.5);
+        }
+
+        const { error: skillError } = await supabase
+          .from("skill_progress")
+          .update({
+            current_xp: newCurrentXp,
+            current_level: newLevel,
+            required_xp: newRequiredXp,
+            last_practiced_at: now.toISOString(),
+          })
+          .eq("id", skillProgress.id);
+
+        if (skillError) throw skillError;
+      } else {
+        // Create new skill progress
+        const { error: skillError } = await supabase.from("skill_progress").insert({
+          profile_id: profileId,
+          skill_slug: course.skill_slug,
+          current_xp: xpEarned,
+          current_level: 0,
+          required_xp: 100,
+          last_practiced_at: now.toISOString(),
+        });
+
+        if (skillError) throw skillError;
+      }
+
+      // Update player profile XP
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("experience, user_id")
+        .eq("id", profileId)
+        .single();
+
+      if (profile) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+            experience: (profile.experience || 0) + xpEarned,
+          })
+          .eq("id", profileId);
+
+        if (profileError) throw profileError;
+
+        // Log to experience ledger
+        const { error: ledgerError } = await supabase.from("experience_ledger").insert({
+          user_id: profile.user_id,
+          profile_id: profileId,
+          activity_type: "university_attendance",
+          xp_amount: xpEarned,
+          skill_slug: course.skill_slug,
+          metadata: {
+            enrollment_id: enrollment.id,
+          },
+        });
+
+        if (ledgerError) throw ledgerError;
+      }
+
       // Create activity status
-      const now = new Date();
       const endTime = new Date(now);
       endTime.setHours(14, 0, 0, 0); // Class ends at 2 PM
 
@@ -155,9 +231,11 @@ export function useUniversityAttendance(profileId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["today_university_attendance"] });
       queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
       queryClient.invalidateQueries({ queryKey: ["current_enrollment_full"] });
+      queryClient.invalidateQueries({ queryKey: ["skill_progress"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast({
         title: "Attending Class!",
-        description: `You're now in class. You'll earn ${data.xpEarned} XP when class ends at 2 PM.`,
+        description: `You earned ${data.xpEarned} XP! Class ends at 2 PM.`,
       });
     },
     onError: (error: any) => {
