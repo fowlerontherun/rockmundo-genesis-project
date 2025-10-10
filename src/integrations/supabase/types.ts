@@ -3262,6 +3262,7 @@ export type Database = {
           city_id: string | null
           created_at: string | null
           description: string | null
+          district_id: string | null
           id: string
           image_url: string | null
           location: string | null
@@ -3277,6 +3278,7 @@ export type Database = {
           city_id?: string | null
           created_at?: string | null
           description?: string | null
+          district_id?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
@@ -3292,6 +3294,7 @@ export type Database = {
           city_id?: string | null
           created_at?: string | null
           description?: string | null
+          district_id?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
@@ -3306,6 +3309,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venues_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "city_districts"
             referencedColumns: ["id"]
           },
         ]

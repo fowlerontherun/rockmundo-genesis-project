@@ -14,6 +14,7 @@ import type { Database } from '@/lib/supabase-types';
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type VenueInsert = Database['public']['Tables']['venues']['Insert'];
 type CityRow = Database['public']['Tables']['cities']['Row'];
+type DistrictRow = Database['public']['Tables']['city_districts']['Row'];
 
 const VENUE_TYPES = [
   { value: 'indie_venue', label: 'Indie Venue' },
@@ -27,6 +28,7 @@ const VENUE_TYPES = [
 
 interface VenueFormData {
   city_id: string | null;
+  district_id: string | null;
   name: string;
   location: string;
   venue_type: string;
@@ -41,6 +43,7 @@ interface VenueFormData {
 
 const defaultFormData: VenueFormData = {
   city_id: null,
+  district_id: null,
   name: '',
   location: '',
   venue_type: 'concert_hall',
@@ -57,6 +60,8 @@ export default function VenuesAdmin() {
   const { toast } = useToast();
   const [venues, setVenues] = useState<VenueRow[]>([]);
   const [cities, setCities] = useState<CityRow[]>([]);
+  const [districts, setDistricts] = useState<DistrictRow[]>([]);
+  const [filteredDistricts, setFilteredDistricts] = useState<DistrictRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<VenueRow | null>(null);
@@ -78,16 +83,19 @@ export default function VenuesAdmin() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [venuesResult, citiesResult] = await Promise.all([
+      const [venuesResult, citiesResult, districtsResult] = await Promise.all([
         supabase.from('venues').select('*').order('prestige_level'),
         supabase.from('cities').select('*').order('name'),
+        supabase.from('city_districts').select('*').order('name'),
       ]);
 
       if (venuesResult.error) throw venuesResult.error;
       if (citiesResult.error) throw citiesResult.error;
+      if (districtsResult.error) throw districtsResult.error;
 
       setVenues(venuesResult.data || []);
       setCities(citiesResult.data || []);
+      setDistricts(districtsResult.data || []);
     } catch (error: any) {
       toast({
         title: 'Error loading data',
@@ -110,6 +118,7 @@ export default function VenuesAdmin() {
       
       setFormData({
         city_id: venue.city_id,
+        district_id: venue.district_id,
         name: venue.name,
         location: venue.location || '',
         venue_type: venue.venue_type,
@@ -121,6 +130,13 @@ export default function VenuesAdmin() {
         requirements: reqs,
         amenities: venueAmenities,
       });
+      
+      // Filter districts based on venue's city
+      if (venue.city_id) {
+        const cityDistricts = districts.filter(d => d.city_id === venue.city_id);
+        setFilteredDistricts(cityDistricts);
+      }
+      
       setMinFans(String(reqs.min_fans || 0));
       setMinFame(String(reqs.min_fame || 0));
       setMinPerformanceSkill(String(reqs.min_performance_skill || 0));
@@ -128,6 +144,7 @@ export default function VenuesAdmin() {
     } else {
       setEditingVenue(null);
       setFormData(defaultFormData);
+      setFilteredDistricts([]);
       setMinFans('0');
       setMinFame('0');
       setMinPerformanceSkill('0');
@@ -169,6 +186,7 @@ export default function VenuesAdmin() {
 
     const venueData: VenueInsert = {
       city_id: formData.city_id || null,
+      district_id: formData.district_id || null,
       name: formData.name,
       location: formData.location,
       venue_type: formData.venue_type,
@@ -284,7 +302,11 @@ export default function VenuesAdmin() {
                   <Label htmlFor="city">City</Label>
                   <Select
                     value={formData.city_id || ''}
-                    onValueChange={(value) => setFormData({ ...formData, city_id: value })}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, city_id: value, district_id: null });
+                      const cityDistricts = districts.filter(d => d.city_id === value);
+                      setFilteredDistricts(cityDistricts);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select city" />
@@ -293,6 +315,27 @@ export default function VenuesAdmin() {
                       {cities.map((city) => (
                         <SelectItem key={city.id} value={city.id}>
                           {city.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="district">District (Optional)</Label>
+                  <Select
+                    value={formData.district_id || ''}
+                    onValueChange={(value) => setFormData({ ...formData, district_id: value })}
+                    disabled={!formData.city_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.city_id ? "Select district" : "Select city first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {filteredDistricts.map((district) => (
+                        <SelectItem key={district.id} value={district.id}>
+                          {district.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
