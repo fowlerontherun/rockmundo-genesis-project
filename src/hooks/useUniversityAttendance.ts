@@ -39,9 +39,11 @@ export function useUniversityAttendance(profileId: string | undefined) {
         `)
         .eq("profile_id", profileId)
         .in("status", ["enrolled", "in_progress"])
-        .maybeSingle();
+        .order("enrolled_at", { ascending: false })
+        .limit(1)
+        .single();
 
-      if (error) throw error;
+      if (error && error.code !== "PGRST116") throw error;
       return data as UniversityEnrollment | null;
     },
     enabled: !!profileId,
