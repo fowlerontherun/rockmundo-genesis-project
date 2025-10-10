@@ -4,20 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Trash2, Plus, Music2 } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 
-type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
+type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'] & {
+  cities?: { name: string } | null;
+  city_districts?: { name: string } | null;
+};
+type City = Database['public']['Tables']['cities']['Row'];
+type District = Database['public']['Tables']['city_districts']['Row'];
 
 export default function RehearsalRooms() {
   const { toast } = useToast();
   const [rooms, setRooms] = useState<RehearsalRoom[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     location: '',
+    city_id: '',
+    district_id: '',
     hourly_rate: 50,
     quality_rating: 50,
     capacity: 10,
@@ -27,14 +37,48 @@ export default function RehearsalRooms() {
 
   useEffect(() => {
     loadRooms();
+    loadCities();
   }, []);
+
+  const loadCities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('cities')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCities(data || []);
+    } catch (error) {
+      console.error('Error loading cities:', error);
+    }
+  };
+
+  const loadDistricts = async (cityId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('city_districts')
+        .select('*')
+        .eq('city_id', cityId)
+        .order('name');
+
+      if (error) throw error;
+      setDistricts(data || []);
+    } catch (error) {
+      console.error('Error loading districts:', error);
+    }
+  };
 
   const loadRooms = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('rehearsal_rooms')
-        .select('*')
+        .select(`
+          *,
+          cities:city_id (name),
+          city_districts:district_id (name)
+        `)
         .order('name');
 
       if (error) throw error;
@@ -54,9 +98,15 @@ export default function RehearsalRooms() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const submitData = {
+        ...formData,
+        city_id: formData.city_id || null,
+        district_id: formData.district_id || null,
+      };
+
       const { error } = await supabase
         .from('rehearsal_rooms')
-        .insert([formData]);
+        .insert([submitData]);
 
       if (error) throw error;
 
@@ -68,12 +118,15 @@ export default function RehearsalRooms() {
       setFormData({
         name: '',
         location: '',
+        city_id: '',
+        district_id: '',
         hourly_rate: 50,
         quality_rating: 50,
         capacity: 10,
         equipment_quality: 50,
         description: '',
       });
+      setDistricts([]);
 
       loadRooms();
     } catch (error) {
@@ -159,6 +212,51 @@ export default function RehearsalRooms() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Select 
+                  value={formData.city_id} 
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, city_id: value, district_id: '' });
+                    if (value) loadDistricts(value);
+                    else setDistricts([]);
+                  }}
+                >
+                  <SelectTrigger id="city">
+                    <SelectValue placeholder="Select city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {cities.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="district">District</Label>
+                <Select 
+                  value={formData.district_id} 
+                  onValueChange={(value) => setFormData({ ...formData, district_id: value === 'none' ? '' : value })}
+                  disabled={!formData.city_id || districts.length === 0}
+                >
+                  <SelectTrigger id="district">
+                    <SelectValue placeholder="Select district" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {districts.map((district) => (
+                      <SelectItem key={district.id} value={district.id}>
+                        {district.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
                 <Input
                   id="hourly_rate"
@@ -241,6 +339,10 @@ export default function RehearsalRooms() {
                   {room.location && (
                     <p className="text-sm text-muted-foreground">{room.location}</p>
                   )}
+                  <div className="flex gap-2 text-xs text-muted-foreground">
+                    {(room.cities as any)?.name && <span>📍 {(room.cities as any).name}</span>}
+                    {(room.city_districts as any)?.name && <span>• {(room.city_districts as any).name}</span>}
+                  </div>
                   <div className="flex gap-4 text-sm text-muted-foreground">
                     <span>${room.hourly_rate}/hr</span>
                     <span>Quality: {room.quality_rating}</span>

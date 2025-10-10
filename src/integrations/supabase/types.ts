@@ -2340,6 +2340,7 @@ export type Database = {
           city_id: string | null
           created_at: string | null
           description: string | null
+          district_id: string | null
           equipment_quality: number | null
           hourly_rate: number
           id: string
@@ -2353,6 +2354,7 @@ export type Database = {
           city_id?: string | null
           created_at?: string | null
           description?: string | null
+          district_id?: string | null
           equipment_quality?: number | null
           hourly_rate?: number
           id?: string
@@ -2366,6 +2368,7 @@ export type Database = {
           city_id?: string | null
           created_at?: string | null
           description?: string | null
+          district_id?: string | null
           equipment_quality?: number | null
           hourly_rate?: number
           id?: string
@@ -2380,6 +2383,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rehearsal_rooms_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "city_districts"
             referencedColumns: ["id"]
           },
         ]
