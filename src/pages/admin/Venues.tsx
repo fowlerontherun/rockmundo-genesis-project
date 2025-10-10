@@ -324,15 +324,15 @@ export default function VenuesAdmin() {
                 <div className="space-y-2">
                   <Label htmlFor="district">District (Optional)</Label>
                   <Select
-                    value={formData.district_id || ''}
-                    onValueChange={(value) => setFormData({ ...formData, district_id: value })}
+                    value={formData.district_id || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, district_id: value === 'none' ? null : value })}
                     disabled={!formData.city_id}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={formData.city_id ? "Select district" : "Select city first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {filteredDistricts.map((district) => (
                         <SelectItem key={district.id} value={district.id}>
                           {district.name}
