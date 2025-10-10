@@ -286,7 +286,7 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="earnings" className="space-y-4">
-          <BandEarnings bandId={selectedBand.id} />
+          <BandEarnings bandId={selectedBand.id} isLeader={isLeader} />
         </TabsContent>
 
         <TabsContent value="chemistry" className="space-y-4">
