@@ -1693,7 +1693,7 @@ export type Database = {
       }
       player_employment: {
         Row: {
-          auto_clock_in: boolean
+          auto_clock_in: boolean | null
           created_at: string | null
           hired_at: string | null
           id: string
@@ -1707,7 +1707,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          auto_clock_in?: boolean
+          auto_clock_in?: boolean | null
           created_at?: string | null
           hired_at?: string | null
           id?: string
@@ -1721,7 +1721,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          auto_clock_in?: boolean
+          auto_clock_in?: boolean | null
           created_at?: string | null
           hired_at?: string | null
           id?: string
@@ -2000,6 +2000,7 @@ export type Database = {
       player_university_enrollments: {
         Row: {
           actual_completion_date: string | null
+          auto_attend: boolean | null
           course_id: string
           created_at: string | null
           days_attended: number | null
@@ -2016,6 +2017,7 @@ export type Database = {
         }
         Insert: {
           actual_completion_date?: string | null
+          auto_attend?: boolean | null
           course_id: string
           created_at?: string | null
           days_attended?: number | null
@@ -2032,6 +2034,7 @@ export type Database = {
         }
         Update: {
           actual_completion_date?: string | null
+          auto_attend?: boolean | null
           course_id?: string
           created_at?: string | null
           days_attended?: number | null

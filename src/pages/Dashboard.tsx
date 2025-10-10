@@ -357,6 +357,8 @@ const Dashboard = () => {
       case "song": return <Music className="h-4 w-4" />;
       case "join": return <Star className="h-4 w-4" />;
       case "busking": return <Mic className="h-4 w-4" />;
+      case "university_attendance": return <Activity className="h-4 w-4" />;
+      case "work_shift": return <Activity className="h-4 w-4" />;
       case "point_grant":
       case "weekly_bonus":
         return <Sparkles className="h-4 w-4" />;
@@ -599,6 +601,18 @@ const Dashboard = () => {
       });
     }
 
+    const universityActivity = activities.find(activity => activity.activity_type === "university_attendance");
+    if (universityActivity && (!latestActivity || universityActivity.id !== latestActivity.id)) {
+      items.push({
+        id: `university-${universityActivity.id}`,
+        title: "Class attendance",
+        description: universityActivity.message,
+        icon: <Activity className="h-4 w-4" />,
+        iconClasses: "bg-blue-500/10 text-blue-500",
+        timestamp: formatNotificationDate(universityActivity.created_at),
+      });
+    }
+
     const skillActivity = activities.find(activity => activity.activity_type === "skill");
     if (skillActivity && (!latestActivity || skillActivity.id !== latestActivity.id)) {
       items.push({
@@ -611,7 +625,7 @@ const Dashboard = () => {
       });
     }
 
-    return items.slice(0, 3);
+    return items.slice(0, 4);
   })();
   const recentLedgerEntries = xpLedger.slice(0, 5);
 

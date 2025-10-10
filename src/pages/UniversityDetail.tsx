@@ -4,11 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, CalendarCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useUniversityAttendance } from "@/hooks/useUniversityAttendance";
+import { format } from "date-fns";
 
 interface University {
   id: string;
@@ -118,6 +123,7 @@ export default function UniversityDetail() {
           total_xp_earned,
           scheduled_end_date,
           payment_amount,
+          auto_attend,
           university_courses (
             name,
             base_duration_days
@@ -274,6 +280,17 @@ export default function UniversityDetail() {
     },
   });
 
+  const {
+    activityStatus: universityActivityStatus,
+    canAttendClass,
+    attendClass,
+    isAttending,
+    toggleAutoAttend,
+    isTogglingAuto,
+  } = useUniversityAttendance(profile?.id);
+
+  const autoAttendEnabled = Boolean((currentEnrollment as any)?.auto_attend);
+
   if (!university) {
     return <div className="p-6">Loading...</div>;
   }
@@ -286,6 +303,15 @@ export default function UniversityDetail() {
           Back to Education
         </Button>
 
+        {universityActivityStatus && (
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              You're currently in class. Class ends at {format(new Date(universityActivityStatus.ends_at), 'h:mm a')}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Show enrollment progress if user is enrolled */}
         {currentEnrollment && (
           <div className="space-y-4">
@@ -293,6 +319,52 @@ export default function UniversityDetail() {
               enrollment={currentEnrollment as any}
               onDropCourse={() => dropCourseMutation.mutate()}
             />
+
+            {/* Attend Class Section - only show if enrolled at THIS university */}
+            {currentEnrollment.university_id === id && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarCheck className="h-5 w-5" />
+                    Class Attendance
+                  </CardTitle>
+                  <CardDescription>
+                    Attend class between 10 AM - 2 PM to earn daily XP
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="auto-attend">Auto-attend classes</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically mark attendance at 10 AM daily
+                      </p>
+                    </div>
+                    <Switch
+                      id="auto-attend"
+                      checked={autoAttendEnabled}
+                      onCheckedChange={() => toggleAutoAttend()}
+                      disabled={isTogglingAuto}
+                    />
+                  </div>
+
+                  <Button
+                    className="w-full"
+                    onClick={() => attendClass()}
+                    disabled={!canAttendClass || isAttending || !!universityActivityStatus}
+                  >
+                    {universityActivityStatus
+                      ? "Currently in Class"
+                      : isAttending
+                      ? "Marking Attendance..."
+                      : !canAttendClass
+                      ? "Not Class Time (10 AM - 2 PM)"
+                      : "Attend Class"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {currentEnrollment.university_id !== id && (
               <Card className="border-amber-500/50 bg-amber-500/10">
                 <CardContent className="py-4">
