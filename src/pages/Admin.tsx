@@ -103,6 +103,13 @@ const adminSections = [
     action: "Manage venues",
     Icon: Music2,
   },
+  {
+    title: "Rehearsal Rooms",
+    description: "Manage rehearsal spaces where bands practice to improve chemistry and gig readiness.",
+    href: "/admin/rehearsal-rooms",
+    action: "Manage rehearsal rooms",
+    Icon: Music2,
+  },
 ] as const;
 
 export default function Admin() {

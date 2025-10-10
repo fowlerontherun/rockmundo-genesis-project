@@ -38,17 +38,17 @@ export function RehearsalsTab() {
       if (roomsError) throw roomsError;
       setRooms(roomsData || []);
 
-      // Get user's band
-      const { data: bandMember, error: memberError } = await supabase
+      // Get user's band (first one if multiple)
+      const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
         .select('band_id, bands:bands!band_members_band_id_fkey(*)')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .limit(1);
 
       if (memberError) throw memberError;
 
-      if (bandMember) {
-        const band = (bandMember as any).bands;
+      if (bandMembers && bandMembers.length > 0) {
+        const band = (bandMembers[0] as any).bands;
         setUserBand(band);
 
         // Check for active rehearsal
