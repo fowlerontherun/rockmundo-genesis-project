@@ -415,6 +415,66 @@ export type Database = {
           },
         ]
       }
+      band_rehearsals: {
+        Row: {
+          band_id: string
+          chemistry_gain: number | null
+          completed_at: string | null
+          created_at: string | null
+          duration_hours: number
+          id: string
+          rehearsal_room_id: string
+          scheduled_end: string
+          scheduled_start: string
+          status: string
+          total_cost: number
+          xp_earned: number | null
+        }
+        Insert: {
+          band_id: string
+          chemistry_gain?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_hours: number
+          id?: string
+          rehearsal_room_id: string
+          scheduled_end: string
+          scheduled_start?: string
+          status?: string
+          total_cost: number
+          xp_earned?: number | null
+        }
+        Update: {
+          band_id?: string
+          chemistry_gain?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_hours?: number
+          id?: string
+          rehearsal_room_id?: string
+          scheduled_end?: string
+          scheduled_start?: string
+          status?: string
+          total_cost?: number
+          xp_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_rehearsals_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_rehearsals_rehearsal_room_id_fkey"
+            columns: ["rehearsal_room_id"]
+            isOneToOne: false
+            referencedRelation: "rehearsal_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bands: {
         Row: {
           artist_name: string | null
@@ -2268,6 +2328,56 @@ export type Database = {
           {
             foreignKeyName: "profiles_current_city_id_fkey"
             columns: ["current_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rehearsal_rooms: {
+        Row: {
+          capacity: number | null
+          city_id: string | null
+          created_at: string | null
+          description: string | null
+          equipment_quality: number | null
+          hourly_rate: number
+          id: string
+          location: string | null
+          name: string
+          quality_rating: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          capacity?: number | null
+          city_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          equipment_quality?: number | null
+          hourly_rate?: number
+          id?: string
+          location?: string | null
+          name: string
+          quality_rating?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          capacity?: number | null
+          city_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          equipment_quality?: number | null
+          hourly_rate?: number
+          id?: string
+          location?: string | null
+          name?: string
+          quality_rating?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rehearsal_rooms_city_id_fkey"
+            columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
             referencedColumns: ["id"]

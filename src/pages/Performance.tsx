@@ -1,9 +1,10 @@
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Music4, Mic } from 'lucide-react';
+import { Calendar, Music4, Mic, Music2 } from 'lucide-react';
 import { GigPerformanceTab } from '@/components/performance/GigPerformanceTab';
 import { JamSessionsTab } from '@/components/performance/JamSessionsTab';
 import { BuskingTab } from '@/components/performance/BuskingTab';
+import { RehearsalsTab } from '@/components/performance/RehearsalsTab';
 
 export default function Performance() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,6 +37,10 @@ export default function Performance() {
             <Mic className="mr-2 h-4 w-4" />
             Busking
           </TabsTrigger>
+          <TabsTrigger value="rehearsals">
+            <Music2 className="mr-2 h-4 w-4" />
+            Rehearsals
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="gigs">
@@ -48,6 +53,10 @@ export default function Performance() {
 
         <TabsContent value="busking">
           <BuskingTab />
+        </TabsContent>
+
+        <TabsContent value="rehearsals">
+          <RehearsalsTab />
         </TabsContent>
       </Tabs>
     </div>
