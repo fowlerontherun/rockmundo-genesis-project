@@ -160,21 +160,20 @@ serve(async (req) => {
         });
       }
 
-      // Update player XP wallet
-      const { data: wallet } = await supabaseClient
-        .from("player_xp_wallet")
-        .select("xp_balance, lifetime_xp")
-        .eq("profile_id", enrollment.profile_id)
+      // Update player profile XP
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("experience")
+        .eq("id", enrollment.profile_id)
         .single();
 
-      if (wallet) {
+      if (profile) {
         await supabaseClient
-          .from("player_xp_wallet")
+          .from("profiles")
           .update({
-            xp_balance: wallet.xp_balance + xpEarned,
-            lifetime_xp: wallet.lifetime_xp + xpEarned,
+            experience: (profile.experience || 0) + xpEarned,
           })
-          .eq("profile_id", enrollment.profile_id);
+          .eq("id", enrollment.profile_id);
       }
 
       // Log to experience ledger

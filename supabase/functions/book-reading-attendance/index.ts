@@ -87,14 +87,27 @@ serve(async (req) => {
         }
 
         // Update skill progress
+        const newXp = (skillProgress?.current_xp || 0) + dailyXp;
+        let newLevel = currentLevel;
+        let newRequiredXp = requiredXp;
+        
+        // Level up check
+        if (newXp >= requiredXp) {
+          newLevel += 1;
+          newRequiredXp = Math.floor(requiredXp * 1.5);
+        }
+
         const { error: skillError } = await supabaseClient
           .from("skill_progress")
           .upsert({
             profile_id: session.profile_id,
             skill_slug: book.skill_slug,
-            current_xp: (skillProgress?.current_xp || 0) + dailyXp,
-            current_level: currentLevel,
-            required_xp: requiredXp,
+            current_xp: newXp,
+            current_level: newLevel,
+            required_xp: newRequiredXp,
+            last_practiced_at: new Date().toISOString(),
+          }, {
+            onConflict: 'profile_id,skill_slug'
           });
 
         if (skillError) {
@@ -128,12 +141,20 @@ serve(async (req) => {
         }
 
         // Award profile XP
-        await supabaseClient
+        const { data: profile } = await supabaseClient
           .from("profiles")
-          .update({
-            experience: supabaseClient.rpc("increment", { amount: dailyXp }),
-          })
-          .eq("id", session.profile_id);
+          .select("experience")
+          .eq("id", session.profile_id)
+          .single();
+        
+        if (profile) {
+          await supabaseClient
+            .from("profiles")
+            .update({
+              experience: (profile.experience || 0) + dailyXp,
+            })
+            .eq("id", session.profile_id);
+        }
 
         // Log to experience ledger
         await supabaseClient

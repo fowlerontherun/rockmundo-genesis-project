@@ -216,10 +216,11 @@ export default function UniversityDetail() {
     return Math.ceil(baseDays * durationMultiplier);
   };
 
-  const calculatePrice = (basePrice?: number | null) => {
+  const calculatePrice = (basePrice?: number | null): number => {
     const normalizedPrice = typeof basePrice === "number" && !Number.isNaN(basePrice) ? basePrice : 0;
     if (!university) return normalizedPrice;
-    return Math.floor(normalizedPrice * (university.course_cost_modifier || 1.0));
+    const calculatedPrice = Math.floor(normalizedPrice * (university.course_cost_modifier || 1.0));
+    return Number.isFinite(calculatedPrice) ? calculatedPrice : 0;
   };
 
   const getSkillLevel = (skillSlug: string) => {
