@@ -120,13 +120,7 @@ const Navigation = () => {
   const mobileShortcuts = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Music, label: "Performance", path: "/performance" },
-    { icon: Calendar, label: "Gigs", path: "/gigs" },
-    { icon: ListMusic, label: "Setlists", path: "/setlists" },
-    { icon: Award, label: "Awards", path: "/awards" },
-    { icon: Plane, label: "Travel", path: "/travel" },
-    { icon: Megaphone, label: "PR", path: "/pr" },
     { icon: User, label: "My Character", path: "/my-character" },
-    { icon: DollarSign, label: "Underworld", path: "/underworld" },
   ];
 
   const handleLogout = async () => {
