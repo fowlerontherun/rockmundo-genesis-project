@@ -48,7 +48,7 @@ export function GigPerformanceTab() {
         .from('gigs')
         .select(`
           *,
-          venues:venue_id (*)
+          venues:venues!gigs_venue_id_fkey (*)
         `)
         .in('band_id', bandIds)
         .eq('status', 'scheduled')

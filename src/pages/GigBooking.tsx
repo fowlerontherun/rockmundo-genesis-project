@@ -89,7 +89,7 @@ const GigBooking = () => {
 
     const { data: memberRecord, error: memberError } = await supabase
       .from('band_members')
-      .select('band_id, bands(*)')
+      .select('band_id, bands:bands!band_members_band_id_fkey(*)')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -109,7 +109,7 @@ const GigBooking = () => {
       .from('gigs')
       .select(`
         *,
-        venues:venue_id (*)
+        venues:venues!gigs_venue_id_fkey (*)
       `)
       .eq('band_id', bandId)
       .gte('scheduled_date', new Date().toISOString())
