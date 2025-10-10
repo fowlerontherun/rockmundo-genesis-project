@@ -1,12 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, TrendingUp, Music, Users, Store } from 'lucide-react';
+import {
+  DollarSign,
+  TrendingUp,
+  Music,
+  Users,
+  Store,
+  ArrowUpCircle,
+  ArrowDownCircle,
+} from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth-context';
 
 interface BandEarningsProps {
   bandId: string;
+  isLeader?: boolean;
 }
 
 interface Earning {
@@ -22,11 +35,13 @@ interface Earning {
 }
 
 interface BandInfo {
-  band_balance: number;
+  band_balance: number | null;
   name: string;
 }
 
-export function BandEarnings({ bandId }: BandEarningsProps) {
+export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [earnings, setEarnings] = useState<Earning[]>([]);
   const [bandInfo, setBandInfo] = useState<BandInfo | null>(null);
   const [stats, setStats] = useState({
@@ -37,12 +52,12 @@ export function BandEarnings({ bandId }: BandEarningsProps) {
     other: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [transactionNote, setTransactionNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadEarningsData();
-  }, [bandId]);
-
-  const loadEarningsData = async () => {
+  const loadEarningsData = useCallback(async () => {
     setLoading(true);
     try {
       // Load band info
@@ -94,16 +109,25 @@ export function BandEarnings({ bandId }: BandEarningsProps) {
         setStats(statsCalc);
       } else {
         setEarnings([]);
+        setStats({ total: 0, gigs: 0, streaming: 0, merchandise: 0, other: 0 });
       }
     } catch (error) {
       console.error('Error loading earnings:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [bandId]);
+
+  useEffect(() => {
+    loadEarningsData();
+  }, [loadEarningsData]);
 
   const getSourceIcon = (source: string) => {
     switch (source) {
+      case 'leader_deposit':
+        return <DollarSign className="h-4 w-4" />;
+      case 'leader_withdrawal':
+        return <Users className="h-4 w-4" />;
       case 'gig':
         return <Music className="h-4 w-4" />;
       case 'streaming':
@@ -117,6 +141,10 @@ export function BandEarnings({ bandId }: BandEarningsProps) {
 
   const getSourceColor = (source: string) => {
     switch (source) {
+      case 'leader_deposit':
+        return 'bg-amber-500/10 text-amber-500';
+      case 'leader_withdrawal':
+        return 'bg-red-500/10 text-red-500';
       case 'gig':
         return 'bg-blue-500/10 text-blue-500';
       case 'streaming':
@@ -125,6 +153,99 @@ export function BandEarnings({ bandId }: BandEarningsProps) {
         return 'bg-purple-500/10 text-purple-500';
       default:
         return 'bg-gray-500/10 text-gray-500';
+    }
+  };
+
+  const handleManualTransaction = async (type: 'deposit' | 'withdraw') => {
+    if (!bandInfo) {
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Authentication required',
+        description: 'You must be signed in to manage band funds.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const rawAmount = type === 'deposit' ? depositAmount : withdrawAmount;
+    const parsedAmount = Math.floor(Number(rawAmount));
+
+    if (!rawAmount || Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: 'Invalid amount',
+        description: 'Enter a positive amount to continue.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (type === 'withdraw' && (bandInfo.band_balance ?? 0) < parsedAmount) {
+      toast({
+        title: 'Insufficient funds',
+        description: 'Your band balance is too low for this withdrawal.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const note = transactionNote.trim();
+    const delta = type === 'deposit' ? parsedAmount : -parsedAmount;
+
+    setSubmitting(true);
+
+    try {
+      const currentBalance = bandInfo.band_balance ?? 0;
+      const newBalance = currentBalance + delta;
+
+      const { data: updatedBand, error: updateError } = await supabase
+        .from('bands')
+        .update({ band_balance: newBalance })
+        .eq('id', bandId)
+        .select('band_balance, name')
+        .single();
+
+      if (updateError) throw updateError;
+
+      const { error: insertError } = await supabase.from('band_earnings').insert({
+        band_id: bandId,
+        amount: delta,
+        source: type === 'deposit' ? 'leader_deposit' : 'leader_withdrawal',
+        description: note || null,
+        earned_by_user_id: user.id,
+      });
+
+      if (insertError) throw insertError;
+
+      setBandInfo(prev => (prev ? { ...prev, band_balance: updatedBand.band_balance } : updatedBand));
+
+      toast({
+        title: type === 'deposit' ? 'Deposit successful' : 'Withdrawal successful',
+        description:
+          type === 'deposit'
+            ? `Added $${parsedAmount.toLocaleString()} to the band balance.`
+            : `Withdrawn $${parsedAmount.toLocaleString()} from the band balance.`,
+      });
+
+      if (type === 'deposit') {
+        setDepositAmount('');
+      } else {
+        setWithdrawAmount('');
+      }
+      setTransactionNote('');
+
+      await loadEarningsData();
+    } catch (error: any) {
+      console.error('Error managing band funds:', error);
+      toast({
+        title: 'Unable to update funds',
+        description: error.message || 'Something went wrong while updating the band balance.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -153,6 +274,93 @@ export function BandEarnings({ bandId }: BandEarningsProps) {
           <p className="text-4xl font-bold">${bandInfo?.band_balance?.toLocaleString() || 0}</p>
         </CardContent>
       </Card>
+
+      {isLeader && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage Band Funds</CardTitle>
+            <CardDescription>
+              Deposit personal money into the band or withdraw funds for expenses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="band-deposit">Deposit amount</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="band-deposit"
+                    type="number"
+                    min="1"
+                    value={depositAmount}
+                    onChange={(event) => setDepositAmount(event.target.value)}
+                    placeholder="Enter amount"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => handleManualTransaction('deposit')}
+                    disabled={submitting || !depositAmount}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowUpCircle className="h-4 w-4" />
+                    Deposit
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use this to fund upcoming rehearsals, studio time, or marketing pushes.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="band-withdraw">Withdraw amount</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="band-withdraw"
+                    type="number"
+                    min="1"
+                    value={withdrawAmount}
+                    onChange={(event) => setWithdrawAmount(event.target.value)}
+                    placeholder="Enter amount"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => handleManualTransaction('withdraw')}
+                    disabled={submitting || !withdrawAmount}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowDownCircle className="h-4 w-4" />
+                    Withdraw
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Funds cannot exceed the current band balance (${bandInfo?.band_balance?.toLocaleString() || 0}).
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="band-transaction-note">Note (optional)</Label>
+              <Input
+                id="band-transaction-note"
+                placeholder="Add context for this transaction"
+                value={transactionNote}
+                onChange={(event) => setTransactionNote(event.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLeader && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Band Fund Access</CardTitle>
+            <CardDescription>
+              Only the band leader can deposit into or withdraw from the shared balance. Reach out to your
+              leader if you need funds moved.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -217,7 +425,7 @@ export function BandEarnings({ bandId }: BandEarningsProps) {
                       {getSourceIcon(earning.source)}
                     </div>
                     <div>
-                      <p className="font-medium capitalize">{earning.source}</p>
+                      <p className="font-medium capitalize">{earning.source.replace(/_/g, ' ')}</p>
                       {earning.description && (
                         <p className="text-sm text-muted-foreground">{earning.description}</p>
                       )}
@@ -229,8 +437,10 @@ export function BandEarnings({ bandId }: BandEarningsProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-green-500">
-                      +${earning.amount.toLocaleString()}
+                    <p
+                      className={`text-lg font-bold ${earning.amount >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                    >
+                      {earning.amount >= 0 ? '+' : '-'}${Math.abs(earning.amount).toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(earning.created_at), 'MMM dd, yyyy')}
