@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSkillBooks } from "@/hooks/useSkillBooks";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useBookReading } from "@/hooks/useBookReading";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
@@ -15,6 +16,7 @@ type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 export const BooksTab = () => {
   const { user } = useAuth();
   const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
+  const { processAttendance, isProcessing } = useBookReading();
   const typedBooks = books as EnrichedSkillBook[] | undefined;
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
 
@@ -98,9 +100,18 @@ export const BooksTab = () => {
                 <p className="text-sm text-muted-foreground">by {activeSession.skill_books?.author}</p>
               </div>
               <Badge variant="outline">
-                Day {activeSession.days_read}
+                Day {activeSession.days_read} / {activeSession.skill_books?.base_reading_days || 0}
               </Badge>
             </div>
+            <p className="text-xs text-muted-foreground">XP Earned: {activeSession.total_skill_xp_earned}</p>
+            <Button 
+              onClick={() => processAttendance()} 
+              disabled={isProcessing}
+              className="w-full"
+              size="sm"
+            >
+              {isProcessing ? "Processing..." : "Record Today's Reading"}
+            </Button>
           </CardContent>
         </Card>
       )}

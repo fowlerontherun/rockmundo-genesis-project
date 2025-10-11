@@ -72,7 +72,7 @@ export const useSkillBooks = () => {
         .from("player_book_reading_sessions")
         .select(`
           *,
-          skill_books (title, author),
+          skill_books (title, author, base_reading_days),
           player_book_reading_attendance (*)
         `)
         .eq("status", "reading")
