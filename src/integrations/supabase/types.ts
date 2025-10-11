@@ -1684,6 +1684,7 @@ export type Database = {
       player_book_reading_sessions: {
         Row: {
           actual_completion_date: string | null
+          auto_read: boolean | null
           book_id: string
           created_at: string
           days_read: number
@@ -1699,6 +1700,7 @@ export type Database = {
         }
         Insert: {
           actual_completion_date?: string | null
+          auto_read?: boolean | null
           book_id: string
           created_at?: string
           days_read?: number
@@ -1714,6 +1716,7 @@ export type Database = {
         }
         Update: {
           actual_completion_date?: string | null
+          auto_read?: boolean | null
           book_id?: string
           created_at?: string
           days_read?: number

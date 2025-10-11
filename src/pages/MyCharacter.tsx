@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGameData, type PlayerProfile } from "@/hooks/useGameData";
 import { HealthSection } from "@/components/character/HealthSection";
 import { AchievementsSection } from "@/components/character/AchievementsSection";
+import { CurrentLearningSection } from "@/components/character/CurrentLearningSection";
 
 const formatDate = (input: string | null | undefined) => {
   if (!input) {
@@ -522,6 +523,8 @@ const MyCharacter = () => {
               </div>
             </CardContent>
           </Card>
+
+          <CurrentLearningSection />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,320px),1fr]">
         <Card>

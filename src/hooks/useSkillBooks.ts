@@ -139,12 +139,13 @@ export const useSkillBooks = () => {
   });
 
   const startReading = useMutation({
-    mutationFn: async ({ purchaseId, bookId, userId, profileId, readingDays }: {
+    mutationFn: async ({ purchaseId, bookId, userId, profileId, readingDays, autoRead }: {
       purchaseId: string;
       bookId: string;
       userId: string;
       profileId: string;
       readingDays: number;
+      autoRead?: boolean;
     }) => {
       const scheduledEndDate = new Date();
       scheduledEndDate.setDate(scheduledEndDate.getDate() + readingDays);
@@ -157,6 +158,7 @@ export const useSkillBooks = () => {
           book_id: bookId,
           purchase_id: purchaseId,
           scheduled_end_date: scheduledEndDate.toISOString(),
+          auto_read: autoRead ?? false,
         })
         .select()
         .single();

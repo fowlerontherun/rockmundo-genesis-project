@@ -3,6 +3,8 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSkillBooks } from "@/hooks/useSkillBooks";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -19,6 +21,7 @@ export const BooksTab = () => {
   const { processAttendance, isProcessing } = useBookReading();
   const typedBooks = books as EnrichedSkillBook[] | undefined;
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
+  const [autoRead, setAutoRead] = useState(false);
 
   const isPurchased = (bookId: string) => 
     purchases?.some((p) => p.book_id === bookId);
@@ -56,8 +59,10 @@ export const BooksTab = () => {
       userId: user.id,
       profileId: profile.id,
       readingDays: selectedBook.base_reading_days,
+      autoRead,
     });
     setSelectedBook(null);
+    setAutoRead(false);
   };
 
   const groupedBooks = useMemo(
@@ -192,6 +197,14 @@ export const BooksTab = () => {
                 </span>
               </div>
             </div>
+            {selectedBook && isPurchased(selectedBook.id) && canStartReading() && (
+              <div className="flex items-center space-x-2 rounded-lg border bg-muted/20 p-3">
+                <Switch id="auto-read" checked={autoRead} onCheckedChange={setAutoRead} />
+                <Label htmlFor="auto-read" className="text-sm">
+                  Auto-read daily at 11 PM (hands-free progress)
+                </Label>
+              </div>
+            )}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             {selectedBook && !isPurchased(selectedBook.id) && (
