@@ -39,11 +39,17 @@ interface BandInfo {
   name: string;
 }
 
+interface LeaderProfileSummary {
+  id: string;
+  cash: number;
+}
+
 export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [earnings, setEarnings] = useState<Earning[]>([]);
   const [bandInfo, setBandInfo] = useState<BandInfo | null>(null);
+  const [leaderProfile, setLeaderProfile] = useState<LeaderProfileSummary | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     gigs: 0,
@@ -56,6 +62,37 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [transactionNote, setTransactionNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const loadLeaderProfile = useCallback(async () => {
+    if (!user) {
+      setLeaderProfile(null);
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, cash')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Failed to load leader profile balance:', error);
+        return null;
+      }
+
+      const normalized: LeaderProfileSummary = {
+        id: data.id,
+        cash: typeof data.cash === 'number' ? data.cash : 0,
+      };
+
+      setLeaderProfile(normalized);
+      return normalized;
+    } catch (profileError) {
+      console.error('Error loading leader profile balance:', profileError);
+      return null;
+    }
+  }, [user]);
 
   const loadEarningsData = useCallback(async () => {
     setLoading(true);
@@ -122,6 +159,12 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
     loadEarningsData();
   }, [loadEarningsData]);
 
+  useEffect(() => {
+    if (isLeader) {
+      void loadLeaderProfile();
+    }
+  }, [isLeader, loadLeaderProfile]);
+
   const getSourceIcon = (source: string) => {
     switch (source) {
       case 'leader_deposit':
@@ -182,44 +225,119 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       return;
     }
 
-    if (type === 'withdraw' && (bandInfo.band_balance ?? 0) < parsedAmount) {
-      toast({
-        title: 'Insufficient funds',
-        description: 'Your band balance is too low for this withdrawal.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     const note = transactionNote.trim();
-    const delta = type === 'deposit' ? parsedAmount : -parsedAmount;
+    const bandDelta = type === 'deposit' ? parsedAmount : -parsedAmount;
+    const personalDelta = -bandDelta;
 
     setSubmitting(true);
 
+    let latestProfileSnapshot: LeaderProfileSummary | null = null;
+    let latestBandSnapshot: BandInfo | null = null;
+    let previousBandBalance = bandInfo?.band_balance ?? 0;
+    let previousPersonalCash = leaderProfile?.cash ?? 0;
+    let profileUpdated = false;
+    let bandUpdated = false;
+
     try {
-      const currentBalance = bandInfo.band_balance ?? 0;
-      const newBalance = currentBalance + delta;
+      const [latestProfile, { data: latestBand, error: latestBandError }] = await Promise.all([
+        loadLeaderProfile(),
+        supabase
+          .from('bands')
+          .select('band_balance, name')
+          .eq('id', bandId)
+          .single(),
+      ]);
+
+      if (latestBandError) {
+        throw latestBandError;
+      }
+
+      if (!latestBand) {
+        throw new Error('Band could not be found.');
+      }
+
+      if (!latestProfile) {
+        toast({
+          title: 'Profile required',
+          description: 'Create your artist profile before managing shared funds.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      latestProfileSnapshot = latestProfile;
+      latestBandSnapshot = latestBand;
+      previousBandBalance = latestBand.band_balance ?? 0;
+      previousPersonalCash = latestProfile.cash;
+
+      const nextBandBalance = previousBandBalance + bandDelta;
+      const nextPersonalCash = previousPersonalCash + personalDelta;
+
+      if (type === 'withdraw' && nextBandBalance < 0) {
+        toast({
+          title: 'Insufficient funds',
+          description: 'Your band balance is too low for this withdrawal.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (type === 'deposit' && nextPersonalCash < 0) {
+        toast({
+          title: 'Not enough personal funds',
+          description: 'You do not have enough personal cash to make this deposit.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: updatedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .update({ cash: nextPersonalCash })
+        .eq('id', latestProfile.id)
+        .select('id, cash')
+        .single();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      profileUpdated = true;
 
       const { data: updatedBand, error: updateError } = await supabase
         .from('bands')
-        .update({ band_balance: newBalance })
+        .update({ band_balance: nextBandBalance })
         .eq('id', bandId)
         .select('band_balance, name')
         .single();
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        throw updateError;
+      }
+
+      bandUpdated = true;
 
       const { error: insertError } = await supabase.from('band_earnings').insert({
         band_id: bandId,
-        amount: delta,
+        amount: bandDelta,
         source: type === 'deposit' ? 'leader_deposit' : 'leader_withdrawal',
         description: note || null,
         earned_by_user_id: user.id,
       });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        throw insertError;
+      }
 
-      setBandInfo(prev => (prev ? { ...prev, band_balance: updatedBand.band_balance } : updatedBand));
+      setBandInfo(updatedBand ?? latestBand);
+      setLeaderProfile(
+        updatedProfile
+          ? { id: updatedProfile.id, cash: typeof updatedProfile.cash === 'number' ? updatedProfile.cash : 0 }
+          : {
+              id: latestProfile.id,
+              cash: nextPersonalCash,
+            }
+      );
 
       toast({
         title: type === 'deposit' ? 'Deposit successful' : 'Withdrawal successful',
@@ -237,11 +355,62 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       setTransactionNote('');
 
       await loadEarningsData();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error managing band funds:', error);
+
+      const revertOperations: Array<Promise<unknown>> = [];
+
+      if (profileUpdated && latestProfileSnapshot) {
+        revertOperations.push(
+          supabase
+            .from('profiles')
+            .update({ cash: previousPersonalCash })
+            .eq('id', latestProfileSnapshot.id)
+        );
+      }
+
+      if (bandUpdated && latestBandSnapshot) {
+        revertOperations.push(
+          supabase
+            .from('bands')
+            .update({ band_balance: previousBandBalance })
+            .eq('id', bandId)
+        );
+      }
+
+      if (revertOperations.length > 0) {
+        const revertResults = await Promise.allSettled(revertOperations);
+        revertResults.forEach((result) => {
+          if (result.status === 'rejected') {
+            console.error('Failed to revert band fund adjustment', result.reason);
+          }
+        });
+      }
+
+      if (profileUpdated && latestProfileSnapshot) {
+        setLeaderProfile({ id: latestProfileSnapshot.id, cash: previousPersonalCash });
+      }
+
+      if (bandUpdated && latestBandSnapshot) {
+        setBandInfo({ band_balance: previousBandBalance, name: latestBandSnapshot.name });
+      }
+
+      if (isLeader) {
+        void loadLeaderProfile();
+      }
+
+      await loadEarningsData();
+
+      const fallbackMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Something went wrong while updating the band balance.';
+
       toast({
         title: 'Unable to update funds',
-        description: error.message || 'Something went wrong while updating the band balance.',
+        description: fallbackMessage || 'Something went wrong while updating the band balance.',
         variant: 'destructive',
       });
     } finally {
@@ -256,6 +425,11 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       </div>
     );
   }
+
+  const availablePersonalCash = leaderProfile?.cash ?? 0;
+  const currentBandBalance = bandInfo?.band_balance ?? 0;
+  const plannedDeposit = Number(depositAmount || 0);
+  const plannedWithdrawal = Number(withdrawAmount || 0);
 
   return (
     <div className="space-y-6">
@@ -284,6 +458,14 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+              <p>
+                Personal cash available: <span className="font-semibold text-foreground">${availablePersonalCash.toLocaleString()}</span>
+              </p>
+              <p>
+                Band balance after adjustments cannot fall below $0, and deposits draw from your personal funds.
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="band-deposit">Deposit amount</Label>
@@ -292,6 +474,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
                     id="band-deposit"
                     type="number"
                     min="1"
+                    max={availablePersonalCash > 0 ? availablePersonalCash : undefined}
                     value={depositAmount}
                     onChange={(event) => setDepositAmount(event.target.value)}
                     placeholder="Enter amount"
@@ -299,7 +482,11 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
                   <Button
                     type="button"
                     onClick={() => handleManualTransaction('deposit')}
-                    disabled={submitting || !depositAmount}
+                    disabled={
+                      submitting ||
+                      !depositAmount ||
+                      (leaderProfile != null && plannedDeposit > availablePersonalCash)
+                    }
                     className="flex items-center gap-2"
                   >
                     <ArrowUpCircle className="h-4 w-4" />
@@ -307,7 +494,8 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Use this to fund upcoming rehearsals, studio time, or marketing pushes.
+                  Use this to fund upcoming rehearsals, studio time, or marketing pushes. You can only deposit up to your
+                  available personal cash.
                 </p>
               </div>
               <div className="space-y-2">
@@ -317,6 +505,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
                     id="band-withdraw"
                     type="number"
                     min="1"
+                    max={currentBandBalance > 0 ? currentBandBalance : undefined}
                     value={withdrawAmount}
                     onChange={(event) => setWithdrawAmount(event.target.value)}
                     placeholder="Enter amount"
@@ -325,7 +514,11 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
                     type="button"
                     variant="destructive"
                     onClick={() => handleManualTransaction('withdraw')}
-                    disabled={submitting || !withdrawAmount}
+                    disabled={
+                      submitting ||
+                      !withdrawAmount ||
+                      (bandInfo != null && plannedWithdrawal > currentBandBalance)
+                    }
                     className="flex items-center gap-2"
                   >
                     <ArrowDownCircle className="h-4 w-4" />
@@ -333,7 +526,8 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Funds cannot exceed the current band balance (${bandInfo?.band_balance?.toLocaleString() || 0}).
+                  Funds cannot exceed the current band balance (${currentBandBalance.toLocaleString()}). Withdrawals add to
+                  your personal cash.
                 </p>
               </div>
             </div>
