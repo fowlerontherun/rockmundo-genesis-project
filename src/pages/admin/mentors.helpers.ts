@@ -1,18 +1,43 @@
 import { z } from "zod";
 
-import {
-  EDUCATION_MENTOR_DIFFICULTIES,
-  EDUCATION_MENTOR_FOCUS_SKILLS,
-  type EducationMentorFocusSkill,
-} from "@/types/education";
+import { EDUCATION_MENTOR_DIFFICULTIES } from "@/types/education";
 import type { Tables, TablesInsert, TablesUpdate } from "@/lib/supabase-types";
 import { ATTRIBUTE_KEYS, type AttributeKey } from "@/utils/attributeProgression";
+import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+import type { SkillDefinitionRecord } from "@/hooks/useSkillSystem.types";
+
+const focusSkillOptionsSource = (
+  SKILL_TREE_DEFINITIONS as SkillDefinitionRecord[]
+).filter((definition) => Boolean(definition.slug));
+
+const formatSkillLabel = (slug: string, displayName?: string | null) => {
+  if (displayName && displayName.trim().length > 0) {
+    return displayName;
+  }
+
+  return slug
+    .split("_")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+};
+
+export const focusSkillOptions = focusSkillOptionsSource
+  .map((definition) => ({
+    value: definition.slug!,
+    label: formatSkillLabel(definition.slug!, definition.display_name),
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label));
+
+const focusSkillValues = focusSkillOptions.map((option) => option.value);
 
 export const mentorSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  focusSkill: z.enum(EDUCATION_MENTOR_FOCUS_SKILLS, {
-    errorMap: () => ({ message: "Select a focus skill" }),
-  }),
+  focusSkill: z
+    .string({ required_error: "Select a focus skill" })
+    .min(1, "Select a focus skill")
+    .refine((value) => focusSkillValues.includes(value), {
+      message: "Select a valid focus skill",
+    }),
   description: z.string().min(1, "Description is required"),
   specialty: z.string().min(1, "Specialty is required"),
   cost: z
@@ -56,14 +81,6 @@ export type EducationMentorRow = any;
 export type EducationMentorInsert = any;
 export type EducationMentorUpdate = any;
 
-export const focusSkillOptions = EDUCATION_MENTOR_FOCUS_SKILLS.map((value) => ({
-  value,
-  label: value
-    .split("-")
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" "),
-}));
-
 export const difficultyOptions = EDUCATION_MENTOR_DIFFICULTIES.map((value) => ({
   value,
   label: value.charAt(0).toUpperCase() + value.slice(1),
@@ -77,5 +94,6 @@ export const attributeOptions = ATTRIBUTE_KEYS.map((key) => ({
     .join(" "),
 }));
 
-export const formatFocusSkill = (skill: EducationMentorFocusSkill) =>
-  focusSkillOptions.find((option) => option.value === skill)?.label ?? skill;
+export const formatFocusSkill = (skill: string) =>
+  focusSkillOptions.find((option) => option.value === skill)?.label ??
+  formatSkillLabel(skill);
