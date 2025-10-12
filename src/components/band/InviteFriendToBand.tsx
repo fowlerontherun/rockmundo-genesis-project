@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Loader2 } from 'lucide-react';
+import type { Database } from '@/lib/supabase-types';
+import { fetchPrimaryProfileForUser } from '@/integrations/supabase/friends';
 
 interface InviteFriendToBandProps {
   bandId: string;
@@ -14,12 +16,13 @@ interface InviteFriendToBandProps {
   currentUserId: string;
 }
 
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+
 interface Friend {
   id: string;
-  user_id: string;
-  friend_user_id: string;
-  friend_profile: {
+  profile: {
     id: string;
+    user_id: string;
     display_name: string;
     username: string;
   };
@@ -37,60 +40,60 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
   const [instrumentRole, setInstrumentRole] = useState('Guitar');
   const [vocalRole, setVocalRole] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
+  const [currentProfile, setCurrentProfile] = useState<ProfileRow | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (open) {
-      loadFriends();
-    }
-  }, [open]);
-
-  const loadFriends = async () => {
-    setLoading(true);
+  const loadFriends = useCallback(async (profileId: string) => {
     try {
-      // Get accepted friendships with friend user IDs
       const { data: friendships, error } = await supabase
         .from('friendships')
-        .select('id, user_id, friend_user_id, friend_profile_id')
-        .eq('user_id', currentUserId)
-        .eq('status', 'accepted');
+        .select('id, requestor_id, addressee_id, status')
+        .eq('status', 'accepted')
+        .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`);
 
       if (error) throw error;
 
       if (!friendships || friendships.length === 0) {
         setFriends([]);
-        setLoading(false);
         return;
       }
 
-      // Get friend profiles separately
-      const profileIds = friendships.map(f => f.friend_profile_id).filter(Boolean);
+      const otherProfileIds = Array.from(new Set(friendships.map(friendship =>
+        friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id
+      )));
+
+      if (otherProfileIds.length === 0) {
+        setFriends([]);
+        return;
+      }
+
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, display_name, username, user_id')
-        .in('id', profileIds);
+        .in('id', otherProfileIds);
 
       if (profilesError) throw profilesError;
 
-      // Map friendships to friends with profile data
+      const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile]));
+
       const friendsWithProfiles = friendships
         .map(friendship => {
-          const profile = profiles?.find(p => p.id === friendship.friend_profile_id);
+          const otherId = friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id;
+          const profile = profileMap.get(otherId);
           if (!profile) return null;
+
           return {
             id: friendship.id,
-            user_id: friendship.user_id,
-            friend_user_id: friendship.friend_user_id,
-            friend_profile: {
+            profile: {
               id: profile.id,
+              user_id: profile.user_id,
               display_name: profile.display_name || 'Unknown',
               username: profile.username || 'unknown',
             },
-          };
+          } satisfies Friend;
         })
         .filter(Boolean) as Friend[];
 
-      // Filter out friends who are already band members or have pending invitations
       const { data: bandMembers } = await supabase
         .from('band_members')
         .select('user_id')
@@ -108,7 +111,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
       ]);
 
       const availableFriends = friendsWithProfiles.filter(
-        f => !existingUserIds.has(f.friend_user_id)
+        f => !existingUserIds.has(f.profile.user_id)
       );
 
       setFriends(availableFriends);
@@ -119,10 +122,47 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
         description: 'Failed to load friends list',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [bandId, toast]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const prepareFriends = async () => {
+      setLoading(true);
+      try {
+        if (!currentProfile) {
+          const profile = await fetchPrimaryProfileForUser(currentUserId);
+          if (!profile) {
+            toast({
+              title: 'Profile required',
+              description: 'Create your character profile to invite friends.',
+              variant: 'destructive',
+            });
+            setFriends([]);
+            return;
+          }
+          setCurrentProfile(profile);
+          return;
+        }
+
+        await loadFriends(currentProfile.id);
+      } catch (error) {
+        console.error('Error preparing friends:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load friends list',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void prepareFriends();
+  }, [open, currentProfile, currentUserId, loadFriends, toast]);
 
   const handleInvite = async () => {
     if (!selectedFriend) {
@@ -208,8 +248,8 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
                     {friends.map((friend) => (
-                      <SelectItem key={friend.id} value={friend.friend_user_id}>
-                        {friend.friend_profile.display_name} (@{friend.friend_profile.username})
+                      <SelectItem key={friend.id} value={friend.profile.user_id}>
+                        {friend.profile.display_name} (@{friend.profile.username})
                       </SelectItem>
                     ))}
                   </SelectContent>

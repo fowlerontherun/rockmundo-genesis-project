@@ -6,11 +6,8 @@ type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
 type FriendProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 export interface SendFriendRequestParams {
-  senderProfileId: string;
-  senderUserId: string;
-  recipientProfileId: string;
-  recipientUserId: string;
-  message?: string | null;
+  requestorProfileId: string;
+  addresseeProfileId: string;
 }
 
 const PROFILE_SELECTION = "id, user_id, username, display_name, bio, level, fame";
@@ -38,10 +35,8 @@ export const fetchFriendshipsForProfile = async (
 ): Promise<FriendshipRow[]> => {
   const { data, error } = await supabase
     .from("friendships")
-    .select(
-      "id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at",
-    )
-    .or(`user_profile_id.eq.${profileId},friend_profile_id.eq.${profileId}`)
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
+    .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -59,9 +54,7 @@ export const updateFriendshipStatus = async (
     .from("friendships")
     .update({ status })
     .eq("id", friendshipId)
-    .select(
-      "id, user_id, friend_user_id, user_profile_id, friend_profile_id, status, created_at, updated_at",
-    )
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
     .single();
 
   if (error) {
@@ -95,23 +88,19 @@ export const fetchProfilesByIds = async (
 };
 
 export const sendFriendRequest = async ({
-  senderProfileId,
-  senderUserId,
-  recipientProfileId,
-  recipientUserId,
+  requestorProfileId,
+  addresseeProfileId,
 }: SendFriendRequestParams): Promise<FriendshipRow> => {
   const payload: Database["public"]["Tables"]["friendships"]["Insert"] = {
-    user_id: senderUserId,
-    friend_user_id: recipientUserId,
-    user_profile_id: senderProfileId,
-    friend_profile_id: recipientProfileId,
+    requestor_id: requestorProfileId,
+    addressee_id: addresseeProfileId,
     status: "pending",
   };
 
   const { data, error } = await supabase
     .from("friendships")
     .insert(payload)
-    .select()
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
     .single();
 
   if (error) {
@@ -119,4 +108,37 @@ export const sendFriendRequest = async ({
   }
 
   return data as FriendshipRow;
+};
+
+export const deleteFriendship = async (friendshipId: string): Promise<void> => {
+  const { error } = await supabase.from("friendships").delete().eq("id", friendshipId);
+
+  if (error) {
+    throw error;
+  }
+};
+
+export const searchProfilesByQuery = async (
+  query: string,
+  excludeProfileIds: string[] = [],
+): Promise<FriendProfileRow[]> => {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_SELECTION)
+    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+    .order("username")
+    .limit(20);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data as FriendProfileRow[]) ?? [];
+
+  if (excludeProfileIds.length === 0) {
+    return rows;
+  }
+
+  const exclusionSet = new Set(excludeProfileIds);
+  return rows.filter((row) => !exclusionSet.has(row.id));
 };

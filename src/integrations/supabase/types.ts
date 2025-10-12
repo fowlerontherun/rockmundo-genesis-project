@@ -1213,36 +1213,48 @@ export type Database = {
       }
       friendships: {
         Row: {
-          created_at: string | null
-          friend_profile_id: string | null
-          friend_user_id: string
+          addressee_id: string
+          created_at: string
           id: string
+          requestor_id: string
+          responded_at: string | null
           status: Database["public"]["Enums"]["friendship_status"]
-          updated_at: string | null
-          user_id: string
-          user_profile_id: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
-          friend_profile_id?: string | null
-          friend_user_id: string
+          addressee_id: string
+          created_at?: string
           id?: string
+          requestor_id: string
+          responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string | null
-          user_id: string
-          user_profile_id?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
-          friend_profile_id?: string | null
-          friend_user_id?: string
+          addressee_id?: string
+          created_at?: string
           id?: string
+          requestor_id?: string
+          responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string | null
-          user_id?: string
-          user_profile_id?: string | null
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requestor_id_fkey"
+            columns: ["requestor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       game_events: {
         Row: {
