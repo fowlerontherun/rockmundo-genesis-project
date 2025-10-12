@@ -950,6 +950,63 @@ export type Database = {
           },
         ]
       }
+      education_mentors: {
+        Row: {
+          attribute_keys: Json
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at: string
+          description: string
+          difficulty: string
+          focus_skill: string
+          id: string
+          is_active: boolean
+          name: string
+          required_skill_value: number
+          skill_gain_ratio: number
+          specialty: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_keys?: Json
+          base_xp?: number
+          bonus_description: string
+          cooldown_hours?: number
+          cost?: number
+          created_at?: string
+          description: string
+          difficulty?: string
+          focus_skill: string
+          id?: string
+          is_active?: boolean
+          name: string
+          required_skill_value?: number
+          skill_gain_ratio?: number
+          specialty: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_keys?: Json
+          base_xp?: number
+          bonus_description?: string
+          cooldown_hours?: number
+          cost?: number
+          created_at?: string
+          description?: string
+          difficulty?: string
+          focus_skill?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          required_skill_value?: number
+          skill_gain_ratio?: number
+          specialty?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       education_youtube_resources: {
         Row: {
           category: string | null
@@ -1858,6 +1915,53 @@ export type Database = {
             columns: ["equipment_id"]
             isOneToOne: false
             referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_mentor_sessions: {
+        Row: {
+          attribute_gains: Json
+          created_at: string
+          id: string
+          mentor_id: string
+          notes: string | null
+          profile_id: string
+          session_date: string
+          skill_value_gained: number
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          attribute_gains?: Json
+          created_at?: string
+          id?: string
+          mentor_id: string
+          notes?: string | null
+          profile_id: string
+          session_date?: string
+          skill_value_gained?: number
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          attribute_gains?: Json
+          created_at?: string
+          id?: string
+          mentor_id?: string
+          notes?: string | null
+          profile_id?: string
+          session_date?: string
+          skill_value_gained?: number
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_mentor_sessions_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "education_mentors"
             referencedColumns: ["id"]
           },
         ]
