@@ -65,16 +65,21 @@ export const BooksTab = () => {
     setAutoRead(false);
   };
 
-  const groupedBooks = useMemo(
-    () =>
-      typedBooks?.reduce((acc, book) => {
-        const skillSlug = book.skill_slug || "other";
-        if (!acc[skillSlug]) acc[skillSlug] = [];
-        acc[skillSlug].push(book);
-        return acc;
-      }, {} as Record<string, EnrichedSkillBook[]>) ?? null,
-    [typedBooks],
-  );
+  const groupedBooks = useMemo(() => {
+    if (!typedBooks) return null;
+    
+    // Group by display name to consolidate skills with different slugs but same name
+    const groups = new Map<string, EnrichedSkillBook[]>();
+    
+    for (const book of typedBooks) {
+      const groupKey = book.skill_display_name || book.skill_slug || "Other";
+      const existing = groups.get(groupKey) || [];
+      existing.push(book);
+      groups.set(groupKey, existing);
+    }
+    
+    return Object.fromEntries(groups.entries());
+  }, [typedBooks]);
 
   return (
     <div className="space-y-8">
@@ -122,16 +127,11 @@ export const BooksTab = () => {
       )}
 
       {!isLoading && groupedBooks &&
-        Object.entries(groupedBooks).map(([skillSlug, booksInSkill]) => {
-          const groupLabel =
-            booksInSkill[0]?.skill_display_name ||
-            booksInSkill[0]?.skill_slug ||
-            skillSlug;
-
+        Object.entries(groupedBooks).map(([groupKey, booksInSkill]) => {
         return (
-          <div key={skillSlug} className="space-y-4">
+          <div key={groupKey} className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {groupLabel}
+              {groupKey}
             </h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {booksInSkill.map((book) => {
