@@ -71,7 +71,7 @@ export const MentorsTab = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Focus Skill</span>
-                    <span className="font-medium">{formatFocusSkill(mentor.focus_skill as any)}</span>
+                    <span className="font-medium">{formatFocusSkill(mentor.focus_skill)}</span>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
