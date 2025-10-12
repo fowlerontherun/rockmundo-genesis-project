@@ -1216,7 +1216,7 @@ export type Database = {
           addressee_id: string
           created_at: string
           id: string
-          requester_id: string
+          requestor_id: string
           responded_at: string | null
           status: Database["public"]["Enums"]["friendship_status"]
           updated_at: string
@@ -1225,7 +1225,7 @@ export type Database = {
           addressee_id: string
           created_at?: string
           id?: string
-          requester_id: string
+          requestor_id: string
           responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
           updated_at?: string
@@ -1234,7 +1234,7 @@ export type Database = {
           addressee_id?: string
           created_at?: string
           id?: string
-          requester_id?: string
+          requestor_id?: string
           responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
           updated_at?: string
@@ -1248,8 +1248,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "friendships_requester_id_fkey"
-            columns: ["requester_id"]
+            foreignKeyName: "friendships_requestor_id_fkey"
+            columns: ["requestor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

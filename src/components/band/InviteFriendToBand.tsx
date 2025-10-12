@@ -47,9 +47,9 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
     try {
       const { data: friendships, error } = await supabase
         .from('friendships')
-        .select('id, requester_id, addressee_id, status')
+        .select('id, requestor_id, addressee_id, status')
         .eq('status', 'accepted')
-        .or(`requester_id.eq.${profileId},addressee_id.eq.${profileId}`);
+        .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`);
 
       if (error) throw error;
 
@@ -59,7 +59,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
       }
 
       const otherProfileIds = Array.from(new Set(friendships.map(friendship =>
-        friendship.requester_id === profileId ? friendship.addressee_id : friendship.requester_id
+        friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id
       )));
 
       if (otherProfileIds.length === 0) {
@@ -78,7 +78,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId }: InviteFr
 
       const friendsWithProfiles = friendships
         .map(friendship => {
-          const otherId = friendship.requester_id === profileId ? friendship.addressee_id : friendship.requester_id;
+          const otherId = friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id;
           const profile = profileMap.get(otherId);
           if (!profile) return null;
 

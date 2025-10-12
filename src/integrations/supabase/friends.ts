@@ -6,7 +6,7 @@ type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
 type FriendProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 export interface SendFriendRequestParams {
-  requesterProfileId: string;
+  requestorProfileId: string;
   addresseeProfileId: string;
 }
 
@@ -35,8 +35,8 @@ export const fetchFriendshipsForProfile = async (
 ): Promise<FriendshipRow[]> => {
   const { data, error } = await supabase
     .from("friendships")
-    .select("id, requester_id, addressee_id, status, created_at, updated_at, responded_at")
-    .or(`requester_id.eq.${profileId},addressee_id.eq.${profileId}`)
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
+    .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -54,7 +54,7 @@ export const updateFriendshipStatus = async (
     .from("friendships")
     .update({ status })
     .eq("id", friendshipId)
-    .select("id, requester_id, addressee_id, status, created_at, updated_at, responded_at")
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
     .single();
 
   if (error) {
@@ -88,11 +88,11 @@ export const fetchProfilesByIds = async (
 };
 
 export const sendFriendRequest = async ({
-  requesterProfileId,
+  requestorProfileId,
   addresseeProfileId,
 }: SendFriendRequestParams): Promise<FriendshipRow> => {
   const payload: Database["public"]["Tables"]["friendships"]["Insert"] = {
-    requester_id: requesterProfileId,
+    requestor_id: requestorProfileId,
     addressee_id: addresseeProfileId,
     status: "pending",
   };
@@ -100,7 +100,7 @@ export const sendFriendRequest = async ({
   const { data, error } = await supabase
     .from("friendships")
     .insert(payload)
-    .select("id, requester_id, addressee_id, status, created_at, updated_at, responded_at")
+    .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
     .single();
 
   if (error) {

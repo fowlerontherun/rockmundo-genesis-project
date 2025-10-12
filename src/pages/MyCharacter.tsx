@@ -178,7 +178,7 @@ const MyCharacter = () => {
 
       const relatedProfileIds = new Set<string>();
       data.forEach((friendship) => {
-        relatedProfileIds.add(friendship.requester_id);
+        relatedProfileIds.add(friendship.requestor_id);
         relatedProfileIds.add(friendship.addressee_id);
       });
       relatedProfileIds.delete(profileId);
@@ -222,7 +222,7 @@ const MyCharacter = () => {
   const existingProfileIds = useMemo(() => {
     const ids = new Set<string>();
     friendships.forEach((friendship) => {
-      ids.add(friendship.requester_id);
+      ids.add(friendship.requestor_id);
       ids.add(friendship.addressee_id);
     });
     if (profile?.id) {
@@ -244,8 +244,8 @@ const MyCharacter = () => {
     }
 
     return friendships.reduce((accumulator, friendship) => {
-      const isRequester = friendship.requester_id === profile.id;
-      const otherProfileId = isRequester ? friendship.addressee_id : friendship.requester_id;
+      const isRequester = friendship.requestor_id === profile.id;
+      const otherProfileId = isRequester ? friendship.addressee_id : friendship.requestor_id;
       const otherProfile = profilesById[otherProfileId] ?? null;
       const decorated: DecoratedFriendship = { friendship, otherProfile, isRequester };
 
@@ -311,7 +311,7 @@ const MyCharacter = () => {
     setActionTarget(targetProfileId);
     try {
       await sendFriendRequest({
-        requesterProfileId: profile.id,
+        requestorProfileId: profile.id,
         addresseeProfileId: targetProfileId,
       });
       toast({

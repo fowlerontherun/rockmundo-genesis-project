@@ -6,23 +6,23 @@ CREATE TYPE IF NOT EXISTS public.friendship_status AS ENUM ('pending', 'accepted
 -- Table to manage friend relationships and requests between profiles
 CREATE TABLE public.friendships (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  requester_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  requestor_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   addressee_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   status public.friendship_status NOT NULL DEFAULT 'pending',
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   responded_at timestamptz,
-  CONSTRAINT friendships_no_self_reference CHECK (requester_id <> addressee_id)
+  CONSTRAINT friendships_no_self_reference CHECK (requestor_id <> addressee_id)
 );
 
 -- Ensure each pair of profiles only has a single friendship record regardless of ordering
 CREATE UNIQUE INDEX friendships_unique_pair_idx
   ON public.friendships (
-    LEAST(requester_id, addressee_id),
-    GREATEST(requester_id, addressee_id)
+    LEAST(requestor_id, addressee_id),
+    GREATEST(requestor_id, addressee_id)
   );
 
-CREATE INDEX friendships_requester_idx ON public.friendships (requester_id);
+CREATE INDEX friendships_requestor_idx ON public.friendships (requestor_id);
 CREATE INDEX friendships_addressee_idx ON public.friendships (addressee_id);
 CREATE INDEX friendships_status_idx ON public.friendships (status);
 
@@ -60,7 +60,7 @@ CREATE POLICY "Friendship participants can view"
     EXISTS (
       SELECT 1
       FROM public.profiles p
-      WHERE p.id = requester_id AND p.user_id = auth.uid()
+      WHERE p.id = requestor_id AND p.user_id = auth.uid()
     )
     OR EXISTS (
       SELECT 1
@@ -76,7 +76,7 @@ CREATE POLICY "Requesters can create friendships"
     EXISTS (
       SELECT 1
       FROM public.profiles p
-      WHERE p.id = requester_id AND p.user_id = auth.uid()
+      WHERE p.id = requestor_id AND p.user_id = auth.uid()
     )
   );
 
@@ -87,7 +87,7 @@ CREATE POLICY "Participants manage friendships"
     EXISTS (
       SELECT 1
       FROM public.profiles p
-      WHERE p.id = requester_id AND p.user_id = auth.uid()
+      WHERE p.id = requestor_id AND p.user_id = auth.uid()
     )
     OR EXISTS (
       SELECT 1
@@ -99,7 +99,7 @@ CREATE POLICY "Participants manage friendships"
     EXISTS (
       SELECT 1
       FROM public.profiles p
-      WHERE p.id = requester_id AND p.user_id = auth.uid()
+      WHERE p.id = requestor_id AND p.user_id = auth.uid()
     )
     OR EXISTS (
       SELECT 1
@@ -115,7 +115,7 @@ CREATE POLICY "Participants can delete friendships"
     EXISTS (
       SELECT 1
       FROM public.profiles p
-      WHERE p.id = requester_id AND p.user_id = auth.uid()
+      WHERE p.id = requestor_id AND p.user_id = auth.uid()
     )
     OR EXISTS (
       SELECT 1
