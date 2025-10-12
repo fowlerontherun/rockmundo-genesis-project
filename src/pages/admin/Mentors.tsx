@@ -68,7 +68,7 @@ const Mentors = () => {
     resolver: zodResolver(mentorSchema),
     defaultValues: {
       name: "",
-      focusSkill: "guitar",
+      focusSkill: focusSkillOptions[0]?.value ?? "",
       description: "",
       specialty: "",
       cost: 0,
