@@ -175,7 +175,15 @@ export default function BandManager() {
     );
   }
 
-  const isLeader = selectedBand.leader_id === user?.id;
+  const currentMembership = selectedBand
+    ? userBands.find((band) => band.band_id === selectedBand.id)
+    : undefined;
+
+  const isLeader = Boolean(
+    (user && selectedBand.leader_id === user.id) ||
+      currentMembership?.role === 'leader' ||
+      (user && currentMembership?.bands?.leader_id === user.id)
+  );
 
   return (
     <div className="container mx-auto p-6">
