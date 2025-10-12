@@ -3,9 +3,12 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSkillBooks } from "@/hooks/useSkillBooks";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useBookReading } from "@/hooks/useBookReading";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
@@ -15,8 +18,10 @@ type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 export const BooksTab = () => {
   const { user } = useAuth();
   const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
+  const { processAttendance, isProcessing } = useBookReading();
   const typedBooks = books as EnrichedSkillBook[] | undefined;
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
+  const [autoRead, setAutoRead] = useState(false);
 
   const isPurchased = (bookId: string) => 
     purchases?.some((p) => p.book_id === bookId);
@@ -54,20 +59,27 @@ export const BooksTab = () => {
       userId: user.id,
       profileId: profile.id,
       readingDays: selectedBook.base_reading_days,
+      autoRead,
     });
     setSelectedBook(null);
+    setAutoRead(false);
   };
 
-  const groupedBooks = useMemo(
-    () =>
-      typedBooks?.reduce((acc, book) => {
-        const skillSlug = book.skill_slug || "other";
-        if (!acc[skillSlug]) acc[skillSlug] = [];
-        acc[skillSlug].push(book);
-        return acc;
-      }, {} as Record<string, EnrichedSkillBook[]>) ?? null,
-    [typedBooks],
-  );
+  const groupedBooks = useMemo(() => {
+    if (!typedBooks) return null;
+    
+    // Group by display name to consolidate skills with different slugs but same name
+    const groups = new Map<string, EnrichedSkillBook[]>();
+    
+    for (const book of typedBooks) {
+      const groupKey = book.skill_display_name || book.skill_slug || "Other";
+      const existing = groups.get(groupKey) || [];
+      existing.push(book);
+      groups.set(groupKey, existing);
+    }
+    
+    return Object.fromEntries(groups.entries());
+  }, [typedBooks]);
 
   return (
     <div className="space-y-8">
@@ -98,24 +110,28 @@ export const BooksTab = () => {
                 <p className="text-sm text-muted-foreground">by {activeSession.skill_books?.author}</p>
               </div>
               <Badge variant="outline">
-                Day {activeSession.days_read}
+                Day {activeSession.days_read} / {activeSession.skill_books?.base_reading_days || 0}
               </Badge>
             </div>
+            <p className="text-xs text-muted-foreground">XP Earned: {activeSession.total_skill_xp_earned}</p>
+            <Button 
+              onClick={() => processAttendance()} 
+              disabled={isProcessing}
+              className="w-full"
+              size="sm"
+            >
+              {isProcessing ? "Processing..." : "Record Today's Reading"}
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {!isLoading && groupedBooks &&
-        Object.entries(groupedBooks).map(([skillSlug, booksInSkill]) => {
-          const groupLabel =
-            booksInSkill[0]?.skill_display_name ||
-            booksInSkill[0]?.skill_slug ||
-            skillSlug;
-
+        Object.entries(groupedBooks).map(([groupKey, booksInSkill]) => {
         return (
-          <div key={skillSlug} className="space-y-4">
+          <div key={groupKey} className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {groupLabel}
+              {groupKey}
             </h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {booksInSkill.map((book) => {
@@ -181,6 +197,14 @@ export const BooksTab = () => {
                 </span>
               </div>
             </div>
+            {selectedBook && isPurchased(selectedBook.id) && canStartReading() && (
+              <div className="flex items-center space-x-2 rounded-lg border bg-muted/20 p-3">
+                <Switch id="auto-read" checked={autoRead} onCheckedChange={setAutoRead} />
+                <Label htmlFor="auto-read" className="text-sm">
+                  Auto-read daily at 11 PM (hands-free progress)
+                </Label>
+              </div>
+            )}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             {selectedBook && !isPurchased(selectedBook.id) && (

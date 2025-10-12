@@ -950,6 +950,63 @@ export type Database = {
           },
         ]
       }
+      education_mentors: {
+        Row: {
+          attribute_keys: Json
+          base_xp: number
+          bonus_description: string
+          cooldown_hours: number
+          cost: number
+          created_at: string
+          description: string
+          difficulty: string
+          focus_skill: string
+          id: string
+          is_active: boolean
+          name: string
+          required_skill_value: number
+          skill_gain_ratio: number
+          specialty: string
+          updated_at: string
+        }
+        Insert: {
+          attribute_keys?: Json
+          base_xp?: number
+          bonus_description: string
+          cooldown_hours?: number
+          cost?: number
+          created_at?: string
+          description: string
+          difficulty?: string
+          focus_skill: string
+          id?: string
+          is_active?: boolean
+          name: string
+          required_skill_value?: number
+          skill_gain_ratio?: number
+          specialty: string
+          updated_at?: string
+        }
+        Update: {
+          attribute_keys?: Json
+          base_xp?: number
+          bonus_description?: string
+          cooldown_hours?: number
+          cost?: number
+          created_at?: string
+          description?: string
+          difficulty?: string
+          focus_skill?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          required_skill_value?: number
+          skill_gain_ratio?: number
+          specialty?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       education_youtube_resources: {
         Row: {
           category: string | null
@@ -1156,36 +1213,48 @@ export type Database = {
       }
       friendships: {
         Row: {
-          created_at: string | null
-          friend_profile_id: string | null
-          friend_user_id: string
+          addressee_id: string
+          created_at: string
           id: string
+          requestor_id: string
+          responded_at: string | null
           status: Database["public"]["Enums"]["friendship_status"]
-          updated_at: string | null
-          user_id: string
-          user_profile_id: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
-          friend_profile_id?: string | null
-          friend_user_id: string
+          addressee_id: string
+          created_at?: string
           id?: string
+          requestor_id: string
+          responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string | null
-          user_id: string
-          user_profile_id?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
-          friend_profile_id?: string | null
-          friend_user_id?: string
+          addressee_id?: string
+          created_at?: string
           id?: string
+          requestor_id?: string
+          responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string | null
-          user_id?: string
-          user_profile_id?: string | null
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requestor_id_fkey"
+            columns: ["requestor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       game_events: {
         Row: {
@@ -1684,6 +1753,7 @@ export type Database = {
       player_book_reading_sessions: {
         Row: {
           actual_completion_date: string | null
+          auto_read: boolean | null
           book_id: string
           created_at: string
           days_read: number
@@ -1699,6 +1769,7 @@ export type Database = {
         }
         Insert: {
           actual_completion_date?: string | null
+          auto_read?: boolean | null
           book_id: string
           created_at?: string
           days_read?: number
@@ -1714,6 +1785,7 @@ export type Database = {
         }
         Update: {
           actual_completion_date?: string | null
+          auto_read?: boolean | null
           book_id?: string
           created_at?: string
           days_read?: number
@@ -1855,6 +1927,53 @@ export type Database = {
             columns: ["equipment_id"]
             isOneToOne: false
             referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_mentor_sessions: {
+        Row: {
+          attribute_gains: Json
+          created_at: string
+          id: string
+          mentor_id: string
+          notes: string | null
+          profile_id: string
+          session_date: string
+          skill_value_gained: number
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          attribute_gains?: Json
+          created_at?: string
+          id?: string
+          mentor_id: string
+          notes?: string | null
+          profile_id: string
+          session_date?: string
+          skill_value_gained?: number
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          attribute_gains?: Json
+          created_at?: string
+          id?: string
+          mentor_id?: string
+          notes?: string | null
+          profile_id?: string
+          session_date?: string
+          skill_value_gained?: number
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_mentor_sessions_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "education_mentors"
             referencedColumns: ["id"]
           },
         ]

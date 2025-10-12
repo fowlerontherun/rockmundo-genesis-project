@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Loader2, GraduationCap } from "lucide-react";
@@ -103,12 +104,19 @@ export const UniversityTab = () => {
     },
   });
 
-  const groupedUniversities = universities?.reduce((acc, uni) => {
-    const city = uni.city || "Other";
-    if (!acc[city]) acc[city] = [];
-    acc[city].push(uni);
-    return acc;
-  }, {} as Record<string, University[]>);
+  const groupedUniversities = useMemo(() => {
+    if (!universities) return {};
+    
+    const groups = new Map<string, University[]>();
+    for (const uni of universities) {
+      const city = uni.city || "Other";
+      const existing = groups.get(city) || [];
+      existing.push(uni);
+      groups.set(city, existing);
+    }
+    
+    return Object.fromEntries(groups.entries());
+  }, [universities]);
 
   return (
     <div className="space-y-8">

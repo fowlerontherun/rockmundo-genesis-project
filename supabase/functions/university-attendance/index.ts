@@ -42,11 +42,12 @@ serve(async (req) => {
     const now = new Date();
     const today = now.toISOString().split("T")[0];
 
-    // Find active enrollments (enrolled or in_progress)
+    // Find active enrollments with auto_attend enabled
     const { data: enrollments, error: enrollError } = await supabaseClient
       .from("player_university_enrollments")
       .select("id, profile_id, course_id, scheduled_end_date, status, days_attended, total_xp_earned")
       .in("status", ["enrolled", "in_progress"])
+      .eq("auto_attend", true)
       .returns<Enrollment[]>();
 
     if (enrollError) throw enrollError;
@@ -160,10 +161,10 @@ serve(async (req) => {
         });
       }
 
-      // Update player profile XP
+      // Update player profile XP and log to experience ledger
       const { data: profile } = await supabaseClient
         .from("profiles")
-        .select("experience")
+        .select("experience, user_id")
         .eq("id", enrollment.profile_id)
         .single();
 
@@ -174,16 +175,8 @@ serve(async (req) => {
             experience: (profile.experience || 0) + xpEarned,
           })
           .eq("id", enrollment.profile_id);
-      }
 
-      // Log to experience ledger
-      const { data: profile } = await supabaseClient
-        .from("profiles")
-        .select("user_id")
-        .eq("id", enrollment.profile_id)
-        .single();
-
-      if (profile) {
+        // Log to experience ledger
         await supabaseClient.from("experience_ledger").insert({
           user_id: profile.user_id,
           profile_id: enrollment.profile_id,
