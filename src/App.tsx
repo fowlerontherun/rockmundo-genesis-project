@@ -48,6 +48,7 @@ const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
+const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
 const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
@@ -117,6 +118,7 @@ function App() {
                     <Route path="travel" element={<Travel />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
+                    <Route path="twaater" element={<Twaater />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />

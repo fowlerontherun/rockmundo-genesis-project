@@ -3362,6 +3362,400 @@ export type Database = {
           },
         ]
       }
+      twaat_metrics: {
+        Row: {
+          clicks: number | null
+          impressions: number | null
+          likes: number | null
+          replies: number | null
+          retwaats: number | null
+          rsvps: number | null
+          sales: number | null
+          twaat_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          clicks?: number | null
+          impressions?: number | null
+          likes?: number | null
+          replies?: number | null
+          retwaats?: number | null
+          rsvps?: number | null
+          sales?: number | null
+          twaat_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          clicks?: number | null
+          impressions?: number | null
+          likes?: number | null
+          replies?: number | null
+          retwaats?: number | null
+          rsvps?: number | null
+          sales?: number | null
+          twaat_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaat_metrics_twaat_id_fkey"
+            columns: ["twaat_id"]
+            isOneToOne: true
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaat_replies: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string | null
+          deleted_at: string | null
+          id: string
+          parent_twaat_id: string
+          sentiment: number | null
+        }
+        Insert: {
+          account_id: string
+          body: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          parent_twaat_id: string
+          sentiment?: number | null
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          parent_twaat_id?: string
+          sentiment?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaat_replies_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaat_replies_parent_twaat_id_fkey"
+            columns: ["parent_twaat_id"]
+            isOneToOne: false
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaater_accounts: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          fame_score: number | null
+          follower_count: number | null
+          following_count: number | null
+          handle: string
+          id: string
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["twaater_owner_type"]
+          updated_at: string | null
+          verified: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          fame_score?: number | null
+          follower_count?: number | null
+          following_count?: number | null
+          handle: string
+          id?: string
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["twaater_owner_type"]
+          updated_at?: string | null
+          verified?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          fame_score?: number | null
+          follower_count?: number | null
+          following_count?: number | null
+          handle?: string
+          id?: string
+          owner_id?: string
+          owner_type?: Database["public"]["Enums"]["twaater_owner_type"]
+          updated_at?: string | null
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
+      twaater_daily_awards: {
+        Row: {
+          account_id: string
+          date: string
+          twaats_awarded: number | null
+          xp_awarded: number | null
+        }
+        Insert: {
+          account_id: string
+          date: string
+          twaats_awarded?: number | null
+          xp_awarded?: number | null
+        }
+        Update: {
+          account_id?: string
+          date?: string
+          twaats_awarded?: number | null
+          xp_awarded?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_daily_awards_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaater_feed_index: {
+        Row: {
+          account_id: string
+          inserted_at: string | null
+          rank_bucket: number | null
+          score: number
+          twaat_id: string
+        }
+        Insert: {
+          account_id: string
+          inserted_at?: string | null
+          rank_bucket?: number | null
+          score: number
+          twaat_id: string
+        }
+        Update: {
+          account_id?: string
+          inserted_at?: string | null
+          rank_bucket?: number | null
+          score?: number
+          twaat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_feed_index_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaater_feed_index_twaat_id_fkey"
+            columns: ["twaat_id"]
+            isOneToOne: false
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaater_follows: {
+        Row: {
+          created_at: string | null
+          followed_account_id: string
+          follower_account_id: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          followed_account_id: string
+          follower_account_id: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          followed_account_id?: string
+          follower_account_id?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_follows_followed_account_id_fkey"
+            columns: ["followed_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaater_follows_follower_account_id_fkey"
+            columns: ["follower_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaater_mentions: {
+        Row: {
+          created_at: string | null
+          id: string
+          mentioned_account_id: string
+          source_twaat_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          mentioned_account_id: string
+          source_twaat_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          mentioned_account_id?: string
+          source_twaat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_mentions_mentioned_account_id_fkey"
+            columns: ["mentioned_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaater_mentions_source_twaat_id_fkey"
+            columns: ["source_twaat_id"]
+            isOneToOne: false
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaater_outcome_catalog: {
+        Row: {
+          code: string
+          created_at: string | null
+          description_template: string
+          effects: Json | null
+          outcome_group: Database["public"]["Enums"]["twaater_outcome_group"]
+          weight_base: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description_template: string
+          effects?: Json | null
+          outcome_group: Database["public"]["Enums"]["twaater_outcome_group"]
+          weight_base?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description_template?: string
+          effects?: Json | null
+          outcome_group?: Database["public"]["Enums"]["twaater_outcome_group"]
+          weight_base?: number | null
+        }
+        Relationships: []
+      }
+      twaater_reactions: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          id: string
+          reaction_type: string
+          twaat_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          id?: string
+          reaction_type: string
+          twaat_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          id?: string
+          reaction_type?: string
+          twaat_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_reactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaater_reactions_twaat_id_fkey"
+            columns: ["twaat_id"]
+            isOneToOne: false
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twaats: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string | null
+          deleted_at: string | null
+          id: string
+          is_system_review: boolean | null
+          lang: string | null
+          linked_id: string | null
+          linked_type: Database["public"]["Enums"]["twaater_linked_type"] | null
+          outcome_code: string | null
+          sentiment: number | null
+          visibility: Database["public"]["Enums"]["twaater_visibility"] | null
+        }
+        Insert: {
+          account_id: string
+          body: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_system_review?: boolean | null
+          lang?: string | null
+          linked_id?: string | null
+          linked_type?:
+            | Database["public"]["Enums"]["twaater_linked_type"]
+            | null
+          outcome_code?: string | null
+          sentiment?: number | null
+          visibility?: Database["public"]["Enums"]["twaater_visibility"] | null
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_system_review?: boolean | null
+          lang?: string | null
+          linked_id?: string | null
+          linked_type?:
+            | Database["public"]["Enums"]["twaater_linked_type"]
+            | null
+          outcome_code?: string | null
+          sentiment?: number | null
+          visibility?: Database["public"]["Enums"]["twaater_visibility"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaats_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       universities: {
         Row: {
           city: string | null
@@ -3581,6 +3975,18 @@ export type Database = {
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
       show_type_enum: "concert" | "festival" | "private" | "street"
+      twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
+      twaater_outcome_group:
+        | "engagement"
+        | "growth"
+        | "commerce"
+        | "press"
+        | "collab"
+        | "backfire"
+        | "algo"
+        | "serendipity"
+      twaater_owner_type: "persona" | "band"
+      twaater_visibility: "public" | "followers"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3715,6 +4121,19 @@ export const Constants = {
       enrollment_status: ["enrolled", "in_progress", "completed", "dropped"],
       friendship_status: ["pending", "accepted", "declined", "blocked"],
       show_type_enum: ["concert", "festival", "private", "street"],
+      twaater_linked_type: ["single", "album", "gig", "tour", "busking"],
+      twaater_outcome_group: [
+        "engagement",
+        "growth",
+        "commerce",
+        "press",
+        "collab",
+        "backfire",
+        "algo",
+        "serendipity",
+      ],
+      twaater_owner_type: ["persona", "band"],
+      twaater_visibility: ["public", "followers"],
     },
   },
 } as const
