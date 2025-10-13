@@ -52,7 +52,7 @@ export const updateFriendshipStatus = async (
 ): Promise<FriendshipRow> => {
   const { data, error } = await supabase
     .from("friendships")
-    .update({ status })
+    .update({ status, responded_at: new Date().toISOString() })
     .eq("id", friendshipId)
     .select("id, requestor_id, addressee_id, status, created_at, updated_at, responded_at")
     .single();

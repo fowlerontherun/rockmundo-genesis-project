@@ -1214,47 +1214,32 @@ export type Database = {
       friendships: {
         Row: {
           addressee_id: string
-          created_at: string
+          created_at: string | null
           id: string
           requestor_id: string
           responded_at: string | null
           status: Database["public"]["Enums"]["friendship_status"]
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           addressee_id: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           requestor_id: string
           responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           addressee_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           requestor_id?: string
           responded_at?: string | null
           status?: Database["public"]["Enums"]["friendship_status"]
-          updated_at?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "friendships_addressee_id_fkey"
-            columns: ["addressee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friendships_requestor_id_fkey"
-            columns: ["requestor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       game_events: {
         Row: {

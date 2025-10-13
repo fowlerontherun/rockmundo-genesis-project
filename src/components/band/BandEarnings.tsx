@@ -362,19 +362,23 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
 
       if (profileUpdated && latestProfileSnapshot) {
         revertOperations.push(
-          supabase
-            .from('profiles')
-            .update({ cash: previousPersonalCash })
-            .eq('id', latestProfileSnapshot.id)
+          (async () => {
+            await supabase
+              .from('profiles')
+              .update({ cash: previousPersonalCash })
+              .eq('id', latestProfileSnapshot.id);
+          })()
         );
       }
 
       if (bandUpdated && latestBandSnapshot) {
         revertOperations.push(
-          supabase
-            .from('bands')
-            .update({ band_balance: previousBandBalance })
-            .eq('id', bandId)
+          (async () => {
+            await supabase
+              .from('bands')
+              .update({ band_balance: previousBandBalance })
+              .eq('id', bandId);
+          })()
         );
       }
 
