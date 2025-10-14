@@ -113,12 +113,14 @@ export function useMentorSessions() {
 
       if (sessionError) throw sessionError;
 
-      // Update skill progress
-      const newXp = (skill?.current_xp || 0) + skillValueGained;
+      // Update skill progress with proper multi-level handling
+      let newXp = (skill?.current_xp || 0) + skillValueGained;
       let newLevel = skill?.current_level || 0;
       let newRequiredXp = skill?.required_xp || 100;
 
-      if (newXp >= newRequiredXp) {
+      // Handle multiple level-ups
+      while (newXp >= newRequiredXp) {
+        newXp -= newRequiredXp;
         newLevel += 1;
         newRequiredXp = Math.floor(newRequiredXp * 1.5);
       }
@@ -136,12 +138,23 @@ export function useMentorSessions() {
 
         if (skillError) throw skillError;
       } else {
+        // For new skills, check if we level up from 0
+        newXp = skillValueGained;
+        newLevel = 0;
+        newRequiredXp = 100;
+        
+        while (newXp >= newRequiredXp) {
+          newXp -= newRequiredXp;
+          newLevel += 1;
+          newRequiredXp = Math.floor(newRequiredXp * 1.5);
+        }
+        
         const { error: skillError } = await supabase.from("skill_progress").insert({
           profile_id: profile.id,
           skill_slug: mentor.focus_skill,
-          current_xp: skillValueGained,
-          current_level: 0,
-          required_xp: 100,
+          current_xp: newXp,
+          current_level: newLevel,
+          required_xp: newRequiredXp,
           last_practiced_at: new Date().toISOString(),
         });
 
