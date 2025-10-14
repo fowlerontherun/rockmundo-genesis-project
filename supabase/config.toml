@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.generate-song-lyrics]
 verify_jwt = false
+
+[functions.twaater-outcome-engine]
+verify_jwt = false

@@ -118,7 +118,6 @@ function App() {
                     <Route path="travel" element={<Travel />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
-                    <Route path="twaater" element={<Twaater />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />

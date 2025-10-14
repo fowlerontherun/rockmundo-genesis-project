@@ -23,6 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useGameData } from "@/hooks/useGameData";
+import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
+import { useTwaaterFeed } from "@/hooks/useTwaats";
+import { TwaaterComposer } from "@/components/twaater/TwaaterComposer";
+import { TwaaterFeed } from "@/components/twaater/TwaaterFeed";
+import { TwaaterAccountSetup } from "@/components/twaater/TwaaterAccountSetup";
+import { TwaaterMentionsFeed } from "@/components/twaater/TwaaterMentionsFeed";
+import { useDailyTwaatXP } from "@/hooks/useDailyTwaatXP";
+import { MessageSquare, Bell, TrendingUp } from "lucide-react";
 import type { Database } from "@/lib/supabase-types";
 import {
   deleteFriendship,
@@ -47,6 +55,9 @@ const MINIMUM_SEARCH_LENGTH = 2;
 const SocialMedia = () => {
   const { profile } = useGameData();
   const { toast } = useToast();
+  const { account: twaaterAccount, isLoading: twaaterAccountLoading } = useTwaaterAccount("persona", profile?.id);
+  const { feed: twaaterFeed, isLoading: twaaterFeedLoading } = useTwaaterFeed(twaaterAccount?.id);
+  const { twaatsPostedToday, xpEarnedToday, canEarnMore } = useDailyTwaatXP(twaaterAccount?.id);
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [friendships, setFriendships] = useState<FriendshipRow[]>([]);
   const [profilesById, setProfilesById] = useState<Record<string, ProfileRow>>({});
@@ -324,12 +335,24 @@ const SocialMedia = () => {
     <div className="container mx-auto space-y-6 py-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Friends</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Social Media</h1>
           <p className="text-muted-foreground">
-            Find new collaborators, accept jam invites, and keep track of your Rockmundo crew.
+            Connect with friends, post updates, and build your following in the music world.
           </p>
         </div>
       </div>
+
+      <Tabs defaultValue="friends" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="friends" className="flex items-center gap-2">
+            <Users className="h-4 w-4" /> Friends
+          </TabsTrigger>
+          <TabsTrigger value="twaater" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" /> Twaater
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="friends" className="space-y-6">
 
       <Card>
         <CardHeader>
@@ -408,10 +431,10 @@ const SocialMedia = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="friends" className="space-y-4">
+      <Tabs defaultValue="current" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="friends" className="flex items-center gap-2">
-            <Users className="h-4 w-4" /> Friends
+          <TabsTrigger value="current" className="flex items-center gap-2">
+            <Users className="h-4 w-4" /> Current
           </TabsTrigger>
           <TabsTrigger value="requests" className="flex items-center gap-2">
             <UserPlus className="h-4 w-4" /> Requests
@@ -421,7 +444,7 @@ const SocialMedia = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="friends">
+        <TabsContent value="current">
           <Card>
             <CardHeader>
               <CardTitle>Current friends</CardTitle>
@@ -637,6 +660,138 @@ const SocialMedia = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+      </Tabs>
+        </TabsContent>
+
+        <TabsContent value="twaater" className="space-y-6">
+          {twaaterAccountLoading ? (
+            <Card>
+              <CardContent className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </CardContent>
+            </Card>
+          ) : !twaaterAccount ? (
+            <TwaaterAccountSetup
+              ownerType="persona"
+              ownerId={profile?.id || ""}
+              profileUsername={profile?.username || ""}
+            />
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-12">
+              {/* Main Feed */}
+              <div className="lg:col-span-8 space-y-6">
+                <TwaaterComposer accountId={twaaterAccount.id} />
+                
+                <Tabs defaultValue="feed" className="space-y-4">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="feed">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Feed
+                    </TabsTrigger>
+                    <TabsTrigger value="trending">
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      Trending
+                    </TabsTrigger>
+                    <TabsTrigger value="mentions">
+                      <Bell className="h-4 w-4 mr-2" />
+                      Mentions
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="feed">
+                    <TwaaterFeed 
+                      feed={twaaterFeed || []} 
+                      isLoading={twaaterFeedLoading} 
+                      viewerAccountId={twaaterAccount.id} 
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="trending">
+                    <Card>
+                      <CardContent className="py-12">
+                        <p className="text-center text-muted-foreground">
+                          Trending posts coming soon! This will show viral twaats and hot topics.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="mentions">
+                    <TwaaterMentionsFeed accountId={twaaterAccount.id} />
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* Sidebar */}
+              <div className="lg:col-span-4 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Your Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Followers</span>
+                      <span className="font-semibold text-lg">
+                        {twaaterAccount.follower_count.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Following</span>
+                      <span className="font-semibold text-lg">
+                        {twaaterAccount.following_count.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Fame Score</span>
+                      <span className="font-semibold text-lg">
+                        {Math.round(Number(twaaterAccount.fame_score))}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Daily XP</CardTitle>
+                    <CardDescription>Post to earn rewards</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Twaats today</span>
+                      <span className="font-semibold">{twaatsPostedToday}/3</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">XP earned</span>
+                      <span className="font-semibold text-primary">+{xpEarnedToday} XP</span>
+                    </div>
+                    {canEarnMore && (
+                      <p className="text-xs text-muted-foreground">
+                        Post {3 - twaatsPostedToday} more to reach daily cap!
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Tips</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <p className="text-muted-foreground">
+                      • Link gigs and releases for +2 XP bonus
+                    </p>
+                    <p className="text-muted-foreground">
+                      • Higher fame = more baseline followers
+                    </p>
+                    <p className="text-muted-foreground">
+                      • Engage consistently for best outcomes
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

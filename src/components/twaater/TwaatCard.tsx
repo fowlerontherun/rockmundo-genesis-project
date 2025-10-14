@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTwaaterReactions } from "@/hooks/useTwaaterReactions";
-import { Heart, MessageCircle, Repeat2, BarChart2, BadgeCheck } from "lucide-react";
+import { TwaatReplyDialog } from "./TwaatReplyDialog";
+import { Heart, Repeat2, BarChart2, BadgeCheck } from "lucide-react";
 
 interface TwaatCardProps {
   twaat: {
@@ -96,14 +97,11 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             {twaat.metrics.likes > 0 && twaat.metrics.likes}
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 text-muted-foreground hover:text-primary"
-          >
-            <MessageCircle className="h-4 w-4" />
-            {twaat.metrics.replies > 0 && twaat.metrics.replies}
-          </Button>
+          <TwaatReplyDialog
+            twaatId={twaat.id}
+            accountId={viewerAccountId}
+            replyCount={twaat.metrics.replies}
+          />
 
           <Button
             variant="ghost"
