@@ -93,11 +93,14 @@ export function RehearsalsTab() {
 
     const durationHours = parseInt(duration);
     const totalCost = room.hourly_rate * durationHours;
+    
+    // Ensure band_balance is treated as a number and defaults to 0
+    const currentBalance = typeof userBand.band_balance === 'number' ? userBand.band_balance : 0;
 
-    if (userBand.band_balance < totalCost) {
+    if (currentBalance < totalCost) {
       toast({
         title: 'Insufficient Funds',
-        description: `Your band needs $${totalCost} to book this rehearsal`,
+        description: `Your band needs $${totalCost} to book this rehearsal. Current balance: $${currentBalance}`,
         variant: 'destructive',
       });
       return;
@@ -128,10 +131,11 @@ export function RehearsalsTab() {
 
       if (rehearsalError) throw rehearsalError;
 
-      // Deduct cost from band balance
+      // Deduct cost from band balance (ensure we use the current balance)
+      const newBalance = currentBalance - totalCost;
       const { error: balanceError } = await supabase
         .from('bands')
-        .update({ band_balance: userBand.band_balance - totalCost })
+        .update({ band_balance: newBalance })
         .eq('id', userBand.id);
 
       if (balanceError) throw balanceError;

@@ -11,6 +11,7 @@ import {
   BookOpen,
   Briefcase,
   Music2,
+  Plane,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -109,6 +110,13 @@ const adminSections = [
     href: "/admin/rehearsal-rooms",
     action: "Manage rehearsal rooms",
     Icon: Music2,
+  },
+  {
+    title: "Travel Routes",
+    description: "Configure transportation routes between cities with costs, duration, and comfort ratings.",
+    href: "/admin/travel",
+    action: "Manage travel routes",
+    Icon: Plane,
   },
 ] as const;
 
