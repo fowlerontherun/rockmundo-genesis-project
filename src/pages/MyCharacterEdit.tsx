@@ -284,7 +284,7 @@ const MyCharacterEdit = () => {
       return;
     }
 
-    if (!user) {
+    if (!user || !profile) {
       setUploadError("You need to be signed in to upload a profile image.");
       return;
     }
@@ -298,6 +298,7 @@ const MyCharacterEdit = () => {
     const filePath = `${user.id}/${fileName}`;
 
     try {
+      // Upload to storage
       const { data, error } = await supabase.storage.from("avatars").upload(filePath, file, {
         upsert: true,
       });
@@ -306,14 +307,28 @@ const MyCharacterEdit = () => {
         throw error;
       }
 
-      setUploadProgress(100);
+      setUploadProgress(50);
 
+      // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(data?.path ?? filePath);
 
       const avatarUrl = publicUrlData.publicUrl;
-      await updateProfile({ avatar_url: avatarUrl } as any);
+      
+      setUploadProgress(75);
+
+      // Update profile directly with supabase client using any cast
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: avatarUrl } as any)
+        .eq("id", profile.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      setUploadProgress(100);
       await refetch();
 
       toast({

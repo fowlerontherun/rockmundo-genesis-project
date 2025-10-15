@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.twaater-outcome-engine]
 verify_jwt = false
+
+[functions.university-attendance]
+verify_jwt = false

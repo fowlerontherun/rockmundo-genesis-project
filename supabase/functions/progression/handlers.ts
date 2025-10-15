@@ -92,6 +92,10 @@ export async function handleSpendAttributeXp(
     .eq("profile_id", profileId)
     .maybeSingle();
 
+  if (!attrs) {
+    throw new Error("Player attributes not found");
+  }
+
   const currentValue = (attrs as any)?.[attributeKey] ?? 10;
   const newValue = currentValue + xpAmount;
 

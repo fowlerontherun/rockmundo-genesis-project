@@ -130,14 +130,15 @@ serve(async (req) => {
         .single();
 
       if (skillProgress) {
-        const newCurrentXp = skillProgress.current_xp + xpEarned;
+        let newCurrentXp = skillProgress.current_xp + xpEarned;
         let newLevel = skillProgress.current_level;
         let newRequiredXp = skillProgress.required_xp;
 
-        // Level up if enough XP
-        if (newCurrentXp >= skillProgress.required_xp) {
+        // Handle multiple level-ups
+        while (newCurrentXp >= newRequiredXp) {
+          newCurrentXp -= newRequiredXp;
           newLevel += 1;
-          newRequiredXp = Math.floor(skillProgress.required_xp * 1.5);
+          newRequiredXp = Math.floor(newRequiredXp * 1.5);
         }
 
         await supabaseClient
@@ -150,13 +151,23 @@ serve(async (req) => {
           })
           .eq("id", skillProgress.id);
       } else {
-        // Create new skill progress
+        // Create new skill progress with multi-level handling
+        let newCurrentXp = xpEarned;
+        let newLevel = 0;
+        let newRequiredXp = 100;
+        
+        while (newCurrentXp >= newRequiredXp) {
+          newCurrentXp -= newRequiredXp;
+          newLevel += 1;
+          newRequiredXp = Math.floor(newRequiredXp * 1.5);
+        }
+
         await supabaseClient.from("skill_progress").insert({
           profile_id: enrollment.profile_id,
           skill_slug: course.skill_slug,
-          current_xp: xpEarned,
-          current_level: 0,
-          required_xp: 100,
+          current_xp: newCurrentXp,
+          current_level: newLevel,
+          required_xp: newRequiredXp,
           last_practiced_at: now.toISOString(),
         });
       }
