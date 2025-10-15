@@ -38,10 +38,10 @@ export function RehearsalsTab() {
       if (roomsError) throw roomsError;
       setRooms(roomsData || []);
 
-      // Get user's band (first one if multiple)
+      // Get user's band (first one if multiple) - ensure we fetch band_balance
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
-        .select('band_id, bands:bands!band_members_band_id_fkey(*)')
+        .select('band_id, bands!band_members_band_id_fkey(id, name, band_balance, leader_id, chemistry_level, fame, status)')
         .eq('user_id', user.id)
         .limit(1);
 

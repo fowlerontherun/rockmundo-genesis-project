@@ -86,14 +86,14 @@ serve(async (req) => {
           course.xp_per_day_min
       );
 
-      // Create attendance record
+      // Create attendance record - set was_locked_out to false so activity feed logs it
       const { error: attendanceError } = await supabaseClient
         .from("player_university_attendance")
         .insert({
           enrollment_id: enrollment.id,
           attendance_date: today,
-          xp_earned: xpEarned,
-          was_locked_out: true,
+          xpEarned: xpEarned,
+          was_locked_out: false, // Changed to false so activity feed trigger fires
         });
 
       if (attendanceError) {
