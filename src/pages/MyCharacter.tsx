@@ -687,8 +687,16 @@ const MyCharacter = () => {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,320px),1fr]">
             <Card>
               <CardHeader className="flex flex-col items-center text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-semibold text-primary">
-                  {profileInitials}
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-primary/20 bg-primary/10 text-2xl font-semibold text-primary">
+                  {(profile as any)?.avatar_url ? (
+                    <img 
+                      src={(profile as any).avatar_url} 
+                      alt={`${displayName} avatar`} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    profileInitials
+                  )}
                 </div>
                 <div className="mt-4 space-y-1">
                   <h2 className="text-2xl font-semibold">{displayName}</h2>
@@ -1052,17 +1060,30 @@ const MyCharacter = () => {
               {searchResults.map((result) => (
                 <Card key={result.id} className="border-border/80">
                   <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{result.display_name ?? result.username}</span>
-                        <Badge variant="outline">@{result.username}</Badge>
+                    <div className="flex gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-semibold">
+                        {(result as any)?.avatar_url ? (
+                          <img 
+                            src={(result as any).avatar_url} 
+                            alt={`${result.display_name ?? result.username} avatar`} 
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          (result.display_name ?? result.username ?? "?").slice(0, 2).toUpperCase()
+                        )}
                       </div>
-                      {result.bio ? (
-                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{result.bio}</p>
-                      ) : null}
-                      <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                        {typeof result.level === "number" && <span>Level {result.level}</span>}
-                        {typeof result.fame === "number" && <span>Fame {result.fame}</span>}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{result.display_name ?? result.username}</span>
+                          <Badge variant="outline">@{result.username}</Badge>
+                        </div>
+                        {result.bio ? (
+                          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{result.bio}</p>
+                        ) : null}
+                        <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+                          {typeof result.level === "number" && <span>Level {result.level}</span>}
+                          {typeof result.fame === "number" && <span>Fame {result.fame}</span>}
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -1125,19 +1146,32 @@ const MyCharacter = () => {
                   {accepted.map(({ friendship, otherProfile }) => (
                     <Card key={friendship.id} className="border-border/80">
                       <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">
-                              {otherProfile?.display_name ?? otherProfile?.username ?? "Former friend"}
-                            </span>
-                            {otherProfile?.username && <Badge variant="outline">@{otherProfile.username}</Badge>}
+                        <div className="flex gap-3">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-semibold">
+                            {(otherProfile as any)?.avatar_url ? (
+                              <img 
+                                src={(otherProfile as any).avatar_url} 
+                                alt={`${otherProfile?.display_name ?? otherProfile?.username} avatar`} 
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              (otherProfile?.display_name ?? otherProfile?.username ?? "?").slice(0, 2).toUpperCase()
+                            )}
                           </div>
-                          {otherProfile?.bio ? (
-                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{otherProfile.bio}</p>
-                          ) : null}
-                          <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                            {typeof otherProfile?.level === "number" && <span>Level {otherProfile.level}</span>}
-                            {typeof otherProfile?.fame === "number" && <span>Fame {otherProfile.fame}</span>}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">
+                                {otherProfile?.display_name ?? otherProfile?.username ?? "Former friend"}
+                              </span>
+                              {otherProfile?.username && <Badge variant="outline">@{otherProfile.username}</Badge>}
+                            </div>
+                            {otherProfile?.bio ? (
+                              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{otherProfile.bio}</p>
+                            ) : null}
+                            <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+                              {typeof otherProfile?.level === "number" && <span>Level {otherProfile.level}</span>}
+                              {typeof otherProfile?.fame === "number" && <span>Fame {otherProfile.fame}</span>}
+                            </div>
                           </div>
                         </div>
                         <Button
@@ -1179,16 +1213,29 @@ const MyCharacter = () => {
                     {incoming.map(({ friendship, otherProfile }) => (
                       <Card key={friendship.id} className="border-border/80">
                         <CardContent className="flex flex-col gap-3 py-4">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">
-                                {otherProfile?.display_name ?? otherProfile?.username ?? "Unknown performer"}
-                              </span>
-                              {otherProfile?.username && <Badge variant="outline">@{otherProfile.username}</Badge>}
+                          <div className="flex gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-semibold">
+                              {(otherProfile as any)?.avatar_url ? (
+                                <img 
+                                  src={(otherProfile as any).avatar_url} 
+                                  alt={`${otherProfile?.display_name ?? otherProfile?.username} avatar`} 
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                (otherProfile?.display_name ?? otherProfile?.username ?? "?").slice(0, 2).toUpperCase()
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              Requested {new Date(friendship.created_at).toLocaleDateString()}
-                            </p>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">
+                                  {otherProfile?.display_name ?? otherProfile?.username ?? "Unknown performer"}
+                                </span>
+                                {otherProfile?.username && <Badge variant="outline">@{otherProfile.username}</Badge>}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Requested {new Date(friendship.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
                           </div>
                           <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                             <Button
@@ -1242,16 +1289,29 @@ const MyCharacter = () => {
                     {outgoing.map(({ friendship, otherProfile }) => (
                       <Card key={friendship.id} className="border-border/80">
                         <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">
-                                {otherProfile?.display_name ?? otherProfile?.username ?? "Unknown performer"}
-                              </span>
-                              {otherProfile?.username && <Badge variant="outline">@{otherProfile.username}</Badge>}
+                          <div className="flex gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted text-sm font-semibold">
+                              {(otherProfile as any)?.avatar_url ? (
+                                <img 
+                                  src={(otherProfile as any).avatar_url} 
+                                  alt={`${otherProfile?.display_name ?? otherProfile?.username} avatar`} 
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                (otherProfile?.display_name ?? otherProfile?.username ?? "?").slice(0, 2).toUpperCase()
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              Sent {new Date(friendship.created_at).toLocaleDateString()}
-                            </p>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">
+                                  {otherProfile?.display_name ?? otherProfile?.username ?? "Unknown performer"}
+                                </span>
+                                {otherProfile?.username && <Badge variant="outline">@{otherProfile.username}</Badge>}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Sent {new Date(friendship.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
                           </div>
                           <Button
                             variant="outline"
