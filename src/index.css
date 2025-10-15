@@ -61,6 +61,14 @@
     --sidebar-accent-foreground: 210 24% 90%;
     --sidebar-border: 221 32% 20%;
     --sidebar-ring: 197 88% 60%;
+
+    /* Twaater Purple Theme */
+    --twaater-bg: 250 30% 12%;
+    --twaater-card: 250 25% 16%;
+    --twaater-border: 250 20% 25%;
+    --twaater-hover: 250 30% 20%;
+    --twaater-purple: 270 80% 65%;
+    --twaater-purple-hover: 270 80% 70%;
   }
 
   .dark {
@@ -107,6 +115,14 @@
     --sidebar-accent-foreground: 210 24% 90%;
     --sidebar-border: 221 32% 20%;
     --sidebar-ring: 197 88% 60%;
+
+    /* Twaater Purple Theme */
+    --twaater-bg: 250 30% 12%;
+    --twaater-card: 250 25% 16%;
+    --twaater-border: 250 20% 25%;
+    --twaater-hover: 250 30% 20%;
+    --twaater-purple: 270 80% 65%;
+    --twaater-purple-hover: 270 80% 70%;
   }
 }
 

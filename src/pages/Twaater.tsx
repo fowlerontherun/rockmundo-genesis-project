@@ -64,126 +64,115 @@ const Twaater = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Twaater</h1>
-          <p className="text-muted-foreground">
-            Your voice in the music world • @{account.handle}
-          </p>
-        </div>
-        <TwaaterAccountSwitcher
-          currentAccount={account}
-          onSwitch={(ownerType, ownerId) => {
-            setSelectedOwnerType(ownerType);
-            setSelectedOwnerId(ownerId);
-          }}
-        />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-12">
-        {/* Main Feed */}
-        <div className="lg:col-span-8 space-y-6">
-          <TwaaterComposer accountId={account.id} />
-
-          <Tabs defaultValue="feed" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="feed" className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Feed
-              </TabsTrigger>
-              <TabsTrigger value="trending" className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Trending
-              </TabsTrigger>
-              <TabsTrigger value="mentions" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Mentions
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="feed">
-              <TwaaterFeed feed={feed || []} isLoading={feedLoading} viewerAccountId={account.id} />
-            </TabsContent>
-
-            <TabsContent value="trending">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">
-                    Trending posts coming soon! This will show viral twaats and hot topics.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="mentions">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">
-                    Mentions feed coming soon! Track who's talking about you and your music.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+    <div className="min-h-screen" style={{ backgroundColor: 'hsl(var(--twaater-bg))' }}>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="sticky top-0 z-10 backdrop-blur-sm border-b px-4 py-3 flex items-center justify-between" style={{ backgroundColor: 'hsl(var(--twaater-bg) / 0.8)', borderColor: 'hsl(var(--twaater-border))' }}>
+          <h1 className="text-xl font-bold">Twaater</h1>
+          <TwaaterAccountSwitcher
+            currentAccount={account}
+            onSwitch={(ownerType, ownerId) => {
+              setSelectedOwnerType(ownerType);
+              setSelectedOwnerId(ownerId);
+            }}
+          />
         </div>
 
-        {/* Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Your Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Followers</span>
-                <span className="font-semibold text-lg">{account.follower_count.toLocaleString()}</span>
+        <div className="flex">
+          {/* Sidebar - Hidden on mobile */}
+          <div className="hidden lg:block w-64 xl:w-80 border-r min-h-screen p-4" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
+            <div className="space-y-4 sticky top-20">
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--twaater-card))' }}>
+                <div className="mb-2">
+                  <div className="font-bold text-lg">{account.display_name}</div>
+                  <div className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>@{account.handle}</div>
+                </div>
+                <div className="flex gap-4 text-sm mt-3">
+                  <div>
+                    <span className="font-bold">{account.following_count}</span>
+                    <span className="ml-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Following</span>
+                  </div>
+                  <div>
+                    <span className="font-bold">{account.follower_count.toLocaleString()}</span>
+                    <span className="ml-1" style={{ color: 'hsl(var(--muted-foreground))' }}>Followers</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Following</span>
-                <span className="font-semibold text-lg">{account.following_count.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Fame Score</span>
-                <span className="font-semibold text-lg">{Math.round(Number(account.fame_score))}</span>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Today's Rewards</CardTitle>
-              <CardDescription>Post to earn XP</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                First 3 twaats today: <span className="font-semibold text-foreground">+15 XP</span>
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Linked posts: <span className="font-semibold text-foreground">+2 XP bonus</span>
-              </p>
-            </CardContent>
-          </Card>
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--twaater-card))' }}>
+                <div className="font-bold mb-3">Daily XP</div>
+                <div className="space-y-2 text-sm">
+                  <div style={{ color: 'hsl(var(--muted-foreground))' }}>First 3 twaats: <span className="font-semibold" style={{ color: 'hsl(var(--twaater-purple))' }}>+15 XP</span></div>
+                  <div style={{ color: 'hsl(var(--muted-foreground))' }}>Linked posts: <span className="font-semibold" style={{ color: 'hsl(var(--twaater-purple))' }}>+2 XP</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Tips</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p className="text-muted-foreground">
-                • Link gigs and releases to get more RSVPs and sales
-              </p>
-              <p className="text-muted-foreground">
-                • Post consistently to build momentum
-              </p>
-              <p className="text-muted-foreground">
-                • Engage with other artists to grow your network
-              </p>
-              <p className="text-muted-foreground">
-                • Higher fame = more followers baseline
-              </p>
-            </CardContent>
-          </Card>
+          {/* Main Feed */}
+          <div className="flex-1 max-w-2xl border-r" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
+            <div className="border-b" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
+              <Tabs defaultValue="feed" className="w-full">
+                <TabsList className="w-full grid grid-cols-3 rounded-none h-auto bg-transparent border-b-0">
+                  <TabsTrigger 
+                    value="feed" 
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[hsl(var(--twaater-purple))] data-[state=active]:bg-transparent hover:bg-[hsl(var(--twaater-hover))] py-4"
+                  >
+                    <MessageCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Feed</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="trending"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[hsl(var(--twaater-purple))] data-[state=active]:bg-transparent hover:bg-[hsl(var(--twaater-hover))] py-4"
+                  >
+                    <TrendingUp className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Trending</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="mentions"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-[hsl(var(--twaater-purple))] data-[state=active]:bg-transparent hover:bg-[hsl(var(--twaater-hover))] py-4"
+                  >
+                    <Bell className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Mentions</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="feed" className="mt-0">
+                  <div className="border-b p-4" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
+                    <TwaaterComposer accountId={account.id} />
+                  </div>
+                  <TwaaterFeed feed={feed || []} isLoading={feedLoading} viewerAccountId={account.id} />
+                </TabsContent>
+
+                <TabsContent value="trending" className="mt-0">
+                  <div className="p-8 text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    Trending posts coming soon!
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="mentions" className="mt-0">
+                  <div className="p-8 text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    Mentions feed coming soon!
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+
+          {/* Right Sidebar - Hidden on mobile */}
+          <div className="hidden xl:block w-80 p-4">
+            <div className="space-y-4 sticky top-20">
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--twaater-card))' }}>
+                <div className="font-bold mb-3">Tips for Success</div>
+                <div className="space-y-2 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  <div>• Link gigs and releases for more engagement</div>
+                  <div>• Post consistently to build momentum</div>
+                  <div>• Engage with other artists</div>
+                  <div>• Higher fame = more followers</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

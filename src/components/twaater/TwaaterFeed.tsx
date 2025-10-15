@@ -59,7 +59,7 @@ export const TwaaterFeed = ({ feed, isLoading, viewerAccountId }: TwaaterFeedPro
   }
 
   return (
-    <div className="space-y-4">
+    <div>
       {feed.map((twaat) => (
         <TwaatCard
           key={twaat.id}

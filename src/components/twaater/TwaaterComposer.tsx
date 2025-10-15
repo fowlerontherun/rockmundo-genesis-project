@@ -34,76 +34,80 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const isOverLimit = charCount > maxChars;
 
   return (
-    <Card>
-      <CardContent className="pt-6 space-y-4">
-        <Textarea
-          placeholder="What's happening in your music journey?"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          className="min-h-[120px] resize-none"
-          disabled={isPosting}
-        />
+    <div className="space-y-3">
+      <Textarea
+        placeholder="What's happening in your music journey?"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        className="min-h-[100px] resize-none border-0 focus-visible:ring-0 p-0 text-lg bg-transparent"
+        disabled={isPosting}
+      />
 
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <Button
-              variant={linkedType === "single" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setLinkedType(linkedType === "single" ? null : "single")}
-            >
-              <Music className="h-4 w-4 mr-1" />
-              Single
-            </Button>
-            <Button
-              variant={linkedType === "album" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setLinkedType(linkedType === "album" ? null : "album")}
-            >
-              <Music className="h-4 w-4 mr-1" />
-              Album
-            </Button>
-            <Button
-              variant={linkedType === "gig" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setLinkedType(linkedType === "gig" ? null : "gig")}
-            >
-              <Calendar className="h-4 w-4 mr-1" />
-              Gig
-            </Button>
-            <Button
-              variant={linkedType === "tour" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setLinkedType(linkedType === "tour" ? null : "tour")}
-            >
-              <MapPin className="h-4 w-4 mr-1" />
-              Tour
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className={`text-sm ${isOverLimit ? "text-destructive" : "text-muted-foreground"}`}>
-              {charCount}/{maxChars}
-            </span>
-            <Button
-              onClick={handlePost}
-              disabled={isPosting || !body.trim() || isOverLimit}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Post
-            </Button>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLinkedType(linkedType === "single" ? null : "single")}
+            className={`h-8 ${linkedType === "single" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
+          >
+            <Music className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Single</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLinkedType(linkedType === "album" ? null : "album")}
+            className={`h-8 ${linkedType === "album" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
+          >
+            <Music className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Album</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLinkedType(linkedType === "gig" ? null : "gig")}
+            className={`h-8 ${linkedType === "gig" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
+          >
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Gig</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLinkedType(linkedType === "tour" ? null : "tour")}
+            className={`h-8 ${linkedType === "tour" ? "bg-[hsl(var(--twaater-purple)_/_0.2)] text-[hsl(var(--twaater-purple))]" : ""}`}
+          >
+            <MapPin className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Tour</span>
+          </Button>
         </div>
 
-        {linkedType && (
-          <Badge variant="secondary" className="gap-1">
-            {linkedType === "single" && <Music className="h-3 w-3" />}
-            {linkedType === "album" && <Music className="h-3 w-3" />}
-            {linkedType === "gig" && <Calendar className="h-3 w-3" />}
-            {linkedType === "tour" && <MapPin className="h-3 w-3" />}
-            Linked to {linkedType} (+2 XP bonus!)
-          </Badge>
-        )}
-      </CardContent>
-    </Card>
+        <div className="flex items-center gap-2 ml-auto">
+          <span className={`text-xs ${isOverLimit ? "text-destructive" : "text-muted-foreground"}`}>
+            {charCount > 450 && `${charCount}/${maxChars}`}
+          </span>
+          <Button
+            onClick={handlePost}
+            disabled={isPosting || !body.trim() || isOverLimit}
+            size="sm"
+            className="rounded-full h-9 px-4 font-bold"
+            style={{ backgroundColor: 'hsl(var(--twaater-purple))', color: 'white' }}
+          >
+            {isPosting ? "Posting..." : "Post"}
+          </Button>
+        </div>
+      </div>
+
+      {linkedType && (
+        <Badge variant="secondary" className="gap-1 text-xs" style={{ backgroundColor: 'hsl(var(--twaater-purple) / 0.2)', color: 'hsl(var(--twaater-purple))' }}>
+          {linkedType === "single" && <Music className="h-3 w-3" />}
+          {linkedType === "album" && <Music className="h-3 w-3" />}
+          {linkedType === "gig" && <Calendar className="h-3 w-3" />}
+          {linkedType === "tour" && <MapPin className="h-3 w-3" />}
+          Linked: {linkedType} (+2 XP)
+        </Badge>
+      )}
+    </div>
   );
 };
