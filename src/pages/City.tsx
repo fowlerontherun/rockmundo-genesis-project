@@ -107,7 +107,8 @@ export const CityContent = ({
   studios,
   playerCount,
   nightClubs,
-}: CityContentProps) => {
+  rehearsalRooms = [],
+}: CityContentProps & { rehearsalRooms?: any[] }) => {
   const culturalEvents = useMemo(
     () => (city?.cultural_events ?? []).filter((event) => typeof event === "string" && event.trim().length > 0),
     [city?.cultural_events],
@@ -337,6 +338,7 @@ export default function City() {
   const [studios, setStudios] = useState<any[]>([]);
   const [playerCount, setPlayerCount] = useState<number>(0);
   const [nightClubs, setNightClubs] = useState<CityNightClub[]>([]);
+  const [rehearsalRooms, setRehearsalRooms] = useState<any[]>([]);
 
   const loadCity = useCallback(
     async (options: { signal?: { cancelled: boolean } } = {}) => {
@@ -402,6 +404,10 @@ export default function City() {
           if (nightClubsResult.status === "fulfilled" && nightClubsResult.value.data) {
             setNightClubs(nightClubsResult.value.data as any);
           }
+
+          if (rehearsalRoomsResult.status === "fulfilled" && rehearsalRoomsResult.value.data) {
+            setRehearsalRooms(rehearsalRoomsResult.value.data);
+          }
           
           if (playerCountResult.status === "fulfilled" && playerCountResult.value.count !== null) {
             setPlayerCount(playerCountResult.value.count);
@@ -464,6 +470,7 @@ export default function City() {
       studios={studios}
       playerCount={playerCount}
       nightClubs={nightClubs}
+      rehearsalRooms={rehearsalRooms}
       onRetry={() => {
         void loadCity();
       }}

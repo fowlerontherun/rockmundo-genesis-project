@@ -318,11 +318,11 @@ const MyCharacterEdit = () => {
       
       setUploadProgress(75);
 
-      // Update profile directly with supabase client using any cast
+      // Update profile with avatar_url using user_id (cast to any for avatar_url)
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: avatarUrl } as any)
-        .eq("id", profile.id);
+        .eq("user_id", user.id);
 
       if (updateError) {
         throw updateError;

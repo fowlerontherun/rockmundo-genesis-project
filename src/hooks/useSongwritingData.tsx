@@ -349,7 +349,7 @@ export const useSongwritingData = (userId?: string | null) => {
         const newLyricsProgress = Math.min(2000, (project.lyrics_progress || 0) + lyricsGain);
         const completed = newMusicProgress >= 2000 && newLyricsProgress >= 2000;
         
-        await supabase
+        const { error: updateError } = await supabase
           .from('songwriting_projects')
           .update({
             music_progress: newMusicProgress,
@@ -359,8 +359,11 @@ export const useSongwritingData = (userId?: string | null) => {
             status: completed ? 'completed' : 'writing',
             is_locked: false,
             locked_until: null,
+            updated_at: new Date().toISOString(),
           })
           .eq('id', session.project_id);
+        
+        if (updateError) throw updateError;
       }
       
       return { sessionId, musicGain, lyricsGain, xpEarned };

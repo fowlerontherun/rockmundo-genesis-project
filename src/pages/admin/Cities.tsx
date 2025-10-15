@@ -239,7 +239,7 @@ const CitiesAdmin = () => {
           if (editingCity) {
             const { error } = await supabase
               .from("cities")
-              .update(payload)
+              .update(payload as any)
               .eq("id", editingCity.id);
 
             if (error) throw error;
@@ -249,7 +249,7 @@ const CitiesAdmin = () => {
               description: `${payload.name} has been updated successfully.`,
             });
           } else {
-            const { error } = await supabase.from("cities").insert(payload);
+            const { error } = await supabase.from("cities").insert(payload as any);
 
             if (error) throw error;
 
