@@ -38,19 +38,28 @@ export const SimplifiedProjectCard = ({
   
   // Get status text
   const getStatusText = () => {
-    if (!isLocked) return "Ready to start";
-    if (!project.locked_until) return "Session in progress";
+    if (!project.locked_until) return "Ready to start";
     
     const lockedUntil = new Date(project.locked_until);
     const now = new Date();
     
-    if (lockedUntil <= now) return "Session completed";
+    // Session expired and waiting for auto-complete
+    if (lockedUntil <= now && isLocked) {
+      return "Auto-completing...";
+    }
     
+    // Session expired, no longer locked
+    if (lockedUntil <= now) {
+      return "Session completed";
+    }
+    
+    // Session in progress
     const timeLeft = formatDistanceToNowStrict(lockedUntil);
     return `Completes in ${timeLeft}`;
   };
   
   const isCompleted = musicPercent >= 100 && lyricsPercent >= 100;
+  const isExpired = project.locked_until && new Date(project.locked_until) <= new Date();
   
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -123,7 +132,9 @@ export const SimplifiedProjectCard = ({
         {/* Status */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Status</span>
-          <span className="font-medium">{getStatusText()}</span>
+          <span className={`font-medium ${isExpired ? 'text-primary' : ''}`}>
+            {getStatusText()}
+          </span>
         </div>
         
         {/* Action Buttons */}

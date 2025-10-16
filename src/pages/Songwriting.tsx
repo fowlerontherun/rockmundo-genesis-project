@@ -801,31 +801,47 @@ const Songwriting = () => {
 
   const initializedProjectsRef = useRef<Set<string>>(new Set());
   const lastCheckRef = useRef<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Auto-check for completed sessions on page load/focus
-  useEffect(() => {
-    const checkAutoCompletions = async () => {
-      const now = Date.now();
-      // Only check once per minute to avoid spam
-      if (now - lastCheckRef.current < 60000) return;
-      lastCheckRef.current = now;
+  // Auto-check for completed sessions
+  const checkAutoCompletions = useCallback(async (force = false) => {
+    const now = Date.now();
+    // Check immediately on first load, then throttle to 30 seconds
+    if (!force && lastCheckRef.current > 0 && now - lastCheckRef.current < 30000) return;
+    lastCheckRef.current = now;
 
-      try {
-        const { data, error } = await supabase.functions.invoke('cleanup-songwriting');
-        if (error) throw error;
-        
-        if (data?.completedSessions > 0) {
-          toast.success(`${data.completedSessions} session(s) auto-completed!`);
-          refetchProjects();
+    try {
+      setIsRefreshing(true);
+      const { data, error } = await supabase.functions.invoke('cleanup-songwriting');
+      
+      if (error) {
+        console.error('Auto-complete error:', error);
+        if (force) {
+          toast.error('Failed to check for completed sessions');
         }
-      } catch (error) {
-        console.error('Auto-complete check failed:', error);
+        return;
       }
-    };
+      
+      if (data?.completedSessions > 0) {
+        toast.success(`${data.completedSessions} session(s) completed! Progress updated.`);
+        await refetchProjects();
+      } else if (force) {
+        toast.info('No sessions ready to complete');
+      }
+    } catch (error) {
+      console.error('Auto-complete check failed:', error);
+      if (force) {
+        toast.error('Failed to refresh sessions');
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchProjects]);
 
+  // Check immediately on mount and when page becomes visible
+  useEffect(() => {
     checkAutoCompletions();
 
-    // Check when tab becomes visible
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         checkAutoCompletions();
@@ -833,8 +849,19 @@ const Songwriting = () => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [refetchProjects]);
+    
+    // Poll every 30 seconds while page is visible
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        checkAutoCompletions();
+      }
+    }, 30000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    };
+  }, [checkAutoCompletions]);
 
   useEffect(() => {
     const newProjects = projectsList.filter(p => !initializedProjectsRef.current.has(p.id));
@@ -1397,14 +1424,25 @@ const Songwriting = () => {
               Create songwriting sprints, track progress, and convert to songs.
             </p>
           </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => checkAutoCompletions(true)}
+              variant="outline"
+              size="sm"
+              disabled={isRefreshing}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              {isRefreshing ? 'Checking...' : 'Refresh Sessions'}
+            </Button>
+          </div>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
-                <Plus className="mr-2 h-4 w-4" />
-                New Project
-              </Button>
-            </DialogTrigger>
+          <DialogTrigger asChild>
+            <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
+              <Plus className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
+          </DialogTrigger>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>{selectedProject ? "Edit Songwriting Project" : "Create Songwriting Project"}</DialogTitle>

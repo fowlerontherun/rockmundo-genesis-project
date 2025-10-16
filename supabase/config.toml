@@ -20,3 +20,10 @@ verify_jwt = false
 
 [functions.university-attendance]
 verify_jwt = false
+
+[functions.cleanup-songwriting]
+verify_jwt = false
+
+[functions.cleanup-songwriting.triggers]
+enabled = true
+schedule = "*/15 * * * *"
