@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -6,9 +6,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Clock, DollarSign, TrendingUp, Music2, Users } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Music2, Users, Wallet, AlertCircle } from "lucide-react";
 import { useCreateRecordingSession, calculateRecordingQuality, ORCHESTRA_OPTIONS, type RecordingProducer } from "@/hooks/useRecordingData";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SessionConfiguratorProps {
   userId: string;
@@ -22,8 +24,23 @@ interface SessionConfiguratorProps {
 export const SessionConfigurator = ({ userId, bandId, studio, song, producer, onComplete }: SessionConfiguratorProps) => {
   const [durationHours, setDurationHours] = useState(3);
   const [orchestraSize, setOrchestraSize] = useState<'chamber' | 'small' | 'full' | null>(null);
+  const [bandBalance, setBandBalance] = useState<number>(0);
+  const [personalCash, setPersonalCash] = useState<number>(0);
   
   const createSession = useCreateRecordingSession();
+
+  // Fetch band balance and personal cash
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (bandId) {
+        const { data: band } = await supabase.from('bands').select('band_balance').eq('id', bandId).single();
+        setBandBalance(band?.band_balance || 0);
+      }
+      const { data: profile } = await supabase.from('profiles').select('cash').eq('user_id', userId).single();
+      setPersonalCash(profile?.cash || 0);
+    };
+    fetchBalances();
+  }, [bandId, userId]);
 
   const orchestraOption = orchestraSize ? ORCHESTRA_OPTIONS.find(o => o.size === orchestraSize) : undefined;
   
@@ -42,6 +59,10 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
 
   const qualityImprovement = finalQuality - (song.quality_score || 0);
   const qualityImprovementPercent = Math.round((qualityImprovement / (song.quality_score || 1)) * 100);
+
+  const availableBalance = bandId ? bandBalance : personalCash;
+  const canAfford = availableBalance >= totalCost;
+  const balanceShortfall = totalCost - availableBalance;
 
   const handleStartRecording = async () => {
     await createSession.mutateAsync({
@@ -163,8 +184,28 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
             <span>Total Cost</span>
             <span className="text-primary">${totalCost.toLocaleString()}</span>
           </div>
+          <div className="flex items-center justify-between text-sm pt-2 border-t">
+            <span className="text-muted-foreground flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              {bandId ? 'Band Balance' : 'Your Cash'}
+            </span>
+            <span className={`font-semibold ${canAfford ? 'text-green-600' : 'text-red-600'}`}>
+              ${availableBalance.toLocaleString()}
+            </span>
+          </div>
         </CardContent>
       </Card>
+
+      {!canAfford && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Insufficient funds! You need ${balanceShortfall.toLocaleString()} more.
+            {bandId && ' Consider depositing funds into the band or performing gigs to earn money.'}
+            {!bandId && ' Complete gigs, sell songs, or find other ways to earn cash.'}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="bg-primary/5 border-primary/20">
         <CardHeader>
@@ -225,7 +266,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
         </Button>
         <Button
           onClick={handleStartRecording}
-          disabled={createSession.isPending}
+          disabled={createSession.isPending || !canAfford}
           className="flex-1"
         >
           {createSession.isPending ? 'Starting...' : `Start Recording ($${totalCost.toLocaleString()})`}

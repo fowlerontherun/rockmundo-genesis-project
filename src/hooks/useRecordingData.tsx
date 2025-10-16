@@ -219,6 +219,24 @@ export const useCreateRecordingSession = () => {
               orchestra_cost: orchestraCost
             }
           });
+      } else {
+        // Solo artist - deduct from personal cash
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('cash')
+          .eq('user_id', input.user_id)
+          .single();
+
+        const currentCash = profile?.cash || 0;
+        if (currentCash < totalCost) {
+          throw new Error(`Insufficient cash. Need $${totalCost.toLocaleString()}, have $${currentCash.toLocaleString()}`);
+        }
+
+        // Deduct from personal cash
+        await supabase
+          .from('profiles')
+          .update({ cash: currentCash - totalCost })
+          .eq('user_id', input.user_id);
       }
 
       // Create recording session
