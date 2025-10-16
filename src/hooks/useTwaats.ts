@@ -65,13 +65,8 @@ export const useTwaats = (accountId?: string) => {
       
       console.log('Twaat created successfully:', twaat);
 
-      // Create initial metrics
-      const { error: metricsError } = await supabase
-        .from("twaat_metrics")
-        .insert({ twaat_id: twaat.id });
-
-      if (metricsError) throw metricsError;
-
+      // Metrics are auto-created by database trigger
+      
       // Call outcome engine (async, don't await)
       supabase.functions.invoke("twaater-outcome-engine", {
         body: { twaat_id: twaat.id },
