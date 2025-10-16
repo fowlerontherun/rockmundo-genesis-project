@@ -1,21 +1,13 @@
-import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Globe2, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-import mapBackground from "@/assets/world-map.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fetchWorldEnvironmentSnapshot } from "@/utils/worldEnvironment";
-import { getCoordinatesForCity } from "@/utils/worldTravel";
-import { projectCoordinates } from "@/utils/mapProjection";
-
-const MAP_DIMENSIONS = { width: 1200, height: 620, padding: 48 } as const;
+import InteractiveWorldMap from "@/components/map/InteractiveWorldMap";
 
 const WorldMap = () => {
-  const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["world-environment", "snapshot"],
     queryFn: fetchWorldEnvironmentSnapshot,
@@ -40,40 +32,6 @@ const WorldMap = () => {
 
   const cities = data?.cities ?? [];
   const currentCityId = currentLocation;
-
-  const pins = useMemo(() => {
-    if (!cities.length) {
-      return [] as Array<{
-        id: string;
-        label: string;
-        left: string;
-        top: string;
-        description?: string;
-        isCurrentCity: boolean;
-      }>;
-    }
-
-    return cities.map((city) => {
-      const coordinates = getCoordinatesForCity(city.name, city.country);
-      const point = projectCoordinates(coordinates, MAP_DIMENSIONS);
-      const left = `${(point.x / MAP_DIMENSIONS.width) * 100}%`;
-      const top = `${(point.y / MAP_DIMENSIONS.height) * 100}%`;
-      const label = city.country ? `${city.name}, ${city.country}` : city.name;
-      const description = city.dominant_genre
-        ? `Dominant genre: ${city.dominant_genre}`
-        : "Click to explore this city's opportunities.";
-      const isCurrentCity = city.id === currentCityId;
-
-      return {
-        id: city.id,
-        label,
-        left,
-        top,
-        description,
-        isCurrentCity,
-      };
-    });
-  }, [cities, currentCityId]);
 
   const renderMap = () => {
     if (isLoading) {
@@ -104,7 +62,7 @@ const WorldMap = () => {
       );
     }
 
-    if (!pins.length) {
+    if (!cities.length) {
       return (
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -119,55 +77,23 @@ const WorldMap = () => {
     }
 
     return (
-      <Card className="overflow-hidden border-none bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 shadow-xl">
-        <CardHeader className="border-b border-white/5 bg-white/5 backdrop-blur">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-white">
+      <Card className="overflow-hidden border-none shadow-xl">
+        <CardHeader className="border-b border-border bg-card/50 backdrop-blur">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Globe2 className="h-5 w-5" aria-hidden="true" />
-            Global city network
+            Interactive Global City Network
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 p-0">
-          <div className="relative w-full overflow-hidden">
-            <div className="relative w-full pt-[56%] sm:pt-[48%]">
-              <img
-                src={mapBackground}
-                alt="Stylised Rockmundo world map"
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-              <div className="absolute inset-0">
-                {pins.map((pin) => (
-                  <Tooltip key={pin.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/cities/${encodeURIComponent(pin.id)}`)}
-                        className={`group absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-xs font-semibold shadow-lg ring-1 transition hover:-translate-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary ${
-                          pin.isCurrentCity
-                            ? "bg-green-500 text-white shadow-green-500/30 ring-green-400/60 animate-pulse"
-                            : "bg-primary/90 text-primary-foreground shadow-primary/20 ring-primary/40 hover:bg-primary"
-                        }`}
-                        style={{ left: pin.left, top: pin.top }}
-                        aria-label={`Open details for ${pin.label}`}
-                      >
-                        <span className="pointer-events-none flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5 transition-transform group-hover:scale-110" aria-hidden="true" />
-                          <span>{pin.label}</span>
-                          {pin.isCurrentCity && <span className="ml-1">📍</span>}
-                        </span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="center" className="max-w-xs text-left">
-                      <p className="font-semibold leading-none">{pin.label}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{pin.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </div>
+        <CardContent className="p-0">
+          <div className="relative w-full h-[600px]">
+            <InteractiveWorldMap 
+              cities={cities}
+              currentCityId={currentCityId}
+            />
           </div>
-          <div className="px-6 pb-6 text-sm text-slate-200/80">
-            Click a city pin to jump to its upcoming opportunities, venue intel, and travel options. Locations are projected
-            using an equirectangular layout so their placement mirrors real-world geography.
+          <div className="px-6 py-4 text-sm text-muted-foreground border-t border-border">
+            🌍 Interact with the globe to explore cities worldwide. Click a city marker to view details and travel options.
+            Zoom and drag to navigate the map.
           </div>
         </CardContent>
       </Card>
