@@ -129,6 +129,13 @@ const adminSections = [
     Icon: Music2,
   },
   {
+    title: "Recording Producers",
+    description: "Manage producers available for recording sessions with skills, costs, and specializations.",
+    href: "/admin/producers",
+    action: "Manage producers",
+    Icon: AudioLines,
+  },
+  {
     title: "Twaater Moderation",
     description: "Review reported content, manage filter words, and moderate user-generated posts.",
     href: "/admin/twaater-moderation",

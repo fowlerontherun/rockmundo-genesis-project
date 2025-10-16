@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { AdminRoute } from "@/components/AdminRoute";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -254,7 +255,8 @@ const ProducersAdmin = () => {
   };
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <AdminRoute>
+      <div className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Recording Producers</h1>
@@ -608,7 +610,8 @@ const ProducersAdmin = () => {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </AdminRoute>
   );
 };
 
