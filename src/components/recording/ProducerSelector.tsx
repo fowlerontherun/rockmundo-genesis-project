@@ -13,22 +13,29 @@ interface ProducerSelectorProps {
 
 export const ProducerSelector = ({ selectedProducer, onSelect, songGenre }: ProducerSelectorProps) => {
   const [tierFilter, setTierFilter] = useState<string>("");
-  const [genreFilter, setGenreFilter] = useState<string>(songGenre || "");
+  const [genreFilter, setGenreFilter] = useState<string>("");
 
   const { data: producers, isLoading } = useRecordingProducers(genreFilter, tierFilter);
+
+  // Self-produce option
+  const selfProduceOption: RecordingProducer = {
+    id: 'self-produce',
+    name: 'Self-Produce',
+    tier: 'budget',
+    specialty_genre: 'All',
+    cost_per_hour: 0,
+    quality_bonus: -10,
+    mixing_skill: 0,
+    arrangement_skill: 0,
+    bio: 'Record on your own without a professional producer. Lower quality but free.',
+    past_works: ['Independent recordings', 'DIY sessions']
+  };
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading producers...</div>;
   }
 
-  if (!producers || producers.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">No producers available.</p>
-      </div>
-    );
-  }
+  const allProducers = [selfProduceOption, ...(producers || [])];
 
   return (
     <div className="space-y-4">
@@ -63,12 +70,12 @@ export const ProducerSelector = ({ selectedProducer, onSelect, songGenre }: Prod
         </Select>
 
         <div className="text-sm text-muted-foreground flex items-center ml-auto">
-          {producers.length} producer{producers.length !== 1 ? 's' : ''} available
+          {allProducers.length} option{allProducers.length !== 1 ? 's' : ''} available
         </div>
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 max-h-[60vh] overflow-y-auto pr-2">
-        {producers.map((producer) => (
+        {allProducers.map((producer) => (
           <ProducerCard
             key={producer.id}
             producer={producer}
