@@ -2196,6 +2196,44 @@ export type Database = {
           },
         ]
       }
+      orchestra_bookings: {
+        Row: {
+          cost: number
+          created_at: string | null
+          id: string
+          musician_count: number
+          orchestra_type: string
+          quality_bonus: number
+          session_id: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string | null
+          id?: string
+          musician_count: number
+          orchestra_type: string
+          quality_bonus?: number
+          session_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string | null
+          id?: string
+          musician_count?: number
+          orchestra_type?: string
+          quality_bonus?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orchestra_bookings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_achievements: {
         Row: {
           achievement_id: string
@@ -3328,6 +3366,96 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "recording_producers_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recording_sessions: {
+        Row: {
+          band_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          duration_hours: number
+          id: string
+          producer_id: string
+          quality_improvement: number | null
+          scheduled_end: string
+          scheduled_start: string
+          song_id: string
+          status: string
+          studio_id: string
+          total_cost: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_hours?: number
+          id?: string
+          producer_id: string
+          quality_improvement?: number | null
+          scheduled_end: string
+          scheduled_start?: string
+          song_id: string
+          status?: string
+          studio_id: string
+          total_cost: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          band_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_hours?: number
+          id?: string
+          producer_id?: string
+          quality_improvement?: number | null
+          scheduled_end?: string
+          scheduled_start?: string
+          song_id?: string
+          status?: string
+          studio_id?: string
+          total_cost?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_sessions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "recording_producers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_studio_id_fkey"
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "city_studios"
