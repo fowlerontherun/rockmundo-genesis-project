@@ -13,6 +13,7 @@ import {
   Music2,
   Plane,
   Calendar,
+  TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -104,7 +105,21 @@ const adminSections = [
     href: "/admin/song-gifts",
     action: "Gift songs",
     Icon: Gift,
-  },
+    },
+    {
+      title: "Streaming Platforms",
+      description: "Manage streaming platforms, configure payout rates, and set quality requirements.",
+      href: "/admin/streaming-platforms",
+      action: "Manage platforms",
+      Icon: Music2,
+    },
+    {
+      title: "Song Marketplace",
+      description: "Moderate listings, manage disputes, configure fees, and view transaction analytics.",
+      href: "/admin/marketplace",
+      action: "Manage marketplace",
+      Icon: TrendingUp,
+    },
   {
     title: "Recording Studios",
     description: "Manage city recording studios with quality ratings, hourly rates, specialties, and equipment.",
