@@ -143,7 +143,7 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                 </div>
               </div>
 
-              {club.guestActions.length > 0 && (
+              {club.guestActions && club.guestActions.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Sparkles className="h-4 w-4 text-primary" /> Guest Experiences
@@ -170,7 +170,7 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                 </div>
               )}
 
-              {club.drinkMenu.length > 0 && (
+              {club.drinkMenu && club.drinkMenu.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <GlassWater className="h-4 w-4 text-primary" /> Signature Drinks
@@ -191,7 +191,7 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                 </div>
               )}
 
-              {club.npcProfiles.length > 0 && (
+              {club.npcProfiles && club.npcProfiles.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Users className="h-4 w-4 text-primary" /> Resident NPCs
