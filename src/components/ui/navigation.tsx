@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/components/ui/use-toast";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
   Home,
   Users,
@@ -224,18 +225,21 @@ const Navigation = () => {
             className="h-8 w-auto object-contain"
           />
           
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Open navigation menu">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-80 p-0 bg-sidebar">
-              <div className="flex flex-col h-full">
-                <NavigationContent isMobile={true} />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeSwitcher />
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Open navigation menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80 p-0 bg-sidebar">
+                <div className="flex flex-col h-full">
+                  <NavigationContent isMobile={true} />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
 

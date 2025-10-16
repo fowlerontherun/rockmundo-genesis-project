@@ -124,6 +124,66 @@
     --twaater-purple: 270 80% 65%;
     --twaater-purple-hover: 270 80% 70%;
   }
+
+  /* Sunrise Theme - Warm Orange & Gold Palette */
+  [data-theme="sunrise"] {
+    --background: 20 45% 10%;
+    --foreground: 35 20% 92%;
+
+    --card: 22 40% 16%;
+    --card-foreground: 35 25% 90%;
+
+    --popover: 18 50% 12%;
+    --popover-foreground: 35 20% 94%;
+
+    --primary: 24 95% 58%;
+    --primary-foreground: 20 90% 12%;
+
+    --secondary: 30 35% 25%;
+    --secondary-foreground: 35 20% 92%;
+
+    --muted: 22 30% 20%;
+    --muted-foreground: 32 18% 72%;
+
+    --accent: 38 100% 60%;
+    --accent-foreground: 20 90% 10%;
+
+    --destructive: 348 79% 52%;
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 152 64% 48%;
+    --success-foreground: 20 90% 12%;
+
+    --warning: 43 96% 62%;
+    --warning-foreground: 20 90% 14%;
+
+    --border: 25 30% 22%;
+    --input: 25 28% 24%;
+    --ring: 24 95% 58%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(24 95% 58%), hsl(30 90% 20%));
+    --gradient-stage: linear-gradient(180deg, hsl(20 45% 10%) 0%, hsl(22 40% 16%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(38 100% 60%) 0%, hsl(20 45% 10%) 100%);
+
+    --shadow-electric: 0 0 24px hsl(24 95% 58% / 0.35);
+    --shadow-glow: 0 0 48px hsl(38 100% 60% / 0.25);
+
+    --sidebar-background: 18 50% 8%;
+    --sidebar-foreground: 35 22% 88%;
+    --sidebar-primary: 24 95% 58%;
+    --sidebar-primary-foreground: 20 90% 12%;
+    --sidebar-accent: 22 40% 18%;
+    --sidebar-accent-foreground: 35 24% 90%;
+    --sidebar-border: 25 30% 22%;
+    --sidebar-ring: 24 95% 58%;
+
+    --twaater-bg: 250 30% 12%;
+    --twaater-card: 250 25% 16%;
+    --twaater-border: 250 20% 25%;
+    --twaater-hover: 250 30% 20%;
+    --twaater-purple: 270 80% 65%;
+    --twaater-purple-hover: 270 80% 70%;
+  }
 }
 
 @layer base {
