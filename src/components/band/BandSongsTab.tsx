@@ -44,7 +44,8 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
         return;
       }
 
-      const memberIds = members.map(m => m.user_id);
+      // Filter out null user_ids from touring members
+      const memberIds = members.map(m => m.user_id).filter(id => id !== null);
 
       // Get familiarity data (includes all songs in band repertoire, including gifted ones)
       const { data: familiarityData } = await supabase
@@ -55,12 +56,32 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
       // Get all song IDs from familiarity data
       const familiaritySongIds = familiarityData?.map(f => f.song_id) || [];
 
-      // Get songs: both owned by members AND in familiarity (which includes gifted songs)
-      const { data: songsData } = await supabase
-        .from('songs')
-        .select('*')
-        .or(`user_id.in.(${memberIds.join(',')}),id.in.(${familiaritySongIds.join(',')})`)
-        .order('created_at', { ascending: false });
+      // Get songs from setlists as fallback
+      const { data: setlistSongs } = await supabase
+        .from('setlist_songs')
+        .select('song_id')
+        .in('setlist_id', await supabase
+          .from('setlists')
+          .select('id')
+          .eq('band_id', bandId)
+          .then(res => res.data?.map(s => s.id) || [])
+        );
+
+      const setlistSongIds = setlistSongs?.map(s => s.song_id) || [];
+      const allSongIds = [...new Set([...familiaritySongIds, ...setlistSongIds])];
+
+      // Build query for songs
+      let songsQuery = supabase.from('songs').select('*');
+      
+      if (memberIds.length > 0 && allSongIds.length > 0) {
+        songsQuery = songsQuery.or(`user_id.in.(${memberIds.join(',')}),id.in.(${allSongIds.join(',')})`);
+      } else if (memberIds.length > 0) {
+        songsQuery = songsQuery.in('user_id', memberIds);
+      } else if (allSongIds.length > 0) {
+        songsQuery = songsQuery.in('id', allSongIds);
+      }
+
+      const { data: songsData } = await songsQuery.order('created_at', { ascending: false });
 
       if (!songsData) {
         setLoading(false);

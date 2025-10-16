@@ -12,7 +12,7 @@ interface BandMemberCardProps {
 
 export function BandMemberCard({ member, isLeader, canManage, onRemove }: BandMemberCardProps) {
   const displayName = member.is_touring_member 
-    ? `${member.role} (AI)`
+    ? `${member.instrument_role} Player (Touring)`
     : (member.profiles?.display_name || member.profiles?.username || 'Unknown');
 
   return (
@@ -51,7 +51,7 @@ export function BandMemberCard({ member, isLeader, canManage, onRemove }: BandMe
 
           {canManage && !isLeader && onRemove && (
             <Button variant="destructive" size="sm" onClick={onRemove}>
-              Remove
+              {member.is_touring_member ? 'Sack' : 'Remove'}
             </Button>
           )}
         </div>
