@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Music, Disc, ShoppingBag, ListMusic, Package, Mic } from "lucide-react";
+import { Music, Disc, ShoppingBag, ListMusic, Package, Mic, PenLine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useQuery } from "@tanstack/react-query";
@@ -58,6 +58,14 @@ const MusicHub = () => {
   });
 
   const sections = [
+    {
+      title: "Songwriting Studio",
+      description: "Write and compose original songs from scratch",
+      icon: PenLine,
+      path: "/songwriting",
+      stats: "Create songs with themes, progressions, and lyrics",
+      color: "text-yellow-500",
+    },
     {
       title: "Song Catalog",
       description: "Manage and view all your completed songs",
