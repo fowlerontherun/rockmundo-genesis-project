@@ -2,9 +2,18 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTwaaterReactions } from "@/hooks/useTwaaterReactions";
+import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
 import { TwaatReplyDialog } from "./TwaatReplyDialog";
-import { Heart, Repeat2, BarChart2, BadgeCheck } from "lucide-react";
+import { TwaatReportDialog } from "./TwaatReportDialog";
+import { Heart, Repeat2, BarChart2, BadgeCheck, MoreHorizontal, Ban } from "lucide-react";
 
 interface TwaatCardProps {
   twaat: {
@@ -35,6 +44,7 @@ interface TwaatCardProps {
 
 export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const { toggleLike, toggleRetwaat } = useTwaaterReactions();
+  const { blockAccount, isBlocking, isAccountBlocked } = useTwaaterModeration(viewerAccountId);
 
   const handleLike = () => {
     toggleLike({ twaatId: twaat.id, accountId: viewerAccountId });
@@ -43,6 +53,18 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const handleRetwaat = () => {
     toggleRetwaat({ twaatId: twaat.id, accountId: viewerAccountId });
   };
+
+  const handleBlock = () => {
+    if (confirm(`Block @${twaat.account.handle}? You won't see their posts anymore.`)) {
+      blockAccount({
+        blockerAccountId: viewerAccountId,
+        blockedAccountId: twaat.account.id,
+      });
+    }
+  };
+
+  const isOwnPost = twaat.account.id === viewerAccountId;
+  const isBlocked = isAccountBlocked(twaat.account.id);
 
   return (
     <div className="border-b px-4 py-3 hover:bg-[hsl(var(--twaater-hover))] transition-colors cursor-pointer" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
@@ -53,14 +75,43 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             {twaat.account.display_name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="font-bold hover:underline truncate">{twaat.account.display_name}</span>
-              {twaat.account.verified && (
-                <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: 'hsl(var(--twaater-purple))' }} />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
+                <span className="font-bold hover:underline truncate">{twaat.account.display_name}</span>
+                {twaat.account.verified && (
+                  <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: 'hsl(var(--twaater-purple))' }} />
+                )}
+                <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                  @{twaat.account.handle} · {formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}
+                </span>
+              </div>
+
+              {!isOwnPost && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {!isBlocked && (
+                      <>
+                        <TwaatReportDialog
+                          twaatId={twaat.id}
+                          accountId={twaat.account.id}
+                          viewerAccountId={viewerAccountId}
+                          asMenuItem={true}
+                        />
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    <DropdownMenuItem onClick={handleBlock} disabled={isBlocking} className="text-destructive">
+                      <Ban className="h-4 w-4 mr-2" />
+                      {isBlocked ? "Blocked" : "Block @" + twaat.account.handle}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-              <span className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                @{twaat.account.handle} · {formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}
-              </span>
             </div>
 
             {/* Body */}

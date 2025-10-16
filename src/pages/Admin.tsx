@@ -14,6 +14,7 @@ import {
   Plane,
   Calendar,
   TrendingUp,
+  Shield,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -126,6 +127,13 @@ const adminSections = [
     href: "/admin/city-studios",
     action: "Manage studios",
     Icon: Music2,
+  },
+  {
+    title: "Twaater Moderation",
+    description: "Review reported content, manage filter words, and moderate user-generated posts.",
+    href: "/admin/twaater-moderation",
+    action: "Moderate content",
+    Icon: Shield,
   },
 ] as const;
 
