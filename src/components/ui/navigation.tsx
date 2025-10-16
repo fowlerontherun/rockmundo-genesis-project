@@ -74,7 +74,7 @@ const Navigation = () => {
         { icon: Music, label: "Performance", path: "/performance" },
         { icon: Calendar, label: "Gig Booking", path: "/gigs" },
         { icon: MapPin, label: "Tour Manager", path: "/tours" },
-        { icon: ListMusic, label: "Setlist Designer", path: "/setlists" },
+        { icon: ListMusic, label: "Setlist Manager", path: "/setlists" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: Award, label: "Awards", path: "/awards" },
         { icon: Building2, label: "Venue Management", path: "/venues" },
