@@ -1922,6 +1922,178 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_bids: {
+        Row: {
+          bid_amount: number
+          bid_status: string
+          bidder_user_id: string
+          created_at: string
+          id: string
+          listing_id: string
+        }
+        Insert: {
+          bid_amount: number
+          bid_status?: string
+          bidder_user_id: string
+          created_at?: string
+          id?: string
+          listing_id: string
+        }
+        Update: {
+          bid_amount?: number
+          bid_status?: string
+          bidder_user_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_bids_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_listings: {
+        Row: {
+          asking_price: number
+          buyout_price: number | null
+          created_at: string
+          current_bid: number | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          listing_status: string
+          listing_type: string
+          minimum_bid: number | null
+          royalty_percentage: number
+          seller_band_id: string | null
+          seller_user_id: string
+          song_id: string
+          updated_at: string
+        }
+        Insert: {
+          asking_price: number
+          buyout_price?: number | null
+          created_at?: string
+          current_bid?: number | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          listing_status?: string
+          listing_type?: string
+          minimum_bid?: number | null
+          royalty_percentage?: number
+          seller_band_id?: string | null
+          seller_user_id: string
+          song_id: string
+          updated_at?: string
+        }
+        Update: {
+          asking_price?: number
+          buyout_price?: number | null
+          created_at?: string
+          current_bid?: number | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          listing_status?: string
+          listing_type?: string
+          minimum_bid?: number | null
+          royalty_percentage?: number
+          seller_band_id?: string | null
+          seller_user_id?: string
+          song_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_seller_band_id_fkey"
+            columns: ["seller_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_transactions: {
+        Row: {
+          buyer_user_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          listing_id: string
+          royalty_percentage: number
+          sale_price: number
+          seller_user_id: string
+          song_id: string
+          transaction_status: string
+        }
+        Insert: {
+          buyer_user_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          listing_id: string
+          royalty_percentage?: number
+          sale_price: number
+          seller_user_id: string
+          song_id: string
+          transaction_status?: string
+        }
+        Update: {
+          buyer_user_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string
+          royalty_percentage?: number
+          sale_price?: number
+          seller_user_id?: string
+          song_id?: string
+          transaction_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_transactions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_achievements: {
         Row: {
           achievement_id: string
@@ -2508,22 +2680,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_player_streaming_platform"
-            columns: ["platform_id"]
-            isOneToOne: false
-            referencedRelation: "streaming_platforms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_streaming_accounts_platform_id_fkey"
-            columns: ["platform_id"]
-            isOneToOne: false
-            referencedRelation: "streaming_platforms"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       player_travel_history: {
         Row: {
@@ -2734,6 +2891,95 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playlist_submissions: {
+        Row: {
+          id: string
+          playlist_id: string
+          release_id: string
+          reviewed_at: string | null
+          submission_status: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          playlist_id: string
+          release_id: string
+          reviewed_at?: string | null
+          submission_status?: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          playlist_id?: string
+          release_id?: string
+          reviewed_at?: string | null
+          submission_status?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_submissions_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlist_submissions_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "song_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playlists: {
+        Row: {
+          acceptance_criteria: Json | null
+          boost_multiplier: number
+          created_at: string
+          curator_type: string
+          follower_count: number
+          id: string
+          platform_id: string
+          playlist_name: string
+          submission_cost: number | null
+        }
+        Insert: {
+          acceptance_criteria?: Json | null
+          boost_multiplier?: number
+          created_at?: string
+          curator_type?: string
+          follower_count?: number
+          id?: string
+          platform_id: string
+          playlist_name: string
+          submission_cost?: number | null
+        }
+        Update: {
+          acceptance_criteria?: Json | null
+          boost_multiplier?: number
+          created_at?: string
+          curator_type?: string
+          follower_count?: number
+          id?: string
+          platform_id?: string
+          playlist_name?: string
+          submission_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlists_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
             referencedColumns: ["id"]
           },
         ]
@@ -3662,6 +3908,80 @@ export type Database = {
           },
         ]
       }
+      song_releases: {
+        Row: {
+          band_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          platform_id: string
+          release_date: string
+          release_type: string
+          song_id: string
+          total_revenue: number
+          total_streams: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          platform_id: string
+          release_date?: string
+          release_type?: string
+          song_id: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          platform_id?: string
+          release_date?: string
+          release_type?: string
+          song_id?: string
+          total_revenue?: number
+          total_streams?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_releases_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_releases_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_releases_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_releases_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       song_sales_royalties: {
         Row: {
           buyer_id: string
@@ -4050,33 +4370,83 @@ export type Database = {
           },
         ]
       }
-      streaming_platforms: {
+      streaming_analytics: {
         Row: {
-          created_at: string | null
-          description: string | null
-          icon: string | null
+          created_at: string
+          date: string
           id: string
-          min_followers: number | null
-          name: string
-          revenue_per_play: number | null
+          new_followers: number
+          playlist_adds: number
+          release_id: string
+          revenue: number
+          streams: number
         }
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          icon?: string | null
+          created_at?: string
+          date: string
           id?: string
-          min_followers?: number | null
-          name: string
-          revenue_per_play?: number | null
+          new_followers?: number
+          playlist_adds?: number
+          release_id: string
+          revenue?: number
+          streams?: number
         }
         Update: {
-          created_at?: string | null
-          description?: string | null
-          icon?: string | null
+          created_at?: string
+          date?: string
           id?: string
-          min_followers?: number | null
-          name?: string
-          revenue_per_play?: number | null
+          new_followers?: number
+          playlist_adds?: number
+          release_id?: string
+          revenue?: number
+          streams?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_analytics_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "song_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      streaming_platforms: {
+        Row: {
+          base_payout_per_stream: number
+          created_at: string
+          genre_bonuses: Json | null
+          id: string
+          is_active: boolean
+          min_quality_requirement: number
+          platform_icon_url: string | null
+          platform_name: string
+          quality_multiplier: number
+          updated_at: string
+        }
+        Insert: {
+          base_payout_per_stream?: number
+          created_at?: string
+          genre_bonuses?: Json | null
+          id?: string
+          is_active?: boolean
+          min_quality_requirement?: number
+          platform_icon_url?: string | null
+          platform_name: string
+          quality_multiplier?: number
+          updated_at?: string
+        }
+        Update: {
+          base_payout_per_stream?: number
+          created_at?: string
+          genre_bonuses?: Json | null
+          id?: string
+          is_active?: boolean
+          min_quality_requirement?: number
+          platform_icon_url?: string | null
+          platform_name?: string
+          quality_multiplier?: number
+          updated_at?: string
         }
         Relationships: []
       }
