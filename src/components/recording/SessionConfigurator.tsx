@@ -26,6 +26,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
   const [orchestraSize, setOrchestraSize] = useState<'chamber' | 'small' | 'full' | null>(null);
   const [bandBalance, setBandBalance] = useState<number>(0);
   const [personalCash, setPersonalCash] = useState<number>(0);
+  const [bandName, setBandName] = useState<string>("");
   
   const createSession = useCreateRecordingSession();
 
@@ -36,12 +37,13 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
         // Fetch band_balance (now auto-synced with band_earnings via trigger)
         const { data: band, error: bandError } = await supabase
           .from('bands')
-          .select('band_balance')
+          .select('band_balance, name')
           .eq('id', bandId)
           .single();
         
         console.log('💰 Band balance fetch:', { band, bandError, bandId });
         setBandBalance(band?.band_balance || 0);
+        setBandName(band?.name || 'Unknown Band');
       }
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -77,17 +79,19 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
   const canAfford = availableBalance >= totalCost;
   const balanceShortfall = totalCost - availableBalance;
   
-  console.log('💰 Balance check:', { 
-    bandId, 
-    bandBalance, 
-    personalCash, 
-    availableBalance, 
-    totalCost, 
-    canAfford,
-    studioCost,
-    producerCost,
-    orchestraCost
-  });
+  useEffect(() => {
+    console.log('💰 RECORDING BALANCE CHECK:', { 
+      bandId, 
+      bandBalance, 
+      personalCash, 
+      availableBalance, 
+      totalCost, 
+      canAfford,
+      studioCost,
+      producerCost,
+      orchestraCost
+    });
+  }, [bandId, bandBalance, personalCash, availableBalance, totalCost, canAfford, studioCost, producerCost, orchestraCost]);
 
   const handleStartRecording = async () => {
     await createSession.mutateAsync({
@@ -209,14 +213,21 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
             <span>Total Cost</span>
             <span className="text-primary">${totalCost.toLocaleString()}</span>
           </div>
-          <div className="flex items-center justify-between text-sm pt-2 border-t">
-            <span className="text-muted-foreground flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              {bandId ? 'Band Balance' : 'Your Cash'}
-            </span>
-            <span className={`font-semibold ${canAfford ? 'text-green-600' : 'text-red-600'}`}>
-              ${availableBalance.toLocaleString()}
-            </span>
+          <div className="space-y-1 pt-2 border-t">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                {bandId ? `Band Balance (${bandName})` : 'Your Cash'}
+              </span>
+              <span className={`font-semibold ${canAfford ? 'text-green-600' : 'text-red-600'}`}>
+                ${availableBalance.toLocaleString()}
+              </span>
+            </div>
+            {bandId && (
+              <p className="text-xs text-muted-foreground">
+                Recording with {bandName}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
