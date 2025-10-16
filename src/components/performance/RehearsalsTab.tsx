@@ -23,6 +23,9 @@ export function RehearsalsTab() {
   const [activeRehearsal, setActiveRehearsal] = useState<BandRehearsal | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [duration, setDuration] = useState<string>('2');
+  const [selectedSong, setSelectedSong] = useState<string>('');
+  const [bandSongs, setBandSongs] = useState<any[]>([]);
+  const [songFamiliarity, setSongFamiliarity] = useState<Record<string, number>>({});
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
@@ -50,6 +53,31 @@ export function RehearsalsTab() {
       if (bandMembers && bandMembers.length > 0) {
         const band = (bandMembers[0] as any).bands;
         setUserBand(band);
+
+        // Load band's songs
+        const { data: songs, error: songsError } = await supabase
+          .from('songs')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .order('title');
+
+        if (songsError) throw songsError;
+        setBandSongs(songs || []);
+
+        // Load song familiarity
+        const { data: familiarityData, error: famError } = await supabase
+          .from('band_song_familiarity')
+          .select('song_id, familiarity_percentage')
+          .eq('band_id', band.id);
+
+        if (famError) throw famError;
+        
+        const familiarityMap: Record<string, number> = {};
+        familiarityData?.forEach((f) => {
+          familiarityMap[f.song_id] = f.familiarity_percentage || 0;
+        });
+        setSongFamiliarity(familiarityMap);
 
         // Check for active rehearsal
         const { data: rehearsal, error: rehearsalError } = await supabase
@@ -79,10 +107,10 @@ export function RehearsalsTab() {
   }, [loadData]);
 
   const handleBookRehearsal = async () => {
-    if (!userBand || !selectedRoom || !duration) {
+    if (!userBand || !selectedRoom || !duration || !selectedSong) {
       toast({
         title: 'Missing Information',
-        description: 'Please select a rehearsal room and duration',
+        description: 'Please select a rehearsal room, duration, and song to practice',
         variant: 'destructive',
       });
       return;
@@ -114,6 +142,7 @@ export function RehearsalsTab() {
       // Calculate rewards based on room quality and duration
       const chemistryGain = Math.floor((room.quality_rating / 10) * durationHours);
       const xpEarned = Math.floor(50 * durationHours * (room.equipment_quality / 100));
+      const familiarityGained = durationHours * 60; // Minutes of familiarity
 
       // Create rehearsal
       const { error: rehearsalError } = await supabase
@@ -127,6 +156,8 @@ export function RehearsalsTab() {
           total_cost: totalCost,
           chemistry_gain: chemistryGain,
           xp_earned: xpEarned,
+          selected_song_id: selectedSong,
+          familiarity_gained: familiarityGained,
         }]);
 
       if (rehearsalError) throw rehearsalError;
@@ -183,9 +214,44 @@ export function RehearsalsTab() {
 
       if (chemistryError) throw chemistryError;
 
+      // Update song familiarity if a song was selected
+      if (activeRehearsal.selected_song_id) {
+        const { data: existing } = await supabase
+          .from('band_song_familiarity')
+          .select('*')
+          .eq('band_id', userBand.id)
+          .eq('song_id', activeRehearsal.selected_song_id)
+          .maybeSingle();
+
+        const newMinutes = (existing?.familiarity_minutes || 0) + (activeRehearsal.familiarity_gained || 0);
+        
+        if (existing) {
+          await supabase
+            .from('band_song_familiarity')
+            .update({
+              familiarity_minutes: Math.min(60, newMinutes),
+              last_rehearsed_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('band_song_familiarity')
+            .insert({
+              band_id: userBand.id,
+              song_id: activeRehearsal.selected_song_id,
+              familiarity_minutes: Math.min(60, newMinutes),
+              last_rehearsed_at: new Date().toISOString(),
+            });
+        }
+      }
+
+      const familiarityMsg = activeRehearsal.selected_song_id 
+        ? ` and ${activeRehearsal.familiarity_gained} minutes of song familiarity`
+        : '';
+
       toast({
         title: 'Rehearsal Complete!',
-        description: `Gained ${activeRehearsal.chemistry_gain} chemistry and ${activeRehearsal.xp_earned} XP`,
+        description: `Gained ${activeRehearsal.chemistry_gain} chemistry, ${activeRehearsal.xp_earned} XP${familiarityMsg}`,
       });
 
       loadData();
@@ -301,9 +367,28 @@ export function RehearsalsTab() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="1">1 Hour</SelectItem>
                 <SelectItem value="2">2 Hours</SelectItem>
                 <SelectItem value="4">4 Hours</SelectItem>
-                <SelectItem value="6">6 Hours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="song">Song to Practice</Label>
+            <Select value={selectedSong} onValueChange={setSelectedSong}>
+              <SelectTrigger id="song">
+                <SelectValue placeholder="Select a song to rehearse" />
+              </SelectTrigger>
+              <SelectContent>
+                {bandSongs.map((song) => {
+                  const familiarity = songFamiliarity[song.id] || 0;
+                  return (
+                    <SelectItem key={song.id} value={song.id}>
+                      {song.title} - {familiarity}% familiarity
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -335,6 +420,15 @@ export function RehearsalsTab() {
                   +{Math.floor(50 * parseInt(duration) * (selectedRoomData.equipment_quality / 100))}
                 </span>
               </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <Music2 className="h-4 w-4" />
+                  Song Familiarity Gain
+                </span>
+                <span className="text-purple-500">
+                  +{parseInt(duration) * 60} minutes
+                </span>
+              </div>
             </div>
           )}
 
@@ -345,7 +439,7 @@ export function RehearsalsTab() {
 
           <Button
             onClick={handleBookRehearsal}
-            disabled={booking || !selectedRoom || totalCost > userBand.band_balance}
+            disabled={booking || !selectedRoom || !selectedSong || totalCost > (userBand.band_balance || 0)}
             className="w-full"
           >
             {booking ? 'Booking...' : `Book Rehearsal ($${totalCost})`}

@@ -559,10 +559,12 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           duration_hours: number
+          familiarity_gained: number | null
           id: string
           rehearsal_room_id: string
           scheduled_end: string
           scheduled_start: string
+          selected_song_id: string | null
           status: string
           total_cost: number
           xp_earned: number | null
@@ -573,10 +575,12 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           duration_hours: number
+          familiarity_gained?: number | null
           id?: string
           rehearsal_room_id: string
           scheduled_end: string
           scheduled_start?: string
+          selected_song_id?: string | null
           status?: string
           total_cost: number
           xp_earned?: number | null
@@ -587,10 +591,12 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           duration_hours?: number
+          familiarity_gained?: number | null
           id?: string
           rehearsal_room_id?: string
           scheduled_end?: string
           scheduled_start?: string
+          selected_song_id?: string | null
           status?: string
           total_cost?: number
           xp_earned?: number | null
@@ -608,6 +614,75 @@ export type Database = {
             columns: ["rehearsal_room_id"]
             isOneToOne: false
             referencedRelation: "rehearsal_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_rehearsals_selected_song_id_fkey"
+            columns: ["selected_song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "band_rehearsals_selected_song_id_fkey"
+            columns: ["selected_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_song_familiarity: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          familiarity_minutes: number
+          familiarity_percentage: number | null
+          id: string
+          last_rehearsed_at: string | null
+          song_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          familiarity_minutes?: number
+          familiarity_percentage?: number | null
+          id?: string
+          last_rehearsed_at?: string | null
+          song_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          familiarity_minutes?: number
+          familiarity_percentage?: number | null
+          id?: string
+          last_rehearsed_at?: string | null
+          song_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_song_familiarity_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_song_familiarity_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "band_song_familiarity_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
             referencedColumns: ["id"]
           },
         ]
