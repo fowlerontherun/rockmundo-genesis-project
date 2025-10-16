@@ -85,10 +85,12 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
       <CardContent className="space-y-4">
         {nightClubs.map((club) => {
           const qualityLabel = getQualityLabel(club.qualityLevel);
-          const fameRequirementLabel = fameFormatter.format(Math.max(0, club.djSlot.fameRequirement));
+          const fameRequirementLabel = club.djSlot?.fameRequirement 
+            ? fameFormatter.format(Math.max(0, club.djSlot.fameRequirement))
+            : "TBD";
           const coverChargeLabel = formatCurrencyValue(club.coverCharge);
-          const djPayoutLabel = formatCurrencyValue(club.djSlot.payout ?? null);
-          const setLengthLabel = formatSetLength(club.djSlot.setLengthMinutes ?? null);
+          const djPayoutLabel = formatCurrencyValue(club.djSlot?.payout ?? null);
+          const setLengthLabel = formatSetLength(club.djSlot?.setLengthMinutes ?? null);
           const liveInteractionsLabel = club.liveInteractionsEnabled ? "Live interactions enabled" : "Live interactions paused";
 
 
@@ -117,7 +119,7 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                       </span>
                     )}
                     {coverChargeLabel && <span>Cover {coverChargeLabel}</span>}
-                    {club.djSlot.schedule && <span>Slots {club.djSlot.schedule}</span>}
+                    {club.djSlot?.schedule && <span>Slots {club.djSlot.schedule}</span>}
                     {djPayoutLabel && <span>Pay {djPayoutLabel}</span>}
                     {setLengthLabel && <span>{setLengthLabel}</span>}
                   </div>
