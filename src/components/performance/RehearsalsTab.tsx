@@ -54,12 +54,21 @@ export function RehearsalsTab() {
         const band = (bandMembers[0] as any).bands;
         setUserBand(band);
 
-        // Load band's songs
+        // Load songs from all band members
+        const { data: members, error: membersError } = await supabase
+          .from('band_members')
+          .select('user_id')
+          .eq('band_id', band.id);
+
+        if (membersError) throw membersError;
+
+        const memberUserIds = members?.map(m => m.user_id) || [];
+        
         const { data: songs, error: songsError } = await supabase
           .from('songs')
           .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'completed')
+          .in('user_id', memberUserIds)
+          .in('status', ['completed', 'recorded'])
           .order('title');
 
         if (songsError) throw songsError;
@@ -434,8 +443,14 @@ export function RehearsalsTab() {
 
           <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
             <span>Band Balance:</span>
-            <span className="font-semibold">${userBand.band_balance}</span>
+            <span className="font-semibold">${userBand.band_balance ?? 0}</span>
           </div>
+          
+          {bandSongs.length === 0 && (
+            <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-600 dark:text-amber-400">
+              No completed songs available. Create and complete a song first.
+            </div>
+          )}
 
           <Button
             onClick={handleBookRehearsal}
