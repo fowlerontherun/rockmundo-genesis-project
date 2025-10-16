@@ -38,17 +38,22 @@ const SetlistManager = () => {
 
       const { data: memberData, error: memberError } = await supabase
         .from("band_members")
-        .select("band_id, bands!band_members_band_id_fkey(*)")
+        .select("band_id, bands!band_id(*)")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (memberData) return memberData.bands;
+      console.log("Member data:", memberData);
+
+      if (memberData?.bands) return memberData.bands;
 
       const { data: leaderData, error: leaderError } = await supabase
         .from("bands")
         .select("*")
         .eq("leader_id", user.id)
+        .eq("status", "active")
         .maybeSingle();
+
+      console.log("Leader data:", leaderData);
 
       return leaderData;
     },
