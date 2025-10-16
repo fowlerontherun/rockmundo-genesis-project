@@ -33,18 +33,23 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
   useEffect(() => {
     const fetchBalances = async () => {
       if (bandId) {
-        // Calculate band balance from earnings (same as BandEarnings component)
-        const { data: earningsData, error: earningsError } = await supabase
-          .from('band_earnings')
-          .select('amount')
-          .eq('band_id', bandId);
+        // Fetch band_balance (now auto-synced with band_earnings via trigger)
+        const { data: band, error: bandError } = await supabase
+          .from('bands')
+          .select('band_balance')
+          .eq('id', bandId)
+          .single();
         
-        console.log('Band earnings fetch:', { earningsData, earningsError, bandId });
-        const calculatedBalance = earningsData?.reduce((sum, e) => sum + e.amount, 0) || 0;
-        setBandBalance(calculatedBalance);
+        console.log('💰 Band balance fetch:', { band, bandError, bandId });
+        setBandBalance(band?.band_balance || 0);
       }
-      const { data: profile, error: profileError } = await supabase.from('profiles').select('cash').eq('user_id', userId).single();
-      console.log('Profile cash fetch:', { profile, profileError, userId });
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('cash')
+        .eq('user_id', userId)
+        .single();
+      
+      console.log('💵 Profile cash fetch:', { profile, profileError, userId });
       setPersonalCash(profile?.cash || 0);
     };
     fetchBalances();
