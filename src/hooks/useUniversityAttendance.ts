@@ -244,9 +244,10 @@ export function useUniversityAttendance(profileId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["current_enrollment_full"] });
       queryClient.invalidateQueries({ queryKey: ["skill_progress"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["activity_feed"] });
       toast({
-        title: "Attending Class!",
-        description: `You earned ${data.xpEarned} XP! Class ends at 2 PM.`,
+        title: "Class Attended! 📚",
+        description: `You earned ${data.xpEarned} XP! Your skill is improving.`,
       });
     },
     onError: (error: any) => {
@@ -296,8 +297,8 @@ export function useUniversityAttendance(profileId: string | undefined) {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // Can attend between 9:45 AM and 2 PM
-    return currentHour >= 9 && currentHour < 14;
+    // Can attend between 10 AM and 2 PM
+    return currentHour >= 10 && currentHour < 14;
   };
 
   return {

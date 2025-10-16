@@ -11,6 +11,7 @@ import { ArrowLeft, GraduationCap, Clock, DollarSign, TrendingUp, Users, Chevron
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
 import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
+import { AttendanceCard } from "@/components/university/AttendanceCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useUniversityAttendance } from "@/hooks/useUniversityAttendance";
 import { format } from "date-fns";
@@ -201,9 +202,10 @@ export default function UniversityDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
+      queryClient.invalidateQueries({ queryKey: ["current_enrollment_full"] });
       toast({
-        title: "Enrollment Successful!",
-        description: "You're enrolled! Classes start at 10am tomorrow.",
+        title: "Enrollment Successful! 🎓",
+        description: "You're enrolled! Enable auto-attend or attend class between 10 AM - 2 PM daily.",
       });
     },
     onError: (error: any) => {
@@ -282,6 +284,7 @@ export default function UniversityDetail() {
 
   const {
     activityStatus: universityActivityStatus,
+    todayAttendance,
     canAttendClass,
     attendClass,
     isAttending,
@@ -303,14 +306,6 @@ export default function UniversityDetail() {
           Back to Education
         </Button>
 
-        {universityActivityStatus && (
-          <Alert>
-            <Clock className="h-4 w-4" />
-            <AlertDescription>
-              You're currently in class. Class ends at {format(new Date(universityActivityStatus.ends_at), 'h:mm a')}
-            </AlertDescription>
-          </Alert>
-        )}
 
         {/* Show enrollment progress if user is enrolled */}
         {currentEnrollment && (
@@ -322,47 +317,16 @@ export default function UniversityDetail() {
 
             {/* Attend Class Section - only show if enrolled at THIS university */}
             {currentEnrollment.university_id === id && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CalendarCheck className="h-5 w-5" />
-                    Class Attendance
-                  </CardTitle>
-                  <CardDescription>
-                    Attend class between 10 AM - 2 PM to earn daily XP
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="auto-attend">Auto-attend classes</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Automatically mark attendance at 10 AM daily
-                      </p>
-                    </div>
-                    <Switch
-                      id="auto-attend"
-                      checked={autoAttendEnabled}
-                      onCheckedChange={() => toggleAutoAttend()}
-                      disabled={isTogglingAuto}
-                    />
-                  </div>
-
-                  <Button
-                    className="w-full"
-                    onClick={() => attendClass()}
-                    disabled={!canAttendClass || isAttending || !!universityActivityStatus}
-                  >
-                    {universityActivityStatus
-                      ? "Currently in Class"
-                      : isAttending
-                      ? "Marking Attendance..."
-                      : !canAttendClass
-                      ? "Not Class Time (10 AM - 2 PM)"
-                      : "Attend Class"}
-                  </Button>
-                </CardContent>
-              </Card>
+              <AttendanceCard
+                canAttendClass={canAttendClass}
+                isAttending={isAttending}
+                activityStatus={universityActivityStatus}
+                autoAttendEnabled={autoAttendEnabled}
+                todayAttendance={todayAttendance}
+                onAttendClass={attendClass}
+                onToggleAutoAttend={toggleAutoAttend}
+                isTogglingAuto={isTogglingAuto}
+              />
             )}
 
             {currentEnrollment.university_id !== id && (
