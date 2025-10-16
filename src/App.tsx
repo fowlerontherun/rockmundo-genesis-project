@@ -174,7 +174,7 @@ function App() {
                     <Route path="busking" element={<Navigate to="/performance?tab=busking" replace />} />
                     <Route path="jams" element={<Navigate to="/performance?tab=jams" replace />} />
                     <Route path="world" element={<WorldEnvironment />} />
-                    <Route path="world-map" element={<WorldMap />} />
+                    {/* <Route path="world-map" element={<WorldMap />} /> */}
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />

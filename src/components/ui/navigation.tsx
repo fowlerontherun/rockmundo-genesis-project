@@ -82,7 +82,6 @@ const Navigation = () => {
       title: "🌍 World & Travel",
       items: [
         { icon: Globe, label: "Cities Explorer", path: "/cities" },
-        { icon: MapPin, label: "World Map", path: "/world-map" },
         { icon: Plane, label: "Travel Planner", path: "/travel" },
         { icon: Building2, label: "Current City", path: cityOverviewPath },
       ],

@@ -116,10 +116,10 @@ export default function WorldEnvironment() {
               <p className="text-muted-foreground">Explore music hubs around the world</p>
             </div>
           </div>
-          <Button onClick={() => navigate("/world-map")} variant="outline">
+          {/* <Button onClick={() => navigate("/world-map")} variant="outline">
             <MapPin className="h-4 w-4 mr-2" />
             View Map
-          </Button>
+          </Button> */}
         </div>
 
         <div className="grid gap-3 md:grid-cols-4">
