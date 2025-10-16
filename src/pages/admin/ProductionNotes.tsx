@@ -77,7 +77,7 @@ const ProductionNotes = () => {
     mutationFn: async (data: z.infer<typeof productionNoteSchema>) => {
       const { data: result, error } = await supabase
         .from('setlist_production_notes')
-        .insert([data])
+        .insert([data as any])
         .select()
         .single();
       if (error) throw error;
@@ -98,7 +98,7 @@ const ProductionNotes = () => {
     mutationFn: async ({ id, data }: { id: string; data: z.infer<typeof productionNoteSchema> }) => {
       const { data: result, error } = await supabase
         .from('setlist_production_notes')
-        .update(data)
+        .update(data as any)
         .eq('id', id)
         .select()
         .single();
