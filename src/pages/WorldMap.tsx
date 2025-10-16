@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Globe2, MapPin } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 import mapBackground from "@/assets/world-map.svg";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,24 @@ const WorldMap = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: currentLocation } = useQuery({
+    queryKey: ["current-location"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("current_city_id")
+        .eq("user_id", user.id)
+        .single();
+      
+      return profile?.current_city_id || null;
+    },
+  });
+
   const cities = data?.cities ?? [];
+  const currentCityId = currentLocation;
 
   const pins = useMemo(() => {
     if (!cities.length) {
@@ -31,6 +49,7 @@ const WorldMap = () => {
         left: string;
         top: string;
         description?: string;
+        isCurrentCity: boolean;
       }>;
     }
 
@@ -43,6 +62,7 @@ const WorldMap = () => {
       const description = city.dominant_genre
         ? `Dominant genre: ${city.dominant_genre}`
         : "Click to explore this city's opportunities.";
+      const isCurrentCity = city.id === currentCityId;
 
       return {
         id: city.id,
@@ -50,9 +70,10 @@ const WorldMap = () => {
         left,
         top,
         description,
+        isCurrentCity,
       };
     });
-  }, [cities]);
+  }, [cities, currentCityId]);
 
   const renderMap = () => {
     if (isLoading) {
@@ -120,13 +141,18 @@ const WorldMap = () => {
                       <button
                         type="button"
                         onClick={() => navigate(`/cities/${encodeURIComponent(pin.id)}`)}
-                        className="group absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/90 px-3 py-1 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/20 ring-1 ring-primary/40 transition hover:-translate-y-2 hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                        className={`group absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-xs font-semibold shadow-lg ring-1 transition hover:-translate-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary ${
+                          pin.isCurrentCity
+                            ? "bg-green-500 text-white shadow-green-500/30 ring-green-400/60 animate-pulse"
+                            : "bg-primary/90 text-primary-foreground shadow-primary/20 ring-primary/40 hover:bg-primary"
+                        }`}
                         style={{ left: pin.left, top: pin.top }}
                         aria-label={`Open details for ${pin.label}`}
                       >
                         <span className="pointer-events-none flex items-center gap-1">
                           <MapPin className="h-3.5 w-3.5 transition-transform group-hover:scale-110" aria-hidden="true" />
                           <span>{pin.label}</span>
+                          {pin.isCurrentCity && <span className="ml-1">📍</span>}
                         </span>
                       </button>
                     </TooltipTrigger>

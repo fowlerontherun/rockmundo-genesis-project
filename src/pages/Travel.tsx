@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { MapPin, Clock, DollarSign, History } from "lucide-react";
+import { useState, useEffect, useContext } from "react";
+import { MapPin, Clock, DollarSign, History, Plane, Train, Bus, Ship } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { useContext } from "react";
 import { AuthContext } from "@/hooks/use-auth-context";
+import { TravelBookingDialog } from "@/components/travel/TravelBookingDialog";
+import { getAvailableRoutes } from "@/utils/travelSystem";
 
 interface TravelHistoryEntry {
   id: string;
@@ -22,11 +23,20 @@ interface TravelHistoryEntry {
   created_at: string;
 }
 
+const TRANSPORT_ICONS = {
+  train: Train,
+  plane: Plane,
+  bus: Bus,
+  ship: Ship,
+} as const;
+
 const Travel = () => {
   const { user } = useContext(AuthContext);
   const [currentCity, setCurrentCity] = useState<any>(null);
   const [travelHistory, setTravelHistory] = useState<TravelHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
 
   useEffect(() => {
     const loadTravelData = async () => {
@@ -69,6 +79,23 @@ const Travel = () => {
     loadTravelData();
   }, [user]);
 
+  useEffect(() => {
+    if (currentCity?.id) {
+      loadAvailableRoutes();
+    }
+  }, [currentCity]);
+
+  const loadAvailableRoutes = async () => {
+    if (!currentCity?.id) return;
+    const routes = await getAvailableRoutes(currentCity.id);
+    setAvailableRoutes(routes);
+  };
+
+  const getTransportIcon = (type: string) => {
+    const Icon = TRANSPORT_ICONS[type.toLowerCase() as keyof typeof TRANSPORT_ICONS] || Train;
+    return <Icon className="h-4 w-4" />;
+  };
+
   const formatDateTime = (dateString: string) => {
     return new Intl.DateTimeFormat(undefined, {
       month: "short",
@@ -98,11 +125,17 @@ const Travel = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Travel Hub</h1>
-        <p className="text-muted-foreground">
-          Manage your location and plan your journey across the music world.
-        </p>
+      <header className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Travel Hub</h1>
+          <p className="text-muted-foreground">
+            Manage your location and plan your journey across the music world.
+          </p>
+        </div>
+        <Button onClick={() => setBookingDialogOpen(true)} size="lg">
+          <Plane className="h-4 w-4 mr-2" />
+          Book Travel
+        </Button>
       </header>
 
       <Card className="border-primary/20 bg-primary/5">
@@ -148,23 +181,70 @@ const Travel = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Travel Between Cities</CardTitle>
-          <CardDescription>
-            More cities are being added to the map. Soon you'll be able to travel between major music hubs worldwide!
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <Clock className="h-4 w-4" />
-            <AlertTitle>Coming Soon</AlertTitle>
-            <AlertDescription>
-              Inter-city travel will be available once more cities are added to the system. For now, explore your current city and prepare for your future tours!
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
+      {currentCity && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Available Routes from {currentCity.name}
+            </CardTitle>
+            <CardDescription>Choose your next destination</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {availableRoutes.length === 0 ? (
+              <Alert>
+                <Clock className="h-4 w-4" />
+                <AlertTitle>No Routes Available</AlertTitle>
+                <AlertDescription>
+                  No direct routes are available from this city yet. Check back later as we expand our travel network!
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="grid gap-3">
+                {availableRoutes.map((route) => (
+                  <Card key={route.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-full bg-primary/10 p-2">
+                            {getTransportIcon(route.transport_type)}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold">
+                              {route.to_city?.name}, {route.to_city?.country}
+                            </h4>
+                            <p className="text-sm text-muted-foreground capitalize">
+                              via {route.transport_type}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {route.duration_hours}h
+                            </div>
+                            <div className="flex items-center gap-1 text-sm font-semibold">
+                              <DollarSign className="h-3 w-3" />
+                              {route.base_cost}
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm"
+                            onClick={() => setBookingDialogOpen(true)}
+                          >
+                            Book
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {travelHistory.length > 0 && (
         <Card>
@@ -218,6 +298,13 @@ const Travel = () => {
           </CardContent>
         </Card>
       )}
+
+      <TravelBookingDialog
+        open={bookingDialogOpen}
+        onOpenChange={setBookingDialogOpen}
+        currentCityId={currentCity?.id || null}
+        currentCityName={currentCity ? `${currentCity.name}, ${currentCity.country}` : undefined}
+      />
     </div>
   );
 };
