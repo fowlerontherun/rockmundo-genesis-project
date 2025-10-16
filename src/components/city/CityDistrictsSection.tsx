@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface District {
   id: string;
+  city_id: string;
   name: string;
   description: string | null;
   vibe: string | null;
@@ -13,10 +14,20 @@ interface District {
 }
 
 interface CityDistrictsSectionProps {
+  cityId?: string;
   districts: District[];
+  onDistrictAdded?: () => void;
 }
 
-export const CityDistrictsSection = ({ districts }: CityDistrictsSectionProps) => {
+import { CityDistrictsManagement } from "./CityDistrictsManagement";
+
+export const CityDistrictsSection = ({ cityId, districts, onDistrictAdded }: CityDistrictsSectionProps) => {
+  // If cityId and onDistrictAdded are provided, show the admin management view
+  if (cityId && onDistrictAdded) {
+    return <CityDistrictsManagement cityId={cityId} districts={districts} onDistrictAdded={onDistrictAdded} />;
+  }
+
+  // Otherwise show the read-only public view
   if (!districts.length) {
     return (
       <Card>

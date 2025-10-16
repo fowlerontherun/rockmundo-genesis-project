@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Pencil, PlusCircle, Trash2 } from "lucide-react";
+import { Loader2, Pencil, PlusCircle, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { CityDistrictsSection } from "@/components/city/CityDistrictsSection";
 
 import { AdminRoute } from "@/components/AdminRoute";
 import { Badge } from "@/components/ui/badge";
@@ -190,6 +191,8 @@ const CitiesAdmin = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCity, setEditingCity] = useState<CityRow | null>(null);
   const [deletingCityId, setDeletingCityId] = useState<string | null>(null);
+  const [expandedCityId, setExpandedCityId] = useState<string | null>(null);
+  const [districts, setDistricts] = useState<Record<string, any[]>>({});
 
   const cityForm = useCityForm();
 
@@ -219,6 +222,37 @@ const CitiesAdmin = () => {
       setIsLoading(false);
     }
   }, [toast]);
+
+  const fetchDistricts = useCallback(async (cityId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("city_districts")
+        .select("*")
+        .eq("city_id", cityId)
+        .order("name");
+
+      if (error) throw error;
+      setDistricts(prev => ({ ...prev, [cityId]: data || [] }));
+    } catch (error) {
+      console.error("Error fetching districts:", error);
+      toast({
+        variant: "destructive",
+        title: "Unable to load districts",
+        description: "Failed to fetch districts for this city.",
+      });
+    }
+  }, [toast]);
+
+  const handleCityExpand = useCallback(async (cityId: string) => {
+    if (expandedCityId === cityId) {
+      setExpandedCityId(null);
+    } else {
+      setExpandedCityId(cityId);
+      if (!districts[cityId]) {
+        await fetchDistricts(cityId);
+      }
+    }
+  }, [expandedCityId, districts, fetchDistricts]);
 
   useEffect(() => {
     fetchCities();
@@ -371,12 +405,25 @@ const CitiesAdmin = () => {
                     </TableHeader>
                     <TableBody>
                       {cities.map((city) => (
-                        <TableRow key={city.id}>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">{city.name ?? "Unnamed city"}</div>
-                            </div>
-                          </TableCell>
+                        <>
+                          <TableRow key={city.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => handleCityExpand(city.id)}
+                                >
+                                  {expandedCityId === city.id ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <div className="font-medium">{city.name ?? "Unnamed city"}</div>
+                              </div>
+                            </TableCell>
                           <TableCell>{city.country ?? "—"}</TableCell>
                           <TableCell>{city.dominant_genre ?? "—"}</TableCell>
                           <TableCell className="text-right">
@@ -415,6 +462,18 @@ const CitiesAdmin = () => {
                             </div>
                           </TableCell>
                         </TableRow>
+                        {expandedCityId === city.id && (
+                          <TableRow>
+                            <TableCell colSpan={10} className="bg-muted/30 p-0">
+                              <CityDistrictsSection 
+                                cityId={city.id}
+                                districts={districts[city.id] || []}
+                                onDistrictAdded={() => fetchDistricts(city.id)}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </>
                       ))}
                     </TableBody>
                   </Table>
