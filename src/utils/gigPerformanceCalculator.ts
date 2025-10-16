@@ -6,6 +6,7 @@ export interface PerformanceFactors {
   crewSkillLevel: number;     // 0-100 average of all crew
   memberSkillAverage: number; // 0-150 from band skill calculator
   venueCapacityUsed: number;  // 0-100 percentage
+  productionNotesBonus?: number; // 0-0.30 (0-30% bonus from production notes)
 }
 
 export interface SongPerformanceResult {
@@ -69,8 +70,11 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
   // Add random variance (±5%) for realism
   const variance = 0.95 + (Math.random() * 0.1);
   
+  // Apply production notes bonus
+  const productionMultiplier = 1 + (factors.productionNotesBonus || 0);
+  
   // Convert to 25-star scale
-  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance;
+  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier;
   const clampedScore = Math.max(0, Math.min(25, finalScore));
   
   // Determine crowd response based on score
@@ -107,7 +111,8 @@ export function calculateAttendanceForecast(
   venueCapacity: number,
   venuePrestige: number,
   ticketPrice: number,
-  setlistQuality: number
+  setlistQuality: number,
+  productionNotesAttendanceBonus: number = 0
 ): {
   pessimistic: number;
   realistic: number;
@@ -141,9 +146,12 @@ export function calculateAttendanceForecast(
   // Setlist quality bonus (1.0 to 1.2x)
   const setlistBonus = 1 + Math.min(0.2, setlistQuality / 1000);
   
+  // Production notes attendance bonus (1.0 to 1.3x)
+  const productionBonus = 1 + productionNotesAttendanceBonus;
+  
   // Base expected attendance
   const baseAttendance = venueCapacity * fameMultiplier * venueMatchPenalty * 
-                         priceDemandMultiplier * setlistBonus;
+                         priceDemandMultiplier * setlistBonus * productionBonus;
   
   // Add variance for estimates
   return {
@@ -157,7 +165,8 @@ export function calculateMerchSales(
   attendance: number,
   bandFame: number,
   performanceRating: number,
-  merchItems: Array<{ selling_price: number; stock_quantity: number; item_type: string }>
+  merchItems: Array<{ selling_price: number; stock_quantity: number; item_type: string }>,
+  productionNotesMerchBonus: number = 0
 ): { totalRevenue: number; itemsSold: number } {
   if (merchItems.length === 0 || merchItems.every(item => item.stock_quantity === 0)) {
     return { totalRevenue: 0, itemsSold: 0 };
@@ -166,7 +175,8 @@ export function calculateMerchSales(
   // Purchase rate: 5-15% of attendees
   const basePurchaseRate = 0.05 + (Math.min(1, bandFame / 5000) * 0.05);
   const performanceBonus = Math.min(1.5, performanceRating / 18);
-  const actualPurchaseRate = basePurchaseRate * performanceBonus;
+  const productionBonus = 1 + productionNotesMerchBonus;
+  const actualPurchaseRate = basePurchaseRate * performanceBonus * productionBonus;
   
   const numberOfBuyers = Math.round(attendance * actualPurchaseRate);
   

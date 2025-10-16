@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -17,7 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, Trash2, Music } from "lucide-react";
+import { Plus, GripVertical, Trash2, Music, Clock } from "lucide-react";
+import { calculateSetlistDuration, formatDuration } from "@/utils/setlistDuration";
 import {
   Select,
   SelectContent,
@@ -47,7 +48,7 @@ export const SetlistSongManager = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("songs")
-        .select("id, title, genre, quality_score")
+        .select("id, title, genre, quality_score, duration_seconds, duration_display")
         .eq("band_id", bandId)
         .order("title");
 
@@ -77,6 +78,13 @@ export const SetlistSongManager = ({
 
   const songCount = setlistSongs?.length || 0;
 
+  const totalDuration = useMemo(() => {
+    if (!setlistSongs) return null;
+    return calculateSetlistDuration(setlistSongs.map(ss => ({
+      duration_seconds: ss.songs?.duration_seconds
+    })));
+  }, [setlistSongs]);
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
@@ -88,10 +96,16 @@ export const SetlistSongManager = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant={songCount >= 6 ? "default" : "secondary"}>
               {songCount} {songCount === 1 ? "song" : "songs"}
             </Badge>
+            {totalDuration && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {totalDuration.displayTime} total
+              </Badge>
+            )}
             {songCount < 6 && (
               <span className="text-sm text-muted-foreground">
                 Add {6 - songCount} more to book gigs
@@ -149,6 +163,12 @@ export const SetlistSongManager = ({
                       <div className="flex items-baseline gap-2">
                         <span className="font-medium">{index + 1}.</span>
                         <span className="font-medium">{ss.songs?.title || "Unknown Song"}</span>
+                        {ss.songs?.duration_display && (
+                          <Badge variant="outline" className="text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {ss.songs.duration_display}
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {ss.songs?.genre} • Quality: {ss.songs?.quality_score || "N/A"}

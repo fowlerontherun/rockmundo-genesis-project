@@ -74,6 +74,21 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/production-notes'}>
+            <CardHeader>
+              <CardTitle>Production Notes</CardTitle>
+              <CardDescription>Manage setlist production elements</CardDescription>
+            </CardHeader>
+          </Card>
+          <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/song-gifts'}>
+            <CardHeader>
+              <CardTitle>Song Gifts</CardTitle>
+              <CardDescription>Gift songs to bands</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+
         <Card className="border-primary/20">
           <CardHeader>
             <CardTitle>Skill Definitions</CardTitle>

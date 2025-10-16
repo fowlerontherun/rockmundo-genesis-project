@@ -45,7 +45,7 @@ import {
   Trash2,
   Play,
   CheckCircle2,
-  Clock,
+  Clock as ClockIcon,
   NotebookPen,
   Trophy,
   Filter,
@@ -80,6 +80,8 @@ interface Song {
   co_writers?: string[] | null;
   split_percentages?: number[] | null;
   rating_revealed_at?: string | null;
+  duration_seconds?: number | null;
+  duration_display?: string | null;
 }
 
 interface ProjectFormState {
@@ -149,10 +151,12 @@ const SONG_SELECT_VARIANTS: ReadonlyArray<ReadonlyArray<string>> = [
     "revenue",
     "release_date",
     "rating_revealed_at",
+    "duration_seconds",
+    "duration_display",
   ],
-  ["id", "title", "genre", "status", "quality_score", "song_rating", "release_date", "rating_revealed_at"],
-  ["id", "title", "genre", "status", "quality_score", "song_rating"],
-  ["id", "title", "genre", "status"],
+  ["id", "title", "genre", "status", "quality_score", "song_rating", "release_date", "rating_revealed_at", "duration_seconds", "duration_display"],
+  ["id", "title", "genre", "status", "quality_score", "song_rating", "duration_seconds", "duration_display"],
+  ["id", "title", "genre", "status", "duration_seconds", "duration_display"],
 ];
 
 type SongFilterStrategy = {
@@ -1736,7 +1740,7 @@ const Songwriting = () => {
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 Focus Minutes Logged
-                <Clock className="h-4 w-4" />
+                <ClockIcon className="h-4 w-4" />
               </div>
               <p className="mt-2 text-2xl font-semibold">{formatNumber.format(focusMinutes)}</p>
               <p className="text-xs text-muted-foreground">Cumulative deep work invested across all projects.</p>
@@ -2030,7 +2034,7 @@ const Songwriting = () => {
                       )}
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="h-4 w-4" />
+                        <ClockIcon className="h-4 w-4" />
                         <span className={lockState.locked ? "text-amber-600" : "text-emerald-600"}>{lockState.message}</span>
                       </div>
 
@@ -2218,7 +2222,7 @@ const Songwriting = () => {
                           onClick={() => handlePauseSession(project)}
                           disabled={pauseSession.isPending}
                         >
-                          <Clock className="mr-1 h-3 w-3" /> Pause
+                          <ClockIcon className="mr-1 h-3 w-3" /> Pause
                         </Button>
                       )}
                       <Button

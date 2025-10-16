@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle } from "lucide-react";
+import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
 import { calculateAttendanceForecast } from "@/utils/gigPerformanceCalculator";
 import { GIG_SLOTS, getSlotBadgeVariant } from "@/utils/gigSlots";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
@@ -19,6 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/supabase-types";
+import { calculateSetlistDuration, validateSetlistForSlot } from "@/utils/setlistDuration";
+import { useSetlistSongs } from "@/hooks/useSetlists";
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type BandRow = Database['public']['Tables']['bands']['Row'];
@@ -27,6 +29,12 @@ interface Setlist {
   id: string;
   name: string;
   song_count: number;
+}
+
+interface SetlistSong {
+  songs?: {
+    duration_seconds?: number | null;
+  } | null;
 }
 
 interface GigBookingDialogProps {
@@ -61,8 +69,22 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
     !!venue
   );
 
+  const { data: setlistSongsData } = useSetlistSongs(selectedSetlistId || null);
+
   const eligibleSetlists = setlists.filter((sl) => (sl.song_count ?? 0) >= 6);
   const selectedSlotData = GIG_SLOTS.find(s => s.id === selectedSlot);
+
+  const setlistDuration = React.useMemo(() => {
+    if (!setlistSongsData) return null;
+    return calculateSetlistDuration(setlistSongsData.map(ss => ({
+      duration_seconds: ss.songs?.duration_seconds
+    })));
+  }, [setlistSongsData]);
+
+  const durationValidation = React.useMemo(() => {
+    if (!setlistDuration || !selectedSlot) return null;
+    return validateSetlistForSlot(setlistDuration.totalSeconds, selectedSlot);
+  }, [setlistDuration, selectedSlot]);
 
   const { attendanceForecast, estimatedRevenue, suggestedTicketPrice, priceRating } = useMemo(() => {
     if (!venue) {
@@ -247,6 +269,41 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                 )}
               </SelectContent>
             </Select>
+            
+            {/* Duration Display & Validation */}
+            {selectedSetlistId && setlistDuration && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {setlistDuration.displayTime}
+                </Badge>
+                
+                {durationValidation && !durationValidation.valid && (
+                  <Badge variant="destructive" className="flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Too long for slot
+                  </Badge>
+                )}
+                
+                {durationValidation && durationValidation.valid && durationValidation.message && (
+                  <Badge variant="outline" className="flex items-center gap-1 text-amber-600">
+                    <AlertTriangle className="h-3 w-3" />
+                    Short setlist
+                  </Badge>
+                )}
+                
+                {durationValidation && durationValidation.valid && !durationValidation.message && (
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Perfect fit
+                  </Badge>
+                )}
+              </div>
+            )}
+            
+            {durationValidation?.message && (
+              <p className="text-sm text-muted-foreground">{durationValidation.message}</p>
+            )}
           </div>
 
           {/* Ticket Pricing */}

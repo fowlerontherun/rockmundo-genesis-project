@@ -80,6 +80,51 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_song_gifts: {
+        Row: {
+          created_at: string | null
+          gift_message: string | null
+          gifted_by_admin_id: string
+          gifted_to_band_id: string | null
+          gifted_to_user_id: string | null
+          id: string
+          song_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          gift_message?: string | null
+          gifted_by_admin_id: string
+          gifted_to_band_id?: string | null
+          gifted_to_user_id?: string | null
+          id?: string
+          song_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          gift_message?: string | null
+          gifted_by_admin_id?: string
+          gifted_to_band_id?: string | null
+          gifted_to_user_id?: string | null
+          id?: string
+          song_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_song_gifts_gifted_to_band_id_fkey"
+            columns: ["gifted_to_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_song_gifts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_activity_lockouts: {
         Row: {
           activity_type: string
