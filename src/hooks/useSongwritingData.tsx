@@ -283,12 +283,13 @@ export const useSongwritingData = (userId?: string | null) => {
     }
   });
 
-  // Start session
+  // Start session - always 3 hours
   const startSession = useMutation({
-    mutationFn: async ({ projectId, effortHours = 6 }: StartSessionInput) => {
+    mutationFn: async ({ projectId }: StartSessionInput) => {
       if (!userId) throw new Error("User ID required");
       
-      const lockDuration = effortHours * 60 * 60 * 1000;
+      // Fixed 3-hour duration
+      const lockDuration = 3 * 60 * 60 * 1000;
       const lockedUntil = new Date(Date.now() + lockDuration).toISOString();
       
       // Lock the project

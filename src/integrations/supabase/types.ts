@@ -3993,6 +3993,7 @@ export type Database = {
       }
       songwriting_sessions: {
         Row: {
+          auto_completed: boolean | null
           completed_at: string | null
           created_at: string
           id: string
@@ -4008,6 +4009,7 @@ export type Database = {
           xp_earned: number | null
         }
         Insert: {
+          auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
           id?: string
@@ -4023,6 +4025,7 @@ export type Database = {
           xp_earned?: number | null
         }
         Update: {
+          auto_completed?: boolean | null
           completed_at?: string | null
           created_at?: string
           id?: string
@@ -4849,6 +4852,13 @@ export type Database = {
       }
     }
     Functions: {
+      auto_complete_songwriting_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          completed_sessions: number
+          converted_projects: number
+        }[]
+      }
       calculate_songwriting_progress: {
         Args: {
           p_attr_creative_insight: number

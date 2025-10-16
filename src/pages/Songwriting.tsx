@@ -25,6 +25,7 @@ import { getSongRating } from "@/data/songRatings";
 import { AILyricsGenerator } from "@/components/songwriting/AILyricsGenerator";
 import { SongQualityBreakdown } from "@/components/songwriting/SongQualityBreakdown";
 import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
+import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
 import {
   Dialog,
   DialogContent,
@@ -473,6 +474,7 @@ const Songwriting = () => {
     pauseSession,
     completeSession,
     convertToSong,
+    refetchProjects,
   } = useSongwritingData(user?.id);
 
   // Map attributes to required format
@@ -800,6 +802,41 @@ const Songwriting = () => {
   }, [songs]);
 
   const initializedProjectsRef = useRef<Set<string>>(new Set());
+  const lastCheckRef = useRef<number>(0);
+
+  // Auto-check for completed sessions on page load/focus
+  useEffect(() => {
+    const checkAutoCompletions = async () => {
+      const now = Date.now();
+      // Only check once per minute to avoid spam
+      if (now - lastCheckRef.current < 60000) return;
+      lastCheckRef.current = now;
+
+      try {
+        const { data, error } = await supabase.functions.invoke('cleanup-songwriting');
+        if (error) throw error;
+        
+        if (data?.completedSessions > 0) {
+          toast.success(`${data.completedSessions} session(s) auto-completed!`);
+          refetchProjects();
+        }
+      } catch (error) {
+        console.error('Auto-complete check failed:', error);
+      }
+    };
+
+    checkAutoCompletions();
+
+    // Check when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkAutoCompletions();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refetchProjects]);
 
   useEffect(() => {
     const newProjects = projectsList.filter(p => !initializedProjectsRef.current.has(p.id));
@@ -1870,421 +1907,21 @@ const Songwriting = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => {
-            const statusMeta = getStatusMeta(project.status);
-            const activeSession = findActiveSession(project.songwriting_sessions);
-            const lockState = computeLockState(project.locked_until ?? null);
-            const linkedSong = project.song_id ? songMap[project.song_id] : undefined;
-            const musicPercent = getProgressPercent(project.music_progress);
-            const lyricsPercent = getProgressPercent(project.lyrics_progress);
-            const canConvert =
-              (project.music_progress ?? 0) >= PROGRESS_TARGET &&
-              (project.lyrics_progress ?? 0) >= PROGRESS_TARGET &&
-              !project.song_id;
-            const ratingDescriptor = getSongQualityDescriptor(project.song_rating ?? project.quality_score ?? 0);
-            const totalSessions = project.total_sessions ?? 0;
-            const sessionTarget = Math.max(
-              project.estimated_completion_sessions ??
-                project.estimated_sessions ??
-                Math.max(totalSessions, 3),
-              1
-            );
-            const linkedSongQuality = linkedSong
-              ? getSongQualityDescriptor(linkedSong.song_rating ?? linkedSong.quality_score ?? 0)
-              : null;
-            const coreAttributes = computeCoreAttributes(project);
-            const participantState = sessionParticipants[project.id] ?? {
-              coWriters: project.creative_brief?.co_writers?.map((writer) => writer.id) ?? [],
-              producers: project.creative_brief?.producers ?? [],
-              musicians: project.creative_brief?.session_musicians ?? [],
-            };
-            const selectedEffort =
-              SESSION_EFFORT_OPTIONS.find(
-                (option) => option.id === (effortSelections[project.id] ?? DEFAULT_EFFORT_OPTION.id),
-              ) ?? DEFAULT_EFFORT_OPTION;
-            const ratingRevealed = Boolean(
-              rehearsalUnlocks[project.id] ||
-                project.creative_brief?.rating_revealed_at ||
-                linkedSong?.rating_revealed_at,
-            );
-            const qualityDescriptor = linkedSongQuality ?? ratingDescriptor;
-            const inspirationTags = project.creative_brief?.inspiration_modifiers ?? [];
-            const moodTags = project.creative_brief?.mood_modifiers ?? [];
-            const inspirationLabels = inspirationTags.map((id) => inspirationTagMap[id]?.label ?? id);
-            const moodLabels = moodTags.map((id) => moodTagMap[id]?.label ?? id);
-            const coWriterSplits = computeCoWriterSplits(project);
+            const isLocked = project.is_locked && project.locked_until && new Date(project.locked_until) > new Date();
 
             return (
-              <Card key={project.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg flex flex-wrap items-center gap-2">
-                        {project.title}
-                        {project.song_themes?.name && (
-                          <Badge variant="outline">{project.song_themes.name}</Badge>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="flex flex-col gap-1 text-xs text-muted-foreground">
-                        {project.chord_progressions ? (
-                          <span>
-                            Progression: <span className="font-medium">{project.chord_progressions.name}</span> · {project.chord_progressions.progression}
-                          </span>
-                        ) : (
-                          <span>No chord progression assigned yet</span>
-                        )}
-                        {project.theme_id && project.song_themes?.mood && (
-                          <span>Mood: {project.song_themes.mood}</span>
-                        )}
-                      </CardDescription>
-                    </div>
-                    <Badge variant={statusMeta.badge}>{statusMeta.label}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-5 text-sm">
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Music Progress</span>
-                        <span>{musicPercent}%</span>
-                      </div>
-                      <Progress value={musicPercent} className="mt-1 h-2" />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Lyrics Progress</span>
-                        <span>{lyricsPercent}%</span>
-                      </div>
-                      <Progress value={lyricsPercent} className="mt-1 h-2" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-                      <div>
-                        <p>Sessions Logged</p>
-                        <p className="text-base font-semibold text-foreground">
-                          {totalSessions} / {sessionTarget}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">Target adjusts with your growing skills.</p>
-                      </div>
-                      <div>
-                        <p>Rating</p>
-                        <p className="text-base font-semibold text-foreground">{ratingDescriptor.label}</p>
-                        <p className="text-[11px] text-muted-foreground">{ratingDescriptor.hint}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                    {["lyrics", "melody", "rhythm", "arrangement", "production"].map((attribute) => (
-                      <div key={attribute} className="rounded-md border bg-muted/40 p-3">
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                          {attribute}
-                        </p>
-                        <p className="text-lg font-semibold text-foreground">
-                          {coreAttributes[attribute as keyof typeof coreAttributes]}/100
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="rounded-md border p-3 space-y-2">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Song rating</p>
-                        {ratingRevealed ? (
-                          <div>
-                            <p className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                              <BadgeCheck className="h-4 w-4 text-primary" /> {qualityDescriptor.label}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{qualityDescriptor.hint}</p>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            Run a rehearsal checkpoint to reveal the rating for this concept.
-                          </p>
-                        )}
-                      </div>
-                      {!ratingRevealed && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleUnlockRating(project)}
-                          disabled={updateProject.isPending}
-                          className="self-start"
-                        >
-                          <LockOpen className="mr-1 h-3 w-3" /> Reveal after rehearsal
-                        </Button>
-                      )}
-                    </div>
-                    {ratingRevealed && (
-                      <p className="text-xs text-muted-foreground">
-                        Revealed {new Date(
-                          project.creative_brief?.rating_revealed_at ??
-                            linkedSong?.rating_revealed_at ??
-                            new Date().toISOString(),
-                        ).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="space-y-3">
-                      {project.initial_lyrics && (
-                        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-                          <p className="uppercase font-semibold text-[10px] tracking-wider">Lyrics & Notes</p>
-                          <ScrollArea className="h-32 w-full">
-                            <p className="text-foreground whitespace-pre-wrap">{project.initial_lyrics}</p>
-                          </ScrollArea>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <ClockIcon className="h-4 w-4" />
-                        <span className={lockState.locked ? "text-amber-600" : "text-emerald-600"}>{lockState.message}</span>
-                      </div>
-
-                      {(inspirationLabels.length > 0 || moodLabels.length > 0) && (
-                        <>
-                          <div className="rounded-md border p-3 space-y-3">
-                            {inspirationLabels.length > 0 && (
-                              <div>
-                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Inspiration</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {inspirationLabels.map((label) => (
-                                    <Badge key={label} variant="outline">
-                                      {label}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {moodLabels.length > 0 && (
-                              <div>
-                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Mood</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {moodLabels.map((label) => (
-                                    <Badge key={label} variant="outline">
-                                      {label}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Rating</p>
-                            <p className="font-semibold text-foreground">
-                              {linkedSongQuality ? linkedSongQuality.label : "Unknown"}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      {coWriterSplits.length > 0 && (
-                        <div className="rounded-md border p-3 space-y-2">
-                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Co-writer splits</p>
-                          <div className="flex flex-wrap gap-2">
-                            {coWriterSplits.map((entry) => (
-                              <Badge key={entry.id} variant="secondary">
-                                {entry.label}: {entry.split}%
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="rounded-md border p-3 space-y-3">
-                        <div className="space-y-1">
-                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sprint roster</p>
-                          <Select
-                            value={effortSelections[project.id] ?? selectedEffort.id}
-                            onValueChange={(value: SessionEffortOption["id"]) =>
-                              setEffortSelections((previous) => ({ ...previous, [project.id]: value }))
-                            }
-                          >
-                            <SelectTrigger className="h-9 text-sm">
-                              <SelectValue placeholder="Select effort level" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SESSION_EFFORT_OPTIONS.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-xs text-muted-foreground">Locked sprint length: {selectedEffort.hours}h</p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-foreground">Co-writers in this sprint</p>
-                          {project.creative_brief?.co_writers?.length ? (
-                            <div className="space-y-2">
-                              {project.creative_brief.co_writers.map((writer) => {
-                                const selected = participantState.coWriters.includes(writer.id);
-                                return (
-                                  <label key={writer.id} className="flex items-center gap-2 text-xs">
-                                    <Checkbox
-                                      checked={selected}
-                                      onCheckedChange={(checked) =>
-                                        updateSessionParticipant(project.id, "coWriters", writer.id, Boolean(checked))
-                                      }
-                                    />
-                                    <div>
-                                      <p className="font-medium text-foreground">{writer.name}</p>
-                                      {writer.role && (
-                                        <p className="text-[11px] text-muted-foreground">{writer.role}</p>
-                                      )}
-                                    </div>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              Add collaborators in the brief to invite them to sessions.
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-foreground">Producers guiding</p>
-                          {project.creative_brief?.producers?.length ? (
-                            <div className="space-y-2">
-                              {project.creative_brief.producers.map((producerId) => {
-                                const selected = participantState.producers.includes(producerId);
-                                const producer = producerOptionMap[producerId];
-                                return (
-                                  <label key={producerId} className="flex items-center gap-2 text-xs">
-                                    <Checkbox
-                                      checked={selected}
-                                      onCheckedChange={(checked) =>
-                                        updateSessionParticipant(project.id, "producers", producerId, Boolean(checked))
-                                      }
-                                    />
-                                    <span>{producer?.label ?? producerId}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">No producers assigned yet.</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-foreground">Session musicians</p>
-                          {project.creative_brief?.session_musicians?.length ? (
-                            <div className="space-y-2">
-                              {project.creative_brief.session_musicians.map((musicianId) => {
-                                const selected = participantState.musicians.includes(musicianId);
-                                const musician = sessionMusicianOptionMap[musicianId];
-                                return (
-                                  <label key={musicianId} className="flex items-center gap-2 text-xs">
-                                    <Checkbox
-                                      checked={selected}
-                                      onCheckedChange={(checked) =>
-                                        updateSessionParticipant(project.id, "musicians", musicianId, Boolean(checked))
-                                      }
-                                    />
-                                    <span>{musician?.label ?? musicianId}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">No session musicians planned.</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        className="flex-1 min-w-[9rem]"
-                        onClick={() => handleStartSession(project)}
-                        disabled={
-                          lockState.locked ||
-                          Boolean(activeSession) ||
-                          globalActivityLock.locked ||
-                          startSession.isPending
-                        }
-                      >
-                        <Play className="h-3 w-3 mr-1" /> Start Sprint
-                      </Button>
-                      {activeSession && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="min-w-[8rem]"
-                          onClick={() => handlePauseSession(project)}
-                          disabled={pauseSession.isPending}
-                        >
-                          <ClockIcon className="mr-1 h-3 w-3" /> Pause
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 min-w-[9rem]"
-                        onClick={() => handleOpenCompletionDialog(project)}
-                        disabled={!activeSession || completeSession.isPending}
-                      >
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Complete Sprint
-                      </Button>
-                    </div>
-                    {activeSession && (
-                      <p className="text-center text-xs text-muted-foreground">
-                        Active sprint started {new Date(activeSession.started_at ?? activeSession.session_start).toLocaleTimeString()}.
-                      </p>
-                    )}
-                    {globalActivityLock.locked && (
-                      <p className="text-center text-xs text-muted-foreground">
-                        Global focus busy
-                        {globalActivityCountdown ? ` until ${globalActivityCountdown}` : " with another activity."}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleEdit(project)}>
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDelete(project)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setHistoryProject(project);
-                          setIsHistoryOpen(true);
-                        }}
-                        disabled={!project.songwriting_sessions?.length}
-                      >
-                        <History className="h-3 w-3 mr-1" /> History
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleConvertProject(project)}
-                        disabled={!canConvert || convertToSong.isPending}
-                      >
-                        <Wand2 className="h-3 w-3 mr-1" /> Convert to Song
-                      </Button>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Updated {new Date(project.updated_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <SimplifiedProjectCard
+                key={project.id}
+                project={project}
+                isLocked={!!isLocked}
+                onStartSession={() => handleStartSession(project)}
+                onEdit={() => handleEdit(project)}
+                onDelete={() => handleDelete(project)}
+                onViewHistory={() => {
+                  setHistoryProject(project);
+                  setIsHistoryOpen(true);
+                }}
+              />
             );
           })}
         </div>
