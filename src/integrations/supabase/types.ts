@@ -2842,6 +2842,93 @@ export type Database = {
           },
         ]
       }
+      setlist_production_note_assignments: {
+        Row: {
+          added_at: string | null
+          id: string
+          production_note_id: string
+          setlist_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          id?: string
+          production_note_id: string
+          setlist_id: string
+        }
+        Update: {
+          added_at?: string | null
+          id?: string
+          production_note_id?: string
+          setlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setlist_production_note_assignments_production_note_id_fkey"
+            columns: ["production_note_id"]
+            isOneToOne: false
+            referencedRelation: "setlist_production_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setlist_production_note_assignments_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setlist_production_notes: {
+        Row: {
+          category: string
+          cooldown_shows: number | null
+          cost_per_use: number | null
+          created_at: string | null
+          description: string
+          id: string
+          impact_type: string
+          impact_value: number
+          name: string
+          rarity: string | null
+          required_fame: number | null
+          required_skill_slug: string | null
+          required_skill_value: number | null
+          required_venue_prestige: number | null
+        }
+        Insert: {
+          category: string
+          cooldown_shows?: number | null
+          cost_per_use?: number | null
+          created_at?: string | null
+          description: string
+          id?: string
+          impact_type: string
+          impact_value: number
+          name: string
+          rarity?: string | null
+          required_fame?: number | null
+          required_skill_slug?: string | null
+          required_skill_value?: number | null
+          required_venue_prestige?: number | null
+        }
+        Update: {
+          category?: string
+          cooldown_shows?: number | null
+          cost_per_use?: number | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          impact_type?: string
+          impact_value?: number
+          name?: string
+          rarity?: string | null
+          required_fame?: number | null
+          required_skill_slug?: string | null
+          required_skill_value?: number | null
+          required_venue_prestige?: number | null
+        }
+        Relationships: []
+      }
       setlist_songs: {
         Row: {
           created_at: string | null
@@ -3420,6 +3507,8 @@ export type Database = {
           chart_position: number | null
           chord_progression_id: string | null
           created_at: string
+          duration_display: string | null
+          duration_seconds: number | null
           genre: string
           id: string
           lyrics: string | null
@@ -3453,6 +3542,8 @@ export type Database = {
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
+          duration_display?: string | null
+          duration_seconds?: number | null
           genre: string
           id?: string
           lyrics?: string | null
@@ -3486,6 +3577,8 @@ export type Database = {
           chart_position?: number | null
           chord_progression_id?: string | null
           created_at?: string
+          duration_display?: string | null
+          duration_seconds?: number | null
           genre?: string
           id?: string
           lyrics?: string | null

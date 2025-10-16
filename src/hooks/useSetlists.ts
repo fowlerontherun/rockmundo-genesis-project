@@ -64,7 +64,9 @@ export const useSetlistSongs = (setlistId: string | null) => {
             id,
             title,
             genre,
-            quality_score
+            quality_score,
+            duration_seconds,
+            duration_display
           )
         `)
         .eq("setlist_id", setlistId)

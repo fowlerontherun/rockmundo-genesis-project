@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { generateSongDuration } from "@/utils/setlistDuration";
 
 export interface SongTheme {
   id: string;
@@ -402,6 +403,9 @@ export const useSongwritingData = (userId?: string | null) => {
       
       if (!project) throw new Error("Project not found");
       
+      // Generate random duration between 2:20 and 7:00
+      const { durationSeconds, durationDisplay } = generateSongDuration();
+      
       // Create song record
       const { data: song, error: songError } = await supabase
         .from('songs')
@@ -421,6 +425,8 @@ export const useSongwritingData = (userId?: string | null) => {
           catalog_status: catalogStatus,
           band_id: bandId || null,
           ai_generated_lyrics: project.lyrics?.includes('[AI Generated]') || false,
+          duration_seconds: durationSeconds,
+          duration_display: durationDisplay,
         })
         .select()
         .single();

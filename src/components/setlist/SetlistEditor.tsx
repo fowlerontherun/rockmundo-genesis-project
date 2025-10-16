@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCreateSetlist, useUpdateSetlist, useSetlists } from "@/hooks/useSetlists";
+import { ProductionNotesSelector } from "./ProductionNotesSelector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -24,9 +26,10 @@ interface SetlistEditorProps {
   bandId: string;
   setlistId?: string;
   onClose: () => void;
+  bandFame?: number;
 }
 
-export const SetlistEditor = ({ bandId, setlistId, onClose }: SetlistEditorProps) => {
+export const SetlistEditor = ({ bandId, setlistId, onClose, bandFame = 0 }: SetlistEditorProps) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [setlistType, setSetlistType] = useState("custom");
@@ -78,7 +81,15 @@ export const SetlistEditor = ({ bandId, setlistId, onClose }: SetlistEditorProps
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="production" disabled={!setlistId}>
+                Production Notes
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details" className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Setlist Name</Label>
               <Input
@@ -116,7 +127,17 @@ export const SetlistEditor = ({ bandId, setlistId, onClose }: SetlistEditorProps
                 rows={3}
               />
             </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="production" className="py-4">
+              {setlistId && (
+                <ProductionNotesSelector
+                  setlistId={setlistId}
+                  bandFame={bandFame}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

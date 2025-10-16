@@ -4,7 +4,8 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Music, Edit, Trash2 } from "lucide-react";
+import { Plus, Music, Edit, Trash2, Lock } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -56,6 +57,8 @@ const SetlistManager = () => {
 
   const { data: setlists, isLoading } = useSetlists(band?.id || null);
   const deleteSetlistMutation = useDeleteSetlist();
+  
+  const canCreateSetlist = (setlists?.length || 0) < 3;
 
   const handleDelete = (setlistId: string) => {
     deleteSetlistMutation.mutate(setlistId);
@@ -85,13 +88,44 @@ const SetlistManager = () => {
             <h1 className="text-3xl font-bold mb-2">Setlist Manager</h1>
             <p className="text-muted-foreground">
               Create and manage setlists for {band.name}
+              <Badge variant="outline" className="ml-2">
+                {setlists?.length || 0}/3 Setlists
+              </Badge>
             </p>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)} size="lg">
-            <Plus className="mr-2 h-4 w-4" />
-            New Setlist
-          </Button>
+          <div className="flex flex-col items-end gap-2">
+            <Button 
+              onClick={() => setShowCreateDialog(true)} 
+              size="lg"
+              disabled={!canCreateSetlist}
+            >
+              {canCreateSetlist ? (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Setlist
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Limit Reached
+                </>
+              )}
+            </Button>
+            {!canCreateSetlist && (
+              <p className="text-sm text-muted-foreground">
+                Delete a setlist to create new one
+              </p>
+            )}
+          </div>
         </div>
+
+        {!canCreateSetlist && (
+          <Alert className="mb-6">
+            <AlertDescription>
+              You've reached the maximum of 3 setlists. This limit helps you focus on perfecting your performances. Delete an existing setlist to create a new one.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {isLoading ? (
           <div className="text-center py-12">Loading setlists...</div>
@@ -175,6 +209,7 @@ const SetlistManager = () => {
           <SetlistEditor
             bandId={band.id}
             onClose={() => setShowCreateDialog(false)}
+            bandFame={band.fame || 0}
           />
         )}
 
@@ -183,6 +218,7 @@ const SetlistManager = () => {
             bandId={band.id}
             setlistId={editingSetlistId}
             onClose={() => setEditingSetlistId(null)}
+            bandFame={band.fame || 0}
           />
         )}
 
