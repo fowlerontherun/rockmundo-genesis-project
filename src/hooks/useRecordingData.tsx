@@ -209,21 +209,23 @@ export const useCreateRecordingSession = () => {
           session_data: breakdown,
         })
         .select()
-        .single();
+        .single() as any;
 
       if (sessionError) throw sessionError;
+      
+      const sessionData = session as any;
 
       // Create orchestra booking if needed
       if (orchestraOption) {
         await supabase.from('orchestra_bookings' as any).insert({
-          recording_session_id: session.id,
+          recording_session_id: sessionData.id,
           orchestra_size: orchestraOption.size,
           orchestra_cost: orchestraOption.cost,
           quality_bonus: orchestraOption.bonus,
         });
       }
 
-      return session;
+      return sessionData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recording-sessions'] });
