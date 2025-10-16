@@ -80,6 +80,41 @@ export type Database = {
         }
         Relationships: []
       }
+      band_activity_lockouts: {
+        Row: {
+          activity_type: string
+          band_id: string
+          created_at: string | null
+          id: string
+          locked_until: string
+          reason: string | null
+        }
+        Insert: {
+          activity_type: string
+          band_id: string
+          created_at?: string | null
+          id?: string
+          locked_until: string
+          reason?: string | null
+        }
+        Update: {
+          activity_type?: string
+          band_id?: string
+          created_at?: string | null
+          id?: string
+          locked_until?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_activity_lockouts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_chat_messages: {
         Row: {
           band_id: string
@@ -1555,8 +1590,12 @@ export type Database = {
           scheduled_date: string
           setlist_id: string | null
           show_type: string | null
+          slot_attendance_multiplier: number | null
+          slot_end_time: string | null
+          slot_start_time: string | null
           status: string | null
           ticket_price: number | null
+          time_slot: string | null
           updated_at: string | null
           venue_id: string
         }
@@ -1573,8 +1612,12 @@ export type Database = {
           scheduled_date: string
           setlist_id?: string | null
           show_type?: string | null
+          slot_attendance_multiplier?: number | null
+          slot_end_time?: string | null
+          slot_start_time?: string | null
           status?: string | null
           ticket_price?: number | null
+          time_slot?: string | null
           updated_at?: string | null
           venue_id: string
         }
@@ -1591,8 +1634,12 @@ export type Database = {
           scheduled_date?: string
           setlist_id?: string | null
           show_type?: string | null
+          slot_attendance_multiplier?: number | null
+          slot_end_time?: string | null
+          slot_start_time?: string | null
           status?: string | null
           ticket_price?: number | null
+          time_slot?: string | null
           updated_at?: string | null
           venue_id?: string
         }
@@ -4318,6 +4365,8 @@ export type Database = {
           name: string
           prestige_level: number | null
           requirements: Json | null
+          slot_config: Json | null
+          slots_per_day: number | null
           venue_type: string | null
         }
         Insert: {
@@ -4334,6 +4383,8 @@ export type Database = {
           name: string
           prestige_level?: number | null
           requirements?: Json | null
+          slot_config?: Json | null
+          slots_per_day?: number | null
           venue_type?: string | null
         }
         Update: {
@@ -4350,6 +4401,8 @@ export type Database = {
           name?: string
           prestige_level?: number | null
           requirements?: Json | null
+          slot_config?: Json | null
+          slots_per_day?: number | null
           venue_type?: string | null
         }
         Relationships: [

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, CheckCircle, DollarSign, MapPin, Music, Star, Users } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, DollarSign, MapPin, Music, Star, Users } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog } from '@/components/gig/GigBookingDialog';
+import { getSlotById, getSlotBadgeVariant } from '@/utils/gigSlots';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -173,31 +174,66 @@ const GigBooking = () => {
 
   const previewNextGigDate = useMemo(() => getNextGigDate(), [getNextGigDate]);
 
-  const handleBookingDialogConfirm = useCallback(async (setlistId: string, ticketPrice: number) => {
+  const handleBookingDialogConfirm = useCallback(async (
+    setlistId: string, 
+    ticketPrice: number,
+    selectedDate: Date,
+    selectedSlot: string
+  ) => {
     if (!band || !bookingVenue) return;
 
     setIsBooking(true);
 
     try {
-      const scheduledDate = getNextGigDate();
+      const { getSlotById } = await import('@/utils/gigSlots');
+      const { checkBandLockout } = await import('@/utils/bandLockout');
+      
+      // Check band lockout
+      const lockout = await checkBandLockout(band.id);
+      if (lockout.isLocked) {
+        toast({
+          title: 'Band is busy',
+          description: lockout.reason,
+          variant: 'destructive'
+        });
+        setIsBooking(false);
+        return;
+      }
 
-      const estimatedAttendance = Math.floor(
+      const slot = getSlotById(selectedSlot);
+      if (!slot) {
+        throw new Error('Invalid slot selected');
+      }
+
+      // Combine date with slot start time
+      const scheduledDateTime = new Date(selectedDate);
+      const [hours, minutes] = slot.startTime.split(':');
+      scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      // Calculate adjusted estimates with slot multiplier
+      const baseAttendance = Math.floor(
         Math.min(
           bookingVenue.capacity || 100,
           ((band.fame || 0) * 2 + (band.popularity || 0) * 3) * (0.7 + Math.random() * 0.3)
         )
       );
+      const estimatedAttendance = Math.floor(baseAttendance * slot.attendanceMultiplier);
+      const adjustedPayment = Math.round((bookingVenue.base_payment || 0) * slot.paymentMultiplier);
       const estimatedRevenue = estimatedAttendance * ticketPrice;
 
       const { error } = await supabase.from('gigs').insert({
         band_id: band.id,
         venue_id: bookingVenue.id,
-        scheduled_date: scheduledDate.toISOString(),
+        scheduled_date: scheduledDateTime.toISOString(),
         status: 'scheduled',
         show_type: bookingVenue.venue_type ?? 'concert',
-        payment: bookingVenue.base_payment ?? 0,
+        payment: adjustedPayment,
         setlist_id: setlistId,
         ticket_price: ticketPrice,
+        time_slot: selectedSlot,
+        slot_start_time: slot.startTime,
+        slot_end_time: slot.endTime,
+        slot_attendance_multiplier: slot.attendanceMultiplier,
         estimated_attendance: estimatedAttendance,
         estimated_revenue: estimatedRevenue,
         attendance: 0,
@@ -210,17 +246,18 @@ const GigBooking = () => {
 
       toast({
         title: 'Gig booked!',
-        description: `Locked in ${bookingVenue.name} for ${scheduledDate.toLocaleString()}.`,
+        description: `${slot.name} at ${bookingVenue.name} on ${scheduledDateTime.toLocaleString()}.`,
       });
 
       await addActivity(
         'gig_booking',
-        `Booked ${bookingVenue.name} for ${band.name}`,
-        bookingVenue.base_payment ?? undefined,
+        `Booked ${slot.name} at ${bookingVenue.name} for ${band.name}`,
+        adjustedPayment ?? undefined,
         {
           venue_id: bookingVenue.id,
-          scheduled_date: scheduledDate.toISOString(),
+          scheduled_date: scheduledDateTime.toISOString(),
           estimated_revenue: estimatedRevenue,
+          time_slot: selectedSlot
         },
       );
 
@@ -358,11 +395,22 @@ const GigBooking = () => {
                           <div className="flex items-center gap-2 text-sm font-semibold">
                             <Music className="h-4 w-4 text-primary" />
                             {venue?.name ?? 'Unassigned Venue'}
+                            {gig.time_slot && (
+                              <Badge variant={getSlotBadgeVariant(gig.time_slot)}>
+                                {getSlotById(gig.time_slot)?.name || gig.time_slot}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            {scheduledDate.toLocaleString()}
+                            {scheduledDate.toLocaleDateString()}
                           </div>
+                          {gig.slot_start_time && gig.slot_end_time && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              {gig.slot_start_time} - {gig.slot_end_time}
+                            </div>
+                          )}
                           {venue?.location ? (
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <MapPin className="h-4 w-4" />
