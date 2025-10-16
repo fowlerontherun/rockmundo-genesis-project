@@ -104,8 +104,11 @@ const Navigation = () => {
         { icon: ShoppingCart, label: "Merchandise", path: "/merchandise" },
         { icon: DollarSign, label: "Underworld", path: "/underworld" },
         { icon: Building2, label: "Venue Management", path: "/venues" },
-        { icon: Globe, label: "World Events", path: "/world" },
-        { icon: TrendingUp, label: "Statistics", path: "/statistics" },
+      ],
+    },
+    {
+      title: "⚙️ Administration",
+      items: [
         { icon: Settings, label: "Admin Panel", path: "/admin" },
       ],
     },
