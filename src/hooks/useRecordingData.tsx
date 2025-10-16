@@ -66,7 +66,8 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
         .order('quality_bonus', { ascending: false });
 
       if (genreFilter) {
-        query = query.eq('specialty_genre', genreFilter);
+        // Use ilike for flexible matching (case-insensitive partial match)
+        query = query.ilike('specialty_genre', `%${genreFilter}%`);
       }
       if (tierFilter) {
         query = query.eq('tier', tierFilter);
