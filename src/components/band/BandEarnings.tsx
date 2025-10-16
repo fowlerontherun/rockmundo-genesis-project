@@ -231,30 +231,13 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
 
     setSubmitting(true);
 
-    let latestProfileSnapshot: LeaderProfileSummary | null = null;
-    let latestBandSnapshot: BandInfo | null = null;
-    let previousBandBalance = bandInfo?.band_balance ?? 0;
-    let previousPersonalCash = leaderProfile?.cash ?? 0;
-    let profileUpdated = false;
-    let bandUpdated = false;
-
     try {
-      const [latestProfile, { data: latestBand, error: latestBandError }] = await Promise.all([
-        loadLeaderProfile(),
-        supabase
-          .from('bands')
-          .select('band_balance, name')
-          .eq('id', bandId)
-          .single(),
-      ]);
-
-      if (latestBandError) {
-        throw latestBandError;
-      }
-
-      if (!latestBand) {
-        throw new Error('Band could not be found.');
-      }
+      // Get latest profile balance
+      const { data: latestProfile } = await supabase
+        .from('profiles')
+        .select('id, cash')
+        .eq('user_id', user.id)
+        .single();
 
       if (!latestProfile) {
         toast({
@@ -265,14 +248,12 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
         return;
       }
 
-      latestProfileSnapshot = latestProfile;
-      latestBandSnapshot = latestBand;
-      previousBandBalance = latestBand.band_balance ?? 0;
-      previousPersonalCash = latestProfile.cash;
+      const currentPersonalCash = latestProfile.cash || 0;
+      const nextPersonalCash = currentPersonalCash + personalDelta;
+      const currentBandBalance = bandInfo.band_balance || 0;
+      const nextBandBalance = currentBandBalance + bandDelta;
 
-      const nextBandBalance = previousBandBalance + bandDelta;
-      const nextPersonalCash = previousPersonalCash + personalDelta;
-
+      // Validation checks
       if (type === 'withdraw' && nextBandBalance < 0) {
         toast({
           title: 'Insufficient funds',
@@ -291,53 +272,26 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
         return;
       }
 
-      const { data: updatedProfile, error: profileError } = await supabase
+      // Update personal cash
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({ cash: nextPersonalCash })
-        .eq('id', latestProfile.id)
-        .select('id, cash')
-        .single();
+        .eq('id', latestProfile.id);
 
-      if (profileError) {
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
-      profileUpdated = true;
+      // Insert into band_earnings - trigger will update band_balance automatically
+      const { error: earningsError } = await supabase
+        .from('band_earnings')
+        .insert({
+          band_id: bandId,
+          amount: bandDelta,
+          source: type === 'deposit' ? 'leader_deposit' : 'leader_withdrawal',
+          description: note || null,
+          earned_by_user_id: user.id,
+        });
 
-      const { data: updatedBand, error: updateError } = await supabase
-        .from('bands')
-        .update({ band_balance: nextBandBalance })
-        .eq('id', bandId)
-        .select('band_balance, name')
-        .single();
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      bandUpdated = true;
-
-      const { error: insertError } = await supabase.from('band_earnings').insert({
-        band_id: bandId,
-        amount: bandDelta,
-        source: type === 'deposit' ? 'leader_deposit' : 'leader_withdrawal',
-        description: note || null,
-        earned_by_user_id: user.id,
-      });
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      setBandInfo(updatedBand ?? latestBand);
-      setLeaderProfile(
-        updatedProfile
-          ? { id: updatedProfile.id, cash: typeof updatedProfile.cash === 'number' ? updatedProfile.cash : 0 }
-          : {
-              id: latestProfile.id,
-              cash: nextPersonalCash,
-            }
-      );
+      if (earningsError) throw earningsError;
 
       toast({
         title: type === 'deposit' ? 'Deposit successful' : 'Withdrawal successful',
@@ -354,56 +308,10 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       }
       setTransactionNote('');
 
-      await loadEarningsData();
+      // Reload data
+      await Promise.all([loadEarningsData(), loadLeaderProfile()]);
     } catch (error) {
       console.error('Error managing band funds:', error);
-
-      const revertOperations: Array<Promise<unknown>> = [];
-
-      if (profileUpdated && latestProfileSnapshot) {
-        revertOperations.push(
-          (async () => {
-            await supabase
-              .from('profiles')
-              .update({ cash: previousPersonalCash })
-              .eq('id', latestProfileSnapshot.id);
-          })()
-        );
-      }
-
-      if (bandUpdated && latestBandSnapshot) {
-        revertOperations.push(
-          (async () => {
-            await supabase
-              .from('bands')
-              .update({ band_balance: previousBandBalance })
-              .eq('id', bandId);
-          })()
-        );
-      }
-
-      if (revertOperations.length > 0) {
-        const revertResults = await Promise.allSettled(revertOperations);
-        revertResults.forEach((result) => {
-          if (result.status === 'rejected') {
-            console.error('Failed to revert band fund adjustment', result.reason);
-          }
-        });
-      }
-
-      if (profileUpdated && latestProfileSnapshot) {
-        setLeaderProfile({ id: latestProfileSnapshot.id, cash: previousPersonalCash });
-      }
-
-      if (bandUpdated && latestBandSnapshot) {
-        setBandInfo({ band_balance: previousBandBalance, name: latestBandSnapshot.name });
-      }
-
-      if (isLeader) {
-        void loadLeaderProfile();
-      }
-
-      await loadEarningsData();
 
       const fallbackMessage =
         error instanceof Error
@@ -414,7 +322,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
 
       toast({
         title: 'Unable to update funds',
-        description: fallbackMessage || 'Something went wrong while updating the band balance.',
+        description: fallbackMessage,
         variant: 'destructive',
       });
     } finally {
