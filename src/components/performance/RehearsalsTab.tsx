@@ -165,7 +165,7 @@ export function RehearsalsTab() {
       });
 
       setShowBookingDialog(false);
-      loadData();
+      await loadData();
     } catch (error) {
       console.error('Error booking rehearsal:', error);
       toast({
