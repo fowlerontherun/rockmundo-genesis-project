@@ -3258,6 +3258,83 @@ export type Database = {
           },
         ]
       }
+      recording_producers: {
+        Row: {
+          arrangement_skill: number
+          bio: string | null
+          cost_per_hour: number
+          created_at: string
+          grammy_wins: number | null
+          id: string
+          image_url: string | null
+          is_available: boolean
+          mastering_skill: number
+          mixing_skill: number
+          name: string
+          past_works: string[] | null
+          platinum_records: number | null
+          preferred_genres: string[] | null
+          quality_bonus: number
+          specialty_genre: string
+          studio_id: string | null
+          tier: string
+          updated_at: string
+          years_experience: number
+        }
+        Insert: {
+          arrangement_skill?: number
+          bio?: string | null
+          cost_per_hour?: number
+          created_at?: string
+          grammy_wins?: number | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          mastering_skill?: number
+          mixing_skill?: number
+          name: string
+          past_works?: string[] | null
+          platinum_records?: number | null
+          preferred_genres?: string[] | null
+          quality_bonus?: number
+          specialty_genre: string
+          studio_id?: string | null
+          tier?: string
+          updated_at?: string
+          years_experience?: number
+        }
+        Update: {
+          arrangement_skill?: number
+          bio?: string | null
+          cost_per_hour?: number
+          created_at?: string
+          grammy_wins?: number | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          mastering_skill?: number
+          mixing_skill?: number
+          name?: string
+          past_works?: string[] | null
+          platinum_records?: number | null
+          preferred_genres?: string[] | null
+          quality_bonus?: number
+          specialty_genre?: string
+          studio_id?: string | null
+          tier?: string
+          updated_at?: string
+          years_experience?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_producers_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rehearsal_rooms: {
         Row: {
           capacity: number | null
