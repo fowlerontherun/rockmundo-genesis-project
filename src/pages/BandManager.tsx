@@ -17,6 +17,7 @@ import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
 import { BandSongGifts } from '@/components/band/BandSongGifts';
+import { BandSongsTab } from '@/components/band/BandSongsTab';
 import { Users, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
@@ -237,6 +238,7 @@ export default function BandManager() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
+          <TabsTrigger value="songs">Songs</TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger>
           <TabsTrigger value="earnings">Earnings</TabsTrigger>
           <TabsTrigger value="chemistry">Chemistry</TabsTrigger>
@@ -289,6 +291,10 @@ export default function BandManager() {
               ))}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="songs" className="space-y-4">
+          <BandSongsTab bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="chat" className="space-y-4">
