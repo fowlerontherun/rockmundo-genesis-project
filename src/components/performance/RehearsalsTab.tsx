@@ -159,7 +159,7 @@ export function RehearsalsTab() {
     void loadData();
   }, [loadData]);
 
-  const handleBookRehearsal = async (roomId: string, duration: number, songId: string, scheduledStart: Date) => {
+  const handleBookRehearsal = async (roomId: string, duration: number, songId: string | null, setlistId: string | null, scheduledStart: Date) => {
     if (!userBand) return;
 
     const room = rooms.find(r => r.id === roomId);

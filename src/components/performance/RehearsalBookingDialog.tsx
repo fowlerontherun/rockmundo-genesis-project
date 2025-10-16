@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { DollarSign, Clock, TrendingUp, Music2, Zap } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
 type Band = Database['public']['Tables']['bands']['Row'];
@@ -18,23 +22,48 @@ interface RehearsalBookingDialogProps {
   rooms: RehearsalRoom[];
   band: Band;
   songs: any[];
-  onConfirm: (roomId: string, duration: number, songId: string, scheduledStart: Date) => Promise<void>;
+  onConfirm: (roomId: string, duration: number, songId: string | null, setlistId: string | null, scheduledStart: Date) => Promise<void>;
   onClose: () => void;
 }
 
 const DURATION_OPTIONS = [
-  { value: 1, label: '1 Hour', multiplier: 1 },
-  { value: 2, label: '2 Hours', multiplier: 2 },
-  { value: 4, label: '4 Hours', multiplier: 4 },
-  { value: 8, label: '8 Hours (Full Day)', multiplier: 8 },
+  { value: 1, label: '1 Hour' },
+  { value: 2, label: '2 Hours' },
+  { value: 3, label: '3 Hours' },
+  { value: 4, label: '4 Hours' },
+  { value: 6, label: '6 Hours' },
+  { value: 8, label: '8 Hours (Full Day)' },
 ];
+
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
+  value: i,
+  label: `${i.toString().padStart(2, '0')}:00`,
+}));
 
 export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose }: RehearsalBookingDialogProps) => {
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
   const [selectedDuration, setSelectedDuration] = useState<number>(2);
+  const [practiceType, setPracticeType] = useState<'song' | 'setlist'>('song');
   const [selectedSongId, setSelectedSongId] = useState<string>('');
+  const [selectedSetlistId, setSelectedSetlistId] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState<number>(14); // 2 PM default
   const [booking, setBooking] = useState(false);
+  const [setlists, setSetlists] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadSetlists = async () => {
+      const { data } = await supabase
+        .from('setlists')
+        .select('id, name')
+        .eq('band_id', band.id)
+        .eq('is_active', true);
+      
+      setSetlists(data || []);
+    };
+    
+    loadSetlists();
+  }, [band.id]);
 
   const selectedRoom = rooms.find(r => r.id === selectedRoomId);
   const totalCost = selectedRoom ? selectedRoom.hourly_rate * selectedDuration : 0;
@@ -43,17 +72,32 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
   const familiarityGain = selectedDuration * 60;
 
   const handleConfirm = async () => {
-    if (!selectedRoomId || !selectedSongId) return;
+    if (!selectedRoomId) return;
+    if (practiceType === 'song' && !selectedSongId) return;
+    if (practiceType === 'setlist' && !selectedSetlistId) return;
     
     setBooking(true);
     try {
-      await onConfirm(selectedRoomId, selectedDuration, selectedSongId, selectedDate);
+      // Combine date and time
+      const scheduledStart = new Date(selectedDate);
+      scheduledStart.setHours(selectedTime, 0, 0, 0);
+      
+      await onConfirm(
+        selectedRoomId,
+        selectedDuration,
+        practiceType === 'song' ? selectedSongId : null,
+        practiceType === 'setlist' ? selectedSetlistId : null,
+        scheduledStart
+      );
     } finally {
       setBooking(false);
     }
   };
 
   const canAfford = (band.band_balance || 0) >= totalCost;
+  const canBook = selectedRoomId && 
+    ((practiceType === 'song' && selectedSongId) || (practiceType === 'setlist' && selectedSetlistId)) &&
+    canAfford;
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -66,16 +110,51 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Date Selection */}
-          <div className="space-y-2">
-            <Label>Rehearsal Date</Label>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              disabled={(date) => date < new Date()}
-              className="rounded-md border"
-            />
+          {/* Date & Time Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Rehearsal Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !selectedDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="time">Start Time</Label>
+              <Select value={selectedTime.toString()} onValueChange={(v) => setSelectedTime(parseInt(v))}>
+                <SelectTrigger id="time">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {TIME_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value.toString()}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Room Selection */}
@@ -86,14 +165,15 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
                 <div
                   key={room.id}
                   className={cn(
-                    'flex items-start space-x-3 rounded-lg border p-4 transition-colors',
+                    'flex items-start space-x-3 rounded-lg border p-4 transition-colors cursor-pointer',
                     selectedRoomId === room.id && 'border-primary bg-primary/5'
                   )}
+                  onClick={() => setSelectedRoomId(room.id)}
                 >
                   <RadioGroupItem value={room.id} />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="font-semibold">{room.name}</Label>
+                      <Label className="font-semibold cursor-pointer">{room.name}</Label>
                       <Badge variant="outline">${room.hourly_rate}/hr</Badge>
                     </div>
                     {room.description && (
@@ -123,7 +203,7 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
               <SelectTrigger id="duration">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background">
                 {DURATION_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value.toString()}>
                     {opt.label}
@@ -133,28 +213,69 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
             </Select>
           </div>
 
-          {/* Song Selection */}
+          {/* Practice Type Selection */}
           <div className="space-y-2">
-            <Label htmlFor="song">Song to Practice</Label>
-            <Select value={selectedSongId} onValueChange={setSelectedSongId}>
-              <SelectTrigger id="song">
-                <SelectValue placeholder="Choose a song..." />
-              </SelectTrigger>
-              <SelectContent>
-                {songs.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    No completed songs available
-                  </div>
-                ) : (
-                  songs.map((song) => (
-                    <SelectItem key={song.id} value={song.id}>
-                      {song.title}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Label>What to Practice</Label>
+            <RadioGroup value={practiceType} onValueChange={(v: any) => setPracticeType(v)}>
+              <div className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="song" id="type-song" />
+                  <Label htmlFor="type-song" className="cursor-pointer">Single Song</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="setlist" id="type-setlist" />
+                  <Label htmlFor="type-setlist" className="cursor-pointer">Entire Setlist</Label>
+                </div>
+              </div>
+            </RadioGroup>
           </div>
+
+          {/* Song/Setlist Selection */}
+          {practiceType === 'song' ? (
+            <div className="space-y-2">
+              <Label htmlFor="song">Song to Practice</Label>
+              <Select value={selectedSongId} onValueChange={setSelectedSongId}>
+                <SelectTrigger id="song">
+                  <SelectValue placeholder="Choose a song..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {songs.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      No completed songs available
+                    </div>
+                  ) : (
+                    songs.map((song) => (
+                      <SelectItem key={song.id} value={song.id}>
+                        {song.title}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="setlist">Setlist to Practice</Label>
+              <Select value={selectedSetlistId} onValueChange={setSelectedSetlistId}>
+                <SelectTrigger id="setlist">
+                  <SelectValue placeholder="Choose a setlist..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {setlists.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      No active setlists available
+                    </div>
+                  ) : (
+                    setlists.map((setlist) => (
+                      <SelectItem key={setlist.id} value={setlist.id}>
+                        {setlist.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Cost & Benefits Preview */}
           {selectedRoom && (
@@ -219,7 +340,7 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
           </Button>
           <Button 
             onClick={handleConfirm} 
-            disabled={!selectedRoomId || !selectedSongId || !canAfford || booking}
+            disabled={!canBook || booking}
           >
             {booking ? 'Booking...' : `Book Rehearsal ($${totalCost})`}
           </Button>
