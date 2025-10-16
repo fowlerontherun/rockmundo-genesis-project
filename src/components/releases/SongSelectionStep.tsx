@@ -4,16 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SongSelectionStepProps {
   userId: string;
   releaseType: "single" | "ep" | "album";
   selectedSongs: string[];
   onSongsChange: (songs: string[]) => void;
-  ownerType: "solo" | "band";
-  selectedBandId: string | null;
-  onBandChange: (bandId: string | null) => void;
+  bandId: string | null;
   onBack: () => void;
   onNext: () => void;
 }
@@ -23,30 +20,25 @@ export function SongSelectionStep({
   releaseType,
   selectedSongs,
   onSongsChange,
-  ownerType,
-  selectedBandId,
-  onBandChange,
+  bandId,
   onBack,
   onNext
 }: SongSelectionStepProps) {
   const requiredSongs = releaseType === "single" ? 2 : releaseType === "ep" ? 4 : 10;
   const maxSongs = releaseType === "album" ? 20 : requiredSongs;
 
-  const { data: bands } = useQuery({
-    queryKey: ["user-bands", userId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("band_members")
-        .select("band:bands(*)")
-        .eq("user_id", userId);
-      return data?.map(d => d.band).filter(Boolean) || [];
-    }
-  });
-
   const { data: songs } = useQuery({
-    queryKey: ["available-songs", userId, ownerType, selectedBandId],
+    queryKey: ["available-songs", userId, bandId],
     queryFn: async () => {
-      if (ownerType === "solo") {
+      if (bandId) {
+        const { data } = await supabase
+          .from("songs")
+          .select("*")
+          .eq("band_id", bandId)
+          .eq("status", "completed")
+          .order("created_at", { ascending: false });
+        return data || [];
+      } else {
         const { data } = await supabase
           .from("songs")
           .select("*")
@@ -54,18 +46,8 @@ export function SongSelectionStep({
           .eq("status", "completed")
           .order("created_at", { ascending: false });
         return data || [];
-      } else if (selectedBandId) {
-        const { data } = await supabase
-          .from("songs")
-          .select("*")
-          .eq("band_id", selectedBandId)
-          .eq("status", "completed")
-          .order("created_at", { ascending: false });
-        return data || [];
       }
-      return [];
-    },
-    enabled: ownerType === "solo" || !!selectedBandId
+    }
   });
 
   const toggleSong = (songId: string) => {
@@ -78,24 +60,6 @@ export function SongSelectionStep({
 
   return (
     <div className="space-y-4">
-      {ownerType === "band" && (
-        <div className="space-y-2">
-          <Label>Select Band</Label>
-          <Select value={selectedBandId || ""} onValueChange={onBandChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose a band" />
-            </SelectTrigger>
-            <SelectContent>
-              {bands?.map((band: any) => (
-                <SelectItem key={band.id} value={band.id}>
-                  {band.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       <div>
         <h3 className="font-semibold mb-2">
           Select Songs ({selectedSongs.length}/{maxSongs})

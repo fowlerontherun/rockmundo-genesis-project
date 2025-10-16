@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ReleaseTypeSelector } from "./ReleaseTypeSelector";
@@ -22,12 +21,31 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [releaseType, setReleaseType] = useState<"single" | "ep" | "album">("single");
   const [title, setTitle] = useState("");
   const [artistName, setArtistName] = useState("");
-  const [ownerType, setOwnerType] = useState<"solo" | "band">("solo");
-  const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<any[]>([]);
 
   const queryClient = useQueryClient();
+
+  // Auto-detect user's active band
+  const { data: userBand } = useQuery({
+    queryKey: ["user-active-band", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("band_members")
+        .select("band_id, bands!band_members_band_id_fkey(*)")
+        .eq("user_id", userId)
+        .limit(1)
+        .single();
+      return data?.bands || null;
+    }
+  });
+
+  // Auto-set artist name when band is detected
+  useEffect(() => {
+    if (userBand && !artistName) {
+      setArtistName(userBand.name);
+    }
+  }, [userBand, artistName]);
 
   const createRelease = useMutation({
     mutationFn: async () => {
@@ -35,11 +53,11 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       const totalCost = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
 
       // Check band balance if band release
-      if (ownerType === "band" && selectedBandId) {
+      if (userBand) {
         const { data: band } = await supabase
           .from("bands")
           .select("band_balance")
-          .eq("id", selectedBandId)
+          .eq("id", userBand.id)
           .single();
 
         if (!band || (band.band_balance || 0) < totalCost) {
@@ -51,11 +69,11 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         await supabase
           .from("bands")
           .update({ band_balance: newBalance })
-          .eq("id", selectedBandId);
+          .eq("id", userBand.id);
 
         // Record expense
         await supabase.from("band_earnings").insert({
-          band_id: selectedBandId,
+          band_id: userBand.id,
           amount: -totalCost,
           source: "release",
           description: `Release manufacturing: ${title}`,
@@ -68,8 +86,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       const { data: release, error: releaseError } = await supabase
         .from("releases")
         .insert({
-          user_id: ownerType === "solo" ? userId : null,
-          band_id: ownerType === "band" ? selectedBandId : null,
+          user_id: userBand ? null : userId,
+          band_id: userBand?.id || null,
           release_type: releaseType,
           title,
           artist_name: artistName,
@@ -111,8 +129,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["releases"] });
-      if (ownerType === "band" && selectedBandId) {
-        queryClient.invalidateQueries({ queryKey: ["band", selectedBandId] });
+      if (userBand) {
+        queryClient.invalidateQueries({ queryKey: ["band", userBand.id] });
         queryClient.invalidateQueries({ queryKey: ["band-earnings"] });
       }
       toast({ title: "Success", description: "Release created successfully!" });
@@ -133,8 +151,6 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setReleaseType("single");
     setTitle("");
     setArtistName("");
-    setOwnerType("solo");
-    setSelectedBandId(null);
     setSelectedSongs([]);
     setSelectedFormats([]);
   };
@@ -180,22 +196,14 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
               <Input
                 value={artistName}
                 onChange={(e) => setArtistName(e.target.value)}
-                placeholder="Enter artist name"
+                placeholder={userBand ? userBand.name : "Enter artist name"}
+                disabled={!!userBand}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Release As</Label>
-              <RadioGroup value={ownerType} onValueChange={(v: any) => setOwnerType(v)}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="solo" id="solo" />
-                  <Label htmlFor="solo">Solo Artist</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="band" id="band" />
-                  <Label htmlFor="band">Band</Label>
-                </div>
-              </RadioGroup>
+              {userBand && (
+                <p className="text-xs text-muted-foreground">
+                  Releasing as {userBand.name}
+                </p>
+              )}
             </div>
 
             <Button onClick={handleNext} className="w-full">Next: Select Songs</Button>
@@ -208,9 +216,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             releaseType={releaseType}
             selectedSongs={selectedSongs}
             onSongsChange={setSelectedSongs}
-            ownerType={ownerType}
-            selectedBandId={selectedBandId}
-            onBandChange={setSelectedBandId}
+            bandId={userBand?.id || null}
             onBack={() => setStep(1)}
             onNext={handleNext}
           />
