@@ -52,65 +52,58 @@ const Navigation = () => {
 
   const navSections = [
     {
-      title: "Overview & Wellness",
+      title: "🏠 Home & Character",
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: User, label: "My Character", path: "/my-character" },
-        { icon: Calendar, label: "Schedule", path: "/schedule" },
+        { icon: Guitar, label: "My Gear", path: "/gear" },
       ],
     },
     {
-      title: "Creative Studio",
+      title: "🎵 Music Creation",
       items: [
         { icon: Music, label: "Music Studio", path: "/music" },
         { icon: Play, label: "Songwriting", path: "/songwriting" },
-        { icon: ListMusic, label: "Song Manager", path: "/songs" },
         { icon: GraduationCap, label: "Education", path: "/education" },
       ],
     },
     {
-      title: "Live Performance & Touring",
+      title: "🎤 Live Performance",
       items: [
-        { icon: Music, label: "Performance", path: "/performance" },
+        { icon: Mic, label: "Performance Hub", path: "/performance" },
         { icon: Calendar, label: "Gig Booking", path: "/gigs" },
-        { icon: MapPin, label: "Tour Manager", path: "/tours" },
-        { icon: ListMusic, label: "Setlist Manager", path: "/setlists" },
+        { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: Award, label: "Awards", path: "/awards" },
-        { icon: Building2, label: "Venue Management", path: "/venues" },
         { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
-        { icon: MapPin, label: "City Overview", path: cityOverviewPath },
-        { icon: Globe, label: "World Map", path: "/cities" },
-        { icon: Plane, label: "Travel Planner", path: "/travel" },
-        { icon: Globe, label: "Tour System", path: "/tours-system" },
       ],
     },
     {
-      title: "Community & Audience",
+      title: "🌍 World & Travel",
+      items: [
+        { icon: Globe, label: "Cities Explorer", path: "/cities" },
+        { icon: MapPin, label: "World Map", path: "/world-map" },
+        { icon: Plane, label: "Travel Planner", path: "/travel" },
+        { icon: Building2, label: "Current City", path: cityOverviewPath },
+      ],
+    },
+    {
+      title: "👥 Band & Community",
       items: [
         { icon: Users, label: "Band Manager", path: "/band" },
-        { icon: Share2, label: "Social Media", path: "/social" },
         { icon: Megaphone, label: "Public Relations", path: "/pr" },
-        { icon: Users, label: "Fan Management", path: "/fans" },
-        { icon: TrendingUp, label: "World Pulse", path: "/charts" },
-        { icon: Trophy, label: "Competitive Charts", path: "/charts-competitive" },
-        { icon: Users, label: "Enhanced Band", path: "/band-enhanced" },
-        { icon: HeartPulse, label: "Enhanced Fans", path: "/fans-enhanced" },
+        { icon: Share2, label: "Social Media", path: "/social" },
       ],
     },
     {
-      title: "Business & Operations",
+      title: "💼 Business",
       items: [
-        { icon: Guitar, label: "My Gear", path: "/gear" },
-        { icon: ShoppingCart, label: "Equipment Store", path: "/equipment" },
-        { icon: Store, label: "Inventory", path: "/inventory" },
         { icon: Briefcase, label: "Employment", path: "/employment" },
         { icon: DollarSign, label: "Finances", path: "/finances" },
+        { icon: Store, label: "Inventory", path: "/inventory" },
         { icon: ShoppingCart, label: "Merchandise", path: "/merchandise" },
         { icon: DollarSign, label: "Underworld", path: "/underworld" },
-        { icon: Building2, label: "Record Label", path: "/labels" },
-        { icon: Play, label: "Streaming", path: "/streaming" },
-        { icon: Store, label: "Enhanced Store", path: "/equipment-enhanced" },
+        { icon: Building2, label: "Venue Management", path: "/venues" },
         { icon: Globe, label: "World Events", path: "/world" },
         { icon: TrendingUp, label: "Statistics", path: "/statistics" },
         { icon: Settings, label: "Admin Panel", path: "/admin" },
@@ -119,9 +112,10 @@ const Navigation = () => {
   ];
 
   const mobileShortcuts = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: Music, label: "Performance", path: "/performance" },
-    { icon: User, label: "My Character", path: "/my-character" },
+    { icon: Home, label: "Home", path: "/dashboard" },
+    { icon: Mic, label: "Perform", path: "/performance" },
+    { icon: Music, label: "Studio", path: "/music" },
+    { icon: User, label: "Character", path: "/my-character" },
   ];
 
   const handleLogout = async () => {

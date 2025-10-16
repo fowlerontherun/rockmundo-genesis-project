@@ -22,11 +22,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const adminSections = [
   {
-    title: "Experience Rewards",
-    description: "Grant instant XP bonuses to individual players or the entire community.",
-    href: "/admin/experience-rewards",
-    action: "Manage XP rewards",
-    Icon: Gift,
+    title: "Game Calendar",
+    description: "Configure in-game time progression, seasons, and seasonal modifiers for genres.",
+    href: "/admin/game-calendar",
+    action: "Manage calendar",
+    Icon: Calendar,
+  },
+  {
+    title: "Cities",
+    description: "Manage destination data, cultural hooks, and gameplay modifiers for each city.",
+    href: "/admin/cities",
+    action: "Manage cities",
+    Icon: Building2,
   },
   {
     title: "Universities",
@@ -43,20 +50,6 @@ const adminSections = [
     Icon: BookOpen,
   },
   {
-    title: "Cities",
-    description: "Manage destination data, cultural hooks, and gameplay modifiers for each city.",
-    href: "/admin/cities",
-    action: "Manage cities",
-    Icon: Building2,
-  },
-  {
-    title: "Studios",
-    description: "Curate recording studios and tune their booking-critical performance stats.",
-    href: "/admin/studios",
-    action: "Manage studios",
-    Icon: AudioLines,
-  },
-  {
     title: "Night Clubs",
     description: "Curate nightlife venues, DJ slot requirements, and social actions by city.",
     href: "/admin/night-clubs",
@@ -69,20 +62,6 @@ const adminSections = [
     href: "/admin/skill-books",
     action: "Manage skill books",
     Icon: NotebookPen,
-  },
-  {
-    title: "YouTube Playlists",
-    description: "Curate lessons and supporting playlists for the Education page.",
-    href: "/admin/youtube-videos",
-    action: "Manage YouTube content",
-    Icon: PlaySquare,
-  },
-  {
-    title: "Band Learning",
-    description: "Curate collaborative sessions that power the band's education track.",
-    href: "/admin/band-learning",
-    action: "Manage band sessions",
-    Icon: Sparkles,
   },
   {
     title: "Mentors",
@@ -125,13 +104,6 @@ const adminSections = [
     href: "/admin/song-gifts",
     action: "Gift songs",
     Icon: Gift,
-  },
-  {
-    title: "Game Calendar",
-    description: "Configure in-game time progression, seasons, and seasonal modifiers for genres.",
-    href: "/admin/game-calendar",
-    action: "Manage calendar",
-    Icon: Calendar,
   },
 ] as const;
 

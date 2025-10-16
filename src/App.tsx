@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +8,14 @@ import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
+
+// Redirect component for removed placeholder pages
+const RedirectTo = ({ to }: { to: string }) => {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+  return null;
+};
 import WorldPulsePage from "./pages/WorldPulse";
 import MusicStudio from "./pages/MusicStudio";
 import BandManager from "./pages/BandManager";
@@ -116,40 +124,43 @@ function App() {
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />
-                    <Route path="tours" element={<TourManager />} />
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
-                    <Route path="labels" element={<RecordLabel />} />
                     <Route path="social" element={<SocialMedia />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />
                     <Route path="awards" element={<AwardShows />} />
                     <Route path="chemistry" element={<BandChemistry />} />
-                    <Route path="streaming" element={<StreamingPlatforms />} />
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="finances" element={<Finances />} />
                     <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="song-market" element={<SongMarket />} />
-                    <Route path="band-enhanced" element={<EnhancedBandManager />} />
-                    <Route path="equipment-enhanced" element={<EnhancedEquipmentStore />} />
-                    <Route path="fans-enhanced" element={<EnhancedFanManagement />} />
+                    
+                    {/* Redirects for removed placeholder pages */}
+                    <Route path="tours" element={<RedirectTo to="/travel" />} />
+                    <Route path="schedule" element={<RedirectTo to="/dashboard" />} />
+                    <Route path="equipment" element={<RedirectTo to="/gear" />} />
+                    <Route path="equipment-enhanced" element={<RedirectTo to="/gear" />} />
+                    <Route path="fans" element={<RedirectTo to="/pr" />} />
+                    <Route path="fans-enhanced" element={<RedirectTo to="/pr" />} />
+                    <Route path="band-enhanced" element={<RedirectTo to="/band" />} />
+                    <Route path="streaming" element={<RedirectTo to="/music" />} />
+                    <Route path="labels" element={<RedirectTo to="/music" />} />
+                    <Route path="tours-system" element={<RedirectTo to="/travel" />} />
+                    <Route path="charts" element={<RedirectTo to="/dashboard" />} />
+                    <Route path="charts-competitive" element={<RedirectTo to="/dashboard" />} />
+                    <Route path="songs" element={<RedirectTo to="/music" />} />
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
-                    <Route path="charts-competitive" element={<CompetitiveCharts />} />
-                    <Route path="tours-system" element={<TouringSystem />} />
                     <Route path="admin" element={<Admin />} />
-                    <Route path="admin/experience-rewards" element={<AdminExperienceRewards />} />
+                    <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/courses" element={<AdminCourses />} />
-                    <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/cities" element={<AdminCities />} />
                     <Route path="admin/skill-books" element={<AdminSkillBooks />} />
-                    <Route path="admin/studios" element={<AdminStudios />} />
                     <Route path="admin/night-clubs" element={<AdminNightClubs />} />
-                    <Route path="admin/youtube-videos" element={<AdminYoutubeVideos />} />
-                    <Route path="admin/band-learning" element={<AdminBandLearning />} />
                     <Route path="admin/game-calendar" element={<AdminGameCalendar />} />
                     <Route path="admin/mentors" element={<AdminMentors />} />
                     <Route path="admin/jobs" element={<AdminJobs />} />
@@ -164,7 +175,6 @@ function App() {
                     <Route path="jams" element={<Navigate to="/performance?tab=jams" replace />} />
                     <Route path="world" element={<WorldEnvironment />} />
                     <Route path="world-map" element={<WorldMap />} />
-                    <Route path="songs" element={<SongManager />} />
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
