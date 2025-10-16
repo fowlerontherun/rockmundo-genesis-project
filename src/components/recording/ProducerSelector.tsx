@@ -12,10 +12,13 @@ interface ProducerSelectorProps {
 }
 
 export const ProducerSelector = ({ selectedProducer, onSelect, songGenre }: ProducerSelectorProps) => {
-  const [tierFilter, setTierFilter] = useState<string>("");
-  const [genreFilter, setGenreFilter] = useState<string>("");
+  const [tierFilter, setTierFilter] = useState<string>("all");
+  const [genreFilter, setGenreFilter] = useState<string>("all");
 
-  const { data: producers, isLoading } = useRecordingProducers(genreFilter, tierFilter);
+  const { data: producers, isLoading } = useRecordingProducers(
+    genreFilter === "all" ? undefined : genreFilter, 
+    tierFilter === "all" ? undefined : tierFilter
+  );
 
   // Self-produce option
   const selfProduceOption: RecordingProducer = {
@@ -45,7 +48,7 @@ export const ProducerSelector = ({ selectedProducer, onSelect, songGenre }: Prod
             <SelectValue placeholder="All Tiers" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Tiers</SelectItem>
+            <SelectItem value="all">All Tiers</SelectItem>
             <SelectItem value="budget">Budget</SelectItem>
             <SelectItem value="mid">Mid-Tier</SelectItem>
             <SelectItem value="premium">Premium</SelectItem>
@@ -58,7 +61,7 @@ export const ProducerSelector = ({ selectedProducer, onSelect, songGenre }: Prod
             <SelectValue placeholder="All Genres" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Genres</SelectItem>
+            <SelectItem value="all">All Genres</SelectItem>
             <SelectItem value="Rock">Rock</SelectItem>
             <SelectItem value="Pop">Pop</SelectItem>
             <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
