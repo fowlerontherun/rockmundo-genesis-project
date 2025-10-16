@@ -36,19 +36,19 @@ const SetlistManager = () => {
     queryFn: async () => {
       if (!user) return null;
 
-      const { data: memberData } = await supabase
+      const { data: memberData, error: memberError } = await supabase
         .from("band_members")
         .select("band_id, bands!band_members_band_id_fkey(*)")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (memberData) return memberData.bands;
 
-      const { data: leaderData } = await supabase
+      const { data: leaderData, error: leaderError } = await supabase
         .from("bands")
         .select("*")
         .eq("leader_id", user.id)
-        .single();
+        .maybeSingle();
 
       return leaderData;
     },
