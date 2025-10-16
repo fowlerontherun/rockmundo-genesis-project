@@ -38,6 +38,7 @@ import {
   Guitar,
   Award,
   Briefcase,
+  Mic2,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -62,7 +63,8 @@ const Navigation = () => {
     {
       title: "🎵 Music Creation",
       items: [
-        { icon: Music, label: "Music Studio", path: "/music" },
+        { icon: Music, label: "Music Hub", path: "/music" },
+        { icon: Mic2, label: "Recording Studio", path: "/recording-studio" },
         { icon: Play, label: "Songwriting", path: "/songwriting" },
         { icon: GraduationCap, label: "Education", path: "/education" },
       ],
@@ -116,7 +118,7 @@ const Navigation = () => {
   const mobileShortcuts = [
     { icon: Home, label: "Home", path: "/dashboard" },
     { icon: Mic, label: "Perform", path: "/performance" },
-    { icon: Music, label: "Studio", path: "/music" },
+    { icon: Mic2, label: "Studio", path: "/recording-studio" },
     { icon: User, label: "Character", path: "/my-character" },
   ];
 

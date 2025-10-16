@@ -1,19 +1,21 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RecordingWizard } from "@/components/recording/RecordingWizard";
 import { useRecordingSessions } from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
-import { Music, Plus, Clock, CheckCircle2, X } from "lucide-react";
+import { useGameData } from "@/hooks/useGameData";
+import { Music, Plus, Clock, CheckCircle2, X, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
 export default function RecordingStudio() {
   const { session } = useAuth();
+  const { currentCity } = useGameData();
   const [wizardOpen, setWizardOpen] = useState(false);
   
-  // TODO: Get current city from player profile
-  const currentCityId = "placeholder-city-id";
+  const currentCityId = currentCity?.id || "";
   
   const { data: sessions, isLoading } = useRecordingSessions(session?.user?.id || "");
 
@@ -61,6 +63,21 @@ export default function RecordingStudio() {
         </Button>
       </div>
 
+      {!currentCityId && (
+        <Card className="bg-yellow-500/10 border-yellow-500/20">
+          <CardContent className="pt-6 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+            <p className="text-yellow-600 dark:text-yellow-400">
+              You need to set your current city first.{" "}
+              <Link to="/travel" className="underline font-medium">
+                Travel to a city
+              </Link>{" "}
+              to access recording studios.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6">
         <Card>
           <CardHeader>
@@ -75,12 +92,18 @@ export default function RecordingStudio() {
                 Loading sessions...
               </div>
             ) : !sessions || sessions.length === 0 ? (
-              <div className="text-center py-12">
-                <Music className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No recording sessions yet</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Start your first recording to see it here
-                </p>
+              <div className="text-center py-12 space-y-4">
+                <Music className="h-12 w-12 text-muted-foreground mx-auto" />
+                <div>
+                  <p className="text-muted-foreground font-medium">No recording sessions yet</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Start by creating songs in the{" "}
+                    <Link to="/songwriting" className="text-primary underline font-medium">
+                      Songwriting
+                    </Link>{" "}
+                    section, then come back here to record them professionally.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">

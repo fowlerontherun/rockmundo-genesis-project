@@ -105,6 +105,13 @@ const adminSections = [
     action: "Gift songs",
     Icon: Gift,
   },
+  {
+    title: "Recording Studios",
+    description: "Manage city recording studios with quality ratings, hourly rates, specialties, and equipment.",
+    href: "/admin/city-studios",
+    action: "Manage studios",
+    Icon: Music2,
+  },
 ] as const;
 
 export default function Admin() {
