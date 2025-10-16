@@ -2,7 +2,10 @@ import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "@/hooks/use-auth-context";
 import { useTravelBooking } from "@/hooks/useTravelBooking";
 import { getAvailableRoutes, calculateTravelCost, TravelRoute } from "@/utils/travelSystem";
+import { checkTravelDisruptions } from "@/utils/gameCalendar";
+import { WeatherDisruptionAlert } from "@/components/travel/WeatherDisruptionAlert";
 import { supabase } from "@/integrations/supabase/client";
+import type { TravelDisruption } from "@/utils/gameCalendar";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +47,7 @@ export function TravelBookingDialog({
   const [selectedRoute, setSelectedRoute] = useState<TravelRoute | null>(null);
   const [playerMoney, setPlayerMoney] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [disruption, setDisruption] = useState<TravelDisruption | null>(null);
 
   useEffect(() => {
     if (open && currentCityId) {
@@ -57,6 +61,15 @@ export function TravelBookingDialog({
       if (route) setSelectedRoute(route);
     }
   }, [preselectedDestinationId, routes]);
+
+  // Check for travel disruptions when route is selected
+  useEffect(() => {
+    if (selectedRoute) {
+      checkTravelDisruptions(selectedRoute.id).then(setDisruption);
+    } else {
+      setDisruption(null);
+    }
+  }, [selectedRoute]);
 
   const loadRoutesAndMoney = async () => {
     if (!currentCityId || !user) return;
@@ -154,19 +167,22 @@ export function TravelBookingDialog({
             </div>
 
             {selectedRoute && (
-              <Card>
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <TransportIcon className="h-6 w-6 text-primary" />
+              <>
+                {disruption && <WeatherDisruptionAlert disruption={disruption} />}
+                
+                <Card>
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-primary/10 p-3">
+                        <TransportIcon className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold capitalize">{selectedRoute.transport_type}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedRoute.to_city?.name}, {selectedRoute.to_city?.country}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold capitalize">{selectedRoute.transport_type}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedRoute.to_city?.name}, {selectedRoute.to_city?.country}
-                      </p>
-                    </div>
-                  </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-1">
@@ -207,6 +223,7 @@ export function TravelBookingDialog({
                   )}
                 </CardContent>
               </Card>
+              </>
             )}
 
             <div className="flex gap-3 pt-4">

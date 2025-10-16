@@ -12,6 +12,7 @@ import {
   Briefcase,
   Music2,
   Plane,
+  Calendar,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -124,6 +125,13 @@ const adminSections = [
     href: "/admin/song-gifts",
     action: "Gift songs",
     Icon: Gift,
+  },
+  {
+    title: "Game Calendar",
+    description: "Configure in-game time progression, seasons, and seasonal modifiers for genres.",
+    href: "/admin/game-calendar",
+    action: "Manage calendar",
+    Icon: Calendar,
   },
 ] as const;
 

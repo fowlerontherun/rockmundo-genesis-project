@@ -1424,6 +1424,36 @@ export type Database = {
         }
         Relationships: []
       }
+      game_calendar_config: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          real_world_days_per_game_month: number
+          real_world_days_per_game_year: number
+          season_start_months: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          real_world_days_per_game_month?: number
+          real_world_days_per_game_year?: number
+          season_start_months?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          real_world_days_per_game_month?: number
+          real_world_days_per_game_year?: number
+          season_start_months?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       game_events: {
         Row: {
           created_at: string | null
@@ -1993,6 +2023,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_birthday_rewards: {
+        Row: {
+          cash_awarded: number
+          claimed_at: string
+          created_at: string
+          game_year: number
+          id: string
+          profile_id: string
+          user_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          cash_awarded?: number
+          claimed_at?: string
+          created_at?: string
+          game_year: number
+          id?: string
+          profile_id: string
+          user_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          cash_awarded?: number
+          claimed_at?: string
+          created_at?: string
+          game_year?: number
+          id?: string
+          profile_id?: string
+          user_id?: string
+          xp_awarded?: number
+        }
+        Relationships: []
       }
       player_book_purchases: {
         Row: {
@@ -2747,6 +2810,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          character_birth_date: string | null
           created_at: string | null
           current_city_id: string | null
           display_name: string | null
@@ -2772,6 +2836,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          character_birth_date?: string | null
           created_at?: string | null
           current_city_id?: string | null
           display_name?: string | null
@@ -2797,6 +2862,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          character_birth_date?: string | null
           created_at?: string | null
           current_city_id?: string | null
           display_name?: string | null
@@ -2883,6 +2949,83 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "city_districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_genre_modifiers: {
+        Row: {
+          created_at: string
+          genre: string
+          gig_attendance_multiplier: number
+          id: string
+          is_active: boolean
+          sales_multiplier: number
+          season: string
+          streams_multiplier: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          genre: string
+          gig_attendance_multiplier?: number
+          id?: string
+          is_active?: boolean
+          sales_multiplier?: number
+          season: string
+          streams_multiplier?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          genre?: string
+          gig_attendance_multiplier?: number
+          id?: string
+          is_active?: boolean
+          sales_multiplier?: number
+          season?: string
+          streams_multiplier?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      seasonal_weather_patterns: {
+        Row: {
+          avg_temperature_celsius: number
+          city_id: string
+          created_at: string
+          id: string
+          season: string
+          travel_disruption_chance: number
+          updated_at: string
+          weather_conditions: Json
+        }
+        Insert: {
+          avg_temperature_celsius?: number
+          city_id: string
+          created_at?: string
+          id?: string
+          season: string
+          travel_disruption_chance?: number
+          updated_at?: string
+          weather_conditions?: Json
+        }
+        Update: {
+          avg_temperature_celsius?: number
+          city_id?: string
+          created_at?: string
+          id?: string
+          season?: string
+          travel_disruption_chance?: number
+          updated_at?: string
+          weather_conditions?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasonal_weather_patterns_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
             referencedColumns: ["id"]
           },
         ]
@@ -3974,6 +4117,59 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_disruption_events: {
+        Row: {
+          cause: string
+          cost_multiplier: number
+          created_at: string
+          delay_hours: number
+          disruption_type: string
+          ends_at: string
+          id: string
+          is_active: boolean
+          route_id: string | null
+          severity: number
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          cause: string
+          cost_multiplier?: number
+          created_at?: string
+          delay_hours?: number
+          disruption_type: string
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          route_id?: string | null
+          severity?: number
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          cause?: string
+          cost_multiplier?: number
+          created_at?: string
+          delay_hours?: number
+          disruption_type?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          route_id?: string | null
+          severity?: number
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_disruption_events_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "city_transport_routes"
             referencedColumns: ["id"]
           },
         ]

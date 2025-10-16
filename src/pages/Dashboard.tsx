@@ -31,6 +31,9 @@ import { CurrentLocationWidget } from "@/components/city/CurrentLocationWidget";
 import type { Database } from "@/lib/supabase-types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
+import { GameDateWidget } from "@/components/calendar/GameDateWidget";
+import { BirthdayNotification } from "@/components/calendar/BirthdayNotification";
+import { useGameCalendar, useBirthdayCheck } from "@/hooks/useGameCalendar";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 type ProfileActivityStatusRow = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
@@ -832,6 +835,30 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Game Calendar Widget */}
+        <GameDateWidget profileCreatedAt={profile.created_at ? new Date(profile.created_at) : undefined} />
+
+        {/* Birthday Notification */}
+        {(() => {
+          const { data: gameCalendar } = useGameCalendar(profile.created_at ? new Date(profile.created_at) : undefined);
+          const { data: birthdayCheck } = useBirthdayCheck(
+            profile.id,
+            profile.character_birth_date ? new Date(profile.character_birth_date) : null,
+            gameCalendar || undefined
+          );
+
+          return birthdayCheck?.isBirthday && birthdayCheck?.canClaim && gameCalendar ? (
+            <BirthdayNotification
+              userId={profile.user_id}
+              profileId={profile.id}
+              gameYear={birthdayCheck.gameYear}
+              birthDate={new Date(profile.character_birth_date!)}
+              createdAt={new Date(profile.created_at)}
+              inGameDate={gameCalendar}
+            />
+          ) : null;
+        })()}
 
         {/* Location Widget */}
         <CurrentLocationWidget city={currentCity} loading={loading} />
