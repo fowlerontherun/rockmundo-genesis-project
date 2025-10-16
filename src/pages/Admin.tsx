@@ -118,6 +118,13 @@ const adminSections = [
     action: "Manage travel routes",
     Icon: Plane,
   },
+  {
+    title: "Song Gifts",
+    description: "Create fully-featured songs with all attributes and gift them to bands.",
+    href: "/admin/song-gifts",
+    action: "Gift songs",
+    Icon: Gift,
+  },
 ] as const;
 
 export default function Admin() {
