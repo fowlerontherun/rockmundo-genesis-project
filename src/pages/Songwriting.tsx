@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MUSIC_GENRES, getGenreSkillSlug } from "@/data/genres";
 import { calculateSongQuality, canStartSongwriting, canWriteGenre } from "@/utils/songQuality";
@@ -58,6 +59,9 @@ import {
   BadgeCheck,
   LockOpen,
   Lock,
+  Music2,
+  Pen,
+  UserPlus,
 } from "lucide-react";
 import logger from "@/lib/logger";
 
@@ -97,7 +101,6 @@ interface ProjectFormState {
   sessionMusicians: string[];
   inspirationModifiers: string[];
   moodModifiers: string[];
-  effortLevel: SessionEffortOption["id"];
 }
 
 type SessionEffortOption = {
@@ -137,7 +140,6 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   sessionMusicians: [],
   inspirationModifiers: [],
   moodModifiers: [],
-  effortLevel: DEFAULT_EFFORT_OPTION.id,
 };
 
 const SONG_SELECT_VARIANTS: ReadonlyArray<ReadonlyArray<string>> = [
@@ -789,10 +791,6 @@ const Songwriting = () => {
     () => WRITING_MODE_OPTIONS.find((option) => option.id === formState.writingMode) ?? null,
     [formState.writingMode],
   );
-  const selectedEffortOption = useMemo(
-    () => SESSION_EFFORT_OPTIONS.find((option) => option.id === formState.effortLevel) ?? DEFAULT_EFFORT_OPTION,
-    [formState.effortLevel],
-  );
 
   const songMap = useMemo(() => {
     return songs.reduce<Record<string, Song>>((accumulator, song) => {
@@ -1059,7 +1057,6 @@ const Songwriting = () => {
       sessionMusicians: creativeBrief?.session_musicians ?? [],
       inspirationModifiers: creativeBrief?.inspiration_modifiers ?? [],
       moodModifiers: creativeBrief?.mood_modifiers ?? [],
-      effortLevel: (creativeBrief?.effort_level as SessionEffortOption["id"]) ?? DEFAULT_EFFORT_OPTION.id,
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -1129,7 +1126,6 @@ const Songwriting = () => {
       session_musicians: formState.sessionMusicians,
       inspiration_modifiers: formState.inspirationModifiers,
       mood_modifiers: formState.moodModifiers,
-      effort_level: formState.effortLevel,
       rating_revealed_at: selectedProject?.creative_brief?.rating_revealed_at ?? null,
       core_attributes: selectedProject?.creative_brief?.core_attributes ?? null,
     } as const;
@@ -1418,343 +1414,337 @@ const Songwriting = () => {
                   : "Define the creative direction and we'll forecast the focus sprints you'll need."}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="project-title">Project Title</Label>
-                <Input
-                  id="project-title"
-                  value={formState.title}
-                  onChange={(event) => setFormState((previous) => ({ ...previous, title: event.target.value }))}
-                  placeholder="anthemic stadium rock banger"
-                  aria-invalid={Boolean(formErrors.title)}
-                />
-                {formErrors.title && <p className="text-sm text-destructive">{formErrors.title}</p>}
-              </div>
+            <form onSubmit={handleSubmit}>
+              <Tabs defaultValue="basics" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="basics" className="flex items-center gap-2">
+                    <Music2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Basics</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="creative" className="flex items-center gap-2">
+                    <Pen className="h-4 w-4" />
+                    <span className="hidden sm:inline">Creative Brief</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="collaborators" className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Collaborators</span>
+                  </TabsTrigger>
+                </TabsList>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="project-theme">Song Theme</Label>
-                  <Select
-                    value={formState.theme_id || "none"}
-                    onValueChange={(value) =>
-                      setFormState((previous) => ({ ...previous, theme_id: value === "none" ? "" : value }))
-                    }
-                    disabled={isLoadingThemes && themesList.length === 0}
-                  >
-                    <SelectTrigger id="project-theme">
-                      <SelectValue placeholder="Choose a theme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No specific theme</SelectItem>
-                      {themesList.map((theme) => (
-                        <SelectItem key={theme.id} value={theme.id}>
-                          {theme.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-progression">Chord Progression</Label>
-                  <Select
-                    value={formState.chord_progression_id || "none"}
-                    onValueChange={(value) =>
-                      setFormState((previous) => ({
-                        ...previous,
-                        chord_progression_id: value === "none" ? "" : value,
-                      }))
-                    }
-                    disabled={isLoadingChordProgressions && progressionsList.length === 0}
-                  >
-                    <SelectTrigger id="project-progression">
-                      <SelectValue placeholder="Select a progression" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No progression yet</SelectItem>
-                      {progressionsList.map((progression) => (
-                        <SelectItem key={progression.id} value={progression.id}>
-                          {progression.name} · {progression.progression}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                <div className="max-h-[60vh] overflow-y-auto pr-2">
+                  {/* Tab 1: Basics */}
+                  <TabsContent value="basics" className="space-y-4 mt-0">
+                    <div className="space-y-2">
+                      <Label htmlFor="project-title">Project Title *</Label>
+                      <Input
+                        id="project-title"
+                        value={formState.title}
+                        onChange={(event) => setFormState((previous) => ({ ...previous, title: event.target.value }))}
+                        placeholder="e.g., Anthemic stadium rock banger"
+                        aria-invalid={Boolean(formErrors.title)}
+                      />
+                      {formErrors.title && <p className="text-sm text-destructive">{formErrors.title}</p>}
+                    </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="project-genre">Primary Genre</Label>
-                  <Select
-                    value={formState.genre || "none"}
-                    onValueChange={(value) =>
-                      setFormState((previous) => ({ ...previous, genre: value === "none" ? "" : value }))
-                    }
-                  >
-                    <SelectTrigger id="project-genre">
-                      <SelectValue placeholder="Select a genre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Explore something new</SelectItem>
-                      {genreOptions.map((genre) => (
-                        <SelectItem key={genre.id} value={genre.id}>
-                          {genre.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {formErrors.genre && <p className="text-sm text-destructive">{formErrors.genre}</p>}
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="project-writing-mode">Writing Mode</Label>
-                  <Select
-                    value={formState.writingMode || "none"}
-                    onValueChange={(value) =>
-                      setFormState((previous) => ({ ...previous, writingMode: value === "none" ? "" : value }))
-                    }
-                  >
-                    <SelectTrigger id="project-writing-mode">
-                      <SelectValue placeholder="How will this sprint run?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Decide later</SelectItem>
-                      {WRITING_MODE_OPTIONS.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedWritingMode?.description ?? "Pick a mode to set expectations for collaborators."}
-                  </p>
-                  {formErrors.writingMode && <p className="text-sm text-destructive">{formErrors.writingMode}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-effort">Effort Level</Label>
-                  <Select
-                    value={formState.effortLevel}
-                    onValueChange={(value: SessionEffortOption["id"]) =>
-                      setFormState((previous) => ({ ...previous, effortLevel: value }))
-                    }
-                  >
-                    <SelectTrigger id="project-effort">
-                      <SelectValue placeholder="Choose focus window" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SESSION_EFFORT_OPTIONS.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">{selectedEffortOption.description}</p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-3 rounded-md border p-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold">Co-writers</Label>
-                    <Badge variant="outline">{formState.coWriters.length} selected</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Invite collaborators to shape the song. We'll preview the royalty split.
-                  </p>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {CO_WRITER_OPTIONS.map((option) => (
-                      <label
-                        key={option.id}
-                        className="flex items-start gap-2 rounded-md border border-transparent p-2 hover:border-muted-foreground/40"
+                    <div className="space-y-2">
+                      <Label htmlFor="project-genre">Primary Genre *</Label>
+                      <Select
+                        value={formState.genre || "none"}
+                        onValueChange={(value) =>
+                          setFormState((previous) => ({ ...previous, genre: value === "none" ? "" : value }))
+                        }
                       >
-                        <Checkbox
-                          checked={formState.coWriters.includes(option.id)}
-                          onCheckedChange={(checked) =>
-                            setFormState((previous) => ({
-                              ...previous,
-                              coWriters: toggleSelection(previous.coWriters, option.id, Boolean(checked)),
-                            }))
+                        <SelectTrigger id="project-genre">
+                          <SelectValue placeholder="Select a genre" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Explore something new</SelectItem>
+                          {availableGenres.map((genre) => (
+                            <SelectItem key={genre} value={genre}>
+                              {genre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formErrors.genre && <p className="text-sm text-destructive">{formErrors.genre}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="project-theme">Song Theme</Label>
+                      <Select
+                        value={formState.theme_id || "none"}
+                        onValueChange={(value) =>
+                          setFormState((previous) => ({ ...previous, theme_id: value === "none" ? "" : value }))
+                        }
+                        disabled={isLoadingThemes && themesList.length === 0}
+                      >
+                        <SelectTrigger id="project-theme">
+                          <SelectValue placeholder="Choose a theme (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No specific theme</SelectItem>
+                          {themesList.map((theme) => (
+                            <SelectItem key={theme.id} value={theme.id}>
+                              {theme.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="project-progression">Chord Progression</Label>
+                      <Select
+                        value={formState.chord_progression_id || "none"}
+                        onValueChange={(value) =>
+                          setFormState((previous) => ({
+                            ...previous,
+                            chord_progression_id: value === "none" ? "" : value,
+                          }))
+                        }
+                        disabled={isLoadingChordProgressions && progressionsList.length === 0}
+                      >
+                        <SelectTrigger id="project-progression">
+                          <SelectValue placeholder="Select a progression (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No progression yet</SelectItem>
+                          {progressionsList.map((progression) => (
+                            <SelectItem key={progression.id} value={progression.id}>
+                              {progression.name} · {progression.progression}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TabsContent>
+
+                  {/* Tab 2: Creative Brief */}
+                  <TabsContent value="creative" className="space-y-4 mt-0">
+                    <div className="space-y-2">
+                      <Label htmlFor="project-lyrics">Lyrics & Song Notes</Label>
+                      <Textarea
+                        id="project-lyrics"
+                        value={formState.initial_lyrics}
+                        onChange={(event) =>
+                          setFormState((previous) => ({ ...previous, initial_lyrics: event.target.value }))
+                        }
+                        placeholder="Capture the core concept, lyric fragments, or production notes."
+                        className="min-h-32"
+                      />
+                      <p className="text-right text-xs text-muted-foreground">{formatWordCount(formState.initial_lyrics)}</p>
+                    </div>
+                    
+                    {/* AI Lyrics Generator - Collapsible */}
+                    <div className="pt-2">
+                      <AILyricsGenerator
+                        title={selectedProject?.title || formState.title}
+                        theme={selectedProject?.song_themes?.name || ''}
+                        genre={formState.genre}
+                        chordProgression={selectedProject?.chord_progressions?.progression || ''}
+                        onLyricsGenerated={(lyrics) => {
+                          setFormState(prev => ({
+                            ...prev,
+                            initial_lyrics: prev.initial_lyrics ? `${prev.initial_lyrics}\n\n[AI Generated]\n${lyrics}` : `[AI Generated]\n${lyrics}`
+                          }));
+                          if (selectedProject) {
+                            updateProject.mutate({
+                              id: selectedProject.id,
+                              initial_lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`,
+                              lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`
+                            });
                           }
-                        />
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">{option.label}</p>
-                          {(option.description || option.familiarity) && (
-                            <p className="text-xs text-muted-foreground">
-                              {option.description ?? option.familiarity}
-                            </p>
-                          )}
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="flex items-center gap-2 mb-2">
+                          <Lightbulb className="h-4 w-4 text-amber-500" />
+                          Inspiration Anchors
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {INSPIRATION_TAGS.map((tag) => {
+                            const selected = formState.inspirationModifiers.includes(tag.id);
+                            return (
+                              <Button
+                                type="button"
+                                key={tag.id}
+                                size="sm"
+                                variant={selected ? "default" : "outline"}
+                                onClick={() =>
+                                  setFormState((previous) => ({
+                                    ...previous,
+                                    inspirationModifiers: toggleSelection(
+                                      previous.inspirationModifiers,
+                                      tag.id,
+                                      !selected,
+                                    ),
+                                  }))
+                                }
+                              >
+                                {tag.label}
+                              </Button>
+                            );
+                          })}
                         </div>
-                      </label>
-                    ))}
-                  </div>
-                  {plannedCoWriterSplits.length > 0 && (
-                    <div className="rounded-md bg-muted/40 p-2 text-xs">
-                      <p className="mb-1 flex items-center gap-1 font-semibold text-foreground">
-                        <Users className="h-3.5 w-3.5" /> Royalty preview
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {plannedCoWriterSplits.map((entry) => (
-                          <Badge key={entry.id} variant="secondary">
-                            {entry.label}: {entry.split}%
-                          </Badge>
-                        ))}
+                      </div>
+
+                      <div>
+                        <Label className="flex items-center gap-2 mb-2">
+                          <Sparkles className="h-4 w-4 text-purple-500" />
+                          Mood Palette
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {MOOD_TAGS.map((tag) => {
+                            const selected = formState.moodModifiers.includes(tag.id);
+                            return (
+                              <Button
+                                type="button"
+                                key={tag.id}
+                                size="sm"
+                                variant={selected ? "default" : "outline"}
+                                onClick={() =>
+                                  setFormState((previous) => ({
+                                    ...previous,
+                                    moodModifiers: toggleSelection(previous.moodModifiers, tag.id, !selected),
+                                  }))
+                                }
+                              >
+                                {tag.label}
+                              </Button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <div className="rounded-md border p-3 space-y-2">
-                    <Label className="text-sm font-semibold">Producer leadership</Label>
+                  </TabsContent>
+
+                  {/* Tab 3: Collaborators */}
+                  <TabsContent value="collaborators" className="space-y-4 mt-0">
                     <div className="space-y-2">
-                      {PRODUCER_OPTIONS.map((option) => (
-                        <label key={option.id} className="flex items-start gap-2 rounded-md border border-transparent p-2 hover:border-muted-foreground/40">
-                          <Checkbox
-                            checked={formState.producers.includes(option.id)}
-                            onCheckedChange={(checked) =>
-                              setFormState((previous) => ({
-                                ...previous,
-                                producers: toggleSelection(previous.producers, option.id, Boolean(checked)),
-                              }))
-                            }
-                          />
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-foreground">{option.label}</p>
-                            {option.description && (
-                              <p className="text-xs text-muted-foreground">{option.description}</p>
-                            )}
+                      <Label htmlFor="project-writing-mode">Writing Mode *</Label>
+                      <Select
+                        value={formState.writingMode || "none"}
+                        onValueChange={(value) =>
+                          setFormState((previous) => ({ ...previous, writingMode: value === "none" ? "" : value }))
+                        }
+                      >
+                        <SelectTrigger id="project-writing-mode">
+                          <SelectValue placeholder="How will this sprint run?" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Decide later</SelectItem>
+                          {WRITING_MODE_OPTIONS.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedWritingMode?.description ?? "Pick a mode to set expectations for collaborators."}
+                      </p>
+                      {formErrors.writingMode && <p className="text-sm text-destructive">{formErrors.writingMode}</p>}
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm font-semibold mb-2 block">Co-writers</Label>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Invite collaborators to shape the song. Royalty splits will be calculated automatically.
+                        </p>
+                        <div className="space-y-2">
+                          {CO_WRITER_OPTIONS.map((option) => (
+                            <label
+                              key={option.id}
+                              className="flex items-start gap-2 p-2 rounded-md border hover:bg-muted/50 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={formState.coWriters.includes(option.id)}
+                                onCheckedChange={(checked) =>
+                                  setFormState((previous) => ({
+                                    ...previous,
+                                    coWriters: toggleSelection(previous.coWriters, option.id, Boolean(checked)),
+                                  }))
+                                }
+                              />
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium">{option.label}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {option.description ?? option.familiarity}
+                                </p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                        {plannedCoWriterSplits.length > 0 && (
+                          <div className="mt-3 rounded-md bg-muted p-3">
+                            <p className="text-xs font-semibold mb-2 flex items-center gap-1">
+                              <Users className="h-3.5 w-3.5" /> Royalty Split Preview
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {plannedCoWriterSplits.map((entry) => (
+                                <Badge key={entry.id} variant="secondary">
+                                  {entry.label}: {entry.split}%
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                        </label>
-                      ))}
+                        )}
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-semibold mb-2 block">Producer Leadership</Label>
+                        <div className="space-y-2">
+                          {PRODUCER_OPTIONS.map((option) => (
+                            <label key={option.id} className="flex items-start gap-2 p-2 rounded-md border hover:bg-muted/50 cursor-pointer">
+                              <Checkbox
+                                checked={formState.producers.includes(option.id)}
+                                onCheckedChange={(checked) =>
+                                  setFormState((previous) => ({
+                                    ...previous,
+                                    producers: toggleSelection(previous.producers, option.id, Boolean(checked)),
+                                  }))
+                                }
+                              />
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium">{option.label}</p>
+                                {option.description && (
+                                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                                )}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-semibold mb-2 block">Session Musicians</Label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {SESSION_MUSICIAN_OPTIONS.map((option) => (
+                            <label key={option.id} className="flex items-center gap-2 text-sm p-2 rounded-md border hover:bg-muted/50 cursor-pointer">
+                              <Checkbox
+                                checked={formState.sessionMusicians.includes(option.id)}
+                                onCheckedChange={(checked) =>
+                                  setFormState((previous) => ({
+                                    ...previous,
+                                    sessionMusicians: toggleSelection(previous.sessionMusicians, option.id, Boolean(checked)),
+                                  }))
+                                }
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="rounded-md border p-3 space-y-2">
-                    <Label className="text-sm font-semibold">Session musicians</Label>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {SESSION_MUSICIAN_OPTIONS.map((option) => (
-                        <label key={option.id} className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={formState.sessionMusicians.includes(option.id)}
-                            onCheckedChange={(checked) =>
-                              setFormState((previous) => ({
-                                ...previous,
-                                sessionMusicians: toggleSelection(previous.sessionMusicians, option.id, Boolean(checked)),
-                              }))
-                            }
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+                  </TabsContent>
                 </div>
-              </div>
+              </Tabs>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-md border p-3 space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-semibold">
-                    <Lightbulb className="h-4 w-4 text-amber-500" /> Inspiration anchors
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {INSPIRATION_TAGS.map((tag) => {
-                      const selected = formState.inspirationModifiers.includes(tag.id);
-                      return (
-                        <Button
-                          type="button"
-                          key={tag.id}
-                          size="sm"
-                          variant={selected ? "default" : "secondary"}
-                          className={selected ? "bg-primary text-primary-foreground" : ""}
-                          onClick={() =>
-                            setFormState((previous) => ({
-                              ...previous,
-                              inspirationModifiers: toggleSelection(
-                                previous.inspirationModifiers,
-                                tag.id,
-                                !selected,
-                              ),
-                            }))
-                          }
-                        >
-                          {tag.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="rounded-md border p-3 space-y-2">
-                  <Label className="flex items-center gap-2 text-sm font-semibold">
-                    <Sparkles className="h-4 w-4 text-purple-500" /> Mood palette
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {MOOD_TAGS.map((tag) => {
-                      const selected = formState.moodModifiers.includes(tag.id);
-                      return (
-                        <Button
-                          type="button"
-                          key={tag.id}
-                          size="sm"
-                          variant={selected ? "default" : "secondary"}
-                          className={selected ? "bg-primary text-primary-foreground" : ""}
-                          onClick={() =>
-                            setFormState((previous) => ({
-                              ...previous,
-                              moodModifiers: toggleSelection(previous.moodModifiers, tag.id, !selected),
-                            }))
-                          }
-                        >
-                          {tag.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 p-3 text-xs text-muted-foreground">
-                Save your project to let the game estimate session counts and progress targets based on your current skills and attributes.
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="project-lyrics">Lyrics & Song Notes</Label>
-                <Textarea
-                  id="project-lyrics"
-                  value={formState.initial_lyrics}
-                  onChange={(event) =>
-                    setFormState((previous) => ({ ...previous, initial_lyrics: event.target.value }))
-                  }
-                  placeholder="Capture the core concept, lyric fragments, or production notes."
-                  className="min-h-32"
-                />
-                <p className="text-right text-xs text-muted-foreground">{formatWordCount(formState.initial_lyrics)}</p>
-                
-                {/* AI Lyrics Generator */}
-                <div className="pt-2">
-                  <AILyricsGenerator
-                    title={selectedProject?.title || formState.title}
-                    theme={selectedProject?.song_themes?.name || ''}
-                    genre={formState.genre}
-                    chordProgression={selectedProject?.chord_progressions?.progression || ''}
-                    onLyricsGenerated={(lyrics) => {
-                      setFormState(prev => ({
-                        ...prev,
-                        initial_lyrics: prev.initial_lyrics ? `${prev.initial_lyrics}\n\n[AI Generated]\n${lyrics}` : `[AI Generated]\n${lyrics}`
-                      }));
-                      if (selectedProject) {
-                        updateProject.mutate({
-                          id: selectedProject.id,
-                          initial_lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`,
-                          lyrics: `${formState.initial_lyrics}\n\n[AI Generated]\n${lyrics}`
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
