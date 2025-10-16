@@ -72,7 +72,17 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
   const canAfford = availableBalance >= totalCost;
   const balanceShortfall = totalCost - availableBalance;
   
-  console.log('Balance check:', { bandId, bandBalance, personalCash, availableBalance, totalCost, canAfford });
+  console.log('💰 Balance check:', { 
+    bandId, 
+    bandBalance, 
+    personalCash, 
+    availableBalance, 
+    totalCost, 
+    canAfford,
+    studioCost,
+    producerCost,
+    orchestraCost
+  });
 
   const handleStartRecording = async () => {
     await createSession.mutateAsync({
