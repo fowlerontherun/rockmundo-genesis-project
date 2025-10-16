@@ -26,22 +26,23 @@ export default function RecordingStudio() {
       if (!session?.user?.id) return;
 
       // Get user's active band (not on hiatus, not inactive)
-      const { data: bandMemberships } = await supabase
+      const { data: bandMemberships, error } = await supabase
         .from('band_members')
-        .select('band_id, bands(id, name, status)')
+        .select('band_id, bands!inner(id, name, status)')
         .eq('user_id', session.user.id)
         .eq('is_touring_member', false)
+        .eq('bands.status', 'active')
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (bandMemberships?.bands) {
-        const band = bandMemberships.bands as any;
-        // Only use active bands (not on hiatus)
-        if (band.status === 'active') {
-          setUserBandId(band.id);
-        } else {
-          setUserBandId(null);
-        }
+      console.log('🎸 Loading user band:', { bandMemberships, error, userId: session.user.id });
+
+      if (bandMemberships?.band_id) {
+        console.log('✅ Setting band ID:', bandMemberships.band_id);
+        setUserBandId(bandMemberships.band_id);
+      } else {
+        console.log('❌ No active band found');
+        setUserBandId(null);
       }
     };
 
@@ -86,7 +87,10 @@ export default function RecordingStudio() {
             Record your songs with professional producers and studios
           </p>
         </div>
-        <Button onClick={() => setWizardOpen(true)} size="lg">
+        <Button onClick={() => {
+          console.log('🎬 Opening recording wizard with:', { userBandId, userId: session?.user?.id });
+          setWizardOpen(true);
+        }} size="lg">
           <Plus className="h-5 w-5 mr-2" />
           New Recording
         </Button>
