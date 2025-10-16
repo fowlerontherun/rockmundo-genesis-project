@@ -15,6 +15,7 @@ import {
   Calendar,
   TrendingUp,
   Shield,
+  Clock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -141,6 +142,13 @@ const adminSections = [
     href: "/admin/twaater-moderation",
     action: "Moderate content",
     Icon: Shield,
+  },
+  {
+    title: "Cron Monitor",
+    description: "Monitor automated background tasks, view execution logs, and manually trigger functions.",
+    href: "/admin/cron-monitor",
+    action: "View monitor",
+    Icon: Clock,
   },
 ] as const;
 

@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.calculate-weekly-activity]
 verify_jwt = false
+
+[functions.complete-recording-sessions]
+verify_jwt = false

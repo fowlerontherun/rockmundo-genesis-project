@@ -145,14 +145,23 @@ const Twaater = () => {
                 </TabsContent>
 
                 <TabsContent value="trending" className="mt-0">
-                  <div className="p-8 text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    Trending posts coming soon!
+                  <div className="p-8 text-center space-y-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    <TrendingUp className="h-12 w-12 mx-auto opacity-50" />
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">Trending Coming Soon</h3>
+                      <p className="text-sm">We're building an algorithm to surface viral twaats and hot topics.</p>
+                    </div>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="mentions" className="mt-0">
-                  <div className="p-8 text-center" style={{ color: 'hsl(var(--muted-foreground))' }}>
-                    Mentions feed coming soon!
+                  {/* Mentions feed implementation would go here using TwaaterMentionsFeed */}
+                  <div className="p-8 text-center space-y-4" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    <Bell className="h-12 w-12 mx-auto opacity-50" />
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">Mentions Coming Soon</h3>
+                      <p className="text-sm">Get notified when other players mention you in their twaats.</p>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
