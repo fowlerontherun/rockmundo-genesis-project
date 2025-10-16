@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -46,6 +47,9 @@ const Layout = () => {
     <div className="flex h-screen bg-background">
       <Navigation />
       <main className="flex-1 overflow-y-auto pb-16 pt-16 lg:ml-0 lg:pb-0 lg:pt-0">
+        <div className="fixed top-4 right-4 z-50">
+          <HowToPlayDialog />
+        </div>
         {profileError && (
           <div className="px-4 pt-4 lg:px-6">
             <Alert variant="destructive" className="max-w-2xl">

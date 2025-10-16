@@ -50,7 +50,7 @@ const SkillBooks = () => {
     description: "",
     price: 500,
     base_reading_days: 3,
-    skill_percentage_gain: 0.25,
+    skill_percentage_gain: 5.0,
     required_skill_level: 0,
     category: "",
     is_active: true,
@@ -149,7 +149,7 @@ const SkillBooks = () => {
       description: "",
       price: 500,
       base_reading_days: 3,
-      skill_percentage_gain: 0.25,
+      skill_percentage_gain: 5.0,
       required_skill_level: 0,
       category: "",
       is_active: true,
@@ -274,16 +274,19 @@ const SkillBooks = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gain">Skill Gain (0-1)</Label>
+                  <Label htmlFor="gain">Skill Gain % (levels)</Label>
                   <Input
                     id="gain"
                     type="number"
-                    step="0.01"
+                    step="0.5"
                     value={formData.skill_percentage_gain}
                     onChange={(e) => setFormData({ ...formData, skill_percentage_gain: parseFloat(e.target.value) })}
                     min="0"
-                    max="1"
+                    max="100"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    How many skill levels to gain (e.g., 5 = gain 5 levels, 0.5 = half a level)
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="required">Required Level</Label>
@@ -364,6 +367,7 @@ const SkillBooks = () => {
               <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Days</TableHead>
+              <TableHead>Skill Gain</TableHead>
               <TableHead>Active</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -390,6 +394,7 @@ const SkillBooks = () => {
                   <TableCell>{book.category}</TableCell>
                   <TableCell>${book.price}</TableCell>
                   <TableCell>{book.base_reading_days}d</TableCell>
+                  <TableCell>+{book.skill_percentage_gain} lvls</TableCell>
                   <TableCell>
                     <span className={book.is_active ? "text-green-600" : "text-red-600"}>
                       {book.is_active ? "Yes" : "No"}
