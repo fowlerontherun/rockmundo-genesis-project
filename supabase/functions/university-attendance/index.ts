@@ -29,6 +29,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log(`=== University Auto-Attendance Started at ${new Date().toISOString()} ===`);
+    
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -41,6 +43,7 @@ serve(async (req) => {
 
     const now = new Date();
     const today = now.toISOString().split("T")[0];
+    console.log(`Processing attendance for date: ${today}`);
 
     // Find active enrollments with auto_attend enabled
     const { data: enrollments, error: enrollError } = await supabaseClient
@@ -50,11 +53,19 @@ serve(async (req) => {
       .eq("auto_attend", true)
       .returns<Enrollment[]>();
 
-    if (enrollError) throw enrollError;
+    if (enrollError) {
+      console.error('Error fetching enrollments:', enrollError);
+      throw enrollError;
+    }
 
-    console.log(`Processing ${enrollments?.length || 0} enrollments`);
+    console.log(`Found ${enrollments?.length || 0} enrollments with auto_attend=true`);
+
+    let processedCount = 0;
+    let skippedCount = 0;
 
     for (const enrollment of enrollments || []) {
+      console.log(`\n--- Processing enrollment ${enrollment.id} for profile ${enrollment.profile_id} ---`);
+      
       // Check if already attended today
       const { data: existingAttendance } = await supabaseClient
         .from("player_university_attendance")
@@ -64,7 +75,8 @@ serve(async (req) => {
         .single();
 
       if (existingAttendance) {
-        console.log(`Already attended today for enrollment ${enrollment.id}`);
+        console.log(`Already attended today for enrollment ${enrollment.id}, skipping`);
+        skippedCount++;
         continue;
       }
 
@@ -80,19 +92,24 @@ serve(async (req) => {
         continue;
       }
 
+      console.log(`Course XP range: ${course.xp_per_day_min}-${course.xp_per_day_max}`);
+
       // Random XP between min and max
       const xpEarned = Math.floor(
         Math.random() * (course.xp_per_day_max - course.xp_per_day_min + 1) +
           course.xp_per_day_min
       );
+      
+      console.log(`Generated XP: ${xpEarned}`);
 
       // Create attendance record - set was_locked_out to false so activity feed logs it
+      console.log('Creating attendance record...');
       const { error: attendanceError } = await supabaseClient
         .from("player_university_attendance")
         .insert({
           enrollment_id: enrollment.id,
           attendance_date: today,
-          xpEarned: xpEarned,
+          xp_earned: xpEarned,
           was_locked_out: false, // Changed to false so activity feed trigger fires
         });
 
@@ -100,6 +117,8 @@ serve(async (req) => {
         console.error(`Error creating attendance: ${attendanceError.message}`);
         continue;
       }
+      
+      console.log('Attendance record created successfully');
 
       // Update enrollment
       const newDaysAttended = enrollment.days_attended + 1;
@@ -201,10 +220,14 @@ serve(async (req) => {
         });
       }
 
+      processedCount++;
       console.log(
-        `Processed attendance for enrollment ${enrollment.id}: ${xpEarned} XP, completed: ${isCompleted}`
+        `✓ Completed enrollment ${enrollment.id}: ${xpEarned} XP, days: ${newDaysAttended}, completed: ${isCompleted}`
       );
     }
+
+    console.log(`\n=== University Auto-Attendance Complete ===`);
+    console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}`);
 
     return new Response(
       JSON.stringify({

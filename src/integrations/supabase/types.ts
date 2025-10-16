@@ -2539,6 +2539,53 @@ export type Database = {
           },
         ]
       }
+      player_daily_cats: {
+        Row: {
+          activity_count: number | null
+          activity_date: string
+          category: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          profile_id: string
+          updated_at: string | null
+          xp_earned: number | null
+          xp_spent: number | null
+        }
+        Insert: {
+          activity_count?: number | null
+          activity_date: string
+          category: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          profile_id: string
+          updated_at?: string | null
+          xp_earned?: number | null
+          xp_spent?: number | null
+        }
+        Update: {
+          activity_count?: number | null
+          activity_date?: string
+          category?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          profile_id?: string
+          updated_at?: string | null
+          xp_earned?: number | null
+          xp_spent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_daily_cats_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_employment: {
         Row: {
           auto_clock_in: boolean | null

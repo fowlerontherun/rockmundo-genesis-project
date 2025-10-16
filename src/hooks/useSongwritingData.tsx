@@ -300,13 +300,17 @@ export const useSongwritingData = (userId?: string | null) => {
         
       if (lockError) throw lockError;
       
-      // Create session
+      // Create session with locked_until timestamp
+      const sessionStart = new Date();
+      const sessionEnd = new Date(sessionStart.getTime() + lockDuration);
+      
       const { data, error } = await supabase
         .from('songwriting_sessions')
         .insert({
           project_id: projectId,
           user_id: userId,
-          session_start: new Date().toISOString(),
+          session_start: sessionStart.toISOString(),
+          locked_until: sessionEnd.toISOString(),
           music_progress_gained: 0,
           lyrics_progress_gained: 0,
           xp_earned: 0,

@@ -24,6 +24,8 @@ verify_jwt = false
 [functions.cleanup-songwriting]
 verify_jwt = false
 
-[functions.cleanup-songwriting.triggers]
-enabled = true
-schedule = "*/15 * * * *"
+[functions.complete-rehearsals]
+verify_jwt = false
+
+[functions.calculate-weekly-activity]
+verify_jwt = false
