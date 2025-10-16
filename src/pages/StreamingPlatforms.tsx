@@ -1,27 +1,73 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Disc } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Disc, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useGameData } from "@/hooks/useGameData";
+import { MyReleasesTab } from "@/components/streaming/MyReleasesTab";
+import { ReleaseSongTab } from "@/components/streaming/ReleaseSongTab";
+import { AnalyticsTab } from "@/components/streaming/AnalyticsTab";
+import { PlaylistsTab } from "@/components/streaming/PlaylistsTab";
 
 const StreamingPlatforms = () => {
+  const navigate = useNavigate();
+  const { profile } = useGameData();
+  const userId = profile?.user_id;
+
+  if (!userId) {
+    return (
+      <div className="container mx-auto py-8">
+        <p className="text-muted-foreground">Please log in to access streaming platforms.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <Disc className="h-10 w-10 text-primary" />
-        <div>
-          <h1 className="text-4xl font-bold">Streaming Platforms</h1>
-          <p className="text-muted-foreground">
-            Release your music and track performance across platforms
-          </p>
+      <div className="space-y-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/music")}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Music Hub
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <Disc className="h-10 w-10 text-primary" />
+          <div>
+            <h1 className="text-4xl font-bold">Streaming Platforms</h1>
+            <p className="text-muted-foreground">
+              Release your music and track performance across platforms
+            </p>
+          </div>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-muted-foreground">
-            Streaming platform features are being set up. The database tables have been created.
-            Once the types regenerate, you'll be able to release songs to Spotify, Apple Music, Tidal, and more!
-          </p>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="releases" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="releases">My Releases</TabsTrigger>
+          <TabsTrigger value="new-release">Release Song</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="playlists">Playlists</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="releases">
+          <MyReleasesTab userId={userId} />
+        </TabsContent>
+
+        <TabsContent value="new-release">
+          <ReleaseSongTab userId={userId} />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsTab userId={userId} />
+        </TabsContent>
+
+        <TabsContent value="playlists">
+          <PlaylistsTab userId={userId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

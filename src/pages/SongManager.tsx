@@ -3,12 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SongFilters } from "@/components/songs/SongFilters";
 import { SongCard } from "@/components/songs/SongCard";
 import { SongDetailDialog } from "@/components/songs/SongDetailDialog";
-import { Music, Sparkles } from "lucide-react";
+import { Music, Sparkles, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const SongManager = () => {
+  const navigate = useNavigate();
   const { profile } = useGameData();
   const user = { id: profile?.user_id };
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,19 +53,16 @@ const SongManager = () => {
 
     let filtered = [...songs];
 
-    // Search filter
     if (searchQuery) {
       filtered = filtered.filter((song) =>
         song.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Genre filter
     if (genreFilter !== "all") {
       filtered = filtered.filter((song) => song.genre === genreFilter);
     }
 
-    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "date_desc":
@@ -101,6 +101,15 @@ const SongManager = () => {
     <div className="container mx-auto py-8 space-y-8">
       {/* Header */}
       <div className="space-y-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/music")}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Music Hub
+        </Button>
+        
         <div className="flex items-center gap-3">
           <Music className="h-10 w-10 text-primary" />
           <div>

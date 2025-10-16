@@ -17,7 +17,7 @@ const RedirectTo = ({ to }: { to: string }) => {
   return null;
 };
 import WorldPulsePage from "./pages/WorldPulse";
-import MusicStudio from "./pages/MusicStudio";
+import MusicHub from "./pages/MusicHub";
 import BandManager from "./pages/BandManager";
 import InventoryManager from "./pages/InventoryManager";
 
@@ -122,7 +122,9 @@ function App() {
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Busking />} />
                     <Route path="my-character" element={<MyCharacter />} />
-                    <Route path="music" element={<MusicStudio />} />
+                    <Route path="music" element={<MusicHub />} />
+                    <Route path="song-manager" element={<SongManager />} />
+                    <Route path="streaming-platforms" element={<StreamingPlatforms />} />
                     <Route path="charts" element={<WorldPulsePage />} />
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="equipment" element={<EquipmentStore />} />
