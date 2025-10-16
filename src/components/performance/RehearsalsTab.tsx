@@ -32,20 +32,24 @@ export function RehearsalsTab() {
 
     setLoading(true);
     try {
-      // Get user's band
+      // Get user's bands (all of them)
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
-        .select('band_id')
+        .select('band_id, bands(*)')
         .eq('user_id', user.id)
-        .limit(1);
+        .order('joined_at', { ascending: false });
 
       if (memberError) throw memberError;
 
       if (bandMembers && bandMembers.length > 0) {
+        // Find the first active band, or just use the first one
+        const activeBand = bandMembers.find((bm: any) => bm.bands?.status === 'active');
+        const selectedBandMember = activeBand || bandMembers[0];
+        
         const { data: bandData, error: bandError } = await supabase
           .from('bands')
           .select('*')
-          .eq('id', bandMembers[0].band_id)
+          .eq('id', selectedBandMember.band_id)
           .single();
 
         if (bandError) throw bandError;

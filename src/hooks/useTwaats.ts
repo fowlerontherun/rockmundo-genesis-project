@@ -49,6 +49,8 @@ export const useTwaats = (accountId?: string) => {
 
   const createTwaatMutation = useMutation({
     mutationFn: async (twaatData: TwaatInsert) => {
+      console.log('Creating twaat with data:', twaatData);
+      
       // Create the twaat
       const { data: twaat, error: twaatError } = await supabase
         .from("twaats")
@@ -56,7 +58,12 @@ export const useTwaats = (accountId?: string) => {
         .select()
         .single();
 
-      if (twaatError) throw twaatError;
+      if (twaatError) {
+        console.error('Twaat creation error:', twaatError);
+        throw twaatError;
+      }
+      
+      console.log('Twaat created successfully:', twaat);
 
       // Create initial metrics
       const { error: metricsError } = await supabase
