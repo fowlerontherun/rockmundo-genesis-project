@@ -184,6 +184,42 @@ export const useCreateRecordingSession = () => {
       const scheduledEnd = new Date();
       scheduledEnd.setHours(scheduledEnd.getHours() + input.duration_hours);
 
+      // If band_id is provided, check band balance and deduct
+      if (input.band_id) {
+        const { data: band } = await supabase
+          .from('bands')
+          .select('band_balance')
+          .eq('id', input.band_id)
+          .single();
+
+        const currentBalance = band?.band_balance || 0;
+        if (currentBalance < totalCost) {
+          throw new Error(`Insufficient band balance. Need $${totalCost.toLocaleString()}, have $${currentBalance.toLocaleString()}`);
+        }
+
+        // Deduct from band balance
+        await supabase
+          .from('bands')
+          .update({ band_balance: currentBalance - totalCost })
+          .eq('id', input.band_id);
+
+        // Record expense in band_earnings
+        await supabase
+          .from('band_earnings')
+          .insert({
+            band_id: input.band_id,
+            amount: -totalCost,
+            source: 'recording',
+            description: `Recording session at studio`,
+            earned_by_user_id: input.user_id,
+            metadata: {
+              studio_cost: studioCost,
+              producer_cost: producerCost,
+              orchestra_cost: orchestraCost
+            }
+          });
+      }
+
       // Create recording session
       const { data: session, error: sessionError } = await supabase
         .from('recording_sessions' as any)

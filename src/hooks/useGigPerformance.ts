@@ -253,16 +253,42 @@ export const useCompleteGigPerformance = () => {
         .update({ status: 'completed' })
         .eq('id', gigId);
 
-      // Update band stats
+      // Update band stats and balance
       if (band) {
+        const { data: currentBand } = await supabase
+          .from('bands')
+          .select('band_balance')
+          .eq('id', bandId)
+          .single();
+
+        const newBalance = (currentBand?.band_balance || 0) + Math.round(netProfit);
+
         await supabase
           .from('bands')
           .update({
             fame: (band.fame || 0) + fameGained,
             chemistry_level: Math.max(0, Math.min(100, bandChemistry + chemistryImpact)),
-            performance_count: (band.performance_count || 0) + 1
+            performance_count: (band.performance_count || 0) + 1,
+            band_balance: newBalance
           })
           .eq('id', bandId);
+
+        // Record earnings in band_earnings table
+        await supabase
+          .from('band_earnings')
+          .insert({
+            band_id: bandId,
+            amount: Math.round(netProfit),
+            source: 'gig',
+            description: `Gig performance (${actualAttendance} attendance, rating: ${overallRating.toFixed(1)})`,
+            metadata: {
+              gig_id: gigId,
+              ticket_revenue: ticketRevenue,
+              merch_sales: merchSales.totalRevenue,
+              crew_costs: crewCosts,
+              equipment_wear: Math.round(equipmentWearCost)
+            }
+          });
       }
 
       return { outcome, songPerformances };

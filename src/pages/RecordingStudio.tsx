@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,15 +9,35 @@ import { useGameData } from "@/hooks/useGameData";
 import { Music, Plus, Clock, CheckCircle2, X, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function RecordingStudio() {
   const { session } = useAuth();
   const { currentCity } = useGameData();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [userBandId, setUserBandId] = useState<string | null>(null);
   
   const currentCityId = currentCity?.id || "";
   
   const { data: sessions, isLoading } = useRecordingSessions(session?.user?.id || "");
+
+  useEffect(() => {
+    const loadUserBand = async () => {
+      if (!session?.user?.id) return;
+
+      const { data: bandMemberships } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', session.user.id)
+        .limit(1);
+
+      if (bandMemberships && bandMemberships.length > 0) {
+        setUserBandId(bandMemberships[0].band_id);
+      }
+    };
+
+    loadUserBand();
+  }, [session?.user?.id]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -164,6 +184,7 @@ export default function RecordingStudio() {
         onOpenChange={setWizardOpen}
         userId={session?.user?.id || ""}
         currentCityId={currentCityId}
+        bandId={userBandId}
       />
     </div>
   );

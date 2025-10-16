@@ -13,9 +13,10 @@ interface RecordingWizardProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   currentCityId: string;
+  bandId?: string | null;
 }
 
-export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId }: RecordingWizardProps) => {
+export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, bandId }: RecordingWizardProps) => {
   const [activeTab, setActiveTab] = useState("studio");
   const [selectedStudio, setSelectedStudio] = useState<any>(null);
   const [selectedSong, setSelectedSong] = useState<any>(null);
@@ -110,6 +111,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId }: R
             <TabsContent value="config" className="mt-0">
               <SessionConfigurator
                 userId={userId}
+                bandId={bandId}
                 studio={selectedStudio}
                 song={selectedSong}
                 producer={selectedProducer!}
