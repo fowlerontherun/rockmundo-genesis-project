@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { calculateAttendanceForecast } from "@/utils/gigPerformanceCalculator";
 import {
   Dialog,
   DialogContent,
@@ -54,50 +55,38 @@ export const GigBookingDialog = ({
 
   const validSetlists = setlists.filter((s) => s.song_count >= 6);
 
-  const { estimatedAttendance, estimatedRevenue, suggestedPrice, priceRating } = useMemo(() => {
-    if (!venue) return { estimatedAttendance: 0, estimatedRevenue: 0, suggestedPrice: 20, priceRating: "good" };
-
-    const prestigeMultiplier = 1 + (venue.prestige_level || 1) * 0.15;
-    const fameMultiplier = 1 + (band.fame || 0) / 1000;
-    const popularityMultiplier = 1 + (band.popularity || 0) / 500;
-
-    const baseAttendance = Math.min(
-      venue.capacity || 100,
-      ((band.fame || 0) * 2 + (band.popularity || 0) * 3)
-    );
+  const { forecast, estimatedAttendance, estimatedRevenue, suggestedPrice, priceRating } = useMemo(() => {
+    if (!venue) return { forecast: null, estimatedAttendance: 0, estimatedRevenue: 0, suggestedPrice: 20, priceRating: "good" };
 
     const suggested = Math.round(10 + (venue.prestige_level || 1) * 5 + (band.fame || 0) / 100);
+    const selectedSetlist = validSetlists.find(s => s.id === selectedSetlistId);
+    const setlistQuality = selectedSetlist ? selectedSetlist.song_count * 500 : 0;
 
-    let priceMultiplier = 1.0;
-    let rating = "good";
+    const attendanceForecast = selectedSetlistId ? calculateAttendanceForecast(
+      band.fame || 0,
+      band.popularity || 0,
+      venue.capacity || 100,
+      venue.prestige_level || 1,
+      ticketPrice,
+      setlistQuality
+    ) : null;
 
-    if (ticketPrice < suggested * 0.5) {
-      priceMultiplier = 1.2;
-      rating = "too-low";
-    } else if (ticketPrice > suggested * 1.5) {
-      priceMultiplier = 0.6;
-      rating = "too-high";
-    } else if (ticketPrice >= suggested * 0.8 && ticketPrice <= suggested * 1.2) {
-      priceMultiplier = 1.0;
-      rating = "perfect";
-    } else {
-      priceMultiplier = 0.9;
-      rating = "good";
-    }
-
-    const attendance = Math.floor(
-      baseAttendance * prestigeMultiplier * fameMultiplier * popularityMultiplier * priceMultiplier * (0.7 + Math.random() * 0.3)
-    );
-
+    const attendance = attendanceForecast?.realistic || 0;
     const revenue = attendance * ticketPrice;
 
+    let rating = "good";
+    if (ticketPrice < suggested * 0.5) rating = "too-low";
+    else if (ticketPrice > suggested * 1.5) rating = "too-high";
+    else if (ticketPrice >= suggested * 0.8 && ticketPrice <= suggested * 1.2) rating = "perfect";
+
     return {
-      estimatedAttendance: Math.max(0, Math.min(attendance, venue.capacity || 100)),
+      forecast: attendanceForecast,
+      estimatedAttendance: attendance,
       estimatedRevenue: revenue,
       suggestedPrice: suggested,
       priceRating: rating,
     };
-  }, [venue, band, ticketPrice]);
+  }, [venue, band, ticketPrice, selectedSetlistId, validSetlists]);
 
   const canBook = selectedSetlistId && ticketPrice > 0;
 
