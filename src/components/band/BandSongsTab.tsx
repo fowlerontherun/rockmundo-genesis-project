@@ -46,23 +46,26 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
 
       const memberIds = members.map(m => m.user_id);
 
-      // Get songs from band members
+      // Get familiarity data (includes all songs in band repertoire, including gifted ones)
+      const { data: familiarityData } = await supabase
+        .from('band_song_familiarity')
+        .select('song_id, familiarity_percentage, familiarity_minutes, last_rehearsed_at')
+        .eq('band_id', bandId);
+
+      // Get all song IDs from familiarity data
+      const familiaritySongIds = familiarityData?.map(f => f.song_id) || [];
+
+      // Get songs: both owned by members AND in familiarity (which includes gifted songs)
       const { data: songsData } = await supabase
         .from('songs')
         .select('*')
-        .in('user_id', memberIds)
+        .or(`user_id.in.(${memberIds.join(',')}),id.in.(${familiaritySongIds.join(',')})`)
         .order('created_at', { ascending: false });
 
       if (!songsData) {
         setLoading(false);
         return;
       }
-
-      // Get familiarity data for each song
-      const { data: familiarityData } = await supabase
-        .from('band_song_familiarity')
-        .select('song_id, familiarity_percentage, familiarity_minutes, last_rehearsed_at')
-        .eq('band_id', bandId);
 
       // Merge song data with familiarity
       const songsWithFamiliarity = songsData.map(song => {
