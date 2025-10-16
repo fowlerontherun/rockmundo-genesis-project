@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, CheckCircle, DollarSign, MapPin, Music, Star, Users } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,8 @@ import { useGameData } from '@/hooks/useGameData';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
+import { useSetlists } from '@/hooks/useSetlists';
+import { GigBookingDialog } from '@/components/gig/GigBookingDialog';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -24,12 +26,16 @@ const GigBooking = () => {
   const { user } = useAuth();
   const { profile, skills, attributes, addActivity } = useGameData();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [venues, setVenues] = useState<VenueRow[]>([]);
   const [band, setBand] = useState<BandRow | null>(null);
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
-  const [bookingVenueId, setBookingVenueId] = useState<string | null>(null);
+  const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
+
+  const { data: setlists } = useSetlists(band?.id || null);
 
   const performanceSkill = skills?.performance ?? 0;
   const stagePresence = attributes?.stage_presence ?? 0;
@@ -167,27 +173,33 @@ const GigBooking = () => {
 
   const previewNextGigDate = useMemo(() => getNextGigDate(), [getNextGigDate]);
 
-  const bookGig = useCallback(async (venue: VenueRow) => {
-    if (!band) {
-      toast({
-        title: 'Band required',
-        description: 'Create or join a band before booking gigs.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleBookingDialogConfirm = useCallback(async (setlistId: string, ticketPrice: number) => {
+    if (!band || !bookingVenue) return;
 
-    setBookingVenueId(venue.id);
+    setIsBooking(true);
 
     try {
       const scheduledDate = getNextGigDate();
+
+      const estimatedAttendance = Math.floor(
+        Math.min(
+          bookingVenue.capacity || 100,
+          ((band.fame || 0) * 2 + (band.popularity || 0) * 3) * (0.7 + Math.random() * 0.3)
+        )
+      );
+      const estimatedRevenue = estimatedAttendance * ticketPrice;
+
       const { error } = await supabase.from('gigs').insert({
         band_id: band.id,
-        venue_id: venue.id,
+        venue_id: bookingVenue.id,
         scheduled_date: scheduledDate.toISOString(),
         status: 'scheduled',
-        show_type: venue.venue_type ?? 'concert',
-        payment: venue.base_payment ?? 0,
+        show_type: bookingVenue.venue_type ?? 'concert',
+        payment: bookingVenue.base_payment ?? 0,
+        setlist_id: setlistId,
+        ticket_price: ticketPrice,
+        estimated_attendance: estimatedAttendance,
+        estimated_revenue: estimatedRevenue,
         attendance: 0,
         fan_gain: 0,
       });
@@ -198,20 +210,22 @@ const GigBooking = () => {
 
       toast({
         title: 'Gig booked!',
-        description: `Locked in ${venue.name} for ${scheduledDate.toLocaleString()}.`,
+        description: `Locked in ${bookingVenue.name} for ${scheduledDate.toLocaleString()}.`,
       });
 
       await addActivity(
         'gig_booking',
-        `Booked ${venue.name} for ${band.name}`,
-        venue.base_payment ?? undefined,
+        `Booked ${bookingVenue.name} for ${band.name}`,
+        bookingVenue.base_payment ?? undefined,
         {
-          venue_id: venue.id,
+          venue_id: bookingVenue.id,
           scheduled_date: scheduledDate.toISOString(),
+          estimated_revenue: estimatedRevenue,
         },
       );
 
       await loadUpcomingGigs(band.id);
+      setBookingVenue(null);
     } catch (error) {
       console.error('Error booking gig:', error);
       toast({
@@ -220,9 +234,9 @@ const GigBooking = () => {
         variant: 'destructive',
       });
     } finally {
-      setBookingVenueId(null);
+      setIsBooking(false);
     }
-  }, [band, getNextGigDate, toast, addActivity, loadUpcomingGigs]);
+  }, [band, bookingVenue, getNextGigDate, toast, addActivity, loadUpcomingGigs]);
 
   const renderRequirements = (requirements: VenueRow['requirements']) => {
     if (!requirements || typeof requirements !== 'object') {
@@ -436,14 +450,14 @@ const GigBooking = () => {
                     {renderRequirements(venue.requirements)}
                   </CardHeader>
                   <CardContent>
-                    <Button
-                      className="w-full"
-                      size="sm"
-                      onClick={() => void bookGig(venue)}
-                      disabled={!band || bookingVenueId === venue.id}
-                    >
-                      {bookingVenueId === venue.id ? 'Booking...' : 'Book Gig'}
-                    </Button>
+                     <Button
+                       className="w-full"
+                       size="sm"
+                       onClick={() => setBookingVenue(venue)}
+                       disabled={!band || isBooking}
+                     >
+                       Book Gig
+                     </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -455,6 +469,17 @@ const GigBooking = () => {
           )}
         </CardContent>
       </Card>
+
+      {bookingVenue && setlists && band && (
+        <GigBookingDialog
+          venue={bookingVenue}
+          band={band}
+          setlists={setlists.map(s => ({ id: s.id, name: s.name, song_count: s.song_count || 0 }))}
+          onConfirm={handleBookingDialogConfirm}
+          onClose={() => setBookingVenue(null)}
+          isBooking={isBooking}
+        />
+      )}
     </div>
   );
 };

@@ -1318,12 +1318,16 @@ export type Database = {
           attendance: number | null
           band_id: string
           created_at: string | null
+          estimated_attendance: number | null
+          estimated_revenue: number | null
           fan_gain: number | null
           id: string
           payment: number | null
           scheduled_date: string
+          setlist_id: string | null
           show_type: string | null
           status: string | null
+          ticket_price: number | null
           updated_at: string | null
           venue_id: string
         }
@@ -1331,12 +1335,16 @@ export type Database = {
           attendance?: number | null
           band_id: string
           created_at?: string | null
+          estimated_attendance?: number | null
+          estimated_revenue?: number | null
           fan_gain?: number | null
           id?: string
           payment?: number | null
           scheduled_date: string
+          setlist_id?: string | null
           show_type?: string | null
           status?: string | null
+          ticket_price?: number | null
           updated_at?: string | null
           venue_id: string
         }
@@ -1344,12 +1352,16 @@ export type Database = {
           attendance?: number | null
           band_id?: string
           created_at?: string | null
+          estimated_attendance?: number | null
+          estimated_revenue?: number | null
           fan_gain?: number | null
           id?: string
           payment?: number | null
           scheduled_date?: string
+          setlist_id?: string | null
           show_type?: string | null
           status?: string | null
+          ticket_price?: number | null
           updated_at?: string | null
           venue_id?: string
         }
@@ -1373,6 +1385,13 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gigs_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
             referencedColumns: ["id"]
           },
           {
@@ -2497,6 +2516,89 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "city_districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setlist_songs: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          position: number
+          setlist_id: string
+          song_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          position: number
+          setlist_id: string
+          song_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          position?: number
+          setlist_id?: string
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setlist_songs_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setlist_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setlists: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          setlist_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          setlist_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          setlist_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setlists_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]
