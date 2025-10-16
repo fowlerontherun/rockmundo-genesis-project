@@ -88,19 +88,43 @@ export default function BandManager() {
   };
 
   const loadBandMembers = async (bandId: string) => {
-    const { data } = await supabase
+    // First get all band members (including touring members with null user_id)
+    const { data: bandMembersData } = await supabase
       .from('band_members')
-      .select(`
-        *,
-        profiles:user_id (
-          display_name,
-          username
-        )
-      `)
+      .select('*')
       .eq('band_id', bandId)
       .order('joined_at', { ascending: true });
 
-    setMembers(data || []);
+    if (!bandMembersData) {
+      setMembers([]);
+      return;
+    }
+
+    // Get user_ids that are not null
+    const userIds = bandMembersData
+      .map(m => m.user_id)
+      .filter((id): id is string => id !== null);
+
+    // Fetch profiles for human members only
+    let profilesData: any[] = [];
+    if (userIds.length > 0) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, username')
+        .in('user_id', userIds);
+      profilesData = data || [];
+    }
+
+    // Attach profile data to members
+    const membersWithProfiles = bandMembersData.map(member => {
+      if (member.user_id) {
+        const profile = profilesData.find(p => p.user_id === member.user_id);
+        return { ...member, profiles: profile || null };
+      }
+      return { ...member, profiles: null };
+    });
+
+    setMembers(membersWithProfiles);
   };
 
   const handleRemoveMember = async (memberId: string) => {
