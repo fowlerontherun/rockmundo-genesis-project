@@ -60,6 +60,7 @@ const CityStudios = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStudio, setEditingStudio] = useState<Studio | null>(null);
+  const [filterCity, setFilterCity] = useState("all");
   const [formData, setFormData] = useState({
     city_id: "",
     district_id: "",
@@ -205,6 +206,10 @@ const CityStudios = () => {
     });
     setDistricts([]);
   };
+
+  const filteredStudios = studios.filter(studio =>
+    filterCity === "all" || studio.city_id === filterCity
+  );
 
   if (loading) {
     return (
@@ -372,11 +377,27 @@ const CityStudios = () => {
         </Dialog>
       </div>
 
+      <div className="flex gap-4">
+        <Select value={filterCity} onValueChange={setFilterCity}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="Filter by city" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Cities</SelectItem>
+            {cities.map((city) => (
+              <SelectItem key={city.id} value={city.id}>
+                {city.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>All Studios</CardTitle>
           <CardDescription>
-            {studios.length} {studios.length === 1 ? "studio" : "studios"} across all cities
+            {filteredStudios.length} {filteredStudios.length === 1 ? "studio" : "studios"} {filterCity !== "all" ? "in selected city" : "across all cities"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -393,7 +414,7 @@ const CityStudios = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {studios.map((studio) => (
+              {filteredStudios.map((studio) => (
                 <TableRow key={studio.id}>
                   <TableCell className="font-medium">{studio.name}</TableCell>
                   <TableCell>

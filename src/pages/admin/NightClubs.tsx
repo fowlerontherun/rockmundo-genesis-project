@@ -77,6 +77,7 @@ const NightClubsAdmin = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingClub, setEditingClub] = useState<NightClubRow | null>(null);
   const [deletingClubId, setDeletingClubId] = useState<string | null>(null);
+  const [filterCity, setFilterCity] = useState("all");
 
   // Form state
   const [cityId, setCityId] = useState("");
@@ -353,6 +354,10 @@ const NightClubsAdmin = () => {
     setNpcs(npcs.filter((_, i) => i !== index));
   };
 
+  const filteredNightClubs = nightClubs.filter(club =>
+    filterCity === "all" || club.city_id === filterCity
+  );
+
   return (
     <AdminRoute>
       <div className="container mx-auto space-y-6 p-6">
@@ -361,6 +366,22 @@ const NightClubsAdmin = () => {
           <p className="text-muted-foreground">
             Configure nightlife venues, DJ slot requirements, and social experiences.
           </p>
+        </div>
+
+        <div className="flex gap-4">
+          <Select value={filterCity} onValueChange={setFilterCity}>
+            <SelectTrigger className="w-[250px]">
+              <SelectValue placeholder="Filter by city" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {cities.map((city) => (
+                <SelectItem key={city.id} value={city.id}>
+                  {city.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr,1fr]">
@@ -754,7 +775,7 @@ const NightClubsAdmin = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {nightClubs.map((club) => (
+                    {filteredNightClubs.map((club) => (
                       <TableRow key={club.id}>
                         <TableCell>
                           <div className="space-y-1">

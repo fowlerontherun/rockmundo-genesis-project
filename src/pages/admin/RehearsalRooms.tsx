@@ -23,6 +23,7 @@ export default function RehearsalRooms() {
   const [cities, setCities] = useState<City[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterCity, setFilterCity] = useState("all");
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -166,6 +167,10 @@ export default function RehearsalRooms() {
     }
   };
 
+  const filteredRooms = rooms.filter(room =>
+    filterCity === "all" || room.city_id === filterCity
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -182,6 +187,22 @@ export default function RehearsalRooms() {
           <h1 className="text-3xl font-bold">Rehearsal Rooms</h1>
           <p className="text-muted-foreground">Manage rehearsal spaces for bands</p>
         </div>
+      </div>
+
+      <div className="flex gap-4">
+        <Select value={filterCity} onValueChange={setFilterCity}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="Filter by city" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Cities</SelectItem>
+            {cities.map((city) => (
+              <SelectItem key={city.id} value={city.id}>
+                {city.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
@@ -329,7 +350,7 @@ export default function RehearsalRooms() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {rooms.map((room) => (
+            {filteredRooms.map((room) => (
               <div
                 key={room.id}
                 className="flex items-center justify-between rounded-lg border p-4"
@@ -360,9 +381,9 @@ export default function RehearsalRooms() {
               </div>
             ))}
 
-            {rooms.length === 0 && (
+            {filteredRooms.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
-                No rehearsal rooms yet. Create one above!
+                No rehearsal rooms found. {filterCity !== "all" ? "Try a different filter or create one above!" : "Create one above!"}
               </p>
             )}
           </div>

@@ -66,6 +66,7 @@ export default function VenuesAdmin() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVenue, setEditingVenue] = useState<VenueRow | null>(null);
   const [formData, setFormData] = useState<VenueFormData>(defaultFormData);
+  const [filterCity, setFilterCity] = useState("all");
 
   // Requirements fields
   const [minFans, setMinFans] = useState('0');
@@ -256,6 +257,10 @@ export default function VenuesAdmin() {
       });
     }
   };
+
+  const filteredVenues = venues.filter(venue =>
+    filterCity === "all" || venue.city_id === filterCity
+  );
 
   if (loading) {
     return (
@@ -526,8 +531,24 @@ export default function VenuesAdmin() {
         </Dialog>
       </div>
 
+      <div className="flex gap-4">
+        <Select value={filterCity} onValueChange={setFilterCity}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="Filter by city" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Cities</SelectItem>
+            {cities.map((city) => (
+              <SelectItem key={city.id} value={city.id}>
+                {city.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {venues.map((venue) => {
+        {filteredVenues.map((venue) => {
           const city = cities.find((c) => c.id === venue.city_id);
           const reqs = (venue.requirements as any) || {};
           const rawAmenities = venue.amenities || [];

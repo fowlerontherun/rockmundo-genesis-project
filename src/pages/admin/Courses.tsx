@@ -65,6 +65,7 @@ export default function Courses() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [filterUniversity, setFilterUniversity] = useState("all");
   const [formData, setFormData] = useState({
     university_id: "",
     skill_slug: "",
@@ -213,6 +214,14 @@ export default function Courses() {
     [skillOptionMap],
   );
 
+  // Get skills that have courses
+  const skillsWithCourses = new Set(courses?.map(c => c.skill_slug) || []);
+
+  // Filter courses by university
+  const filteredCourses = courses?.filter(course => 
+    filterUniversity === "all" || course.university_id === filterUniversity
+  );
+
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
   }
@@ -230,6 +239,22 @@ export default function Courses() {
         </Button>
       </div>
 
+      <div className="flex gap-4">
+        <Select value={filterUniversity} onValueChange={setFilterUniversity}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="Filter by university" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Universities</SelectItem>
+            {universities?.map((uni) => (
+              <SelectItem key={uni.id} value={uni.id}>
+                {uni.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -244,7 +269,7 @@ export default function Courses() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {courses?.map((course) => (
+          {filteredCourses?.map((course) => (
             <TableRow key={course.id}>
               <TableCell className="font-medium">{course.name}</TableCell>
               <TableCell>{getUniversityName(course.university_id)}</TableCell>
@@ -322,7 +347,12 @@ export default function Courses() {
                   <SelectContent>
                     {skillOptions.map((skill) => (
                       <SelectItem key={skill.slug} value={skill.slug}>
-                        {skill.displayName}
+                        <div className="flex items-center gap-2">
+                          {skill.displayName}
+                          {skillsWithCourses.has(skill.slug) && (
+                            <Badge variant="outline" className="text-xs">Has Course</Badge>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>

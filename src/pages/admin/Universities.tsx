@@ -48,6 +48,7 @@ export default function Universities() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [filterCity, setFilterCity] = useState("all");
   const [formData, setFormData] = useState<UniversityFormValues>({
     name: "",
     city: "",
@@ -181,6 +182,10 @@ export default function Universities() {
     saveMutation.mutate(result.data);
   };
 
+  const filteredUniversities = universities?.filter(uni => 
+    filterCity === "all" || uni.city === filterCity
+  );
+
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
   }
@@ -198,6 +203,22 @@ export default function Universities() {
         </Button>
       </div>
 
+      <div className="flex gap-4">
+        <Select value={filterCity} onValueChange={setFilterCity}>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder="Filter by city" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Cities</SelectItem>
+            {cities?.map((city) => (
+              <SelectItem key={city} value={city}>
+                {city}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -210,7 +231,7 @@ export default function Universities() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {universities?.map((uni) => (
+          {filteredUniversities?.map((uni) => (
             <TableRow key={uni.id}>
               <TableCell className="font-medium">{uni.name}</TableCell>
               <TableCell>{uni.city || "—"}</TableCell>
