@@ -123,7 +123,7 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                     {djPayoutLabel && <span>Pay {djPayoutLabel}</span>}
                     {setLengthLabel && <span>{setLengthLabel}</span>}
                   </div>
-                  {club.djSlot.perks && club.djSlot.perks.length > 0 && (
+                  {club.djSlot?.perks && club.djSlot.perks.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {club.djSlot.perks.map((perk) => (
                         <Badge key={`${club.id}-perk-${perk}`} variant="outline">
