@@ -77,7 +77,24 @@ export function RehearsalsTab() {
         if (roomsError) throw roomsError;
         setRooms(roomsData || []);
 
-        // Load band songs
+        // Load band songs from setlists and member songs
+        const { data: setlistSongs, error: setlistSongsError } = await supabase
+          .from('setlist_songs')
+          .select(`
+            song_id,
+            setlists!inner(band_id, is_active)
+          `)
+          .eq('setlists.band_id', bandData.id)
+          .eq('setlists.is_active', true);
+
+        if (setlistSongsError) throw setlistSongsError;
+
+        // Get unique song IDs from setlists
+        const setlistSongIds = new Set<string>(
+          setlistSongs?.map(ss => ss.song_id) || []
+        );
+
+        // Also get songs owned by band members
         const { data: members, error: membersError } = await supabase
           .from('band_members')
           .select('user_id')
@@ -87,15 +104,44 @@ export function RehearsalsTab() {
 
         const memberUserIds = members?.map(m => m.user_id) || [];
         
-        const { data: songs, error: songsError } = await supabase
-          .from('songs')
-          .select('*')
-          .in('user_id', memberUserIds)
-          .in('status', ['completed', 'recorded'])
-          .order('title');
+        // Combine song IDs from setlists and load all songs
+        let allSongs: any[] = [];
+        
+        // Get setlist songs
+        if (setlistSongIds.size > 0) {
+          const { data: songs1, error: songs1Error } = await supabase
+            .from('songs')
+            .select('*')
+            .in('id', Array.from(setlistSongIds))
+            .in('status', ['completed', 'recorded'])
+            .order('title');
 
-        if (songsError) throw songsError;
-        setBandSongs(songs || []);
+          if (!songs1Error && songs1) {
+            allSongs = songs1;
+          }
+        }
+        
+        // Also get member songs
+        if (memberUserIds.length > 0) {
+          const { data: memberSongs, error: memberSongsError } = await supabase
+            .from('songs')
+            .select('*')
+            .in('user_id', memberUserIds)
+            .in('status', ['completed', 'recorded'])
+            .order('title');
+
+          if (!memberSongsError && memberSongs) {
+            // Merge without duplicates
+            const existingIds = new Set(allSongs.map(s => s.id));
+            memberSongs.forEach(song => {
+              if (!existingIds.has(song.id)) {
+                allSongs.push(song);
+              }
+            });
+          }
+        }
+
+        setBandSongs(allSongs);
       }
     } catch (error) {
       console.error('Error loading data:', error);
