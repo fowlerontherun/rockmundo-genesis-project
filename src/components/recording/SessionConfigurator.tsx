@@ -225,9 +225,22 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Insufficient funds! You need ${balanceShortfall.toLocaleString()} more.
-            {bandId && ' Consider depositing funds into the band or performing gigs to earn money.'}
-            {!bandId && ' Complete gigs, sell songs, or find other ways to earn cash.'}
+            <div className="font-semibold mb-1">Insufficient funds!</div>
+            <div className="space-y-1 text-sm">
+              <div>Current balance: ${availableBalance.toLocaleString()}</div>
+              <div>Total cost: ${totalCost.toLocaleString()}</div>
+              <div>Shortfall: ${balanceShortfall.toLocaleString()}</div>
+              {bandId && (
+                <div className="mt-2 text-xs">
+                  💡 Go to Band Manager → Earnings tab to deposit funds into your band balance.
+                </div>
+              )}
+              {!bandId && (
+                <div className="mt-2 text-xs">
+                  💡 Complete gigs, sell songs, or find other ways to earn cash.
+                </div>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
       )}
