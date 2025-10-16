@@ -80,10 +80,12 @@ const GigBooking = () => {
       return null;
     }
 
+    // Check if user is a band leader with an active band
     const { data: leaderBand, error: leaderError } = await supabase
       .from('bands')
       .select('*')
       .eq('leader_id', user.id)
+      .eq('status', 'active')
       .maybeSingle();
 
     if (leaderError && leaderError.code !== 'PGRST116') {
@@ -94,10 +96,12 @@ const GigBooking = () => {
       return leaderBand as BandRow;
     }
 
+    // Check if user is a band member in an active band
     const { data: memberRecord, error: memberError } = await supabase
       .from('band_members')
       .select('band_id, bands:bands!band_members_band_id_fkey(*)')
       .eq('user_id', user.id)
+      .eq('bands.status', 'active')
       .maybeSingle();
 
     if (memberError && memberError.code !== 'PGRST116') {
