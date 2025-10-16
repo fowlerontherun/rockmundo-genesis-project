@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useSkillBooks } from "@/hooks/useSkillBooks";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useBookReading } from "@/hooks/useBookReading";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
@@ -17,6 +18,7 @@ type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 
 export const BooksTab = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
   const { processAttendance, isProcessing } = useBookReading();
   const typedBooks = books as EnrichedSkillBook[] | undefined;
@@ -26,11 +28,35 @@ export const BooksTab = () => {
   const isPurchased = (bookId: string) => 
     purchases?.some((p) => p.book_id === bookId);
 
+  const isCompleted = (bookId: string) => {
+    const purchase = purchases?.find((p) => p.book_id === bookId);
+    if (!purchase) return false;
+    
+    const sessions = Array.isArray(purchase.player_book_reading_sessions) 
+      ? purchase.player_book_reading_sessions 
+      : purchase.player_book_reading_sessions 
+      ? [purchase.player_book_reading_sessions] 
+      : [];
+    
+    return sessions.some((s: any) => s?.status === "completed");
+  };
+
   const canStartReading = () =>
-    !activeSession && selectedBook && isPurchased(selectedBook.id);
+    !activeSession && selectedBook && isPurchased(selectedBook.id) && !isCompleted(selectedBook.id);
 
   const handlePurchase = async (book: SkillBook) => {
     if (!user) return;
+    
+    // Check if already completed
+    if (isCompleted(book.id)) {
+      toast({
+        title: "Already Completed",
+        description: "You've already read this book.",
+        variant: "destructive",
+      });
+      setSelectedBook(null);
+      return;
+    }
     
     const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
     if (!profile) return;
@@ -136,6 +162,7 @@ export const BooksTab = () => {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {booksInSkill.map((book) => {
                 const purchased = isPurchased(book.id);
+                const completed = isCompleted(book.id);
 
                 return (
                   <Card
@@ -152,8 +179,11 @@ export const BooksTab = () => {
                         <span className="text-sm text-muted-foreground">{book.base_reading_days} days</span>
                         <span className="font-semibold">${book.price}</span>
                       </div>
-                      <Badge variant={purchased ? "default" : "secondary"} className="w-full justify-center">
-                        {purchased ? "Owned" : `Requires Level ${book.required_skill_level}`}
+                      <Badge 
+                        variant={completed ? "outline" : purchased ? "default" : "secondary"} 
+                        className="w-full justify-center"
+                      >
+                        {completed ? "Completed Reading" : purchased ? "Owned" : `Requires Level ${book.required_skill_level}`}
                       </Badge>
                     </CardContent>
                   </Card>
@@ -207,7 +237,12 @@ export const BooksTab = () => {
             )}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
-            {selectedBook && !isPurchased(selectedBook.id) && (
+            {selectedBook && isCompleted(selectedBook.id) && (
+              <Badge variant="outline" className="w-full justify-center py-2">
+                Completed Reading
+              </Badge>
+            )}
+            {selectedBook && !isPurchased(selectedBook.id) && !isCompleted(selectedBook.id) && (
               <Button onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
                 Purchase for ${selectedBook.price}
               </Button>

@@ -61,7 +61,11 @@ async function processAttendance(supabaseClient: any) {
       
       // Calculate XP: skill_percentage_gain of required XP spread over reading days
       const totalSkillXp = Math.round(requiredXp * skillGainPercentage);
-      const dailyXp = Math.round(totalSkillXp / totalDays);
+      const baseXpPerDay = Math.round(totalSkillXp / totalDays);
+      
+      // Add random variation: 1-200 XP per day
+      const randomBonus = Math.floor(Math.random() * 200) + 1;
+      const dailyXp = Math.max(1, Math.min(200, baseXpPerDay + randomBonus));
 
       // Create attendance record
       const { error: attendanceError } = await supabaseClient

@@ -57,7 +57,13 @@ export const useSkillBooks = () => {
         .from("player_book_purchases")
         .select(`
           *,
-          skill_books (*)
+          skill_books (*),
+          player_book_reading_sessions!player_book_reading_sessions_purchase_id_fkey (
+            id,
+            status,
+            days_read,
+            actual_completion_date
+          )
         `);
 
       if (error) throw error;
