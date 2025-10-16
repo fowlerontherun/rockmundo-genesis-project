@@ -8,6 +8,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 
+const BUILD_VERSION = "v1.0.0";
+const BUILD_DATE = "2025-01-16";
+
 const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,7 +50,10 @@ const Layout = () => {
     <div className="flex h-screen bg-background">
       <Navigation />
       <main className="flex-1 overflow-y-auto pb-16 pt-16 lg:ml-0 lg:pb-0 lg:pt-0">
-        <div className="fixed top-4 right-4 z-50">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+          <span className="text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-2 py-1 rounded border hidden sm:block">
+            {BUILD_VERSION} ({BUILD_DATE})
+          </span>
           <HowToPlayDialog />
         </div>
         {profileError && (

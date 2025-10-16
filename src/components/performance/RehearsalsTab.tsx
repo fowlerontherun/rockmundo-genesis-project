@@ -1,47 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Music2, Clock, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
+import { Music2, Plus } from 'lucide-react';
 import type { Database } from '@/lib/supabase-types';
+import { RehearsalBookingDialog } from './RehearsalBookingDialog';
+import { format } from 'date-fns';
 
 type RehearsalRoom = Database['public']['Tables']['rehearsal_rooms']['Row'];
-type BandRehearsal = Database['public']['Tables']['band_rehearsals']['Row'];
+type BandRehearsal = Database['public']['Tables']['band_rehearsals']['Row'] & {
+  rehearsal_rooms?: RehearsalRoom | null;
+  songs?: { title: string } | null;
+};
 type Band = Database['public']['Tables']['bands']['Row'];
 
 export function RehearsalsTab() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState(false);
-  const [rooms, setRooms] = useState<RehearsalRoom[]>([]);
   const [userBand, setUserBand] = useState<Band | null>(null);
-  const [activeRehearsal, setActiveRehearsal] = useState<BandRehearsal | null>(null);
-  const [selectedRoom, setSelectedRoom] = useState<string>('');
-  const [duration, setDuration] = useState<string>('2');
-  const [selectedSong, setSelectedSong] = useState<string>('');
+  const [rehearsals, setRehearsals] = useState<BandRehearsal[]>([]);
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [rooms, setRooms] = useState<RehearsalRoom[]>([]);
   const [bandSongs, setBandSongs] = useState<any[]>([]);
-  const [songFamiliarity, setSongFamiliarity] = useState<Record<string, number>>({});
 
   const loadData = useCallback(async () => {
     if (!user?.id) return;
 
     setLoading(true);
     try {
-      // Load rehearsal rooms
-      const { data: roomsData, error: roomsError } = await supabase
-        .from('rehearsal_rooms')
-        .select('*')
-        .order('name');
-
-      if (roomsError) throw roomsError;
-      setRooms(roomsData || []);
-
-      // Get user's band (first one if multiple) - ensure we fetch band_balance
+      // Get user's band
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
         .select('band_id')
@@ -51,7 +42,6 @@ export function RehearsalsTab() {
       if (memberError) throw memberError;
 
       if (bandMembers && bandMembers.length > 0) {
-        // Fetch band data separately to ensure we get all fields including band_balance
         const { data: bandData, error: bandError } = await supabase
           .from('bands')
           .select('*')
@@ -61,7 +51,30 @@ export function RehearsalsTab() {
         if (bandError) throw bandError;
         setUserBand(bandData);
 
-        // Load songs from all band members
+        // Load scheduled rehearsals
+        const { data: rehearsalData, error: rehearsalError } = await supabase
+          .from('band_rehearsals')
+          .select(`
+            *,
+            rehearsal_rooms:rehearsal_room_id (*),
+            songs:selected_song_id (title)
+          `)
+          .eq('band_id', bandData.id)
+          .order('scheduled_start', { ascending: true });
+
+        if (rehearsalError) throw rehearsalError;
+        setRehearsals(rehearsalData || []);
+
+        // Load rehearsal rooms
+        const { data: roomsData, error: roomsError } = await supabase
+          .from('rehearsal_rooms')
+          .select('*')
+          .order('quality_rating', { ascending: false });
+
+        if (roomsError) throw roomsError;
+        setRooms(roomsData || []);
+
+        // Load band songs
         const { data: members, error: membersError } = await supabase
           .from('band_members')
           .select('user_id')
@@ -80,31 +93,6 @@ export function RehearsalsTab() {
 
         if (songsError) throw songsError;
         setBandSongs(songs || []);
-
-        // Load song familiarity
-        const { data: familiarityData, error: famError } = await supabase
-          .from('band_song_familiarity')
-          .select('song_id, familiarity_percentage')
-          .eq('band_id', bandData.id);
-
-        if (famError) throw famError;
-        
-        const familiarityMap: Record<string, number> = {};
-        familiarityData?.forEach((f) => {
-          familiarityMap[f.song_id] = f.familiarity_percentage || 0;
-        });
-        setSongFamiliarity(familiarityMap);
-
-        // Check for active rehearsal
-        const { data: rehearsal, error: rehearsalError } = await supabase
-          .from('band_rehearsals')
-          .select('*')
-          .eq('band_id', bandData.id)
-          .eq('status', 'in_progress')
-          .maybeSingle();
-
-        if (rehearsalError) throw rehearsalError;
-        setActiveRehearsal(rehearsal);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -122,76 +110,61 @@ export function RehearsalsTab() {
     void loadData();
   }, [loadData]);
 
-  const handleBookRehearsal = async () => {
-    if (!userBand || !selectedRoom || !duration || !selectedSong) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please select a rehearsal room, duration, and song to practice',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleBookRehearsal = async (roomId: string, duration: number, songId: string, scheduledStart: Date) => {
+    if (!userBand) return;
 
-    const room = rooms.find((r) => r.id === selectedRoom);
+    const room = rooms.find(r => r.id === roomId);
     if (!room) return;
 
-    const durationHours = parseInt(duration);
-    const totalCost = room.hourly_rate * durationHours;
-    
-    // Ensure band_balance is treated as a number and defaults to 0
-    const currentBalance = typeof userBand.band_balance === 'number' ? userBand.band_balance : 0;
+    const totalCost = room.hourly_rate * duration;
+    const currentBalance = userBand.band_balance || 0;
 
     if (currentBalance < totalCost) {
       toast({
         title: 'Insufficient Funds',
-        description: `Your band needs $${totalCost} to book this rehearsal. Current balance: $${currentBalance}`,
+        description: `Your band needs $${totalCost}. Current balance: $${currentBalance}`,
         variant: 'destructive',
       });
       return;
     }
 
-    setBooking(true);
     try {
-      const now = new Date();
-      const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+      const endTime = new Date(scheduledStart.getTime() + duration * 60 * 60 * 1000);
+      const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
+      const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
+      const familiarityGained = duration * 60;
 
-      // Calculate rewards based on room quality and duration
-      const chemistryGain = Math.floor((room.quality_rating / 10) * durationHours);
-      const xpEarned = Math.floor(50 * durationHours * (room.equipment_quality / 100));
-      const familiarityGained = durationHours * 60; // Minutes of familiarity
-
-      // Create rehearsal
       const { error: rehearsalError } = await supabase
         .from('band_rehearsals')
         .insert([{
           band_id: userBand.id,
-          rehearsal_room_id: selectedRoom,
-          duration_hours: durationHours,
-          scheduled_start: now.toISOString(),
+          rehearsal_room_id: roomId,
+          duration_hours: duration,
+          scheduled_start: scheduledStart.toISOString(),
           scheduled_end: endTime.toISOString(),
           total_cost: totalCost,
           chemistry_gain: chemistryGain,
           xp_earned: xpEarned,
-          selected_song_id: selectedSong,
+          selected_song_id: songId,
           familiarity_gained: familiarityGained,
+          status: 'in_progress',
         }]);
 
       if (rehearsalError) throw rehearsalError;
 
-      // Deduct cost from band balance (ensure we use the current balance)
-      const newBalance = currentBalance - totalCost;
       const { error: balanceError } = await supabase
         .from('bands')
-        .update({ band_balance: newBalance })
+        .update({ band_balance: currentBalance - totalCost })
         .eq('id', userBand.id);
 
       if (balanceError) throw balanceError;
 
       toast({
         title: 'Rehearsal Booked!',
-        description: `Your band is now rehearsing for ${durationHours} hours`,
+        description: `Your band is rehearsing for ${duration} hours`,
       });
 
+      setShowBookingDialog(false);
       loadData();
     } catch (error) {
       console.error('Error booking rehearsal:', error);
@@ -200,46 +173,41 @@ export function RehearsalsTab() {
         description: 'Failed to book rehearsal',
         variant: 'destructive',
       });
-    } finally {
-      setBooking(false);
     }
   };
 
-  const handleCompleteRehearsal = async () => {
-    if (!activeRehearsal || !userBand) return;
+  const handleCompleteRehearsal = async (rehearsal: BandRehearsal) => {
+    if (!userBand) return;
 
     try {
-      // Mark rehearsal as completed
       const { error: updateError } = await supabase
         .from('band_rehearsals')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
         })
-        .eq('id', activeRehearsal.id);
+        .eq('id', rehearsal.id);
 
       if (updateError) throw updateError;
 
-      // Update band chemistry
       const { error: chemistryError } = await supabase
         .from('bands')
         .update({
-          chemistry_level: Math.min(100, (userBand.chemistry_level || 0) + activeRehearsal.chemistry_gain),
+          chemistry_level: Math.min(100, (userBand.chemistry_level || 0) + (rehearsal.chemistry_gain || 0)),
         })
         .eq('id', userBand.id);
 
       if (chemistryError) throw chemistryError;
 
-      // Update song familiarity if a song was selected
-      if (activeRehearsal.selected_song_id) {
+      if (rehearsal.selected_song_id) {
         const { data: existing } = await supabase
           .from('band_song_familiarity')
           .select('*')
           .eq('band_id', userBand.id)
-          .eq('song_id', activeRehearsal.selected_song_id)
+          .eq('song_id', rehearsal.selected_song_id)
           .maybeSingle();
 
-        const newMinutes = (existing?.familiarity_minutes || 0) + (activeRehearsal.familiarity_gained || 0);
+        const newMinutes = (existing?.familiarity_minutes || 0) + (rehearsal.familiarity_gained || 0);
         
         if (existing) {
           await supabase
@@ -254,20 +222,16 @@ export function RehearsalsTab() {
             .from('band_song_familiarity')
             .insert({
               band_id: userBand.id,
-              song_id: activeRehearsal.selected_song_id,
+              song_id: rehearsal.selected_song_id,
               familiarity_minutes: Math.min(60, newMinutes),
               last_rehearsed_at: new Date().toISOString(),
             });
         }
       }
 
-      const familiarityMsg = activeRehearsal.selected_song_id 
-        ? ` and ${activeRehearsal.familiarity_gained} minutes of song familiarity`
-        : '';
-
       toast({
         title: 'Rehearsal Complete!',
-        description: `Gained ${activeRehearsal.chemistry_gain} chemistry, ${activeRehearsal.xp_earned} XP${familiarityMsg}`,
+        description: `Gained ${rehearsal.chemistry_gain} chemistry, ${rehearsal.xp_earned} XP`,
       });
 
       loadData();
@@ -301,182 +265,131 @@ export function RehearsalsTab() {
     );
   }
 
-  if (activeRehearsal) {
-    const endTime = new Date(activeRehearsal.scheduled_end);
-    const now = new Date();
-    const canComplete = now >= endTime;
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Rehearsal</CardTitle>
-          <CardDescription>Your band is currently rehearsing</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">Duration:</span>
-              <span>{activeRehearsal.duration_hours} hours</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">Ends at:</span>
-              <span>{endTime.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">Chemistry Gain:</span>
-              <span className="text-green-500">+{activeRehearsal.chemistry_gain}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">XP Earned:</span>
-              <span className="text-blue-500">+{activeRehearsal.xp_earned}</span>
-            </div>
-          </div>
-
-          {canComplete ? (
-            <Button onClick={handleCompleteRehearsal} className="w-full">
-              Complete Rehearsal
-            </Button>
-          ) : (
-            <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm">
-              <AlertCircle className="h-4 w-4" />
-              <span>Rehearsal in progress. Come back when it's complete!</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const selectedRoomData = rooms.find((r) => r.id === selectedRoom);
-  const totalCost = selectedRoomData ? selectedRoomData.hourly_rate * parseInt(duration) : 0;
+  const activeRehearsals = rehearsals.filter(r => r.status === 'in_progress');
+  const upcomingRehearsals = rehearsals.filter(r => r.status === 'scheduled');
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Book a Rehearsal</CardTitle>
-          <CardDescription>
-            Improve your band's chemistry and gig readiness through practice
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="room">Rehearsal Room</Label>
-            <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-              <SelectTrigger id="room">
-                <SelectValue placeholder="Select a rehearsal room" />
-              </SelectTrigger>
-              <SelectContent>
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name} - ${room.hourly_rate}/hr (Quality: {room.quality_rating})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="duration">Duration</Label>
-            <Select value={duration} onValueChange={setDuration}>
-              <SelectTrigger id="duration">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 Hour</SelectItem>
-                <SelectItem value="2">2 Hours</SelectItem>
-                <SelectItem value="4">4 Hours</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="song">Song to Practice</Label>
-            <Select value={selectedSong} onValueChange={setSelectedSong}>
-              <SelectTrigger id="song">
-                <SelectValue placeholder="Select a song to rehearse" />
-              </SelectTrigger>
-              <SelectContent>
-                {bandSongs.map((song) => {
-                  const familiarity = songFamiliarity[song.id] || 0;
-                  return (
-                    <SelectItem key={song.id} value={song.id}>
-                      {song.title} - {familiarity}% familiarity
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedRoomData && (
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Total Cost
-                </span>
-                <span className="font-semibold">${totalCost}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Est. Chemistry Gain
-                </span>
-                <span className="text-green-500">
-                  +{Math.floor((selectedRoomData.quality_rating / 10) * parseInt(duration))}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Est. XP
-                </span>
-                <span className="text-blue-500">
-                  +{Math.floor(50 * parseInt(duration) * (selectedRoomData.equipment_quality / 100))}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <Music2 className="h-4 w-4" />
-                  Song Familiarity Gain
-                </span>
-                <span className="text-purple-500">
-                  +{parseInt(duration) * 60} minutes
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
-            <span>Band Balance:</span>
-            <span className="font-semibold">${userBand.band_balance ?? 0}</span>
-          </div>
-          
-          {bandSongs.length === 0 && (
-            <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-600 dark:text-amber-400">
-              No completed songs available. Create and complete a song first.
-            </div>
-          )}
-
-          <Button
-            onClick={handleBookRehearsal}
-            disabled={booking || !selectedRoom || !selectedSong || totalCost > (userBand.band_balance || 0)}
-            className="w-full"
-          >
-            {booking ? 'Booking...' : `Book Rehearsal ($${totalCost})`}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {rooms.length === 0 && (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <Music2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">No Rehearsal Rooms Available</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Check back later for available rehearsal spaces.
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Band Rehearsals</h2>
+          <p className="text-sm text-muted-foreground">
+            Band Balance: ${userBand.band_balance || 0}
           </p>
         </div>
+        <Button onClick={() => setShowBookingDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Book Rehearsal
+        </Button>
+      </div>
+
+      {activeRehearsals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Rehearsals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {activeRehearsals.map((rehearsal) => {
+              const endTime = new Date(rehearsal.scheduled_end);
+              const now = new Date();
+              const canComplete = now >= endTime;
+
+              return (
+                <div key={rehearsal.id} className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">
+                        {(rehearsal.rehearsal_rooms as any)?.name || 'Rehearsal Room'}
+                      </h3>
+                      {rehearsal.songs && (
+                        <p className="text-sm text-muted-foreground">
+                          Practicing: {(rehearsal.songs as any).title}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant={canComplete ? 'default' : 'secondary'}>
+                      {rehearsal.duration_hours}h
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Chemistry</p>
+                      <p className="font-semibold text-green-500">+{rehearsal.chemistry_gain}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">XP</p>
+                      <p className="font-semibold text-blue-500">+{rehearsal.xp_earned}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Ends</p>
+                      <p className="font-semibold">{format(endTime, 'HH:mm')}</p>
+                    </div>
+                  </div>
+
+                  {canComplete ? (
+                    <Button onClick={() => handleCompleteRehearsal(rehearsal)} className="w-full">
+                      Complete Rehearsal
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center">
+                      In progress... ({format(endTime, 'MMM d, HH:mm')})
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {upcomingRehearsals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Rehearsals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {upcomingRehearsals.map((rehearsal) => (
+              <div key={rehearsal.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <p className="font-semibold">
+                    {(rehearsal.rehearsal_rooms as any)?.name || 'Rehearsal Room'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(rehearsal.scheduled_start), 'MMM d, yyyy HH:mm')}
+                  </p>
+                </div>
+                <Badge variant="outline">{rehearsal.duration_hours}h</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {rehearsals.length === 0 && (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <Music2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+            <h3 className="text-lg font-semibold">No Rehearsals Scheduled</h3>
+            <p className="mt-1 text-sm text-muted-foreground mb-4">
+              Book your first rehearsal to improve your band's chemistry and skills.
+            </p>
+            <Button onClick={() => setShowBookingDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Book Rehearsal
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {showBookingDialog && (
+        <RehearsalBookingDialog
+          rooms={rooms}
+          band={userBand}
+          songs={bandSongs}
+          onConfirm={handleBookRehearsal}
+          onClose={() => setShowBookingDialog(false)}
+        />
       )}
     </div>
   );
