@@ -33,10 +33,12 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
   useEffect(() => {
     const fetchBalances = async () => {
       if (bandId) {
-        const { data: band } = await supabase.from('bands').select('band_balance').eq('id', bandId).single();
+        const { data: band, error: bandError } = await supabase.from('bands').select('band_balance').eq('id', bandId).single();
+        console.log('Band balance fetch:', { band, bandError, bandId });
         setBandBalance(band?.band_balance || 0);
       }
-      const { data: profile } = await supabase.from('profiles').select('cash').eq('user_id', userId).single();
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('cash').eq('user_id', userId).single();
+      console.log('Profile cash fetch:', { profile, profileError, userId });
       setPersonalCash(profile?.cash || 0);
     };
     fetchBalances();
@@ -63,6 +65,8 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
   const availableBalance = bandId ? bandBalance : personalCash;
   const canAfford = availableBalance >= totalCost;
   const balanceShortfall = totalCost - availableBalance;
+  
+  console.log('Balance check:', { bandId, bandBalance, personalCash, availableBalance, totalCost, canAfford });
 
   const handleStartRecording = async () => {
     await createSession.mutateAsync({
