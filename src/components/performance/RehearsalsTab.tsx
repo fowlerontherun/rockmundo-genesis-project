@@ -32,10 +32,10 @@ export function RehearsalsTab() {
 
     setLoading(true);
     try {
-      // Get user's band with full details
+      // Get user's band with full details (specify the FK relationship)
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
-        .select('bands(*)')
+        .select('bands!band_members_band_id_fkey(*)')
         .eq('user_id', user.id)
         .order('joined_at', { ascending: false });
 
