@@ -1235,11 +1235,17 @@ const Songwriting = () => {
       return;
     }
 
+    if (!activeSession.id) {
+      toast.error("Session ID is missing - cannot complete.");
+      logger.error("Active session missing ID", { project: completionProject.id });
+      return;
+    }
+
     try {
       await completeSession.mutateAsync({
         sessionId: activeSession.id,
         notes: completionNotes,
-        effortHours: activeSession.effort_hours ?? undefined,
+        effortHours: activeSession.effort_hours ?? 2,
         skillLevels: skills || {},
         attributes: attributes || {
           creative_insight: 10,

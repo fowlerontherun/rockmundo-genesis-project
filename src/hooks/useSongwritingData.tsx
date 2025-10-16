@@ -137,7 +137,7 @@ export const useSongwritingData = (userId?: string | null) => {
     }
   });
 
-  // Fetch projects
+  // Fetch projects with sessions and auto-unlock expired locks
   const { data: projects = [], isLoading: isLoadingProjects, refetch: refetchProjects } = useQuery({
     queryKey: ['songwriting-projects', userId],
     enabled: !!userId,
@@ -149,13 +149,53 @@ export const useSongwritingData = (userId?: string | null) => {
         .select(`
           *,
           song_themes (*),
-          chord_progressions (*)
+          chord_progressions (*),
+          songwriting_sessions (
+            id,
+            project_id,
+            user_id,
+            session_start,
+            session_end,
+            completed_at,
+            music_progress_gained,
+            lyrics_progress_gained,
+            xp_earned,
+            notes
+          )
         `)
         .eq('user_id', userId)
         .order('updated_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []) as SongwritingProject[];
+      
+      // Auto-unlock expired projects
+      const now = new Date().toISOString();
+      const needsUnlock = (data || []).filter(p => 
+        p.is_locked && p.locked_until && p.locked_until < now
+      );
+      
+      if (needsUnlock.length > 0) {
+        await Promise.all(
+          needsUnlock.map(p =>
+            supabase
+              .from('songwriting_projects')
+              .update({ is_locked: false, locked_until: null })
+              .eq('id', p.id)
+          )
+        );
+      }
+      
+      // Order sessions by created_at DESC
+      const projectsWithSessions = (data || []).map(project => ({
+        ...project,
+        songwriting_sessions: (project.songwriting_sessions || []).sort(
+          (a: any, b: any) => new Date(b.session_start).getTime() - new Date(a.session_start).getTime()
+        ),
+        is_locked: needsUnlock.some(p => p.id === project.id) ? false : project.is_locked,
+        locked_until: needsUnlock.some(p => p.id === project.id) ? null : project.locked_until,
+      }));
+      
+      return projectsWithSessions as SongwritingProject[];
     }
   });
 
@@ -300,11 +340,14 @@ export const useSongwritingData = (userId?: string | null) => {
       // Get session and project data
       const { data: session, error: sessionError } = await supabase
         .from('songwriting_sessions')
-        .select('project_id')
+        .select('project_id, session_end')
         .eq('id', sessionId)
         .single();
       
       if (sessionError) throw sessionError;
+      if (session.session_end) {
+        throw new Error('Session already completed');
+      }
       
       // Calculate skill-based progress if skills provided
       let musicGain = 0;
