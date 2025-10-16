@@ -67,8 +67,6 @@ interface Song {
   status: string;
   quality_score?: number | null;
   song_rating?: number;
-  genre_id?: string | null;
-  genre_familiarity?: number | null;
   streams?: number | null;
   revenue?: number | null;
   release_date?: string | null;
@@ -90,7 +88,6 @@ interface ProjectFormState {
   chord_progression_id: string;
   initial_lyrics: string;
   genre: string;
-  purpose: string;
   writingMode: string;
   coWriters: string[];
   producers: string[];
@@ -101,7 +98,7 @@ interface ProjectFormState {
 }
 
 type SessionEffortOption = {
-  id: "burst-6" | "standard-8" | "deep-10" | "marathon-12";
+  id: "burst-2" | "standard-4";
   label: string;
   hours: number;
   description: string;
@@ -109,32 +106,20 @@ type SessionEffortOption = {
 
 const SESSION_EFFORT_OPTIONS: SessionEffortOption[] = [
   {
-    id: "burst-6",
-    label: "6-hour burst",
-    hours: 6,
-    description: "Tight creative burst with room for a rehearsal pass.",
+    id: "burst-2",
+    label: "2-hour sprint",
+    hours: 2,
+    description: "Quick focused session for rapid ideas and hooks.",
   },
   {
-    id: "standard-8",
-    label: "8-hour studio day",
-    hours: 8,
-    description: "Balanced co-writing day with breaks for feedback loops.",
-  },
-  {
-    id: "deep-10",
-    label: "10-hour deep dive",
-    hours: 10,
-    description: "Producer-led focus block covering arrangement polish.",
-  },
-  {
-    id: "marathon-12",
-    label: "12-hour marathon",
-    hours: 12,
-    description: "All-hands sprint to push a song over the finish line.",
+    id: "standard-4",
+    label: "4-hour session",
+    hours: 4,
+    description: "Balanced creative session with time for refinement.",
   },
 ];
 
-const DEFAULT_EFFORT_OPTION = SESSION_EFFORT_OPTIONS[1];
+const DEFAULT_EFFORT_OPTION = SESSION_EFFORT_OPTIONS[0];
 const PROGRESS_TARGET = SONG_RATING_RANGE.max * 2;
 
 const DEFAULT_FORM_STATE: ProjectFormState = {
@@ -143,7 +128,6 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   chord_progression_id: "",
   initial_lyrics: "",
   genre: "",
-  purpose: "",
   writingMode: "",
   coWriters: [],
   producers: [],
@@ -161,8 +145,6 @@ const SONG_SELECT_VARIANTS: ReadonlyArray<ReadonlyArray<string>> = [
     "status",
     "quality_score",
     "song_rating",
-    "genre_id",
-    "genre_familiarity",
     "streams",
     "revenue",
     "release_date",
@@ -305,18 +287,11 @@ type NamedOption = {
 
 // Genre library - use centralized genre list from skill tree
 const GENRE_LIBRARY = MUSIC_GENRES.map(genre => ({
-  id: genre.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+  id: genre,
   label: genre,
   relatedSkill: getGenreSkillSlug(genre, 'basic')
 }));
 
-const SONG_PURPOSE_OPTIONS: NamedOption[] = [
-  { id: "single", label: "Flagship Single", description: "Craft a lead single engineered for fan excitement." },
-  { id: "album", label: "Album Cut", description: "Deepen the album narrative with a rich track." },
-  { id: "sync", label: "Sync Pitch", description: "Write with film, TV, or game placement in mind." },
-  { id: "commission", label: "Commission", description: "Deliver on a paid brief or collaboration." },
-  { id: "live", label: "Live Feature", description: "Design a moment that elevates the live set." },
-];
 
 const WRITING_MODE_OPTIONS: NamedOption[] = [
   { id: "solo", label: "Solo writing", description: "You drive the full process." },
@@ -804,10 +779,6 @@ const Songwriting = () => {
     });
   }, [formState.coWriters, coWriterOptionMap]);
 
-  const selectedPurpose = useMemo(
-    () => SONG_PURPOSE_OPTIONS.find((option) => option.id === formState.purpose) ?? null,
-    [formState.purpose],
-  );
   const selectedWritingMode = useMemo(
     () => WRITING_MODE_OPTIONS.find((option) => option.id === formState.writingMode) ?? null,
     [formState.writingMode],
@@ -1044,7 +1015,6 @@ const Songwriting = () => {
       chord_progression_id: project.chord_progression_id ?? "",
       initial_lyrics: project.lyrics ?? project.initial_lyrics ?? "",
       genre: creativeBrief?.genre ?? "",
-      purpose: creativeBrief?.purpose ?? "",
       writingMode: creativeBrief?.writing_mode ?? "",
       coWriters: creativeBrief?.co_writers?.map((writer) => writer.id) ?? [],
       producers: creativeBrief?.producers ?? [],
@@ -1087,10 +1057,6 @@ const Songwriting = () => {
       validationErrors.genre = "Select a genre focus to unlock tailored prompts.";
     }
 
-    if (!formState.purpose) {
-      validationErrors.purpose = "Choose a purpose so collaborators know the target.";
-    }
-
     if (!formState.writingMode) {
       validationErrors.writingMode = "Pick how this session will unfold.";
     }
@@ -1118,7 +1084,6 @@ const Songwriting = () => {
 
     const creativeBrief = {
       genre: formState.genre,
-      purpose: formState.purpose,
       writing_mode: formState.writingMode,
       familiarity_tags: formState.genre ? [formState.genre] : [],
       co_writers: coWriterEntries,
@@ -1380,24 +1345,26 @@ const Songwriting = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Music className="h-8 w-8 text-primary" />
-            Songwriting Studio
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Craft deliberate songwriting sprints, track your progress, and convert finished projects into release-ready songs.
-          </p>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-7xl">
+        <div className="flex flex-col gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <Music className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+              Songwriting Studio
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
+              Create songwriting sprints, track progress, and convert to songs.
+            </p>
+          </div>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleOpenCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-          </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button onClick={handleOpenCreate} size="sm" className="md:size-default">
+                <Plus className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>{selectedProject ? "Edit Songwriting Project" : "Create Songwriting Project"}</DialogTitle>
@@ -1492,31 +1459,6 @@ const Songwriting = () => {
                     </SelectContent>
                   </Select>
                   {formErrors.genre && <p className="text-sm text-destructive">{formErrors.genre}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-purpose">Project Purpose</Label>
-                  <Select
-                    value={formState.purpose || "none"}
-                    onValueChange={(value) =>
-                      setFormState((previous) => ({ ...previous, purpose: value === "none" ? "" : value }))
-                    }
-                  >
-                    <SelectTrigger id="project-purpose">
-                      <SelectValue placeholder="Where will this song live?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Still exploring</SelectItem>
-                      {SONG_PURPOSE_OPTIONS.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedPurpose?.description ?? "Clarify the purpose to align your team."}
-                  </p>
-                  {formErrors.purpose && <p className="text-sm text-destructive">{formErrors.purpose}</p>}
                 </div>
               </div>
 
@@ -1780,9 +1722,9 @@ const Songwriting = () => {
           </DialogContent>
         </Dialog>
       </div>
-      <Card>
-        <CardContent className="py-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card className="overflow-hidden">
+        <CardContent className="p-4 md:py-6">
+          <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 Active Projects
@@ -2077,11 +2019,13 @@ const Songwriting = () => {
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-3">
+                  <div className="space-y-3">
                       {project.initial_lyrics && (
                         <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-                          <p className="uppercase font-semibold text-[10px] tracking-wider">Concept notes</p>
-                          <p className="line-clamp-3 text-foreground">{project.initial_lyrics}</p>
+                          <p className="uppercase font-semibold text-[10px] tracking-wider">Lyrics & Notes</p>
+                          <ScrollArea className="h-32 w-full">
+                            <p className="text-foreground whitespace-pre-wrap">{project.initial_lyrics}</p>
+                          </ScrollArea>
                         </div>
                       )}
 

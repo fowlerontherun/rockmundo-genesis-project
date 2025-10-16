@@ -286,7 +286,7 @@ export const useSongwritingData = (userId?: string | null) => {
     mutationFn: async ({ 
       sessionId, 
       notes, 
-      effortHours = 6,
+      effortHours = 2,
       skillLevels,
       attributes 
     }: { 
@@ -330,6 +330,7 @@ export const useSongwritingData = (userId?: string | null) => {
         .from('songwriting_sessions')
         .update({
           session_end: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
           music_progress_gained: musicGain,
           lyrics_progress_gained: lyricsGain,
           xp_earned: xpEarned,
