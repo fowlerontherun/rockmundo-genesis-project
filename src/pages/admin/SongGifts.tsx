@@ -111,7 +111,7 @@ const SongGifts = () => {
           lyrics: songData.lyrics || null,
           quality_score: songData.quality_score,
           song_rating: song_rating,
-          status: 'completed',
+          status: 'recorded',
           band_id: selectedBandId,
           user_id: band.leader_id,
           duration_seconds: duration.durationSeconds,
