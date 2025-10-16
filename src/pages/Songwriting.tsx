@@ -799,37 +799,32 @@ const Songwriting = () => {
     }, {});
   }, [songs]);
 
+  const initializedProjectsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    // Only update if projects actually changed (by checking length and IDs)
-    const projectIds = projectsList.map(p => p.id).join(',');
+    const newProjects = projectsList.filter(p => !initializedProjectsRef.current.has(p.id));
+    
+    if (newProjects.length === 0) return;
     
     setEffortSelections((previous) => {
       const nextSelections = { ...previous };
-      let hasChanges = false;
       
-      projectsList.forEach((project) => {
-        if (!project.id || nextSelections[project.id]) {
-          return;
-        }
-        hasChanges = true;
+      newProjects.forEach((project) => {
+        if (!project.id) return;
         const defaultEffort = SESSION_EFFORT_OPTIONS.find(
           (option) => option.id === (project.creative_brief?.effort_level as SessionEffortOption["id"]),
         );
         nextSelections[project.id] = defaultEffort?.id ?? DEFAULT_EFFORT_OPTION.id;
       });
       
-      return hasChanges ? nextSelections : previous;
+      return nextSelections;
     });
 
     setSessionParticipants((previous) => {
       const nextParticipants = { ...previous };
-      let hasChanges = false;
       
-      projectsList.forEach((project) => {
-        if (!project.id || nextParticipants[project.id]) {
-          return;
-        }
-        hasChanges = true;
+      newProjects.forEach((project) => {
+        if (!project.id) return;
         nextParticipants[project.id] = {
           coWriters: project.creative_brief?.co_writers?.map((writer) => writer.id) ?? [],
           producers: project.creative_brief?.producers ?? [],
@@ -837,10 +832,12 @@ const Songwriting = () => {
         };
       });
       
-      return hasChanges ? nextParticipants : previous;
+      return nextParticipants;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects]); // Use projects from query, not computed projectsList
+    
+    // Track that we've initialized these projects
+    newProjects.forEach(p => initializedProjectsRef.current.add(p.id));
+  }, [projectsList]);
 
   useEffect(() => {
     setRehearsalUnlocks((previous) => {
@@ -2379,20 +2376,15 @@ const Songwriting = () => {
             <div className="space-y-4">
               {historyProject?.songwriting_sessions && historyProject.songwriting_sessions.length > 0 ? (
                 [...historyProject.songwriting_sessions]
-                  .sort((a, b) => new Date(b.started_at ?? b.session_start).getTime() - new Date(a.started_at ?? a.session_start).getTime())
+                  .sort((a, b) => new Date(b.session_start).getTime() - new Date(a.session_start).getTime())
                   .map((session) => {
-                    const started = session.started_at ?? session.session_start;
+                    const started = session.session_start;
                     const ended = session.completed_at ?? session.session_end;
                     return (
                       <div key={session.id} className="rounded-md border p-3 text-sm space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="font-medium">{new Date(started).toLocaleString()}</p>
-                            {session.locked_until && (
-                              <p className="text-xs text-muted-foreground">
-                                Locked until {new Date(session.locked_until).toLocaleTimeString()}
-                              </p>
-                            )}
                           </div>
                           <Badge variant={session.completed_at ? "default" : "secondary"}>
                             {session.completed_at ? "Completed" : "In progress"}
