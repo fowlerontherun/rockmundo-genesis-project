@@ -16,6 +16,7 @@ import { BandEarnings } from '@/components/band/BandEarnings';
 import { InviteFriendToBand } from '@/components/band/InviteFriendToBand';
 import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
+import { BandSongGifts } from '@/components/band/BandSongGifts';
 import { Users, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
@@ -243,6 +244,7 @@ export default function BandManager() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <BandSongGifts bandId={selectedBand.id} />
           <BandOverview bandId={selectedBand.id} />
         </TabsContent>
 

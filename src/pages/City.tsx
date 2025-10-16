@@ -378,10 +378,26 @@ export default function City() {
         setLoading(false);
         setDetailsLoading(true);
 
+        // Get user's current city to filter studios
+        const { data: userData } = await supabase.auth.getUser();
+        let userCityId = matchedCity.id;
+        
+        if (userData?.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("current_city_id")
+            .eq("user_id", userData.user.id)
+            .single();
+          
+          if (profile?.current_city_id) {
+            userCityId = profile.current_city_id;
+          }
+        }
+
         // Load districts, studios, night clubs, rehearsal rooms, and player count in parallel
         const [districtsResult, studiosResult, nightClubsResult, rehearsalRoomsResult, playerCountResult, cityDetails] = await Promise.allSettled([
           supabase.from("city_districts").select("*").eq("city_id", matchedCity.id).order("name"),
-          supabase.from("city_studios").select("*, district:city_districts(name)").eq("city_id", matchedCity.id).order("quality_rating", { ascending: false }),
+          supabase.from("city_studios").select("*, district:city_districts(name)").eq("city_id", userCityId).order("quality_rating", { ascending: false }),
           supabase.from("city_night_clubs").select("*").eq("city_id", matchedCity.id).order("quality_level", { ascending: false }),
           supabase.from("rehearsal_rooms").select("*, city:cities(name)").eq("city_id", matchedCity.id).order("quality_rating", { ascending: false }),
           supabase.from("profiles").select("id", { count: "exact", head: true }).eq("current_city_id", matchedCity.id),

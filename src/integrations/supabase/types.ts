@@ -120,6 +120,13 @@ export type Database = {
             foreignKeyName: "admin_song_gifts_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "admin_song_gifts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -1646,6 +1653,13 @@ export type Database = {
             foreignKeyName: "gig_song_performances_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "gig_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -2812,6 +2826,7 @@ export type Database = {
           cash: number | null
           character_birth_date: string | null
           created_at: string | null
+          current_activity: string | null
           current_city_id: string | null
           display_name: string | null
           energy: number
@@ -2838,6 +2853,7 @@ export type Database = {
           cash?: number | null
           character_birth_date?: string | null
           created_at?: string | null
+          current_activity?: string | null
           current_city_id?: string | null
           display_name?: string | null
           energy?: number
@@ -2864,6 +2880,7 @@ export type Database = {
           cash?: number | null
           character_birth_date?: string | null
           created_at?: string | null
+          current_activity?: string | null
           current_city_id?: string | null
           display_name?: string | null
           energy?: number
@@ -3149,6 +3166,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "setlists"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setlist_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
           },
           {
             foreignKeyName: "setlist_songs_song_id_fkey"
@@ -3568,6 +3592,13 @@ export type Database = {
             foreignKeyName: "song_market_listings_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_market_listings_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -3619,6 +3650,13 @@ export type Database = {
             foreignKeyName: "song_rehearsals_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_rehearsals_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -3653,6 +3691,13 @@ export type Database = {
           song_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "song_sales_royalties_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
           {
             foreignKeyName: "song_sales_royalties_song_id_fkey"
             columns: ["song_id"]
@@ -3708,7 +3753,9 @@ export type Database = {
           original_writer_id: string | null
           ownership_type: string | null
           production_potential: number | null
+          profile_id: string | null
           quality_score: number
+          rating_revealed_at: string | null
           release_date: string | null
           revenue: number
           rhythm_strength: number | null
@@ -3743,7 +3790,9 @@ export type Database = {
           original_writer_id?: string | null
           ownership_type?: string | null
           production_potential?: number | null
+          profile_id?: string | null
           quality_score?: number
+          rating_revealed_at?: string | null
           release_date?: string | null
           revenue?: number
           rhythm_strength?: number | null
@@ -3778,7 +3827,9 @@ export type Database = {
           original_writer_id?: string | null
           ownership_type?: string | null
           production_potential?: number | null
+          profile_id?: string | null
           quality_score?: number
+          rating_revealed_at?: string | null
           release_date?: string | null
           revenue?: number
           rhythm_strength?: number | null
@@ -3805,6 +3856,13 @@ export type Database = {
             columns: ["chord_progression_id"]
             isOneToOne: false
             referencedRelation: "chord_progressions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -3909,6 +3967,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "chord_progressions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songwriting_projects_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
           },
           {
             foreignKeyName: "songwriting_projects_song_id_fkey"
@@ -4758,7 +4823,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      band_gift_notifications: {
+        Row: {
+          band_name: string | null
+          created_at: string | null
+          genre: string | null
+          gift_message: string | null
+          gifted_to_band_id: string | null
+          id: string | null
+          quality_score: number | null
+          song_id: string | null
+          song_rating: number | null
+          song_title: string | null
+          viewed: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_song_gifts_gifted_to_band_id_fkey"
+            columns: ["gifted_to_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_songwriting_progress: {

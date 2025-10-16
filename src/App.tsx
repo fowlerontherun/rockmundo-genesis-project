@@ -62,8 +62,11 @@ const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities
 const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
 const UniversityDetail = lazyWithRetry(() => import("./pages/UniversityDetail"));
 const AdminCities = lazyWithRetry(() => import("./pages/admin/Cities"));
+const AdminDistricts = lazyWithRetry(() => import("./pages/admin/Districts"));
 const AdminSkillBooks = lazyWithRetry(() => import("./pages/admin/SkillBooks"));
 const AdminStudios = lazyWithRetry(() => import("./pages/admin/Studios"));
+const AdminCityStudios = lazyWithRetry(() => import("./pages/admin/CityStudios"));
+const AdminProductionNotes = lazyWithRetry(() => import("./pages/admin/ProductionNotes"));
 const AdminNightClubs = lazyWithRetry(() => import("./pages/admin/NightClubs"));
 const AdminYoutubeVideos = lazyWithRetry(() => import("./pages/admin/YoutubeVideos"));
 const AdminBandLearning = lazyWithRetry(() => import("./pages/admin/BandLearning"));
@@ -159,6 +162,9 @@ function App() {
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/courses" element={<AdminCourses />} />
                     <Route path="admin/cities" element={<AdminCities />} />
+                    <Route path="admin/districts" element={<AdminDistricts />} />
+                    <Route path="admin/city-studios" element={<AdminCityStudios />} />
+                    <Route path="admin/production-notes" element={<AdminProductionNotes />} />
                     <Route path="admin/skill-books" element={<AdminSkillBooks />} />
                     <Route path="admin/night-clubs" element={<AdminNightClubs />} />
                     <Route path="admin/game-calendar" element={<AdminGameCalendar />} />
