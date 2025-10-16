@@ -25,14 +25,23 @@ export default function RecordingStudio() {
     const loadUserBand = async () => {
       if (!session?.user?.id) return;
 
+      // Get user's active band (not on hiatus, not inactive)
       const { data: bandMemberships } = await supabase
         .from('band_members')
-        .select('band_id')
+        .select('band_id, bands(id, name, status)')
         .eq('user_id', session.user.id)
-        .limit(1);
+        .eq('is_touring_member', false)
+        .limit(1)
+        .single();
 
-      if (bandMemberships && bandMemberships.length > 0) {
-        setUserBandId(bandMemberships[0].band_id);
+      if (bandMemberships?.bands) {
+        const band = bandMemberships.bands as any;
+        // Only use active bands (not on hiatus)
+        if (band.status === 'active') {
+          setUserBandId(band.id);
+        } else {
+          setUserBandId(null);
+        }
       }
     };
 
