@@ -1997,6 +1997,33 @@ export type Database = {
         }
         Relationships: []
       }
+      manufacturing_costs: {
+        Row: {
+          cost_per_unit: number
+          created_at: string
+          format_type: string
+          id: string
+          max_quantity: number | null
+          min_quantity: number
+        }
+        Insert: {
+          cost_per_unit: number
+          created_at?: string
+          format_type: string
+          id?: string
+          max_quantity?: number | null
+          min_quantity: number
+        }
+        Update: {
+          cost_per_unit?: number
+          created_at?: string
+          format_type?: string
+          id?: string
+          max_quantity?: number | null
+          min_quantity?: number
+        }
+        Relationships: []
+      }
       marketplace_bids: {
         Row: {
           bid_amount: number
@@ -3287,6 +3314,205 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "city_districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      release_formats: {
+        Row: {
+          created_at: string
+          distribution_fee_percentage: number | null
+          format_type: string
+          id: string
+          manufacturing_completion_date: string | null
+          manufacturing_cost: number | null
+          manufacturing_status: string | null
+          quantity: number | null
+          release_date: string
+          release_id: string
+          retail_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          distribution_fee_percentage?: number | null
+          format_type: string
+          id?: string
+          manufacturing_completion_date?: string | null
+          manufacturing_cost?: number | null
+          manufacturing_status?: string | null
+          quantity?: number | null
+          release_date: string
+          release_id: string
+          retail_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          distribution_fee_percentage?: number | null
+          format_type?: string
+          id?: string
+          manufacturing_completion_date?: string | null
+          manufacturing_cost?: number | null
+          manufacturing_status?: string | null
+          quantity?: number | null
+          release_date?: string
+          release_id?: string
+          retail_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_formats_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      release_sales: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string | null
+          quantity_sold: number
+          release_format_id: string
+          sale_date: string
+          total_amount: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform?: string | null
+          quantity_sold?: number
+          release_format_id: string
+          sale_date?: string
+          total_amount: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string | null
+          quantity_sold?: number
+          release_format_id?: string
+          sale_date?: string
+          total_amount?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_sales_release_format_id_fkey"
+            columns: ["release_format_id"]
+            isOneToOne: false
+            referencedRelation: "release_formats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      release_songs: {
+        Row: {
+          created_at: string
+          id: string
+          is_b_side: boolean | null
+          release_id: string
+          song_id: string
+          track_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_b_side?: boolean | null
+          release_id: string
+          song_id: string
+          track_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_b_side?: boolean | null
+          release_id?: string
+          song_id?: string
+          track_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_songs_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "release_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "release_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      releases: {
+        Row: {
+          artist_name: string
+          artwork_url: string | null
+          band_id: string | null
+          catalog_number: string | null
+          created_at: string
+          id: string
+          release_status: string
+          release_type: string
+          title: string
+          total_cost: number | null
+          total_revenue: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          artist_name: string
+          artwork_url?: string | null
+          band_id?: string | null
+          catalog_number?: string | null
+          created_at?: string
+          id?: string
+          release_status?: string
+          release_type: string
+          title: string
+          total_cost?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          artist_name?: string
+          artwork_url?: string | null
+          band_id?: string | null
+          catalog_number?: string | null
+          created_at?: string
+          id?: string
+          release_status?: string
+          release_type?: string
+          title?: string
+          total_cost?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "releases_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
             referencedColumns: ["id"]
           },
         ]

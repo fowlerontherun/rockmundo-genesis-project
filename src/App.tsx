@@ -87,6 +87,7 @@ const Busking = lazyWithRetry(() => import("./pages/Busking"));
 const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
+const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
@@ -147,6 +148,7 @@ function App() {
                     <Route path="songwriting" element={<Songwriting />} />
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
+                    <Route path="release-manager" element={<ReleaseManager />} />
                     
                     {/* Redirects for removed placeholder pages */}
                     <Route path="tours" element={<RedirectTo to="/travel" />} />

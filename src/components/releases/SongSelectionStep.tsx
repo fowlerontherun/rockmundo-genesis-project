@@ -1,0 +1,150 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface SongSelectionStepProps {
+  userId: string;
+  releaseType: "single" | "ep" | "album";
+  selectedSongs: string[];
+  onSongsChange: (songs: string[]) => void;
+  ownerType: "solo" | "band";
+  selectedBandId: string | null;
+  onBandChange: (bandId: string | null) => void;
+  onBack: () => void;
+  onNext: () => void;
+}
+
+export function SongSelectionStep({
+  userId,
+  releaseType,
+  selectedSongs,
+  onSongsChange,
+  ownerType,
+  selectedBandId,
+  onBandChange,
+  onBack,
+  onNext
+}: SongSelectionStepProps) {
+  const requiredSongs = releaseType === "single" ? 2 : releaseType === "ep" ? 4 : 10;
+  const maxSongs = releaseType === "album" ? 20 : requiredSongs;
+
+  const { data: bands } = useQuery({
+    queryKey: ["user-bands", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("band_members")
+        .select("band:bands(*)")
+        .eq("user_id", userId);
+      return data?.map(d => d.band).filter(Boolean) || [];
+    }
+  });
+
+  const { data: songs } = useQuery({
+    queryKey: ["available-songs", userId, ownerType, selectedBandId],
+    queryFn: async () => {
+      if (ownerType === "solo") {
+        const { data } = await supabase
+          .from("songs")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("status", "completed")
+          .order("created_at", { ascending: false });
+        return data || [];
+      } else if (selectedBandId) {
+        const { data } = await supabase
+          .from("songs")
+          .select("*")
+          .eq("band_id", selectedBandId)
+          .eq("status", "completed")
+          .order("created_at", { ascending: false });
+        return data || [];
+      }
+      return [];
+    },
+    enabled: ownerType === "solo" || !!selectedBandId
+  });
+
+  const toggleSong = (songId: string) => {
+    if (selectedSongs.includes(songId)) {
+      onSongsChange(selectedSongs.filter(id => id !== songId));
+    } else if (selectedSongs.length < maxSongs) {
+      onSongsChange([...selectedSongs, songId]);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {ownerType === "band" && (
+        <div className="space-y-2">
+          <Label>Select Band</Label>
+          <Select value={selectedBandId || ""} onValueChange={onBandChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a band" />
+            </SelectTrigger>
+            <SelectContent>
+              {bands?.map((band: any) => (
+                <SelectItem key={band.id} value={band.id}>
+                  {band.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div>
+        <h3 className="font-semibold mb-2">
+          Select Songs ({selectedSongs.length}/{maxSongs})
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          {releaseType === "single" && "Select 1 A-side and 1 B-side"}
+          {releaseType === "ep" && "Select exactly 4 songs"}
+          {releaseType === "album" && "Select 10-20 songs"}
+        </p>
+
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {songs?.map((song, index) => (
+            <Card key={song.id} className="p-4">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  checked={selectedSongs.includes(song.id)}
+                  onCheckedChange={() => toggleSong(song.id)}
+                  disabled={
+                    !selectedSongs.includes(song.id) && selectedSongs.length >= maxSongs
+                  }
+                />
+                <div className="flex-1">
+                  <div className="font-medium">{song.title}</div>
+                  <div className="text-sm text-muted-foreground">{song.genre}</div>
+                  {releaseType === "single" && selectedSongs[0] === song.id && (
+                    <div className="text-xs text-primary">A-side</div>
+                  )}
+                  {releaseType === "single" && selectedSongs[1] === song.id && (
+                    <div className="text-xs text-muted-foreground">B-side</div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onBack} className="flex-1">
+          Back
+        </Button>
+        <Button
+          onClick={onNext}
+          disabled={selectedSongs.length < requiredSongs}
+          className="flex-1"
+        >
+          Next: Select Formats
+        </Button>
+      </div>
+    </div>
+  );
+}

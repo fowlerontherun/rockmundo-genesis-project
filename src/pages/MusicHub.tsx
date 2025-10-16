@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Music, Disc, ShoppingBag, ListMusic } from "lucide-react";
+import { Music, Disc, ShoppingBag, ListMusic, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useQuery } from "@tanstack/react-query";
@@ -84,6 +84,14 @@ const MusicHub = () => {
       stats: "Browse listings and track royalties",
       color: "text-purple-500",
     },
+    {
+      title: "Release Manager",
+      description: "Create Singles, EPs, and Albums for physical and digital release",
+      icon: Package,
+      path: "/release-manager",
+      stats: "Manufacture CDs, Vinyl, Digital, and more",
+      color: "text-orange-500",
+    },
   ];
 
   return (
@@ -134,7 +142,7 @@ const MusicHub = () => {
       )}
 
       {/* Main Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {sections.map((section) => {
           const Icon = section.icon;
           return (
