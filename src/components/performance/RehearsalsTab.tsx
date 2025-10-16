@@ -44,21 +44,28 @@ export function RehearsalsTab() {
       // Get user's band (first one if multiple) - ensure we fetch band_balance
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
-        .select('band_id, bands!band_members_band_id_fkey(id, name, band_balance, leader_id, chemistry_level, fame, status)')
+        .select('band_id')
         .eq('user_id', user.id)
         .limit(1);
 
       if (memberError) throw memberError;
 
       if (bandMembers && bandMembers.length > 0) {
-        const band = (bandMembers[0] as any).bands;
-        setUserBand(band);
+        // Fetch band data separately to ensure we get all fields including band_balance
+        const { data: bandData, error: bandError } = await supabase
+          .from('bands')
+          .select('*')
+          .eq('id', bandMembers[0].band_id)
+          .single();
+
+        if (bandError) throw bandError;
+        setUserBand(bandData);
 
         // Load songs from all band members
         const { data: members, error: membersError } = await supabase
           .from('band_members')
           .select('user_id')
-          .eq('band_id', band.id);
+          .eq('band_id', bandData.id);
 
         if (membersError) throw membersError;
 
@@ -78,7 +85,7 @@ export function RehearsalsTab() {
         const { data: familiarityData, error: famError } = await supabase
           .from('band_song_familiarity')
           .select('song_id, familiarity_percentage')
-          .eq('band_id', band.id);
+          .eq('band_id', bandData.id);
 
         if (famError) throw famError;
         
@@ -92,7 +99,7 @@ export function RehearsalsTab() {
         const { data: rehearsal, error: rehearsalError } = await supabase
           .from('band_rehearsals')
           .select('*')
-          .eq('band_id', band.id)
+          .eq('band_id', bandData.id)
           .eq('status', 'in_progress')
           .maybeSingle();
 

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Music, Disc, ShoppingBag, ListMusic, Package } from "lucide-react";
+import { Music, Disc, ShoppingBag, ListMusic, Package, Mic } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useQuery } from "@tanstack/react-query";
@@ -92,6 +92,14 @@ const MusicHub = () => {
       stats: "Manufacture CDs, Vinyl, Digital, and more",
       color: "text-orange-500",
     },
+    {
+      title: "Recording Studio",
+      description: "Book studio sessions to record your songs",
+      icon: Mic,
+      path: "/recording-studio",
+      stats: "Professional recording and production",
+      color: "text-red-500",
+    },
   ];
 
   return (
@@ -142,7 +150,7 @@ const MusicHub = () => {
       )}
 
       {/* Main Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sections.map((section) => {
           const Icon = section.icon;
           return (
