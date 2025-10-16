@@ -32,10 +32,10 @@ export function RehearsalsTab() {
 
     setLoading(true);
     try {
-      // Get user's bands (all of them)
+      // Get user's band with full details
       const { data: bandMembers, error: memberError } = await supabase
         .from('band_members')
-        .select('band_id, bands(*)')
+        .select('bands(*)')
         .eq('user_id', user.id)
         .order('joined_at', { ascending: false });
 
@@ -45,14 +45,13 @@ export function RehearsalsTab() {
         // Find the first active band, or just use the first one
         const activeBand = bandMembers.find((bm: any) => bm.bands?.status === 'active');
         const selectedBandMember = activeBand || bandMembers[0];
+        const bandData = (selectedBandMember as any).bands;
         
-        const { data: bandData, error: bandError } = await supabase
-          .from('bands')
-          .select('*')
-          .eq('id', selectedBandMember.band_id)
-          .single();
-
-        if (bandError) throw bandError;
+        if (!bandData) {
+          throw new Error('Band data not found');
+        }
+        
+        console.log('Band data loaded:', { name: bandData.name, balance: bandData.band_balance });
         setUserBand(bandData);
 
         // Load scheduled rehearsals
