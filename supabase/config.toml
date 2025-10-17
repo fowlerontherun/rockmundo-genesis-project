@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.complete-recording-sessions]
 verify_jwt = false
+
+[functions.suggest-accounts]
+verify_jwt = false

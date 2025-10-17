@@ -8,6 +8,8 @@ import { TwaaterComposer } from "@/components/twaater/TwaaterComposer";
 import { TwaaterFeed } from "@/components/twaater/TwaaterFeed";
 import { TwaaterAccountSetup } from "@/components/twaater/TwaaterAccountSetup";
 import { TwaaterAccountSwitcher } from "@/components/twaater/TwaaterAccountSwitcher";
+import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
+import { SuggestedAccounts } from "@/components/twaater/SuggestedAccounts";
 import { MessageCircle, TrendingUp, Bell } from "lucide-react";
 
 const Twaater = () => {
@@ -99,6 +101,8 @@ const Twaater = () => {
                 </div>
               </div>
 
+              <TwaaterSearch currentAccountId={account.id} />
+
               <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--twaater-card))' }}>
                 <div className="font-bold mb-3">Daily XP</div>
                 <div className="space-y-2 text-sm">
@@ -171,6 +175,8 @@ const Twaater = () => {
           {/* Right Sidebar - Hidden on mobile */}
           <div className="hidden xl:block w-80 p-4">
             <div className="space-y-4 sticky top-20">
+              <SuggestedAccounts accountId={account.id} />
+
               <div className="rounded-xl p-4" style={{ backgroundColor: 'hsl(var(--twaater-card))' }}>
                 <div className="font-bold mb-3">Tips for Success</div>
                 <div className="space-y-2 text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>

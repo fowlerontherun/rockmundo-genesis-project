@@ -11,9 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTwaaterReactions } from "@/hooks/useTwaaterReactions";
 import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
+import { useTwaaterFollow } from "@/hooks/useTwaaterFollow";
 import { TwaatReplyDialog } from "./TwaatReplyDialog";
 import { TwaatReportDialog } from "./TwaatReportDialog";
-import { Heart, Repeat2, BarChart2, BadgeCheck, MoreHorizontal, Ban } from "lucide-react";
+import { Heart, Repeat2, BarChart2, BadgeCheck, MoreHorizontal, Ban, UserPlus, Check } from "lucide-react";
 
 interface TwaatCardProps {
   twaat: {
@@ -45,6 +46,7 @@ interface TwaatCardProps {
 export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const { toggleLike, toggleRetwaat } = useTwaaterReactions();
   const { blockAccount, isBlocking, isAccountBlocked } = useTwaaterModeration(viewerAccountId);
+  const { isFollowing, follow, unfollow, isFollowPending } = useTwaaterFollow(viewerAccountId);
 
   const handleLike = () => {
     toggleLike({ twaatId: twaat.id, accountId: viewerAccountId });
@@ -63,8 +65,17 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
     }
   };
 
+  const handleFollowClick = () => {
+    if (following) {
+      unfollow({ followedAccountId: twaat.account.id });
+    } else {
+      follow({ followedAccountId: twaat.account.id });
+    }
+  };
+
   const isOwnPost = twaat.account.id === viewerAccountId;
   const isBlocked = isAccountBlocked(twaat.account.id);
+  const following = isFollowing(twaat.account.id);
 
   return (
     <div className="border-b px-4 py-3 hover:bg-[hsl(var(--twaater-hover))] transition-colors cursor-pointer" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
@@ -86,32 +97,56 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
                 </span>
               </div>
 
-              {!isOwnPost && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {!isBlocked && (
+              <div className="flex items-center gap-2">
+                {!isOwnPost && (
+                  <Button
+                    size="sm"
+                    variant={following ? "secondary" : "default"}
+                    onClick={handleFollowClick}
+                    disabled={isFollowPending}
+                    className="h-7"
+                  >
+                    {following ? (
                       <>
-                        <TwaatReportDialog
-                          twaatId={twaat.id}
-                          accountId={twaat.account.id}
-                          viewerAccountId={viewerAccountId}
-                          asMenuItem={true}
-                        />
-                        <DropdownMenuSeparator />
+                        <Check className="h-3 w-3 mr-1" />
+                        Following
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-3 w-3 mr-1" />
+                        Follow
                       </>
                     )}
-                    <DropdownMenuItem onClick={handleBlock} disabled={isBlocking} className="text-destructive">
-                      <Ban className="h-4 w-4 mr-2" />
-                      {isBlocked ? "Blocked" : "Block @" + twaat.account.handle}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+                  </Button>
+                )}
+
+                {!isOwnPost && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {!isBlocked && (
+                        <>
+                          <TwaatReportDialog
+                            twaatId={twaat.id}
+                            accountId={twaat.account.id}
+                            viewerAccountId={viewerAccountId}
+                            asMenuItem={true}
+                          />
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      <DropdownMenuItem onClick={handleBlock} disabled={isBlocking} className="text-destructive">
+                        <Ban className="h-4 w-4 mr-2" />
+                        {isBlocked ? "Blocked" : "Block @" + twaat.account.handle}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             </div>
 
             {/* Body */}

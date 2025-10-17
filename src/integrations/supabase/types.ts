@@ -5502,6 +5502,45 @@ export type Database = {
           },
         ]
       }
+      twaater_suggested_follows: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          reason: string
+          score: number
+          suggested_account_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          reason: string
+          score?: number
+          suggested_account_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          reason?: string
+          score?: number
+          suggested_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_suggested_follows_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaater_suggested_follows_suggested_account_id_fkey"
+            columns: ["suggested_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       twaats: {
         Row: {
           account_id: string
