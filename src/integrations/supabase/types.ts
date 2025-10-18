@@ -4612,6 +4612,7 @@ export type Database = {
           catalog_status: string | null
           chart_position: number | null
           chord_progression_id: string | null
+          completed_at: string | null
           created_at: string
           duration_display: string | null
           duration_seconds: number | null
@@ -4649,6 +4650,7 @@ export type Database = {
           catalog_status?: string | null
           chart_position?: number | null
           chord_progression_id?: string | null
+          completed_at?: string | null
           created_at?: string
           duration_display?: string | null
           duration_seconds?: number | null
@@ -4686,6 +4688,7 @@ export type Database = {
           catalog_status?: string | null
           chart_position?: number | null
           chord_progression_id?: string | null
+          completed_at?: string | null
           created_at?: string
           duration_display?: string | null
           duration_seconds?: number | null

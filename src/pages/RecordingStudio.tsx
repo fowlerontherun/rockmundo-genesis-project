@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RecordingWizard } from "@/components/recording/RecordingWizard";
+import { CompleteRecordingDialog } from "@/components/recording/CompleteRecordingDialog";
 import { useRecordingSessions } from "@/hooks/useRecordingData";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
@@ -15,6 +16,8 @@ export default function RecordingStudio() {
   const { session } = useAuth();
   const { currentCity } = useGameData();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<any>(null);
   const [userBandId, setUserBandId] = useState<string | null>(null);
   
   const currentCityId = currentCity?.id || "";
@@ -173,13 +176,27 @@ export default function RecordingStudio() {
                           )}
                         </div>
 
-                        <div className="text-right text-sm text-muted-foreground">
-                          {session.completed_at ? (
-                            <div>Completed {formatDistanceToNow(new Date(session.completed_at))} ago</div>
-                          ) : session.status === 'in_progress' ? (
-                            <div>Ends {formatDistanceToNow(new Date(session.scheduled_end))}</div>
-                          ) : (
-                            <div>Created {formatDistanceToNow(new Date(session.created_at))} ago</div>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="text-sm text-muted-foreground">
+                            {session.completed_at ? (
+                              <div>Completed {formatDistanceToNow(new Date(session.completed_at))} ago</div>
+                            ) : session.status === 'in_progress' ? (
+                              <div>Ends {formatDistanceToNow(new Date(session.scheduled_end))}</div>
+                            ) : (
+                              <div>Created {formatDistanceToNow(new Date(session.created_at))} ago</div>
+                            )}
+                          </div>
+                          {session.status === 'in_progress' && new Date(session.scheduled_end) <= new Date() && (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSession(session);
+                                setCompleteDialogOpen(true);
+                              }}
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                              Complete
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -199,6 +216,15 @@ export default function RecordingStudio() {
         currentCityId={currentCityId}
         bandId={userBandId}
       />
+
+      {selectedSession && (
+        <CompleteRecordingDialog
+          open={completeDialogOpen}
+          onOpenChange={setCompleteDialogOpen}
+          sessionId={selectedSession.id}
+          songTitle={selectedSession.songs?.title || "Unknown Song"}
+        />
+      )}
     </div>
   );
 }

@@ -74,7 +74,7 @@ const PROFILE_META_FIELDS: Array<{ key: any; label: string; icon: ElementType }>
 ];
 
 const MIN_ATTRIBUTE_SCORE = 5;
-const DAILY_XP_STIPEND = 150;
+const DAILY_XP_STIPEND = 100;
 const DEFAULT_ATTRIBUTE_SPEND = 10;
 const DEFAULT_SKILL_SPEND = 25;
 

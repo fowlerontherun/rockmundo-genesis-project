@@ -2,6 +2,7 @@ import { serve } from "../_shared/deno/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
 import { handleClaimDailyXp, handleSpendAttributeXp, handleSpendSkillXp, handleAwardActionXp } from "./handlers.ts";
+import { handleAdminAwardSpecialXp } from "./handlers-admin.ts";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type WalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"] | null;
@@ -192,6 +193,31 @@ serve(async (req) => {
           params.metadata,
         );
         break;
+
+      case "admin_award_special_xp": {
+        const adminResult = await handleAdminAwardSpecialXp(
+          client,
+          user.id,
+          profileState,
+          params.amount,
+          params.reason,
+          params.profileIds || [],
+          params.apply_to_all || false,
+          params.metadata,
+        );
+        return new Response(
+          JSON.stringify({
+            success: true,
+            action: "admin_award_special_xp",
+            message: `Awarded ${params.amount} XP to ${adminResult.profiles_updated} profiles`,
+            profiles_updated: adminResult.profiles_updated,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
 
       default:
         throw new Error(`Unknown action: ${action}`);

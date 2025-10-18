@@ -1949,6 +1949,7 @@ const Songwriting = () => {
                   setHistoryProject(project);
                   setIsHistoryOpen(true);
                 }}
+                onComplete={() => refetchProjects()}
               />
             );
           })}

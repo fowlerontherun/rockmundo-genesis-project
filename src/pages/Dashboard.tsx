@@ -159,7 +159,7 @@ const getMetadataString = (metadata: ProfileActivityStatusRow["metadata"], ...ke
   return null;
 };
 
-const DAILY_XP_STIPEND = 150;
+const DAILY_XP_STIPEND = 100;
 
 const Dashboard = () => {
   const navigate = useNavigate();
