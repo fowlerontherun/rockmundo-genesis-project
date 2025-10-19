@@ -19,7 +19,7 @@ export const SongSelector = ({ userId, selectedSong, onSelect }: SongSelectorPro
         .from('songs')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['complete', 'demo', 'recorded'])
+        .in('status', ['draft', 'recorded'])
         .order('created_at', { ascending: false });
       
       if (error) throw error;

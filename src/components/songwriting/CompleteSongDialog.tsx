@@ -28,7 +28,7 @@ export const CompleteSongDialog = ({
       // Get project details first
       const { data: project, error: projectFetchError } = await supabase
         .from("songwriting_projects")
-        .select("*, profiles(user_id)")
+        .select("*")
         .eq("id", projectId)
         .single();
 
@@ -53,37 +53,41 @@ export const CompleteSongDialog = ({
         .maybeSingle();
 
       if (!existingSong) {
-        // Create new song from completed project
+        // Create new song from completed project (use 'draft' status, not 'complete')
         const { error: songError } = await supabase
           .from("songs")
           .insert({
-            user_id: project.profiles?.[0]?.user_id,
+            user_id: project.user_id,
             title: project.title,
             genre: project.genres?.[0] || "Rock",
             lyrics: project.initial_lyrics || "",
             quality_score: project.quality_score || 50,
             song_rating: project.song_rating || 1,
-            duration: 180,
-            status: "complete",
+            status: "draft",
             completed_at: new Date().toISOString(),
             songwriting_project_id: projectId,
-            catalog_status: "private"
+            catalog_status: "private",
+            streams: 0,
+            revenue: 0
           });
 
-        if (songError) throw songError;
+        if (songError) {
+          console.error("Error creating song:", songError);
+          throw songError;
+        }
       } else {
-        // Update existing song
+        // Update existing song to draft status
         await supabase
           .from("songs")
           .update({
-            status: "complete",
+            status: "draft",
             completed_at: new Date().toISOString(),
           })
           .eq("id", existingSong.id);
       }
 
       toast.success("Song completed!", {
-        description: `"${projectTitle}" is now ready for recording or release.`,
+        description: `"${projectTitle}" is now ready for recording and release.`,
       });
 
       onComplete();
