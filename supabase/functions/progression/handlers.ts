@@ -27,13 +27,8 @@ export async function handleClaimDailyXp(
     throw new Error("Daily XP already claimed today");
   }
 
-  // Calculate base daily XP based on account age
-  const profileCreatedAt = new Date(profileState.profile.created_at);
-  const now = new Date();
-  const daysSinceCreation = Math.floor((now.getTime() - profileCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
-  const isFirstMonth = daysSinceCreation < 30;
-  
-  const baseDailyAmount = isFirstMonth ? 10 : 5;
+  // Fixed: Award 100 XP daily stipend
+  const baseDailyAmount = 100;
 
   // Calculate activity bonus from past 7 days
   const sevenDaysAgo = new Date();
@@ -47,21 +42,14 @@ export async function handleClaimDailyXp(
 
   const weeklyXp = weeklyXpData?.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0) || 0;
 
-  // Activity tier bonuses
-  let activityBonus = 0;
-  if (weeklyXp >= 3000) activityBonus = 15;
-  else if (weeklyXp >= 1500) activityBonus = 10;
-  else if (weeklyXp >= 500) activityBonus = 5;
+  // Activity tier bonuses (removed - now flat 100 XP)
+  const activityBonus = 0;
+  const dailyAmount = baseDailyAmount;
 
-  const dailyAmount = baseDailyAmount + activityBonus;
-
-  // Create grant record with activity bonus metadata
+  // Create grant record
   const grantMetadata = {
     ...metadata,
-    base_amount: baseDailyAmount,
-    activity_bonus: activityBonus,
-    weekly_xp: weeklyXp,
-    is_first_month: isFirstMonth
+    base_amount: baseDailyAmount
   };
 
   const { error: grantError } = await client

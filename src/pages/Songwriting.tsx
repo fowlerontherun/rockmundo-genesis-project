@@ -494,7 +494,7 @@ const Songwriting = () => {
   const songSelectVariantRef = useRef(0);
   const songFilterStrategyRef = useRef(0);
   const songOrderIndexRef = useRef(0);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [themeFilter, setThemeFilter] = useState<string>("all");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showLockedOnly, setShowLockedOnly] = useState(false);
@@ -1002,8 +1002,15 @@ const Songwriting = () => {
   const filteredProjects = useMemo(() => {
     return projectsList.filter((project) => {
       const status = (project.status || "").toLowerCase();
+      
+      // Filter out completed by default when statusFilter is "active"
+      if (statusFilter === "active" && (status === "completed" || status === "complete")) {
+        return false;
+      }
+      
       const matchesStatus =
         statusFilter === "all" ||
+        statusFilter === "active" ||
         status === statusFilter ||
         (statusFilter === "completed" && status === "complete");
 

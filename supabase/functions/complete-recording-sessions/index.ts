@@ -84,76 +84,52 @@ Deno.serve(async (req) => {
             .eq('id', session.song_id)
         }
 
-        // Award XP to participants (band members or solo artist)
+        // Award XP via progression function
         if (session.band_id) {
           const { data: bandMembers } = await supabase
             .from('band_members')
-            .select('profile_id')
+            .select('profile_id, profiles(user_id)')
             .eq('band_id', session.band_id)
             .eq('status', 'active')
 
           if (bandMembers) {
             for (const member of bandMembers) {
-              // Update XP wallet
-              await supabase
-                .from('player_xp_wallet')
-                .upsert({
-                  profile_id: member.profile_id,
-                  xp_balance: supabase.rpc('increment', { x: xpEarned }),
-                  updated_at: new Date().toISOString()
-                }, { onConflict: 'profile_id' })
-
-              // Log to experience ledger
-              await supabase
-                .from('experience_ledger')
-                .insert({
-                  profile_id: member.profile_id,
-                  user_id: member.profile_id, // Assuming profile_id = user_id for now
-                  activity_type: 'recording',
-                  xp_amount: xpEarned,
-                  metadata: {
-                    session_id: session.id,
-                    song_id: session.song_id,
-                    final_quality: finalQuality,
-                    auto_completed: true
+              if (member.profiles?.user_id) {
+                await supabase.functions.invoke('progression', {
+                  body: {
+                    action: 'award_action_xp',
+                    amount: xpEarned,
+                    category: 'performance',
+                    action_key: 'recording_session',
+                    metadata: {
+                      session_id: session.id,
+                      song_id: session.song_id,
+                      final_quality: finalQuality,
+                      duration_hours: durationHours,
+                      auto_completed: true
+                    }
                   }
                 })
+              }
             }
           }
         } else if (session.user_id) {
-          // Solo artist
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, user_id')
-            .eq('user_id', session.user_id)
-            .single()
-
-          if (profile) {
-            // Update XP wallet
-            await supabase
-              .from('player_xp_wallet')
-              .upsert({
-                profile_id: profile.id,
-                xp_balance: supabase.rpc('increment', { x: xpEarned }),
-                updated_at: new Date().toISOString()
-              }, { onConflict: 'profile_id' })
-
-            // Log to experience ledger
-            await supabase
-              .from('experience_ledger')
-              .insert({
-                profile_id: profile.id,
-                user_id: session.user_id,
-                activity_type: 'recording',
-                xp_amount: xpEarned,
-                metadata: {
-                  session_id: session.id,
-                  song_id: session.song_id,
-                  final_quality: finalQuality,
-                  auto_completed: true
-                }
-              })
-          }
+          // Solo artist - award via progression
+          await supabase.functions.invoke('progression', {
+            body: {
+              action: 'award_action_xp',
+              amount: xpEarned,
+              category: 'performance',
+              action_key: 'recording_session',
+              metadata: {
+                session_id: session.id,
+                song_id: session.song_id,
+                final_quality: finalQuality,
+                duration_hours: durationHours,
+                auto_completed: true
+              }
+            }
+          })
         }
 
         completedCount++

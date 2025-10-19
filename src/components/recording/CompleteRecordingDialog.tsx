@@ -25,7 +25,16 @@ export const CompleteRecordingDialog = ({
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      // Mark session as completed
+      // Get session details
+      const { data: session, error: sessionError } = await supabase
+        .from('recording_sessions')
+        .select('song_id')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Update session
       const { error: updateError } = await supabase
         .from("recording_sessions")
         .update({
@@ -35,6 +44,14 @@ export const CompleteRecordingDialog = ({
         .eq("id", sessionId);
 
       if (updateError) throw updateError;
+
+      // Update song status to recorded
+      if (session?.song_id) {
+        await supabase
+          .from('songs')
+          .update({ status: 'recorded' })
+          .eq('id', session.song_id);
+      }
 
       toast.success("Recording completed!", {
         description: `"${songTitle}" recording session finished successfully.`,

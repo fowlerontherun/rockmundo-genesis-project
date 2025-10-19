@@ -20,6 +20,40 @@ Deno.serve(async (req) => {
 
     console.log(`Auto-completed ${completedSessions} sessions, converted ${convertedProjects} projects`)
 
+    // Award XP for completed sessions via progression function
+    if (completedSessions > 0) {
+      const { data: sessions } = await supabase
+        .from('songwriting_sessions')
+        .select('id, xp_earned, project_id, songwriting_projects(user_id, profiles(id))')
+        .eq('auto_completed', true)
+        .not('xp_awarded', 'eq', true)
+        .limit(completedSessions)
+
+      for (const session of sessions || []) {
+        if (session.xp_earned && session.songwriting_projects?.profiles?.id) {
+          await supabase.functions.invoke('progression', {
+            body: {
+              action: 'award_action_xp',
+              amount: session.xp_earned,
+              category: 'practice',
+              action_key: 'songwriting_session',
+              metadata: {
+                session_id: session.id,
+                project_id: session.project_id,
+                auto_completed: true
+              }
+            }
+          })
+
+          // Mark XP as awarded
+          await supabase
+            .from('songwriting_sessions')
+            .update({ xp_awarded: true })
+            .eq('id', session.id)
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,

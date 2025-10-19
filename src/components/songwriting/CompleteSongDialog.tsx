@@ -25,6 +25,15 @@ export const CompleteSongDialog = ({
   const handleComplete = async () => {
     setCompleting(true);
     try {
+      // Get project details first
+      const { data: project, error: projectFetchError } = await supabase
+        .from("songwriting_projects")
+        .select("*, profiles(user_id)")
+        .eq("id", projectId)
+        .single();
+
+      if (projectFetchError) throw projectFetchError;
+
       // Update project status to completed
       const { error: projectError } = await supabase
         .from("songwriting_projects")
@@ -36,21 +45,41 @@ export const CompleteSongDialog = ({
 
       if (projectError) throw projectError;
 
-      // If there's an associated song, mark it complete too
-      const { data: song } = await supabase
+      // Check if song exists, if not create it
+      const { data: existingSong } = await supabase
         .from("songs")
         .select("id")
         .eq("songwriting_project_id", projectId)
         .maybeSingle();
 
-      if (song) {
+      if (!existingSong) {
+        // Create new song from completed project
+        const { error: songError } = await supabase
+          .from("songs")
+          .insert({
+            user_id: project.profiles?.[0]?.user_id,
+            title: project.title,
+            genre: project.genres?.[0] || "Rock",
+            lyrics: project.initial_lyrics || "",
+            quality_score: project.quality_score || 50,
+            song_rating: project.song_rating || 1,
+            duration: 180,
+            status: "complete",
+            completed_at: new Date().toISOString(),
+            songwriting_project_id: projectId,
+            catalog_status: "private"
+          });
+
+        if (songError) throw songError;
+      } else {
+        // Update existing song
         await supabase
           .from("songs")
           .update({
             status: "complete",
             completed_at: new Date().toISOString(),
           })
-          .eq("id", song.id);
+          .eq("id", existingSong.id);
       }
 
       toast.success("Song completed!", {

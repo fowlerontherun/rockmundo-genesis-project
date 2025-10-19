@@ -74,36 +74,31 @@ Deno.serve(async (req) => {
           .eq('status', 'active')
 
         if (!membersError && bandMembers) {
-          // Award XP to each band member
+          // Award XP via progression function
           for (const member of bandMembers) {
-            // Update player XP wallet
-            const { error: xpError } = await supabase
-              .from('player_xp_wallet')
-              .update({
-                xp_balance: supabase.rpc('increment', { x: xpEarned }),
-                updated_at: new Date().toISOString()
-              })
-              .eq('profile_id', member.profile_id)
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('user_id')
+              .eq('id', member.profile_id)
+              .single()
 
-            if (xpError) {
-              console.error(`Error awarding XP to profile ${member.profile_id}:`, xpError)
-            }
-
-            // Log to experience ledger
-            await supabase
-              .from('experience_ledger')
-              .insert({
-                profile_id: member.profile_id,
-                activity_type: 'rehearsal',
-                xp_amount: xpEarned,
-                metadata: {
-                  rehearsal_id: rehearsal.id,
-                  band_id: rehearsal.band_id,
-                  duration_hours: durationHours,
-                  chemistry_gained: chemistryGain,
-                  auto_completed: true
+            if (profile?.user_id) {
+              await supabase.functions.invoke('progression', {
+                body: {
+                  action: 'award_action_xp',
+                  amount: xpEarned,
+                  category: 'practice',
+                  action_key: 'rehearsal',
+                  metadata: {
+                    rehearsal_id: rehearsal.id,
+                    band_id: rehearsal.band_id,
+                    duration_hours: durationHours,
+                    chemistry_gained: chemistryGain,
+                    auto_completed: true
+                  }
                 }
               })
+            }
           }
         }
 
