@@ -53,6 +53,9 @@ export const CompleteSongDialog = ({
         .maybeSingle();
 
       if (!existingSong) {
+        // Generate random duration between 2:20 and 7:00 (140-420 seconds)
+        const durationSeconds = Math.floor(Math.random() * (420 - 140 + 1) + 140);
+        
         // Create new song from completed project (use 'draft' status, not 'complete')
         const { error: songError } = await supabase
           .from("songs")
@@ -63,6 +66,7 @@ export const CompleteSongDialog = ({
             lyrics: project.initial_lyrics || "",
             quality_score: project.quality_score || 50,
             song_rating: project.song_rating || 1,
+            duration_seconds: durationSeconds,
             status: "draft",
             completed_at: new Date().toISOString(),
             songwriting_project_id: projectId,

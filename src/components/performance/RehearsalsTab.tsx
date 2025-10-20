@@ -113,7 +113,7 @@ export function RehearsalsTab() {
             .from('songs')
             .select('*')
             .in('id', Array.from(setlistSongIds))
-            .in('status', ['completed', 'recorded'])
+            .in('status', ['draft', 'recorded'])
             .order('title');
 
           if (!songs1Error && songs1) {
@@ -127,7 +127,7 @@ export function RehearsalsTab() {
             .from('songs')
             .select('*')
             .in('user_id', memberUserIds)
-            .in('status', ['completed', 'recorded'])
+            .in('status', ['draft', 'recorded'])
             .order('title');
 
           if (!memberSongsError && memberSongs) {

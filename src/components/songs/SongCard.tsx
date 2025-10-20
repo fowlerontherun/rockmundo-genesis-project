@@ -2,6 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Music, Info, ListPlus, Clock } from "lucide-react";
+import { SongFamiliarityBadge } from "./SongFamiliarityBadge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SongCardProps {
   song: {
@@ -11,7 +14,9 @@ interface SongCardProps {
     quality_score: number;
     created_at: string;
     duration_display?: string;
+    duration_seconds?: number | null;
     catalog_status?: string;
+    user_id?: string;
     bands?: {
       name: string;
     } | null;
@@ -20,6 +25,27 @@ interface SongCardProps {
 }
 
 export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
+  const { data: userBand } = useQuery({
+    queryKey: ["user-band", song.user_id],
+    queryFn: async () => {
+      if (!song.user_id) return null;
+      const { data } = await supabase
+        .from("band_members")
+        .select("bands!band_members_band_id_fkey(id, name)")
+        .eq("user_id", song.user_id)
+        .maybeSingle();
+      return data?.bands;
+    },
+    enabled: !!song.user_id,
+  });
+
+  const formatDuration = (seconds: number | null | undefined) => {
+    if (!seconds) return "3:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const getQualityColor = (quality: number) => {
     if (quality >= 1500) return "bg-purple-500/10 text-purple-500 border-purple-500/20";
     if (quality >= 1000) return "bg-blue-500/10 text-blue-500 border-blue-500/20";
@@ -56,12 +82,15 @@ export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
           {song.catalog_status && (
             <Badge variant="secondary">{song.catalog_status}</Badge>
           )}
+          <Badge variant="outline" className="gap-1">
+            <Clock className="h-3 w-3" />
+            {song.duration_display || formatDuration(song.duration_seconds)}
+          </Badge>
         </div>
 
-        {song.duration_display && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span>{song.duration_display}</span>
+        {userBand && (
+          <div className="flex items-center gap-2">
+            <SongFamiliarityBadge songId={song.id} bandId={userBand.id} />
           </div>
         )}
 

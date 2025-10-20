@@ -241,7 +241,7 @@ export const RehearsalBookingDialog = ({ rooms, band, songs, onConfirm, onClose 
                 <SelectContent className="bg-background">
                   {songs.length === 0 ? (
                     <div className="p-2 text-sm text-muted-foreground">
-                      No completed songs available
+                      No songs available - complete a song first!
                     </div>
                   ) : (
                     songs.map((song) => (
