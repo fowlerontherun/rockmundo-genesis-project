@@ -50,6 +50,7 @@ export const SetlistSongManager = ({
         .from("songs")
         .select("id, title, genre, quality_score, duration_seconds, duration_display")
         .eq("band_id", bandId)
+        .in("status", ["draft", "recorded"])
         .order("title");
 
       if (error) throw error;

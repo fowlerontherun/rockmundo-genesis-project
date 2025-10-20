@@ -28,7 +28,7 @@ export const ReleaseSongTab = ({ userId }: ReleaseSongTabProps) => {
         .from("songs")
         .select("*")
         .eq("user_id", userId)
-        .eq("catalog_status", "completed")
+        .in("status", ["draft", "recorded"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;

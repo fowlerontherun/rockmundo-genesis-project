@@ -155,15 +155,25 @@ export const useCreateRecordingSession = () => {
   return useMutation({
     mutationFn: async (input: CreateRecordingSessionInput) => {
       // Fetch required data
-      const [{ data: song }, { data: studio }, { data: producer }] = await Promise.all([
+      const [songResult, studioResult, producerResult] = await Promise.all([
         supabase.from('songs').select('quality_score').eq('id', input.song_id).single(),
         supabase.from('city_studios').select('quality_rating, hourly_rate').eq('id', input.studio_id).single(),
-        supabase.from('recording_producers' as any).select('quality_bonus, cost_per_hour').eq('id', input.producer_id).single(),
-      ]) as any;
+        supabase.from('recording_producers').select('quality_bonus, cost_per_hour').eq('id', input.producer_id).single(),
+      ]);
 
-      if (!song || !studio || !producer) {
-        throw new Error('Failed to fetch session data');
+      if (songResult.error || !songResult.data) {
+        throw new Error('Failed to fetch song data');
       }
+      if (studioResult.error || !studioResult.data) {
+        throw new Error('Failed to fetch studio data');
+      }
+      if (producerResult.error || !producerResult.data) {
+        throw new Error('Failed to fetch producer data');
+      }
+
+      const song = songResult.data;
+      const studio = studioResult.data;
+      const producer = producerResult.data;
 
       const orchestraOption = input.orchestra_size 
         ? ORCHESTRA_OPTIONS.find(o => o.size === input.orchestra_size)

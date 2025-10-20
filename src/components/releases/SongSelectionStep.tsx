@@ -35,7 +35,7 @@ export function SongSelectionStep({
           .from("songs")
           .select("*")
           .eq("band_id", bandId)
-          .in("status", ["draft", "recorded"])
+          .in("status", ["recorded"])
           .order("created_at", { ascending: false });
         return data || [];
       } else {
@@ -43,7 +43,7 @@ export function SongSelectionStep({
           .from("songs")
           .select("*")
           .eq("user_id", userId)
-          .in("status", ["draft", "recorded"])
+          .in("status", ["recorded"])
           .order("created_at", { ascending: false });
         return data || [];
       }
