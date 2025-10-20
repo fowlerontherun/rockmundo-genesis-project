@@ -29,9 +29,10 @@ export default function RecordingStudio() {
       if (!session?.user?.id) return;
 
       // Get user's active band (not on hiatus, not inactive)
+      // Specify the FK relationship to avoid ambiguity error
       const { data: bandMemberships, error } = await supabase
         .from('band_members')
-        .select('band_id, bands!inner(id, name, status)')
+        .select('band_id, bands!band_members_band_id_fkey(id, name, status, band_balance)')
         .eq('user_id', session.user.id)
         .eq('is_touring_member', false)
         .eq('bands.status', 'active')
