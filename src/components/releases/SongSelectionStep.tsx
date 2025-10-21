@@ -30,23 +30,52 @@ export function SongSelectionStep({
   const { data: songs } = useQuery({
     queryKey: ["available-songs", userId, bandId],
     queryFn: async () => {
+      let allSongs: any[] = [];
+
       if (bandId) {
-        const { data } = await supabase
+        // Get band songs
+        const { data: bandSongs } = await supabase
           .from("songs")
           .select("*")
           .eq("band_id", bandId)
           .in("status", ["recorded"])
           .order("created_at", { ascending: false });
-        return data || [];
+        
+        allSongs = bandSongs || [];
+
+        // Also get songs from band members
+        const { data: bandMembers } = await supabase
+          .from("band_members")
+          .select("user_id")
+          .eq("band_id", bandId);
+
+        if (bandMembers && bandMembers.length > 0) {
+          const memberUserIds = bandMembers.map(m => m.user_id);
+          const { data: memberSongs } = await supabase
+            .from("songs")
+            .select("*")
+            .in("user_id", memberUserIds)
+            .is("band_id", null)
+            .in("status", ["recorded"])
+            .order("created_at", { ascending: false });
+
+          if (memberSongs) {
+            allSongs = [...allSongs, ...memberSongs];
+          }
+        }
       } else {
-        const { data } = await supabase
+        // Get user's solo songs
+        const { data: userSongs } = await supabase
           .from("songs")
           .select("*")
           .eq("user_id", userId)
           .in("status", ["recorded"])
           .order("created_at", { ascending: false });
-        return data || [];
+        
+        allSongs = userSongs || [];
       }
+
+      return allSongs;
     }
   });
 

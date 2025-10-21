@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Music, Info, ListPlus, Clock } from "lucide-react";
-import { SongFamiliarityBadge } from "./SongFamiliarityBadge";
+import { SongRehearsalStatus } from "./SongRehearsalStatus";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,7 +16,9 @@ interface SongCardProps {
     duration_display?: string;
     duration_seconds?: number | null;
     catalog_status?: string;
+    status?: string;
     user_id?: string;
+    band_id?: string | null;
     bands?: {
       name: string;
     } | null;
@@ -82,17 +84,20 @@ export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
           {song.catalog_status && (
             <Badge variant="secondary">{song.catalog_status}</Badge>
           )}
+          {song.status && (
+            <Badge variant={song.status === "recorded" ? "default" : "outline"}>
+              {song.status}
+            </Badge>
+          )}
           <Badge variant="outline" className="gap-1">
             <Clock className="h-3 w-3" />
             {song.duration_display || formatDuration(song.duration_seconds)}
           </Badge>
         </div>
 
-        {userBand && (
-          <div className="flex items-center gap-2">
-            <SongFamiliarityBadge songId={song.id} bandId={userBand.id} />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <SongRehearsalStatus songId={song.id} bandId={song.band_id || userBand?.id} />
+        </div>
 
         <div className="flex gap-2">
           <Button

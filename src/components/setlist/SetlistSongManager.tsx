@@ -46,15 +46,38 @@ export const SetlistSongManager = ({
   const { data: availableSongs } = useQuery({
     queryKey: ["band-songs", bandId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch both band songs and user songs that belong to band members
+      const { data: bandSongs, error: bandError } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, duration_seconds, duration_display")
         .eq("band_id", bandId)
         .in("status", ["draft", "recorded"])
         .order("title");
 
-      if (error) throw error;
-      return data;
+      if (bandError) throw bandError;
+
+      // Also fetch songs from band members (solo songs they wrote)
+      const { data: bandMembers } = await supabase
+        .from("band_members")
+        .select("user_id")
+        .eq("band_id", bandId);
+
+      if (bandMembers && bandMembers.length > 0) {
+        const memberUserIds = bandMembers.map(m => m.user_id);
+        const { data: memberSongs, error: memberError } = await supabase
+          .from("songs")
+          .select("id, title, genre, quality_score, duration_seconds, duration_display")
+          .in("user_id", memberUserIds)
+          .is("band_id", null)
+          .in("status", ["draft", "recorded"])
+          .order("title");
+
+        if (!memberError && memberSongs) {
+          return [...(bandSongs || []), ...memberSongs];
+        }
+      }
+
+      return bandSongs || [];
     },
   });
 

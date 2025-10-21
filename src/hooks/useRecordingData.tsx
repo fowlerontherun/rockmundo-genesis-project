@@ -321,10 +321,13 @@ export const useCompleteRecordingSession = () => {
 
       if (updateError) throw updateError;
 
-      // Update song quality
+      // Update song quality and status to 'recorded'
       const { error: songError } = await supabase
         .from('songs')
-        .update({ quality_score: session.quality_after })
+        .update({ 
+          quality_score: session.quality_after,
+          status: 'recorded'
+        })
         .eq('id', session.song_id);
 
       if (songError) throw songError;
