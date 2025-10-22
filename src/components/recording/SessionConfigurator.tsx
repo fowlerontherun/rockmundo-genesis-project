@@ -18,10 +18,11 @@ interface SessionConfiguratorProps {
   studio: any;
   song: any;
   producer: RecordingProducer;
+  recordingVersion?: 'standard' | 'remix' | 'acoustic';
   onComplete: () => void;
 }
 
-export const SessionConfigurator = ({ userId, bandId, studio, song, producer, onComplete }: SessionConfiguratorProps) => {
+export const SessionConfigurator = ({ userId, bandId, studio, song, producer, recordingVersion, onComplete }: SessionConfiguratorProps) => {
   const [durationHours, setDurationHours] = useState(3);
   const [orchestraSize, setOrchestraSize] = useState<'chamber' | 'small' | 'full' | null>(null);
   const [bandBalance, setBandBalance] = useState<number>(0);
@@ -102,6 +103,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, on
       song_id: song.id,
       duration_hours: durationHours,
       orchestra_size: orchestraSize || undefined,
+      recording_version: recordingVersion,
     });
     onComplete();
   };

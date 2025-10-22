@@ -110,6 +110,7 @@ interface CreateRecordingSessionInput {
   song_id: string;
   duration_hours: number;
   orchestra_size?: 'chamber' | 'small' | 'full';
+  recording_version?: 'standard' | 'remix' | 'acoustic';
   session_type?: string;
   parent_recording_id?: string;
 }
@@ -253,6 +254,7 @@ export const useCreateRecordingSession = () => {
           producer_id: input.producer_id,
           song_id: input.song_id,
           session_type: input.session_type || 'full_recording',
+          recording_version: input.recording_version || null,
           is_parent_version: !input.parent_recording_id,
           parent_recording_id: input.parent_recording_id || null,
           duration_hours: input.duration_hours,

@@ -3429,6 +3429,7 @@ export type Database = {
           id: string
           producer_id: string
           quality_improvement: number | null
+          recording_version: string | null
           scheduled_end: string
           scheduled_start: string
           song_id: string
@@ -3446,6 +3447,7 @@ export type Database = {
           id?: string
           producer_id: string
           quality_improvement?: number | null
+          recording_version?: string | null
           scheduled_end: string
           scheduled_start?: string
           song_id: string
@@ -3463,6 +3465,7 @@ export type Database = {
           id?: string
           producer_id?: string
           quality_improvement?: number | null
+          recording_version?: string | null
           scheduled_end?: string
           scheduled_start?: string
           song_id?: string

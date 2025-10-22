@@ -150,6 +150,13 @@ const adminSections = [
     action: "View monitor",
     Icon: Clock,
   },
+  {
+    title: "Release Configuration",
+    description: "Configure costs and pricing for music releases across all formats (digital, CD, vinyl).",
+    href: "/admin/release-config",
+    action: "Manage config",
+    Icon: Disc3,
+  },
 ] as const;
 
 export default function Admin() {

@@ -5,7 +5,8 @@ import { StudioSelector } from "./StudioSelector";
 import { SongSelector } from "./SongSelector";
 import { ProducerSelector } from "./ProducerSelector";
 import { SessionConfigurator } from "./SessionConfigurator";
-import { Music, Mic2, Settings, CheckCircle } from "lucide-react";
+import { RecordingVersionSelector } from "./RecordingVersionSelector";
+import { Music, Mic2, Settings, CheckCircle, Disc3 } from "lucide-react";
 import type { RecordingProducer } from "@/hooks/useRecordingData";
 
 interface RecordingWizardProps {
@@ -21,9 +22,12 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
   const [selectedStudio, setSelectedStudio] = useState<any>(null);
   const [selectedSong, setSelectedSong] = useState<any>(null);
   const [selectedProducer, setSelectedProducer] = useState<RecordingProducer | null>(null);
+  const [recordingVersion, setRecordingVersion] = useState<'standard' | 'remix' | 'acoustic' | null>(null);
 
   const canProceedToSong = !!selectedStudio;
-  const canProceedToProducer = canProceedToSong && !!selectedSong;
+  const canProceedToVersion = canProceedToSong && !!selectedSong && selectedSong.status === 'recorded';
+  const canProceedToProducer = (canProceedToSong && !!selectedSong && selectedSong.status !== 'recorded') || 
+                                (canProceedToVersion && !!recordingVersion);
   const canProceedToConfig = canProceedToProducer && !!selectedProducer;
 
   const handleStudioSelect = (studio: any) => {
@@ -33,6 +37,15 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
 
   const handleSongSelect = (song: any) => {
     setSelectedSong(song);
+    if (song.status === 'recorded') {
+      setActiveTab("version");
+    } else {
+      setActiveTab("producer");
+    }
+  };
+
+  const handleVersionSelect = (version: 'standard' | 'remix' | 'acoustic') => {
+    setRecordingVersion(version);
     setActiveTab("producer");
   };
 
@@ -47,6 +60,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
     setSelectedStudio(null);
     setSelectedSong(null);
     setSelectedProducer(null);
+    setRecordingVersion(null);
     setActiveTab("studio");
   };
 
@@ -61,7 +75,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className={`grid w-full ${selectedSong?.status === 'recorded' ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="studio" className="gap-2">
               <Music className="h-4 w-4" />
               <span className="hidden sm:inline">Studio</span>
@@ -72,6 +86,13 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
               <span className="hidden sm:inline">Song</span>
               {selectedSong && <CheckCircle className="h-3 w-3 text-green-500" />}
             </TabsTrigger>
+            {selectedSong?.status === 'recorded' && (
+              <TabsTrigger value="version" disabled={!canProceedToVersion} className="gap-2">
+                <Disc3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Version</span>
+                {recordingVersion && <CheckCircle className="h-3 w-3 text-green-500" />}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="producer" disabled={!canProceedToProducer} className="gap-2">
               <Music className="h-4 w-4" />
               <span className="hidden sm:inline">Producer</span>
@@ -100,6 +121,16 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
               />
             </TabsContent>
 
+            {selectedSong?.status === 'recorded' && (
+              <TabsContent value="version" className="mt-0">
+                <RecordingVersionSelector
+                  song={selectedSong}
+                  onSelectVersion={handleVersionSelect}
+                  selectedVersion={recordingVersion || undefined}
+                />
+              </TabsContent>
+            )}
+
             <TabsContent value="producer" className="mt-0">
               <ProducerSelector
                 selectedProducer={selectedProducer}
@@ -115,6 +146,7 @@ export const RecordingWizard = ({ open, onOpenChange, userId, currentCityId, ban
                 studio={selectedStudio}
                 song={selectedSong}
                 producer={selectedProducer!}
+                recordingVersion={recordingVersion || undefined}
                 onComplete={handleSessionComplete}
               />
             </TabsContent>
