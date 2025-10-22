@@ -316,6 +316,9 @@ export function RehearsalsTab() {
 
   const activeRehearsals = rehearsals.filter(r => r.status === 'in_progress');
   const upcomingRehearsals = rehearsals.filter(r => r.status === 'scheduled');
+  const completedRehearsals = rehearsals.filter(r => r.status === 'completed')
+    .sort((a, b) => new Date(b.completed_at || b.created_at).getTime() - new Date(a.completed_at || a.created_at).getTime())
+    .slice(0, 3);
 
   return (
     <div className="space-y-6">
@@ -331,6 +334,53 @@ export function RehearsalsTab() {
           Book Rehearsal
         </Button>
       </div>
+
+      {completedRehearsals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Completed Rehearsals</CardTitle>
+            <CardDescription>Last 3 rehearsals</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {completedRehearsals.map((rehearsal) => (
+              <div key={rehearsal.id} className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">
+                      {(rehearsal.rehearsal_rooms as any)?.name || 'Rehearsal Room'}
+                    </h3>
+                    {rehearsal.songs && (
+                      <p className="text-sm text-muted-foreground">
+                        Practiced: {(rehearsal.songs as any).title}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant="default">{rehearsal.duration_hours}h</Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Chemistry</p>
+                    <p className="font-semibold text-green-500">+{rehearsal.chemistry_gain}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">XP</p>
+                    <p className="font-semibold text-blue-500">+{rehearsal.xp_earned}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Familiarity</p>
+                    <p className="font-semibold text-purple-500">+{rehearsal.familiarity_gained}m</p>
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  Completed: {rehearsal.completed_at ? format(new Date(rehearsal.completed_at), 'MMM d, yyyy HH:mm') : 'N/A'}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {activeRehearsals.length > 0 && (
         <Card>

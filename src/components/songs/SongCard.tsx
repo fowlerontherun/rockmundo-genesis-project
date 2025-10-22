@@ -81,13 +81,13 @@ export const SongCard = ({ song, onViewDetails }: SongCardProps) => {
           <Badge className={getQualityColor(song.quality_score)}>
             {getQualityLabel(song.quality_score)} ({song.quality_score})
           </Badge>
+          {song.status && (
+            <Badge variant={song.status === "recorded" ? "default" : song.status === "draft" ? "secondary" : "outline"}>
+              {song.status === "recorded" ? "Recorded" : song.status === "draft" ? "Draft" : song.status}
+            </Badge>
+          )}
           {song.catalog_status && (
             <Badge variant="secondary">{song.catalog_status}</Badge>
-          )}
-          {song.status && (
-            <Badge variant={song.status === "recorded" ? "default" : "outline"}>
-              {song.status}
-            </Badge>
           )}
           <Badge variant="outline" className="gap-1">
             <Clock className="h-3 w-3" />

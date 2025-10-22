@@ -165,6 +165,11 @@ export function BandSongsTab({ bandId }: BandSongsTabProps) {
                         <h3 className="font-semibold text-lg">{song.title}</h3>
                         <div className="flex gap-2 mt-1 flex-wrap">
                           <Badge variant="outline">{song.genre}</Badge>
+                          {(song as any).status && (
+                            <Badge variant={(song as any).status === 'recorded' ? 'default' : 'secondary'}>
+                              {(song as any).status === 'recorded' ? 'Recorded' : (song as any).status}
+                            </Badge>
+                          )}
                           {song.catalog_status === 'published' && (
                             <Badge variant="secondary">In Catalog</Badge>
                           )}
