@@ -111,6 +111,7 @@ interface CreateRecordingSessionInput {
   duration_hours: number;
   orchestra_size?: 'chamber' | 'small' | 'full';
   recording_version?: 'standard' | 'remix' | 'acoustic';
+  rehearsal_bonus?: number;
   session_type?: string;
   parent_recording_id?: string;
 }
@@ -120,7 +121,8 @@ export const calculateRecordingQuality = (
   studioQuality: number,
   producerBonus: number,
   durationHours: number,
-  orchestraBonus?: number
+  orchestraBonus?: number,
+  rehearsalBonus?: number
 ): { finalQuality: number; breakdown: any } => {
   // Studio multiplier (quality_rating 0-100 gives 1.0-1.2x)
   const studioMultiplier = 1 + (studioQuality / 100) * 0.2;
@@ -133,9 +135,12 @@ export const calculateRecordingQuality = (
   
   // Orchestra multiplier (10-25% bonus)
   const orchestraMultiplier = orchestraBonus ? 1 + (orchestraBonus / 100) : 1;
+
+  // Rehearsal multiplier (-20%, 0%, +10%)
+  const rehearsalMultiplier = rehearsalBonus ? 1 + (rehearsalBonus / 100) : 1;
   
   const finalQuality = Math.round(
-    baseSongQuality * studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier
+    baseSongQuality * studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier
   );
 
   const breakdown = {
@@ -144,7 +149,8 @@ export const calculateRecordingQuality = (
     producerBonus: Math.round((producerMultiplier - 1) * 100),
     durationBonus: Math.round((durationMultiplier - 1) * 100),
     orchestraBonus: orchestraBonus || 0,
-    totalMultiplier: studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier,
+    rehearsalBonus: rehearsalBonus || 0,
+    totalMultiplier: studioMultiplier * producerMultiplier * durationMultiplier * orchestraMultiplier * rehearsalMultiplier,
   };
 
   return { finalQuality, breakdown };
@@ -185,7 +191,8 @@ export const useCreateRecordingSession = () => {
         studio.quality_rating,
         producer.quality_bonus,
         input.duration_hours,
-        orchestraOption?.bonus
+        orchestraOption?.bonus,
+        input.rehearsal_bonus
       );
 
       const studioCost = studio.hourly_rate * input.duration_hours;

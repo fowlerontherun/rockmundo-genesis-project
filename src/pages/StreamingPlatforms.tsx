@@ -6,7 +6,10 @@ import { useGameData } from "@/hooks/useGameData";
 import { MyReleasesTab } from "@/components/streaming/MyReleasesTab";
 import { ReleaseSongTab } from "@/components/streaming/ReleaseSongTab";
 import { AnalyticsTab } from "@/components/streaming/AnalyticsTab";
+import { DetailedAnalyticsTab } from "@/components/streaming/DetailedAnalyticsTab";
 import { PlaylistsTab } from "@/components/streaming/PlaylistsTab";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 const StreamingPlatforms = () => {
   const navigate = useNavigate();
@@ -26,7 +29,7 @@ const StreamingPlatforms = () => {
       <div className="space-y-4">
         <Button
           variant="ghost"
-          onClick={() => navigate("/music")}
+          onClick={() => navigate("/music-hub")}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -42,13 +45,21 @@ const StreamingPlatforms = () => {
             </p>
           </div>
         </div>
+
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            For full release management including physical formats (CD, Vinyl), use the <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/release-manager')}>Release Manager</Button>
+          </AlertDescription>
+        </Alert>
       </div>
 
       <Tabs defaultValue="releases" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="releases">My Releases</TabsTrigger>
           <TabsTrigger value="new-release">Release Song</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="analytics">Overview</TabsTrigger>
+          <TabsTrigger value="detailed-analytics">Detailed Analytics</TabsTrigger>
           <TabsTrigger value="playlists">Playlists</TabsTrigger>
         </TabsList>
 
@@ -62,6 +73,10 @@ const StreamingPlatforms = () => {
 
         <TabsContent value="analytics">
           <AnalyticsTab userId={userId} />
+        </TabsContent>
+
+        <TabsContent value="detailed-analytics">
+          <DetailedAnalyticsTab userId={userId} />
         </TabsContent>
 
         <TabsContent value="playlists">

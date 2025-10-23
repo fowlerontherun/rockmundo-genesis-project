@@ -11,6 +11,7 @@ import { useCreateRecordingSession, calculateRecordingQuality, ORCHESTRA_OPTIONS
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RehearsalWarningDialog } from "./RehearsalWarningDialog";
 
 interface SessionConfiguratorProps {
   userId: string;
@@ -28,14 +29,20 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
   const [bandBalance, setBandBalance] = useState<number>(0);
   const [personalCash, setPersonalCash] = useState<number>(0);
   const [bandName, setBandName] = useState<string>("");
+  const [rehearsalData, setRehearsalData] = useState<{
+    minutes: number;
+    stage: 'unrehearsed' | 'tight' | 'perfect';
+    penalty: number;
+  } | null>(null);
+  const [showRehearsalWarning, setShowRehearsalWarning] = useState(false);
   
   const createSession = useCreateRecordingSession();
 
-  // Fetch band balance and personal cash
+  // Fetch band balance, personal cash, and rehearsal data
   useEffect(() => {
-    const fetchBalances = async () => {
+    const fetchData = async () => {
+      // Fetch balances
       if (bandId) {
-        // Fetch band_balance (now auto-synced with band_earnings via trigger)
         const { data: band, error: bandError } = await supabase
           .from('bands')
           .select('band_balance, name')
@@ -45,7 +52,26 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
         console.log('💰 Band balance fetch:', { band, bandError, bandId });
         setBandBalance(band?.band_balance || 0);
         setBandName(band?.name || 'Unknown Band');
+
+        // Fetch rehearsal data for band song
+        const { data: familiarity } = await supabase
+          .from('band_song_familiarity')
+          .select('familiarity_minutes, rehearsal_stage')
+          .eq('band_id', bandId)
+          .eq('song_id', song.id)
+          .single();
+
+        if (familiarity) {
+          const minutes = familiarity.familiarity_minutes || 0;
+          const stage = familiarity.rehearsal_stage as 'unrehearsed' | 'tight' | 'perfect';
+          const penalty = stage === 'unrehearsed' ? -20 : stage === 'perfect' ? 10 : 0;
+          setRehearsalData({ minutes, stage, penalty });
+        } else {
+          // No rehearsal record - defaults to unrehearsed
+          setRehearsalData({ minutes: 0, stage: 'unrehearsed', penalty: -20 });
+        }
       }
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('cash')
@@ -55,17 +81,21 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
       console.log('💵 Profile cash fetch:', { profile, profileError, userId });
       setPersonalCash(profile?.cash || 0);
     };
-    fetchBalances();
-  }, [bandId, userId]);
+    fetchData();
+  }, [bandId, userId, song.id]);
 
   const orchestraOption = orchestraSize ? ORCHESTRA_OPTIONS.find(o => o.size === orchestraSize) : undefined;
+  
+  // Calculate quality with rehearsal penalty/bonus
+  const rehearsalBonus = bandId && rehearsalData ? rehearsalData.penalty : 0;
   
   const { finalQuality, breakdown } = calculateRecordingQuality(
     song.quality_score || 0,
     studio.quality_rating,
     producer.quality_bonus,
     durationHours,
-    orchestraOption?.bonus
+    orchestraOption?.bonus,
+    rehearsalBonus
   );
 
   const studioCost = studio.hourly_rate * durationHours;
@@ -94,7 +124,17 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     });
   }, [bandId, bandBalance, personalCash, availableBalance, totalCost, canAfford, studioCost, producerCost, orchestraCost]);
 
-  const handleStartRecording = async () => {
+  const handleStartRecording = () => {
+    // Show rehearsal warning dialog if this is a band recording
+    if (bandId && rehearsalData) {
+      setShowRehearsalWarning(true);
+    } else {
+      proceedWithRecording();
+    }
+  };
+
+  const proceedWithRecording = async () => {
+    setShowRehearsalWarning(false);
     await createSession.mutateAsync({
       user_id: userId,
       band_id: bandId || null,
@@ -104,6 +144,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
       duration_hours: durationHours,
       orchestra_size: orchestraSize || undefined,
       recording_version: recordingVersion,
+      rehearsal_bonus: rehearsalBonus,
     });
     onComplete();
   };
@@ -307,9 +348,27 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
                 <span className="font-semibold">+{breakdown.orchestraBonus}%</span>
               </div>
             )}
+            {breakdown.rehearsalBonus !== 0 && (
+              <div className="flex justify-between p-2 rounded bg-background">
+                <span className="text-muted-foreground">Rehearsal:</span>
+                <span className={`font-semibold ${breakdown.rehearsalBonus > 0 ? 'text-primary' : 'text-destructive'}`}>
+                  {breakdown.rehearsalBonus > 0 ? '+' : ''}{breakdown.rehearsalBonus}%
+                </span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      <RehearsalWarningDialog
+        open={showRehearsalWarning}
+        onOpenChange={setShowRehearsalWarning}
+        songTitle={song.title}
+        rehearsalStage={rehearsalData?.stage || 'unrehearsed'}
+        familiarityMinutes={rehearsalData?.minutes || 0}
+        qualityPenalty={rehearsalBonus}
+        onConfirm={proceedWithRecording}
+      />
 
       <div className="flex gap-3">
         <Button variant="outline" className="flex-1" disabled>

@@ -640,6 +640,7 @@ export type Database = {
           familiarity_percentage: number | null
           id: string
           last_rehearsed_at: string | null
+          rehearsal_stage: string | null
           song_id: string
           updated_at: string | null
         }
@@ -650,6 +651,7 @@ export type Database = {
           familiarity_percentage?: number | null
           id?: string
           last_rehearsed_at?: string | null
+          rehearsal_stage?: string | null
           song_id: string
           updated_at?: string | null
         }
@@ -660,6 +662,7 @@ export type Database = {
           familiarity_percentage?: number | null
           id?: string
           last_rehearsed_at?: string | null
+          rehearsal_stage?: string | null
           song_id?: string
           updated_at?: string | null
         }
@@ -849,10 +852,13 @@ export type Database = {
         Row: {
           chart_date: string | null
           chart_type: string
+          country: string | null
           created_at: string | null
+          genre: string | null
           id: string
           plays_count: number | null
           rank: number
+          sale_type: string | null
           song_id: string
           trend: string | null
           trend_change: number | null
@@ -861,10 +867,13 @@ export type Database = {
         Insert: {
           chart_date?: string | null
           chart_type: string
+          country?: string | null
           created_at?: string | null
+          genre?: string | null
           id?: string
           plays_count?: number | null
           rank: number
+          sale_type?: string | null
           song_id: string
           trend?: string | null
           trend_change?: number | null
@@ -873,10 +882,13 @@ export type Database = {
         Update: {
           chart_date?: string | null
           chart_type?: string
+          country?: string | null
           created_at?: string | null
+          genre?: string | null
           id?: string
           plays_count?: number | null
           rank?: number
+          sale_type?: string | null
           song_id?: string
           trend?: string | null
           trend_change?: number | null
@@ -4472,6 +4484,7 @@ export type Database = {
           is_active: boolean
           platform_id: string
           release_date: string
+          release_id: string | null
           release_type: string
           song_id: string
           total_revenue: number
@@ -4486,6 +4499,7 @@ export type Database = {
           is_active?: boolean
           platform_id: string
           release_date?: string
+          release_id?: string | null
           release_type?: string
           song_id: string
           total_revenue?: number
@@ -4500,6 +4514,7 @@ export type Database = {
           is_active?: boolean
           platform_id?: string
           release_date?: string
+          release_id?: string | null
           release_type?: string
           song_id?: string
           total_revenue?: number
@@ -4520,6 +4535,13 @@ export type Database = {
             columns: ["platform_id"]
             isOneToOne: false
             referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_releases_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
           {
@@ -4964,6 +4986,60 @@ export type Database = {
           {
             foreignKeyName: "streaming_analytics_release_id_fkey"
             columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "song_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      streaming_analytics_daily: {
+        Row: {
+          analytics_date: string
+          completion_rate: number | null
+          created_at: string | null
+          daily_revenue: number | null
+          daily_streams: number | null
+          id: string
+          platform_id: string | null
+          skip_rate: number | null
+          song_release_id: string
+          unique_listeners: number | null
+        }
+        Insert: {
+          analytics_date?: string
+          completion_rate?: number | null
+          created_at?: string | null
+          daily_revenue?: number | null
+          daily_streams?: number | null
+          id?: string
+          platform_id?: string | null
+          skip_rate?: number | null
+          song_release_id: string
+          unique_listeners?: number | null
+        }
+        Update: {
+          analytics_date?: string
+          completion_rate?: number | null
+          created_at?: string | null
+          daily_revenue?: number | null
+          daily_streams?: number | null
+          id?: string
+          platform_id?: string | null
+          skip_rate?: number | null
+          song_release_id?: string
+          unique_listeners?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_analytics_daily_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "streaming_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaming_analytics_daily_song_release_id_fkey"
+            columns: ["song_release_id"]
             isOneToOne: false
             referencedRelation: "song_releases"
             referencedColumns: ["id"]
@@ -5821,7 +5897,7 @@ export type Database = {
     }
     Functions: {
       auto_complete_songwriting_sessions: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           completed_sessions: number
           converted_projects: number

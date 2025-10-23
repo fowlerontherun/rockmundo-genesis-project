@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Music2 } from "lucide-react";
 
 interface SongSelectionStepProps {
   userId: string;
@@ -38,7 +39,7 @@ export function SongSelectionStep({
           .from("songs")
           .select("*")
           .eq("band_id", bandId)
-          .in("status", ["recorded"])
+          .eq("status", "recorded")
           .order("created_at", { ascending: false });
         
         allSongs = bandSongs || [];
@@ -56,7 +57,7 @@ export function SongSelectionStep({
             .select("*")
             .in("user_id", memberUserIds)
             .is("band_id", null)
-            .in("status", ["recorded"])
+            .eq("status", "recorded")
             .order("created_at", { ascending: false });
 
           if (memberSongs) {
@@ -69,7 +70,7 @@ export function SongSelectionStep({
           .from("songs")
           .select("*")
           .eq("user_id", userId)
-          .in("status", ["recorded"])
+          .eq("status", "recorded")
           .order("created_at", { ascending: false });
         
         allSongs = userSongs || [];
@@ -94,13 +95,20 @@ export function SongSelectionStep({
           Select Songs ({selectedSongs.length}/{maxSongs})
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          {releaseType === "single" && "Select 1 A-side and 1 B-side"}
-          {releaseType === "ep" && "Select exactly 4 songs"}
-          {releaseType === "album" && "Select 10-20 songs"}
+          {releaseType === "single" && "Select 1 A-side and 1 B-side (must be recorded)"}
+          {releaseType === "ep" && "Select exactly 4 recorded songs"}
+          {releaseType === "album" && "Select 10-20 recorded songs"}
         </p>
 
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {songs?.map((song, index) => (
+        {!songs || songs.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Music2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium">No recorded songs available</p>
+            <p className="text-sm mt-1">Record your songs in the Recording Studio first</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {songs?.map((song, index) => (
             <Card key={song.id} className="p-4">
               <div className="flex items-center space-x-3">
                 <Checkbox
@@ -123,7 +131,8 @@ export function SongSelectionStep({
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2">

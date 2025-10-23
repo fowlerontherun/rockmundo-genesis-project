@@ -33,22 +33,29 @@ Deno.serve(async (req) => {
 
     // Update streams for each release
     for (const release of streamingReleases || []) {
-      // Calculate daily streams based on song quality and randomness
-      const baseStreams = Math.floor(Math.random() * 100) + 10;
-      const dailyStreams = baseStreams;
-      const dailyRevenue = Math.floor(dailyStreams * 0.004); // $0.004 per stream average
+      const dailyStreams = Math.floor(Math.random() * 4900) + 100;
+      const dailyRevenue = Math.floor(dailyStreams * 0.004);
 
-      // Update total streams
+      // Direct update without RPC
       const { error: updateError } = await supabase
         .from('song_releases')
         .update({
           total_streams: (release.total_streams || 0) + dailyStreams,
-          total_revenue: supabase.rpc('increment', { x: dailyRevenue }),
+          total_revenue: dailyRevenue,
         })
         .eq('id', release.id);
 
       if (!updateError) {
         streamUpdates++;
+        
+        // Insert daily analytics
+        await supabase.from('streaming_analytics_daily').insert({
+          song_release_id: release.id,
+          analytics_date: new Date().toISOString().split('T')[0],
+          daily_streams: dailyStreams,
+          daily_revenue: dailyRevenue,
+          platform_id: release.platform_id,
+        });
       }
     }
 

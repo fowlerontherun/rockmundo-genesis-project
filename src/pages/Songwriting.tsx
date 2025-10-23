@@ -142,41 +142,8 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   moodModifiers: [],
 };
 
-const SONG_SELECT_VARIANTS: ReadonlyArray<ReadonlyArray<string>> = [
-  [
-    "id",
-    "title",
-    "genre",
-    "status",
-    "quality_score",
-    "song_rating",
-    "streams",
-    "revenue",
-    "release_date",
-    "rating_revealed_at",
-    "duration_seconds",
-    "duration_display",
-  ],
-  ["id", "title", "genre", "status", "quality_score", "song_rating", "release_date", "rating_revealed_at", "duration_seconds", "duration_display"],
-  ["id", "title", "genre", "status", "quality_score", "song_rating", "duration_seconds", "duration_display"],
-  ["id", "title", "genre", "status", "duration_seconds", "duration_display"],
-];
-
-type SongFilterStrategy = {
-  column: "user_id" | "profile_id" | null;
-  requires?: "user" | "profile";
-};
-
-const SONG_FILTER_STRATEGIES: ReadonlyArray<SongFilterStrategy> = [
-  { column: "user_id", requires: "user" },
-  { column: "profile_id", requires: "profile" },
-  { column: null },
-];
-
-const SONG_ORDER_COLUMNS: ReadonlyArray<string | null> = ["updated_at", "created_at", null];
-
-const SONG_QUERY_MAX_ATTEMPTS =
-  SONG_SELECT_VARIANTS.length + SONG_FILTER_STRATEGIES.length + SONG_ORDER_COLUMNS.length + 2;
+// Simplified song select - only use existing columns
+const SONG_SELECT_COLUMNS = "id, title, genre, status, quality_score, song_rating, streams, revenue, release_date, duration_seconds";
 
 type PostgrestErrorLike = {
   code?: string | null;
@@ -235,53 +202,6 @@ const isMissingTableError = (error: unknown, tableName: string): boolean => {
   );
 };
 
-const isMissingColumnError = (error: unknown, columnName: string): boolean => {
-  const context = getPostgrestErrorContext(error);
-
-  if (!context) {
-    return false;
-  }
-
-  if (context.code === "42703") {
-    return true;
-  }
-
-  if (!context.haystack) {
-    return false;
-  }
-
-  const normalizedColumn = columnName.toLowerCase();
-
-  return (
-    context.haystack.includes(normalizedColumn) &&
-    (context.haystack.includes("column") || context.haystack.includes("does not exist") || context.haystack.includes("schema cache"))
-  );
-};
-
-const findNextVariantWithoutColumn = (currentIndex: number, columnName: string): number => {
-  const target = columnName.toLowerCase();
-
-  for (let index = currentIndex + 1; index < SONG_SELECT_VARIANTS.length; index += 1) {
-    const variant = SONG_SELECT_VARIANTS[index];
-    const hasColumn = variant.some((column) => column.toLowerCase() === target);
-
-    if (!hasColumn) {
-      return index;
-    }
-  }
-
-  return -1;
-};
-
-const formatErrorForLog = (error: unknown): Record<string, unknown> => {
-  if (error && typeof error === "object") {
-    return { ...(error as Record<string, unknown>) };
-  }
-
-  return {
-    error: typeof error === "string" ? error : String(error),
-  };
-};
 
 type NamedOption = {
   id: string;
@@ -490,10 +410,6 @@ const Songwriting = () => {
   }, [rawAttributes]);
 
   const [songs, setSongs] = useState<Song[]>([]);
-  const songsTableAvailableRef = useRef(true);
-  const songSelectVariantRef = useRef(0);
-  const songFilterStrategyRef = useRef(0);
-  const songOrderIndexRef = useRef(0);
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [themeFilter, setThemeFilter] = useState<string>("all");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
@@ -533,161 +449,33 @@ const Songwriting = () => {
 
   const fetchSongs = useCallback(async () => {
     const userId = user?.id ?? null;
-    const profileId = profile?.id ?? null;
 
-    if (!userId && !profileId) {
+    if (!userId) {
       setSongs([]);
       return;
     }
 
-    if (!songsTableAvailableRef.current) {
-      setSongs([]);
-      return;
-    }
-
-    logger.info("Fetching songs for songwriting", { userId, profileId });
+    logger.info("Fetching songs for songwriting", { userId });
 
     try {
-      let selectIndex = Math.min(songSelectVariantRef.current, SONG_SELECT_VARIANTS.length - 1);
-      let filterIndex = Math.min(songFilterStrategyRef.current, SONG_FILTER_STRATEGIES.length - 1);
-      let orderIndex = Math.min(songOrderIndexRef.current, SONG_ORDER_COLUMNS.length - 1);
-      let attempts = 0;
-      let lastError: unknown = null;
+      const { data, error } = await supabase
+        .from("songs")
+        .select(SONG_SELECT_COLUMNS)
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false });
 
-      while (attempts < SONG_QUERY_MAX_ATTEMPTS) {
-        const selectColumns =
-          SONG_SELECT_VARIANTS[selectIndex] ?? SONG_SELECT_VARIANTS[SONG_SELECT_VARIANTS.length - 1];
-        const selectClause = selectColumns.join(", ");
-
-        let query: any = supabase.from("songs").select(selectClause);
-        let appliedFilterIndex = filterIndex;
-        let filterApplied = false;
-
-        while (appliedFilterIndex < SONG_FILTER_STRATEGIES.length && !filterApplied) {
-          const strategy = SONG_FILTER_STRATEGIES[appliedFilterIndex];
-
-          if (!strategy.column) {
-            filterApplied = true;
-            break;
-          }
-
-          if (strategy.column === "user_id") {
-            if (userId) {
-              query = query.eq("user_id", userId);
-              filterApplied = true;
-              break;
-            }
-          } else if (strategy.column === "profile_id") {
-            if (profileId) {
-              query = query.eq("profile_id", profileId);
-              filterApplied = true;
-              break;
-            }
-          }
-
-          appliedFilterIndex += 1;
-        }
-
-        if (!filterApplied) {
-          appliedFilterIndex = SONG_FILTER_STRATEGIES.length - 1;
-        }
-
-        if (appliedFilterIndex !== filterIndex) {
-          filterIndex = appliedFilterIndex;
-          songFilterStrategyRef.current = filterIndex;
-        }
-
-        const orderColumn = SONG_ORDER_COLUMNS[orderIndex] ?? null;
-        if (orderColumn) {
-          query = query.order(orderColumn, { ascending: false });
-        }
-
-        const { data, error, status, statusText } = await query;
-
-        if (!error) {
-          songSelectVariantRef.current = selectIndex;
-          songFilterStrategyRef.current = filterIndex;
-          songOrderIndexRef.current = orderIndex;
-
-          const resolvedSongs = Array.isArray(data) ? (data as unknown as Song[]) : [];
-          setSongs(resolvedSongs);
-          return;
-        }
-
-        if (status === 404 || isMissingTableError(error, "songs")) {
-          songsTableAvailableRef.current = false;
-          logger.warn("Songs table is unavailable; skipping future queries", {
-            status,
-            statusText,
-            ...formatErrorForLog(error),
-          });
-          setSongs([]);
-          return;
-        }
-
-        const orderColumnName = orderColumn;
-        if (orderColumnName && isMissingColumnError(error, orderColumnName)) {
-          if (orderIndex < SONG_ORDER_COLUMNS.length - 1) {
-            orderIndex += 1;
-            songOrderIndexRef.current = orderIndex;
-            const fallbackOrder = SONG_ORDER_COLUMNS[orderIndex] ?? "none";
-            logger.warn(
-              `Songs ordering column '${orderColumnName}' unavailable; falling back to '${fallbackOrder}'.`,
-              {
-                ...formatErrorForLog(error),
-              },
-            );
-            attempts += 1;
-            continue;
-          }
-        }
-
-        const activeFilterColumn = SONG_FILTER_STRATEGIES[filterIndex]?.column;
-        if (activeFilterColumn && isMissingColumnError(error, activeFilterColumn)) {
-          if (filterIndex < SONG_FILTER_STRATEGIES.length - 1) {
-            const previousColumn = activeFilterColumn;
-            filterIndex += 1;
-            songFilterStrategyRef.current = filterIndex;
-            logger.warn(`Songs filter column '${previousColumn}' unavailable; adjusting filter strategy.`, {
-              ...formatErrorForLog(error),
-            });
-            attempts += 1;
-            continue;
-          }
-        }
-
-        const missingColumn = selectColumns.find((column) => isMissingColumnError(error, column));
-        if (missingColumn) {
-          const nextIndex = findNextVariantWithoutColumn(selectIndex, missingColumn);
-          if (nextIndex !== -1) {
-            selectIndex = nextIndex;
-            songSelectVariantRef.current = selectIndex;
-            logger.warn(`Songs column '${missingColumn}' unavailable; falling back to reduced selection.`, {
-              ...formatErrorForLog(error),
-            });
-            attempts += 1;
-            continue;
-          }
-        }
-
-        lastError = error;
-        break;
+      if (error) {
+        throw error;
       }
 
-      if (lastError) {
-        throw lastError;
-      }
-
-      throw new Error("Unable to fetch songs due to unknown error");
+      const resolvedSongs = Array.isArray(data) ? (data as unknown as Song[]) : [];
+      setSongs(resolvedSongs);
     } catch (error) {
-      logger.error("Error fetching songs for songwriting", {
-        userId,
-        profileId,
-        ...formatErrorForLog(error),
-      });
-      toast.error("Failed to load songs for linking");
+      logger.error("Error fetching songs for songwriting", { userId, error });
+      toast.error("Failed to load songs");
+      setSongs([]);
     }
-  }, [user?.id, profile?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     void fetchSongs();
