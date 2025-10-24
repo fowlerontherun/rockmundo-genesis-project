@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Music, Disc, ShoppingBag, ListMusic, Package, Mic, PenLine } from "lucide-react";
+import { Music, Disc, ShoppingBag, ListMusic, Package, Mic, PenLine, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
 import { useQuery } from "@tanstack/react-query";
@@ -107,6 +107,14 @@ const MusicHub = () => {
       path: "/recording-studio",
       stats: "Professional recording and production",
       color: "text-red-500",
+    },
+    {
+      title: "Radio Airplay",
+      description: "Submit songs to national and local radio stations",
+      icon: Radio,
+      path: "/radio",
+      stats: "Build hype and reach new listeners",
+      color: "text-cyan-500",
     },
   ];
 

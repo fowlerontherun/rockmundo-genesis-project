@@ -83,8 +83,10 @@ const AdminProducers = lazyWithRetry(() => import("./pages/admin/Producers"));
 const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/TwaaterModeration"));
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
+const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
+const Radio = lazyWithRetry(() => import("./pages/Radio"));
 const SongManager = lazyWithRetry(() => import("./pages/SongManager"));
 const PlayerStatistics = lazyWithRetry(() => import("./pages/PlayerStatistics"));
 const Busking = lazyWithRetry(() => import("./pages/Busking"));
@@ -192,7 +194,9 @@ function App() {
                     <Route path="admin/twaater-moderation" element={<AdminTwaaterModeration />} />
                     <Route path="admin/cron-monitor" element={<AdminCronMonitor />} />
                     <Route path="admin/release-config" element={<AdminReleaseConfig />} />
+                    <Route path="admin/radio-stations" element={<AdminRadioStations />} />
                     <Route path="employment" element={<Employment />} />
+                    <Route path="radio" element={<Radio />} />
                     <Route path="performance" element={<Performance />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
                     <Route path="busking" element={<Navigate to="/performance?tab=busking" replace />} />

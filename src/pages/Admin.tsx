@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Shield,
   Clock,
+  Radio,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -156,6 +157,13 @@ const adminSections = [
     href: "/admin/release-config",
     action: "Manage config",
     Icon: Disc3,
+  },
+  {
+    title: "Radio Stations",
+    description: "Manage national and local radio stations and shows",
+    href: "/admin/radio-stations",
+    action: "Manage Radio",
+    Icon: Radio,
   },
 ] as const;
 

@@ -3355,6 +3355,322 @@ export type Database = {
           },
         ]
       }
+      radio_playlists: {
+        Row: {
+          added_at: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          removed_at: string | null
+          show_id: string
+          song_id: string
+          times_played: number | null
+          week_start_date: string
+        }
+        Insert: {
+          added_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          removed_at?: string | null
+          show_id: string
+          song_id: string
+          times_played?: number | null
+          week_start_date: string
+        }
+        Update: {
+          added_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          removed_at?: string | null
+          show_id?: string
+          song_id?: string
+          times_played?: number | null
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_playlists_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "radio_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_playlists_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "radio_playlists_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radio_plays: {
+        Row: {
+          created_at: string | null
+          hype_gained: number | null
+          id: string
+          listeners: number
+          played_at: string | null
+          playlist_id: string
+          sales_boost: number | null
+          show_id: string
+          song_id: string
+          station_id: string
+          streams_boost: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          hype_gained?: number | null
+          id?: string
+          listeners: number
+          played_at?: string | null
+          playlist_id: string
+          sales_boost?: number | null
+          show_id: string
+          song_id: string
+          station_id: string
+          streams_boost?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          hype_gained?: number | null
+          id?: string
+          listeners?: number
+          played_at?: string | null
+          playlist_id?: string
+          sales_boost?: number | null
+          show_id?: string
+          song_id?: string
+          station_id?: string
+          streams_boost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_plays_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "radio_playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_plays_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "radio_shows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_plays_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "radio_plays_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_plays_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "radio_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radio_shows: {
+        Row: {
+          created_at: string | null
+          day_of_week: number | null
+          description: string | null
+          host_name: string
+          id: string
+          is_active: boolean | null
+          listener_multiplier: number | null
+          show_genres: string[] | null
+          show_name: string
+          station_id: string
+          time_slot: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week?: number | null
+          description?: string | null
+          host_name: string
+          id?: string
+          is_active?: boolean | null
+          listener_multiplier?: number | null
+          show_genres?: string[] | null
+          show_name: string
+          station_id: string
+          time_slot: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number | null
+          description?: string | null
+          host_name?: string
+          id?: string
+          is_active?: boolean | null
+          listener_multiplier?: number | null
+          show_genres?: string[] | null
+          show_name?: string
+          station_id?: string
+          time_slot?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_shows_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "radio_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radio_stations: {
+        Row: {
+          accepted_genres: string[] | null
+          city_id: string | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          frequency: string | null
+          id: string
+          is_active: boolean | null
+          listener_base: number
+          name: string
+          quality_level: number
+          station_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_genres?: string[] | null
+          city_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          listener_base?: number
+          name: string
+          quality_level?: number
+          station_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_genres?: string[] | null
+          city_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          listener_base?: number
+          name?: string
+          quality_level?: number
+          station_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_stations_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radio_submissions: {
+        Row: {
+          band_id: string | null
+          created_at: string | null
+          id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          song_id: string
+          station_id: string
+          status: string | null
+          submitted_at: string | null
+          user_id: string | null
+          week_submitted: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string | null
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          song_id: string
+          station_id: string
+          status?: string | null
+          submitted_at?: string | null
+          user_id?: string | null
+          week_submitted?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string | null
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          song_id?: string
+          station_id?: string
+          status?: string | null
+          submitted_at?: string | null
+          user_id?: string | null
+          week_submitted?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_submissions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "radio_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_submissions_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "radio_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recording_producers: {
         Row: {
           arrangement_skill: number
@@ -4642,7 +4958,9 @@ export type Database = {
           duration_display: string | null
           duration_seconds: number | null
           genre: string
+          hype: number | null
           id: string
+          last_radio_play: string | null
           lyrics: string | null
           lyrics_progress: number | null
           lyrics_strength: number | null
@@ -4664,6 +4982,7 @@ export type Database = {
           streams: number
           theme_id: string | null
           title: string
+          total_radio_plays: number | null
           total_sessions: number | null
           updated_at: string
           user_id: string
@@ -4680,7 +4999,9 @@ export type Database = {
           duration_display?: string | null
           duration_seconds?: number | null
           genre: string
+          hype?: number | null
           id?: string
+          last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
           lyrics_strength?: number | null
@@ -4702,6 +5023,7 @@ export type Database = {
           streams?: number
           theme_id?: string | null
           title: string
+          total_radio_plays?: number | null
           total_sessions?: number | null
           updated_at?: string
           user_id: string
@@ -4718,7 +5040,9 @@ export type Database = {
           duration_display?: string | null
           duration_seconds?: number | null
           genre?: string
+          hype?: number | null
           id?: string
+          last_radio_play?: string | null
           lyrics?: string | null
           lyrics_progress?: number | null
           lyrics_strength?: number | null
@@ -4740,6 +5064,7 @@ export type Database = {
           streams?: number
           theme_id?: string | null
           title?: string
+          total_radio_plays?: number | null
           total_sessions?: number | null
           updated_at?: string
           user_id?: string
