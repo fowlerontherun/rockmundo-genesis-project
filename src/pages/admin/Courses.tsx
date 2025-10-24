@@ -447,7 +447,7 @@ export default function Courses() {
                   id="xp_min"
                   type="number"
                   min="1"
-                  max="3"
+                  max="100"
                   value={formData.xp_per_day_min}
                   onChange={(e) =>
                     setFormData({ ...formData, xp_per_day_min: Number(e.target.value) })
@@ -461,7 +461,7 @@ export default function Courses() {
                   id="xp_max"
                   type="number"
                   min="1"
-                  max="3"
+                  max="100"
                   value={formData.xp_per_day_max}
                   onChange={(e) =>
                     setFormData({ ...formData, xp_per_day_max: Number(e.target.value) })

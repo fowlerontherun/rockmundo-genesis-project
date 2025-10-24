@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Music, Calendar, DollarSign } from "lucide-react";
+import { ReleasePredictions } from "./ReleasePredictions";
 
 interface MyReleasesTabProps {
   userId: string;
@@ -17,8 +18,10 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
         .from("releases")
         .select(`
           *,
-          release_songs(song:songs(title)),
-          release_formats(*)
+          release_songs(song:songs(title, quality_score)),
+          release_formats(*),
+          bands(fame, popularity, chemistry_level),
+          profiles!releases_user_id_fkey(fame, popularity)
         `)
         .or(`user_id.eq.${userId},band_id.in.(${await getBandIds(userId)})`)
         .order("created_at", { ascending: false });
@@ -116,6 +119,23 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
                 ))}
               </div>
             </div>
+
+            {/* Show predictions for planned/manufacturing releases */}
+            {(release.release_status === "planned" || release.release_status === "manufacturing") && (
+              <ReleasePredictions
+                artistFame={release.bands?.[0]?.fame || release.profiles?.fame || 0}
+                artistPopularity={release.bands?.[0]?.popularity || release.profiles?.popularity || 0}
+                songQuality={
+                  release.release_songs?.reduce((sum: number, rs: any) => 
+                    sum + (rs.song?.quality_score || 0), 0
+                  ) / (release.release_songs?.length || 1)
+                }
+                bandChemistry={release.bands?.[0]?.chemistry_level}
+                releaseType={release.release_type}
+                formatTypes={release.release_formats?.map((f: any) => f.format_type) || []}
+                trackCount={release.release_songs?.length || 1}
+              />
+            )}
 
             <div className="flex gap-2 pt-2">
               <Button variant="outline" size="sm">View Details</Button>

@@ -351,44 +351,49 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
               </div>
             </div>
 
-            {/* Revenue Estimation */}
+            {/* Revenue & Attendance Forecast */}
             {selectedSlot && selectedSetlistId && (
               <Card className="bg-muted/50">
                 <CardContent className="pt-6">
                   <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Revenue Forecast
+                    <Users className="h-5 w-5" />
+                    Attendance & Revenue Forecast
                   </h4>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Attendance Range</span>
-                      <span className="text-sm font-medium">
+                      <span className="text-sm text-muted-foreground">Predicted Attendance Range</span>
+                      <Badge variant="outline">
                         {attendanceForecast.pessimistic} - {attendanceForecast.optimistic}
-                      </span>
+                      </Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Expected Attendance</span>
-                      <span className="font-bold">{attendanceForecast.realistic}</span>
+                      <Badge variant="secondary" className="font-bold">
+                        {attendanceForecast.realistic} people
+                      </Badge>
                     </div>
                     <Separator />
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Ticket Revenue</span>
+                      <span className="text-sm text-muted-foreground">Ticket Sales Revenue</span>
                       <span className="font-semibold">${estimatedRevenue.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Venue Payment</span>
+                      <span className="text-sm text-muted-foreground">Venue Base Payment</span>
                       <span className="font-semibold text-green-600">
                         +${Math.round((venue.base_payment || 0) * (selectedSlotData?.paymentMultiplier || 1)).toLocaleString()}
                       </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between items-center text-lg">
-                      <span className="font-semibold">Total Earnings</span>
+                      <span className="font-semibold">Total Projected Earnings</span>
                       <span className="font-bold text-primary">
                         ${(estimatedRevenue + Math.round((venue.base_payment || 0) * (selectedSlotData?.paymentMultiplier || 1))).toLocaleString()}
                       </span>
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground italic mt-4">
+                    * Conservative estimates based on your band's current stats and venue prestige.
+                  </p>
                 </CardContent>
               </Card>
             )}
