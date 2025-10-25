@@ -149,15 +149,17 @@ export function calculateAttendanceForecast(
   // Production notes attendance bonus (1.0 to 1.3x)
   const productionBonus = 1 + productionNotesAttendanceBonus;
   
-  // Base expected attendance
-  const baseAttendance = venueCapacity * fameMultiplier * venueMatchPenalty * 
-                         priceDemandMultiplier * setlistBonus * productionBonus;
+  // Base expected attendance - ensure minimum 5% if price isn't too high
+  const baseAttendance = Math.max(
+    priceRatio < 2 ? venueCapacity * 0.05 : 0,
+    venueCapacity * fameMultiplier * venueMatchPenalty * priceDemandMultiplier * setlistBonus * productionBonus
+  );
   
   // Add variance for estimates
   return {
-    pessimistic: Math.round(baseAttendance * 0.7),
-    realistic: Math.round(baseAttendance),
-    optimistic: Math.round(Math.min(venueCapacity, baseAttendance * 1.3))
+    pessimistic: Math.max(1, Math.round(baseAttendance * 0.7)),
+    realistic: Math.max(1, Math.round(baseAttendance)),
+    optimistic: Math.max(1, Math.round(Math.min(venueCapacity, baseAttendance * 1.3)))
   };
 }
 

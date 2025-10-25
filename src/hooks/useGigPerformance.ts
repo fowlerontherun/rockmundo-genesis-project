@@ -211,14 +211,11 @@ export const useCompleteGigPerformance = () => {
         chemistryImpact = -1;
       }
 
-      // Insert song performances
-      const { error: perfError } = await supabase
-        .from('gig_song_performances')
-        .insert(songPerformances);
+      // Get performance grade
+      const { getPerformanceGrade } = await import('@/utils/gigPerformanceCalculator');
+      const gradeData = getPerformanceGrade(overallRating);
 
-      if (perfError) throw perfError;
-
-      // Insert gig outcome
+      // First insert the outcome to get the ID
       const { data: outcome, error: outcomeError } = await supabase
         .from('gig_outcomes')
         .insert([{
@@ -227,23 +224,45 @@ export const useCompleteGigPerformance = () => {
           actual_attendance: actualAttendance,
           attendance_percentage: (actualAttendance / venueCapacity) * 100,
           ticket_revenue: ticketRevenue,
-          merch_sales: merchSales.totalRevenue,
+          merch_revenue: merchSales.totalRevenue,
           total_revenue: totalRevenue,
-          crew_costs: crewCosts,
-          equipment_wear_cost: Math.round(equipmentWearCost),
+          venue_cost: 0,
+          crew_cost: crewCosts,
+          equipment_cost: Math.round(equipmentWearCost),
+          total_costs: crewCosts + Math.round(equipmentWearCost),
           net_profit: Math.round(netProfit),
+          performance_grade: gradeData.grade,
+          equipment_quality_avg: equipmentQuality,
+          crew_skill_avg: crewSkillLevel,
+          band_chemistry_level: bandChemistry,
+          member_skill_avg: memberSkillAverage,
           fame_gained: fameGained,
-          chemistry_impact: chemistryImpact,
-          breakdown_data: {
-            equipment_quality: equipmentQuality,
-            crew_skill: crewSkillLevel,
-            band_chemistry: bandChemistry,
-            member_skills: memberSkillAverage,
-            merch_items_sold: merchSales.itemsSold
-          }
+          chemistry_change: chemistryImpact,
+          merch_items_sold: merchSales.itemsSold
         }])
         .select()
         .single();
+
+      if (outcomeError) throw outcomeError;
+
+      // Now insert song performances with the outcome ID
+      const songPerformancesWithOutcome = songPerformances.map((sp: any) => ({
+        gig_outcome_id: outcome.id,
+        song_id: sp.song_id,
+        position: sp.setlist_position,
+        performance_score: sp.performance_score,
+        crowd_response: sp.crowd_response,
+        song_quality_contrib: sp.song_quality_contribution,
+        rehearsal_contrib: sp.rehearsal_contribution,
+        chemistry_contrib: sp.chemistry_contribution,
+        equipment_contrib: sp.equipment_contribution,
+        crew_contrib: sp.crew_contribution,
+        member_skill_contrib: sp.member_skills_contribution
+      }));
+
+      const { error: perfError } = await supabase
+        .from('gig_song_performances')
+        .insert(songPerformancesWithOutcome);
 
       if (outcomeError) throw outcomeError;
 

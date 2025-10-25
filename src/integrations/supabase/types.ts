@@ -1596,60 +1596,81 @@ export type Database = {
       gig_outcomes: {
         Row: {
           actual_attendance: number
-          attendance_percentage: number
-          breakdown_data: Json
-          chemistry_impact: number
-          created_at: string
-          crew_costs: number
-          equipment_wear_cost: number
-          fame_gained: number
+          attendance_percentage: number | null
+          band_chemistry_level: number | null
+          chemistry_change: number | null
+          created_at: string | null
+          crew_cost: number
+          crew_skill_avg: number | null
+          equipment_cost: number
+          equipment_quality_avg: number | null
+          fame_gained: number | null
           gig_id: string
           id: string
-          merch_sales: number
+          member_skill_avg: number | null
+          merch_items_sold: number | null
+          merch_revenue: number
           net_profit: number
           overall_rating: number
+          performance_grade: string | null
           ticket_revenue: number
+          total_costs: number
           total_revenue: number
+          venue_cost: number
         }
         Insert: {
-          actual_attendance?: number
-          attendance_percentage?: number
-          breakdown_data?: Json
-          chemistry_impact?: number
-          created_at?: string
-          crew_costs?: number
-          equipment_wear_cost?: number
-          fame_gained?: number
+          actual_attendance: number
+          attendance_percentage?: number | null
+          band_chemistry_level?: number | null
+          chemistry_change?: number | null
+          created_at?: string | null
+          crew_cost?: number
+          crew_skill_avg?: number | null
+          equipment_cost?: number
+          equipment_quality_avg?: number | null
+          fame_gained?: number | null
           gig_id: string
           id?: string
-          merch_sales?: number
+          member_skill_avg?: number | null
+          merch_items_sold?: number | null
+          merch_revenue?: number
           net_profit?: number
-          overall_rating?: number
+          overall_rating: number
+          performance_grade?: string | null
           ticket_revenue?: number
+          total_costs?: number
           total_revenue?: number
+          venue_cost?: number
         }
         Update: {
           actual_attendance?: number
-          attendance_percentage?: number
-          breakdown_data?: Json
-          chemistry_impact?: number
-          created_at?: string
-          crew_costs?: number
-          equipment_wear_cost?: number
-          fame_gained?: number
+          attendance_percentage?: number | null
+          band_chemistry_level?: number | null
+          chemistry_change?: number | null
+          created_at?: string | null
+          crew_cost?: number
+          crew_skill_avg?: number | null
+          equipment_cost?: number
+          equipment_quality_avg?: number | null
+          fame_gained?: number | null
           gig_id?: string
           id?: string
-          merch_sales?: number
+          member_skill_avg?: number | null
+          merch_items_sold?: number | null
+          merch_revenue?: number
           net_profit?: number
           overall_rating?: number
+          performance_grade?: string | null
           ticket_revenue?: number
+          total_costs?: number
           total_revenue?: number
+          venue_cost?: number
         }
         Relationships: [
           {
             foreignKeyName: "gig_outcomes_gig_id_fkey"
             columns: ["gig_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "gigs"
             referencedColumns: ["id"]
           },
@@ -1684,56 +1705,56 @@ export type Database = {
       }
       gig_song_performances: {
         Row: {
-          chemistry_contribution: number
-          created_at: string
-          crew_contribution: number
+          chemistry_contrib: number | null
+          created_at: string | null
+          crew_contrib: number | null
           crowd_response: string
-          equipment_contribution: number
-          gig_id: string
+          equipment_contrib: number | null
+          gig_outcome_id: string
           id: string
-          member_skills_contribution: number
+          member_skill_contrib: number | null
           performance_score: number
-          rehearsal_contribution: number
-          setlist_position: number
+          position: number
+          rehearsal_contrib: number | null
           song_id: string
-          song_quality_contribution: number
+          song_quality_contrib: number | null
         }
         Insert: {
-          chemistry_contribution?: number
-          created_at?: string
-          crew_contribution?: number
-          crowd_response?: string
-          equipment_contribution?: number
-          gig_id: string
+          chemistry_contrib?: number | null
+          created_at?: string | null
+          crew_contrib?: number | null
+          crowd_response: string
+          equipment_contrib?: number | null
+          gig_outcome_id: string
           id?: string
-          member_skills_contribution?: number
-          performance_score?: number
-          rehearsal_contribution?: number
-          setlist_position: number
+          member_skill_contrib?: number | null
+          performance_score: number
+          position: number
+          rehearsal_contrib?: number | null
           song_id: string
-          song_quality_contribution?: number
+          song_quality_contrib?: number | null
         }
         Update: {
-          chemistry_contribution?: number
-          created_at?: string
-          crew_contribution?: number
+          chemistry_contrib?: number | null
+          created_at?: string | null
+          crew_contrib?: number | null
           crowd_response?: string
-          equipment_contribution?: number
-          gig_id?: string
+          equipment_contrib?: number | null
+          gig_outcome_id?: string
           id?: string
-          member_skills_contribution?: number
+          member_skill_contrib?: number | null
           performance_score?: number
-          rehearsal_contribution?: number
-          setlist_position?: number
+          position?: number
+          rehearsal_contrib?: number | null
           song_id?: string
-          song_quality_contribution?: number
+          song_quality_contrib?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "gig_song_performances_gig_id_fkey"
-            columns: ["gig_id"]
+            foreignKeyName: "gig_song_performances_gig_outcome_id_fkey"
+            columns: ["gig_outcome_id"]
             isOneToOne: false
-            referencedRelation: "gigs"
+            referencedRelation: "gig_outcomes"
             referencedColumns: ["id"]
           },
           {

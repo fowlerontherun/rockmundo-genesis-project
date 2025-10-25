@@ -259,15 +259,16 @@ export default function BandManager() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="members">Members</TabsTrigger>
-          <TabsTrigger value="songs">Songs</TabsTrigger>
-          <TabsTrigger value="chat">Chat</TabsTrigger>
-          <TabsTrigger value="earnings">Earnings</TabsTrigger>
-          <TabsTrigger value="chemistry">Chemistry</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="members">Members</TabsTrigger>
+            <TabsTrigger value="songs">Songs</TabsTrigger>
+            <TabsTrigger value="history">Gig History</TabsTrigger>
+            <TabsTrigger value="chat">Chat</TabsTrigger>
+            <TabsTrigger value="earnings">Earnings</TabsTrigger>
+            <TabsTrigger value="chemistry">Chemistry</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
           <BandSongGifts bandId={selectedBand.id} />
@@ -319,6 +320,10 @@ export default function BandManager() {
 
         <TabsContent value="songs" className="space-y-4">
           <BandSongsTab bandId={selectedBand.id} />
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <GigHistoryTab bandId={selectedBand.id} />
         </TabsContent>
 
         <TabsContent value="chat" className="space-y-4">
