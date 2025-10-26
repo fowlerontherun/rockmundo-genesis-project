@@ -47,7 +47,16 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
 
     setSelectedOutcome({
       ...outcome,
-      song_performances: songPerfs || []
+      gig_song_performances: songPerfs || [],
+      breakdown_data: {
+        equipment_quality: outcome.equipment_quality_avg || 0,
+        crew_skill: outcome.crew_skill_avg || 0,
+        band_chemistry: outcome.band_chemistry_level || 0,
+        member_skills: outcome.member_skill_avg || 0,
+        merch_items_sold: outcome.merch_items_sold || 0
+      },
+      chemistry_impact: outcome.chemistry_change || 0,
+      equipment_wear_cost: outcome.equipment_cost || 0
     });
     setShowReport(true);
   };
@@ -151,6 +160,9 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
             setSelectedOutcome(null);
           }}
           outcome={selectedOutcome}
+          venueName={selectedOutcome.gigs?.venues?.name || 'Unknown Venue'}
+          venueCapacity={selectedOutcome.gigs?.venues?.capacity || 0}
+          songs={[]}
         />
       )}
     </>

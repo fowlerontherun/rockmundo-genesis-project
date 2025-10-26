@@ -18,6 +18,7 @@ import { BandSettingsTab } from '@/components/band/BandSettingsTab';
 import { BandStatusBanner } from '@/components/band/BandStatusBanner';
 import { BandSongGifts } from '@/components/band/BandSongGifts';
 import { BandSongsTab } from '@/components/band/BandSongsTab';
+import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { Users, Music } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
