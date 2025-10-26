@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getUserBands } from '@/utils/bandStatus';
 import { reactivateBand } from '@/utils/bandHiatus';
 import { getBandStatusLabel, getBandStatusColor } from '@/utils/bandStatus';
+import { useAutoGigExecution } from '@/hooks/useAutoGigExecution';
 
 export default function BandManager() {
   const { user } = useAuth();
@@ -33,6 +34,9 @@ export default function BandManager() {
   const [selectedBand, setSelectedBand] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Enable auto-gig execution for the selected band
+  useAutoGigExecution(selectedBandId);
 
   useEffect(() => {
     if (user) {

@@ -360,22 +360,33 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                     Attendance & Revenue Forecast
                   </h4>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Predicted Attendance Range</span>
-                      <Badge variant="outline">
-                        {attendanceForecast.pessimistic} - {attendanceForecast.optimistic}
-                      </Badge>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Attendance Forecast</span>
+                      <Badge variant="outline">Based on your stats</Badge>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Expected Attendance</span>
-                      <Badge variant="secondary" className="font-bold">
-                        {attendanceForecast.realistic} people
-                      </Badge>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Pessimistic</span>
+                        <span className="font-semibold">{attendanceForecast.pessimistic} people</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Realistic</span>
+                        <span className="font-semibold text-primary">{attendanceForecast.realistic} people</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Optimistic</span>
+                        <span className="font-semibold">{attendanceForecast.optimistic} people</span>
+                      </div>
                     </div>
+                    
                     <Separator />
+                    
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Ticket Sales Revenue</span>
-                      <span className="font-semibold">${estimatedRevenue.toLocaleString()}</span>
+                      <span className="text-sm font-medium">Estimated Revenue</span>
+                      <span className="text-lg font-bold text-green-600">
+                        ${estimatedRevenue.toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Venue Base Payment</span>

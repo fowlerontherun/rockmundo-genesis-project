@@ -152,6 +152,74 @@ export default function Radio() {
         .single();
       
       if (error) throw error;
+
+      // Get song and station details for hype/fame calculation
+      const { data: selectedSongData } = await supabase
+        .from('songs')
+        .select('hype, band_id')
+        .eq('id', selectedSong)
+        .single();
+
+      const { data: stationData } = await supabase
+        .from('radio_stations')
+        .select('listener_base')
+        .eq('id', selectedStation)
+        .single();
+
+      if (selectedSongData && stationData) {
+        // Update song hype
+        await supabase
+          .from('songs')
+          .update({
+            hype: (selectedSongData.hype || 0) + Math.floor((stationData.listener_base || 0) * 0.001)
+          })
+          .eq('id', selectedSong);
+
+        // Award fame to band and members if band song
+        if (selectedSongData.band_id) {
+          const fameGain = Math.floor((stationData.listener_base || 0) * 0.0005);
+          
+          const { data: band } = await supabase
+            .from('bands')
+            .select('fame')
+            .eq('id', selectedSongData.band_id)
+            .single();
+
+          if (band) {
+            await supabase
+              .from('bands')
+              .update({ fame: (band.fame || 0) + fameGain })
+              .eq('id', selectedSongData.band_id);
+
+            // Award fame to band members
+            const { data: members } = await supabase
+              .from('band_members')
+              .select('user_id')
+              .eq('band_id', selectedSongData.band_id)
+              .eq('is_touring_member', false);
+
+            if (members) {
+              const famePerMember = Math.floor(fameGain / Math.max(1, members.length));
+              
+              for (const member of members) {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('fame')
+                  .eq('user_id', member.user_id)
+                  .single();
+
+                if (profile) {
+                  await supabase
+                    .from('profiles')
+                    .update({ fame: (profile.fame || 0) + famePerMember })
+                    .eq('user_id', member.user_id);
+                }
+              }
+            }
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
