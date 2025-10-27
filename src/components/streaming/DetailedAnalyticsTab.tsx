@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, DollarSign, Users, BarChart3 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PlatformComparisonChart } from "./PlatformComparisonChart";
 
 interface DetailedAnalyticsTabProps {
   userId: string;
@@ -167,10 +168,12 @@ export function DetailedAnalyticsTab({ userId }: DetailedAnalyticsTabProps) {
               />
               <Legend />
               <Bar dataKey="revenue" fill="hsl(var(--primary))" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-    </div>
-  );
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+
+    <PlatformComparisonChart userId={userId} />
+  </div>
+);
 }

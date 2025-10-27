@@ -5361,7 +5361,10 @@ export type Database = {
           daily_revenue: number | null
           daily_streams: number | null
           id: string
+          listener_age_group: string | null
+          listener_region: string | null
           platform_id: string | null
+          platform_name: string | null
           skip_rate: number | null
           song_release_id: string
           unique_listeners: number | null
@@ -5373,7 +5376,10 @@ export type Database = {
           daily_revenue?: number | null
           daily_streams?: number | null
           id?: string
+          listener_age_group?: string | null
+          listener_region?: string | null
           platform_id?: string | null
+          platform_name?: string | null
           skip_rate?: number | null
           song_release_id: string
           unique_listeners?: number | null
@@ -5385,7 +5391,10 @@ export type Database = {
           daily_revenue?: number | null
           daily_streams?: number | null
           id?: string
+          listener_age_group?: string | null
+          listener_region?: string | null
           platform_id?: string | null
+          platform_name?: string | null
           skip_rate?: number | null
           song_release_id?: string
           unique_listeners?: number | null
@@ -6292,6 +6301,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_release_revenue: {
+        Args: { amount: number; release_id: string }
+        Returns: undefined
       }
     }
     Enums: {

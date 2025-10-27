@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign } from 'lucide-react';
 import { LiveGigPerformance } from '@/components/gig/LiveGigPerformance';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
+import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { executeGigPerformance } from '@/utils/gigExecution';
 import type { Database } from '@/lib/supabase-types';
 import { format } from 'date-fns';
@@ -25,6 +26,10 @@ export default function PerformGig() {
 
   const [gig, setGig] = useState<GigWithVenue | null>(null);
   const [setlistSongs, setSetlistSongs] = useState<any[]>([]);
+  const [rehearsals, setRehearsals] = useState<any[]>([]);
+  const [equipmentCount, setEquipmentCount] = useState(0);
+  const [crewCount, setCrewCount] = useState(0);
+  const [bandChemistry, setBandChemistry] = useState(0);
   const [isPerforming, setIsPerforming] = useState(false);
   const [showOutcome, setShowOutcome] = useState(false);
   const [outcome, setOutcome] = useState<any>(null);
@@ -73,16 +78,39 @@ export default function PerformGig() {
 
       setGig(gigData as any);
 
-      // Load setlist songs if not performed yet
+      // Load setlist songs and preparation data if not performed yet
       if (gigData.setlist_id) {
-        const { data: songs, error: songsError } = await supabase
-          .from('setlist_songs')
-          .select('*, songs!inner(id, title, genre, quality_score)')
-          .eq('setlist_id', gigData.setlist_id)
-          .order('position');
+        const [songsRes, rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
+          supabase
+            .from('setlist_songs')
+            .select('*, songs!inner(id, title, genre, quality_score)')
+            .eq('setlist_id', gigData.setlist_id)
+            .order('position'),
+          supabase
+            .from('song_rehearsals')
+            .select('song_id, rehearsal_level, songs(title)')
+            .eq('band_id', gigData.band_id),
+          supabase
+            .from('band_stage_equipment')
+            .select('id')
+            .eq('band_id', gigData.band_id),
+          supabase
+            .from('band_crew_members')
+            .select('id')
+            .eq('band_id', gigData.band_id),
+          supabase
+            .from('bands')
+            .select('chemistry_level')
+            .eq('id', gigData.band_id)
+            .single()
+        ]);
 
-        if (songsError) throw songsError;
-        setSetlistSongs(songs || []);
+        if (songsRes.error) throw songsRes.error;
+        setSetlistSongs(songsRes.data || []);
+        setRehearsals(rehearsalsRes.data || []);
+        setEquipmentCount(equipmentRes.data?.length || 0);
+        setCrewCount(crewRes.data?.length || 0);
+        setBandChemistry(bandRes.data?.chemistry_level || 0);
       }
 
       setLoading(false);
@@ -276,6 +304,21 @@ export default function PerformGig() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Preparation Checklist */}
+      {setlistSongs.length > 0 && (
+        <GigPreparationChecklist
+          setlistSongs={setlistSongs}
+          rehearsals={rehearsals.map(r => ({
+            song_id: r.song_id,
+            song_title: r.songs?.title || 'Unknown',
+            rehearsal_level: r.rehearsal_level || 0
+          }))}
+          equipmentCount={equipmentCount}
+          crewCount={crewCount}
+          bandChemistry={bandChemistry}
+        />
+      )}
 
       {/* Performance */}
       {!isPerforming && setlistSongs.length > 0 && (

@@ -34,6 +34,7 @@ import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 import { GameDateWidget } from "@/components/calendar/GameDateWidget";
 import { BirthdayNotification } from "@/components/calendar/BirthdayNotification";
 import { useGameCalendar, useBirthdayCheck } from "@/hooks/useGameCalendar";
+import { useGameNotifications } from "@/hooks/useGameNotifications";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 type ProfileActivityStatusRow = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
@@ -177,6 +178,10 @@ const Dashboard = () => {
     loading,
     error
   } = useGameData();
+  
+  // Game notifications hook
+  useGameNotifications(profile?.user_id || null);
+  
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
   const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
   const [chatOnlineCounts, setChatOnlineCounts] = useState<Record<ChatScope, number>>({
