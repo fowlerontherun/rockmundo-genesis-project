@@ -23,6 +23,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [artistName, setArtistName] = useState("");
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<any[]>([]);
+  const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -49,8 +50,18 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
 
   const createRelease = useMutation({
     mutationFn: async () => {
-      // Calculate total cost
+      // Calculate total cost and manufacturing time (2-14 days based on format complexity)
       const totalCost = selectedFormats.reduce((sum, format) => sum + format.manufacturing_cost, 0);
+      
+      const manufacturingDays = selectedFormats.reduce((max, format) => {
+        const days = format.format_type === 'vinyl' ? 14 : 
+                     format.format_type === 'cd' ? 7 : 
+                     format.format_type === 'cassette' ? 5 : 2;
+        return Math.max(max, days);
+      }, 2);
+      
+      const manufacturingCompleteAt = new Date();
+      manufacturingCompleteAt.setDate(manufacturingCompleteAt.getDate() + manufacturingDays);
 
       // Check band balance if band release
       if (userBand) {
@@ -82,7 +93,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         });
       }
 
-      // Create release
+      // Create release with manufacturing timeline
       const { data: release, error: releaseError } = await supabase
         .from("releases")
         .insert({
@@ -92,7 +103,9 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           title,
           artist_name: artistName,
           release_status: "manufacturing",
-          total_cost: totalCost
+          total_cost: totalCost,
+          manufacturing_complete_at: manufacturingCompleteAt.toISOString(),
+          scheduled_release_date: scheduledReleaseDate?.toISOString().split('T')[0] || null
         })
         .select()
         .single();
@@ -127,13 +140,25 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
 
       return release;
     },
-    onSuccess: () => {
+    onSuccess: (release) => {
       queryClient.invalidateQueries({ queryKey: ["releases"] });
       if (userBand) {
         queryClient.invalidateQueries({ queryKey: ["band", userBand.id] });
         queryClient.invalidateQueries({ queryKey: ["band-earnings"] });
       }
-      toast({ title: "Success", description: "Release created successfully!" });
+      
+      const manufacturingDays = Math.ceil(
+        (new Date(release.manufacturing_complete_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      );
+      
+      toast({ 
+        title: "Release Created!", 
+        description: `Manufacturing will complete in ${manufacturingDays} days. ${
+          release.scheduled_release_date 
+            ? `Release scheduled for ${new Date(release.scheduled_release_date).toLocaleDateString()}.` 
+            : ''
+        }`
+      });
       onOpenChange(false);
       resetForm();
     },

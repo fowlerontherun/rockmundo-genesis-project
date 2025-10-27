@@ -75,7 +75,7 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-4 text-sm">
+            <div className="flex gap-4 text-sm flex-wrap">
               <div className="flex items-center gap-2">
                 <Music className="h-4 w-4" />
                 <span className="capitalize">{release.release_type}</span>
@@ -86,8 +86,24 @@ export function MyReleasesTab({ userId }: MyReleasesTabProps) {
               </div>
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                <span>Revenue: ${release.total_revenue}</span>
+                <span>Revenue: ${release.total_revenue || 0}</span>
               </div>
+              {release.manufacturing_complete_at && release.release_status === 'manufacturing' && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-xs">
+                    Ready: {new Date(release.manufacturing_complete_at).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {release.scheduled_release_date && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-xs">
+                    Release: {new Date(release.scheduled_release_date).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>

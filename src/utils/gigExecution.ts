@@ -136,7 +136,14 @@ export async function executeGigPerformance(data: GigExecutionData) {
 
   const gradeData = getPerformanceGrade(overallRating);
 
-  // Insert gig outcome
+  // Fetch venue info
+  const { data: venueData } = await supabase
+    .from('venues')
+    .select('name, capacity')
+    .eq('id', (await supabase.from('gigs').select('venue_id').eq('id', gigId).single()).data?.venue_id)
+    .single();
+
+  // Insert gig outcome with venue info
   const { data: outcome, error: outcomeError } = await supabase
     .from('gig_outcomes')
     .insert({
@@ -159,17 +166,20 @@ export async function executeGigPerformance(data: GigExecutionData) {
       member_skill_avg: memberSkillAverage,
       fame_gained: fameGained,
       chemistry_change: chemistryImpact,
-      merch_items_sold: merchSales.itemsSold
+      merch_items_sold: merchSales.itemsSold,
+      venue_name: venueData?.name,
+      venue_capacity: venueData?.capacity
     })
     .select()
     .single();
 
   if (outcomeError) throw outcomeError;
 
-  // Insert song performances
+  // Insert song performances with song titles
   const songPerfsWithOutcome = songPerformances.map(sp => ({
     gig_outcome_id: outcome.id,
     song_id: sp.song_id,
+    song_title: sp.song_title,
     position: sp.position,
     performance_score: sp.performance_score,
     crowd_response: sp.crowd_response,

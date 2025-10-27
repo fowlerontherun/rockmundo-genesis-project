@@ -1616,7 +1616,9 @@ export type Database = {
           ticket_revenue: number
           total_costs: number
           total_revenue: number
+          venue_capacity: number | null
           venue_cost: number
+          venue_name: string | null
         }
         Insert: {
           actual_attendance: number
@@ -1640,7 +1642,9 @@ export type Database = {
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
+          venue_capacity?: number | null
           venue_cost?: number
+          venue_name?: string | null
         }
         Update: {
           actual_attendance?: number
@@ -1664,7 +1668,9 @@ export type Database = {
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
+          venue_capacity?: number | null
           venue_cost?: number
+          venue_name?: string | null
         }
         Relationships: [
           {
@@ -1718,6 +1724,7 @@ export type Database = {
           rehearsal_contrib: number | null
           song_id: string
           song_quality_contrib: number | null
+          song_title: string | null
         }
         Insert: {
           chemistry_contrib?: number | null
@@ -1733,6 +1740,7 @@ export type Database = {
           rehearsal_contrib?: number | null
           song_id: string
           song_quality_contrib?: number | null
+          song_title?: string | null
         }
         Update: {
           chemistry_contrib?: number | null
@@ -1748,6 +1756,7 @@ export type Database = {
           rehearsal_contrib?: number | null
           song_id?: string
           song_quality_contrib?: number | null
+          song_title?: string | null
         }
         Relationships: [
           {
@@ -4073,8 +4082,10 @@ export type Database = {
           catalog_number: string | null
           created_at: string
           id: string
+          manufacturing_complete_at: string | null
           release_status: string
           release_type: string
+          scheduled_release_date: string | null
           title: string
           total_cost: number | null
           total_revenue: number | null
@@ -4088,8 +4099,10 @@ export type Database = {
           catalog_number?: string | null
           created_at?: string
           id?: string
+          manufacturing_complete_at?: string | null
           release_status?: string
           release_type: string
+          scheduled_release_date?: string | null
           title: string
           total_cost?: number | null
           total_revenue?: number | null
@@ -4103,8 +4116,10 @@ export type Database = {
           catalog_number?: string | null
           created_at?: string
           id?: string
+          manufacturing_complete_at?: string | null
           release_status?: string
           release_type?: string
+          scheduled_release_date?: string | null
           title?: string
           total_cost?: number | null
           total_revenue?: number | null
@@ -6242,6 +6257,12 @@ export type Database = {
       }
     }
     Functions: {
+      auto_complete_manufacturing: {
+        Args: never
+        Returns: {
+          completed_releases: number
+        }[]
+      }
       auto_complete_songwriting_sessions: {
         Args: never
         Returns: {

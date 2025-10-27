@@ -7,12 +7,16 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { CreateReleaseDialog } from "@/components/releases/CreateReleaseDialog";
 import { MyReleasesTab } from "@/components/releases/MyReleasesTab";
 import { ReleaseSalesTab } from "@/components/releases/ReleaseSalesTab";
+import { useAutoReleaseManufacturing } from "@/hooks/useAutoReleaseManufacturing";
 
 export default function ReleaseManager() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const userId = user?.id;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  // Auto-check for completed manufacturing
+  useAutoReleaseManufacturing(userId || null);
 
   if (!userId) {
     return (
