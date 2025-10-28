@@ -35,6 +35,11 @@ import { GameDateWidget } from "@/components/calendar/GameDateWidget";
 import { BirthdayNotification } from "@/components/calendar/BirthdayNotification";
 import { useGameCalendar, useBirthdayCheck } from "@/hooks/useGameCalendar";
 import { useGameNotifications } from "@/hooks/useGameNotifications";
+import { useAutoRecordingCompletion } from "@/hooks/useAutoRecordingCompletion";
+import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
+import { useAutoUniversityAttendance } from "@/hooks/useAutoUniversityAttendance";
+import { useAutoBookReading } from "@/hooks/useAutoBookReading";
+import { useAutoShiftClockOut } from "@/hooks/useAutoShiftClockOut";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 type ProfileActivityStatusRow = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
@@ -179,8 +184,13 @@ const Dashboard = () => {
     error
   } = useGameData();
   
-  // Game notifications hook
+  // Game notifications and auto-completion hooks
   useGameNotifications(profile?.user_id || null);
+  useAutoRecordingCompletion(profile?.user_id || null);
+  useAutoRehearsalCompletion(profile?.user_id || null);
+  useAutoUniversityAttendance(profile?.user_id || null);
+  useAutoBookReading(profile?.user_id || null);
+  useAutoShiftClockOut(profile?.user_id || null);
   
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
   const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
