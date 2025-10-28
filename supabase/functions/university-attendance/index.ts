@@ -181,14 +181,14 @@ serve(async (req) => {
           newRequiredXp = Math.floor(newRequiredXp * 1.5);
         }
 
-        await supabaseClient.from("skill_progress").insert({
+        await supabaseClient.from("skill_progress").upsert({
           profile_id: enrollment.profile_id,
           skill_slug: course.skill_slug,
           current_xp: newCurrentXp,
           current_level: newLevel,
           required_xp: newRequiredXp,
           last_practiced_at: now.toISOString(),
-        });
+        }, { onConflict: 'profile_id,skill_slug' });
       }
 
       // Update player profile XP and log to experience ledger
