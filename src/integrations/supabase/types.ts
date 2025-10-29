@@ -1712,6 +1712,7 @@ export type Database = {
       gig_song_performances: {
         Row: {
           chemistry_contrib: number | null
+          completed_at: string | null
           created_at: string | null
           crew_contrib: number | null
           crowd_response: string
@@ -1725,9 +1726,11 @@ export type Database = {
           song_id: string
           song_quality_contrib: number | null
           song_title: string | null
+          started_at: string | null
         }
         Insert: {
           chemistry_contrib?: number | null
+          completed_at?: string | null
           created_at?: string | null
           crew_contrib?: number | null
           crowd_response: string
@@ -1741,9 +1744,11 @@ export type Database = {
           song_id: string
           song_quality_contrib?: number | null
           song_title?: string | null
+          started_at?: string | null
         }
         Update: {
           chemistry_contrib?: number | null
+          completed_at?: string | null
           created_at?: string | null
           crew_contrib?: number | null
           crowd_response?: string
@@ -1757,6 +1762,7 @@ export type Database = {
           song_id?: string
           song_quality_contrib?: number | null
           song_title?: string | null
+          started_at?: string | null
         }
         Relationships: [
           {
@@ -1786,7 +1792,9 @@ export type Database = {
         Row: {
           attendance: number | null
           band_id: string
+          completed_at: string | null
           created_at: string | null
+          current_song_position: number | null
           estimated_attendance: number | null
           estimated_revenue: number | null
           fan_gain: number | null
@@ -1794,11 +1802,13 @@ export type Database = {
           payment: number | null
           pre_gig_forecast: Json | null
           scheduled_date: string
+          setlist_duration_minutes: number | null
           setlist_id: string | null
           show_type: string | null
           slot_attendance_multiplier: number | null
           slot_end_time: string | null
           slot_start_time: string | null
+          started_at: string | null
           status: string | null
           ticket_price: number | null
           time_slot: string | null
@@ -1808,7 +1818,9 @@ export type Database = {
         Insert: {
           attendance?: number | null
           band_id: string
+          completed_at?: string | null
           created_at?: string | null
+          current_song_position?: number | null
           estimated_attendance?: number | null
           estimated_revenue?: number | null
           fan_gain?: number | null
@@ -1816,11 +1828,13 @@ export type Database = {
           payment?: number | null
           pre_gig_forecast?: Json | null
           scheduled_date: string
+          setlist_duration_minutes?: number | null
           setlist_id?: string | null
           show_type?: string | null
           slot_attendance_multiplier?: number | null
           slot_end_time?: string | null
           slot_start_time?: string | null
+          started_at?: string | null
           status?: string | null
           ticket_price?: number | null
           time_slot?: string | null
@@ -1830,7 +1844,9 @@ export type Database = {
         Update: {
           attendance?: number | null
           band_id?: string
+          completed_at?: string | null
           created_at?: string | null
+          current_song_position?: number | null
           estimated_attendance?: number | null
           estimated_revenue?: number | null
           fan_gain?: number | null
@@ -1838,11 +1854,13 @@ export type Database = {
           payment?: number | null
           pre_gig_forecast?: Json | null
           scheduled_date?: string
+          setlist_duration_minutes?: number | null
           setlist_id?: string | null
           show_type?: string | null
           slot_attendance_multiplier?: number | null
           slot_end_time?: string | null
           slot_start_time?: string | null
+          started_at?: string | null
           status?: string | null
           ticket_price?: number | null
           time_slot?: string | null
@@ -6266,6 +6284,7 @@ export type Database = {
       }
     }
     Functions: {
+      advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
       auto_complete_manufacturing: {
         Args: never
         Returns: {
@@ -6278,6 +6297,11 @@ export type Database = {
           completed_sessions: number
           converted_projects: number
         }[]
+      }
+      auto_start_scheduled_gigs: { Args: never; Returns: undefined }
+      calculate_setlist_duration: {
+        Args: { p_setlist_id: string }
+        Returns: number
       }
       calculate_songwriting_progress: {
         Args: {

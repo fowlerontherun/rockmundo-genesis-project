@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign } from 'lucide-react';
-import { LiveGigPerformance } from '@/components/gig/LiveGigPerformance';
+import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
-import { executeGigPerformance } from '@/utils/gigExecution';
+import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import type { Database } from '@/lib/supabase-types';
 import { format } from 'date-fns';
 
@@ -30,7 +30,6 @@ export default function PerformGig() {
   const [equipmentCount, setEquipmentCount] = useState(0);
   const [crewCount, setCrewCount] = useState(0);
   const [bandChemistry, setBandChemistry] = useState(0);
-  const [isPerforming, setIsPerforming] = useState(false);
   const [showOutcome, setShowOutcome] = useState(false);
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -129,59 +128,13 @@ export default function PerformGig() {
     loadGig();
   }, [loadGig]);
 
-  const handlePerformanceComplete = async (performances: any[]) => {
-    if (!gig || !gig.setlist_id) return;
+  // Use realtime gig advancement
+  const isGigInProgress = gig?.status === 'in_progress' || gig?.status === 'ready_for_completion';
+  useRealtimeGigAdvancement(gigId || null, isGigInProgress && !showOutcome);
 
-    setIsPerforming(true);
-
-    try {
-      const result = await executeGigPerformance({
-        gigId: gig.id,
-        bandId: gig.band_id,
-        setlistId: gig.setlist_id,
-        venueCapacity: gig.venues?.capacity || 100,
-        ticketPrice: gig.ticket_price || 20
-      });
-
-      // Transform outcome for display
-      const transformedOutcome = {
-        ...result.outcome,
-        gig_song_performances: result.songPerformances.map((sp: any) => ({
-          ...sp,
-          songs: { title: sp.song_title }
-        })),
-        breakdown_data: {
-          equipment_quality: result.outcome.equipment_quality_avg || 0,
-          crew_skill: result.outcome.crew_skill_avg || 0,
-          band_chemistry: result.outcome.band_chemistry_level || 0,
-          member_skills: result.outcome.member_skill_avg || 0,
-          merch_items_sold: result.outcome.merch_items_sold || 0
-        },
-        chemistry_impact: result.outcome.chemistry_change || 0,
-        equipment_wear_cost: result.outcome.equipment_cost || 0
-      };
-
-      setOutcome(transformedOutcome);
-      setShowOutcome(true);
-
-      toast({
-        title: "Performance Complete!",
-        description: `You earned $${result.netProfit.toLocaleString()} and gained ${result.fameGained} fame!`
-      });
-    } catch (error) {
-      console.error('Error executing gig:', error);
-      toast({
-        title: "Error",
-        description: "Failed to complete gig performance",
-        variant: "destructive"
-      });
-    } finally {
-      setIsPerforming(false);
-    }
-  };
-
-  const handleCancel = () => {
-    navigate('/gig-booking');
+  const handleGigComplete = async () => {
+    // Reload to show outcome
+    await loadGig();
   };
 
   if (loading) {
@@ -320,26 +273,12 @@ export default function PerformGig() {
         />
       )}
 
-      {/* Performance */}
-      {!isPerforming && setlistSongs.length > 0 && (
-        <LiveGigPerformance
-          songs={setlistSongs.map(s => ({
-            id: s.song_id,
-            title: s.songs?.title || 'Unknown Song',
-            quality_score: s.songs?.quality_score || 50
-          }))}
-          onComplete={handlePerformanceComplete}
-          onCancel={handleCancel}
+      {/* Real-time Performance Viewer */}
+      {setlistSongs.length > 0 && !showOutcome && (
+        <RealtimeGigViewer
+          gigId={gig.id}
+          onComplete={handleGigComplete}
         />
-      )}
-
-      {isPerforming && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-lg font-semibold">Processing performance results...</p>
-          </CardContent>
-        </Card>
       )}
     </div>
   );
