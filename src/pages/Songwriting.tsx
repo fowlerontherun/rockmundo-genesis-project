@@ -1292,14 +1292,33 @@ const Songwriting = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Explore something new</SelectItem>
-                          {availableGenres.map((genre) => (
-                            <SelectItem key={genre} value={genre}>
-                              {genre}
-                            </SelectItem>
-                          ))}
+                          {MUSIC_GENRES.map((genre) => {
+                            const isUnlocked = canWriteGenre(genre, skills || {});
+                            const genreSkillSlug = getGenreSkillSlug(genre, 'basic');
+                            const skillLevel = genreSkillSlug ? (skills?.[genreSkillSlug] || 0) : 0;
+                            return (
+                              <SelectItem 
+                                key={genre} 
+                                value={genre}
+                                disabled={!isUnlocked}
+                              >
+                                {genre} {isUnlocked ? '✓' : `🔒 (Need level 10, currently ${skillLevel})`}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       {formErrors.genre && <p className="text-sm text-destructive">{formErrors.genre}</p>}
+                      {availableGenres.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Learn genre skills through University, Books, or Mentors to unlock songwriting genres.
+                        </p>
+                      )}
+                      {availableGenres.length > 0 && availableGenres.length < MUSIC_GENRES.length && (
+                        <p className="text-xs text-muted-foreground">
+                          {availableGenres.length} of {MUSIC_GENRES.length} genres unlocked. Learn more through University!
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">

@@ -73,7 +73,13 @@ WHERE slug LIKE 'genres_%';
 
 Expected: ~84-93 total genre skills (28-31 per tier)
 
-## Migration Applied
-- Migration ID: `20251028-060406-083977`
-- Tables modified: `skill_definitions`, `skill_parent_links`
-- Status: ✅ Deployed and Active
+## Migrations Applied
+1. **Genre Skills Population** - `20251028-060406-083977`
+   - Tables modified: `skill_definitions`, `skill_parent_links`
+   - Status: ✅ Deployed and Active
+
+2. **Duplicate Cleanup & Constraint** - `20251029-[timestamp]`
+   - Removed duplicate skill progress entries
+   - Added unique constraint: `skill_progress_profile_skill_unique`
+   - Prevents future duplicates at database level
+   - Status: ✅ Deployed and Active
