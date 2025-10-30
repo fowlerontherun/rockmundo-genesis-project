@@ -33,7 +33,7 @@ export function canStartSongwriting(skillLevels: Record<string, number>): boolea
 export function canWriteGenre(genre: string, skillLevels: Record<string, number>): boolean {
   const genreSkillSlug = getGenreSkillSlug(genre, 'basic');
   if (!genreSkillSlug) return false;
-  return (skillLevels[genreSkillSlug] || 0) >= 10;
+  return (skillLevels[genreSkillSlug] || 0) >= 1;
 }
 
 // Determine skill ceiling based on tier unlocks

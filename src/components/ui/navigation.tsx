@@ -52,7 +52,7 @@ const Navigation = () => {
 
   const navSections = [
     {
-      title: "🏠 Home & Character",
+      title: "🏠 Home",
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: User, label: "My Character", path: "/my-character" },
@@ -60,37 +60,36 @@ const Navigation = () => {
       ],
     },
     {
-      title: "🎵 Music Creation",
+      title: "🎵 Music",
       items: [
         { icon: Music, label: "Music Hub", path: "/music" },
         { icon: GraduationCap, label: "Education", path: "/education" },
       ],
     },
     {
-      title: "🎤 Live Performance",
+      title: "🎤 Performance",
       items: [
-        { icon: Mic, label: "Performance Hub", path: "/performance" },
-        { icon: Calendar, label: "Gig Booking", path: "/gigs" },
+        { icon: Mic, label: "Performance", path: "/performance" },
+        { icon: Calendar, label: "Gigs", path: "/gigs" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: Award, label: "Awards", path: "/awards" },
-        { icon: Settings, label: "Stage Setup", path: "/stage-setup" },
       ],
     },
     {
-      title: "🌍 World & Travel",
+      title: "🌍 World",
       items: [
-        { icon: Globe, label: "Cities Explorer", path: "/cities" },
-        { icon: Plane, label: "Travel Planner", path: "/travel" },
+        { icon: Globe, label: "Cities", path: "/cities" },
+        { icon: Plane, label: "Travel", path: "/travel" },
         { icon: Building2, label: "Current City", path: cityOverviewPath },
       ],
     },
     {
-      title: "👥 Band & Community",
+      title: "👥 Social",
       items: [
-        { icon: Users, label: "Band Manager", path: "/band" },
-        { icon: Megaphone, label: "Public Relations", path: "/pr" },
-        { icon: Share2, label: "Social Media", path: "/social" },
+        { icon: Users, label: "Band", path: "/band" },
+        { icon: Megaphone, label: "PR", path: "/pr" },
+        { icon: Share2, label: "Social", path: "/social" },
       ],
     },
     {
@@ -99,15 +98,14 @@ const Navigation = () => {
         { icon: Briefcase, label: "Employment", path: "/employment" },
         { icon: DollarSign, label: "Finances", path: "/finances" },
         { icon: Store, label: "Inventory", path: "/inventory" },
-        { icon: ShoppingCart, label: "Merchandise", path: "/merchandise" },
-        { icon: DollarSign, label: "Underworld", path: "/underworld" },
-        { icon: Building2, label: "Venue Management", path: "/venues" },
+        { icon: ShoppingCart, label: "Merch", path: "/merchandise" },
+        { icon: Building2, label: "Venues", path: "/venues" },
       ],
     },
     {
-      title: "⚙️ Administration",
+      title: "⚙️ Admin",
       items: [
-        { icon: Settings, label: "Admin Panel", path: "/admin" },
+        { icon: Settings, label: "Admin", path: "/admin" },
       ],
     },
   ];

@@ -54,6 +54,6 @@ export function hasGenreSkill(
   const skillSlug = getGenreSkillSlug(genre, tier);
   if (!skillSlug) return false;
   
-  const requiredLevel = tier === 'basic' ? 10 : tier === 'professional' ? 50 : 100;
+  const requiredLevel = tier === 'basic' ? 1 : tier === 'professional' ? 50 : 100;
   return (skillLevels[skillSlug] || 0) >= requiredLevel;
 }

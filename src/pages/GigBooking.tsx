@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useGameData } from '@/hooks/useGameData';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog } from '@/components/gig/GigBookingDialog';
+import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { getSlotById, getSlotBadgeVariant } from '@/utils/gigSlots';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
@@ -426,14 +428,13 @@ const GigBooking = () => {
                             {gig.payment ? `$${gig.payment.toLocaleString()}` : 'Payment TBD'}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={status === 'completed' ? 'default' : 'secondary'} className="capitalize">
-                            {status}
-                          </Badge>
-                          <Button asChild size="sm" variant="default">
-                            <Link to={`/gigs/perform/${gig.id}`}>Perform</Link>
-                          </Button>
-                        </div>
+                        <Badge variant={
+                          status === 'completed' ? 'default' : 
+                          status === 'in_progress' ? 'default' : 
+                          'secondary'
+                        } className="capitalize">
+                          {status === 'in_progress' ? 'Live Now' : status}
+                        </Badge>
                       </div>
                     );
                   })
@@ -453,20 +454,27 @@ const GigBooking = () => {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <MapPin className="h-5 w-5 text-primary" />
-            Available Venues
-          </CardTitle>
-          <CardDescription>
-            Choose a venue that fits your level. We'll automatically schedule the next available slot.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {venues.length ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {venues.map((venue) => (
+      <Tabs defaultValue="venues" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="venues">Available Venues</TabsTrigger>
+          <TabsTrigger value="history">Gig History</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="venues">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MapPin className="h-5 w-5 text-primary" />
+                Available Venues
+              </CardTitle>
+              <CardDescription>
+                Choose a venue that fits your level. We'll automatically schedule the next available slot.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {venues.length ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {venues.map((venue) => (
                 <Card key={venue.id} className="border-border">
                   <CardHeader className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -519,8 +527,22 @@ const GigBooking = () => {
               No venues are currently available. Check back soon.
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          {band ? (
+            <GigHistoryTab bandId={band.id} />
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">Join or create a band to view gig history</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {bookingVenue && setlists && band && (
         <GigBookingDialog

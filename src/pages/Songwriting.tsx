@@ -1302,7 +1302,7 @@ const Songwriting = () => {
                                 value={genre}
                                 disabled={!isUnlocked}
                               >
-                                {genre} {isUnlocked ? '✓' : `🔒 (Need level 10, currently ${skillLevel})`}
+                                {genre} {isUnlocked ? '✓' : `🔒 (Need level 1, currently ${skillLevel})`}
                               </SelectItem>
                             );
                           })}
