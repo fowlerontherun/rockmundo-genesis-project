@@ -21,10 +21,7 @@ Deno.serve(async (req) => {
     // Find active work shifts that have ended
     const { data: activeShifts, error: shiftsError } = await supabaseClient
       .from('profile_activity_statuses')
-      .select(`
-        *,
-        shift_history!inner(*)
-      `)
+      .select('*')
       .eq('activity_type', 'work_shift')
       .eq('status', 'active')
       .lt('ends_at', now);
