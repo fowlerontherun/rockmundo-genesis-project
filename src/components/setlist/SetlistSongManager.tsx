@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useSetlistSongs,
@@ -17,7 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, Trash2, Music, Clock } from "lucide-react";
+import { Plus, GripVertical, Trash2, Music, Clock, Star } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { calculateSetlistDuration, formatDuration } from "@/utils/setlistDuration";
 import {
   Select,
@@ -39,9 +40,27 @@ export const SetlistSongManager = ({
   onClose,
 }: SetlistSongManagerProps) => {
   const [selectedSongId, setSelectedSongId] = useState<string>("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: setlistSongs, isLoading } = useSetlistSongs(setlistId);
   const addSongMutation = useAddSongToSetlist();
   const removeSongMutation = useRemoveSongFromSetlist();
+
+  const toggleEncoreMutation = useMutation({
+    mutationFn: async ({ songId, isEncore }: { songId: string; isEncore: boolean }) => {
+      const { error } = await supabase
+        .from("setlist_songs")
+        .update({ is_encore: isEncore })
+        .eq("setlist_id", setlistId)
+        .eq("song_id", songId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
+      toast({ title: "Encore status updated" });
+    },
+  });
 
   const { data: availableSongs } = useQuery({
     queryKey: ["band-songs", bandId],
@@ -100,7 +119,12 @@ export const SetlistSongManager = ({
     removeSongMutation.mutate({ setlistId, songId });
   };
 
+  const handleToggleEncore = (songId: string, currentEncore: boolean) => {
+    toggleEncoreMutation.mutate({ songId, isEncore: !currentEncore });
+  };
+
   const songCount = setlistSongs?.length || 0;
+  const encoreCount = setlistSongs?.filter(ss => ss.is_encore).length || 0;
 
   const totalDuration = useMemo(() => {
     if (!setlistSongs) return null;
@@ -115,26 +139,30 @@ export const SetlistSongManager = ({
         <DialogHeader>
           <DialogTitle>Manage Setlist Songs</DialogTitle>
           <DialogDescription>
-            Add or remove songs from your setlist (minimum 6 required for gigs)
+            Add songs and mark up to 2 as encore. Setlist duration determines slot eligibility.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={songCount >= 6 ? "default" : "secondary"}>
+            <Badge variant="default">
               {songCount} {songCount === 1 ? "song" : "songs"}
             </Badge>
             {totalDuration && (
               <Badge variant="outline" className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {totalDuration.displayTime} total
+                {totalDuration.displayTime}
               </Badge>
             )}
-            {songCount < 6 && (
-              <span className="text-sm text-muted-foreground">
-                Add {6 - songCount} more to book gigs
-              </span>
+            {encoreCount > 0 && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Star className="h-3 w-3" />
+                {encoreCount} encore
+              </Badge>
             )}
+            <span className="text-xs text-muted-foreground">
+              Kids/Opening: 30min • Support: 45min • Headline: 75min
+            </span>
           </div>
 
           <div className="flex gap-2">
@@ -180,13 +208,21 @@ export const SetlistSongManager = ({
                 {setlistSongs?.map((ss, index) => (
                   <div
                     key={ss.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      ss.is_encore ? 'bg-primary/5 border-primary/20' : 'bg-card hover:bg-accent'
+                    }`}
                   >
                     <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
                     <div className="flex-1">
                       <div className="flex items-baseline gap-2">
                         <span className="font-medium">{index + 1}.</span>
                         <span className="font-medium">{ss.songs?.title || "Unknown Song"}</span>
+                        {ss.is_encore && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Star className="h-3 w-3 mr-1" />
+                            Encore
+                          </Badge>
+                        )}
                         {ss.songs?.duration_display && (
                           <Badge variant="outline" className="text-xs">
                             <Clock className="h-3 w-3 mr-1" />
@@ -203,6 +239,15 @@ export const SetlistSongManager = ({
                         </div>
                       )}
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleEncore(ss.song_id, ss.is_encore || false)}
+                      disabled={toggleEncoreMutation.isPending || (!ss.is_encore && encoreCount >= 2)}
+                      title={!ss.is_encore && encoreCount >= 2 ? "Maximum 2 encore songs" : "Mark as encore"}
+                    >
+                      <Star className={`h-4 w-4 ${ss.is_encore ? 'fill-current' : ''}`} />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

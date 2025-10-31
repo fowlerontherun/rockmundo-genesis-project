@@ -1808,6 +1808,7 @@ export type Database = {
           slot_attendance_multiplier: number | null
           slot_end_time: string | null
           slot_start_time: string | null
+          slot_type: string | null
           started_at: string | null
           status: string | null
           ticket_price: number | null
@@ -1834,6 +1835,7 @@ export type Database = {
           slot_attendance_multiplier?: number | null
           slot_end_time?: string | null
           slot_start_time?: string | null
+          slot_type?: string | null
           started_at?: string | null
           status?: string | null
           ticket_price?: number | null
@@ -1860,6 +1862,7 @@ export type Database = {
           slot_attendance_multiplier?: number | null
           slot_end_time?: string | null
           slot_start_time?: string | null
+          slot_type?: string | null
           started_at?: string | null
           status?: string | null
           ticket_price?: number | null
@@ -4322,6 +4325,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          is_encore: boolean | null
           notes: string | null
           position: number
           setlist_id: string
@@ -4330,6 +4334,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          is_encore?: boolean | null
           notes?: string | null
           position: number
           setlist_id: string
@@ -4338,6 +4343,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          is_encore?: boolean | null
           notes?: string | null
           position?: number
           setlist_id?: string
@@ -6315,6 +6321,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_setlist_total_duration: {
+        Args: { p_setlist_id: string }
+        Returns: number
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -6329,6 +6339,10 @@ export type Database = {
       increment_release_revenue: {
         Args: { amount: number; release_id: string }
         Returns: undefined
+      }
+      validate_setlist_for_slot: {
+        Args: { p_setlist_id: string; p_slot_type: string }
+        Returns: Json
       }
     }
     Enums: {

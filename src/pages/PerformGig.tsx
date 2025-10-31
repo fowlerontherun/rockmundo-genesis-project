@@ -3,14 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign } from 'lucide-react';
+import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle } from 'lucide-react';
 import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
+import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
 import { format } from 'date-fns';
 
@@ -128,6 +129,8 @@ export default function PerformGig() {
     loadGig();
   }, [loadGig]);
 
+  const startGigMutation = useManualGigStart();
+
   // Use realtime gig advancement
   const isGigInProgress = gig?.status === 'in_progress' || gig?.status === 'ready_for_completion';
   useRealtimeGigAdvancement(gigId || null, isGigInProgress && !showOutcome);
@@ -135,6 +138,12 @@ export default function PerformGig() {
   const handleGigComplete = async () => {
     // Reload to show outcome
     await loadGig();
+  };
+
+  const handleStartGig = () => {
+    if (gigId) {
+      startGigMutation.mutate(gigId);
+    }
   };
 
   if (loading) {
@@ -251,8 +260,13 @@ export default function PerformGig() {
             <Badge variant="outline">
               {setlistSongs.length} songs in setlist
             </Badge>
-            <Badge variant="default">
-              {gig.status}
+            <Badge variant={
+              gig.status === 'in_progress' ? 'default' :
+              gig.status === 'completed' ? 'secondary' :
+              gig.status === 'cancelled' ? 'destructive' :
+              'outline'
+            }>
+              {gig.status === 'in_progress' ? '🔴 Live Now' : gig.status}
             </Badge>
           </div>
         </CardContent>
@@ -273,8 +287,31 @@ export default function PerformGig() {
         />
       )}
 
-      {/* Real-time Performance Viewer */}
-      {setlistSongs.length > 0 && !showOutcome && (
+      {/* Start Gig Button - shown when gig is scheduled and time has passed */}
+      {gig.status === 'scheduled' && new Date(gig.scheduled_date) <= new Date() && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ready to Perform</CardTitle>
+            <CardDescription>
+              Your gig is scheduled to start. Click below to begin the performance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleStartGig}
+              disabled={startGigMutation.isPending}
+              className="w-full"
+              size="lg"
+            >
+              <PlayCircle className="mr-2 h-5 w-5" />
+              Start Performance
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Real-time Performance Viewer - shown when gig is in progress */}
+      {gig.status === 'in_progress' && setlistSongs.length > 0 && !showOutcome && (
         <RealtimeGigViewer
           gigId={gig.id}
           onComplete={handleGigComplete}

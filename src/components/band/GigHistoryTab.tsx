@@ -41,7 +41,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
     // Fetch song performances for this gig
     const { data: songPerfs } = await supabase
       .from('gig_song_performances')
-      .select('*, songs(title, genre)')
+      .select('*, songs(title, genre, duration_seconds)')
       .eq('gig_outcome_id', outcome.id)
       .order('position');
 
