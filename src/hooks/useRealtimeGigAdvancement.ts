@@ -25,6 +25,16 @@ export const useRealtimeGigAdvancement = (gigId: string | null, enabled: boolean
     if (currentPosition >= setlistSongs.length) {
       // All songs completed - finalize the gig
       console.log('All songs completed, finalizing gig');
+      
+      const { error: completeError } = await supabase.functions.invoke('complete-gig', {
+        body: { gigId: gig.id }
+      });
+
+      if (completeError) {
+        console.error('Error completing gig:', completeError);
+      } else {
+        console.log('Gig completed successfully');
+      }
       return;
     }
 
