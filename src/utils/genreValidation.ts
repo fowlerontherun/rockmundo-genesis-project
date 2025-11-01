@@ -55,5 +55,11 @@ export function hasGenreSkill(
   if (!skillSlug) return false;
   
   const requiredLevel = tier === 'basic' ? 1 : tier === 'professional' ? 50 : 100;
-  return (skillLevels[skillSlug] || 0) >= requiredLevel;
+  
+  // Check new format
+  if ((skillLevels[skillSlug] || 0) >= requiredLevel) return true;
+  
+  // Check legacy format (basic_*, professional_*, mastery_*)
+  const legacySlug = skillSlug.replace(`genres_${tier}_`, `${tier}_`);
+  return (skillLevels[legacySlug] || 0) >= requiredLevel;
 }

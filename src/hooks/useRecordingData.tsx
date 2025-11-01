@@ -60,7 +60,7 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
     queryKey: ['recording-producers', genreFilter, tierFilter],
     queryFn: async () => {
       let query = supabase
-        .from('recording_producers' as any)
+        .from('recording_producers')
         .select('*')
         .order('tier', { ascending: false })
         .order('quality_bonus', { ascending: false });
@@ -75,8 +75,11 @@ export const useRecordingProducers = (genreFilter?: string, tierFilter?: string)
 
       const { data, error } = await query;
       
-      if (error) throw error;
-      return data as any as RecordingProducer[];
+      if (error) {
+        console.error('Error fetching producers:', error);
+        throw error;
+      }
+      return (data || []) as RecordingProducer[];
     },
   });
 };
@@ -86,7 +89,7 @@ export const useRecordingSessions = (userId: string) => {
     queryKey: ['recording-sessions', userId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('recording_sessions' as any)
+        .from('recording_sessions')
         .select(`
           *,
           city_studios (name, quality_rating),
@@ -96,8 +99,11 @@ export const useRecordingSessions = (userId: string) => {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching recording sessions:', error);
+        throw error;
+      }
+      return data || [];
     },
   });
 };
@@ -253,7 +259,7 @@ export const useCreateRecordingSession = () => {
 
       // Create recording session
       const { data: session, error: sessionError } = await supabase
-        .from('recording_sessions' as any)
+        .from('recording_sessions')
         .insert({
           user_id: input.user_id,
           band_id: input.band_id || null,
@@ -312,16 +318,17 @@ export const useCompleteRecordingSession = () => {
     mutationFn: async (sessionId: string) => {
       // Get session data
       const { data: session, error: fetchError } = await supabase
-        .from('recording_sessions' as any)
-        .select('song_id, quality_after')
+        .from('recording_sessions')
+        .select('song_id, quality_improvement')
         .eq('id', sessionId)
-        .single() as any;
+        .single();
 
       if (fetchError) throw fetchError;
+      if (!session) throw new Error('Session not found');
 
       // Update session status
       const { error: updateError } = await supabase
-        .from('recording_sessions' as any)
+        .from('recording_sessions')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
@@ -331,10 +338,11 @@ export const useCompleteRecordingSession = () => {
       if (updateError) throw updateError;
 
       // Update song quality and status to 'recorded'
+      const qualityImprovement = session.quality_improvement || 0;
       const { error: songError } = await supabase
         .from('songs')
         .update({ 
-          quality_score: session.quality_after,
+          quality_score: qualityImprovement,
           status: 'recorded'
         })
         .eq('id', session.song_id);
