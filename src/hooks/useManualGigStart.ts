@@ -11,7 +11,7 @@ export const useManualGigStart = () => {
       // Check if gig is already started
       const { data: gig } = await supabase
         .from("gigs")
-        .select("status, started_at, scheduled_date")
+        .select("status, started_at, scheduled_date, setlist_id")
         .eq("id", gigId)
         .single();
 
@@ -21,12 +21,21 @@ export const useManualGigStart = () => {
         return { success: true, message: "Gig already in progress" };
       }
 
+      if (gig.status === "completed") {
+        return { success: true, message: "Gig already completed" };
+      }
+
+      if (!gig.setlist_id) {
+        throw new Error("Gig has no setlist assigned");
+      }
+
       // Start the gig
       const { error } = await supabase
         .from("gigs")
         .update({
           status: "in_progress",
           started_at: new Date().toISOString(),
+          current_song_position: 0,
         })
         .eq("id", gigId);
 
