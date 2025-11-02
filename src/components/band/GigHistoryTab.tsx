@@ -30,11 +30,13 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           )
         `)
         .eq('gigs.band_id', bandId)
+        .not('completed_at', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
     },
+    refetchInterval: 5000, // Refetch every 5 seconds to catch newly completed gigs
   });
 
   const handleViewDetails = async (outcome: any) => {

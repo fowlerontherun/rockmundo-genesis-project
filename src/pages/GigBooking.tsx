@@ -16,6 +16,7 @@ import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog } from '@/components/gig/GigBookingDialog';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { getSlotById, getSlotBadgeVariant } from '@/utils/gigSlots';
+import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -39,6 +40,9 @@ const GigBooking = () => {
   const [isBooking, setIsBooking] = useState(false);
 
   const { data: setlists } = useSetlists(band?.id || null);
+  
+  // Auto-start gigs that are past their scheduled time
+  useAutoGigStart();
 
   const performanceSkill = skills?.performance ?? 0;
   const stagePresence = attributes?.stage_presence ?? 0;
@@ -125,7 +129,7 @@ const GigBooking = () => {
         venues:venues!gigs_venue_id_fkey (*)
       `)
       .eq('band_id', bandId)
-      .gte('scheduled_date', new Date().toISOString())
+      .in('status', ['scheduled', 'in_progress'])
       .order('scheduled_date', { ascending: true });
 
     if (error) {
@@ -161,7 +165,16 @@ const GigBooking = () => {
 
   useEffect(() => {
     void loadData();
-  }, [loadData]);
+    
+    // Reload gigs every 10 seconds to catch status changes
+    const interval = setInterval(() => {
+      if (band?.id) {
+        loadUpcomingGigs(band.id);
+      }
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [loadData, band?.id, loadUpcomingGigs]);
 
   const getNextGigDate = useCallback(() => {
     const now = new Date();
@@ -393,49 +406,60 @@ const GigBooking = () => {
                     const status = gig.status ?? 'scheduled';
 
                     return (
-                      <div
-                        key={gig.id}
-                        className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm font-semibold">
-                            <Music className="h-4 w-4 text-primary" />
-                            {venue?.name ?? 'Unassigned Venue'}
-                            {gig.time_slot && (
-                              <Badge variant={getSlotBadgeVariant(gig.time_slot)}>
-                                {getSlotById(gig.time_slot)?.name || gig.time_slot}
-                              </Badge>
+                        <div
+                          key={gig.id}
+                          className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm font-semibold">
+                              <Music className="h-4 w-4 text-primary" />
+                              {venue?.name ?? 'Unassigned Venue'}
+                              {gig.time_slot && (
+                                <Badge variant={getSlotBadgeVariant(gig.time_slot)}>
+                                  {getSlotById(gig.time_slot)?.name || gig.time_slot}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="h-4 w-4" />
+                              {scheduledDate.toLocaleDateString()}
+                            </div>
+                            {gig.slot_start_time && gig.slot_end_time && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-4 w-4" />
+                                {gig.slot_start_time} - {gig.slot_end_time}
+                              </div>
+                            )}
+                            {venue?.location ? (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <MapPin className="h-4 w-4" />
+                                {venue.location}
+                              </div>
+                            ) : null}
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <DollarSign className="h-4 w-4" />
+                              {gig.payment ? `$${gig.payment.toLocaleString()}` : 'Payment TBD'}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Badge variant={
+                              status === 'completed' ? 'default' : 
+                              status === 'in_progress' ? 'default' : 
+                              'secondary'
+                            } className="capitalize">
+                              {status === 'in_progress' ? 'Live Now' : status}
+                            </Badge>
+                            {(status === 'scheduled' || status === 'in_progress') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/gigs/perform/${gig.id}`)}
+                              >
+                                {status === 'in_progress' ? 'Watch Live' : 'View Details'}
+                              </Button>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            {scheduledDate.toLocaleDateString()}
-                          </div>
-                          {gig.slot_start_time && gig.slot_end_time && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Clock className="h-4 w-4" />
-                              {gig.slot_start_time} - {gig.slot_end_time}
-                            </div>
-                          )}
-                          {venue?.location ? (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <MapPin className="h-4 w-4" />
-                              {venue.location}
-                            </div>
-                          ) : null}
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <DollarSign className="h-4 w-4" />
-                            {gig.payment ? `$${gig.payment.toLocaleString()}` : 'Payment TBD'}
-                          </div>
                         </div>
-                        <Badge variant={
-                          status === 'completed' ? 'default' : 
-                          status === 'in_progress' ? 'default' : 
-                          'secondary'
-                        } className="capitalize">
-                          {status === 'in_progress' ? 'Live Now' : status}
-                        </Badge>
-                      </div>
                     );
                   })
                 ) : (

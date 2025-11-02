@@ -40,6 +40,8 @@ import { useAutoRehearsalCompletion } from "@/hooks/useAutoRehearsalCompletion";
 import { useAutoUniversityAttendance } from "@/hooks/useAutoUniversityAttendance";
 import { useAutoBookReading } from "@/hooks/useAutoBookReading";
 import { useAutoShiftClockOut } from "@/hooks/useAutoShiftClockOut";
+import { useAutoGigStart } from "@/hooks/useAutoGigStart";
+import { useGigNotifications } from "@/hooks/useGigNotifications";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 type ProfileActivityStatusRow = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
@@ -191,6 +193,8 @@ const Dashboard = () => {
   useAutoUniversityAttendance(profile?.user_id || null);
   useAutoBookReading(profile?.user_id || null);
   useAutoShiftClockOut(profile?.user_id || null);
+  useAutoGigStart();
+  useGigNotifications();
   
   const [birthCityLabel, setBirthCityLabel] = useState<string | null>(null);
   const [activeChatTab, setActiveChatTab] = useState<ChatScope>("general");
