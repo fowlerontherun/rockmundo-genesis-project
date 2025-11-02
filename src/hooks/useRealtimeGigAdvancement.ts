@@ -96,47 +96,19 @@ export const useRealtimeGigAdvancement = (gigId: string | null, enabled: boolean
           songs = setlistData || [];
         }
 
-        // Get or create outcome
+        // Get outcome (should be created by trigger when gig starts)
         if (!outcomeId) {
           const { data: existingOutcome } = await supabase
             .from('gig_outcomes')
-            .select('id, actual_attendance')
+            .select('id')
             .eq('gig_id', gig.id)
             .maybeSingle();
 
           if (existingOutcome) {
             outcomeId = existingOutcome.id;
           } else {
-            // Create initial outcome
-            const { data: venue } = await supabase
-              .from('venues')
-              .select('capacity')
-              .eq('id', gig.venue_id)
-              .single();
-
-            const venueCapacity = venue?.capacity || 100;
-            const actualAttendance = Math.floor(venueCapacity * (0.6 + Math.random() * 0.3));
-
-            const { data: newOutcome } = await supabase
-              .from('gig_outcomes')
-              .insert({
-                gig_id: gig.id,
-                actual_attendance: actualAttendance,
-                attendance_percentage: (actualAttendance / venueCapacity) * 100,
-                ticket_revenue: actualAttendance * (gig.ticket_price || 20),
-                merch_revenue: 0,
-                total_revenue: actualAttendance * (gig.ticket_price || 20),
-                venue_cost: 0,
-                crew_cost: 0,
-                equipment_cost: 0,
-                total_costs: 0,
-                net_profit: actualAttendance * (gig.ticket_price || 20),
-                overall_rating: 0
-              })
-              .select()
-              .single();
-
-            outcomeId = newOutcome?.id || null;
+            console.error('No outcome found for gig:', gig.id);
+            return;
           }
         }
 

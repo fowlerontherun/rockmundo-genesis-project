@@ -24,7 +24,7 @@ serve(async (req) => {
     // Get gig and outcome
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!inner(id, chemistry_level, fame_level)')
+      .select('*, bands!inner(*)')
       .eq('id', gigId)
       .single();
 
@@ -113,13 +113,16 @@ serve(async (req) => {
 
     // Update band stats
     const newChemistry = Math.max(0, Math.min(100, (gig.bands.chemistry_level || 50) + chemistryChange));
-    const newFame = Math.max(0, (gig.bands.fame_level || 0) + fameGained);
+    const newFame = Math.max(0, (gig.bands.fame || 0) + fameGained);
+    const newBalance = (gig.bands.band_balance || 0) + netProfit;
 
     const { error: bandError } = await supabaseClient
       .from('bands')
       .update({
         chemistry_level: newChemistry,
-        fame_level: newFame
+        fame: newFame,
+        band_balance: newBalance,
+        performance_count: (gig.bands.performance_count || 0) + 1
       })
       .eq('id', gig.band_id);
 
@@ -130,13 +133,35 @@ serve(async (req) => {
       .from('band_earnings')
       .insert({
         band_id: gig.band_id,
-        source: 'gig',
+        source: 'gig_performance',
         amount: netProfit,
-        description: `Gig performance profit`,
-        related_id: gigId
+        description: `Gig performance earnings`,
+        metadata: { gig_id: gigId, outcome_id: outcome.id }
       });
 
     if (earningsError) console.error('Error adding earnings:', earningsError);
+
+    // Distribute XP to band members
+    const { data: members } = await supabaseClient
+      .from('band_members')
+      .select('user_id')
+      .eq('band_id', gig.band_id)
+      .eq('is_touring_member', false);
+
+    if (members && members.length > 0) {
+      const xpPerMember = Math.floor(fameGained / members.length);
+      
+      for (const member of members) {
+        await supabaseClient
+          .from('experience_ledger')
+          .insert({
+            user_id: member.user_id,
+            activity_type: 'gig_performance',
+            xp_amount: xpPerMember,
+            metadata: { gig_id: gigId, band_id: gig.band_id }
+          });
+      }
+    }
 
     // Mark gig as completed
     const { error: gigUpdateError } = await supabaseClient
