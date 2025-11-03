@@ -1599,6 +1599,7 @@ export type Database = {
           attendance_percentage: number | null
           band_chemistry_level: number | null
           chemistry_change: number | null
+          completed_at: string | null
           created_at: string | null
           crew_cost: number
           crew_skill_avg: number | null
@@ -1625,6 +1626,7 @@ export type Database = {
           attendance_percentage?: number | null
           band_chemistry_level?: number | null
           chemistry_change?: number | null
+          completed_at?: string | null
           created_at?: string | null
           crew_cost?: number
           crew_skill_avg?: number | null
@@ -1651,6 +1653,7 @@ export type Database = {
           attendance_percentage?: number | null
           band_chemistry_level?: number | null
           chemistry_change?: number | null
+          completed_at?: string | null
           created_at?: string | null
           crew_cost?: number
           crew_skill_avg?: number | null

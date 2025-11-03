@@ -1,62 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { RefreshCw, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
-
-interface CronJob {
-  jobid: number;
-  schedule: string;
-  command: string;
-  nodename: string;
-  nodeport: number;
-  database: string;
-  username: string;
-  active: boolean;
-  jobname: string;
-}
-
-interface CronJobStats {
-  runid: bigint;
-  jobid: number;
-  job_pid: number;
-  database: string;
-  username: string;
-  command: string;
-  status: string;
-  return_message: string;
-  start_time: string;
-  end_time: string;
-}
 
 export default function CronMonitor() {
   const { toast } = useToast();
 
-  const { data: cronJobs, isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
-    queryKey: ["cron-jobs"],
-    queryFn: async () => {
-      // Since we can't query cron.job directly via Supabase client,
-      // we'll return a placeholder for now
-      return [] as CronJob[];
-    },
-  });
-
-  const { data: jobStats, refetch: refetchStats } = useQuery({
-    queryKey: ["cron-job-stats"],
-    queryFn: async () => {
-      // Since we can't query cron.job_run_details directly via Supabase client,
-      // we'll return a placeholder for now
-      return [] as CronJobStats[];
-    },
-  });
-
   const handleRefresh = () => {
-    refetchJobs();
-    refetchStats();
     toast({
       title: "Refreshed",
       description: "Cron job data has been updated",
@@ -82,6 +35,7 @@ export default function CronMonitor() {
   };
 
   const edgeFunctions = [
+    { name: "auto-start-gigs", schedule: "Every minute", description: "Auto-start scheduled gigs" },
     { name: "university-attendance", schedule: "Daily at 10:00 UTC", description: "Process daily university attendance" },
     { name: "book-reading-attendance", schedule: "Daily at 23:00 UTC", description: "Update book reading progress" },
     { name: "shift-clock-out", schedule: "Every 15 minutes", description: "Auto-complete work shifts" },
@@ -89,6 +43,8 @@ export default function CronMonitor() {
     { name: "complete-rehearsals", schedule: "Every 30 minutes", description: "Complete finished rehearsals" },
     { name: "complete-recording-sessions", schedule: "Every 30 minutes", description: "Complete recording sessions" },
     { name: "calculate-weekly-activity", schedule: "Daily at 01:00 UTC", description: "Calculate weekly XP for bonuses" },
+    { name: "generate-daily-sales", schedule: "Daily at midnight", description: "Generate release sales" },
+    { name: "update-daily-streams", schedule: "Daily at midnight", description: "Update streaming stats" },
   ];
 
   return (
@@ -103,59 +59,6 @@ export default function CronMonitor() {
           Refresh
         </Button>
       </div>
-
-      {/* Database Cron Jobs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Database Cron Jobs
-          </CardTitle>
-          <CardDescription>Scheduled tasks running in PostgreSQL</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {jobsLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading cron jobs...</div>
-          ) : cronJobs && cronJobs.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Job Name</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Database</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cronJobs.map((job) => (
-                  <TableRow key={job.jobid}>
-                    <TableCell className="font-medium">{job.jobname}</TableCell>
-                    <TableCell className="font-mono text-sm">{job.schedule}</TableCell>
-                    <TableCell>
-                      {job.active ? (
-                        <Badge variant="default" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Inactive
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{job.database}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No cron jobs configured in database
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Edge Functions */}
       <Card>
@@ -195,66 +98,6 @@ export default function CronMonitor() {
               </Card>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Job Runs */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Job Runs</CardTitle>
-          <CardDescription>Last execution results from cron jobs</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {jobStats && jobStats.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Command</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Start Time</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Message</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {jobStats.slice(0, 10).map((stat) => (
-                  <TableRow key={stat.runid.toString()}>
-                    <TableCell className="font-mono text-xs max-w-xs truncate">
-                      {stat.command}
-                    </TableCell>
-                    <TableCell>
-                      {stat.status === 'succeeded' ? (
-                        <Badge variant="default" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Success
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Failed
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {formatDistanceToNow(new Date(stat.start_time), { addSuffix: true })}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {stat.end_time 
-                        ? `${((new Date(stat.end_time).getTime() - new Date(stat.start_time).getTime()) / 1000).toFixed(2)}s`
-                        : 'Running...'}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
-                      {stat.return_message || '-'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No recent job runs found
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
