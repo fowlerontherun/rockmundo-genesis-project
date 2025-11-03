@@ -28,13 +28,14 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
   const [gig, setGig] = useState<Gig | null>(null);
   const [setlistSongs, setSetlistSongs] = useState<any[]>([]);
   const [performances, setPerformances] = useState<SongPerformance[]>([]);
+  const [rehearsals, setRehearsals] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [commentary, setCommentary] = useState<string>("");
 
   const loadGig = useCallback(async () => {
     const { data: gigData, error } = await supabase
       .from('gigs')
-      .select('*')
+      .select('*, bands!inner(id)')
       .eq('id', gigId)
       .single();
 
@@ -53,6 +54,16 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
         .order('position');
 
       setSetlistSongs(songs || []);
+    }
+
+    // Load rehearsal data for the band
+    if ((gigData as any).bands?.id) {
+      const { data: rehearsalData } = await supabase
+        .from('song_rehearsals')
+        .select('song_id, rehearsal_level')
+        .eq('band_id', (gigData as any).bands.id);
+      
+      setRehearsals(rehearsalData || []);
     }
   }, [gigId]);
 
@@ -298,17 +309,29 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
                 <p className="text-sm text-muted-foreground">Song #{currentSongIndex}</p>
               </div>
               
-              <div className="flex gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-4 w-4 ${
-                      i < Math.floor((currentSong.songs.quality_score || 0) / 20)
-                        ? 'fill-yellow-500 text-yellow-500'
-                        : 'text-muted'
-                    }`}
-                  />
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${
+                        i < Math.floor((currentSong.songs.quality_score || 0) / 20)
+                          ? 'fill-yellow-500 text-yellow-500'
+                          : 'text-muted'
+                      }`}
+                    />
+                  ))}
+                </div>
+                
+                {(() => {
+                  const rehearsal = rehearsals.find(r => r.song_id === currentSong.song_id);
+                  const level = rehearsal?.rehearsal_level || 0;
+                  return (
+                    <Badge variant={level >= 5 ? "default" : level >= 3 ? "secondary" : "destructive"}>
+                      Rehearsed: {level}/10
+                    </Badge>
+                  );
+                })()}
               </div>
             </div>
           </CardContent>
@@ -325,6 +348,10 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
             <div className="space-y-2">
               {performances.slice().reverse().map((perf, idx) => {
                 const config = crowdResponseConfig[perf.crowd_response] || crowdResponseConfig.mixed;
+                const songData = setlistSongs.find(s => s.songs.id === perf.song_id);
+                const rehearsal = rehearsals.find(r => r.song_id === perf.song_id);
+                const rehearsalLevel = rehearsal?.rehearsal_level || 0;
+                
                 return (
                   <div key={perf.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex-1">
@@ -333,6 +360,9 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
                         <span className="text-xs text-muted-foreground">
                           Score: {(perf.performance_score || 0).toFixed(1)}/25
                         </span>
+                        <Badge variant="outline" className="text-xs">
+                          Rehearsed: {rehearsalLevel}/10
+                        </Badge>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
