@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -9,11 +10,15 @@ interface UniversityEnrollment {
   course_id: string;
   status: string;
   auto_attend: boolean;
+  days_attended: number | null;
+  total_xp_earned: number | null;
   university_courses: {
     name: string;
     skill_slug: string;
     xp_per_day_min: number;
     xp_per_day_max: number;
+    class_start_hour: number | null;
+    class_end_hour: number | null;
   } | null;
 }
 
@@ -34,7 +39,9 @@ export function useUniversityAttendance(profileId: string | undefined) {
             name,
             skill_slug,
             xp_per_day_min,
-            xp_per_day_max
+            xp_per_day_max,
+            class_start_hour,
+            class_end_hour
           )
         `)
         .eq("profile_id", profileId)
@@ -94,11 +101,11 @@ export function useUniversityAttendance(profileId: string | undefined) {
       const course = enrollment.university_courses;
       if (!course) throw new Error("Course details not found");
 
+      const xpMin = Math.max(0, Math.floor(course.xp_per_day_min ?? 0));
+      const xpMax = Math.max(xpMin, Math.floor(course.xp_per_day_max ?? xpMin));
+
       // Calculate XP to award
-      const xpEarned = Math.floor(
-        Math.random() * (course.xp_per_day_max - course.xp_per_day_min + 1) +
-        course.xp_per_day_min
-      );
+      const xpEarned = Math.floor(Math.random() * (xpMax - xpMin + 1) + xpMin);
 
       const today = new Date().toISOString().split("T")[0];
       const now = new Date();
@@ -116,12 +123,15 @@ export function useUniversityAttendance(profileId: string | undefined) {
       if (attendanceError) throw attendanceError;
 
       // Update enrollment
+      const currentDays = Number(enrollment.days_attended ?? 0);
+      const currentXp = Number(enrollment.total_xp_earned ?? 0);
+
       const { error: updateError } = await supabase
         .from("player_university_enrollments")
         .update({
           status: "in_progress",
-          days_attended: (enrollment as any).days_attended + 1,
-          total_xp_earned: (enrollment as any).total_xp_earned + xpEarned,
+          days_attended: (Number.isFinite(currentDays) ? currentDays : 0) + 1,
+          total_xp_earned: (Number.isFinite(currentXp) ? currentXp : 0) + xpEarned,
         })
         .eq("id", enrollment.id);
 
@@ -216,7 +226,8 @@ export function useUniversityAttendance(profileId: string | undefined) {
 
       // Create activity status
       const endTime = new Date(now);
-      endTime.setHours(14, 0, 0, 0); // Class ends at 2 PM
+      const classEndHour = course.class_end_hour ?? 14;
+      endTime.setHours(classEndHour, 0, 0, 0);
 
       const { error: statusError } = await supabase
         .from("profile_activity_statuses")
@@ -245,6 +256,8 @@ export function useUniversityAttendance(profileId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["skill_progress"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["activity_feed"] });
+      queryClient.invalidateQueries({ queryKey: ["university_course_performance"] });
+      queryClient.invalidateQueries({ queryKey: ["course_xp_stats_admin"] });
       toast({
         title: "Class Attended! 📚",
         description: `You earned ${data.xpEarned} XP! Your skill is improving.`,
@@ -291,21 +304,54 @@ export function useUniversityAttendance(profileId: string | undefined) {
     },
   });
 
-  const canAttendClass = () => {
+  const [isWithinClassWindow, setIsWithinClassWindow] = useState(false);
+
+  useEffect(() => {
+    const evaluateWindow = () => {
+      if (!enrollment || !enrollment.university_courses) {
+        setIsWithinClassWindow(false);
+        return;
+      }
+
+      const { class_start_hour, class_end_hour } = enrollment.university_courses;
+      const rawStart = Number.isFinite(class_start_hour) ? class_start_hour : 10;
+      const rawEnd = Number.isFinite(class_end_hour) ? class_end_hour : 14;
+      const startHour = Math.min(Math.max(rawStart, 0), 23);
+      const endHour = Math.min(Math.max(rawEnd, startHour + 1), 24);
+
+      const now = new Date();
+      const hour = now.getHours();
+      setIsWithinClassWindow(hour >= startHour && hour < endHour);
+    };
+
+    evaluateWindow();
+    const interval = setInterval(evaluateWindow, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [enrollment?.id, enrollment?.university_courses?.class_start_hour, enrollment?.university_courses?.class_end_hour]);
+
+  const canAttendClass = useMemo(() => {
     if (!enrollment || activityStatus || todayAttendance) return false;
+    return isWithinClassWindow;
+  }, [enrollment, activityStatus, todayAttendance, isWithinClassWindow]);
 
-    const now = new Date();
-    const currentHour = now.getHours();
-
-    // Can attend between 10 AM and 2 PM
-    return currentHour >= 10 && currentHour < 14;
-  };
+  const classStartHour = Math.min(
+    Math.max(enrollment?.university_courses?.class_start_hour ?? 10, 0),
+    23,
+  );
+  const classEndHour = Math.min(
+    Math.max(enrollment?.university_courses?.class_end_hour ?? 14, classStartHour + 1),
+    24,
+  );
 
   return {
     enrollment,
     activityStatus,
     todayAttendance,
-    canAttendClass: canAttendClass(),
+    canAttendClass,
+    classWindow: {
+      start: classStartHour,
+      end: classEndHour,
+    },
     attendClass: attendClassMutation.mutate,
     isAttending: attendClassMutation.isPending,
     toggleAutoAttend: toggleAutoAttendMutation.mutate,
