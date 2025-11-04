@@ -165,7 +165,8 @@ function App() {
                     <Route path="fans-enhanced" element={<RedirectTo to="/pr" />} />
                     <Route path="band-enhanced" element={<RedirectTo to="/band" />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
-                    <Route path="labels" element={<RedirectTo to="/music" />} />
+                    <Route path="labels" element={<RecordLabel />} />
+                    <Route path="record-label" element={<Navigate to="/labels" replace />} />
                     <Route path="tours-system" element={<RedirectTo to="/travel" />} />
                     <Route path="charts" element={<RedirectTo to="/dashboard" />} />
                     <Route path="charts-competitive" element={<RedirectTo to="/dashboard" />} />
