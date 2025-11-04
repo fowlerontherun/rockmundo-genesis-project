@@ -5,6 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { Star, TrendingUp, TrendingDown, Minus, Music, DollarSign } from "lucide-react";
 import { getPerformanceGrade } from "@/utils/gigPerformanceCalculator";
 
+const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+
 interface SongPerformance {
   song_id: string;
   setlist_position: number;
@@ -52,8 +54,25 @@ interface Props {
 export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [] }: Props) => {
   if (!outcome) return null;
 
-  const safeNumber = (value: number | null | undefined) =>
-    typeof value === "number" && !Number.isNaN(value) ? value : 0;
+  const safeNumber = (value: number | string | null | undefined) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return 0;
+  };
+
+  const formatCurrency = (value: number | string | null | undefined) => {
+    const numericValue = safeNumber(value);
+    return integerFormatter.format(numericValue);
+  };
 
   const overallRating = safeNumber(outcome.overall_rating);
   const ticketRevenue = safeNumber(outcome.ticket_revenue);
@@ -162,32 +181,32 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Ticket Sales</p>
-                  <p className="text-xl font-semibold">${ticketRevenue.toLocaleString()}</p>
+                  <p className="text-xl font-semibold">${formatCurrency(ticketRevenue)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Merchandise</p>
-                  <p className="text-xl font-semibold">${merchSales.toLocaleString()}</p>
+                  <p className="text-xl font-semibold">${formatCurrency(merchSales)}</p>
                 </div>
               </div>
               <div className="border-t pt-3">
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">${formatCurrency(totalRevenue)}</p>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Crew Costs</span>
-                  <span className="text-destructive">-${crewCosts.toLocaleString()}</span>
+                  <span className="text-destructive">-${formatCurrency(crewCosts)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Equipment Wear</span>
-                  <span className="text-destructive">-${equipmentWearCost.toLocaleString()}</span>
+                  <span className="text-destructive">-${formatCurrency(equipmentWearCost)}</span>
                 </div>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
                   <p className="text-lg font-semibold">Net Profit</p>
                   <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ${netProfit.toLocaleString()}
+                    ${formatCurrency(netProfit)}
                   </p>
                 </div>
               </div>
