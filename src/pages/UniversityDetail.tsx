@@ -16,6 +16,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useUniversityAttendance } from "@/hooks/useUniversityAttendance";
 import { format } from "date-fns";
 
+const formatClassWindowLabel = (startHour: number, endHour: number) => {
+  const sanitizedStart = Math.min(Math.max(Math.floor(startHour), 0), 23);
+  const sanitizedEnd = Math.min(Math.max(Math.floor(endHour), sanitizedStart + 1), 24);
+  const startDate = new Date();
+  startDate.setHours(sanitizedStart, 0, 0, 0);
+  const endDate = new Date();
+  endDate.setHours(sanitizedEnd, 0, 0, 0);
+  return `${format(startDate, "h a")} - ${format(endDate, "h a")}`;
+};
+
 interface University {
   id: string;
   name: string;
@@ -38,6 +48,8 @@ interface Course {
   xp_per_day_max: number;
   max_enrollments: number | null;
   is_active: boolean;
+  class_start_hour: number | null;
+  class_end_hour: number | null;
 }
 
 interface SkillProgress {
@@ -76,6 +88,63 @@ export default function UniversityDetail() {
         .order("required_skill_level");
       if (error) throw error;
       return data as Course[];
+    },
+    enabled: !!id,
+  });
+
+  const { data: courseEnrollmentCounts } = useQuery({
+    queryKey: ["university_course_enrollment_counts", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("player_university_enrollments")
+        .select("course_id")
+        .eq("university_id", id)
+        .in("status", ["enrolled", "in_progress"]);
+
+      if (error) throw error;
+
+      return (data || []).reduce((acc, enrollment) => {
+        const courseId = (enrollment as { course_id: string }).course_id;
+        acc[courseId] = (acc[courseId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+    },
+    enabled: !!id,
+  });
+
+  const { data: coursePerformance } = useQuery({
+    queryKey: ["university_course_performance", id],
+    queryFn: async () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const since = sevenDaysAgo.toISOString().split("T")[0];
+
+      const { data, error } = await supabase
+        .from("player_university_attendance")
+        .select(`
+          xp_earned,
+          player_university_enrollments!inner (
+            course_id,
+            university_id
+          )
+        `)
+        .eq("player_university_enrollments.university_id", id)
+        .gte("attendance_date", since);
+
+      if (error) throw error;
+
+      return (data || []).reduce((acc, record) => {
+        const enrollment = (record as any).player_university_enrollments;
+        if (!enrollment?.course_id) {
+          return acc;
+        }
+
+        const stats = acc[enrollment.course_id] || { totalXp: 0, count: 0 };
+        stats.totalXp += record.xp_earned;
+        stats.count += 1;
+        acc[enrollment.course_id] = stats;
+        return acc;
+      }, {} as Record<string, { totalXp: number; count: number }>);
     },
     enabled: !!id,
   });
@@ -170,6 +239,20 @@ export default function UniversityDetail() {
         throw new Error("Insufficient funds");
       }
 
+      if (course.max_enrollments !== null) {
+        const { count, error: capacityError } = await supabase
+          .from("player_university_enrollments")
+          .select("id", { count: "exact", head: true })
+          .eq("course_id", courseId)
+          .in("status", ["enrolled", "in_progress"]);
+
+        if (capacityError) throw capacityError;
+
+        if ((count ?? 0) >= course.max_enrollments) {
+          throw new Error("This course has reached its maximum capacity.");
+        }
+      }
+
       // Calculate duration based on quality
       const quality = university.quality_of_learning || 50;
       const durationMultiplier = (200 - quality) / 100;
@@ -198,14 +281,26 @@ export default function UniversityDetail() {
         .eq("id", profile.id);
 
       if (cashError) throw cashError;
+
+      return {
+        courseName: course.name,
+        classWindow: formatClassWindowLabel(
+          course.class_start_hour ?? 10,
+          course.class_end_hour ?? 14,
+        ),
+      };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
       queryClient.invalidateQueries({ queryKey: ["current_enrollment_full"] });
+      queryClient.invalidateQueries({ queryKey: ["university_course_enrollment_counts", id] });
+      queryClient.invalidateQueries({ queryKey: ["course_enrollment_usage"] });
       toast({
         title: "Enrollment Successful! 🎓",
-        description: "You're enrolled! Enable auto-attend or attend class between 10 AM - 2 PM daily.",
+        description: result
+          ? `You're enrolled in ${result.courseName}! Attend between ${result.classWindow} or enable auto-attend.`
+          : "You're enrolled! Enable auto-attend or attend during the class window.",
       });
     },
     onError: (error: any) => {
@@ -239,12 +334,16 @@ export default function UniversityDetail() {
     const skillLevel = getSkillLevel(course.skill_slug);
     const hasPrerequisite = skillLevel >= course.required_skill_level;
     const hasEnoughCash = (profile?.cash || 0) >= calculatePrice(course.base_price);
-    return hasPrerequisite && hasEnoughCash;
+    const currentEnrollments = courseEnrollmentCounts?.[course.id] || 0;
+    const hasCapacity =
+      course.max_enrollments === null || currentEnrollments < course.max_enrollments;
+    return hasPrerequisite && hasEnoughCash && hasCapacity;
   };
 
   const getEnrollmentMessage = (course: Course) => {
     const skillLevel = getSkillLevel(course.skill_slug);
     const price = calculatePrice(course.base_price);
+    const currentEnrollments = courseEnrollmentCounts?.[course.id] || 0;
 
     if (skillLevel < course.required_skill_level) {
       return `Requires skill level ${course.required_skill_level} (you have ${skillLevel})`;
@@ -252,7 +351,94 @@ export default function UniversityDetail() {
     if ((profile?.cash || 0) < price) {
       return `Insufficient funds (need $${price.toLocaleString()})`;
     }
+    if (course.max_enrollments !== null && currentEnrollments >= course.max_enrollments) {
+      return "Course is at capacity";
+    }
     return "";
+  };
+
+  const renderCourseCard = (course: Course) => {
+    const duration = calculateDuration(course.base_duration_days);
+    const price = calculatePrice(course.base_price);
+    const enrollmentMsg = getEnrollmentMessage(course);
+    const currentEnrollments = courseEnrollmentCounts?.[course.id] || 0;
+    const atCapacity =
+      course.max_enrollments !== null && currentEnrollments >= course.max_enrollments;
+    const capacityLabel =
+      course.max_enrollments === null
+        ? `${currentEnrollments} enrolled`
+        : `${currentEnrollments}/${course.max_enrollments} seats`;
+    const stats = coursePerformance?.[course.id];
+    const avgXp = stats && stats.count > 0 ? Math.round(stats.totalXp / stats.count) : null;
+    const classWindowLabel = formatClassWindowLabel(
+      course.class_start_hour ?? 10,
+      course.class_end_hour ?? 14,
+    );
+
+    return (
+      <Card key={course.id} className={atCapacity ? "border-destructive/40" : undefined}>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle>{course.name}</CardTitle>
+              {course.description && <CardDescription>{course.description}</CardDescription>}
+            </div>
+            {atCapacity && (
+              <Badge variant="destructive" className="shrink-0">
+                At Capacity
+              </Badge>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <Badge variant="secondary">{classWindowLabel}</Badge>
+            <Badge variant="outline">{capacityLabel}</Badge>
+            {avgXp !== null && <Badge variant="outline">Avg {avgXp} XP (7d)</Badge>}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span>{duration} days</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <span>${price.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>Level {course.required_skill_level}+ required</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+              <span>{capacityLabel}</span>
+            </div>
+          </div>
+
+          {enrollmentMsg && (
+            <p className="text-sm text-destructive">{enrollmentMsg}</p>
+          )}
+
+          <Button
+            className="w-full"
+            disabled={!canEnroll(course) || enrollMutation.isPending || !!currentEnrollment}
+            onClick={() => enrollMutation.mutate(course.id)}
+          >
+            {currentEnrollment
+              ? "Already Enrolled Elsewhere"
+              : enrollMutation.isPending
+              ? "Enrolling..."
+              : "Enroll Now"}
+          </Button>
+        </CardContent>
+      </Card>
+    );
   };
 
   const dropCourseMutation = useMutation({
@@ -272,6 +458,8 @@ export default function UniversityDetail() {
         description: "You have withdrawn from the course.",
       });
       queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
+      queryClient.invalidateQueries({ queryKey: ["university_course_enrollment_counts", id] });
+      queryClient.invalidateQueries({ queryKey: ["course_enrollment_usage"] });
     },
     onError: (error: Error) => {
       toast({
@@ -290,6 +478,7 @@ export default function UniversityDetail() {
     isAttending,
     toggleAutoAttend,
     isTogglingAuto,
+    classWindow,
   } = useUniversityAttendance(profile?.id);
 
   const autoAttendEnabled = Boolean((currentEnrollment as any)?.auto_attend);
@@ -326,6 +515,7 @@ export default function UniversityDetail() {
                 onAttendClass={attendClass}
                 onToggleAutoAttend={toggleAutoAttend}
                 isTogglingAuto={isTogglingAuto}
+                classWindow={classWindow}
               />
             )}
 
@@ -373,54 +563,7 @@ export default function UniversityDetail() {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
               <div className="grid gap-4 md:grid-cols-2">
-                {courses?.map((course) => {
-              const duration = calculateDuration(course.base_duration_days);
-              const price = calculatePrice(course.base_price);
-              const enrollmentMsg = getEnrollmentMessage(course);
-
-              return (
-                <Card key={course.id}>
-                  <CardHeader>
-                    <CardTitle>{course.name}</CardTitle>
-                    <CardDescription>{course.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{duration} days</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span>${price.toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>Level {course.required_skill_level}+ required</span>
-                      </div>
-                    </div>
-
-                    {enrollmentMsg && (
-                      <p className="text-sm text-destructive">{enrollmentMsg}</p>
-                    )}
-
-                    <Button
-                      className="w-full"
-                      disabled={!canEnroll(course) || enrollMutation.isPending || !!currentEnrollment}
-                      onClick={() => enrollMutation.mutate(course.id)}
-                    >
-                      {currentEnrollment ? "Already Enrolled Elsewhere" : enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                {courses?.map(renderCourseCard)}
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -428,54 +571,7 @@ export default function UniversityDetail() {
           <div>
             <h2 className="text-2xl font-bold mb-4">Available Courses</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              {courses?.map((course) => {
-                const duration = calculateDuration(course.base_duration_days);
-                const price = calculatePrice(course.base_price);
-                const enrollmentMsg = getEnrollmentMessage(course);
-
-                return (
-                  <Card key={course.id}>
-                    <CardHeader>
-                      <CardTitle>{course.name}</CardTitle>
-                      <CardDescription>{course.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>{duration} days</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span>${price.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>Level {course.required_skill_level}+ required</span>
-                        </div>
-                      </div>
-
-                      {enrollmentMsg && (
-                        <p className="text-sm text-destructive">{enrollmentMsg}</p>
-                      )}
-
-                      <Button
-                        className="w-full"
-                        disabled={!canEnroll(course) || enrollMutation.isPending || !!currentEnrollment}
-                        onClick={() => enrollMutation.mutate(course.id)}
-                      >
-                        {currentEnrollment ? "Already Enrolled Elsewhere" : enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {courses?.map(renderCourseCard)}
             </div>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useMergedSkillDefinitions } from "@/utils/skillDefinitions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { courseSchema, CourseFormValues } from "./courses.helpers";
+import { format } from "date-fns";
 
 interface Course {
   id: string;
@@ -47,6 +50,8 @@ interface Course {
   xp_per_day_max: number;
   max_enrollments: number | null;
   is_active: boolean;
+  class_start_hour: number | null;
+  class_end_hour: number | null;
 }
 
 interface University {
@@ -66,7 +71,10 @@ export default function Courses() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterUniversity, setFilterUniversity] = useState("all");
-  const [formData, setFormData] = useState({
+  const [filterSkill, setFilterSkill] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [showAtCapacityOnly, setShowAtCapacityOnly] = useState(false);
+  const [formData, setFormData] = useState<CourseFormValues>({
     university_id: "",
     skill_slug: "",
     name: "",
@@ -76,9 +84,12 @@ export default function Courses() {
     required_skill_level: 0,
     xp_per_day_min: 1,
     xp_per_day_max: 3,
-    max_enrollments: null as number | null,
+    max_enrollments: null,
     is_active: true,
+    class_start_hour: 10,
+    class_end_hour: 14,
   });
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof CourseFormValues, string>>>({});
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ["university_courses"],
@@ -89,6 +100,55 @@ export default function Courses() {
         .order("name");
       if (error) throw error;
       return data as Course[];
+    },
+  });
+
+  const { data: seatUsage } = useQuery({
+    queryKey: ["course_enrollment_usage"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("player_university_enrollments")
+        .select("course_id")
+        .in("status", ["enrolled", "in_progress"]);
+      if (error) throw error;
+
+      return (data || []).reduce((acc, enrollment) => {
+        const courseId = (enrollment as { course_id: string }).course_id;
+        acc[courseId] = (acc[courseId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+    },
+  });
+
+  const { data: xpStats } = useQuery({
+    queryKey: ["course_xp_stats_admin"],
+    queryFn: async () => {
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      const since = fourteenDaysAgo.toISOString().split("T")[0];
+
+      const { data, error } = await supabase
+        .from("player_university_attendance")
+        .select(`
+          xp_earned,
+          player_university_enrollments!inner (
+            course_id
+          )
+        `)
+        .gte("attendance_date", since);
+
+      if (error) throw error;
+
+      return (data || []).reduce((acc, record) => {
+        const enrollment = (record as any).player_university_enrollments;
+        if (!enrollment?.course_id) return acc;
+
+        const stats = acc[enrollment.course_id] || { totalXp: 0, count: 0 };
+        stats.totalXp += record.xp_earned;
+        stats.count += 1;
+        acc[enrollment.course_id] = stats;
+        return acc;
+      }, {} as Record<string, { totalXp: number; count: number }>);
     },
   });
 
@@ -119,20 +179,39 @@ export default function Courses() {
   const { list: skillOptions, map: skillOptionMap } = useMergedSkillDefinitions(skills ?? []);
 
   const saveMutation = useMutation({
-    mutationFn: async (values: typeof formData) => {
+    mutationFn: async (values: CourseFormValues) => {
+      const payload = {
+        university_id: values.university_id,
+        skill_slug: values.skill_slug,
+        name: values.name.trim(),
+        description: values.description?.trim() ? values.description.trim() : null,
+        base_price: values.base_price,
+        base_duration_days: values.base_duration_days,
+        required_skill_level: values.required_skill_level,
+        xp_per_day_min: values.xp_per_day_min,
+        xp_per_day_max: values.xp_per_day_max,
+        max_enrollments: values.max_enrollments,
+        is_active: values.is_active,
+        class_start_hour: values.class_start_hour,
+        class_end_hour: values.class_end_hour,
+      };
+
       if (editingId) {
         const { error } = await supabase
           .from("university_courses")
-          .update(values)
+          .update(payload)
           .eq("id", editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("university_courses").insert(values);
+        const { error } = await supabase.from("university_courses").insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["university_courses"] });
+      queryClient.invalidateQueries({ queryKey: ["course_enrollment_usage"] });
+      queryClient.invalidateQueries({ queryKey: ["course_xp_stats_admin"] });
+      queryClient.invalidateQueries({ queryKey: ["university_course_enrollment_counts"] });
       toast({
         title: editingId ? "Course updated" : "Course created",
         description: "Changes saved successfully.",
@@ -158,6 +237,9 @@ export default function Courses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["university_courses"] });
+      queryClient.invalidateQueries({ queryKey: ["course_enrollment_usage"] });
+      queryClient.invalidateQueries({ queryKey: ["course_xp_stats_admin"] });
+      queryClient.invalidateQueries({ queryKey: ["university_course_enrollment_counts"] });
       toast({
         title: "Course deleted",
         description: "Course removed successfully.",
@@ -180,6 +262,8 @@ export default function Courses() {
         xp_per_day_max: course.xp_per_day_max,
         max_enrollments: course.max_enrollments,
         is_active: course.is_active,
+        class_start_hour: course.class_start_hour ?? 10,
+        class_end_hour: course.class_end_hour ?? 14,
       });
     } else {
       setEditingId(null);
@@ -195,14 +279,18 @@ export default function Courses() {
         xp_per_day_max: 3,
         max_enrollments: null,
         is_active: true,
+        class_start_hour: 10,
+        class_end_hour: 14,
       });
     }
+    setFormErrors({});
     setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingId(null);
+    setFormErrors({});
   };
 
   const getUniversityName = (id: string) => {
@@ -218,9 +306,65 @@ export default function Courses() {
   const skillsWithCourses = new Set(courses?.map(c => c.skill_slug) || []);
 
   // Filter courses by university
-  const filteredCourses = courses?.filter(course => 
-    filterUniversity === "all" || course.university_id === filterUniversity
-  );
+  const filteredCourses = courses?.filter((course) => {
+    const matchesUniversity =
+      filterUniversity === "all" || course.university_id === filterUniversity;
+    const matchesSkill = filterSkill === "all" || course.skill_slug === filterSkill;
+    const matchesStatus =
+      filterStatus === "all" || (filterStatus === "active" ? course.is_active : !course.is_active);
+    const currentSeats = seatUsage?.[course.id] || 0;
+    const isAtCapacity =
+      course.max_enrollments !== null && currentSeats >= course.max_enrollments;
+    const matchesCapacity = !showAtCapacityOnly || isAtCapacity;
+
+    return matchesUniversity && matchesSkill && matchesStatus && matchesCapacity;
+  });
+
+  const duplicateSkillCourse = useMemo(() => {
+    if (!formData.skill_slug) return false;
+    return (courses || []).some(
+      (course) => course.skill_slug === formData.skill_slug && course.id !== editingId,
+    );
+  }, [courses, formData.skill_slug, editingId]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const result = courseSchema.safeParse({
+      ...formData,
+      description: formData.description ?? "",
+    });
+
+    if (!result.success) {
+      const fieldErrors = result.error.flatten().fieldErrors;
+      const mapped: Partial<Record<keyof CourseFormValues, string>> = {};
+      for (const [key, messages] of Object.entries(fieldErrors)) {
+        if (messages && messages.length > 0) {
+          mapped[key as keyof CourseFormValues] = messages[0];
+        }
+      }
+      setFormErrors(mapped);
+      toast({
+        title: "Please fix the highlighted fields",
+        description: "Review validation messages before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFormErrors({});
+    saveMutation.mutate(result.data);
+  };
+
+  const isSaveDisabled = saveMutation.isPending || duplicateSkillCourse;
+
+  const getClassWindowLabel = (startHour: number, endHour: number) => {
+    const startDate = new Date();
+    startDate.setHours(startHour, 0, 0, 0);
+    const endDate = new Date();
+    endDate.setHours(endHour, 0, 0, 0);
+    return `${format(startDate, "h a")} - ${format(endDate, "h a")}`;
+  };
 
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
@@ -239,7 +383,7 @@ export default function Courses() {
         </Button>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-wrap items-end gap-4">
         <Select value={filterUniversity} onValueChange={setFilterUniversity}>
           <SelectTrigger className="w-[250px]">
             <SelectValue placeholder="Filter by university" />
@@ -253,6 +397,39 @@ export default function Courses() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={filterSkill} onValueChange={setFilterSkill}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Filter by skill" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Skills</SelectItem>
+            {skillOptions.map((skill) => (
+              <SelectItem key={skill.slug} value={skill.slug}>
+                {skill.displayName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="capacity-filter"
+            checked={showAtCapacityOnly}
+            onCheckedChange={setShowAtCapacityOnly}
+          />
+          <Label htmlFor="capacity-filter" className="text-sm">
+            At capacity only
+          </Label>
+        </div>
       </div>
 
       <Table>
@@ -265,41 +442,68 @@ export default function Courses() {
             <TableHead>Duration</TableHead>
             <TableHead>Req. Level</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Seats</TableHead>
+            <TableHead>Avg XP (14d)</TableHead>
+            <TableHead>Class Window</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredCourses?.map((course) => (
-            <TableRow key={course.id}>
-              <TableCell className="font-medium">{course.name}</TableCell>
-              <TableCell>{getUniversityName(course.university_id)}</TableCell>
-              <TableCell>{getSkillName(course.skill_slug)}</TableCell>
-              <TableCell>${course.base_price.toLocaleString()}</TableCell>
-              <TableCell>{course.base_duration_days} days</TableCell>
-              <TableCell>{course.required_skill_level}</TableCell>
-              <TableCell>
-                <Badge variant={course.is_active ? "default" : "secondary"}>
-                  {course.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleOpenDialog(course)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteMutation.mutate(course.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredCourses?.map((course) => {
+            const currentSeats = seatUsage?.[course.id] || 0;
+            const capacityLabel =
+              course.max_enrollments === null
+                ? `${currentSeats} enrolled`
+                : `${currentSeats}/${course.max_enrollments}`;
+            const atCapacity =
+              course.max_enrollments !== null && currentSeats >= course.max_enrollments;
+            const xpStat = xpStats?.[course.id];
+            const avgXp = xpStat && xpStat.count > 0 ? Math.round(xpStat.totalXp / xpStat.count) : null;
+            const classWindow = getClassWindowLabel(
+              course.class_start_hour ?? 10,
+              course.class_end_hour ?? 14,
+            );
+
+            return (
+              <TableRow key={course.id} className={atCapacity ? "bg-amber-500/5" : undefined}>
+                <TableCell className="font-medium">{course.name}</TableCell>
+                <TableCell>{getUniversityName(course.university_id)}</TableCell>
+                <TableCell>{getSkillName(course.skill_slug)}</TableCell>
+                <TableCell>${course.base_price.toLocaleString()}</TableCell>
+                <TableCell>{course.base_duration_days} days</TableCell>
+                <TableCell>{course.required_skill_level}</TableCell>
+                <TableCell>
+                  <Badge variant={course.is_active ? "default" : "secondary"}>
+                    {course.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{capacityLabel}</span>
+                    {atCapacity && <Badge variant="destructive">Full</Badge>}
+                  </div>
+                </TableCell>
+                <TableCell>{avgXp !== null ? `${avgXp} XP` : "—"}</TableCell>
+                <TableCell>{classWindow}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleOpenDialog(course)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteMutation.mutate(course.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
 
@@ -311,7 +515,7 @@ export default function Courses() {
               Configure the course details below.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(formData); }} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label htmlFor="university">University</Label>
@@ -321,7 +525,7 @@ export default function Courses() {
                     setFormData({ ...formData, university_id: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={formErrors.university_id ? "border-destructive focus:ring-destructive" : undefined}>
                     <SelectValue placeholder="Select university" />
                   </SelectTrigger>
                   <SelectContent>
@@ -332,6 +536,9 @@ export default function Courses() {
                     ))}
                   </SelectContent>
                 </Select>
+                {formErrors.university_id && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.university_id}</p>
+                )}
               </div>
               <div className="col-span-2">
                 <Label htmlFor="skill">Skill</Label>
@@ -341,7 +548,7 @@ export default function Courses() {
                     setFormData({ ...formData, skill_slug: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={formErrors.skill_slug ? "border-destructive focus:ring-destructive" : undefined}>
                     <SelectValue placeholder="Select skill" />
                   </SelectTrigger>
                   <SelectContent>
@@ -357,6 +564,16 @@ export default function Courses() {
                     ))}
                   </SelectContent>
                 </Select>
+                {duplicateSkillCourse && (
+                  <Alert className="mt-2 border-amber-500/50 bg-amber-500/10">
+                    <AlertDescription>
+                      A course already targets this skill. Update the existing course or drop it before adding another.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {formErrors.skill_slug && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.skill_slug}</p>
+                )}
               </div>
               <div className="col-span-2">
                 <Label htmlFor="name">Course Name</Label>
@@ -367,7 +584,11 @@ export default function Courses() {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   required
+                  aria-invalid={!!formErrors.name}
                 />
+                {formErrors.name && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.name}</p>
+                )}
               </div>
               <div className="col-span-2">
                 <Label htmlFor="description">Description</Label>
@@ -379,6 +600,9 @@ export default function Courses() {
                   }
                   rows={3}
                 />
+                {formErrors.description && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.description}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="price">Base Price ($)</Label>
@@ -391,7 +615,11 @@ export default function Courses() {
                     setFormData({ ...formData, base_price: Number(e.target.value) })
                   }
                   required
+                  aria-invalid={!!formErrors.base_price}
                 />
+                {formErrors.base_price && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.base_price}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="duration">Duration (days)</Label>
@@ -407,7 +635,11 @@ export default function Courses() {
                     })
                   }
                   required
+                  aria-invalid={!!formErrors.base_duration_days}
                 />
+                {formErrors.base_duration_days && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.base_duration_days}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="req_level">Required Skill Level</Label>
@@ -423,7 +655,11 @@ export default function Courses() {
                     })
                   }
                   required
+                  aria-invalid={!!formErrors.required_skill_level}
                 />
+                {formErrors.required_skill_level && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.required_skill_level}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="max_enroll">Max Enrollments</Label>
@@ -439,7 +675,11 @@ export default function Courses() {
                     })
                   }
                   placeholder="Unlimited"
+                  aria-invalid={!!formErrors.max_enrollments}
                 />
+                {formErrors.max_enrollments && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.max_enrollments}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="xp_min">Min XP/Day</Label>
@@ -453,7 +693,11 @@ export default function Courses() {
                     setFormData({ ...formData, xp_per_day_min: Number(e.target.value) })
                   }
                   required
+                  aria-invalid={!!formErrors.xp_per_day_min}
                 />
+                {formErrors.xp_per_day_min && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.xp_per_day_min}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="xp_max">Max XP/Day</Label>
@@ -467,7 +711,53 @@ export default function Courses() {
                     setFormData({ ...formData, xp_per_day_max: Number(e.target.value) })
                   }
                   required
+                  aria-invalid={!!formErrors.xp_per_day_max}
                 />
+                {formErrors.xp_per_day_max && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.xp_per_day_max}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="class_start">Class Start Hour</Label>
+                <Input
+                  id="class_start"
+                  type="number"
+                  min="0"
+                  max="23"
+                  value={formData.class_start_hour}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      class_start_hour: Number(e.target.value),
+                    })
+                  }
+                  required
+                  aria-invalid={!!formErrors.class_start_hour}
+                />
+                {formErrors.class_start_hour && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.class_start_hour}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="class_end">Class End Hour</Label>
+                <Input
+                  id="class_end"
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={formData.class_end_hour}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      class_end_hour: Number(e.target.value),
+                    })
+                  }
+                  required
+                  aria-invalid={!!formErrors.class_end_hour}
+                />
+                {formErrors.class_end_hour && (
+                  <p className="mt-1 text-xs text-destructive">{formErrors.class_end_hour}</p>
+                )}
               </div>
               <div className="col-span-2 flex items-center space-x-2">
                 <Switch
@@ -484,8 +774,8 @@ export default function Courses() {
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? "Saving..." : "Save"}
+              <Button type="submit" disabled={isSaveDisabled}>
+                {saveMutation.isPending ? "Saving..." : duplicateSkillCourse ? "Resolve duplicate" : "Save"}
               </Button>
             </DialogFooter>
           </form>

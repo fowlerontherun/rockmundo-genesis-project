@@ -16,6 +16,10 @@ interface AttendanceCardProps {
   onAttendClass: () => void;
   onToggleAutoAttend: () => void;
   isTogglingAuto: boolean;
+  classWindow: {
+    start: number;
+    end: number;
+  };
 }
 
 export function AttendanceCard({
@@ -27,10 +31,17 @@ export function AttendanceCard({
   onAttendClass,
   onToggleAutoAttend,
   isTogglingAuto,
+  classWindow,
 }: AttendanceCardProps) {
+  const startHour = Math.min(Math.max(Math.floor(classWindow.start), 0), 23);
+  const endHour = Math.min(Math.max(Math.floor(classWindow.end), startHour + 1), 24);
   const now = new Date();
   const currentHour = now.getHours();
-  const isClassTime = currentHour >= 10 && currentHour < 14;
+  const isClassTime = currentHour >= startHour && currentHour < endHour;
+  const classWindowLabel = `${format(new Date().setHours(startHour, 0, 0, 0), "h a")} - ${format(
+    new Date().setHours(endHour, 0, 0, 0),
+    "h a",
+  )}`;
 
   return (
     <Card className="border-primary/20">
@@ -40,7 +51,7 @@ export function AttendanceCard({
           Daily Attendance
         </CardTitle>
         <CardDescription>
-          Attend class between 10 AM - 2 PM daily to earn XP and improve your skills
+          Attend class between {classWindowLabel} daily to earn XP and improve your skills
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -68,7 +79,7 @@ export function AttendanceCard({
               Auto-attend classes
             </Label>
             <p className="text-sm text-muted-foreground">
-              Automatically attend at 10 AM daily when enrolled
+              Automatically attend when class opens each day
             </p>
           </div>
           <Switch
@@ -83,7 +94,9 @@ export function AttendanceCard({
           <Alert>
             <Clock className="h-4 w-4" />
             <AlertDescription>
-              Classes are held from 10 AM to 2 PM. {autoAttendEnabled ? "Auto-attendance is enabled." : "Come back during class time or enable auto-attend."}
+              Classes are held from {classWindowLabel}. {autoAttendEnabled
+                ? "Auto-attendance is enabled."
+                : "Come back during class time or enable auto-attend."}
             </AlertDescription>
           </Alert>
         )}
@@ -101,7 +114,7 @@ export function AttendanceCard({
             : todayAttendance
             ? "Already Attended Today"
             : !isClassTime
-            ? "Not Class Time (10 AM - 2 PM)"
+            ? `Not Class Time (${classWindowLabel})`
             : "Attend Class"}
         </Button>
 

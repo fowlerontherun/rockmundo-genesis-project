@@ -33,14 +33,6 @@ export function useCurrentEnrollment() {
 
       if (!profile) return null;
 
-      const now = new Date();
-      const currentHour = now.getHours();
-
-      // Only block during class time (10am-2pm)
-      if (currentHour < 10 || currentHour >= 14) {
-        return null;
-      }
-
       const { data, error } = await supabase
         .from("player_university_enrollments")
         .select(`
