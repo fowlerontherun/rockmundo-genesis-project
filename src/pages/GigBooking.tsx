@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, CheckCircle, Clock, DollarSign, MapPin, Music, Star, Users } from 'lucide-react';
+import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Flag, MapPin, Music, PlayCircle, Star, Users } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,10 +13,13 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { useSetlists } from '@/hooks/useSetlists';
-import { GigBookingDialog } from '@/components/gig/GigBookingDialog';
+import { GigBookingDialog, GigBookingSubmission } from '@/components/gig/GigBookingDialog';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { getSlotById, getSlotBadgeVariant } from '@/utils/gigSlots';
 import { useAutoGigStart } from '@/hooks/useAutoGigStart';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { checkBandLockout } from '@/utils/bandLockout';
+import { formatDistanceToNow } from 'date-fns';
 
 type VenueRow = Database['public']['Tables']['venues']['Row'];
 type GigRow = Database['public']['Tables']['gigs']['Row'];
@@ -38,8 +41,11 @@ const GigBooking = () => {
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
   const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
   const [isBooking, setIsBooking] = useState(false);
+  const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
 
   const { data: setlists } = useSetlists(band?.id || null);
+  const eligibleSetlists = useMemo(() => (setlists ?? []).filter((sl) => (sl.song_count ?? 0) >= 6), [setlists]);
+  const hasEligibleSetlists = eligibleSetlists.length > 0;
   
   // Auto-start gigs that are past their scheduled time
   useAutoGigStart();
@@ -129,7 +135,7 @@ const GigBooking = () => {
         venues:venues!gigs_venue_id_fkey (*)
       `)
       .eq('band_id', bandId)
-      .in('status', ['scheduled', 'in_progress'])
+      .in('status', ['scheduled', 'in_progress', 'ready_for_completion', 'completed'])
       .order('scheduled_date', { ascending: true });
 
     if (error) {
@@ -145,6 +151,11 @@ const GigBooking = () => {
     setUpcomingGigs((data ?? []) as any);
   }, [toast]);
 
+  const updateBandLockout = useCallback(async (bandId: string) => {
+    const lockout = await checkBandLockout(bandId);
+    setBandLockout(lockout);
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
 
@@ -154,14 +165,18 @@ const GigBooking = () => {
       setBand(resolvedBand);
 
       if (resolvedBand) {
-        await loadUpcomingGigs(resolvedBand.id);
+        await Promise.all([
+          loadUpcomingGigs(resolvedBand.id),
+          updateBandLockout(resolvedBand.id)
+        ]);
       } else {
         setUpcomingGigs([]);
+        setBandLockout({ isLocked: false });
       }
     } finally {
       setLoading(false);
     }
-  }, [loadVenues, resolveBand, loadUpcomingGigs]);
+  }, [loadVenues, resolveBand, loadUpcomingGigs, updateBandLockout]);
 
   useEffect(() => {
     void loadData();
@@ -170,35 +185,51 @@ const GigBooking = () => {
     const interval = setInterval(() => {
       if (band?.id) {
         loadUpcomingGigs(band.id);
+        updateBandLockout(band.id);
       }
     }, 10000);
-    
-    return () => clearInterval(interval);
-  }, [loadData, band?.id, loadUpcomingGigs]);
 
-  const getNextGigDate = useCallback(() => {
+    return () => clearInterval(interval);
+  }, [loadData, band?.id, loadUpcomingGigs, updateBandLockout]);
+
+  const getNextAvailableDateForVenue = useCallback((venueId: string) => {
     const now = new Date();
-    const scheduledDates = upcomingGigs
+    const candidateTimes: number[] = [now.getTime()];
+
+    const venueGigTimes = upcomingGigs
+      .filter((gig) => gig.venue_id === venueId)
       .map((gig) => new Date(gig.scheduled_date))
       .filter((date) => !Number.isNaN(date.getTime()))
-      .sort((a, b) => a.getTime() - b.getTime());
+      .map((date) => date.getTime());
 
-    const baseDate = scheduledDates.length ? scheduledDates[scheduledDates.length - 1] : now;
-    const proposed = new Date(baseDate);
-    proposed.setDate(proposed.getDate() + DEFAULT_GIG_OFFSET_DAYS);
-    proposed.setHours(20, 0, 0, 0);
+    if (venueGigTimes.length) {
+      const latestGigTime = Math.max(...venueGigTimes);
+      const nextAfterLatest = new Date(latestGigTime);
+      nextAfterLatest.setDate(nextAfterLatest.getDate() + DEFAULT_GIG_OFFSET_DAYS);
+      candidateTimes.push(nextAfterLatest.getTime());
+    } else {
+      const defaultDate = new Date(now);
+      defaultDate.setDate(defaultDate.getDate() + DEFAULT_GIG_OFFSET_DAYS);
+      candidateTimes.push(defaultDate.getTime());
+    }
 
-    return proposed;
-  }, [upcomingGigs]);
+    if (bandLockout.lockedUntil) {
+      candidateTimes.push(bandLockout.lockedUntil.getTime());
+    }
 
-  const previewNextGigDate = useMemo(() => getNextGigDate(), [getNextGigDate]);
+    const target = new Date(Math.max(...candidateTimes));
+    target.setHours(20, 0, 0, 0);
+    return target;
+  }, [upcomingGigs, bandLockout.lockedUntil]);
 
-  const handleBookingDialogConfirm = useCallback(async (
-    setlistId: string, 
-    ticketPrice: number,
-    selectedDate: Date,
-    selectedSlot: string
-  ) => {
+  const handleBookingDialogConfirm = useCallback(async ({
+    setlistId,
+    ticketPrice,
+    selectedDate,
+    selectedSlot,
+    attendanceForecast,
+    estimatedRevenue
+  }: GigBookingSubmission) => {
     if (!band || !bookingVenue) return;
 
     setIsBooking(true);
@@ -230,15 +261,9 @@ const GigBooking = () => {
       scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
       // Calculate adjusted estimates with slot multiplier
-      const baseAttendance = Math.floor(
-        Math.min(
-          bookingVenue.capacity || 100,
-          ((band.fame || 0) * 2 + (band.popularity || 0) * 3) * (0.7 + Math.random() * 0.3)
-        )
-      );
-      const estimatedAttendance = Math.floor(baseAttendance * slot.attendanceMultiplier);
+      const venueCapacity = bookingVenue.capacity ?? attendanceForecast.realistic;
+      const estimatedAttendance = Math.min(venueCapacity, attendanceForecast.realistic);
       const adjustedPayment = Math.round((bookingVenue.base_payment || 0) * slot.paymentMultiplier);
-      const estimatedRevenue = estimatedAttendance * ticketPrice;
 
       const { error } = await supabase.from('gigs').insert({
         band_id: band.id,
@@ -276,11 +301,13 @@ const GigBooking = () => {
           venue_id: bookingVenue.id,
           scheduled_date: scheduledDateTime.toISOString(),
           estimated_revenue: estimatedRevenue,
-          time_slot: selectedSlot
+          time_slot: selectedSlot,
+          attendance_forecast: attendanceForecast
         },
       );
 
       await loadUpcomingGigs(band.id);
+      await updateBandLockout(band.id);
       setBookingVenue(null);
     } catch (error) {
       console.error('Error booking gig:', error);
@@ -292,7 +319,44 @@ const GigBooking = () => {
     } finally {
       setIsBooking(false);
     }
-  }, [band, bookingVenue, getNextGigDate, toast, addActivity, loadUpcomingGigs]);
+  }, [band, bookingVenue, toast, addActivity, loadUpcomingGigs, updateBandLockout]);
+
+  const getGigStatusConfig = useCallback((status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return {
+          badgeVariant: 'default' as const,
+          badgeLabel: 'Live Now',
+          icon: <PlayCircle className="h-3 w-3" />,
+          buttonLabel: 'Watch Live',
+          buttonVariant: 'default' as const,
+        };
+      case 'ready_for_completion':
+        return {
+          badgeVariant: 'outline' as const,
+          badgeLabel: 'Needs Finalization',
+          icon: <Flag className="h-3 w-3" />,
+          buttonLabel: 'Finalize Outcome',
+          buttonVariant: 'default' as const,
+        };
+      case 'completed':
+        return {
+          badgeVariant: 'secondary' as const,
+          badgeLabel: 'Completed',
+          icon: <CheckCircle2 className="h-3 w-3" />,
+          buttonLabel: 'View Report',
+          buttonVariant: 'outline' as const,
+        };
+      default:
+        return {
+          badgeVariant: 'secondary' as const,
+          badgeLabel: status,
+          icon: <Clock className="h-3 w-3" />,
+          buttonLabel: 'View Details',
+          buttonVariant: 'outline' as const,
+        };
+    }
+  }, []);
 
   const renderRequirements = (requirements: VenueRow['requirements']) => {
     if (!requirements || typeof requirements !== 'object') {
@@ -404,62 +468,58 @@ const GigBooking = () => {
                     const venue = gig.venues;
                     const scheduledDate = new Date(gig.scheduled_date);
                     const status = gig.status ?? 'scheduled';
+                    const statusConfig = getGigStatusConfig(status);
 
                     return (
-                        <div
-                          key={gig.id}
-                          className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-sm font-semibold">
-                              <Music className="h-4 w-4 text-primary" />
-                              {venue?.name ?? 'Unassigned Venue'}
-                              {gig.time_slot && (
-                                <Badge variant={getSlotBadgeVariant(gig.time_slot)}>
-                                  {getSlotById(gig.time_slot)?.name || gig.time_slot}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Calendar className="h-4 w-4" />
-                              {scheduledDate.toLocaleDateString()}
-                            </div>
-                            {gig.slot_start_time && gig.slot_end_time && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Clock className="h-4 w-4" />
-                                {gig.slot_start_time} - {gig.slot_end_time}
-                              </div>
+                      <div
+                        key={gig.id}
+                        className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm font-semibold">
+                            <Music className="h-4 w-4 text-primary" />
+                            {venue?.name ?? 'Unassigned Venue'}
+                            {gig.time_slot && (
+                              <Badge variant={getSlotBadgeVariant(gig.time_slot)}>
+                                {getSlotById(gig.time_slot)?.name || gig.time_slot}
+                              </Badge>
                             )}
-                            {venue?.location ? (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <MapPin className="h-4 w-4" />
-                                {venue.location}
-                              </div>
-                            ) : null}
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <DollarSign className="h-4 w-4" />
-                              {gig.payment ? `$${gig.payment.toLocaleString()}` : 'Payment TBD'}
-                            </div>
                           </div>
-                          <div className="flex flex-col gap-2">
-                            <Badge variant={
-                              status === 'completed' ? 'default' : 
-                              status === 'in_progress' ? 'default' : 
-                              'secondary'
-                            } className="capitalize">
-                              {status === 'in_progress' ? 'Live Now' : status}
-                            </Badge>
-                            {(status === 'scheduled' || status === 'in_progress') && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => navigate(`/gigs/perform/${gig.id}`)}
-                              >
-                                {status === 'in_progress' ? 'Watch Live' : 'View Details'}
-                              </Button>
-                            )}
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            {scheduledDate.toLocaleDateString()}
+                          </div>
+                          {gig.slot_start_time && gig.slot_end_time && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              {gig.slot_start_time} - {gig.slot_end_time}
+                            </div>
+                          )}
+                          {venue?.location ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <MapPin className="h-4 w-4" />
+                              {venue.location}
+                            </div>
+                          ) : null}
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <DollarSign className="h-4 w-4" />
+                            {gig.payment ? `$${gig.payment.toLocaleString()}` : 'Payment TBD'}
                           </div>
                         </div>
+                        <div className="flex flex-col gap-2">
+                          <Badge variant={statusConfig.badgeVariant} className="flex items-center gap-1 capitalize">
+                            {statusConfig.icon}
+                            {statusConfig.badgeLabel}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant={statusConfig.buttonVariant}
+                            onClick={() => navigate(`/gigs/perform/${gig.id}`)}
+                          >
+                            {statusConfig.buttonLabel}
+                          </Button>
+                        </div>
+                      </div>
                     );
                   })
                 ) : (
@@ -496,61 +556,85 @@ const GigBooking = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {band && !hasEligibleSetlists && (
+                <Alert className="mb-4">
+                  <AlertTitle>No qualifying setlists yet</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span>Create a setlist with at least six songs to unlock venue bookings.</span>
+                    <Button asChild size="sm">
+                      <Link to="/setlists">Create setlist</Link>
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
               {venues.length ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {venues.map((venue) => (
-                <Card key={venue.id} className="border-border">
-                  <CardHeader className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-base">{venue.name}</CardTitle>
-                        {venue.location ? (
-                          <CardDescription className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {venue.location}
-                          </CardDescription>
-                        ) : null}
-                      </div>
-                      <Badge variant="outline">Prestige {venue.prestige_level ?? 'N/A'}</Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        Capacity {venue.capacity ?? '—'}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        Base pay {venue.base_payment ? `$${venue.base_payment.toLocaleString()}` : 'TBD'}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Music className="h-3 w-3" />
-                        {venue.venue_type ? venue.venue_type.replace(/_/g, ' ') : 'Concert'}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Next slot {previewNextGigDate.toLocaleDateString()}
-                      </div>
-                    </div>
-                    {renderRequirements(venue.requirements)}
-                  </CardHeader>
-                  <CardContent>
-                     <Button
-                       className="w-full"
-                       size="sm"
-                       onClick={() => setBookingVenue(venue)}
-                       disabled={!band || isBooking}
-                     >
-                       Book Gig
-                     </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              No venues are currently available. Check back soon.
-            </div>
-          )}
+                  {venues.map((venue) => {
+                    const nextSlotDate = getNextAvailableDateForVenue(venue.id);
+                    const cooldownLabel = bandLockout.isLocked && bandLockout.lockedUntil
+                      ? formatDistanceToNow(bandLockout.lockedUntil, { addSuffix: true })
+                      : null;
+
+                    return (
+                      <Card key={venue.id} className="border-border">
+                        <CardHeader className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <CardTitle className="text-base">{venue.name}</CardTitle>
+                              {venue.location ? (
+                                <CardDescription className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {venue.location}
+                                </CardDescription>
+                              ) : null}
+                            </div>
+                            <Badge variant="outline">Prestige {venue.prestige_level ?? 'N/A'}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              Capacity {venue.capacity ?? '—'}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              Base pay {venue.base_payment ? `$${venue.base_payment.toLocaleString()}` : 'TBD'}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Music className="h-3 w-3" />
+                              {venue.venue_type ? venue.venue_type.replace(/_/g, ' ') : 'Concert'}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Next slot {nextSlotDate.toLocaleDateString()}
+                            </div>
+                          </div>
+                          {bandLockout.isLocked && (
+                            <div className="flex items-center gap-1 text-xs text-amber-600">
+                              <Clock className="h-3 w-3" />
+                              Cooldown ends {cooldownLabel ?? 'soon'}
+                            </div>
+                          )}
+                          {renderRequirements(venue.requirements)}
+                        </CardHeader>
+                        <CardContent>
+                          <Button
+                            className="w-full"
+                            size="sm"
+                            onClick={() => setBookingVenue(venue)}
+                            disabled={!band || isBooking || bandLockout.isLocked || !hasEligibleSetlists}
+                          >
+                            Book Gig
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  No venues are currently available. Check back soon.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -568,16 +652,17 @@ const GigBooking = () => {
         </TabsContent>
       </Tabs>
 
-      {bookingVenue && setlists && band && (
-        <GigBookingDialog
-          venue={bookingVenue}
-          band={band}
-          setlists={setlists.map(s => ({ id: s.id, name: s.name, song_count: s.song_count || 0 }))}
-          onConfirm={handleBookingDialogConfirm}
-          onClose={() => setBookingVenue(null)}
-          isBooking={isBooking}
-        />
-      )}
+        {bookingVenue && setlists && band && (
+          <GigBookingDialog
+            venue={bookingVenue}
+            band={band}
+            setlists={setlists.map(s => ({ id: s.id, name: s.name, song_count: s.song_count || 0 }))}
+            onConfirm={handleBookingDialogConfirm}
+            onClose={() => setBookingVenue(null)}
+            isBooking={isBooking}
+            initialDate={getNextAvailableDateForVenue(bookingVenue.id)}
+          />
+        )}
     </div>
   );
 };
