@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle } from 'lucide-react';
+import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2 } from 'lucide-react';
 import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
@@ -34,6 +34,7 @@ export default function PerformGig() {
   const [showOutcome, setShowOutcome] = useState(false);
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [finalizing, setFinalizing] = useState(false);
 
   const loadGig = useCallback(async () => {
     if (!gigId || !user) return;
@@ -55,30 +56,8 @@ export default function PerformGig() {
         .eq('gig_id', gigId)
         .single();
 
-      if (existingOutcome) {
-        // Gig already performed, show outcome
-        const transformedOutcome = {
-          ...existingOutcome,
-          breakdown_data: {
-            equipment_quality: existingOutcome.equipment_quality_avg || 0,
-            crew_skill: existingOutcome.crew_skill_avg || 0,
-            band_chemistry: existingOutcome.band_chemistry_level || 0,
-            member_skills: existingOutcome.member_skill_avg || 0,
-            merch_items_sold: existingOutcome.merch_items_sold || 0
-          },
-          chemistry_impact: existingOutcome.chemistry_change || 0,
-          equipment_wear_cost: existingOutcome.equipment_cost || 0
-        };
-        setOutcome(transformedOutcome);
-        setShowOutcome(true);
-        setGig(gigData as any);
-        setLoading(false);
-        return;
-      }
-
       setGig(gigData as any);
 
-      // Load setlist songs and preparation data if not performed yet
       if (gigData.setlist_id) {
         const [songsRes, rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
           supabase
@@ -111,6 +90,32 @@ export default function PerformGig() {
         setEquipmentCount(equipmentRes.data?.length || 0);
         setCrewCount(crewRes.data?.length || 0);
         setBandChemistry(bandRes.data?.chemistry_level || 0);
+      } else {
+        setSetlistSongs([]);
+        setRehearsals([]);
+        setEquipmentCount(0);
+        setCrewCount(0);
+        setBandChemistry(0);
+      }
+
+      if (existingOutcome) {
+        const transformedOutcome = {
+          ...existingOutcome,
+          breakdown_data: {
+            equipment_quality: existingOutcome.equipment_quality_avg || 0,
+            crew_skill: existingOutcome.crew_skill_avg || 0,
+            band_chemistry: existingOutcome.band_chemistry_level || 0,
+            member_skills: existingOutcome.member_skill_avg || 0,
+            merch_items_sold: existingOutcome.merch_items_sold || 0
+          },
+          chemistry_impact: existingOutcome.chemistry_change || 0,
+          equipment_wear_cost: existingOutcome.equipment_cost || 0
+        };
+        setOutcome(transformedOutcome);
+        setShowOutcome(true);
+      } else {
+        setOutcome(null);
+        setShowOutcome(false);
       }
 
       setLoading(false);
@@ -138,6 +143,36 @@ export default function PerformGig() {
   const handleGigComplete = async () => {
     // Reload to show outcome
     await loadGig();
+  };
+
+  const handleFinalizeGig = async () => {
+    if (!gigId) return;
+    setFinalizing(true);
+    try {
+      const { error } = await supabase.functions.invoke('complete-gig', {
+        body: { gigId }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Gig finalized',
+        description: 'We generated the performance report based on the completed set.',
+      });
+
+      await loadGig();
+    } catch (error: any) {
+      console.error('Error finalizing gig:', error);
+      toast({
+        title: 'Unable to finalize gig',
+        description: error?.message || 'Please try again in a moment.',
+        variant: 'destructive'
+      });
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   const handleStartGig = () => {
@@ -172,30 +207,6 @@ export default function PerformGig() {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
-
-  if (showOutcome && outcome) {
-    return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/gig-booking')}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Gig Booking
-        </Button>
-
-        <GigOutcomeReport
-          isOpen={true}
-          onClose={() => navigate('/gig-booking')}
-          outcome={outcome}
-          venueName={gig.venues?.name || 'Unknown Venue'}
-          venueCapacity={gig.venues?.capacity || 0}
-          songs={setlistSongs.map(s => ({ id: s.song_id, title: s.songs?.title || 'Unknown' }))}
-        />
       </div>
     );
   }
@@ -310,6 +321,33 @@ export default function PerformGig() {
         </Card>
       )}
 
+      {/* Finalize Gig CTA */}
+      {gig.status === 'ready_for_completion' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flag className="h-4 w-4 text-primary" />
+              Finalize Performance
+            </CardTitle>
+            <CardDescription>
+              The band has wrapped the set. Finalize the show to generate the results report.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Confirming completion will calculate attendance, payouts, and fan impact for this gig.
+            </p>
+            <Button
+              onClick={handleFinalizeGig}
+              disabled={finalizing}
+              className="sm:w-auto"
+            >
+              {finalizing ? 'Finalizing...' : 'Finalize Gig'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Real-time Performance Viewer - shown when gig is in progress */}
       {gig.status === 'in_progress' && setlistSongs.length > 0 && !showOutcome && (
         <RealtimeGigViewer
@@ -317,6 +355,43 @@ export default function PerformGig() {
           onComplete={handleGigComplete}
         />
       )}
+
+      {/* Completed Gig CTA */}
+      {gig.status === 'completed' && outcome && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              Performance Completed
+            </CardTitle>
+            <CardDescription>
+              Review the detailed report to see how the crowd responded and how much you earned.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Outcome recorded on {format(new Date(gig.updated_at || gig.scheduled_date), 'PPP p')}.
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate('/gig-booking')}>
+                Back to Schedule
+              </Button>
+              <Button onClick={() => setShowOutcome(true)}>
+                View Performance Report
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <GigOutcomeReport
+        isOpen={!!outcome && showOutcome}
+        onClose={() => setShowOutcome(false)}
+        outcome={outcome}
+        venueName={gig.venues?.name || 'Unknown Venue'}
+        venueCapacity={gig.venues?.capacity || 0}
+        songs={setlistSongs.map(s => ({ id: s.song_id, title: s.songs?.title || 'Unknown' }))}
+      />
     </div>
   );
 }

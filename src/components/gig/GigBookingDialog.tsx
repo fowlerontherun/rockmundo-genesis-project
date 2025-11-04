@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { calculateAttendanceForecast } from "@/utils/gigPerformanceCalculator";
 import { GIG_SLOTS, getSlotBadgeVariant } from "@/utils/gigSlots";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
@@ -37,25 +38,47 @@ interface SetlistSong {
   } | null;
 }
 
+export interface BookingForecast {
+  pessimistic: number;
+  realistic: number;
+  optimistic: number;
+}
+
+export interface GigBookingSubmission {
+  setlistId: string;
+  ticketPrice: number;
+  selectedDate: Date;
+  selectedSlot: string;
+  attendanceForecast: BookingForecast;
+  estimatedRevenue: number;
+}
+
 interface GigBookingDialogProps {
   venue: VenueRow | null;
   band: BandRow;
   setlists: Setlist[];
-  onConfirm: (setlistId: string, ticketPrice: number, selectedDate: Date, selectedSlot: string) => Promise<void>;
+  onConfirm: (submission: GigBookingSubmission) => Promise<void>;
   onClose: () => void;
   isBooking: boolean;
+  initialDate?: Date;
 }
 
-export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, isBooking }: GigBookingDialogProps) => {
+export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, isBooking, initialDate }: GigBookingDialogProps) => {
   const { toast } = useToast();
   const [selectedSetlistId, setSelectedSetlistId] = useState<string>("");
   const [ticketPrice, setTicketPrice] = useState<number>(20);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate ? new Date(initialDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [bandLockout, setBandLockout] = useState<{ isLocked: boolean; lockedUntil?: Date; reason?: string }>({ isLocked: false });
 
+  useEffect(() => {
+    if (initialDate) {
+      setSelectedDate(new Date(initialDate));
+    }
+  }, [initialDate]);
+
   // Check band lockout status
-  React.useEffect(() => {
+  useEffect(() => {
     if (venue && band?.id) {
       checkBandLockout(band.id).then(setBandLockout);
     }
@@ -72,16 +95,33 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
   const { data: setlistSongsData } = useSetlistSongs(selectedSetlistId || null);
 
   const eligibleSetlists = setlists.filter((sl) => (sl.song_count ?? 0) >= 6);
+  const hasEligibleSetlists = eligibleSetlists.length > 0;
   const selectedSlotData = GIG_SLOTS.find(s => s.id === selectedSlot);
 
-  const setlistDuration = React.useMemo(() => {
+  useEffect(() => {
+    if (!hasEligibleSetlists) {
+      setSelectedSetlistId("");
+      return;
+    }
+
+    if (!selectedSetlistId && eligibleSetlists.length === 1) {
+      setSelectedSetlistId(eligibleSetlists[0].id);
+      return;
+    }
+
+    if (selectedSetlistId && !eligibleSetlists.some(setlist => setlist.id === selectedSetlistId)) {
+      setSelectedSetlistId("");
+    }
+  }, [eligibleSetlists, hasEligibleSetlists, selectedSetlistId]);
+
+  const setlistDuration = useMemo(() => {
     if (!setlistSongsData) return null;
     return calculateSetlistDuration(setlistSongsData.map(ss => ({
       duration_seconds: ss.songs?.duration_seconds
     })));
   }, [setlistSongsData]);
 
-  const durationValidation = React.useMemo(() => {
+  const durationValidation = useMemo(() => {
     if (!setlistDuration || !selectedSlot) return null;
     return validateSetlistForSlot(setlistDuration.totalSeconds, selectedSlot);
   }, [setlistDuration, selectedSlot]);
@@ -138,10 +178,36 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
 
   const handleConfirm = async () => {
     if (!selectedSetlistId || !selectedSlot || !selectedDate || !venue) return;
-    await onConfirm(selectedSetlistId, ticketPrice, selectedDate, selectedSlot);
+
+    if (durationValidation && durationValidation.valid === false) {
+      toast({
+        title: "Setlist doesn't fit",
+        description: "Choose or edit a setlist whose duration fits the selected slot.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    await onConfirm({
+      setlistId: selectedSetlistId,
+      ticketPrice,
+      selectedDate,
+      selectedSlot,
+      attendanceForecast,
+      estimatedRevenue,
+    });
   };
 
   if (!venue) return null;
+
+  const isConfirmDisabled =
+    !hasEligibleSetlists ||
+    !selectedSetlistId ||
+    !selectedSlot ||
+    ticketPrice <= 0 ||
+    isBooking ||
+    bandLockout.isLocked ||
+    durationValidation?.valid === false;
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -251,25 +317,36 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
           {/* Setlist Selection */}
           <div className="space-y-2">
             <Label htmlFor="setlist">Select Setlist *</Label>
-            <Select value={selectedSetlistId} onValueChange={setSelectedSetlistId}>
+            <Select value={selectedSetlistId} onValueChange={setSelectedSetlistId} disabled={!hasEligibleSetlists}>
               <SelectTrigger id="setlist">
                 <SelectValue placeholder="Choose a setlist..." />
               </SelectTrigger>
               <SelectContent>
-                {eligibleSetlists.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    No valid setlists (minimum 6 songs required)
-                  </div>
-                ) : (
+                {hasEligibleSetlists ? (
                   eligibleSetlists.map((setlist) => (
                     <SelectItem key={setlist.id} value={setlist.id}>
                       {setlist.name} ({setlist.song_count} songs)
                     </SelectItem>
                   ))
+                ) : (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    No valid setlists (minimum 6 songs required)
+                  </div>
                 )}
               </SelectContent>
             </Select>
-            
+
+            {!hasEligibleSetlists && (
+              <Alert variant="default" className="mt-2">
+                <AlertDescription className="flex items-center justify-between gap-3">
+                  <span>Create a setlist with at least 6 songs to unlock bookings.</span>
+                  <Button asChild size="sm" variant="secondary">
+                    <Link to="/setlists">Build setlist</Link>
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Duration Display & Validation */}
             {selectedSetlistId && setlistDuration && (
               <div className="flex items-center gap-2 mt-2">
@@ -278,13 +355,13 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
                   {setlistDuration.displayTime}
                 </Badge>
                 
-                {durationValidation && !durationValidation.valid && (
+                {durationValidation && durationValidation.valid === false && (
                   <Badge variant="destructive" className="flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
                     Too long for slot
                   </Badge>
                 )}
-                
+
                 {durationValidation && durationValidation.valid && durationValidation.message && (
                   <Badge variant="outline" className="flex items-center gap-1 text-amber-600">
                     <AlertTriangle className="h-3 w-3" />
@@ -415,9 +492,9 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
           <Button variant="outline" onClick={onClose} disabled={isBooking}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleConfirm} 
-            disabled={!selectedSetlistId || !selectedSlot || ticketPrice <= 0 || isBooking || bandLockout.isLocked}
+          <Button
+            onClick={handleConfirm}
+            disabled={isConfirmDisabled}
           >
             {isBooking ? "Booking..." : "Confirm Booking"}
           </Button>
