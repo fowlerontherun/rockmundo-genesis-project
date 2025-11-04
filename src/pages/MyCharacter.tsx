@@ -445,6 +445,7 @@ const MyCharacter = () => {
   }, [trackedSkillProgress, selectedSkill]);
 
   const xpBalance = useMemo(() => Math.max(0, Number(xpWallet?.xp_balance ?? 0)), [xpWallet]);
+  const hasSpendableXp = xpBalance > 0;
   const lifetimeXp = useMemo(
     () => Math.max(0, Number(xpWallet?.lifetime_xp ?? profile?.experience ?? 0)),
     [xpWallet, profile],
@@ -901,7 +902,7 @@ const MyCharacter = () => {
                   const dbKey = ATTRIBUTE_COLUMN_KEY_MAP[attributeKey] ?? attributeKey;
                   const xpInputValue = attributeXpInputs[attributeKey] ?? DEFAULT_ATTRIBUTE_SPEND;
                   const attributeButtonDisabled =
-                    xpBalance <= 0 || xpInputValue <= 0 || xpBalance < xpInputValue;
+                    !hasSpendableXp || xpInputValue <= 0 || xpBalance < xpInputValue;
                   const isProcessing = attributeSpendPending === dbKey;
 
                   return (
@@ -924,15 +925,22 @@ const MyCharacter = () => {
                           onChange={(event) => handleAttributeInputChange(attributeKey, event.target.value)}
                           className="h-9 w-20"
                           aria-label={`XP to invest in ${sanitizeAttributeLabel(attributeKey)}`}
+                          disabled={!hasSpendableXp}
                         />
-                        <Button
-                          size="sm"
-                          onClick={() => handleSpendAttribute(attributeKey)}
-                          disabled={attributeButtonDisabled || isProcessing}
-                        >
-                          {isProcessing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                          Spend XP
-                        </Button>
+                        {hasSpendableXp ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handleSpendAttribute(attributeKey)}
+                            disabled={attributeButtonDisabled || isProcessing}
+                          >
+                            {isProcessing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                            Spend XP
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Earn XP to invest here.
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -984,6 +992,7 @@ const MyCharacter = () => {
                     min={1}
                     value={skillXpAmount}
                     onChange={(event) => setSkillXpAmount(Math.max(0, Math.trunc(Number(event.target.value))))}
+                    disabled={!hasSpendableXp}
                   />
                 </div>
               </div>
@@ -995,10 +1004,14 @@ const MyCharacter = () => {
                       }`
                     : "Select a skill to see its current level."}
                 </div>
-                <Button onClick={handleSpendSkill} disabled={skillSpendPending || xpBalance <= 0}>
-                  {skillSpendPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Invest XP
-                </Button>
+                {hasSpendableXp ? (
+                  <Button onClick={handleSpendSkill} disabled={skillSpendPending || xpBalance <= 0}>
+                    {skillSpendPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Invest XP
+                  </Button>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Earn more XP to invest in skills.</span>
+                )}
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {trackedSkillProgress.map((skill) => (
