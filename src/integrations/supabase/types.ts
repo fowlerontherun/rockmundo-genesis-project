@@ -132,6 +132,60 @@ export type Database = {
           },
         ]
       }
+      audience_memory: {
+        Row: {
+          avg_experience_score: number | null
+          band_id: string | null
+          city_id: string | null
+          created_at: string | null
+          gigs_attended: number | null
+          id: string
+          last_gig_date: string | null
+          loyalty_level: string | null
+          updated_at: string | null
+          will_attend_again: boolean | null
+        }
+        Insert: {
+          avg_experience_score?: number | null
+          band_id?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          gigs_attended?: number | null
+          id?: string
+          last_gig_date?: string | null
+          loyalty_level?: string | null
+          updated_at?: string | null
+          will_attend_again?: boolean | null
+        }
+        Update: {
+          avg_experience_score?: number | null
+          band_id?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          gigs_attended?: number | null
+          id?: string
+          last_gig_date?: string | null
+          loyalty_level?: string | null
+          updated_at?: string | null
+          will_attend_again?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audience_memory_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audience_memory_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_activity_lockouts: {
         Row: {
           activity_type: string
@@ -230,6 +284,61 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_conflicts: {
+        Row: {
+          band_id: string | null
+          conflict_type: string
+          detected_at: string | null
+          gig_id_1: string | null
+          gig_id_2: string | null
+          id: string
+          resolution_note: string | null
+          resolved: boolean | null
+        }
+        Insert: {
+          band_id?: string | null
+          conflict_type: string
+          detected_at?: string | null
+          gig_id_1?: string | null
+          gig_id_2?: string | null
+          id?: string
+          resolution_note?: string | null
+          resolved?: boolean | null
+        }
+        Update: {
+          band_id?: string | null
+          conflict_type?: string
+          detected_at?: string | null
+          gig_id_1?: string | null
+          gig_id_2?: string | null
+          id?: string
+          resolution_note?: string | null
+          resolved?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_conflicts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_conflicts_gig_id_1_fkey"
+            columns: ["gig_id_1"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_conflicts_gig_id_2_fkey"
+            columns: ["gig_id_2"]
+            isOneToOne: false
+            referencedRelation: "gigs"
             referencedColumns: ["id"]
           },
         ]
@@ -1593,11 +1702,130 @@ export type Database = {
         }
         Relationships: []
       }
+      gig_analytics: {
+        Row: {
+          compared_to_previous: Json | null
+          created_at: string | null
+          crowd_reaction_highlights: string[] | null
+          energy_curve: Json | null
+          gig_id: string | null
+          id: string
+          mishap_events: Json | null
+          performance_breakdown: Json | null
+          social_buzz_count: number | null
+          twaater_sentiment: number | null
+        }
+        Insert: {
+          compared_to_previous?: Json | null
+          created_at?: string | null
+          crowd_reaction_highlights?: string[] | null
+          energy_curve?: Json | null
+          gig_id?: string | null
+          id?: string
+          mishap_events?: Json | null
+          performance_breakdown?: Json | null
+          social_buzz_count?: number | null
+          twaater_sentiment?: number | null
+        }
+        Update: {
+          compared_to_previous?: Json | null
+          created_at?: string | null
+          crowd_reaction_highlights?: string[] | null
+          energy_curve?: Json | null
+          gig_id?: string | null
+          id?: string
+          mishap_events?: Json | null
+          performance_breakdown?: Json | null
+          social_buzz_count?: number | null
+          twaater_sentiment?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_analytics_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_offers: {
+        Row: {
+          band_id: string | null
+          base_payout: number | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          metadata: Json | null
+          offer_reason: string | null
+          offered_date: string
+          promoter_id: string | null
+          slot_type: string | null
+          status: string | null
+          ticket_price: number | null
+          venue_id: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          base_payout?: number | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          metadata?: Json | null
+          offer_reason?: string | null
+          offered_date: string
+          promoter_id?: string | null
+          slot_type?: string | null
+          status?: string | null
+          ticket_price?: number | null
+          venue_id?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          base_payout?: number | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          metadata?: Json | null
+          offer_reason?: string | null
+          offered_date?: string
+          promoter_id?: string | null
+          slot_type?: string | null
+          status?: string | null
+          ticket_price?: number | null
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_offers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_offers_promoter_id_fkey"
+            columns: ["promoter_id"]
+            isOneToOne: false
+            referencedRelation: "promoters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_offers_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_outcomes: {
         Row: {
           actual_attendance: number
           attendance_percentage: number | null
+          audience_memory_impact: number | null
           band_chemistry_level: number | null
+          band_synergy_modifier: number | null
           chemistry_change: number | null
           completed_at: string | null
           created_at: string | null
@@ -1614,17 +1842,23 @@ export type Database = {
           net_profit: number
           overall_rating: number
           performance_grade: string | null
+          promoter_modifier: number | null
+          skill_performance_avg: number | null
+          social_buzz_impact: number | null
           ticket_revenue: number
           total_costs: number
           total_revenue: number
           venue_capacity: number | null
           venue_cost: number
+          venue_loyalty_bonus: number | null
           venue_name: string | null
         }
         Insert: {
           actual_attendance: number
           attendance_percentage?: number | null
+          audience_memory_impact?: number | null
           band_chemistry_level?: number | null
+          band_synergy_modifier?: number | null
           chemistry_change?: number | null
           completed_at?: string | null
           created_at?: string | null
@@ -1641,17 +1875,23 @@ export type Database = {
           net_profit?: number
           overall_rating: number
           performance_grade?: string | null
+          promoter_modifier?: number | null
+          skill_performance_avg?: number | null
+          social_buzz_impact?: number | null
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
           venue_capacity?: number | null
           venue_cost?: number
+          venue_loyalty_bonus?: number | null
           venue_name?: string | null
         }
         Update: {
           actual_attendance?: number
           attendance_percentage?: number | null
+          audience_memory_impact?: number | null
           band_chemistry_level?: number | null
+          band_synergy_modifier?: number | null
           chemistry_change?: number | null
           completed_at?: string | null
           created_at?: string | null
@@ -1668,11 +1908,15 @@ export type Database = {
           net_profit?: number
           overall_rating?: number
           performance_grade?: string | null
+          promoter_modifier?: number | null
+          skill_performance_avg?: number | null
+          social_buzz_impact?: number | null
           ticket_revenue?: number
           total_costs?: number
           total_revenue?: number
           venue_capacity?: number | null
           venue_cost?: number
+          venue_loyalty_bonus?: number | null
           venue_name?: string | null
         }
         Relationships: [
@@ -1797,16 +2041,20 @@ export type Database = {
           band_id: string
           completed_at: string | null
           created_at: string | null
+          crowd_engagement: number | null
           current_song_position: number | null
           estimated_attendance: number | null
           estimated_revenue: number | null
           fan_gain: number | null
           id: string
           payment: number | null
+          performance_calculation: Json | null
           pre_gig_forecast: Json | null
+          promoter_id: string | null
           scheduled_date: string
           setlist_duration_minutes: number | null
           setlist_id: string | null
+          setlist_quality_score: number | null
           show_type: string | null
           slot_attendance_multiplier: number | null
           slot_end_time: string | null
@@ -1816,6 +2064,7 @@ export type Database = {
           status: string | null
           ticket_price: number | null
           time_slot: string | null
+          tour_id: string | null
           updated_at: string | null
           venue_id: string
         }
@@ -1824,16 +2073,20 @@ export type Database = {
           band_id: string
           completed_at?: string | null
           created_at?: string | null
+          crowd_engagement?: number | null
           current_song_position?: number | null
           estimated_attendance?: number | null
           estimated_revenue?: number | null
           fan_gain?: number | null
           id?: string
           payment?: number | null
+          performance_calculation?: Json | null
           pre_gig_forecast?: Json | null
+          promoter_id?: string | null
           scheduled_date: string
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
+          setlist_quality_score?: number | null
           show_type?: string | null
           slot_attendance_multiplier?: number | null
           slot_end_time?: string | null
@@ -1843,6 +2096,7 @@ export type Database = {
           status?: string | null
           ticket_price?: number | null
           time_slot?: string | null
+          tour_id?: string | null
           updated_at?: string | null
           venue_id: string
         }
@@ -1851,16 +2105,20 @@ export type Database = {
           band_id?: string
           completed_at?: string | null
           created_at?: string | null
+          crowd_engagement?: number | null
           current_song_position?: number | null
           estimated_attendance?: number | null
           estimated_revenue?: number | null
           fan_gain?: number | null
           id?: string
           payment?: number | null
+          performance_calculation?: Json | null
           pre_gig_forecast?: Json | null
+          promoter_id?: string | null
           scheduled_date?: string
           setlist_duration_minutes?: number | null
           setlist_id?: string | null
+          setlist_quality_score?: number | null
           show_type?: string | null
           slot_attendance_multiplier?: number | null
           slot_end_time?: string | null
@@ -1870,6 +2128,7 @@ export type Database = {
           status?: string | null
           ticket_price?: number | null
           time_slot?: string | null
+          tour_id?: string | null
           updated_at?: string | null
           venue_id?: string
         }
@@ -1896,10 +2155,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "gigs_promoter_id_fkey"
+            columns: ["promoter_id"]
+            isOneToOne: false
+            referencedRelation: "promoters"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gigs_setlist_id_fkey"
             columns: ["setlist_id"]
             isOneToOne: false
             referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gigs_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
             referencedColumns: ["id"]
           },
           {
@@ -2258,6 +2531,59 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      multiplayer_events: {
+        Row: {
+          created_at: string | null
+          entry_fee: number | null
+          event_date: string
+          event_name: string
+          event_type: string | null
+          id: string
+          max_participants: number | null
+          metadata: Json | null
+          prize_pool: number | null
+          status: string | null
+          venue_id: string | null
+          voting_enabled: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          entry_fee?: number | null
+          event_date: string
+          event_name: string
+          event_type?: string | null
+          id?: string
+          max_participants?: number | null
+          metadata?: Json | null
+          prize_pool?: number | null
+          status?: string | null
+          venue_id?: string | null
+          voting_enabled?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          entry_fee?: number | null
+          event_date?: string
+          event_name?: string
+          event_type?: string | null
+          id?: string
+          max_participants?: number | null
+          metadata?: Json | null
+          prize_pool?: number | null
+          status?: string | null
+          venue_id?: string | null
+          voting_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multiplayer_events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -3409,6 +3735,45 @@ export type Database = {
           },
         ]
       }
+      promoters: {
+        Row: {
+          active: boolean | null
+          booking_fee: number | null
+          created_at: string | null
+          crowd_engagement_bonus: number | null
+          genre_specialization: string[] | null
+          id: string
+          name: string
+          quality_tier: string | null
+          reputation: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          booking_fee?: number | null
+          created_at?: string | null
+          crowd_engagement_bonus?: number | null
+          genre_specialization?: string[] | null
+          id?: string
+          name: string
+          quality_tier?: string | null
+          reputation?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          booking_fee?: number | null
+          created_at?: string | null
+          crowd_engagement_bonus?: number | null
+          genre_specialization?: string[] | null
+          id?: string
+          name?: string
+          quality_tier?: string | null
+          reputation?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       radio_playlists: {
         Row: {
           added_at: string | null
@@ -4327,30 +4692,39 @@ export type Database = {
       setlist_songs: {
         Row: {
           created_at: string | null
+          crowd_engagement_target: number | null
+          energy_level: number | null
           id: string
           is_encore: boolean | null
           notes: string | null
           position: number
           setlist_id: string
           song_id: string
+          tempo_bpm: number | null
         }
         Insert: {
           created_at?: string | null
+          crowd_engagement_target?: number | null
+          energy_level?: number | null
           id?: string
           is_encore?: boolean | null
           notes?: string | null
           position: number
           setlist_id: string
           song_id: string
+          tempo_bpm?: number | null
         }
         Update: {
           created_at?: string | null
+          crowd_engagement_target?: number | null
+          energy_level?: number | null
           id?: string
           is_encore?: boolean | null
           notes?: string | null
           position?: number
           setlist_id?: string
           song_id?: string
+          tempo_bpm?: number | null
         }
         Relationships: [
           {
@@ -5339,6 +5713,47 @@ export type Database = {
           },
         ]
       }
+      stage_events: {
+        Row: {
+          description: string | null
+          event_type: string
+          gig_id: string | null
+          id: string
+          impact_score: number | null
+          occurred_at: string | null
+          severity: string | null
+          song_position: number | null
+        }
+        Insert: {
+          description?: string | null
+          event_type: string
+          gig_id?: string | null
+          id?: string
+          impact_score?: number | null
+          occurred_at?: string | null
+          severity?: string | null
+          song_position?: number | null
+        }
+        Update: {
+          description?: string | null
+          event_type?: string
+          gig_id?: string | null
+          id?: string
+          impact_score?: number | null
+          occurred_at?: string | null
+          severity?: string | null
+          song_position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_events_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       streaming_analytics: {
         Row: {
           created_at: string
@@ -5481,6 +5896,95 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tour_gigs: {
+        Row: {
+          created_at: string | null
+          gig_id: string | null
+          id: string
+          position: number
+          tour_id: string | null
+          travel_cost: number | null
+          travel_distance_km: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          gig_id?: string | null
+          id?: string
+          position: number
+          tour_id?: string | null
+          travel_cost?: number | null
+          travel_distance_km?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          gig_id?: string | null
+          id?: string
+          position?: number
+          tour_id?: string | null
+          travel_cost?: number | null
+          travel_distance_km?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_gigs_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_gigs_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tour_logistics: {
+        Row: {
+          created_at: string | null
+          daily_costs: number | null
+          fatigue_level: number | null
+          id: string
+          log_date: string
+          morale_level: number | null
+          notes: string | null
+          tour_id: string | null
+          vehicle_condition: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_costs?: number | null
+          fatigue_level?: number | null
+          id?: string
+          log_date: string
+          morale_level?: number | null
+          notes?: string | null
+          tour_id?: string | null
+          vehicle_condition?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_costs?: number | null
+          fatigue_level?: number | null
+          id?: string
+          log_date?: string
+          morale_level?: number | null
+          notes?: string | null
+          tour_id?: string | null
+          vehicle_condition?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_logistics_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tour_venues: {
         Row: {
@@ -6193,59 +6697,128 @@ export type Database = {
         }
         Relationships: []
       }
+      venue_relationships: {
+        Row: {
+          band_id: string | null
+          created_at: string | null
+          gigs_performed: number | null
+          id: string
+          last_performance_date: string | null
+          loyalty_points: number | null
+          payout_bonus: number | null
+          relationship_tier: string | null
+          updated_at: string | null
+          venue_id: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string | null
+          gigs_performed?: number | null
+          id?: string
+          last_performance_date?: string | null
+          loyalty_points?: number | null
+          payout_bonus?: number | null
+          relationship_tier?: string | null
+          updated_at?: string | null
+          venue_id?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string | null
+          gigs_performed?: number | null
+          id?: string
+          last_performance_date?: string | null
+          loyalty_points?: number | null
+          payout_bonus?: number | null
+          relationship_tier?: string | null
+          updated_at?: string | null
+          venue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_relationships_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venue_relationships_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           amenities: Json | null
+          audience_type: string | null
           base_payment: number | null
           capacity: number | null
           city_id: string | null
           created_at: string | null
           description: string | null
           district_id: string | null
+          economy_factor: number | null
+          genre_bias: Json | null
           id: string
           image_url: string | null
           location: string | null
           name: string
           prestige_level: number | null
+          reputation: number | null
           requirements: Json | null
           slot_config: Json | null
           slots_per_day: number | null
+          venue_cut: number | null
           venue_type: string | null
         }
         Insert: {
           amenities?: Json | null
+          audience_type?: string | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
           created_at?: string | null
           description?: string | null
           district_id?: string | null
+          economy_factor?: number | null
+          genre_bias?: Json | null
           id?: string
           image_url?: string | null
           location?: string | null
           name: string
           prestige_level?: number | null
+          reputation?: number | null
           requirements?: Json | null
           slot_config?: Json | null
           slots_per_day?: number | null
+          venue_cut?: number | null
           venue_type?: string | null
         }
         Update: {
           amenities?: Json | null
+          audience_type?: string | null
           base_payment?: number | null
           capacity?: number | null
           city_id?: string | null
           created_at?: string | null
           description?: string | null
           district_id?: string | null
+          economy_factor?: number | null
+          genre_bias?: Json | null
           id?: string
           image_url?: string | null
           location?: string | null
           name?: string
           prestige_level?: number | null
+          reputation?: number | null
           requirements?: Json | null
           slot_config?: Json | null
           slots_per_day?: number | null
+          venue_cut?: number | null
           venue_type?: string | null
         }
         Relationships: [
@@ -6324,6 +6897,7 @@ export type Database = {
         }
         Returns: Json
       }
+      expire_old_gig_offers: { Args: never; Returns: undefined }
       get_setlist_total_duration: {
         Args: { p_setlist_id: string }
         Returns: number
