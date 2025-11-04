@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
+import { MAX_SKILL_LEVEL } from "../../../src/data/skillConstants.ts";
 import { fetchProfileState, type ProfileState } from "./index.ts";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -171,7 +172,7 @@ export async function handleSpendSkillXp(
   const calculateRequiredXp = (level: number) => Math.floor(100 * Math.pow(1.5, level));
 
   const currentXp = skill?.current_xp ?? 0;
-  const currentLevel = skill?.current_level ?? 0;
+  const currentLevel = Math.min(skill?.current_level ?? 0, MAX_SKILL_LEVEL);
   const newXp = currentXp + xpAmount;
   let requiredXp = skill?.required_xp ?? calculateRequiredXp(currentLevel);
 
@@ -179,10 +180,15 @@ export async function handleSpendSkillXp(
   let remainingXp = newXp;
 
   // Calculate level ups
-  while (remainingXp >= requiredXp) {
+  while (newLevel < MAX_SKILL_LEVEL && remainingXp >= requiredXp) {
     remainingXp -= requiredXp;
     newLevel += 1;
     requiredXp = calculateRequiredXp(newLevel);
+  }
+
+  if (newLevel >= MAX_SKILL_LEVEL) {
+    newLevel = MAX_SKILL_LEVEL;
+    remainingXp = Math.min(remainingXp, currentXp);
   }
 
   // Update skill progress

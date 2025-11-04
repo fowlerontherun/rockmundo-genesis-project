@@ -1118,6 +1118,236 @@ const instrumentsConfigs: TieredSkillConfig[] = [
         slug: "instruments_mastery_songwriting_arrangement"
       }
     }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Acoustic Guitar Fingerstyle",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Acoustic Guitar Fingerstyle",
+        description: "Build alternating thumb patterns, Travis picking, and melodic fingerstyle textures.",
+        slug: createSlug("instruments", "Basic", "Acoustic Guitar Fingerstyle")
+      },
+      Professional: {
+        name: "Professional Acoustic Fingerstyle",
+        description: "Arrange solo guitar pieces with harmonics, syncopation, and dynamic phrasing.",
+        slug: createSlug("instruments", "Professional", "Acoustic Guitar Fingerstyle")
+      },
+      Mastery: {
+        name: "Acoustic Fingerstyle Mastery",
+        description: "Deliver virtuosic fingerstyle performances with percussive flair and harmonic layering.",
+        slug: createSlug("instruments", "Mastery", "Acoustic Guitar Fingerstyle")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Electric Guitar Lead Techniques",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Electric Guitar Lead Techniques",
+        description: "Strengthen bending accuracy, vibrato control, and scale fluency for solos.",
+        slug: createSlug("instruments", "Basic", "Electric Guitar Lead Techniques")
+      },
+      Professional: {
+        name: "Professional Electric Guitar Leads",
+        description: "Blend legato, tapping, and modal phrasing for expressive lead passages.",
+        slug: createSlug("instruments", "Professional", "Electric Guitar Lead Techniques")
+      },
+      Mastery: {
+        name: "Electric Lead Mastery",
+        description: "Command arena-ready solos with storytelling phrasing and tonal artistry.",
+        slug: createSlug("instruments", "Mastery", "Electric Guitar Lead Techniques")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Rhythm Guitar & Comping",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Rhythm Guitar & Comping",
+        description: "Lock in strumming patterns, chordal grooves, and muting clarity for ensembles.",
+        slug: createSlug("instruments", "Basic", "Rhythm Guitar & Comping")
+      },
+      Professional: {
+        name: "Professional Rhythm Guitar",
+        description: "Craft intricate comping with chord extensions, inversions, and syncopation.",
+        slug: createSlug("instruments", "Professional", "Rhythm Guitar & Comping")
+      },
+      Mastery: {
+        name: "Rhythm Guitar Mastery",
+        description: "Drive bands with genre-fluid comping, percussive textures, and pocket precision.",
+        slug: createSlug("instruments", "Mastery", "Rhythm Guitar & Comping")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Drum Set Pocket & Fills",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Drum Set Pocket & Fills",
+        description: "Develop timekeeping, subdivision control, and tasteful fill vocabulary.",
+        slug: createSlug("instruments", "Basic", "Drum Set Pocket & Fills")
+      },
+      Professional: {
+        name: "Professional Drum Set Pocket",
+        description: "Shape dynamic grooves with ghost notes, linear patterns, and stylistic fills.",
+        slug: createSlug("instruments", "Professional", "Drum Set Pocket & Fills")
+      },
+      Mastery: {
+        name: "Drum Set Mastery",
+        description: "Lead rhythm sections with polyrhythmic command, showpiece solos, and studio precision.",
+        slug: createSlug("instruments", "Mastery", "Drum Set Pocket & Fills")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "World Hand Percussion",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "World Hand Percussion",
+        description: "Explore djembé, cajón, and frame drum fundamentals with authentic grooves.",
+        slug: createSlug("instruments", "Basic", "World Hand Percussion")
+      },
+      Professional: {
+        name: "Professional Hand Percussion",
+        description: "Blend global rhythms, call-and-response, and ensemble interplay across instruments.",
+        slug: createSlug("instruments", "Professional", "World Hand Percussion")
+      },
+      Mastery: {
+        name: "Hand Percussion Mastery",
+        description: "Lead world ensembles with advanced solos, cultural nuance, and hybrid arrangements.",
+        slug: createSlug("instruments", "Mastery", "World Hand Percussion")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Jazz Piano & Harmony",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Jazz Piano & Harmony",
+        description: "Learn shell voicings, swing comping, and ii-V-I progressions at the keys.",
+        slug: createSlug("instruments", "Basic", "Jazz Piano & Harmony")
+      },
+      Professional: {
+        name: "Professional Jazz Piano",
+        description: "Improvise with extended harmony, stride variations, and reharmonization techniques.",
+        slug: createSlug("instruments", "Professional", "Jazz Piano & Harmony")
+      },
+      Mastery: {
+        name: "Jazz Piano Mastery",
+        description: "Command trio settings with modal improvisation, polyrhythms, and harmonic storytelling.",
+        slug: createSlug("instruments", "Mastery", "Jazz Piano & Harmony")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Gospel/Pop Vocal Harmonies",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Gospel/Pop Vocal Harmonies",
+        description: "Blend thirds, sixths, and call-and-response parts with confident tuning.",
+        slug: createSlug("instruments", "Basic", "Gospel/Pop Vocal Harmonies")
+      },
+      Professional: {
+        name: "Professional Vocal Harmonies",
+        description: "Arrange stacked harmonies, modulations, and dynamic swells for live sets.",
+        slug: createSlug("instruments", "Professional", "Gospel/Pop Vocal Harmonies")
+      },
+      Mastery: {
+        name: "Vocal Harmony Mastery",
+        description: "Direct choirs and pop ensembles with intricate voicings and improvisational blends.",
+        slug: createSlug("instruments", "Mastery", "Gospel/Pop Vocal Harmonies")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Brass Section Leadership",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Brass Section Leadership",
+        description: "Coordinate section phrasing, cues, and blend for live brass ensembles.",
+        slug: createSlug("instruments", "Basic", "Brass Section Leadership")
+      },
+      Professional: {
+        name: "Professional Brass Leadership",
+        description: "Shape voicings, balance dynamics, and cue hits across horn sections.",
+        slug: createSlug("instruments", "Professional", "Brass Section Leadership")
+      },
+      Mastery: {
+        name: "Brass Leadership Mastery",
+        description: "Direct touring brass sections with advanced arrangements and improvisational interplay.",
+        slug: createSlug("instruments", "Mastery", "Brass Section Leadership")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Woodwind Solo Improvisation",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Woodwind Solo Improvisation",
+        description: "Learn blues scales, motivic development, and breath phrasing for woodwind solos.",
+        slug: createSlug("instruments", "Basic", "Woodwind Solo Improvisation")
+      },
+      Professional: {
+        name: "Professional Woodwind Improvisation",
+        description: "Navigate chord changes, altissimo control, and stylistic articulations on woodwinds.",
+        slug: createSlug("instruments", "Professional", "Woodwind Solo Improvisation")
+      },
+      Mastery: {
+        name: "Woodwind Improvisation Mastery",
+        description: "Deliver emotive solos with circular breathing, extended techniques, and genre fusion.",
+        slug: createSlug("instruments", "Mastery", "Woodwind Solo Improvisation")
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Modular Synth Performance",
+    icon: "performance",
+    tiers: {
+      Basic: {
+        name: "Modular Synth Performance",
+        description: "Patch oscillators, filters, and sequencers for evolving live textures.",
+        slug: createSlug("instruments", "Basic", "Modular Synth Performance")
+      },
+      Professional: {
+        name: "Professional Modular Performance",
+        description: "Integrate clocking, CV modulation, and external gear for improvisational sets.",
+        slug: createSlug("instruments", "Professional", "Modular Synth Performance")
+      },
+      Mastery: {
+        name: "Modular Synth Mastery",
+        description: "Design immersive modular showcases with live re-patching and narrative dynamics.",
+        slug: createSlug("instruments", "Mastery", "Modular Synth Performance")
+      }
+    }
   }
 ];
 
@@ -1262,6 +1492,84 @@ const instrumentMasteryConfigs: TieredSkillConfig[] = [
           { slug: createSlug("instruments", "Professional", "Electronic Strings"), requiredValue: 650 },
           { slug: "instruments_professional_advanced_strings", requiredValue: 650 },
           { slug: "instruments_professional_synths_keys", requiredValue: 600 }
+        ]
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Guitar Virtuoso",
+    icon: "performance",
+    chainPrerequisites: false,
+    tiers: {
+      Mastery: {
+        name: "Guitar Virtuoso Mastery",
+        description: "Deliver show-stopping solos with hybrid picking, speed, and expressive dynamics.",
+        slug: createSlug("instruments", "Mastery", "Guitar Virtuoso"),
+        prerequisites: [
+          { slug: createSlug("instruments", "Professional", "Acoustic Guitar Fingerstyle"), requiredValue: 650 },
+          { slug: createSlug("instruments", "Professional", "Electric Guitar Lead Techniques"), requiredValue: 650 },
+          { slug: createSlug("instruments", "Professional", "Rhythm Guitar & Comping"), requiredValue: 600 },
+          { slug: "instruments_professional_advanced_strings", requiredValue: 600 }
+        ]
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Drumline Captain",
+    icon: "performance",
+    chainPrerequisites: false,
+    tiers: {
+      Mastery: {
+        name: "Drumline Captain Mastery",
+        description: "Lead percussion squads with precise rudiments, visuals, and ensemble direction.",
+        slug: createSlug("instruments", "Mastery", "Drumline Captain"),
+        prerequisites: [
+          { slug: createSlug("instruments", "Professional", "Drum Set Pocket & Fills"), requiredValue: 650 },
+          { slug: createSlug("instruments", "Professional", "Hybrid Drums"), requiredValue: 600 },
+          { slug: "instruments_professional_percussion_drums", requiredValue: 650 }
+        ]
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Keyboard Improvisation",
+    icon: "performance",
+    chainPrerequisites: false,
+    tiers: {
+      Mastery: {
+        name: "Keyboard Improvisation Mastery",
+        description: "Improvise fearlessly across jazz, gospel, and synth-driven sets.",
+        slug: createSlug("instruments", "Mastery", "Keyboard Improvisation"),
+        prerequisites: [
+          { slug: createSlug("instruments", "Professional", "Jazz Piano & Harmony"), requiredValue: 650 },
+          { slug: "instruments_professional_keyboard_piano", requiredValue: 650 },
+          { slug: createSlug("instruments", "Professional", "Modular Synth Performance"), requiredValue: 600 },
+          { slug: "instruments_professional_synths_keys", requiredValue: 600 }
+        ]
+      }
+    }
+  },
+  {
+    prefix: "instruments",
+    category: "Instruments & Performance",
+    track: "Vocal Harmony Director",
+    icon: "performance",
+    chainPrerequisites: false,
+    tiers: {
+      Mastery: {
+        name: "Vocal Harmony Director Mastery",
+        description: "Arrange, cue, and conduct lush harmony stacks with confidence.",
+        slug: createSlug("instruments", "Mastery", "Vocal Harmony Director"),
+        prerequisites: [
+          { slug: createSlug("instruments", "Professional", "Gospel/Pop Vocal Harmonies"), requiredValue: 650 },
+          { slug: "instruments_professional_vocal_performance", requiredValue: 650 },
+          { slug: "instruments_professional_vocal_fx", requiredValue: 600 }
         ]
       }
     }

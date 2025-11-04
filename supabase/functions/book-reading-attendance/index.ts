@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { MAX_SKILL_LEVEL } from "../../../src/data/skillConstants.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +56,7 @@ async function processAttendance(supabaseClient: any) {
         .eq("skill_slug", book.skill_slug)
         .maybeSingle();
 
-      const currentLevel = skillProgress?.current_level || 1;
+      const currentLevel = Math.min(skillProgress?.current_level || 1, MAX_SKILL_LEVEL);
       const currentXp = skillProgress?.current_xp || 0;
       const requiredXp = skillProgress?.required_xp || 100;
       
@@ -86,12 +87,17 @@ async function processAttendance(supabaseClient: any) {
       let newLevel = currentLevel;
       let newRequiredXp = requiredXp;
       let remainingXp = newXp;
-      
+
       // Level up check (can level up multiple times)
-      while (remainingXp >= newRequiredXp) {
+      while (newLevel < MAX_SKILL_LEVEL && remainingXp >= newRequiredXp) {
         remainingXp -= newRequiredXp;
         newLevel += 1;
         newRequiredXp = Math.floor(newRequiredXp * 1.5);
+      }
+
+      if (newLevel >= MAX_SKILL_LEVEL) {
+        newLevel = MAX_SKILL_LEVEL;
+        remainingXp = Math.min(remainingXp, currentXp);
       }
 
       const { error: skillError } = await supabaseClient

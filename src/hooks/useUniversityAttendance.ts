@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
 
 interface UniversityEnrollment {
   id: string;
@@ -147,14 +148,19 @@ export function useUniversityAttendance(profileId: string | undefined) {
 
       if (skillProgress) {
         let newCurrentXp = skillProgress.current_xp + xpEarned;
-        let newLevel = skillProgress.current_level;
+        let newLevel = Math.min(skillProgress.current_level, MAX_SKILL_LEVEL);
         let newRequiredXp = skillProgress.required_xp;
 
         // Handle multiple level-ups
-        while (newCurrentXp >= newRequiredXp) {
+        while (newLevel < MAX_SKILL_LEVEL && newCurrentXp >= newRequiredXp) {
           newCurrentXp -= newRequiredXp;
           newLevel += 1;
           newRequiredXp = Math.floor(newRequiredXp * 1.5);
+        }
+
+        if (newLevel >= MAX_SKILL_LEVEL) {
+          newLevel = MAX_SKILL_LEVEL;
+          newCurrentXp = Math.min(newCurrentXp, skillProgress.current_xp);
         }
 
         const { error: skillError } = await supabase
@@ -173,11 +179,16 @@ export function useUniversityAttendance(profileId: string | undefined) {
         let newCurrentXp = xpEarned;
         let newLevel = 0;
         let newRequiredXp = 100;
-        
-        while (newCurrentXp >= newRequiredXp) {
+
+        while (newLevel < MAX_SKILL_LEVEL && newCurrentXp >= newRequiredXp) {
           newCurrentXp -= newRequiredXp;
           newLevel += 1;
           newRequiredXp = Math.floor(newRequiredXp * 1.5);
+        }
+
+        if (newLevel >= MAX_SKILL_LEVEL) {
+          newLevel = MAX_SKILL_LEVEL;
+          newCurrentXp = Math.min(newCurrentXp, newRequiredXp);
         }
         
         const { error: skillError } = await supabase.from("skill_progress").insert({

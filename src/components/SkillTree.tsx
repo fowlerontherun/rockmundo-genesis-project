@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/lib/supabase-types';
 import { useGameData } from '@/hooks/useGameData';
+import { MAX_SKILL_LEVEL } from '@/data/skillConstants';
 import { Lock, Star, Trophy, Music, Users, Mic, Zap } from 'lucide-react';
 
 type SkillDefinition = Database['public']['Tables']['skill_definitions']['Row'];
@@ -139,6 +140,7 @@ export const SkillTree: React.FC = () => {
           skill.slug.includes('percussions') ||
           skill.slug.includes('strings') ||
           skill.slug.includes('woodwinds') ||
+          skill.slug.includes('woodwind') ||
           skill.slug.includes('electronic_instruments') ||
           skill.slug.includes('string_instruments') ||
           skill.slug.includes('advanced_strings') ||
@@ -195,8 +197,13 @@ export const SkillTree: React.FC = () => {
 
     try {
       const existingProgress = getSkillProgress(skillSlug);
-      const newXp = (existingProgress?.current_xp || 0) + 10;
-      const newLevel = Math.floor(newXp / 100);
+      const currentXp = existingProgress?.current_xp || 0;
+      const newXp = currentXp + 10;
+      const unclampedLevel = Math.floor(newXp / 100);
+      const newLevel = Math.min(unclampedLevel, MAX_SKILL_LEVEL);
+      const cappedXp = newLevel >= MAX_SKILL_LEVEL ? currentXp : newXp;
+      const requiredXp =
+        newLevel >= MAX_SKILL_LEVEL ? existingProgress?.required_xp ?? (MAX_SKILL_LEVEL + 1) * 100 : (newLevel + 1) * 100;
 
       const { error } = await supabase
         .from('skill_progress')
@@ -204,8 +211,8 @@ export const SkillTree: React.FC = () => {
           profile_id: profile.id,
           skill_slug: skillSlug,
           current_level: newLevel,
-          current_xp: newXp,
-          required_xp: (newLevel + 1) * 100,
+          current_xp: cappedXp,
+          required_xp: requiredXp,
         } as any, { onConflict: 'profile_id,skill_slug' });
 
       if (error) throw error;
