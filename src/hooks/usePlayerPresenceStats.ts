@@ -71,7 +71,7 @@ export const usePlayerPresenceStats = (
       let nextTotalPlayers = 0;
       let nextOnlinePlayers = 0;
 
-      const totalResult = await supabase.from("profiles").select("*", { count: "exact", head: true });
+      const totalResult = await supabase.from("public_profiles").select("*", { count: "exact", head: true });
 
       if (totalResult.error) {
         if (!isMissingRelationError(totalResult.error)) {
