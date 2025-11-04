@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth-context";
+import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
 
 export function useMentorSessions() {
   const { toast } = useToast();
@@ -115,14 +116,19 @@ export function useMentorSessions() {
 
       // Update skill progress with proper multi-level handling
       let newXp = (skill?.current_xp || 0) + skillValueGained;
-      let newLevel = skill?.current_level || 0;
+      let newLevel = Math.min(skill?.current_level || 0, MAX_SKILL_LEVEL);
       let newRequiredXp = skill?.required_xp || 100;
 
       // Handle multiple level-ups
-      while (newXp >= newRequiredXp) {
+      while (newLevel < MAX_SKILL_LEVEL && newXp >= newRequiredXp) {
         newXp -= newRequiredXp;
         newLevel += 1;
         newRequiredXp = Math.floor(newRequiredXp * 1.5);
+      }
+
+      if (newLevel >= MAX_SKILL_LEVEL) {
+        newLevel = MAX_SKILL_LEVEL;
+        newXp = Math.min(newXp, skill?.current_xp || newXp);
       }
 
       if (skill) {
@@ -143,10 +149,15 @@ export function useMentorSessions() {
         newLevel = 0;
         newRequiredXp = 100;
         
-        while (newXp >= newRequiredXp) {
+        while (newLevel < MAX_SKILL_LEVEL && newXp >= newRequiredXp) {
           newXp -= newRequiredXp;
           newLevel += 1;
           newRequiredXp = Math.floor(newRequiredXp * 1.5);
+        }
+
+        if (newLevel >= MAX_SKILL_LEVEL) {
+          newLevel = MAX_SKILL_LEVEL;
+          newXp = Math.min(newXp, newRequiredXp);
         }
         
         const { error: skillError } = await supabase.from("skill_progress").insert({
