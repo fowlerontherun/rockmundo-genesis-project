@@ -52,9 +52,32 @@ interface Props {
 export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [] }: Props) => {
   if (!outcome) return null;
 
-  const grade = getPerformanceGrade(outcome.overall_rating);
-  const starsFilled = Math.floor(outcome.overall_rating);
-  const starsPartial = outcome.overall_rating - starsFilled;
+  const safeNumber = (value: number | null | undefined) =>
+    typeof value === "number" && !Number.isNaN(value) ? value : 0;
+
+  const overallRating = safeNumber(outcome.overall_rating);
+  const ticketRevenue = safeNumber(outcome.ticket_revenue);
+  const merchSales = safeNumber(outcome.merch_sales);
+  const totalRevenue = safeNumber(outcome.total_revenue);
+  const crewCosts = safeNumber(outcome.crew_costs);
+  const equipmentWearCost = safeNumber(outcome.equipment_wear_cost);
+  const netProfit = safeNumber(outcome.net_profit);
+  const actualAttendance = safeNumber(outcome.actual_attendance);
+  const attendancePercentage = safeNumber(outcome.attendance_percentage);
+  const fameGained = safeNumber(outcome.fame_gained);
+  const chemistryImpact = safeNumber(outcome.chemistry_impact);
+
+  const breakdown = {
+    equipment_quality: safeNumber(outcome.breakdown_data?.equipment_quality),
+    crew_skill: safeNumber(outcome.breakdown_data?.crew_skill),
+    band_chemistry: safeNumber(outcome.breakdown_data?.band_chemistry),
+    member_skills: safeNumber(outcome.breakdown_data?.member_skills),
+    merch_items_sold: safeNumber(outcome.breakdown_data?.merch_items_sold),
+  };
+
+  const grade = getPerformanceGrade(overallRating);
+  const starsFilled = Math.floor(overallRating);
+  const starsPartial = overallRating - starsFilled;
 
   const renderStars = (rating: number, maxStars: number = 25) => {
     const filled = Math.floor(rating);
@@ -118,9 +141,9 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
             <CardContent>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
-                  {renderStars(outcome.overall_rating)}
+                  {renderStars(overallRating)}
                   <p className="text-3xl font-bold mt-2">
-                    {outcome.overall_rating.toFixed(1)} / 25
+                    {overallRating.toFixed(1)} / 25
                   </p>
                 </div>
               </div>
@@ -139,32 +162,32 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Ticket Sales</p>
-                  <p className="text-xl font-semibold">${outcome.ticket_revenue.toLocaleString()}</p>
+                  <p className="text-xl font-semibold">${ticketRevenue.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Merchandise</p>
-                  <p className="text-xl font-semibold">${outcome.merch_sales.toLocaleString()}</p>
+                  <p className="text-xl font-semibold">${merchSales.toLocaleString()}</p>
                 </div>
               </div>
               <div className="border-t pt-3">
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">${outcome.total_revenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Crew Costs</span>
-                  <span className="text-destructive">-${outcome.crew_costs.toLocaleString()}</span>
+                  <span className="text-destructive">-${crewCosts.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Equipment Wear</span>
-                  <span className="text-destructive">-${outcome.equipment_wear_cost.toLocaleString()}</span>
+                  <span className="text-destructive">-${equipmentWearCost.toLocaleString()}</span>
                 </div>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
                   <p className="text-lg font-semibold">Net Profit</p>
-                  <p className={`text-2xl font-bold ${outcome.net_profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ${outcome.net_profit.toLocaleString()}
+                  <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    ${netProfit.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -179,11 +202,11 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Capacity</span>
-                <span className="font-semibold">{outcome.actual_attendance} / {venueCapacity}</span>
+                <span className="font-semibold">{actualAttendance} / {venueCapacity}</span>
               </div>
-              <Progress value={outcome.attendance_percentage} className="h-3" />
+              <Progress value={attendancePercentage} className="h-3" />
               <p className="text-sm text-muted-foreground text-center">
-                {outcome.attendance_percentage.toFixed(1)}% of venue capacity
+                {attendancePercentage.toFixed(1)}% of venue capacity
               </p>
             </CardContent>
           </Card>
@@ -257,30 +280,30 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
             <CardContent className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-semibold">Equipment Quality</p>
-                <Progress value={outcome.breakdown_data.equipment_quality} className="h-2 mt-1" />
+                <Progress value={breakdown.equipment_quality} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {outcome.breakdown_data.equipment_quality.toFixed(0)}/100
+                  {breakdown.equipment_quality.toFixed(0)}/100
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Crew Skill</p>
-                <Progress value={outcome.breakdown_data.crew_skill} className="h-2 mt-1" />
+                <Progress value={breakdown.crew_skill} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {outcome.breakdown_data.crew_skill.toFixed(0)}/100
+                  {breakdown.crew_skill.toFixed(0)}/100
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Band Chemistry</p>
-                <Progress value={outcome.breakdown_data.band_chemistry} className="h-2 mt-1" />
+                <Progress value={breakdown.band_chemistry} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {outcome.breakdown_data.band_chemistry.toFixed(0)}/100
+                  {breakdown.band_chemistry.toFixed(0)}/100
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold">Member Skills</p>
-                <Progress value={(outcome.breakdown_data.member_skills / 150) * 100} className="h-2 mt-1" />
+                <Progress value={(breakdown.member_skills / 150) * 100} className="h-2 mt-1" />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {outcome.breakdown_data.member_skills.toFixed(0)}/150
+                  {breakdown.member_skills.toFixed(0)}/150
                 </p>
               </div>
             </CardContent>
@@ -293,27 +316,27 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
             </CardHeader>
             <CardContent className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">+{outcome.fame_gained}</p>
+                <p className="text-2xl font-bold text-primary">+{fameGained}</p>
                 <p className="text-sm text-muted-foreground">Fame Gained</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1">
-                  {outcome.chemistry_impact > 0 && <TrendingUp className="w-4 h-4 text-green-500" />}
-                  {outcome.chemistry_impact < 0 && <TrendingDown className="w-4 h-4 text-red-500" />}
-                  {outcome.chemistry_impact === 0 && <Minus className="w-4 h-4 text-muted" />}
+                  {chemistryImpact > 0 && <TrendingUp className="w-4 h-4 text-green-500" />}
+                  {chemistryImpact < 0 && <TrendingDown className="w-4 h-4 text-red-500" />}
+                  {chemistryImpact === 0 && <Minus className="w-4 h-4 text-muted" />}
                   <p className={`text-2xl font-bold ${
-                    outcome.chemistry_impact > 0 ? 'text-green-500' : 
-                    outcome.chemistry_impact < 0 ? 'text-red-500' : 
+                    chemistryImpact > 0 ? 'text-green-500' :
+                    chemistryImpact < 0 ? 'text-red-500' :
                     'text-muted-foreground'
                   }`}>
-                    {outcome.chemistry_impact > 0 ? '+' : ''}{outcome.chemistry_impact}
+                    {chemistryImpact > 0 ? '+' : ''}{chemistryImpact}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground">Chemistry Change</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-500">
-                  {outcome.breakdown_data.merch_items_sold || 0}
+                  {breakdown.merch_items_sold}
                 </p>
                 <p className="text-sm text-muted-foreground">Merch Items Sold</p>
               </div>
