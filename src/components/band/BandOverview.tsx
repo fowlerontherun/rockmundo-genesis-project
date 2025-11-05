@@ -373,7 +373,7 @@ export function BandOverview({ bandId }: BandOverviewProps) {
                       content={
                         <ChartTooltipContent
                           labelFormatter={formatTooltipLabel}
-                          formatter={barTooltipFormatter}
+                          formatter={barTooltipFormatter as any}
                           nameKey="name"
                         />
                       }

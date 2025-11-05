@@ -62,7 +62,7 @@ export function ReleasePipelineTab({ artistEntities, territories }: ReleasePipel
 
       const contractIds = contracts?.map((contract) => contract.id) ?? [];
       if (contractIds.length === 0) {
-        return { contracts: contracts as ContractWithRelations[], releases: [] };
+        return { contracts: contracts as any as ContractWithRelations[], releases: [] };
       }
 
       const { data: releases, error: releasesError } = await supabase
@@ -89,7 +89,7 @@ export function ReleasePipelineTab({ artistEntities, territories }: ReleasePipel
       }
 
       return {
-        contracts: contracts as ContractWithRelations[],
+        contracts: contracts as any as ContractWithRelations[],
         releases: releases as ReleaseWithRelations[],
       };
     },

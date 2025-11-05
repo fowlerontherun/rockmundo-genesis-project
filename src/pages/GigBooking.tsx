@@ -302,7 +302,7 @@ const GigBooking = () => {
           scheduled_date: scheduledDateTime.toISOString(),
           estimated_revenue: estimatedRevenue,
           time_slot: selectedSlot,
-          attendance_forecast: attendanceForecast
+          attendance_forecast: attendanceForecast as any
         },
       );
 

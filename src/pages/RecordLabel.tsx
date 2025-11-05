@@ -56,12 +56,12 @@ const RecordLabel = () => {
       }
 
       memberships?.forEach((membership) => {
-        if (!membership.band_id || !membership.bands) return;
+        if (!membership.band_id || !membership.bands || typeof membership.bands === 'string') return;
         entities.push({
           id: membership.band_id,
           bandId: membership.band_id,
-          name: membership.bands.name,
-          genre: membership.bands.genre,
+          name: (membership.bands as any).name,
+          genre: (membership.bands as any).genre,
           role: membership.role,
           type: "band",
         });
