@@ -60,19 +60,24 @@ serve(async (req) => {
   try {
     const { gigId, outcomeId, songId, position } = await req.json();
 
+    console.log('[process-gig-song] Received:', { gigId, outcomeId, songId, position });
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     // Get gig details
-    const { data: gig } = await supabaseClient
+    const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
       .select('*, bands!inner(*), venues!inner(*)')
       .eq('id', gigId)
       .single();
 
-    if (!gig) throw new Error('Gig not found');
+    if (gigError || !gig) {
+      console.error('[process-gig-song] Gig fetch error:', gigError);
+      throw new Error('Gig not found');
+    }
 
     const bandId = gig.band_id;
     const venueCapacity = gig.venues.capacity || 100;

@@ -32,6 +32,44 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
   const [currentTime, setCurrentTime] = useState(new Date());
   const [commentary, setCommentary] = useState<string>("");
 
+  const generateCommentary = useCallback((perf: SongPerformance) => {
+    const comments = {
+      ecstatic: [
+        "The crowd is going absolutely wild! 🔥",
+        "This is incredible! The energy in here is electric! ⚡",
+        "Best performance of the night! The crowd can't get enough!",
+        "Absolutely sensational! This is what live music is all about!"
+      ],
+      enthusiastic: [
+        "The crowd loves it! Great performance! 🎉",
+        "Amazing energy from the band right now!",
+        "The audience is really feeling this one!",
+        "Strong performance - the crowd is really into it!"
+      ],
+      engaged: [
+        "Nice work! The crowd is engaged 👍",
+        "Solid performance - audience is enjoying this",
+        "Good vibes in the venue right now",
+        "The crowd is nodding along nicely"
+      ],
+      mixed: [
+        "Mixed reactions from the crowd... 😐",
+        "The energy has dipped a bit on this one",
+        "Some people are into it, others less so",
+        "Decent but not quite hitting the mark"
+      ],
+      disappointed: [
+        "Tough one... the crowd seems disappointed 😞",
+        "That didn't land as well as hoped",
+        "The energy in the room has dropped significantly",
+        "The band will need to win them back after that one"
+      ]
+    };
+
+    const options = comments[perf.crowd_response as keyof typeof comments] || comments.mixed;
+    return options[Math.floor(Math.random() * options.length)];
+  }, []);
+
   const loadGig = useCallback(async () => {
     const { data: gigData, error } = await supabase
       .from('gigs')
@@ -84,46 +122,13 @@ export const RealtimeGigViewer = ({ gigId, onComplete }: RealtimeGigViewerProps)
       .eq('gig_outcome_id', outcome.id)
       .order('position');
 
-    setPerformances(perfs || []);
-  }, [gig]);
-
-  const generateCommentary = useCallback((perf: SongPerformance) => {
-    const comments = {
-      ecstatic: [
-        "The crowd is going absolutely wild! 🔥",
-        "This is incredible! The energy in here is electric! ⚡",
-        "Best performance of the night! The crowd can't get enough!",
-        "Absolutely sensational! This is what live music is all about!"
-      ],
-      enthusiastic: [
-        "The crowd loves it! Great performance! 🎉",
-        "Amazing energy from the band right now!",
-        "The audience is really feeling this one!",
-        "Strong performance - the crowd is really into it!"
-      ],
-      engaged: [
-        "Nice work! The crowd is engaged 👍",
-        "Solid performance - audience is enjoying this",
-        "Good vibes in the venue right now",
-        "The crowd is nodding along nicely"
-      ],
-      mixed: [
-        "Mixed reactions from the crowd... 😐",
-        "The energy has dipped a bit on this one",
-        "Some people are into it, others less so",
-        "Decent but not quite hitting the mark"
-      ],
-      disappointed: [
-        "Tough one... the crowd seems disappointed 😞",
-        "That didn't land as well as hoped",
-        "The energy in the room has dropped significantly",
-        "The band will need to win them back after that one"
-      ]
-    };
-
-    const options = comments[perf.crowd_response as keyof typeof comments] || comments.mixed;
-    return options[Math.floor(Math.random() * options.length)];
-  }, []);
+    if (perfs && perfs.length > 0) {
+      setPerformances(perfs);
+      // Generate commentary for the latest performance
+      const latestPerf = perfs[perfs.length - 1];
+      setCommentary(generateCommentary(latestPerf));
+    }
+  }, [gig, generateCommentary]);
 
   useEffect(() => {
     loadGig();
