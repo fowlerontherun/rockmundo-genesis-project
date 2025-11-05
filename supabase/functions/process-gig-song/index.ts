@@ -67,10 +67,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get gig details
+    // Get gig details with proper relationship hint
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!inner(*), venues!inner(*)')
+      .select('*, bands!gigs_band_id_fkey(*), venues!inner(*)')
       .eq('id', gigId)
       .single();
 
