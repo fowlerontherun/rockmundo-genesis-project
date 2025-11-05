@@ -70,7 +70,7 @@ serve(async (req) => {
     // Get gig details with proper relationship hint
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!gigs_band_id_fkey(*), venues!inner(*)')
+      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(*)')
       .eq('id', gigId)
       .single();
 
