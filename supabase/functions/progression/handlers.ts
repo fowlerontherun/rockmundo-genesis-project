@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
-import { MAX_SKILL_LEVEL } from "../../../src/data/skillConstants.ts";
 import { fetchProfileState, type ProfileState } from "./index.ts";
+
+// Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
+const MAX_SKILL_LEVEL = 100;
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type WalletRow = Database["public"]["Tables"]["player_xp_wallet"]["Row"];
