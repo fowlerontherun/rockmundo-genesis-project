@@ -36,6 +36,7 @@ import {
   ShoppingCart,
   Settings,
   LogOut,
+  Disc,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -109,6 +110,7 @@ export function AppSidebar() {
         { icon: DollarSign, label: "Finances", path: "/finances" },
         { icon: Store, label: "Inventory", path: "/inventory" },
         { icon: ShoppingCart, label: "Merch", path: "/merchandise" },
+        { icon: Disc, label: "Record Labels", path: "/labels" },
         { icon: Building2, label: "Venues", path: "/venues" },
       ],
     },
