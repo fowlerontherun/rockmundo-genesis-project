@@ -57,7 +57,7 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
         throw error;
       }
 
-      return data as any as ContractWithRelations[];
+      return data as ContractWithRelations[];
     },
   });
 

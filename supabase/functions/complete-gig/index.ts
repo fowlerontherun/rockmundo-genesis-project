@@ -24,7 +24,7 @@ serve(async (req) => {
     // Get gig and outcome
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!inner(*)')
+      .select('*, bands!gigs_band_id_fkey(*)')
       .eq('id', gigId)
       .single();
 
