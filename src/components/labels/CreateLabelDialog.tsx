@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,15 +9,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import type { TerritoryRow } from "./types";
 
 interface CreateLabelDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   territories: TerritoryRow[];
+  personalBalance: number;
+  minimumBalance: number;
 }
 
-export function CreateLabelDialog({ open, onOpenChange, territories }: CreateLabelDialogProps) {
+export function CreateLabelDialog({
+  open,
+  onOpenChange,
+  territories,
+  personalBalance,
+  minimumBalance,
+}: CreateLabelDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [headquartersCity, setHeadquartersCity] = useState("");
@@ -28,6 +38,15 @@ export function CreateLabelDialog({ open, onOpenChange, territories }: CreateLab
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const insufficientFunds = personalBalance < minimumBalance;
+  const formattedPersonalBalance = useMemo(
+    () => personalBalance.toLocaleString("en-US"),
+    [personalBalance],
+  );
+  const formattedMinimumBalance = useMemo(
+    () => minimumBalance.toLocaleString("en-US"),
+    [minimumBalance],
+  );
 
   const resetState = () => {
     setName("");
@@ -46,6 +65,15 @@ export function CreateLabelDialog({ open, onOpenChange, territories }: CreateLab
   };
 
   const handleSubmit = async () => {
+    if (insufficientFunds) {
+      toast({
+        title: "Insufficient personal funds",
+        description: `You need at least $${formattedMinimumBalance} in your personal balance to launch a label.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!name.trim()) {
       toast({
         title: "Name is required",
@@ -131,6 +159,22 @@ export function CreateLabelDialog({ open, onOpenChange, territories }: CreateLab
         </DialogHeader>
 
         <div className="space-y-4">
+          <Alert variant={insufficientFunds ? "destructive" : "default"}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {insufficientFunds ? (
+                <span>
+                  Launching a label is limited to players with at least ${formattedMinimumBalance} in personal funds. Your current balance is ${formattedPersonalBalance}.
+                  Admins can also provision labels via the management tools without any fee.
+                </span>
+              ) : (
+                <span>
+                  You meet the personal balance requirement of ${formattedMinimumBalance}. Completing this form will register the label without additional costs.
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
+
           <div className="space-y-2">
             <Label htmlFor="label-name">Label name</Label>
             <Input
@@ -221,7 +265,7 @@ export function CreateLabelDialog({ open, onOpenChange, territories }: CreateLab
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button onClick={handleSubmit} disabled={isSubmitting || insufficientFunds}>
             {isSubmitting ? "Creating..." : "Create label"}
           </Button>
         </div>
