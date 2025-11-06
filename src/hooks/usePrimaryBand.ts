@@ -28,7 +28,7 @@ export const usePrimaryBand = () => {
       const { data, error } = await supabase
         .from("band_members")
         .select(
-          `id, band_id, role, joined_at, bands ( id, name, fame, band_balance )`
+          `id, band_id, role, joined_at, bands!band_members_band_id_fkey ( id, name, fame, band_balance )`
         )
         .eq("user_id", user.id)
         .order("joined_at", { ascending: true })
@@ -39,7 +39,7 @@ export const usePrimaryBand = () => {
         throw error;
       }
 
-      return (data as PrimaryBandRecord) ?? null;
+      return (data as any as PrimaryBandRecord) ?? null;
     },
     enabled: !!user?.id,
     staleTime: 60 * 1000,

@@ -232,13 +232,37 @@ const StageEquipmentSystem = () => {
       const { data, error } = await supabase
         .from("band_stage_equipment")
         .select(
-          `*, band_vehicles:vehicle_id ( id, name, vehicle_type, capacity )`
+          `*`
         )
         .eq("band_id", bandId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data as StageEquipmentRecord[]) ?? [];
+      
+      // Fetch vehicle data separately if needed
+      const equipmentData = data ?? [];
+      const vehicleIds = equipmentData
+        .filter((e: any) => e.vehicle_id)
+        .map((e: any) => e.vehicle_id as string);
+      
+      let vehiclesData: any[] = [];
+      if (vehicleIds.length > 0) {
+        const { data: vData } = await (supabase as any)
+          .from("band_vehicles")
+          .select("id, name, vehicle_type, capacity")
+          .in("id", vehicleIds);
+        vehiclesData = vData ?? [];
+      }
+      
+      // Merge data
+      const enriched = equipmentData.map((eq: any) => ({
+        ...eq,
+        band_vehicles: eq.vehicle_id 
+          ? vehiclesData.find((v: any) => v.id === eq.vehicle_id) ?? null
+          : null
+      }));
+      
+      return enriched as StageEquipmentRecord[];
     },
     enabled: !!bandId,
   });
@@ -248,14 +272,14 @@ const StageEquipmentSystem = () => {
     queryFn: async () => {
       if (!bandId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("band_vehicles")
         .select("*")
         .eq("band_id", bandId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true});
 
       if (error) throw error;
-      return (data as BandVehicleRecord[]) ?? [];
+      return data as any as BandVehicleRecord[] ?? [];
     },
     enabled: !!bandId,
   });
@@ -265,16 +289,36 @@ const StageEquipmentSystem = () => {
     queryFn: async () => {
       if (!bandId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("band_equipment_maintenance_logs")
         .select(
-          `id, band_equipment_id, band_id, performed_by, action, cost, notes, condition_before, condition_after, created_at, band_stage_equipment:band_equipment_id ( equipment_name )`
+          `id, band_equipment_id, band_id, performed_by, action, cost, notes, condition_before, condition_after, created_at`
         )
         .eq("band_id", bandId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data as MaintenanceLogRecord[]) ?? [];
+      
+      // Fetch equipment names separately
+      const logsData = data ?? [];
+      const equipmentIds = logsData.map((log: any) => log.band_equipment_id);
+      
+      let equipmentData: any[] = [];
+      if (equipmentIds.length > 0) {
+        const { data: eqData } = await supabase
+          .from("band_stage_equipment")
+          .select("id, equipment_name")
+          .in("id", equipmentIds);
+        equipmentData = eqData ?? [];
+      }
+      
+      // Merge data
+      const enriched = logsData.map((log: any) => ({
+        ...log,
+        band_stage_equipment: equipmentData.find((eq: any) => eq.id === log.band_equipment_id) ?? null
+      }));
+      
+      return enriched as any as MaintenanceLogRecord[];
     },
     enabled: !!bandId,
   });
@@ -353,7 +397,7 @@ const StageEquipmentSystem = () => {
 
       if (updateError) throw updateError;
 
-      const { error: logError } = await supabase
+      const { error: logError } = await (supabase as any)
         .from("band_equipment_maintenance_logs")
         .insert({
           band_equipment_id: id,
@@ -402,7 +446,7 @@ const StageEquipmentSystem = () => {
   const addVehicleMutation = useMutation({
     mutationFn: async (values: VehicleFormValues) => {
       if (!bandId) return;
-      const { error } = await supabase.from("band_vehicles").insert({
+      const { error } = await (supabase as any).from("band_vehicles").insert({
         band_id: bandId,
         name: values.name,
         vehicle_type: values.vehicleType,
@@ -427,9 +471,9 @@ const StageEquipmentSystem = () => {
 
   const updateVehicleMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<BandVehicleRecord> }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("band_vehicles")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id);
 
       if (error) throw error;
@@ -444,7 +488,7 @@ const StageEquipmentSystem = () => {
 
   const removeVehicleMutation = useMutation({
     mutationFn: async (vehicleId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("band_vehicles")
         .delete()
         .eq("id", vehicleId);
@@ -466,7 +510,7 @@ const StageEquipmentSystem = () => {
     mutationFn: async ({ equipmentId, vehicleId }: { equipmentId: string; vehicleId: string | null }) => {
       const { error } = await supabase
         .from("band_stage_equipment")
-        .update({ vehicle_id: vehicleId })
+        .update({ vehicle_id: vehicleId } as any)
         .eq("id", equipmentId);
 
       if (error) throw error;

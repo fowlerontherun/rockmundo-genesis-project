@@ -343,7 +343,7 @@ export default function Radio() {
         const { data: existingPlaylist } = await supabase
           .from('radio_playlists')
           .select('*')
-          .eq('show_id', show.id)
+          .eq('show_id', (show as any).id)
           .eq('song_id', selectedSong)
           .eq('week_start_date', weekStartDate)
           .maybeSingle();
@@ -363,7 +363,7 @@ export default function Radio() {
           const { data: newPlaylist } = await supabase
             .from('radio_playlists')
             .insert({
-              show_id: show.id,
+              show_id: (show as any).id,
               song_id: selectedSong,
               week_start_date: weekStartDate,
               added_at: nowIso,
@@ -389,7 +389,7 @@ export default function Radio() {
             .from('radio_plays')
             .insert({
               playlist_id: playlistId,
-              show_id: show.id,
+              show_id: (show as any).id,
               song_id: selectedSong,
               station_id: selectedStation,
               listeners,
