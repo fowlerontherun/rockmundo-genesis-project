@@ -160,11 +160,18 @@ const SetlistManager = () => {
                         {setlist.setlist_type} setlist
                       </CardDescription>
                     </div>
-                    <Badge
-                      variant={setlist.song_count >= 6 ? "default" : "secondary"}
-                    >
-                      {setlist.song_count || 0} songs
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge
+                        variant={setlist.song_count >= 6 ? "default" : "secondary"}
+                      >
+                        {setlist.song_count || 0} songs
+                      </Badge>
+                      {(setlist.special_item_count || 0) > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {setlist.special_item_count} moments
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   {setlist.description && (
                     <p className="text-sm text-muted-foreground mt-2">
