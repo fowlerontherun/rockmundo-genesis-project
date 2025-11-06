@@ -68,11 +68,11 @@ const EquipmentStore = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("equipment_items")
-        .select("id, name, category, subcategory, price, rarity, description, stat_boosts")
+        .select("id, name, category, subcategory, price, rarity, description, stat_boosts, stock")
         .order("price");
 
       if (error) throw error;
-      return (data as any as StoreItem[]) ?? [];
+      return (data as StoreItem[]) ?? [];
     },
   });
 
@@ -84,20 +84,20 @@ const EquipmentStore = () => {
       const { data, error } = await supabase
         .from("player_equipment")
         .select(
-          `id, condition, is_equipped, created_at, equipment:equipment_item_id ( id, name, category, subcategory, price, rarity )`
+          `id, condition, is_equipped, created_at, equipment:equipment_items ( id, name, category, subcategory, price, rarity )`
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data as any as OwnedEquipmentRecord[]) ?? [];
+      return (data as OwnedEquipmentRecord[]) ?? [];
     },
     enabled: !!user?.id,
   });
 
   const purchaseMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await (supabase as any).rpc("purchase_equipment_item", { p_equipment_id: itemId });
+      const { error } = await supabase.rpc("purchase_equipment_item", { p_equipment_id: itemId });
       if (error) throw error;
     },
     onSuccess: async () => {

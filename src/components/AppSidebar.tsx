@@ -37,6 +37,7 @@ import {
   Settings,
   LogOut,
   Disc,
+  Wrench,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
