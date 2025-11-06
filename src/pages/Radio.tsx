@@ -64,63 +64,33 @@ type RadioShowRecord = {
   time_slot: string;
 };
 
-type RadioPlaylistRecord = {
-  id: string;
-  week_start_date: string | null;
-  times_played: number | null;
-  added_at: string | null;
-  songs?: { title: string | null; genre: string | null; bands?: { name: string | null } | null } | null;
-  radio_shows?: { id: string; show_name: string | null } | null;
+type StationPlaySummary = {
+  total_spins: number;
+  total_listeners: number;
+  total_streams: number;
+  total_revenue: number;
+  total_hype: number;
 };
 
-type RadioPlayRecord = {
-  song_id: string;
+type StationPlayTimelineEntry = {
+  play_date: string;
+  spins: number;
+  revenue: number;
   listeners: number;
-  played_at: string;
-  songs?: { title: string | null; genre: string | null; bands?: { name: string | null } | null } | null;
+  streams: number;
+  hype: number;
 };
 
-type NowPlayingRecord = {
-  id: string;
-  played_at: string | null;
-  listeners: number;
-  songs?: {
-    id: string;
-    title: string | null;
-    genre: string | null;
-    bands?: { id: string; name: string | null } | null;
-  } | null;
-  radio_shows?: { id: string; show_name: string | null } | null;
-};
+export default function Radio() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState<any>(null);
 
-const REVENUE_PER_LISTENER = 0.02;
-const FAME_PER_PLAY = 0.1;
-
-const formatNumber = (value: number | null | undefined, options?: Intl.NumberFormatOptions) =>
-  new Intl.NumberFormat(undefined, options).format(value ?? 0);
-
-const formatCurrency = (value: number | null | undefined) =>
-  new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(value ?? 0);
-
-const formatLocation = (station: RadioStationRecord) => {
-  const city = station.cities?.name;
-  const country = station.cities?.country ?? station.country;
-
-  if (city && country) return `${city}, ${country}`;
-  if (country) return country;
-  return "Unknown location";
-};
-
-const formatDate = (value: string | null | undefined) => {
-  if (!value) return "–";
-  const date = new Date(value);
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
+  // Get current user
+  useState(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
   });
 };
 
@@ -325,16 +295,129 @@ export default function Radio() {
     [recentPlays, today]
   );
 
-  const bandDailyEarnings = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        band: string;
-        plays: number;
-        listeners: number;
-        songs: Set<string>;
-        revenue: number;
-        fame: number;
+  const dailyRevenueTotal = useMemo(
+    () => aggregatedBandRevenue.reduce((sum, band) => sum + band.total, 0),
+    [aggregatedBandRevenue]
+  );
+
+  const { data: stationPlaySummary } = useQuery<StationPlaySummary | null>({
+    queryKey: ['station-play-summary', selectedStation],
+    queryFn: async () => {
+      if (!selectedStation) return null;
+
+      const { data, error } = await supabase.rpc('get_radio_station_play_summary', {
+        p_station_id: selectedStation,
+        p_days: 14,
+      });
+
+      if (error) throw error;
+
+      const summary = data && data.length > 0 ? data[0] : null;
+
+      return {
+        total_spins: Number(summary?.total_spins ?? 0),
+        total_listeners: Number(summary?.total_listeners ?? 0),
+        total_streams: Number(summary?.total_streams ?? 0),
+        total_revenue: Number(summary?.total_revenue ?? 0),
+        total_hype: Number(summary?.total_hype ?? 0),
+      };
+    },
+    enabled: !!selectedStation,
+  });
+
+  const { data: stationPlayTimeline } = useQuery<StationPlayTimelineEntry[]>({
+    queryKey: ['station-play-timeline', selectedStation],
+    queryFn: async () => {
+      if (!selectedStation) return [];
+
+      const { data, error } = await supabase.rpc('get_radio_station_play_timeline', {
+        p_station_id: selectedStation,
+        p_days: 14,
+      });
+
+      if (error) throw error;
+      return (data as StationPlayTimelineEntry[]) || [];
+    },
+    enabled: !!selectedStation,
+  });
+
+  const fourteenDayTimeline = useMemo(() => {
+    if (!selectedStation) return [];
+
+    const days: string[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 13; i >= 0; i--) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - i);
+      days.push(day.toISOString().split('T')[0]);
+    }
+
+    const timelineMap = new Map(
+      (stationPlayTimeline || []).map((entry) => [entry.play_date, entry])
+    );
+
+    return days.map((date) => {
+      const entry = timelineMap.get(date);
+
+      return {
+        date,
+        spins: Number(entry?.spins ?? 0),
+        revenue: Number(entry?.revenue ?? 0),
+        listeners: Number(entry?.listeners ?? 0),
+        streams: Number(entry?.streams ?? 0),
+        hype: Number(entry?.hype ?? 0),
+      };
+    });
+  }, [stationPlayTimeline, selectedStation]);
+
+  const { data: recordedSongs } = useQuery({
+    queryKey: ['recorded-songs', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('songs')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'recorded')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: mySubmissions } = useQuery({
+    queryKey: ['my-radio-submissions', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radio_submissions')
+        .select('*, songs(title, genre), radio_stations(name)')
+        .eq('user_id', user?.id)
+        .order('submitted_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: topSongs } = useQuery({
+    queryKey: ['top-radio-songs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('songs')
+        .select('*, profiles(display_name)')
+        .order('hype', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const submitSong = useMutation({
+    mutationFn: async () => {
+      if (!selectedStation || !selectedSong) {
+        throw new Error('Please select a station and song');
       }
     >();
 
@@ -363,8 +446,22 @@ export default function Radio() {
         entry.songs.add(play.songs.title);
       }
 
-      map.set(key, entry);
-    });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
+      queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
+      queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['station-play-timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['top-radio-songs'] });
+      toast.success('Your track is now spinning on the airwaves!');
+      setSelectedSong('');
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    },
+  });
 
     return Array.from(map.values())
       .map((entry) => ({
@@ -435,130 +532,39 @@ export default function Radio() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <RadioIcon className="h-5 w-5" /> Station Filters
-          </CardTitle>
-          <CardDescription>
-            Narrow the catalogue by format, genre, or location to find the perfect station for your next spin.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-wrap items-center gap-2">
-            {["all", "national", "local"].map((type) => (
-              <Button
-                key={type}
-                variant={typeFilter === type ? "default" : "outline"}
-                onClick={() => setTypeFilter(type as typeof typeFilter)}
-              >
-                {type === "all" ? "All Stations" : `${type.charAt(0).toUpperCase()}${type.slice(1)} Stations`}
-              </Button>
-            ))}
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Filter by genre</div>
-              <Select value={genreFilter} onValueChange={setGenreFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All genres" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All genres</SelectItem>
-                  {genreOptions.map((genre) => (
-                    <SelectItem key={genre} value={genre}>
-                      {genre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Filter by location</div>
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All locations</SelectItem>
-                  {locationOptions.map((location) => (
-                    <SelectItem key={location} value={location}>
-                      {location}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Search className="h-4 w-4" /> Search by name, frequency, or vibe
-            </label>
-            <Input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Try “Skyline FM” or “Lo-fi”"
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border border-dashed bg-muted/40 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Stations</p>
-              <p className="mt-2 text-2xl font-semibold">{formatNumber(networkSummary.totalStations)}</p>
-              <p className="text-xs text-muted-foreground">Active broadcasters across Rockmundo</p>
-            </div>
-            <div className="rounded-lg border border-dashed bg-muted/40 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Listener Reach</p>
-              <p className="mt-2 text-2xl font-semibold">
-                {formatNumber(networkSummary.totalListenerBase, { notation: "compact" })}
-              </p>
-              <p className="text-xs text-muted-foreground">Fans within the combined signal footprint</p>
-            </div>
-            <div className="rounded-lg border border-dashed bg-muted/40 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Average Quality</p>
-              <p className="mt-2 text-2xl font-semibold">
-                {networkSummary.averageQuality ? networkSummary.averageQuality.toFixed(1) : "–"}
-              </p>
-              <p className="text-xs text-muted-foreground">Broadcast tech & audio engineering benchmark</p>
-            </div>
-            <div className="rounded-lg border border-dashed bg-muted/40 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Unique Genres</p>
-              <p className="mt-2 text-2xl font-semibold">{formatNumber(networkSummary.uniqueGenres)}</p>
-              <p className="text-xs text-muted-foreground">Different scenes championed across the dial</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                {selectedStation && (
+                  <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+                    {stationPlaySummary && (
+                      <div className="grid gap-3 md:grid-cols-4">
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spins (14 days)</p>
+                          <p className="text-2xl font-semibold">{stationPlaySummary.total_spins.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Listeners reached</p>
+                          <p className="text-2xl font-semibold">{stationPlaySummary.total_listeners.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Streams boosted</p>
+                          <p className="text-2xl font-semibold">{stationPlaySummary.total_streams.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estimated payouts (14 days)</p>
+                          <p className="text-2xl font-semibold">{currencyFormatter.format(stationPlaySummary.total_revenue || 0)}</p>
+                        </div>
+                      </div>
+                    )}
 
-      {stationsError ? (
-        <Card className="border-destructive/40">
-          <CardContent className="space-y-2 py-6 text-sm">
-            <p className="font-medium text-destructive">Unable to load stations.</p>
-            <p className="text-muted-foreground">
-              {stationsError instanceof Error
-                ? stationsError.message
-                : "Something went wrong while talking to the radio tower."}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {stationsLoading
-            ? Array.from({ length: 6 }).map((_, index) => (
-                <Card key={index} className="overflow-hidden">
-                  <CardHeader className="space-y-2">
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-3 w-2/3" />
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Skeleton className="h-12 w-24" />
-                      <Skeleton className="h-12 w-20" />
-                    </div>
-                    <Separator />
-                    <div className="flex flex-wrap gap-2">
-                      {Array.from({ length: 3 }).map((__, chip) => (
-                        <Skeleton key={chip} className="h-6 w-16 rounded-full" />
-                      ))}
+                    <div className="flex items-start gap-3">
+                      <PlayCircle className="h-6 w-6 text-primary" />
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+                          Now Playing
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {activeStation?.name || 'Selected Station'} • {nowPlaying?.radio_shows?.show_name || 'Automated Rotation'}
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -608,38 +614,68 @@ export default function Radio() {
                         ))}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            : (
-                <Card>
-                  <CardContent className="flex h-full items-center justify-center py-10 text-sm text-muted-foreground">
-                    No stations match the selected filters.
-                  </CardContent>
-                </Card>
-              )}
-        </div>
-      )}
 
-      {selectedStation ? (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Music className="h-5 w-5" /> Now playing & overview
-              </CardTitle>
-              <CardDescription>
-                Snapshot of the currently spinning track and high-level stats for the station.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1 text-sm">
-                <div className="font-semibold">Current track</div>
-                {nowPlaying ? (
-                  <>
-                    <div>{nowPlaying.songs?.title ?? "Unknown song"}</div>
-                    <div className="text-muted-foreground">
-                      {nowPlaying.songs?.bands?.name ?? "Unknown band"}
+                    <div className="rounded-md border border-primary/20 bg-background/70 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Clock className="h-4 w-4 text-primary" />
+                          14-Day Spin Timeline
+                        </div>
+                        <span className="text-xs text-muted-foreground">Aggregated from all spins in the last 14 days</span>
+                      </div>
+                      {fourteenDayTimeline.length > 0 ? (
+                        <div className="mt-3 grid gap-2 text-xs">
+                          {fourteenDayTimeline.map((day) => (
+                            <div
+                              key={day.date}
+                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
+                            >
+                              <span className="font-medium">
+                                {new Date(day.date).toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-4">
+                                <span className="text-muted-foreground">
+                                  {day.spins} spin{day.spins === 1 ? '' : 's'}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {day.listeners.toLocaleString()} listeners
+                                </span>
+                                <span className="font-semibold">
+                                  {currencyFormatter.format(day.revenue || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          No spins recorded in the last 14 days.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedStation && shows && shows.length > 0 && (
+                  <div className="pt-4">
+                    <h3 className="text-lg font-semibold mb-2">Shows on this station:</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {shows.map((show) => (
+                        <div key={show.id} className="p-3 border rounded-lg">
+                          <p className="font-medium">{show.show_name}</p>
+                          <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {show.show_genres?.map((genre: string) => (
+                              <Badge key={genre} variant="outline" className="text-xs">
+                                {genre}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     <div className="text-muted-foreground text-xs">
                       {nowPlaying.radio_shows?.show_name ? `During ${nowPlaying.radio_shows.show_name}` : "Unscheduled spin"}
