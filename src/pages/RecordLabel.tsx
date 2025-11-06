@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -13,6 +13,11 @@ import { RoyaltyStatementsTab } from "@/components/labels/RoyaltyStatementsTab";
 import { CreateLabelDialog } from "@/components/labels/CreateLabelDialog";
 import type { ArtistEntity, DealTypeRow, TerritoryRow } from "@/components/labels/types";
 
+interface ArtistEntitiesResult {
+  entities: ArtistEntity[];
+  personalBalance: number;
+}
+
 const defaultTabs = ["directory", "contracts", "releases", "royalties"] as const;
 
 type RecordLabelTab = (typeof defaultTabs)[number];
@@ -24,19 +29,24 @@ const RecordLabel = () => {
   const [isCreateLabelOpen, setIsCreateLabelOpen] = useState(false);
 
   const {
-    data: artistEntities = [],
+    data: artistData,
     isLoading: loadingEntities,
     error: entityError,
-  } = useQuery<ArtistEntity[]>({
+  } = useQuery<ArtistEntitiesResult>({
     queryKey: ["artist-entities", userId],
     enabled: Boolean(userId),
     queryFn: async () => {
-      if (!userId) return [];
+      if (!userId) {
+        return {
+          entities: [],
+          personalBalance: 0,
+        } satisfies ArtistEntitiesResult;
+      }
 
       const [{ data: profile }, { data: memberships }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, display_name")
+          .select("id, display_name, cash")
           .eq("user_id", userId)
           .maybeSingle(),
         supabase
@@ -56,20 +66,36 @@ const RecordLabel = () => {
       }
 
       memberships?.forEach((membership) => {
-        if (!membership.band_id || !membership.bands || typeof membership.bands === 'string') return;
+        if (!membership.band_id || !membership.bands) return;
         entities.push({
           id: membership.band_id,
           bandId: membership.band_id,
-          name: (membership.bands as any).name,
-          genre: (membership.bands as any).genre,
+          name: membership.bands.name,
+          genre: membership.bands.genre,
           role: membership.role,
           type: "band",
         });
       });
 
-      return entities;
+      return {
+        entities,
+        personalBalance: Number(profile?.cash ?? 0),
+      } satisfies ArtistEntitiesResult;
     },
   });
+
+  const artistEntities = artistData?.entities ?? [];
+  const personalBalance = artistData?.personalBalance ?? 0;
+  const minimumLabelBalance = 1_000_000;
+  const canCreateLabel = personalBalance >= minimumLabelBalance;
+  const formattedPersonalBalance = useMemo(
+    () => personalBalance.toLocaleString("en-US"),
+    [personalBalance],
+  );
+  const formattedMinimumBalance = useMemo(
+    () => minimumLabelBalance.toLocaleString("en-US"),
+    [minimumLabelBalance],
+  );
 
   const {
     data: dealTypes = [],
@@ -117,13 +143,20 @@ const RecordLabel = () => {
   return (
     <div className="container mx-auto space-y-6 p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
+        <div className="space-y-2">
           <h1 className="text-4xl font-bold">Record label hub</h1>
           <p className="text-muted-foreground">
             Scout label partners, manage release campaigns, and monitor royalties across all your artist projects.
           </p>
+          <p className="text-sm text-muted-foreground">
+            Launching a label requires at least ${formattedMinimumBalance} in personal funds. Current balance: ${formattedPersonalBalance}.
+          </p>
         </div>
-        <Button onClick={() => setIsCreateLabelOpen(true)} className="self-start md:self-auto">
+        <Button
+          onClick={() => setIsCreateLabelOpen(true)}
+          className="self-start md:self-auto"
+          disabled={!canCreateLabel}
+        >
           <Plus className="mr-2 h-4 w-4" /> Launch new label
         </Button>
       </div>
@@ -171,6 +204,8 @@ const RecordLabel = () => {
         open={isCreateLabelOpen}
         onOpenChange={setIsCreateLabelOpen}
         territories={territories}
+        personalBalance={personalBalance}
+        minimumBalance={minimumLabelBalance}
       />
     </div>
   );

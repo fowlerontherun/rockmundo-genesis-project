@@ -52,6 +52,8 @@ const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
 const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanManagement"));
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
+const StageEquipmentSystemPlan = lazyWithRetry(() => import("./pages/StageEquipmentSystemPlan"));
+const StageEquipmentSystem = lazyWithRetry(() => import("./pages/StageEquipmentSystem"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
@@ -148,6 +150,8 @@ function App() {
                     <Route path="awards" element={<AwardShows />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
+                    <Route path="stage-equipment" element={<StageEquipmentSystem />} />
+                    <Route path="stage-equipment-system-plan" element={<StageEquipmentSystemPlan />} />
                     <Route path="finances" element={<Finances />} />
                     <Route path="underworld" element={<Underworld />} />
                     <Route path="education" element={<Education />} />
