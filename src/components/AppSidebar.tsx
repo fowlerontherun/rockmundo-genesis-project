@@ -38,6 +38,7 @@ import {
   LogOut,
   Disc,
   Wrench,
+  HardHat,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -85,6 +86,7 @@ export function AppSidebar() {
         { icon: Calendar, label: "Gigs", path: "/gigs" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
+        { icon: HardHat, label: "Band Crew", path: "/band-crew" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: Award, label: "Awards", path: "/awards" },
       ],

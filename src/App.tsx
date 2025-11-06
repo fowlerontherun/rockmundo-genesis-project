@@ -54,6 +54,7 @@ const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanMan
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
 const StageEquipmentSystemPlan = lazyWithRetry(() => import("./pages/StageEquipmentSystemPlan"));
 const StageEquipmentSystem = lazyWithRetry(() => import("./pages/StageEquipmentSystem"));
+const BandCrewManagement = lazyWithRetry(() => import("./pages/BandCrewManagement"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
@@ -151,6 +152,7 @@ function App() {
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
+                    <Route path="band-crew" element={<BandCrewManagement />} />
                     <Route path="stage-equipment-system-plan" element={<StageEquipmentSystemPlan />} />
                     <Route path="finances" element={<Finances />} />
                     <Route path="underworld" element={<Underworld />} />

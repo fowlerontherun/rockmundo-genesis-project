@@ -23,7 +23,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
-import { useGameData } from "@/hooks/useGameData";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useUserRole } from "@/hooks/useUserRole";
 import type { Database } from "@/lib/supabase-types";
@@ -404,7 +403,6 @@ const generateId = () => `catalog-${Math.random().toString(36).slice(2, 10)}`;
 
 const StageEquipmentSystem = () => {
   const queryClient = useQueryClient();
-  const { profile } = useGameData();
   const { data: primaryBand, isLoading: loadingBand } = usePrimaryBand();
   const { isAdmin, loading: loadingRole } = useUserRole();
   const bandId = primaryBand?.band_id ?? null;
@@ -693,7 +691,7 @@ const StageEquipmentSystem = () => {
     );
   }
 
-  if (!profile || !bandId) {
+  if (!bandId) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-3xl">
