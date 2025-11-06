@@ -33,9 +33,12 @@ import {
   Guitar,
   Loader2,
   Minus,
+  Pencil,
   Plus,
   ShoppingCart,
   Sparkles,
+  Trash2,
+  X,
 } from "lucide-react";
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
@@ -248,6 +251,19 @@ const sizeToUnits = (size: SizeCategory): number => {
   }
 };
 
+const ADMIN_FORM_DEFAULTS: AdminEquipmentFormValues = {
+  name: "",
+  type: "Sound",
+  cost: 1000,
+  liveImpact: "Improves live presence",
+  weight: "medium",
+  size: "medium",
+  condition: "good",
+  amountAvailable: 1,
+  rarity: "normal",
+  description: "",
+};
+
 const unitsToSize = (units?: number | null): SizeCategory => {
   switch (units) {
     case 1:
@@ -400,19 +416,10 @@ const StageEquipmentSystem = () => {
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<EquipmentCatalogItem | null>(null);
 
   const adminForm = useForm<AdminEquipmentFormValues>({
-    defaultValues: {
-      name: "",
-      type: "Sound",
-      cost: 1000,
-      liveImpact: "Improves live presence",
-      weight: "medium",
-      size: "medium",
-      condition: "good",
-      amountAvailable: 1,
-      rarity: "normal",
-      description: "",
-    },
+    defaultValues: ADMIN_FORM_DEFAULTS,
   });
+
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   const { data: equipment, isLoading: loadingEquipment } = useQuery<StageEquipmentRecord[]>({
     queryKey: ["band-stage-equipment", bandId],
@@ -581,24 +588,94 @@ const StageEquipmentSystem = () => {
     return catalog.filter((item) => item.type === selectedType);
   }, [catalog, selectedType]);
 
-  const handleSubmitAdmin = adminForm.handleSubmit((values) => {
-    const newItem: EquipmentCatalogItem = {
-      id: generateId(),
-      name: values.name.trim(),
-      type: values.type,
-      cost: Number(values.cost) || 0,
-      liveImpact: values.liveImpact,
-      weight: values.weight,
-      size: values.size,
-      baseCondition: values.condition,
-      amountAvailable: Number(values.amountAvailable) || 0,
-      rarity: values.rarity,
-      description: values.description?.trim() || undefined,
-    };
+  const adminCatalogView = useMemo(
+    () =>
+      [...catalog].sort((a, b) => {
+        const typeCompare = a.type.localeCompare(b.type);
+        if (typeCompare !== 0) return typeCompare;
+        return a.name.localeCompare(b.name);
+      }),
+    [catalog],
+  );
 
+  const createCatalogItem = (
+    values: AdminEquipmentFormValues,
+    id: string = generateId(),
+  ): EquipmentCatalogItem => ({
+    id,
+    name: values.name.trim(),
+    type: values.type,
+    cost: Number(values.cost) || 0,
+    liveImpact: values.liveImpact,
+    weight: values.weight,
+    size: values.size,
+    baseCondition: values.condition,
+    amountAvailable: Number(values.amountAvailable) || 0,
+    rarity: values.rarity,
+    description: values.description?.trim() || undefined,
+  });
+
+  const beginEditCatalogItem = (item: EquipmentCatalogItem) => {
+    setEditingItemId(item.id);
+    adminForm.reset({
+      name: item.name,
+      type: item.type,
+      cost: item.cost,
+      liveImpact: item.liveImpact,
+      weight: item.weight,
+      size: item.size,
+      condition: item.baseCondition,
+      amountAvailable: item.amountAvailable,
+      rarity: item.rarity,
+      description: item.description ?? "",
+    });
+  };
+
+  const cancelEditCatalogItem = () => {
+    setEditingItemId(null);
+    adminForm.reset(ADMIN_FORM_DEFAULTS);
+  };
+
+  const handleRemoveCatalogItem = (itemId: string) => {
+    const itemToRemove = catalog.find((item) => item.id === itemId);
+    if (!itemToRemove) return;
+
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm(
+            `Remove ${itemToRemove.name} from the catalog? Bands will no longer be able to purchase it.`,
+          );
+    if (!confirmed) return;
+
+    setCatalog((prev) => prev.filter((item) => item.id !== itemId));
+    setSelectedCatalogItem((prev) => {
+      if (prev?.id === itemId) {
+        setPurchaseDialogOpen(false);
+        return null;
+      }
+      return prev;
+    });
+    toast.success(`${itemToRemove.name} removed from the catalog`);
+    if (editingItemId === itemId) {
+      cancelEditCatalogItem();
+    }
+  };
+
+  const handleSubmitAdmin = adminForm.handleSubmit((values) => {
+    if (editingItemId) {
+      const updatedItem = createCatalogItem(values, editingItemId);
+      setCatalog((prev) => prev.map((item) => (item.id === editingItemId ? updatedItem : item)));
+      setSelectedCatalogItem((prev) => (prev?.id === editingItemId ? updatedItem : prev));
+      toast.success(`${updatedItem.name} updated in the catalog`);
+      cancelEditCatalogItem();
+      return;
+    }
+
+    const newItem = createCatalogItem(values);
     setCatalog((prev) => [...prev, newItem]);
     toast.success(`${newItem.name} added to the catalog`);
-    adminForm.reset();
+    adminForm.reset(ADMIN_FORM_DEFAULTS);
   });
 
   const openPurchaseDialog = (item: EquipmentCatalogItem) => {
@@ -1054,12 +1131,104 @@ const StageEquipmentSystem = () => {
                     )}
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 flex flex-wrap items-center gap-2">
                   <Button type="submit" className="w-full md:w-auto">
-                    <Plus className="mr-2 h-4 w-4" /> Add equipment to catalog
+                    {editingItemId ? (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" /> Update equipment
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" /> Add equipment to catalog
+                      </>
+                    )}
                   </Button>
+                  {editingItemId && (
+                    <Button type="button" variant="outline" onClick={cancelEditCatalogItem}>
+                      <X className="mr-2 h-4 w-4" /> Cancel edit
+                    </Button>
+                  )}
                 </div>
               </form>
+
+              <div className="mt-8 space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Catalog inventory</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Edit, remove, or restock the equipment players can purchase.
+                  </p>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Live impact</TableHead>
+                        <TableHead>Attributes</TableHead>
+                        <TableHead className="text-right">Price & Stock</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminCatalogView.map((item) => (
+                        <TableRow
+                          key={item.id}
+                          className={editingItemId === item.id ? "bg-muted/50" : undefined}
+                        >
+                          <TableCell>
+                            <div className="font-medium text-foreground">{item.name}</div>
+                            {item.description && (
+                              <div className="text-xs text-muted-foreground">{item.description}</div>
+                            )}
+                            <div className="mt-1 text-xs text-muted-foreground">{item.type}</div>
+                          </TableCell>
+                          <TableCell className="max-w-xs">
+                            <p className="text-sm text-muted-foreground">{item.liveImpact}</p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              <Badge variant="outline">{labelMap[item.weight]}</Badge>
+                              <Badge variant="outline">{labelMap[item.size]}</Badge>
+                              <Badge variant="outline">{labelMap[item.baseCondition]}</Badge>
+                              <Badge variant="outline">{labelMap[item.rarity]}</Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            <div className="font-semibold text-foreground">{formatCurrency(item.cost)}</div>
+                            <div className="text-muted-foreground">{item.amountAvailable} available</div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => beginEditCatalogItem(item)}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveCatalogItem(item.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Remove
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {adminCatalogView.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                            No equipment in the catalog yet. Add new items to make them available for purchase.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
