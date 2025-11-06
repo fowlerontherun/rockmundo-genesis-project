@@ -271,15 +271,34 @@ export default function Radio() {
       const windowStart = new Date();
       windowStart.setDate(windowStart.getDate() - 14);
 
-      const { data, error } = await supabase
-        .from("radio_plays")
-        .select(`song_id, listeners, played_at, songs(title, genre, bands(name))`)
-        .eq("station_id", selectedStation.id)
-        .gte("played_at", windowStart.toISOString())
-        .order("played_at", { ascending: false });
+      const pageSize = 1000;
+      const allPlays: RadioPlayRecord[] = [];
+      let page = 0;
 
-      if (error) throw error;
-      return (data as RadioPlayRecord[]) ?? [];
+      while (true) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from("radio_plays")
+          .select(`song_id, listeners, played_at, songs(title, genre, bands(name))`)
+          .eq("station_id", selectedStation.id)
+          .gte("played_at", windowStart.toISOString())
+          .order("played_at", { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+
+        const pageData = (data as RadioPlayRecord[]) ?? [];
+        allPlays.push(...pageData);
+
+        if (pageData.length < pageSize) {
+          break;
+        }
+
+        page += 1;
+      }
+
+      return allPlays;
     },
     enabled: !!selectedStation?.id,
   });
