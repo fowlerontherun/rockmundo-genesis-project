@@ -559,20 +559,56 @@ for select using (
 
 create policy releases_manage_label_team on public.label_releases
 for all using (
-  exists (
-    select 1 from public.artist_label_contracts alc
-    join public.label_members lm on lm.label_id = alc.label_id
-    where alc.id = label_releases.contract_id
-      and lm.user_id = auth.uid()
-      and lm.role in ('owner', 'manager')
+  (
+    exists (
+      select 1 from public.artist_label_contracts alc
+      join public.label_members lm on lm.label_id = alc.label_id
+      where alc.id = label_releases.contract_id
+        and lm.user_id = auth.uid()
+        and lm.role in ('owner', 'manager')
+    )
+  )
+  or (
+    exists (
+      select 1 from public.artist_label_contracts alc
+      join public.band_members bm on bm.band_id = alc.band_id
+      where alc.id = label_releases.contract_id
+        and bm.user_id = auth.uid()
+    )
+  )
+  or (
+    exists (
+      select 1 from public.artist_label_contracts alc
+      join public.profiles p on p.id = alc.artist_profile_id
+      where alc.id = label_releases.contract_id
+        and p.user_id = auth.uid()
+    )
   )
 ) with check (
-  exists (
-    select 1 from public.artist_label_contracts alc
-    join public.label_members lm on lm.label_id = alc.label_id
-    where alc.id = label_releases.contract_id
-      and lm.user_id = auth.uid()
-      and lm.role in ('owner', 'manager')
+  (
+    exists (
+      select 1 from public.artist_label_contracts alc
+      join public.label_members lm on lm.label_id = alc.label_id
+      where alc.id = label_releases.contract_id
+        and lm.user_id = auth.uid()
+        and lm.role in ('owner', 'manager')
+    )
+  )
+  or (
+    exists (
+      select 1 from public.artist_label_contracts alc
+      join public.band_members bm on bm.band_id = alc.band_id
+      where alc.id = label_releases.contract_id
+        and bm.user_id = auth.uid()
+    )
+  )
+  or (
+    exists (
+      select 1 from public.artist_label_contracts alc
+      join public.profiles p on p.id = alc.artist_profile_id
+      where alc.id = label_releases.contract_id
+        and p.user_id = auth.uid()
+    )
   )
 );
 
@@ -606,22 +642,62 @@ for select using (
 
 create policy promotion_campaigns_manage_label_team on public.label_promotion_campaigns
 for all using (
-  exists (
-    select 1 from public.label_releases lr
-    join public.artist_label_contracts alc on alc.id = lr.contract_id
-    join public.label_members lm on lm.label_id = alc.label_id
-    where lr.id = label_promotion_campaigns.release_id
-      and lm.user_id = auth.uid()
-      and lm.role in ('owner', 'manager')
+  (
+    exists (
+      select 1 from public.label_releases lr
+      join public.artist_label_contracts alc on alc.id = lr.contract_id
+      join public.label_members lm on lm.label_id = alc.label_id
+      where lr.id = label_promotion_campaigns.release_id
+        and lm.user_id = auth.uid()
+        and lm.role in ('owner', 'manager')
+    )
+  )
+  or (
+    exists (
+      select 1 from public.label_releases lr
+      join public.artist_label_contracts alc on alc.id = lr.contract_id
+      join public.band_members bm on bm.band_id = alc.band_id
+      where lr.id = label_promotion_campaigns.release_id
+        and bm.user_id = auth.uid()
+    )
+  )
+  or (
+    exists (
+      select 1 from public.label_releases lr
+      join public.artist_label_contracts alc on alc.id = lr.contract_id
+      join public.profiles p on p.id = alc.artist_profile_id
+      where lr.id = label_promotion_campaigns.release_id
+        and p.user_id = auth.uid()
+    )
   )
 ) with check (
-  exists (
-    select 1 from public.label_releases lr
-    join public.artist_label_contracts alc on alc.id = lr.contract_id
-    join public.label_members lm on lm.label_id = alc.label_id
-    where lr.id = label_promotion_campaigns.release_id
-      and lm.user_id = auth.uid()
-      and lm.role in ('owner', 'manager')
+  (
+    exists (
+      select 1 from public.label_releases lr
+      join public.artist_label_contracts alc on alc.id = lr.contract_id
+      join public.label_members lm on lm.label_id = alc.label_id
+      where lr.id = label_promotion_campaigns.release_id
+        and lm.user_id = auth.uid()
+        and lm.role in ('owner', 'manager')
+    )
+  )
+  or (
+    exists (
+      select 1 from public.label_releases lr
+      join public.artist_label_contracts alc on alc.id = lr.contract_id
+      join public.band_members bm on bm.band_id = alc.band_id
+      where lr.id = label_promotion_campaigns.release_id
+        and bm.user_id = auth.uid()
+    )
+  )
+  or (
+    exists (
+      select 1 from public.label_releases lr
+      join public.artist_label_contracts alc on alc.id = lr.contract_id
+      join public.profiles p on p.id = alc.artist_profile_id
+      where lr.id = label_promotion_campaigns.release_id
+        and p.user_id = auth.uid()
+    )
   )
 );
 
