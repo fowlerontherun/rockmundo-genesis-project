@@ -116,9 +116,16 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
 
   const setlistDuration = useMemo(() => {
     if (!setlistSongsData) return null;
-    return calculateSetlistDuration(setlistSongsData.map(ss => ({
-      duration_seconds: ss.songs?.duration_seconds
-    })));
+
+    const songEntries = setlistSongsData.filter(
+      (item) => item.item_type === "song" && item.songs
+    );
+
+    return calculateSetlistDuration(
+      songEntries.map((ss) => ({
+        duration_seconds: ss.songs?.duration_seconds,
+      }))
+    );
   }, [setlistSongsData]);
 
   const durationValidation = useMemo(() => {
