@@ -382,7 +382,21 @@ create policy labels_read_all on public.labels
 for select using (true);
 
 create policy labels_insert_authenticated on public.labels
-for insert with check (auth.role() = 'authenticated');
+for insert with check (
+  auth.role() = 'service_role'
+  or (
+    auth.role() = 'authenticated'
+    and (
+      public.has_role(auth.uid(), 'admin')
+      or exists (
+        select 1
+        from public.profiles p
+        where p.user_id = auth.uid()
+          and coalesce(p.cash, 0) >= 1000000
+      )
+    )
+  )
+);
 
 create policy labels_update_owner_or_manager on public.labels
 for update using (
@@ -696,3 +710,168 @@ insert into public.territories (code, name, region) values
   ('JP', 'Japan', 'Asia'),
   ('SE', 'Sweden', 'Europe')
 on conflict (code) do nothing;
+
+-- Seed a few launch labels backed by the admin user so players have partners from day one
+do $$
+declare
+  admin_user_id uuid;
+  label_id uuid;
+begin
+  select id into admin_user_id from auth.users where email = 'admin@rockmundo.com';
+
+  if admin_user_id is not null then
+    -- Midnight Wave Records (electronic & pop focus)
+    select id into label_id from public.labels where name = 'Midnight Wave Records' limit 1;
+    if label_id is null then
+      insert into public.labels (
+        name,
+        description,
+        headquarters_city,
+        created_by,
+        genre_focus,
+        roster_slot_capacity,
+        marketing_budget,
+        reputation_score,
+        market_share
+      )
+      values (
+        'Midnight Wave Records',
+        'Synth-forward indie pop collective known for bold visuals and late-night release drops.',
+        'Stockholm',
+        admin_user_id,
+        array['Synthpop', 'Electronic']::text[],
+        6,
+        250000,
+        55,
+        12.5
+      )
+      returning id into label_id;
+    end if;
+
+    if label_id is not null then
+      insert into public.label_members (label_id, user_id, role)
+      values (label_id, admin_user_id, 'owner')
+      on conflict (label_id, user_id) do nothing;
+
+      insert into public.label_territories (label_id, territory_code, priority)
+      values
+        (label_id, 'SE', 1),
+        (label_id, 'UK', 2),
+        (label_id, 'US', 3)
+      on conflict (label_id, territory_code) do nothing;
+
+      insert into public.label_roster_slots (label_id, slot_number, focus_genre)
+      values
+        (label_id, 1, 'Synthpop'),
+        (label_id, 2, 'Electropop'),
+        (label_id, 3, 'Indie Pop'),
+        (label_id, 4, 'Electronic'),
+        (label_id, 5, 'Alt Pop'),
+        (label_id, 6, 'Experimental')
+      on conflict (label_id, slot_number) do nothing;
+    end if;
+
+    -- Steel & Velvet Entertainment (rock & metal specialists)
+    select id into label_id from public.labels where name = 'Steel & Velvet Entertainment' limit 1;
+    if label_id is null then
+      insert into public.labels (
+        name,
+        description,
+        headquarters_city,
+        created_by,
+        genre_focus,
+        roster_slot_capacity,
+        marketing_budget,
+        reputation_score,
+        market_share
+      )
+      values (
+        'Steel & Velvet Entertainment',
+        'Global rock powerhouse balancing gritty metal signings with radio-ready arena acts.',
+        'Los Angeles',
+        admin_user_id,
+        array['Rock', 'Metal', 'Hard Rock']::text[],
+        8,
+        320000,
+        68,
+        18.4
+      )
+      returning id into label_id;
+    end if;
+
+    if label_id is not null then
+      insert into public.label_members (label_id, user_id, role)
+      values (label_id, admin_user_id, 'owner')
+      on conflict (label_id, user_id) do nothing;
+
+      insert into public.label_territories (label_id, territory_code, priority)
+      values
+        (label_id, 'US', 1),
+        (label_id, 'UK', 2),
+        (label_id, 'BR', 3)
+      on conflict (label_id, territory_code) do nothing;
+
+      insert into public.label_roster_slots (label_id, slot_number, focus_genre)
+      values
+        (label_id, 1, 'Hard Rock'),
+        (label_id, 2, 'Metalcore'),
+        (label_id, 3, 'Classic Rock'),
+        (label_id, 4, 'Symphonic Metal'),
+        (label_id, 5, 'Alternative Rock'),
+        (label_id, 6, 'Progressive Metal'),
+        (label_id, 7, 'Stadium Rock'),
+        (label_id, 8, 'Indie Rock')
+      on conflict (label_id, slot_number) do nothing;
+    end if;
+
+    -- Horizon Line Collective (global fusion and experimental sounds)
+    select id into label_id from public.labels where name = 'Horizon Line Collective' limit 1;
+    if label_id is null then
+      insert into public.labels (
+        name,
+        description,
+        headquarters_city,
+        created_by,
+        genre_focus,
+        roster_slot_capacity,
+        marketing_budget,
+        reputation_score,
+        market_share
+      )
+      values (
+        'Horizon Line Collective',
+        'Boutique collective focused on cross-cultural collaborations and future-facing genre blends.',
+        'Rio de Janeiro',
+        admin_user_id,
+        array['World', 'Experimental', 'Downtempo']::text[],
+        5,
+        180000,
+        47,
+        9.6
+      )
+      returning id into label_id;
+    end if;
+
+    if label_id is not null then
+      insert into public.label_members (label_id, user_id, role)
+      values (label_id, admin_user_id, 'owner')
+      on conflict (label_id, user_id) do nothing;
+
+      insert into public.label_territories (label_id, territory_code, priority)
+      values
+        (label_id, 'BR', 1),
+        (label_id, 'JP', 2),
+        (label_id, 'SE', 3)
+      on conflict (label_id, territory_code) do nothing;
+
+      insert into public.label_roster_slots (label_id, slot_number, focus_genre)
+      values
+        (label_id, 1, 'World Fusion'),
+        (label_id, 2, 'Downtempo'),
+        (label_id, 3, 'Afrobeat'),
+        (label_id, 4, 'Ambient Pop'),
+        (label_id, 5, 'Latin Experimental')
+      on conflict (label_id, slot_number) do nothing;
+    end if;
+  end if;
+end $$;
