@@ -1,48 +1,50 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  BarChart3,
-  Lightbulb,
-  ListMusic,
-  MapPin,
-  Music,
   Radio as RadioIcon,
-  Search,
-  Waves,
+  Music,
+  TrendingUp,
+  Star,
+  Clock,
+  Send,
+  CheckCircle,
+  XCircle,
+  PlayCircle,
+  DollarSign,
+  Sparkles,
 } from "lucide-react";
 
-const enhancementIdeas = [
-  "Live listener chat or call-in queue to capture audience engagement in real time.",
-  "Station reputation meter that impacts submission acceptance odds and rewards.",
-  "Regional heatmap displaying station reach and signal strength by geography.",
-  "Ad inventory marketplace where bands can purchase promoted spins or shout-outs.",
-  "Syndication tracker showing where shows are rebroadcast across partner stations.",
-  "DJ affinity scores that surface hosts most likely to love a band’s genre mix.",
-  "Weekly programming calendar with drag-and-drop tools for scheduling new shows.",
-  "Audience demographic breakdown estimating age groups and favorite genres.",
-  "Historical chart showing how a band’s radio fame changed over time per station.",
-  "Integration hooks for live streaming platforms to simulcast radio content.",
-];
+type BandRadioEarning = {
+  band_id: string;
+  amount: number;
+  bands?: { name?: string | null } | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+type NowPlayingRecord = {
+  id: string;
+  played_at: string | null;
+  listeners: number;
+  hype_gained: number | null;
+  streams_boost: number | null;
+  songs?: {
+    id: string;
+    title: string;
+    genre: string;
+    band_id: string | null;
+    bands?: { id: string; name: string | null; fame: number | null } | null;
+  } | null;
+  radio_shows?: { id: string; show_name: string | null } | null;
+};
 
 type RadioStationRecord = {
   id: string;
@@ -51,15 +53,15 @@ type RadioStationRecord = {
   station_type: string;
   listener_base: number;
   quality_level: number;
-  accepted_genres: string[] | null;
-  country: string | null;
-  cities: { name: string | null; country: string | null } | null;
+  accepted_genres?: string[] | null;
+  cities?: { name?: string | null; country?: string | null } | null;
+  country?: string | null;
 };
 
 type RadioShowRecord = {
   id: string;
   show_name: string;
-  host_name: string | null;
+  host_name: string;
   show_genres: string[] | null;
   time_slot: string;
 };
@@ -92,207 +94,148 @@ export default function Radio() {
       setUser(data.user);
     });
   });
-};
+  const [selectedStation, setSelectedStation] = useState<string>("");
+  const [selectedSong, setSelectedSong] = useState<string>("");
+  const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
 
-export default function Radio() {
-  const [typeFilter, setTypeFilter] = useState<"all" | "national" | "local">("all");
-  const [genreFilter, setGenreFilter] = useState<string>("all");
-  const [locationFilter, setLocationFilter] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
-
-  const {
-    data: stations = [],
-    isLoading: stationsLoading,
-    error: stationsError,
-  } = useQuery({
-    queryKey: ["radio-stations"],
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("radio_stations")
-        .select("id, name, frequency, station_type, listener_base, quality_level, accepted_genres, country, cities(name, country)")
-        .eq("is_active", true)
-        .order("name");
-
+        .from('profiles')
+        .select('*, bands!bands_leader_id_fkey(id, name, fame)')
+        .eq('user_id', user?.id)
+        .single();
       if (error) throw error;
-      return (data as RadioStationRecord[]) ?? [];
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: stations } = useQuery<RadioStationRecord[]>({
+    queryKey: ['radio-stations', filterType],
+    queryFn: async () => {
+      let query = supabase
+        .from('radio_stations')
+        .select('*, cities(name, country)')
+        .eq('is_active', true)
+        .order('quality_level', { ascending: false });
+
+      if (filterType !== 'all') {
+        query = query.eq('station_type', filterType);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data as RadioStationRecord[]) || [];
     },
   });
 
-  const genreOptions = useMemo(() => {
-    const unique = new Set<string>();
-    stations.forEach((station) => {
-      station.accepted_genres?.forEach((genre) => unique.add(genre));
-    });
-    return Array.from(unique).sort();
-  }, [stations]);
+  const activeStation = useMemo(() => {
+    return stations?.find((station) => station.id === selectedStation);
+  }, [stations, selectedStation]);
 
-  const locationOptions = useMemo(() => {
-    const unique = new Set<string>();
-    stations.forEach((station) => {
-      unique.add(formatLocation(station));
-    });
-    return Array.from(unique).sort();
-  }, [stations]);
-
-  const filteredStations = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-
-    return stations.filter((station) => {
-      if (typeFilter !== "all" && station.station_type !== typeFilter) return false;
-
-      if (genreFilter !== "all") {
-        const genres = station.accepted_genres ?? [];
-        if (!genres.includes(genreFilter)) return false;
-      }
-
-      if (locationFilter !== "all") {
-        if (formatLocation(station) !== locationFilter) return false;
-      }
-
-      if (normalizedSearch) {
-        const haystack = `${station.name} ${station.frequency ?? ""} ${station.accepted_genres?.join(" ") ?? ""}`.toLowerCase();
-        if (!haystack.includes(normalizedSearch)) return false;
-      }
-
-      return true;
-    });
-  }, [stations, typeFilter, genreFilter, locationFilter, searchTerm]);
-
-  useEffect(() => {
-    if (!filteredStations.length) {
-      setSelectedStationId(null);
-      return;
-    }
-
-    if (!selectedStationId || !filteredStations.some((station) => station.id === selectedStationId)) {
-      setSelectedStationId(filteredStations[0].id);
-    }
-  }, [filteredStations, selectedStationId]);
-
-  const selectedStation = useMemo(
-    () => filteredStations.find((station) => station.id === selectedStationId) ?? null,
-    [filteredStations, selectedStationId]
-  );
-
-  const { data: shows = [], isLoading: showsLoading } = useQuery({
-    queryKey: ["radio-station-shows", selectedStation?.id],
+  const { data: shows } = useQuery<RadioShowRecord[]>({
+    queryKey: ['radio-shows', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
       const { data, error } = await supabase
-        .from("radio_shows")
-        .select("id, show_name, host_name, show_genres, time_slot")
-        .eq("station_id", selectedStation.id)
-        .eq("is_active", true)
-        .order("time_slot");
-
+        .from('radio_shows')
+        .select('*')
+        .eq('station_id', selectedStation)
+        .eq('is_active', true)
+        .order('time_slot');
       if (error) throw error;
-      return (data as RadioShowRecord[]) ?? [];
+      return (data as RadioShowRecord[]) || [];
     },
-    enabled: !!selectedStation?.id,
+    enabled: !!selectedStation,
   });
 
-  const { data: nowPlaying } = useQuery({
-    queryKey: ["radio-station-now-playing", selectedStation?.id],
+  const { data: nowPlaying } = useQuery<NowPlayingRecord | null>({
+    queryKey: ['station-now-playing', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return null;
       const { data, error } = await supabase
-        .from("radio_plays")
-        .select(
-          `id, played_at, listeners, songs(id, title, genre, bands(id, name)), radio_shows(id, show_name)`
-        )
-        .eq("station_id", selectedStation.id)
-        .order("played_at", { ascending: false })
+        .from('radio_plays')
+        .select(`
+          id,
+          played_at,
+          listeners,
+          hype_gained,
+          streams_boost,
+          songs (
+            id,
+            title,
+            genre,
+            band_id,
+            bands ( id, name, fame )
+          ),
+          radio_shows ( id, show_name )
+        `)
+        .eq('station_id', selectedStation)
+        .order('played_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
       return (data as NowPlayingRecord | null) ?? null;
     },
-    enabled: !!selectedStation?.id,
+    enabled: !!selectedStation,
   });
 
-  const showIds = useMemo(() => shows.map((show) => show.id), [shows]);
-
-  const { data: playlists = [], isLoading: playlistsLoading } = useQuery({
-    queryKey: ["radio-station-playlists", showIds.sort().join("-")],
-    queryFn: async () => {
-      if (!showIds.length) return [];
-      const { data, error } = await supabase
-        .from("radio_playlists")
-        .select(
-          `id, week_start_date, times_played, added_at, songs(title, genre, bands(name)), radio_shows(id, show_name)`
-        )
-        .in("show_id", showIds)
-        .eq("is_active", true)
-        .order("added_at", { ascending: false })
-        .limit(12);
-
-      if (error) throw error;
-      return (data as RadioPlaylistRecord[]) ?? [];
-    },
-    enabled: !!showIds.length,
-  });
-
-  const { data: recentPlays = [] } = useQuery({
-    queryKey: ["radio-station-plays", selectedStation?.id],
+  const { data: bandRadioEarnings } = useQuery<BandRadioEarning[]>({
+    queryKey: ['band-radio-earnings', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
-      const windowStart = new Date();
-      windowStart.setDate(windowStart.getDate() - 14);
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
 
       const { data, error } = await supabase
-        .from("radio_plays")
-        .select(`song_id, listeners, played_at, songs(title, genre, bands(name))`)
-        .eq("station_id", selectedStation.id)
-        .gte("played_at", windowStart.toISOString())
-        .order("played_at", { ascending: false })
-        .limit(100);
+        .from('band_earnings')
+        .select('amount, created_at, band_id, bands(name), metadata')
+        .eq('source', 'radio_play')
+        .gte('created_at', startOfDay.toISOString())
+        .contains('metadata', { station_id: selectedStation })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data as RadioPlayRecord[]) ?? [];
+      return (data as BandRadioEarning[]) || [];
     },
-    enabled: !!selectedStation?.id,
+    enabled: !!selectedStation,
   });
 
-  const songPopularity = useMemo(() => {
-    const map = new Map<
-      string,
-      { title: string; band: string; genre: string; plays: number; listeners: number }
-    >();
+  const aggregatedBandRevenue = useMemo(() => {
+    if (!bandRadioEarnings) return [];
 
-    recentPlays.forEach((play) => {
-      const key = play.song_id;
-      if (!key) return;
+    const revenueMap = new Map<string, { name: string; total: number; plays: number }>();
 
-      const title = play.songs?.title ?? "Unknown Song";
-      const band = play.songs?.bands?.name ?? "Unknown Band";
-      const genre = play.songs?.genre ?? "Unknown";
+    for (const earning of bandRadioEarnings) {
+      const key = earning.band_id;
+      const entry = revenueMap.get(key) || {
+        name: earning.bands?.name || 'Unknown Band',
+        total: 0,
+        plays: 0,
+      };
 
-      const entry = map.get(key) ?? { title, band, genre, plays: 0, listeners: 0 };
+      entry.total += earning.amount;
       entry.plays += 1;
-      entry.listeners += play.listeners ?? 0;
-      map.set(key, entry);
-    });
+      revenueMap.set(key, entry);
+    }
 
-    return Array.from(map.values())
-      .sort((a, b) => (b.plays === a.plays ? b.listeners - a.listeners : b.plays - a.plays))
-      .slice(0, 5);
-  }, [recentPlays]);
+    return Array.from(revenueMap.entries()).map(([bandId, info]) => ({
+      bandId,
+      ...info,
+    }));
+  }, [bandRadioEarnings]);
 
-  const today = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    return start;
-  }, []);
-
-  const todayPlays = useMemo(
+  const currencyFormatter = useMemo(
     () =>
-      recentPlays.filter((play) => {
-        if (!play.played_at) return false;
-        return new Date(play.played_at) >= today;
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
       }),
-    [recentPlays, today]
+    []
   );
 
   const dailyRevenueTotal = useMemo(
@@ -419,31 +362,188 @@ export default function Radio() {
       if (!selectedStation || !selectedSong) {
         throw new Error('Please select a station and song');
       }
-    >();
 
-    todayPlays.forEach((play) => {
-      const bandName = play.songs?.bands?.name;
-      if (!bandName) return;
+      // Check if already submitted this week
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStartDate = weekStart.toISOString().split('T')[0];
 
-      const key = bandName.toLowerCase();
-      const listeners = play.listeners ?? 0;
+      const { data: existing } = await supabase
+        .from('radio_submissions')
+        .select('id')
+        .eq('station_id', selectedStation)
+        .eq('song_id', selectedSong)
+        .eq('week_submitted', weekStartDate)
+        .maybeSingle();
 
-      const entry =
-        map.get(key) ?? {
-          band: bandName,
-          plays: 0,
-          listeners: 0,
-          songs: new Set<string>(),
-          revenue: 0,
-          fame: 0,
-        };
+      if (existing) {
+        throw new Error('You have already submitted this song to this station this week');
+      }
 
-      entry.plays += 1;
-      entry.listeners += listeners;
-      entry.revenue += listeners * REVENUE_PER_LISTENER;
-      entry.fame += FAME_PER_PLAY;
-      if (play.songs?.title) {
-        entry.songs.add(play.songs.title);
+      const now = new Date();
+      const nowIso = now.toISOString();
+
+      const { data, error } = await supabase
+        .from('radio_submissions')
+        .insert({
+          song_id: selectedSong,
+          user_id: user?.id,
+          station_id: selectedStation,
+          week_submitted: weekStartDate,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const { data: selectedSongData } = await supabase
+        .from('songs')
+        .select('id, title, hype, band_id, total_radio_plays, streams, revenue')
+        .eq('id', selectedSong)
+        .single();
+
+      const { data: stationData } = await supabase
+        .from('radio_stations')
+        .select('id, name, listener_base')
+        .eq('id', selectedStation)
+        .single();
+
+      const { data: show } = await supabase
+        .from('radio_shows')
+        .select('id, name')
+        .eq('station_id', selectedStation)
+        .eq('is_active', true)
+        .order('time_slot', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      await supabase
+        .from('radio_submissions')
+        .update({
+          status: 'accepted',
+          reviewed_at: nowIso,
+          rejection_reason: null,
+        })
+        .eq('id', data.id);
+
+      if (selectedSongData && stationData && show) {
+        let playlistId: string | null = null;
+
+        const { data: existingPlaylist } = await supabase
+          .from('radio_playlists')
+          .select('*')
+          .eq('show_id', (show as any).id)
+          .eq('song_id', selectedSong)
+          .eq('week_start_date', weekStartDate)
+          .maybeSingle();
+
+        if (existingPlaylist) {
+          await supabase
+            .from('radio_playlists')
+            .update({
+              times_played: (existingPlaylist.times_played || 0) + 1,
+              added_at: nowIso,
+              is_active: true,
+            })
+            .eq('id', existingPlaylist.id);
+
+          playlistId = existingPlaylist.id;
+        } else {
+          const { data: newPlaylist } = await supabase
+            .from('radio_playlists')
+            .insert({
+              show_id: (show as any).id,
+              song_id: selectedSong,
+              week_start_date: weekStartDate,
+              added_at: nowIso,
+              is_active: true,
+              times_played: 1,
+            })
+            .select()
+            .single();
+
+          playlistId = newPlaylist?.id ?? null;
+        }
+
+        if (playlistId) {
+          const listeners = Math.max(
+            100,
+            Math.round((stationData.listener_base || 0) * (0.55 + Math.random() * 0.35))
+          );
+          const hypeGain = Math.max(1, Math.round(listeners * 0.002));
+          const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
+          const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+
+          const { data: playRecord } = await supabase
+            .from('radio_plays')
+            .insert({
+              playlist_id: playlistId,
+              show_id: (show as any).id,
+              song_id: selectedSong,
+              station_id: selectedStation,
+              listeners,
+              played_at: nowIso,
+              hype_gained: hypeGain,
+              streams_boost: streamsBoost,
+              sales_boost: radioRevenue,
+            })
+            .select()
+            .single();
+
+          await supabase
+            .from('songs')
+            .update({
+              hype: (selectedSongData.hype || 0) + hypeGain,
+              total_radio_plays: (selectedSongData.total_radio_plays || 0) + 1,
+              last_radio_play: nowIso,
+              streams: (selectedSongData.streams || 0) + streamsBoost,
+              revenue: (selectedSongData.revenue || 0) + radioRevenue,
+            })
+            .eq('id', selectedSong);
+
+          if (selectedSongData.band_id) {
+            const { data: band } = await supabase
+              .from('bands')
+              .select('fame')
+              .eq('id', selectedSongData.band_id)
+              .single();
+
+            if (band) {
+              const fameGain = 0.1;
+
+              await supabase
+                .from('bands')
+                .update({ fame: (band.fame || 0) + fameGain })
+                .eq('id', selectedSongData.band_id);
+
+              await supabase.from('band_fame_events').insert({
+                band_id: selectedSongData.band_id,
+                fame_gained: fameGain,
+                event_type: 'radio_play',
+                event_data: {
+                  station_id: selectedStation,
+                  station_name: stationData.name,
+                  play_id: playRecord?.id,
+                },
+              });
+
+              if (radioRevenue > 0) {
+                await supabase.from('band_earnings').insert({
+                  band_id: selectedSongData.band_id,
+                  amount: radioRevenue,
+                  source: 'radio_play',
+                  description: `Radio play on ${stationData.name}`,
+                  metadata: {
+                    station_id: selectedStation,
+                    station_name: stationData.name,
+                    song_id: selectedSongData.id,
+                    play_id: playRecord?.id,
+                  },
+                });
+              }
+            }
+          }
+        }
       }
 
       return data;
@@ -463,74 +563,149 @@ export default function Radio() {
     },
   });
 
-    return Array.from(map.values())
-      .map((entry) => ({
-        ...entry,
-        songCount: entry.songs.size,
-      }))
-      .sort((a, b) => (b.revenue === a.revenue ? b.plays - a.plays : b.revenue - a.revenue))
-      .slice(0, 6);
-  }, [todayPlays]);
+  const getQualityColor = (level: number) => {
+    if (level >= 4) return 'text-yellow-500';
+    if (level >= 3) return 'text-blue-500';
+    return 'text-gray-500';
+  };
 
-  const stationKpis = useMemo(() => {
-    if (!recentPlays.length) {
-      return {
-        totalSpins: 0,
-        uniqueSongs: 0,
-        totalListeners: 0,
-        averageListeners: 0,
-        peakListeners: 0,
-      };
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'rejected':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-yellow-500" />;
     }
+  };
 
-    const totalListeners = recentPlays.reduce((sum, play) => sum + (play.listeners ?? 0), 0);
-    const uniqueSongs = new Set(recentPlays.map((play) => play.song_id)).size;
-    const peakListeners = recentPlays.reduce(
-      (max, play) => Math.max(max, play.listeners ?? 0),
-      0
-    );
-
-    return {
-      totalSpins: recentPlays.length,
-      uniqueSongs,
-      totalListeners,
-      averageListeners: totalListeners / recentPlays.length,
-      peakListeners,
-    };
-  }, [recentPlays]);
-
-  const networkSummary = useMemo(() => {
-    if (!stations.length) {
-      return {
-        totalStations: 0,
-        totalListenerBase: 0,
-        averageQuality: 0,
-        uniqueGenres: 0,
-      };
-    }
-
-    const totalListenerBase = stations.reduce((sum, station) => sum + (station.listener_base ?? 0), 0);
-    const uniqueGenres = new Set(stations.flatMap((station) => station.accepted_genres ?? [])).size;
-    const averageQuality =
-      stations.reduce((sum, station) => sum + (station.quality_level ?? 0), 0) / stations.length;
-
-    return {
-      totalStations: stations.length,
-      totalListenerBase,
-      averageQuality,
-      uniqueGenres,
-    };
-  }, [stations]);
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Radio Network</h1>
-        <p className="text-muted-foreground">
-          Discover every station in the world of Rockmundo, browse their programming, and monitor
-          the songs captivating listeners right now.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-stage">
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <RadioIcon className="h-8 w-8" />
+          <div>
+            <h1 className="text-4xl font-oswald">Radio Airplay</h1>
+            <p className="text-muted-foreground">Submit your songs to radio stations and build hype</p>
+          </div>
+        </div>
+
+        <Alert>
+          <Music className="h-4 w-4" />
+          <AlertDescription>
+            Submit your recorded songs to radio stations. Higher quality stations are more selective but reach more listeners.
+            Songs can be played up to 7 times per week if added to playlists. Each play increases hype, streams, and sales!
+          </AlertDescription>
+        </Alert>
+
+        <Tabs defaultValue="submit" className="w-full">
+          <TabsList>
+            <TabsTrigger value="submit">Submit Song</TabsTrigger>
+            <TabsTrigger value="submissions">My Submissions</TabsTrigger>
+            <TabsTrigger value="trending">Trending on Radio</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="submit" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Submit Song to Radio</CardTitle>
+                <CardDescription>Choose a station and one of your recorded songs to submit</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Filter Stations</label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={filterType === 'all' ? 'default' : 'outline'}
+                      onClick={() => setFilterType('all')}
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant={filterType === 'national' ? 'default' : 'outline'}
+                      onClick={() => setFilterType('national')}
+                    >
+                      National
+                    </Button>
+                    <Button
+                      variant={filterType === 'local' ? 'default' : 'outline'}
+                      onClick={() => setFilterType('local')}
+                    >
+                      Local
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {stations?.map((station) => (
+                    <Card
+                      key={station.id}
+                      className={`cursor-pointer transition-colors ${
+                        selectedStation === station.id ? 'border-primary' : ''
+                      }`}
+                      onClick={() => setSelectedStation(station.id)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{station.name}</CardTitle>
+                            <CardDescription>{station.frequency}</CardDescription>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < station.quality_level
+                                    ? 'fill-yellow-500 text-yellow-500'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Type:</span>
+                          <Badge variant="outline">{station.station_type}</Badge>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Location:</span>
+                          <span className="text-sm">
+                            {station.station_type === 'national'
+                              ? station.country
+                              : `${station.cities?.name}, ${station.cities?.country}`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Listeners:</span>
+                          <span className="font-semibold">
+                            {station.listener_base.toLocaleString()}
+                          </span>
+                        </div>
+                        {station.accepted_genres?.length > 0 && (
+                          <div className="pt-2">
+                            <p className="text-xs text-muted-foreground mb-1">Accepts:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {station.accepted_genres.map((genre: string) => (
+                                <Badge key={genre} variant="secondary" className="text-xs">
+                                  {genre}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
 
                 {selectedStation && (
                   <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
@@ -566,53 +741,68 @@ export default function Radio() {
                         </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            : filteredStations.length
-            ? filteredStations.map((station) => (
-                <Card
-                  key={station.id}
-                  className={`cursor-pointer transition ${
-                    selectedStationId === station.id ? "border-primary shadow-lg" : "hover:border-primary"
-                  }`}
-                  onClick={() => setSelectedStationId(station.id)}
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between gap-2 text-lg">
-                      <span>{station.name}</span>
-                      <Badge>{station.station_type === "national" ? "National" : "Local"}</Badge>
-                    </CardTitle>
-                    <CardDescription className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Waves className="h-4 w-4" /> {station.frequency ?? "Unknown frequency"}
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="h-4 w-4" /> {formatLocation(station)}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="space-y-1">
-                        <div className="font-medium">Listener Base</div>
-                        <div className="text-muted-foreground">{formatNumber(station.listener_base)} fans</div>
+                    {nowPlaying ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <p className="text-xl font-semibold">{nowPlaying.songs?.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {nowPlaying.songs?.genre} · {nowPlaying.songs?.bands?.name || 'Independent Artist'}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Last spun {nowPlaying.played_at ? new Date(nowPlaying.played_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'just now'}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 text-sm">
+                          <div className="flex justify-between rounded-md bg-background/60 px-3 py-2">
+                            <span className="text-muted-foreground">Listeners</span>
+                            <span className="font-semibold">{nowPlaying.listeners?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between rounded-md bg-background/60 px-3 py-2">
+                            <span className="text-muted-foreground">Streams Boost</span>
+                            <span className="font-semibold">{nowPlaying.streams_boost?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between rounded-md bg-background/60 px-3 py-2">
+                            <span className="text-muted-foreground">Hype Gained</span>
+                            <span className="font-semibold">{nowPlaying.hype_gained ?? 0}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1 text-right">
-                        <div className="font-medium">Broadcast Quality</div>
-                        <div className="text-muted-foreground">Level {station.quality_level}</div>
+                    ) : (
+                      <div className="rounded-md border border-dashed border-primary/20 bg-background/80 p-4 text-sm text-muted-foreground">
+                        No spins recorded yet today. Submitting a song will immediately trigger airplay for this station.
                       </div>
-                    </div>
-                    <Separator />
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Accepted genres</div>
-                      <div className="flex flex-wrap gap-2">
-                        {(station.accepted_genres ?? ["Open format"]).map((genre) => (
-                          <Badge key={genre} variant="outline">
-                            {genre}
-                          </Badge>
-                        ))}
+                    )}
+
+                    <div className="space-y-3 rounded-md border border-primary/20 bg-background/70 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          Daily Band Revenue
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {currencyFormatter.format(dailyRevenueTotal || 0)}
+                        </span>
                       </div>
+                      {aggregatedBandRevenue.length > 0 ? (
+                        <div className="space-y-2 text-sm">
+                          {aggregatedBandRevenue.map((entry) => (
+                            <div
+                              key={entry.bandId}
+                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
+                            >
+                              <div>
+                                <p className="font-medium">{entry.name}</p>
+                                <p className="text-xs text-muted-foreground">{entry.plays} play{entry.plays === 1 ? '' : 's'} today</p>
+                              </div>
+                              <span className="font-semibold">{currencyFormatter.format(entry.total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          No radio revenue logged yet today for this station. Keep submitting to earn automated payouts.
+                        </p>
+                      )}
                     </div>
 
                     <div className="rounded-md border border-primary/20 bg-background/70 p-3">
@@ -677,248 +867,158 @@ export default function Radio() {
                         </div>
                       ))}
                     </div>
-                    <div className="text-muted-foreground text-xs">
-                      {nowPlaying.radio_shows?.show_name ? `During ${nowPlaying.radio_shows.show_name}` : "Unscheduled spin"}
-                    </div>
-                    <div className="text-muted-foreground text-xs">
-                      {nowPlaying.played_at ? `Last updated ${formatDate(nowPlaying.played_at)}` : "Play time unavailable"}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-muted-foreground">No recent play data for this station.</div>
+                  </div>
                 )}
-              </div>
-              <Separator />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs">
-                  <p className="uppercase tracking-wide text-muted-foreground">Spins (14 days)</p>
-                  <p className="mt-1 text-xl font-semibold">{formatNumber(stationKpis.totalSpins)}</p>
-                </div>
-                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs">
-                  <p className="uppercase tracking-wide text-muted-foreground">Unique Songs</p>
-                  <p className="mt-1 text-xl font-semibold">{formatNumber(stationKpis.uniqueSongs)}</p>
-                </div>
-                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs">
-                  <p className="uppercase tracking-wide text-muted-foreground">Avg. Audience</p>
-                  <p className="mt-1 text-xl font-semibold">
-                    {stationKpis.averageListeners ? stationKpis.averageListeners.toFixed(0) : "–"}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs">
-                  <p className="uppercase tracking-wide text-muted-foreground">Peak Listeners</p>
-                  <p className="mt-1 text-xl font-semibold">{formatNumber(stationKpis.peakListeners)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ListMusic className="h-5 w-5" /> Current shows
-              </CardTitle>
-              <CardDescription>Who is on the air and what they’re spinning this season.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {showsLoading ? (
-                <div className="text-sm text-muted-foreground">Loading shows...</div>
-              ) : shows.length ? (
-                shows.map((show) => (
-                  <div key={show.id} className="flex flex-col gap-2 rounded-lg border p-4 md:flex-row md:items-center md:justify-between">
-                    <div className="space-y-1">
-                      <div className="text-sm font-semibold">{show.show_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Hosted by {show.host_name ?? "TBA"} • {show.time_slot}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      {(show.show_genres ?? []).map((genre) => (
-                        <Badge key={genre} variant="secondary">
-                          {genre}
-                        </Badge>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Select Song</label>
+                  <Select value={selectedSong} onValueChange={setSelectedSong}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a recorded song" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recordedSongs?.map((song) => (
+                        <SelectItem key={song.id} value={song.id}>
+                          {song.title} ({song.genre}) - Quality: {song.quality_score}
+                        </SelectItem>
                       ))}
-                      {!show.show_genres?.length && <span>No genres listed</span>}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-muted-foreground">No active shows are scheduled for this station.</div>
-              )}
-            </CardContent>
-          </Card>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChart3 className="h-5 w-5" /> Song popularity snapshot
-              </CardTitle>
-              <CardDescription>
-                Aggregated from the last two weeks of spins to highlight what listeners keep requesting.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {songPopularity.length ? (
-                songPopularity.map((song, index) => (
-                  <div key={`${song.title}-${index}`} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 text-sm">
-                    <div>
-                      <div className="font-semibold">{song.title}</div>
-                      <div className="text-xs text-muted-foreground">{song.band} • {song.genre}</div>
-                    </div>
-                    <div className="flex items-center gap-6 text-xs text-muted-foreground">
-                      <div>
-                        <div className="font-semibold text-base leading-none">{song.plays}</div>
-                        <div>Spins</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-base leading-none">{formatNumber(song.listeners)}</div>
-                        <div>Listeners</div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-muted-foreground">Not enough recent plays to build popularity stats.</div>
-              )}
-            </CardContent>
-          </Card>
+                <Button
+                  onClick={() => submitSong.mutate()}
+                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
+                  className="w-full"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Submit to Radio Station
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChart3 className="h-5 w-5" /> Daily band payouts & fame
-              </CardTitle>
-              <CardDescription>
-                Estimated royalties and notoriety earned from today’s confirmed spins on this station.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {bandDailyEarnings.length ? (
-                <div className="grid gap-3">
-                  {bandDailyEarnings.map((entry) => (
-                    <div
-                      key={entry.band}
-                      className="grid gap-4 rounded-lg border border-muted/60 bg-background/60 p-4 md:grid-cols-[1.2fr_1fr_1fr_1fr]"
-                    >
-                      <div className="space-y-1 text-sm">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Band</p>
-                        <p className="text-base font-semibold">{entry.band}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {entry.songCount} song{entry.songCount === 1 ? "" : "s"} in rotation today
+          <TabsContent value="submissions" className="space-y-4">
+            {mySubmissions?.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No submissions yet. Submit your first song to a radio station!
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              mySubmissions?.map((submission) => (
+                <Card key={submission.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{submission.songs?.title}</CardTitle>
+                        <CardDescription>{submission.radio_stations?.name}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(submission.status)}
+                        <Badge
+                          variant={
+                            submission.status === 'accepted'
+                              ? 'default'
+                              : submission.status === 'rejected'
+                              ? 'destructive'
+                              : 'secondary'
+                          }
+                        >
+                          {submission.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Genre:</span>
+                        <Badge variant="outline">{submission.songs?.genre}</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Submitted:</span>
+                        <span>{new Date(submission.submitted_at).toLocaleDateString()}</span>
+                      </div>
+                      {submission.rejection_reason && (
+                        <Alert variant="destructive">
+                          <AlertDescription>{submission.rejection_reason}</AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="trending" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Songs on Radio</CardTitle>
+                <CardDescription>Songs with the most hype from radio airplay</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {topSongs?.map((song, index) => (
+                    <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                        <span className="font-bold">{index + 1}</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{song.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          by {song.profiles?.display_name}
                         </p>
                       </div>
-                      <div className="space-y-1 text-sm">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Spins</p>
-                        <p className="text-base font-semibold">{entry.plays}</p>
-                        <p className="text-xs text-muted-foreground">Across {formatNumber(entry.listeners)} listeners</p>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <span className="font-semibold">{song.hype || 0} hype</span>
                       </div>
-                      <div className="space-y-1 text-sm">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Daily Revenue</p>
-                        <p className="text-base font-semibold">{formatCurrency(entry.revenue)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Calculated at {formatNumber(REVENUE_PER_LISTENER, { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 })} per listener
-                        </p>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Fame</p>
-                        <p className="text-base font-semibold">{entry.fame.toFixed(1)}</p>
-                        <p className="text-xs text-muted-foreground">{FAME_PER_PLAY.toFixed(1)} per confirmed spin</p>
-                      </div>
+                      <Badge variant="outline">{song.genre}</Badge>
+                      {song.total_radio_plays > 0 && (
+                        <Badge variant="secondary">{song.total_radio_plays} plays</Badge>
+                      )}
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  No plays recorded so far today. Keep an eye on the airwaves as the broadcast day unfolds.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Waves className="h-5 w-5" /> Latest spins timeline
-              </CardTitle>
-              <CardDescription>Recent airplay history to understand programming cadence.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              {recentPlays.length ? (
-                recentPlays.slice(0, 8).map((play) => {
-                  const playedAt = play.played_at ? new Date(play.played_at) : null;
-
-                  return (
-                    <div key={`${play.song_id}-${play.played_at}`} className="space-y-1 rounded-lg border bg-muted/40 p-3">
-                      <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                        <span>{playedAt ? playedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Unknown time"}</span>
-                        <span>{formatNumber(play.listeners)} listeners</span>
-                      </div>
-                      <div className="text-sm font-semibold">{play.songs?.title ?? "Unknown song"}</div>
-                      <div className="text-xs text-muted-foreground">{play.songs?.bands?.name ?? "Unknown band"} • {play.songs?.genre ?? "Unknown genre"}</div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  We haven’t tracked any spins yet. Once this station cues up tracks, you’ll see them here instantly.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ListMusic className="h-5 w-5" /> Featured playlists
-              </CardTitle>
-              <CardDescription>Active rotations curated by the station’s programming team.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {playlistsLoading ? (
-                <div className="text-sm text-muted-foreground">Loading playlists...</div>
-              ) : playlists.length ? (
-                playlists.map((playlist) => (
-                  <div key={playlist.id} className="rounded-lg border p-4 text-sm">
-                    <div className="font-semibold">{playlist.songs?.title ?? "Unknown song"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {playlist.songs?.bands?.name ?? "Unknown band"} • {playlist.radio_shows?.show_name ?? "Unassigned show"}
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Week of {formatDate(playlist.week_start_date)}</span>
-                      <span>{playlist.times_played ?? 0} spins</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-muted-foreground">No playlists have been published yet.</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Adjust the filters or select a card above to view station details.
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Lightbulb className="h-5 w-5" /> Future enhancements
-          </CardTitle>
-          <CardDescription>
-            Ten ambitious ideas to evolve the radio experience even further for artists, DJs, and fans.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          {enhancementIdeas.map((idea) => (
-            <div key={idea} className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
-              {idea}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Future Radio Enhancements
+                </CardTitle>
+                <CardDescription>Opportunities to deepen the broadcast management experience</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                  <li>
+                    Build a rotation planner that balances hot, recurrent, and gold categories so accepted songs receive
+                    predictable spins throughout the week.
+                  </li>
+                  <li>
+                    Introduce genre-specific programming blocks and gate submissions based on music director preferences for
+                    each show.
+                  </li>
+                  <li>
+                    Surface historical analytics (reach, conversion, and fan growth) so bands can compare station performance
+                    before spending promo budgets.
+                  </li>
+                  <li>
+                    Allow station managers to run ad campaigns, sponsorships, and interview slots that boost revenue and fame
+                    when combined with airplay.
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
