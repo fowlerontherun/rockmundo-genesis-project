@@ -536,17 +536,18 @@ const StageEquipmentSystem = () => {
   const updateCatalogAvailabilityMutation = useMutation({
     mutationFn: async ({
       itemId,
-      amountAvailable,
+      decrementBy = 1,
     }: {
       itemId: string;
-      amountAvailable: number;
+      decrementBy?: number;
     }) => {
-      const { data, error } = await supabase
-        .from("stage_equipment_catalog")
-        .update({ amount_available: amountAvailable })
-        .eq("id", itemId)
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc(
+        "decrement_stage_equipment_catalog_stock",
+        {
+          item_id: itemId,
+          amount: decrementBy,
+        },
+      );
 
       if (error) throw error;
       return data as StageEquipmentCatalogRow;
@@ -651,21 +652,23 @@ const StageEquipmentSystem = () => {
     onSuccess: (_, item) => {
       toast.success(`${item.name} added to your stage inventory`);
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-      let updatedAmount: number | null = null;
+      let decrementBy = 0;
       setCatalog((prev) =>
         prev.map((entry) => {
           if (entry.id === item.id) {
-            const amountAvailable = Math.max(0, entry.amountAvailable - 1);
-            updatedAmount = amountAvailable;
-            return { ...entry, amountAvailable };
+            if (entry.amountAvailable > 0) {
+              decrementBy = 1;
+              return { ...entry, amountAvailable: entry.amountAvailable - 1 };
+            }
+            return entry;
           }
           return entry;
         }),
       );
-      if (updatedAmount !== null) {
+      if (decrementBy > 0) {
         updateCatalogAvailabilityMutation.mutate({
           itemId: item.id,
-          amountAvailable: updatedAmount,
+          decrementBy,
         });
       }
       setPurchaseDialogOpen(false);

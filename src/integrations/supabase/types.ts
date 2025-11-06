@@ -7493,6 +7493,10 @@ export type Database = {
         Args: { p_setlist_id: string }
         Returns: number
       }
+      decrement_stage_equipment_catalog_stock: {
+        Args: { amount?: number | null; item_id: string }
+        Returns: Database["public"]["Tables"]["stage_equipment_catalog"]["Row"]
+      }
       calculate_songwriting_progress: {
         Args: {
           p_attr_creative_insight: number
