@@ -51,7 +51,6 @@ export function ReleasePipelineTab({ artistEntities, territories }: ReleasePipel
           *,
           labels(id, name, reputation_score),
           label_releases(id),
-          label_promotion_campaigns(id),
           label_royalty_statements(id)
         `)
         .or(filters.join(","));

@@ -45,9 +45,11 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
         .select(`
           *,
           labels(id, name, headquarters_city, reputation_score),
-          label_releases(*),
+          label_releases(
+            *,
+            label_promotion_campaigns(*)
+          ),
           label_royalty_statements(*),
-          label_promotion_campaigns(*),
           label_roster_slots(id, slot_number, status)
         `)
         .or(filters.join(","))
