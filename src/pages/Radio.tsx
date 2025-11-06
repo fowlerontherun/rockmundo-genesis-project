@@ -276,8 +276,7 @@ export default function Radio() {
         .select(`song_id, listeners, played_at, songs(title, genre, bands(name))`)
         .eq("station_id", selectedStation.id)
         .gte("played_at", windowStart.toISOString())
-        .order("played_at", { ascending: false })
-        .limit(100);
+        .order("played_at", { ascending: false });
 
       if (error) throw error;
       return (data as RadioPlayRecord[]) ?? [];
