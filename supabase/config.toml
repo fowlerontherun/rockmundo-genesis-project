@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.complete-gig]
 verify_jwt = false
+
+[functions.auto-complete-gigs]
+verify_jwt = false

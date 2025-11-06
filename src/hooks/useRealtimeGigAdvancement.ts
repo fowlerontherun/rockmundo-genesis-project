@@ -53,11 +53,12 @@ export const useRealtimeGigAdvancement = (gigId: string | null, enabled: boolean
     console.log(`[Gig Advancement] Processing song: ${nextSong.song_id} at position ${currentPosition}`);
     
     // Call edge function to process this song's performance
-    // Note: position in the edge function expects 0-indexed
     const { data, error } = await supabase.functions.invoke('process-gig-song', {
       body: {
         gigId: gig.id,
-        position: currentPosition  // Already 0-indexed
+        outcomeId: outcomeId,
+        songId: nextSong.song_id,
+        position: currentPosition
       }
     });
 

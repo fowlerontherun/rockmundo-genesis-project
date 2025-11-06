@@ -83,6 +83,7 @@ export function AppSidebar() {
         { icon: Mic, label: "Perform", path: "/performance" },
         { icon: Calendar, label: "Gigs", path: "/gigs" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
+        { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: Award, label: "Awards", path: "/awards" },
       ],

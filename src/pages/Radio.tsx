@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,62 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Radio as RadioIcon, Music, TrendingUp, Star, Clock, Send, CheckCircle, XCircle } from "lucide-react";
+import {
+  Radio as RadioIcon,
+  Music,
+  TrendingUp,
+  Star,
+  Clock,
+  Send,
+  CheckCircle,
+  XCircle,
+  PlayCircle,
+  DollarSign,
+  Sparkles,
+} from "lucide-react";
+
+type BandRadioEarning = {
+  band_id: string;
+  amount: number;
+  bands?: { name?: string | null } | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+type NowPlayingRecord = {
+  id: string;
+  played_at: string | null;
+  listeners: number;
+  hype_gained: number | null;
+  streams_boost: number | null;
+  songs?: {
+    id: string;
+    title: string;
+    genre: string;
+    band_id: string | null;
+    bands?: { id: string; name: string | null; fame: number | null } | null;
+  } | null;
+  radio_shows?: { id: string; show_name: string | null } | null;
+};
+
+type RadioStationRecord = {
+  id: string;
+  name: string;
+  frequency: string | null;
+  station_type: string;
+  listener_base: number;
+  quality_level: number;
+  accepted_genres?: string[] | null;
+  cities?: { name?: string | null; country?: string | null } | null;
+  country?: string | null;
+};
+
+type RadioShowRecord = {
+  id: string;
+  show_name: string;
+  host_name: string;
+  show_genres: string[] | null;
+  time_slot: string;
+};
 
 export default function Radio() {
   const navigate = useNavigate();
@@ -40,7 +95,7 @@ export default function Radio() {
     enabled: !!user?.id,
   });
 
-  const { data: stations } = useQuery({
+  const { data: stations } = useQuery<RadioStationRecord[]>({
     queryKey: ['radio-stations', filterType],
     queryFn: async () => {
       let query = supabase
@@ -48,18 +103,22 @@ export default function Radio() {
         .select('*, cities(name, country)')
         .eq('is_active', true)
         .order('quality_level', { ascending: false });
-      
+
       if (filterType !== 'all') {
         query = query.eq('station_type', filterType);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return (data as RadioStationRecord[]) || [];
     },
   });
 
-  const { data: shows } = useQuery({
+  const activeStation = useMemo(() => {
+    return stations?.find((station) => station.id === selectedStation);
+  }, [stations, selectedStation]);
+
+  const { data: shows } = useQuery<RadioShowRecord[]>({
     queryKey: ['radio-shows', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
@@ -70,10 +129,102 @@ export default function Radio() {
         .eq('is_active', true)
         .order('time_slot');
       if (error) throw error;
-      return data;
+      return (data as RadioShowRecord[]) || [];
     },
     enabled: !!selectedStation,
   });
+
+  const { data: nowPlaying } = useQuery<NowPlayingRecord | null>({
+    queryKey: ['station-now-playing', selectedStation],
+    queryFn: async () => {
+      if (!selectedStation) return null;
+      const { data, error } = await supabase
+        .from('radio_plays')
+        .select(`
+          id,
+          played_at,
+          listeners,
+          hype_gained,
+          streams_boost,
+          songs (
+            id,
+            title,
+            genre,
+            band_id,
+            bands ( id, name, fame )
+          ),
+          radio_shows ( id, show_name )
+        `)
+        .eq('station_id', selectedStation)
+        .order('played_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data as NowPlayingRecord | null) ?? null;
+    },
+    enabled: !!selectedStation,
+  });
+
+  const { data: bandRadioEarnings } = useQuery<BandRadioEarning[]>({
+    queryKey: ['band-radio-earnings', selectedStation],
+    queryFn: async () => {
+      if (!selectedStation) return [];
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('band_earnings')
+        .select('amount, created_at, band_id, bands(name), metadata')
+        .eq('source', 'radio_play')
+        .gte('created_at', startOfDay.toISOString())
+        .contains('metadata', { station_id: selectedStation })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data as BandRadioEarning[]) || [];
+    },
+    enabled: !!selectedStation,
+  });
+
+  const aggregatedBandRevenue = useMemo(() => {
+    if (!bandRadioEarnings) return [];
+
+    const revenueMap = new Map<string, { name: string; total: number; plays: number }>();
+
+    for (const earning of bandRadioEarnings) {
+      const key = earning.band_id;
+      const entry = revenueMap.get(key) || {
+        name: earning.bands?.name || 'Unknown Band',
+        total: 0,
+        plays: 0,
+      };
+
+      entry.total += earning.amount;
+      entry.plays += 1;
+      revenueMap.set(key, entry);
+    }
+
+    return Array.from(revenueMap.entries()).map(([bandId, info]) => ({
+      bandId,
+      ...info,
+    }));
+  }, [bandRadioEarnings]);
+
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
+
+  const dailyRevenueTotal = useMemo(
+    () => aggregatedBandRevenue.reduce((sum, band) => sum + band.total, 0),
+    [aggregatedBandRevenue]
+  );
 
   const { data: recordedSongs } = useQuery({
     queryKey: ['recorded-songs', user?.id],
@@ -134,86 +285,172 @@ export default function Radio() {
         .eq('station_id', selectedStation)
         .eq('song_id', selectedSong)
         .eq('week_submitted', weekStartDate)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         throw new Error('You have already submitted this song to this station this week');
       }
 
+      const now = new Date();
+      const nowIso = now.toISOString();
+
       const { data, error } = await supabase
         .from('radio_submissions')
-        .insert([{
+        .insert({
           song_id: selectedSong,
           user_id: user?.id,
           station_id: selectedStation,
           week_submitted: weekStartDate,
-        }])
+        })
         .select()
         .single();
-      
+
       if (error) throw error;
 
-      // Get song and station details for hype/fame calculation
       const { data: selectedSongData } = await supabase
         .from('songs')
-        .select('hype, band_id')
+        .select('id, title, hype, band_id, total_radio_plays, streams, revenue')
         .eq('id', selectedSong)
         .single();
 
       const { data: stationData } = await supabase
         .from('radio_stations')
-        .select('listener_base')
+        .select('id, name, listener_base')
         .eq('id', selectedStation)
         .single();
 
-      if (selectedSongData && stationData) {
-        // Update song hype
-        await supabase
-          .from('songs')
-          .update({
-            hype: (selectedSongData.hype || 0) + Math.floor((stationData.listener_base || 0) * 0.001)
-          })
-          .eq('id', selectedSong);
+      const { data: show } = await supabase
+        .from('radio_shows')
+        .select('id, name')
+        .eq('station_id', selectedStation)
+        .eq('is_active', true)
+        .order('time_slot', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
-        // Award fame to band and members if band song
-        if (selectedSongData.band_id) {
-          const fameGain = Math.floor((stationData.listener_base || 0) * 0.0005);
-          
-          const { data: band } = await supabase
-            .from('bands')
-            .select('fame')
-            .eq('id', selectedSongData.band_id)
+      await supabase
+        .from('radio_submissions')
+        .update({
+          status: 'accepted',
+          reviewed_at: nowIso,
+          rejection_reason: null,
+        })
+        .eq('id', data.id);
+
+      if (selectedSongData && stationData && show) {
+        let playlistId: string | null = null;
+
+        const { data: existingPlaylist } = await supabase
+          .from('radio_playlists')
+          .select('*')
+          .eq('show_id', (show as any).id)
+          .eq('song_id', selectedSong)
+          .eq('week_start_date', weekStartDate)
+          .maybeSingle();
+
+        if (existingPlaylist) {
+          await supabase
+            .from('radio_playlists')
+            .update({
+              times_played: (existingPlaylist.times_played || 0) + 1,
+              added_at: nowIso,
+              is_active: true,
+            })
+            .eq('id', existingPlaylist.id);
+
+          playlistId = existingPlaylist.id;
+        } else {
+          const { data: newPlaylist } = await supabase
+            .from('radio_playlists')
+            .insert({
+              show_id: (show as any).id,
+              song_id: selectedSong,
+              week_start_date: weekStartDate,
+              added_at: nowIso,
+              is_active: true,
+              times_played: 1,
+            })
+            .select()
             .single();
 
-          if (band) {
-            await supabase
+          playlistId = newPlaylist?.id ?? null;
+        }
+
+        if (playlistId) {
+          const listeners = Math.max(
+            100,
+            Math.round((stationData.listener_base || 0) * (0.55 + Math.random() * 0.35))
+          );
+          const hypeGain = Math.max(1, Math.round(listeners * 0.002));
+          const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
+          const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+
+          const { data: playRecord } = await supabase
+            .from('radio_plays')
+            .insert({
+              playlist_id: playlistId,
+              show_id: (show as any).id,
+              song_id: selectedSong,
+              station_id: selectedStation,
+              listeners,
+              played_at: nowIso,
+              hype_gained: hypeGain,
+              streams_boost: streamsBoost,
+              sales_boost: radioRevenue,
+            })
+            .select()
+            .single();
+
+          await supabase
+            .from('songs')
+            .update({
+              hype: (selectedSongData.hype || 0) + hypeGain,
+              total_radio_plays: (selectedSongData.total_radio_plays || 0) + 1,
+              last_radio_play: nowIso,
+              streams: (selectedSongData.streams || 0) + streamsBoost,
+              revenue: (selectedSongData.revenue || 0) + radioRevenue,
+            })
+            .eq('id', selectedSong);
+
+          if (selectedSongData.band_id) {
+            const { data: band } = await supabase
               .from('bands')
-              .update({ fame: (band.fame || 0) + fameGain })
-              .eq('id', selectedSongData.band_id);
+              .select('fame')
+              .eq('id', selectedSongData.band_id)
+              .single();
 
-            // Award fame to band members
-            const { data: members } = await supabase
-              .from('band_members')
-              .select('user_id')
-              .eq('band_id', selectedSongData.band_id)
-              .eq('is_touring_member', false);
+            if (band) {
+              const fameGain = 0.1;
 
-            if (members) {
-              const famePerMember = Math.floor(fameGain / Math.max(1, members.length));
-              
-              for (const member of members) {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('fame')
-                  .eq('user_id', member.user_id)
-                  .single();
+              await supabase
+                .from('bands')
+                .update({ fame: (band.fame || 0) + fameGain })
+                .eq('id', selectedSongData.band_id);
 
-                if (profile) {
-                  await supabase
-                    .from('profiles')
-                    .update({ fame: (profile.fame || 0) + famePerMember })
-                    .eq('user_id', member.user_id);
-                }
+              await supabase.from('band_fame_events').insert({
+                band_id: selectedSongData.band_id,
+                fame_gained: fameGain,
+                event_type: 'radio_play',
+                event_data: {
+                  station_id: selectedStation,
+                  station_name: stationData.name,
+                  play_id: playRecord?.id,
+                },
+              });
+
+              if (radioRevenue > 0) {
+                await supabase.from('band_earnings').insert({
+                  band_id: selectedSongData.band_id,
+                  amount: radioRevenue,
+                  source: 'radio_play',
+                  description: `Radio play on ${stationData.name}`,
+                  metadata: {
+                    station_id: selectedStation,
+                    station_name: stationData.name,
+                    song_id: selectedSongData.id,
+                    play_id: playRecord?.id,
+                  },
+                });
               }
             }
           }
@@ -224,7 +461,10 @@ export default function Radio() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
-      toast.success('Song submitted to radio station!');
+      queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
+      queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
+      queryClient.invalidateQueries({ queryKey: ['top-radio-songs'] });
+      toast.success('Your track is now spinning on the airwaves!');
       setSelectedSong('');
     },
     onError: (error: any) => {
@@ -376,6 +616,85 @@ export default function Radio() {
                   ))}
                 </div>
 
+                {selectedStation && (
+                  <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+                    <div className="flex items-start gap-3">
+                      <PlayCircle className="h-6 w-6 text-primary" />
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+                          Now Playing
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {activeStation?.name || 'Selected Station'} • {nowPlaying?.radio_shows?.show_name || 'Automated Rotation'}
+                        </p>
+                      </div>
+                    </div>
+                    {nowPlaying ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <p className="text-xl font-semibold">{nowPlaying.songs?.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {nowPlaying.songs?.genre} · {nowPlaying.songs?.bands?.name || 'Independent Artist'}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Last spun {nowPlaying.played_at ? new Date(nowPlaying.played_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'just now'}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 text-sm">
+                          <div className="flex justify-between rounded-md bg-background/60 px-3 py-2">
+                            <span className="text-muted-foreground">Listeners</span>
+                            <span className="font-semibold">{nowPlaying.listeners?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between rounded-md bg-background/60 px-3 py-2">
+                            <span className="text-muted-foreground">Streams Boost</span>
+                            <span className="font-semibold">{nowPlaying.streams_boost?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between rounded-md bg-background/60 px-3 py-2">
+                            <span className="text-muted-foreground">Hype Gained</span>
+                            <span className="font-semibold">{nowPlaying.hype_gained ?? 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-md border border-dashed border-primary/20 bg-background/80 p-4 text-sm text-muted-foreground">
+                        No spins recorded yet today. Submitting a song will immediately trigger airplay for this station.
+                      </div>
+                    )}
+
+                    <div className="space-y-3 rounded-md border border-primary/20 bg-background/70 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          Daily Band Revenue
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {currencyFormatter.format(dailyRevenueTotal || 0)}
+                        </span>
+                      </div>
+                      {aggregatedBandRevenue.length > 0 ? (
+                        <div className="space-y-2 text-sm">
+                          {aggregatedBandRevenue.map((entry) => (
+                            <div
+                              key={entry.bandId}
+                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
+                            >
+                              <div>
+                                <p className="font-medium">{entry.name}</p>
+                                <p className="text-xs text-muted-foreground">{entry.plays} play{entry.plays === 1 ? '' : 's'} today</p>
+                              </div>
+                              <span className="font-semibold">{currencyFormatter.format(entry.total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          No radio revenue logged yet today for this station. Keep submitting to earn automated payouts.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {selectedStation && shows && shows.length > 0 && (
                   <div className="pt-4">
                     <h3 className="text-lg font-semibold mb-2">Shows on this station:</h3>
@@ -511,6 +830,36 @@ export default function Radio() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Future Radio Enhancements
+                </CardTitle>
+                <CardDescription>Opportunities to deepen the broadcast management experience</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                  <li>
+                    Build a rotation planner that balances hot, recurrent, and gold categories so accepted songs receive
+                    predictable spins throughout the week.
+                  </li>
+                  <li>
+                    Introduce genre-specific programming blocks and gate submissions based on music director preferences for
+                    each show.
+                  </li>
+                  <li>
+                    Surface historical analytics (reach, conversion, and fan growth) so bands can compare station performance
+                    before spending promo budgets.
+                  </li>
+                  <li>
+                    Allow station managers to run ad campaigns, sponsorships, and interview slots that boost revenue and fame
+                    when combined with airplay.
+                  </li>
+                </ul>
               </CardContent>
             </Card>
           </TabsContent>

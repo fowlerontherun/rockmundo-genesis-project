@@ -17,6 +17,17 @@ interface PerformanceFactors {
 }
 
 function calculateSongPerformance(factors: PerformanceFactors) {
+  // Clamp all factors to 0-100 range to prevent overflow
+  const clampedFactors = {
+    songQuality: Math.min(100, Math.max(0, factors.songQuality || 0)),
+    rehearsalLevel: Math.min(100, Math.max(0, factors.rehearsalLevel || 0)),
+    bandChemistry: Math.min(100, Math.max(0, factors.bandChemistry || 0)),
+    equipmentQuality: Math.min(100, Math.max(0, factors.equipmentQuality || 0)),
+    crewSkillLevel: Math.min(100, Math.max(0, factors.crewSkillLevel || 0)),
+    memberSkillAverage: Math.min(100, Math.max(0, factors.memberSkillAverage || 0)),
+    venueCapacityUsed: Math.min(100, Math.max(0, factors.venueCapacityUsed || 0))
+  };
+
   const weights = {
     songQuality: 0.25,
     rehearsal: 0.20,
@@ -26,22 +37,25 @@ function calculateSongPerformance(factors: PerformanceFactors) {
     memberSkills: 0.15
   };
 
+  // Calculate raw contributions (0-25 range)
   const breakdown = {
-    songQuality: (factors.songQuality / 100) * 25 * weights.songQuality / weights.songQuality,
-    rehearsal: (factors.rehearsalLevel / 100) * 25 * weights.rehearsal / weights.rehearsal,
-    chemistry: (factors.bandChemistry / 100) * 25 * weights.chemistry / weights.chemistry,
-    equipment: (factors.equipmentQuality / 100) * 25 * weights.equipment / weights.equipment,
-    crew: (factors.crewSkillLevel / 100) * 25 * weights.crew / weights.crew,
-    memberSkills: (factors.memberSkillAverage / 100) * 25 * weights.memberSkills / weights.memberSkills
+    songQuality: (clampedFactors.songQuality / 100) * 25,
+    rehearsal: (clampedFactors.rehearsalLevel / 100) * 25,
+    chemistry: (clampedFactors.bandChemistry / 100) * 25,
+    equipment: (clampedFactors.equipmentQuality / 100) * 25,
+    crew: (clampedFactors.crewSkillLevel / 100) * 25,
+    memberSkills: (clampedFactors.memberSkillAverage / 100) * 25
   };
 
-  const score = 
+  // Calculate weighted score and round to 2 decimal places
+  const score = Number((
     breakdown.songQuality * weights.songQuality +
     breakdown.rehearsal * weights.rehearsal +
     breakdown.chemistry * weights.chemistry +
     breakdown.equipment * weights.equipment +
     breakdown.crew * weights.crew +
-    breakdown.memberSkills * weights.memberSkills;
+    breakdown.memberSkills * weights.memberSkills
+  ).toFixed(2));
 
   let crowdResponse = 'mixed';
   if (score >= 22) crowdResponse = 'ecstatic';
@@ -49,7 +63,19 @@ function calculateSongPerformance(factors: PerformanceFactors) {
   else if (score >= 15) crowdResponse = 'engaged';
   else if (score < 10) crowdResponse = 'disappointed';
 
-  return { score, crowdResponse, breakdown };
+  // Round all breakdown values to 2 decimal places
+  return { 
+    score, 
+    crowdResponse, 
+    breakdown: {
+      songQuality: Number(breakdown.songQuality.toFixed(2)),
+      rehearsal: Number(breakdown.rehearsal.toFixed(2)),
+      chemistry: Number(breakdown.chemistry.toFixed(2)),
+      equipment: Number(breakdown.equipment.toFixed(2)),
+      crew: Number(breakdown.crew.toFixed(2)),
+      memberSkills: Number(breakdown.memberSkills.toFixed(2))
+    }
+  };
 }
 
 serve(async (req) => {
@@ -60,19 +86,24 @@ serve(async (req) => {
   try {
     const { gigId, outcomeId, songId, position } = await req.json();
 
+    console.log('[process-gig-song] Received:', { gigId, outcomeId, songId, position });
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get gig details
-    const { data: gig } = await supabaseClient
+    // Get gig details with proper relationship hint
+    const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!inner(*), venues!inner(*)')
+      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(*)')
       .eq('id', gigId)
       .single();
 
-    if (!gig) throw new Error('Gig not found');
+    if (gigError || !gig) {
+      console.error('[process-gig-song] Gig fetch error:', gigError);
+      throw new Error('Gig not found');
+    }
 
     const bandId = gig.band_id;
     const venueCapacity = gig.venues.capacity || 100;

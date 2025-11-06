@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { MAX_SKILL_LEVEL } from "../../../src/data/skillConstants.ts";
+
+// Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
+const MAX_SKILL_LEVEL = 100;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

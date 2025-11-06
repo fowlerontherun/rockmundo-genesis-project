@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
 
           if (setlistSongs) {
             for (const song of setlistSongs) {
+              // Update band_song_familiarity
               await supabase
                 .from('band_song_familiarity')
                 .upsert({
@@ -131,8 +132,54 @@ Deno.serve(async (req) => {
                 }, {
                   onConflict: 'band_id,song_id'
                 })
+
+              // Update song_rehearsals for gig performance calculations
+              const { data: existingRehearsal } = await supabase
+                .from('song_rehearsals')
+                .select('rehearsal_level')
+                .eq('band_id', rehearsal.band_id)
+                .eq('song_id', song.song_id)
+                .single()
+
+              const newLevel = Math.min(10, (existingRehearsal?.rehearsal_level || 0) + 1)
+              
+              await supabase
+                .from('song_rehearsals')
+                .upsert({
+                  band_id: rehearsal.band_id,
+                  song_id: song.song_id,
+                  rehearsal_level: newLevel,
+                  last_rehearsed: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }, {
+                  onConflict: 'band_id,song_id'
+                })
             }
           }
+        }
+
+        // Update song rehearsal for single song practice
+        if (rehearsal.selected_song_id) {
+          const { data: existingRehearsal } = await supabase
+            .from('song_rehearsals')
+            .select('rehearsal_level')
+            .eq('band_id', rehearsal.band_id)
+            .eq('song_id', rehearsal.selected_song_id)
+            .single()
+
+          const newLevel = Math.min(10, (existingRehearsal?.rehearsal_level || 0) + 1)
+          
+          await supabase
+            .from('song_rehearsals')
+            .upsert({
+              band_id: rehearsal.band_id,
+              song_id: rehearsal.selected_song_id,
+              rehearsal_level: newLevel,
+              last_rehearsed: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'band_id,song_id'
+            })
         }
 
         completedCount++
