@@ -17,6 +17,8 @@ import {
   Shield,
   Clock,
   Radio,
+  Guitar,
+  HardHat,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -108,21 +110,21 @@ const adminSections = [
     href: "/admin/song-gifts",
     action: "Gift songs",
     Icon: Gift,
-    },
-    {
-      title: "Streaming Platforms",
-      description: "Manage streaming platforms, configure payout rates, and set quality requirements.",
-      href: "/admin/streaming-platforms",
-      action: "Manage platforms",
-      Icon: Music2,
-    },
-    {
-      title: "Song Marketplace",
-      description: "Moderate listings, manage disputes, configure fees, and view transaction analytics.",
-      href: "/admin/marketplace",
-      action: "Manage marketplace",
-      Icon: TrendingUp,
-    },
+  },
+  {
+    title: "Streaming Platforms",
+    description: "Manage streaming platforms, configure payout rates, and set quality requirements.",
+    href: "/admin/streaming-platforms",
+    action: "Manage platforms",
+    Icon: Music2,
+  },
+  {
+    title: "Song Marketplace",
+    description: "Moderate listings, manage disputes, configure fees, and view transaction analytics.",
+    href: "/admin/marketplace",
+    action: "Manage marketplace",
+    Icon: TrendingUp,
+  },
   {
     title: "Recording Studios",
     description: "Manage city recording studios with quality ratings, hourly rates, specialties, and equipment.",
@@ -167,6 +169,23 @@ const adminSections = [
   },
 ] as const;
 
+const adminSubSections = [
+  {
+    title: "Stage Equipment Catalog",
+    description: "Manage the equipment catalog players browse in the stage equipment market.",
+    href: "/admin/stage-equipment",
+    action: "Manage catalog",
+    Icon: Guitar,
+  },
+  {
+    title: "Crew Hiring Catalog",
+    description: "Curate the professionals available for hire so bands can build their touring teams.",
+    href: "/admin/crew",
+    action: "Manage crew",
+    Icon: HardHat,
+  },
+] as const;
+
 export default function Admin() {
   return (
     <AdminRoute>
@@ -180,6 +199,36 @@ export default function Admin() {
 
         <div className="grid gap-6 md:grid-cols-2">
           {adminSections.map(({ title, description, href, action, Icon }) => (
+            <Card key={title} className="flex flex-col justify-between">
+              <CardHeader className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className="rounded-full bg-primary/10 p-2 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <CardTitle className="text-xl">{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button asChild className="w-full">
+                  <Link to={href}>{action}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight">Admin sub sections</h2>
+          <p className="text-muted-foreground">
+            Tune the live performance catalogs powering stage setups and touring crew recruitment.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {adminSubSections.map(({ title, description, href, action, Icon }) => (
             <Card key={title} className="flex flex-col justify-between">
               <CardHeader className="space-y-3">
                 <div className="flex items-start gap-3">

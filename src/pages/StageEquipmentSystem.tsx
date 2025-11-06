@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -17,14 +16,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import { useUserRole } from "@/hooks/useUserRole";
 import type { Database } from "@/lib/supabase-types";
 import {
   CheckCircle2,
@@ -32,47 +28,28 @@ import {
   Guitar,
   Loader2,
   Minus,
-  Pencil,
-  Plus,
   ShoppingCart,
   Sparkles,
-  Trash2,
-  X,
 } from "lucide-react";
+import {
+  CONDITION_ORDER,
+  EquipmentCatalogItem,
+  equipmentLabelMap as labelMap,
+  formatEquipmentCurrency as formatCurrency,
+  EQUIPMENT_TYPES,
+  RarityTier,
+  SizeCategory,
+  StageEquipmentType,
+  WeightCategory,
+  ConditionTier,
+} from "@/features/stage-equipment/catalog";
+import { useStageEquipmentCatalog } from "@/features/stage-equipment/catalog-context";
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
 
 type StageEquipmentRecord = BandStageEquipmentRow & {
   notes?: string | null;
 };
-
-type StageEquipmentType =
-  | "Sound"
-  | "Lighting"
-  | "Visuals"
-  | "Effects"
-  | "Decor"
-  | "Transport"
-  | "Utility";
-
-type WeightCategory = "light" | "medium" | "heavy" | "very_heavy";
-type SizeCategory = "tiny" | "small" | "medium" | "larger" | "huge";
-type ConditionTier =
-  | "almost_dead"
-  | "terrible"
-  | "bad"
-  | "usable"
-  | "ok"
-  | "good"
-  | "very_good"
-  | "brand_new";
-type RarityTier =
-  | "common"
-  | "normal"
-  | "rare"
-  | "ultra_rare"
-  | "super_ultra_rare"
-  | "wow_you_cant_find_these_anywhere";
 
 interface EquipmentMetadata {
   weight: WeightCategory;
@@ -93,146 +70,6 @@ interface ConditionState {
   score: number;
 }
 
-interface EquipmentCatalogItem {
-  id: string;
-  name: string;
-  type: StageEquipmentType;
-  cost: number;
-  liveImpact: string;
-  weight: WeightCategory;
-  size: SizeCategory;
-  baseCondition: ConditionTier;
-  amountAvailable: number;
-  rarity: RarityTier;
-  description?: string;
-}
-
-interface AdminEquipmentFormValues {
-  name: string;
-  type: StageEquipmentType;
-  cost: number;
-  liveImpact: string;
-  weight: WeightCategory;
-  size: SizeCategory;
-  condition: ConditionTier;
-  amountAvailable: number;
-  rarity: RarityTier;
-  description?: string;
-}
-
-const EQUIPMENT_TYPES: StageEquipmentType[] = [
-  "Sound",
-  "Lighting",
-  "Visuals",
-  "Effects",
-  "Decor",
-  "Transport",
-  "Utility",
-];
-
-const CONDITION_ORDER: ConditionTier[] = [
-  "almost_dead",
-  "terrible",
-  "bad",
-  "usable",
-  "ok",
-  "good",
-  "very_good",
-  "brand_new",
-];
-
-const WEIGHT_OPTIONS: WeightCategory[] = ["light", "medium", "heavy", "very_heavy"];
-const SIZE_OPTIONS: SizeCategory[] = ["tiny", "small", "medium", "larger", "huge"];
-const RARITY_OPTIONS: RarityTier[] = [
-  "common",
-  "normal",
-  "rare",
-  "ultra_rare",
-  "super_ultra_rare",
-  "wow_you_cant_find_these_anywhere",
-];
-
-const INITIAL_CATALOG: EquipmentCatalogItem[] = [
-  {
-    id: "sound-elite-array",
-    name: "Elite Line Array System",
-    type: "Sound",
-    cost: 18500,
-    liveImpact: "Arena-grade clarity with directional control for massive rooms.",
-    weight: "very_heavy",
-    size: "huge",
-    baseCondition: "brand_new",
-    amountAvailable: 2,
-    rarity: "rare",
-    description: "Engineered for headline stages that demand pristine dispersion across festival fields.",
-  },
-  {
-    id: "lighting-halo",
-    name: "Halo Beam Matrix",
-    type: "Lighting",
-    cost: 7600,
-    liveImpact: "Programmable pan/tilt beams with synchronized pixel waves.",
-    weight: "medium",
-    size: "larger",
-    baseCondition: "very_good",
-    amountAvailable: 4,
-    rarity: "ultra_rare",
-    description: "Ride dramatic sweeps and aerial bursts that punctuate breakdowns and finales.",
-  },
-  {
-    id: "visuals-vortex",
-    name: "Vortex LED Wall",
-    type: "Visuals",
-    cost: 9200,
-    liveImpact: "High-density LED mesh for reactive backdrops and dynamic storytelling.",
-    weight: "heavy",
-    size: "huge",
-    baseCondition: "good",
-    amountAvailable: 3,
-    rarity: "super_ultra_rare",
-    description: "Transforms every venue into a cinematic canvas tied to your setlist cues.",
-  },
-  {
-    id: "effects-thunder",
-    name: "Thunderstrike FX Rack",
-    type: "Effects",
-    cost: 5400,
-    liveImpact: "Modular CO₂ jets and spark fountains for high-impact drops.",
-    weight: "medium",
-    size: "medium",
-    baseCondition: "good",
-    amountAvailable: 5,
-    rarity: "rare",
-    description: "Stackable effects kit to punctuate anthems without overshooting power limits.",
-  },
-  {
-    id: "decor-backline",
-    name: "Neon Skyline Backline",
-    type: "Decor",
-    cost: 2800,
-    liveImpact: "Immersive stage mood with programmable neon and skyline silhouettes.",
-    weight: "light",
-    size: "larger",
-    baseCondition: "ok",
-    amountAvailable: 7,
-    rarity: "normal",
-    description: "A versatile design pack to dress intimate clubs and mid-size theatres.",
-  },
-  {
-    id: "utility-powergrid",
-    name: "Road Guardian Power Grid",
-    type: "Utility",
-    cost: 3600,
-    liveImpact: "Smart power distribution with surge analytics and per-phase balancing.",
-    weight: "medium",
-    size: "medium",
-    baseCondition: "very_good",
-    amountAvailable: 6,
-    rarity: "ultra_rare",
-    description: "Keeps your rig humming across unpredictable venues with automated health reports.",
-  },
-];
-
 const sizeToUnits = (size: SizeCategory): number => {
   switch (size) {
     case "tiny":
@@ -248,19 +85,6 @@ const sizeToUnits = (size: SizeCategory): number => {
     default:
       return 3;
   }
-};
-
-const ADMIN_FORM_DEFAULTS: AdminEquipmentFormValues = {
-  name: "",
-  type: "Sound",
-  cost: 1000,
-  liveImpact: "Improves live presence",
-  weight: "medium",
-  size: "medium",
-  condition: "good",
-  amountAvailable: 1,
-  rarity: "normal",
-  description: "",
 };
 
 const unitsToSize = (units?: number | null): SizeCategory => {
@@ -279,38 +103,6 @@ const unitsToSize = (units?: number | null): SizeCategory => {
       return "medium";
   }
 };
-
-const labelMap: Record<ConditionTier | WeightCategory | SizeCategory | RarityTier, string> = {
-  almost_dead: "Almost Dead",
-  terrible: "Terrible",
-  bad: "Bad",
-  usable: "Usable",
-  ok: "Ok",
-  good: "Good",
-  very_good: "Very Good",
-  brand_new: "Brand New",
-  light: "Light",
-  medium: "Medium",
-  heavy: "Heavy",
-  very_heavy: "Very Heavy",
-  tiny: "Tiny",
-  small: "Small",
-  larger: "Larger",
-  huge: "Huge",
-  common: "Common",
-  normal: "Normal",
-  rare: "Rare",
-  ultra_rare: "Ultra Rare",
-  super_ultra_rare: "Super Ultra Rare",
-  wow_you_cant_find_these_anywhere: "Wow you can't find these anywhere",
-};
-
-const formatCurrency = (value?: number | null) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value ?? 0);
 
 const calculateConditionState = (metadata: EquipmentMetadata): ConditionState => {
   const baseIndex = CONDITION_ORDER.indexOf(metadata.baseCondition);
@@ -399,25 +191,16 @@ const buildMetadataPayload = (metadata: EquipmentMetadata, condition: ConditionS
   lastConditionPoints: condition.points,
 });
 
-const generateId = () => `catalog-${Math.random().toString(36).slice(2, 10)}`;
-
 const StageEquipmentSystem = () => {
   const queryClient = useQueryClient();
   const { data: primaryBand, isLoading: loadingBand } = usePrimaryBand();
-  const { isAdmin, loading: loadingRole } = useUserRole();
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
 
-  const [catalog, setCatalog] = useState<EquipmentCatalogItem[]>(INITIAL_CATALOG);
+  const { catalog, setCatalog } = useStageEquipmentCatalog();
   const [selectedType, setSelectedType] = useState<StageEquipmentType | "all">("all");
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<EquipmentCatalogItem | null>(null);
-
-  const adminForm = useForm<AdminEquipmentFormValues>({
-    defaultValues: ADMIN_FORM_DEFAULTS,
-  });
-
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   const { data: equipment, isLoading: loadingEquipment } = useQuery<StageEquipmentRecord[]>({
     queryKey: ["band-stage-equipment", bandId],
@@ -586,102 +369,12 @@ const StageEquipmentSystem = () => {
     return catalog.filter((item) => item.type === selectedType);
   }, [catalog, selectedType]);
 
-  const adminCatalogView = useMemo(
-    () =>
-      [...catalog].sort((a, b) => {
-        const typeCompare = a.type.localeCompare(b.type);
-        if (typeCompare !== 0) return typeCompare;
-        return a.name.localeCompare(b.name);
-      }),
-    [catalog],
-  );
-
-  const createCatalogItem = (
-    values: AdminEquipmentFormValues,
-    id: string = generateId(),
-  ): EquipmentCatalogItem => ({
-    id,
-    name: values.name.trim(),
-    type: values.type,
-    cost: Number(values.cost) || 0,
-    liveImpact: values.liveImpact,
-    weight: values.weight,
-    size: values.size,
-    baseCondition: values.condition,
-    amountAvailable: Number(values.amountAvailable) || 0,
-    rarity: values.rarity,
-    description: values.description?.trim() || undefined,
-  });
-
-  const beginEditCatalogItem = (item: EquipmentCatalogItem) => {
-    setEditingItemId(item.id);
-    adminForm.reset({
-      name: item.name,
-      type: item.type,
-      cost: item.cost,
-      liveImpact: item.liveImpact,
-      weight: item.weight,
-      size: item.size,
-      condition: item.baseCondition,
-      amountAvailable: item.amountAvailable,
-      rarity: item.rarity,
-      description: item.description ?? "",
-    });
-  };
-
-  const cancelEditCatalogItem = () => {
-    setEditingItemId(null);
-    adminForm.reset(ADMIN_FORM_DEFAULTS);
-  };
-
-  const handleRemoveCatalogItem = (itemId: string) => {
-    const itemToRemove = catalog.find((item) => item.id === itemId);
-    if (!itemToRemove) return;
-
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm(
-            `Remove ${itemToRemove.name} from the catalog? Bands will no longer be able to purchase it.`,
-          );
-    if (!confirmed) return;
-
-    setCatalog((prev) => prev.filter((item) => item.id !== itemId));
-    setSelectedCatalogItem((prev) => {
-      if (prev?.id === itemId) {
-        setPurchaseDialogOpen(false);
-        return null;
-      }
-      return prev;
-    });
-    toast.success(`${itemToRemove.name} removed from the catalog`);
-    if (editingItemId === itemId) {
-      cancelEditCatalogItem();
-    }
-  };
-
-  const handleSubmitAdmin = adminForm.handleSubmit((values) => {
-    if (editingItemId) {
-      const updatedItem = createCatalogItem(values, editingItemId);
-      setCatalog((prev) => prev.map((item) => (item.id === editingItemId ? updatedItem : item)));
-      setSelectedCatalogItem((prev) => (prev?.id === editingItemId ? updatedItem : prev));
-      toast.success(`${updatedItem.name} updated in the catalog`);
-      cancelEditCatalogItem();
-      return;
-    }
-
-    const newItem = createCatalogItem(values);
-    setCatalog((prev) => [...prev, newItem]);
-    toast.success(`${newItem.name} added to the catalog`);
-    adminForm.reset(ADMIN_FORM_DEFAULTS);
-  });
-
   const openPurchaseDialog = (item: EquipmentCatalogItem) => {
     setSelectedCatalogItem(item);
     setPurchaseDialogOpen(true);
   };
 
-  if (loadingBand || loadingEquipment || loadingRole) {
+  if (loadingBand || loadingEquipment) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
@@ -983,253 +676,6 @@ const StageEquipmentSystem = () => {
           </TabsContent>
         </Tabs>
 
-        {isAdmin() && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Stage Equipment Admin</CardTitle>
-              <CardDescription>
-                Curate the global catalog. Define type, rarity, weight, and how each item impacts live performance before bands buy.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitAdmin} className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="admin-name">Equipment name</Label>
-                  <Input id="admin-name" placeholder="Enter equipment name" {...adminForm.register("name", { required: true })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Equipment type</Label>
-                  <Controller
-                    control={adminForm.control}
-                    name="type"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {EQUIPMENT_TYPES.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="admin-cost">Cost</Label>
-                  <Input
-                    id="admin-cost"
-                    type="number"
-                    min={0}
-                    step={100}
-                    {...adminForm.register("cost", { valueAsNumber: true })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Live performance impact</Label>
-                  <Textarea
-                    placeholder="Describe how this gear influences a live show"
-                    className="min-h-[80px]"
-                    {...adminForm.register("liveImpact")}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Weight</Label>
-                  <Controller
-                    control={adminForm.control}
-                    name="weight"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select weight" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {WEIGHT_OPTIONS.map((weight) => (
-                            <SelectItem key={weight} value={weight}>
-                              {labelMap[weight]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Size</Label>
-                  <Controller
-                    control={adminForm.control}
-                    name="size"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SIZE_OPTIONS.map((size) => (
-                            <SelectItem key={size} value={size}>
-                              {labelMap[size]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Condition</Label>
-                  <Controller
-                    control={adminForm.control}
-                    name="condition"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CONDITION_ORDER.slice().reverse().map((condition) => (
-                            <SelectItem key={condition} value={condition}>
-                              {labelMap[condition]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="admin-amount">Amount available</Label>
-                  <Input
-                    id="admin-amount"
-                    type="number"
-                    min={0}
-                    {...adminForm.register("amountAvailable", { valueAsNumber: true })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Rareity</Label>
-                  <Controller
-                    control={adminForm.control}
-                    name="rarity"
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select rarity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RARITY_OPTIONS.map((rarity) => (
-                            <SelectItem key={rarity} value={rarity}>
-                              {labelMap[rarity]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="md:col-span-2 flex flex-wrap items-center gap-2">
-                  <Button type="submit" className="w-full md:w-auto">
-                    {editingItemId ? (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" /> Update equipment
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="mr-2 h-4 w-4" /> Add equipment to catalog
-                      </>
-                    )}
-                  </Button>
-                  {editingItemId && (
-                    <Button type="button" variant="outline" onClick={cancelEditCatalogItem}>
-                      <X className="mr-2 h-4 w-4" /> Cancel edit
-                    </Button>
-                  )}
-                </div>
-              </form>
-
-              <div className="mt-8 space-y-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Catalog inventory</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Edit, remove, or restock the equipment players can purchase.
-                  </p>
-                </div>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Live impact</TableHead>
-                        <TableHead>Attributes</TableHead>
-                        <TableHead className="text-right">Price & Stock</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {adminCatalogView.map((item) => (
-                        <TableRow
-                          key={item.id}
-                          className={editingItemId === item.id ? "bg-muted/50" : undefined}
-                        >
-                          <TableCell>
-                            <div className="font-medium text-foreground">{item.name}</div>
-                            {item.description && (
-                              <div className="text-xs text-muted-foreground">{item.description}</div>
-                            )}
-                            <div className="mt-1 text-xs text-muted-foreground">{item.type}</div>
-                          </TableCell>
-                          <TableCell className="max-w-xs">
-                            <p className="text-sm text-muted-foreground">{item.liveImpact}</p>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant="outline">{labelMap[item.weight]}</Badge>
-                              <Badge variant="outline">{labelMap[item.size]}</Badge>
-                              <Badge variant="outline">{labelMap[item.baseCondition]}</Badge>
-                              <Badge variant="outline">{labelMap[item.rarity]}</Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            <div className="font-semibold text-foreground">{formatCurrency(item.cost)}</div>
-                            <div className="text-muted-foreground">{item.amountAvailable} available</div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => beginEditCatalogItem(item)}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" /> Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => handleRemoveCatalogItem(item.id)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" /> Remove
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {adminCatalogView.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                            No equipment in the catalog yet. Add new items to make them available for purchase.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>

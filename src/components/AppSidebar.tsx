@@ -122,6 +122,8 @@ export function AppSidebar() {
       label: "Admin",
       items: [
         { icon: Settings, label: "Admin", path: "/admin" },
+        { icon: Wrench, label: "Stage Equipment", path: "/admin/stage-equipment" },
+        { icon: HardHat, label: "Crew Catalog", path: "/admin/crew" },
       ],
     },
   ];
