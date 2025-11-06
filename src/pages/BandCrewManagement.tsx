@@ -42,51 +42,23 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import {
+  assignmentHighlights,
+  CREW_DISCIPLINES,
+  CrewAssignment,
+  CrewCatalogItem,
+  CrewDiscipline,
+  CrewMetadata,
+  CrewMorale,
+  DISCIPLINE_DEFAULTS,
+  formatCrewCurrency as formatCurrency,
+  moraleBadgeVariant,
+  moraleLabelMap,
+  moraleScoreMap,
+} from "@/features/band-crew/catalog";
+import { useBandCrewCatalog } from "@/features/band-crew/catalog-context";
 
 type BandCrewMemberRow = Database["public"]["Tables"]["band_crew_members"]["Row"];
-
-type CrewMorale = "electric" | "steady" | "strained" | "burned_out";
-type CrewAssignment = "Touring" | "Studio" | "Production" | "Standby";
-type CrewDiscipline =
-  | "Tour Manager"
-  | "Front of House Engineer"
-  | "Lighting Director"
-  | "Road Crew Chief"
-  | "Backline Technician"
-  | "Merch Director"
-  | "Security Lead"
-  | "Wardrobe Stylist";
-
-interface CrewMetadata {
-  morale: CrewMorale;
-  loyalty: number;
-  assignment: CrewAssignment;
-  focus: string;
-  specialties: string[];
-  traits: string[];
-  trainingFocus: string | null;
-  trainingProgress: number;
-  biography: string | null;
-  lastGigDate: string | null;
-}
-
-interface CrewCatalogItem {
-  id: string;
-  name: string;
-  role: CrewDiscipline;
-  headline: string;
-  background: string;
-  skill: number;
-  salary: number;
-  experience: number;
-  morale: CrewMorale;
-  loyalty: number;
-  assignment: CrewAssignment;
-  focus: string;
-  specialties: string[];
-  traits: string[];
-  openings: number;
-}
 
 interface ManageCrewFormValues {
   assignment: CrewAssignment;
@@ -100,249 +72,6 @@ interface ManageCrewFormValues {
   biography: string;
 }
 
-const moraleLabelMap: Record<CrewMorale, string> = {
-  electric: "Electric",
-  steady: "Steady",
-  strained: "Strained",
-  burned_out: "Burned Out",
-};
-
-const moraleBadgeVariant: Record<CrewMorale, "default" | "secondary" | "outline" | "destructive"> = {
-  electric: "default",
-  steady: "secondary",
-  strained: "outline",
-  burned_out: "destructive",
-};
-
-const moraleScoreMap: Record<CrewMorale, number> = {
-  electric: 90,
-  steady: 70,
-  strained: 45,
-  burned_out: 25,
-};
-
-const assignmentHighlights: Record<CrewAssignment, string> = {
-  Touring: "Core road crew keeping the nightly show on rails.",
-  Studio: "Focused on rehearsals, tracking sessions, and arrangement polish.",
-  Production: "Overseeing load-ins, stage builds, and vendor wrangling.",
-  Standby: "Floating specialists ready to plug gaps or spin up pop-up shows.",
-};
-
-const CREW_DISCIPLINES: CrewDiscipline[] = [
-  "Tour Manager",
-  "Front of House Engineer",
-  "Lighting Director",
-  "Road Crew Chief",
-  "Backline Technician",
-  "Merch Director",
-  "Security Lead",
-  "Wardrobe Stylist",
-];
-
-const DISCIPLINE_DEFAULTS: Record<CrewDiscipline, { assignment: CrewAssignment; focus: string; specialties: string[]; traits: string[] }> = {
-  "Tour Manager": {
-    assignment: "Touring",
-    focus: "Routing & settlements",
-    specialties: ["Advance packets", "Promoter settlements", "Crisis triage"],
-    traits: ["Logistics wizard", "Diplomatic"],
-  },
-  "Front of House Engineer": {
-    assignment: "Touring",
-    focus: "Front of house mix",
-    specialties: ["Arena EQ", "Broadcast stems", "Audience tuning"],
-    traits: ["Detail-obsessed", "Calm under pressure"],
-  },
-  "Lighting Director": {
-    assignment: "Production",
-    focus: "Lighting design & timecode",
-    specialties: ["Timecode programming", "Rig redesign", "Atmospherics"],
-    traits: ["Show painter", "Precision cueing"],
-  },
-  "Road Crew Chief": {
-    assignment: "Production",
-    focus: "Load-in leadership",
-    specialties: ["Stage builds", "Crew routing", "Risk assessment"],
-    traits: ["Hands-on", "Commanding"],
-  },
-  "Backline Technician": {
-    assignment: "Touring",
-    focus: "Instrument tech",
-    specialties: ["Guitar setups", "Quick change swaps", "Pedalboard repair"],
-    traits: ["Unflappable", "Gear whisperer"],
-  },
-  "Merch Director": {
-    assignment: "Standby",
-    focus: "Merchandising & ecom",
-    specialties: ["Pop-up shops", "Inventory", "Design drops"],
-    traits: ["Storyteller", "Data fluent"],
-  },
-  "Security Lead": {
-    assignment: "Production",
-    focus: "Safety & advance",
-    specialties: ["Advance sweeps", "Artist protection", "Crowd response"],
-    traits: ["Protective", "Quick-thinking"],
-  },
-  "Wardrobe Stylist": {
-    assignment: "Studio",
-    focus: "Image & styling",
-    specialties: ["Show looks", "Quick repairs", "Tour capsule"],
-    traits: ["Visionary", "Fast hands"],
-  },
-};
-
-const INITIAL_CATALOG: CrewCatalogItem[] = [
-  {
-    id: "tour-manager-compass",
-    name: "Mara \"Compass\" Liang",
-    role: "Tour Manager",
-    headline: "Eight-country arena routing ace who never misses curfew.",
-    background:
-      "Guided three platinum acts through world tours without a single canceled date. Legendary for turning promoter panic into viral fan experiences.",
-    skill: 86,
-    salary: 4200,
-    experience: 8,
-    morale: "electric",
-    loyalty: 78,
-    assignment: "Touring",
-    focus: "Logistics & settlements",
-    specialties: ["Visa wrangling", "Promoter negotiations", "Crisis messaging"],
-    traits: ["Budget hawk", "Sleeps on the bus"],
-    openings: 1,
-  },
-  {
-    id: "foh-clarity",
-    name: "Riley \"Fader\" Cortez",
-    role: "Front of House Engineer",
-    headline: "Makes stadium crowds feel like club mixes night after night.",
-    background:
-      "Cut their teeth mixing late-night TV sessions and hybrid festival sets. Fans routinely share board mixes because the clarity is unreal.",
-    skill: 89,
-    salary: 3900,
-    experience: 7,
-    morale: "steady",
-    loyalty: 74,
-    assignment: "Touring",
-    focus: "FOH sonic design",
-    specialties: ["Arena EQ", "Broadcast splits", "In-ear calibration"],
-    traits: ["Detail addict", "Sleeps with reference tracks"],
-    openings: 1,
-  },
-  {
-    id: "lighting-spectra",
-    name: "Jules Navarro",
-    role: "Lighting Director",
-    headline: "Transforms every breakdown into cinematic timecode moments.",
-    background:
-      "Designed festival headline looks for synthwave and hyperpop tours. Obsessed with color stories synced to your setlist arcs.",
-    skill: 83,
-    salary: 3200,
-    experience: 6,
-    morale: "steady",
-    loyalty: 70,
-    assignment: "Production",
-    focus: "Timecode & rig design",
-    specialties: ["Timecode sequencing", "Laser choreography", "Rig redesign"],
-    traits: ["Storyboard brain", "Precision caller"],
-    openings: 2,
-  },
-  {
-    id: "roadcrew-anchor",
-    name: "Diego Maddox",
-    role: "Road Crew Chief",
-    headline: "Keeps 14-truck tours loading in under 90 minutes.",
-    background:
-      "Former military logistics lead who shifted to live music after building touring festivals. Crew loves his calm command energy.",
-    skill: 81,
-    salary: 3100,
-    experience: 9,
-    morale: "electric",
-    loyalty: 82,
-    assignment: "Production",
-    focus: "Load-ins & night ops",
-    specialties: ["Stage builds", "Vendor wrangling", "Risk sweeps"],
-    traits: ["Hands-on", "Crew dad"],
-    openings: 1,
-  },
-  {
-    id: "backline-spire",
-    name: "Indigo Park",
-    role: "Backline Technician",
-    headline: "Refrets guitars between encore calls and swaps rigs in 30 seconds.",
-    background:
-      "Built boutique pedalboards before hitting the road. Known for keeping vintage synths alive during brutal weather runs.",
-    skill: 78,
-    salary: 2700,
-    experience: 5,
-    morale: "strained",
-    loyalty: 65,
-    assignment: "Touring",
-    focus: "Instrument tech",
-    specialties: ["Guitar luthiery", "Synth calibration", "Quick change choreography"],
-    traits: ["Gear whisperer", "Never rattled"],
-    openings: 2,
-  },
-  {
-    id: "merch-hype",
-    name: "Sasha Volkov",
-    role: "Merch Director",
-    headline: "Turns pop-up drops into six-figure nights with narrative design.",
-    background:
-      "Scaled indie acts into lifestyle brands with AR merch hunts and data-backed capsule releases. Obsessed with fan stories.",
-    skill: 76,
-    salary: 2400,
-    experience: 6,
-    morale: "steady",
-    loyalty: 72,
-    assignment: "Standby",
-    focus: "Merch & experiential",
-    specialties: ["Limited drops", "Ecom funnels", "Crew wear"],
-    traits: ["Storyteller", "Data fluent"],
-    openings: 1,
-  },
-  {
-    id: "security-vanguard",
-    name: "Lennox Ward",
-    role: "Security Lead",
-    headline: "Shields the band and fans while keeping the vibe welcoming.",
-    background:
-      "Protected high-profile pop stars and esports athletes. Built threat matrices that keep fans safe without killing the energy.",
-    skill: 80,
-    salary: 2900,
-    experience: 10,
-    morale: "steady",
-    loyalty: 88,
-    assignment: "Production",
-    focus: "Security & advance",
-    specialties: ["Threat assessment", "Advance sweeps", "Crowd response"],
-    traits: ["Protective", "Calm under pressure"],
-    openings: 1,
-  },
-  {
-    id: "wardrobe-flux",
-    name: "Noor El-Refai",
-    role: "Wardrobe Stylist",
-    headline: "Builds capsule looks that survive pyros, sweat, and photo pits.",
-    background:
-      "Styled breakthrough pop acts with fast-change illusions and sustainable fabrics. Keeps couture calm under side-stage chaos.",
-    skill: 75,
-    salary: 2200,
-    experience: 4,
-    morale: "steady",
-    loyalty: 68,
-    assignment: "Studio",
-    focus: "Image & styling",
-    specialties: ["Quick repairs", "Tour capsules", "Red carpet pivots"],
-    traits: ["Visionary", "Fast hands"],
-    openings: 1,
-  },
-];
-
-const formatCurrency = (value?: number | null) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value ?? 0);
 
 const formatDate = (value?: string | null) => {
   if (!value) return "No shows logged";
@@ -445,7 +174,7 @@ const BandCrewManagement = () => {
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
 
-  const [catalog, setCatalog] = useState<CrewCatalogItem[]>(INITIAL_CATALOG);
+  const { catalog, setCatalog } = useBandCrewCatalog();
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("all");
   const [candidateDialogOpen, setCandidateDialogOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<CrewCatalogItem | null>(null);
