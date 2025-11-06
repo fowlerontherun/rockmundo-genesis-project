@@ -49,7 +49,7 @@ export const usePrimaryBand = () => {
         )
         .eq("user_id", user.id)
         .eq("bands.status", "active")
-        .neq("is_touring_member", true)
+        .not("is_touring_member", "is", true)
         .or("member_status.eq.active,member_status.is.null")
         .order("joined_at", { ascending: false })
         .limit(1)
