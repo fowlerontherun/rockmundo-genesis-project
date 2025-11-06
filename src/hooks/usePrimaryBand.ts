@@ -38,7 +38,7 @@ export const usePrimaryBand = () => {
             joined_at,
             member_status,
             is_touring_member,
-            bands!inner (
+            bands:bands!band_members_band_id_fkey (
               id,
               name,
               fame,
@@ -49,8 +49,6 @@ export const usePrimaryBand = () => {
         )
         .eq("user_id", user.id)
         .eq("bands.status", "active")
-        .neq("is_touring_member", true)
-        .or("member_status.eq.active,member_status.is.null")
         .order("joined_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -63,7 +61,15 @@ export const usePrimaryBand = () => {
         return null;
       }
 
+      if (data.is_touring_member) {
+        return null;
+      }
+
       if (data.member_status && data.member_status !== "active") {
+        return null;
+      }
+
+      if (data.bands?.status && data.bands.status !== "active") {
         return null;
       }
 
