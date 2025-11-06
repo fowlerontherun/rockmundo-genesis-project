@@ -1,226 +1,416 @@
 import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, formatDistanceToNow, isBefore, addDays, parseISO } from "date-fns";
 import { toast } from "sonner";
 import {
-  AlertTriangle,
-  CalendarClock,
-  Loader2,
-  MoreHorizontal,
-  Plus,
-  RefreshCw,
-  ShieldCheck,
-  Truck,
-  Wrench,
-} from "lucide-react";
-
-import { supabase } from "@/integrations/supabase/client";
-import { useGameData } from "@/hooks/useGameData";
-import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import type { Database } from "@/lib/supabase-types";
-import { Badge } from "@/components/ui/badge";
+  Badge,
+} from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-const EQUIPMENT_CATEGORIES = ["Sound", "Lighting", "Visuals", "Effects", "Decor", "Transport", "Utility"] as const;
-const MAINTENANCE_STATUS = ["good", "scheduled", "needs_service", "under_repair"] as const;
-const MAINTENANCE_ACTIONS = ["inspection", "repair", "upgrade", "cleaning", "emergency_fix"] as const;
-const VEHICLE_TYPES = ["Van", "Tour Bus", "Truck", "Sprinter", "Utility", "Trailer"] as const;
-
-type MaintenanceStatus = (typeof MAINTENANCE_STATUS)[number];
+import { supabase } from "@/integrations/supabase/client";
+import { useGameData } from "@/hooks/useGameData";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { useUserRole } from "@/hooks/useUserRole";
+import type { Database } from "@/lib/supabase-types";
+import {
+  CheckCircle2,
+  CircleDashed,
+  Guitar,
+  Loader2,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Sparkles,
+} from "lucide-react";
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
 
 type StageEquipmentRecord = BandStageEquipmentRow & {
-  condition_rating?: number | null;
-  is_active?: boolean | null;
-  vehicle_id?: string | null;
-  maintenance_due_at?: string | null;
-  maintenance_status?: MaintenanceStatus | null;
-  in_service?: boolean | null;
-  size_units?: number | null;
-  band_vehicles?: {
-    id: string;
-    name: string | null;
-    vehicle_type: string | null;
-    capacity: number | null;
-  } | null;
+  notes?: string | null;
 };
 
-interface BandVehicleRecord {
+type StageEquipmentType =
+  | "Sound"
+  | "Lighting"
+  | "Visuals"
+  | "Effects"
+  | "Decor"
+  | "Transport"
+  | "Utility";
+
+type WeightCategory = "light" | "medium" | "heavy" | "very_heavy";
+type SizeCategory = "tiny" | "small" | "medium" | "larger" | "huge";
+type ConditionTier =
+  | "almost_dead"
+  | "terrible"
+  | "bad"
+  | "usable"
+  | "ok"
+  | "good"
+  | "very_good"
+  | "brand_new";
+type RarityTier =
+  | "common"
+  | "normal"
+  | "rare"
+  | "ultra_rare"
+  | "super_ultra_rare"
+  | "wow_you_cant_find_these_anywhere";
+
+interface EquipmentMetadata {
+  weight: WeightCategory;
+  size: SizeCategory;
+  baseCondition: ConditionTier;
+  showsPerformed: number;
+  liveImpact: string;
+  rarity: RarityTier;
+  liveSelected: boolean;
+  value: number;
+  lastConditionTier?: ConditionTier;
+  lastConditionPoints?: number;
+}
+
+interface ConditionState {
+  tier: ConditionTier;
+  points: number;
+  score: number;
+}
+
+interface EquipmentCatalogItem {
   id: string;
-  band_id: string;
   name: string;
-  vehicle_type: string;
-  capacity: number;
-  location: string | null;
-  condition: number;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MaintenanceLogRecord {
-  id: string;
-  band_equipment_id: string;
-  band_id: string;
-  performed_by: string | null;
-  action: string;
+  type: StageEquipmentType;
   cost: number;
-  notes: string | null;
-  condition_before: number | null;
-  condition_after: number | null;
-  created_at: string;
-  band_stage_equipment?: {
-    equipment_name: string | null;
-  } | null;
+  liveImpact: string;
+  weight: WeightCategory;
+  size: SizeCategory;
+  baseCondition: ConditionTier;
+  amountAvailable: number;
+  rarity: RarityTier;
+  description?: string;
 }
 
-interface AddEquipmentFormValues {
-  equipmentName: string;
-  equipmentType: typeof EQUIPMENT_CATEGORIES[number];
-  qualityRating: number;
-  conditionRating: number;
-  powerDraw?: number | null;
-  purchaseCost?: number | null;
-  purchaseDate?: string;
-  maintenanceDueAt?: string;
-  maintenanceStatus: MaintenanceStatus;
-  sizeUnits: number;
-  notes?: string;
-}
-
-interface MaintenanceFormValues {
-  action: typeof MAINTENANCE_ACTIONS[number];
-  cost: number;
-  conditionAfter: number;
-  maintenanceStatus: MaintenanceStatus;
-  maintenanceDueAt?: string;
-  notes?: string;
-  markActive: boolean;
-  markInService: boolean;
-}
-
-interface VehicleFormValues {
+interface AdminEquipmentFormValues {
   name: string;
-  vehicleType: typeof VEHICLE_TYPES[number];
-  capacity: number;
-  location?: string;
-  condition: number;
-  notes?: string;
+  type: StageEquipmentType;
+  cost: number;
+  liveImpact: string;
+  weight: WeightCategory;
+  size: SizeCategory;
+  condition: ConditionTier;
+  amountAvailable: number;
+  rarity: RarityTier;
+  description?: string;
 }
 
-const getStatusBadge = (status?: MaintenanceStatus | null) => {
-  switch (status) {
-    case "good":
-      return <Badge className="bg-emerald-600 hover:bg-emerald-700">Ready</Badge>;
-    case "scheduled":
-      return <Badge className="bg-amber-500 hover:bg-amber-600">Scheduled</Badge>;
-    case "needs_service":
-      return <Badge variant="destructive">Needs Service</Badge>;
-    case "under_repair":
-      return <Badge className="bg-blue-600 hover:bg-blue-700">Under Repair</Badge>;
+const EQUIPMENT_TYPES: StageEquipmentType[] = [
+  "Sound",
+  "Lighting",
+  "Visuals",
+  "Effects",
+  "Decor",
+  "Transport",
+  "Utility",
+];
+
+const CONDITION_ORDER: ConditionTier[] = [
+  "almost_dead",
+  "terrible",
+  "bad",
+  "usable",
+  "ok",
+  "good",
+  "very_good",
+  "brand_new",
+];
+
+const WEIGHT_OPTIONS: WeightCategory[] = ["light", "medium", "heavy", "very_heavy"];
+const SIZE_OPTIONS: SizeCategory[] = ["tiny", "small", "medium", "larger", "huge"];
+const RARITY_OPTIONS: RarityTier[] = [
+  "common",
+  "normal",
+  "rare",
+  "ultra_rare",
+  "super_ultra_rare",
+  "wow_you_cant_find_these_anywhere",
+];
+
+const INITIAL_CATALOG: EquipmentCatalogItem[] = [
+  {
+    id: "sound-elite-array",
+    name: "Elite Line Array System",
+    type: "Sound",
+    cost: 18500,
+    liveImpact: "Arena-grade clarity with directional control for massive rooms.",
+    weight: "very_heavy",
+    size: "huge",
+    baseCondition: "brand_new",
+    amountAvailable: 2,
+    rarity: "rare",
+    description: "Engineered for headline stages that demand pristine dispersion across festival fields.",
+  },
+  {
+    id: "lighting-halo",
+    name: "Halo Beam Matrix",
+    type: "Lighting",
+    cost: 7600,
+    liveImpact: "Programmable pan/tilt beams with synchronized pixel waves.",
+    weight: "medium",
+    size: "larger",
+    baseCondition: "very_good",
+    amountAvailable: 4,
+    rarity: "ultra_rare",
+    description: "Ride dramatic sweeps and aerial bursts that punctuate breakdowns and finales.",
+  },
+  {
+    id: "visuals-vortex",
+    name: "Vortex LED Wall",
+    type: "Visuals",
+    cost: 9200,
+    liveImpact: "High-density LED mesh for reactive backdrops and dynamic storytelling.",
+    weight: "heavy",
+    size: "huge",
+    baseCondition: "good",
+    amountAvailable: 3,
+    rarity: "super_ultra_rare",
+    description: "Transforms every venue into a cinematic canvas tied to your setlist cues.",
+  },
+  {
+    id: "effects-thunder",
+    name: "Thunderstrike FX Rack",
+    type: "Effects",
+    cost: 5400,
+    liveImpact: "Modular CO₂ jets and spark fountains for high-impact drops.",
+    weight: "medium",
+    size: "medium",
+    baseCondition: "good",
+    amountAvailable: 5,
+    rarity: "rare",
+    description: "Stackable effects kit to punctuate anthems without overshooting power limits.",
+  },
+  {
+    id: "decor-backline",
+    name: "Neon Skyline Backline",
+    type: "Decor",
+    cost: 2800,
+    liveImpact: "Immersive stage mood with programmable neon and skyline silhouettes.",
+    weight: "light",
+    size: "larger",
+    baseCondition: "ok",
+    amountAvailable: 7,
+    rarity: "normal",
+    description: "A versatile design pack to dress intimate clubs and mid-size theatres.",
+  },
+  {
+    id: "utility-powergrid",
+    name: "Road Guardian Power Grid",
+    type: "Utility",
+    cost: 3600,
+    liveImpact: "Smart power distribution with surge analytics and per-phase balancing.",
+    weight: "medium",
+    size: "medium",
+    baseCondition: "very_good",
+    amountAvailable: 6,
+    rarity: "ultra_rare",
+    description: "Keeps your rig humming across unpredictable venues with automated health reports.",
+  },
+];
+
+const sizeToUnits = (size: SizeCategory): number => {
+  switch (size) {
+    case "tiny":
+      return 1;
+    case "small":
+      return 2;
+    case "medium":
+      return 3;
+    case "larger":
+      return 4;
+    case "huge":
+      return 5;
     default:
-      return <Badge variant="secondary">Unknown</Badge>;
+      return 3;
   }
 };
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "—";
-  try {
-    const parsed = typeof value === "string" && value.includes("T") ? parseISO(value) : new Date(value);
-    return format(parsed, "MMM d, yyyy");
-  } catch (error) {
-    return "—";
+const unitsToSize = (units?: number | null): SizeCategory => {
+  switch (units) {
+    case 1:
+      return "tiny";
+    case 2:
+      return "small";
+    case 3:
+      return "medium";
+    case 4:
+      return "larger";
+    case 5:
+      return "huge";
+    default:
+      return "medium";
   }
 };
+
+const labelMap: Record<ConditionTier | WeightCategory | SizeCategory | RarityTier, string> = {
+  almost_dead: "Almost Dead",
+  terrible: "Terrible",
+  bad: "Bad",
+  usable: "Usable",
+  ok: "Ok",
+  good: "Good",
+  very_good: "Very Good",
+  brand_new: "Brand New",
+  light: "Light",
+  medium: "Medium",
+  heavy: "Heavy",
+  very_heavy: "Very Heavy",
+  tiny: "Tiny",
+  small: "Small",
+  larger: "Larger",
+  huge: "Huge",
+  common: "Common",
+  normal: "Normal",
+  rare: "Rare",
+  ultra_rare: "Ultra Rare",
+  super_ultra_rare: "Super Ultra Rare",
+  wow_you_cant_find_these_anywhere: "Wow you can't find these anywhere",
+};
+
+const formatCurrency = (value?: number | null) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value ?? 0);
+
+const calculateConditionState = (metadata: EquipmentMetadata): ConditionState => {
+  const baseIndex = CONDITION_ORDER.indexOf(metadata.baseCondition);
+  if (baseIndex === -1) {
+    return { tier: "usable", points: 100, score: 400 };
+  }
+
+  const shows = metadata.showsPerformed ?? 0;
+  if (shows <= 30) {
+    const points = metadata.lastConditionPoints ?? 100;
+    return { tier: metadata.baseCondition, points, score: baseIndex * 100 + points };
+  }
+
+  const degradeStart = 30;
+  const degradeWindow = 20;
+  let extraShows = Math.max(0, shows - degradeStart);
+  const tiersLost = Math.floor(extraShows / degradeWindow);
+  let remainder = extraShows % degradeWindow;
+
+  let newIndex = Math.max(0, baseIndex - tiersLost);
+  if (tiersLost > baseIndex) {
+    newIndex = 0;
+    remainder = 0;
+  }
+
+  let points = 100;
+  if (remainder > 0) {
+    points = Math.max(0, 100 - Math.round((remainder / degradeWindow) * 100));
+  }
+
+  if (newIndex === 0 && tiersLost > baseIndex) {
+    points = 0;
+  }
+
+  return {
+    tier: CONDITION_ORDER[newIndex],
+    points,
+    score: newIndex * 100 + points,
+  };
+};
+
+const createDefaultMetadata = (item: StageEquipmentRecord): EquipmentMetadata => ({
+  weight: "medium",
+  size: unitsToSize(item.size_units ?? 3),
+  baseCondition: "good",
+  showsPerformed: 0,
+  liveImpact: "General purpose upgrade",
+  rarity: "normal",
+  liveSelected: Boolean(item.is_active),
+  value: item.purchase_cost ?? 0,
+  lastConditionTier: "good",
+  lastConditionPoints: item.condition_rating ?? 100,
+});
+
+const parseMetadata = (item: StageEquipmentRecord): EquipmentMetadata => {
+  const fallback = createDefaultMetadata(item);
+  if (!item.notes) {
+    return fallback;
+  }
+
+  try {
+    const raw = JSON.parse(item.notes) as Partial<EquipmentMetadata>;
+    return {
+      ...fallback,
+      ...raw,
+      weight: (raw?.weight as WeightCategory) ?? fallback.weight,
+      size: (raw?.size as SizeCategory) ?? fallback.size,
+      baseCondition: (raw?.baseCondition as ConditionTier) ?? fallback.baseCondition,
+      rarity: (raw?.rarity as RarityTier) ?? fallback.rarity,
+      liveSelected: raw?.liveSelected ?? fallback.liveSelected,
+      value: raw?.value ?? fallback.value,
+      showsPerformed: raw?.showsPerformed ?? fallback.showsPerformed,
+      lastConditionTier: (raw?.lastConditionTier as ConditionTier) ?? fallback.lastConditionTier,
+      lastConditionPoints: raw?.lastConditionPoints ?? fallback.lastConditionPoints,
+    };
+  } catch (error) {
+    console.error("Failed to parse equipment metadata", error);
+    return fallback;
+  }
+};
+
+const buildMetadataPayload = (metadata: EquipmentMetadata, condition: ConditionState): EquipmentMetadata => ({
+  ...metadata,
+  liveSelected: metadata.liveSelected,
+  lastConditionTier: condition.tier,
+  lastConditionPoints: condition.points,
+});
+
+const generateId = () => `catalog-${Math.random().toString(36).slice(2, 10)}`;
 
 const StageEquipmentSystem = () => {
   const queryClient = useQueryClient();
   const { profile } = useGameData();
   const { data: primaryBand, isLoading: loadingBand } = usePrimaryBand();
+  const { isAdmin, loading: loadingRole } = useUserRole();
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
 
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
-  const [maintenanceDialog, setMaintenanceDialog] = useState<StageEquipmentRecord | null>(null);
-  const [assignDialog, setAssignDialog] = useState<StageEquipmentRecord | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<StageEquipmentRecord | null>(null);
-  const [deleteVehicleTarget, setDeleteVehicleTarget] = useState<BandVehicleRecord | null>(null);
+  const [catalog, setCatalog] = useState<EquipmentCatalogItem[]>(INITIAL_CATALOG);
+  const [selectedType, setSelectedType] = useState<StageEquipmentType | "all">("all");
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [selectedCatalogItem, setSelectedCatalogItem] = useState<EquipmentCatalogItem | null>(null);
 
-  const addEquipmentForm = useForm<AddEquipmentFormValues>({
-    defaultValues: {
-      equipmentName: "",
-      equipmentType: "Sound",
-      qualityRating: 70,
-      conditionRating: 100,
-      powerDraw: null,
-      purchaseCost: null,
-      purchaseDate: "",
-      maintenanceDueAt: "",
-      maintenanceStatus: "good",
-      sizeUnits: 1,
-      notes: "",
-    },
-  });
-
-  const maintenanceForm = useForm<MaintenanceFormValues>({
-    defaultValues: {
-      action: "inspection",
-      cost: 0,
-      conditionAfter: 100,
-      maintenanceStatus: "good",
-      maintenanceDueAt: "",
-      notes: "",
-      markActive: true,
-      markInService: true,
-    },
-  });
-
-  const vehicleForm = useForm<VehicleFormValues>({
+  const adminForm = useForm<AdminEquipmentFormValues>({
     defaultValues: {
       name: "",
-      vehicleType: "Van",
-      capacity: 10,
-      location: "",
-      condition: 100,
-      notes: "",
+      type: "Sound",
+      cost: 1000,
+      liveImpact: "Improves live presence",
+      weight: "medium",
+      size: "medium",
+      condition: "good",
+      amountAvailable: 1,
+      rarity: "normal",
+      description: "",
     },
   });
 
@@ -231,1232 +421,694 @@ const StageEquipmentSystem = () => {
 
       const { data, error } = await supabase
         .from("band_stage_equipment")
-        .select(
-          `*`
-        )
-        .eq("band_id", bandId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      
-      // Fetch vehicle data separately if needed
-      const equipmentData = data ?? [];
-      const vehicleIds = equipmentData
-        .filter((e: any) => e.vehicle_id)
-        .map((e: any) => e.vehicle_id as string);
-      
-      let vehiclesData: any[] = [];
-      if (vehicleIds.length > 0) {
-        const { data: vData } = await (supabase as any)
-          .from("band_vehicles")
-          .select("id, name, vehicle_type, capacity")
-          .in("id", vehicleIds);
-        vehiclesData = vData ?? [];
-      }
-      
-      // Merge data
-      const enriched = equipmentData.map((eq: any) => ({
-        ...eq,
-        band_vehicles: eq.vehicle_id 
-          ? vehiclesData.find((v: any) => v.id === eq.vehicle_id) ?? null
-          : null
-      }));
-      
-      return enriched as StageEquipmentRecord[];
-    },
-    enabled: !!bandId,
-  });
-
-  const { data: vehicles, isLoading: loadingVehicles } = useQuery<BandVehicleRecord[]>({
-    queryKey: ["band-vehicles", bandId],
-    queryFn: async () => {
-      if (!bandId) return [];
-
-      const { data, error } = await (supabase as any)
-        .from("band_vehicles")
         .select("*")
         .eq("band_id", bandId)
-        .order("created_at", { ascending: true});
-
-      if (error) throw error;
-      return data as any as BandVehicleRecord[] ?? [];
-    },
-    enabled: !!bandId,
-  });
-
-  const { data: maintenanceLogs, isLoading: loadingLogs } = useQuery<MaintenanceLogRecord[]>({
-    queryKey: ["band-equipment-logs", bandId],
-    queryFn: async () => {
-      if (!bandId) return [];
-
-      const { data, error } = await (supabase as any)
-        .from("band_equipment_maintenance_logs")
-        .select(
-          `id, band_equipment_id, band_id, performed_by, action, cost, notes, condition_before, condition_after, created_at`
-        )
-        .eq("band_id", bandId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
-      // Fetch equipment names separately
-      const logsData = data ?? [];
-      const equipmentIds = logsData.map((log: any) => log.band_equipment_id);
-      
-      let equipmentData: any[] = [];
-      if (equipmentIds.length > 0) {
-        const { data: eqData } = await supabase
-          .from("band_stage_equipment")
-          .select("id, equipment_name")
-          .in("id", equipmentIds);
-        equipmentData = eqData ?? [];
-      }
-      
-      // Merge data
-      const enriched = logsData.map((log: any) => ({
-        ...log,
-        band_stage_equipment: equipmentData.find((eq: any) => eq.id === log.band_equipment_id) ?? null
-      }));
-      
-      return enriched as any as MaintenanceLogRecord[];
+      return (data ?? []) as StageEquipmentRecord[];
     },
-    enabled: !!bandId,
+    enabled: Boolean(bandId),
   });
 
-  const addEquipmentMutation = useMutation({
-    mutationFn: async (values: AddEquipmentFormValues) => {
-      if (!bandId) return;
-
-      const { error } = await supabase.from("band_stage_equipment").insert({
-        band_id: bandId,
-        equipment_name: values.equipmentName,
-        equipment_type: values.equipmentType,
-        quality_rating: values.qualityRating,
-        condition_rating: values.conditionRating,
-        power_draw: values.powerDraw ?? null,
-        purchase_cost: values.purchaseCost ?? null,
-        purchase_date: values.purchaseDate ? new Date(values.purchaseDate).toISOString() : null,
-        maintenance_due_at: values.maintenanceDueAt ? new Date(values.maintenanceDueAt).toISOString() : null,
-        maintenance_status: values.maintenanceStatus,
-        size_units: values.sizeUnits,
-        notes: values.notes ?? null,
-      });
+  const updateEquipmentMutation = useMutation({
+    mutationFn: async ({
+      equipmentId,
+      metadata,
+      conditionRating,
+    }: {
+      equipmentId: string;
+      metadata: EquipmentMetadata;
+      conditionRating: number;
+    }) => {
+      const { error } = await supabase
+        .from("band_stage_equipment")
+        .update({
+          notes: JSON.stringify(metadata),
+          condition_rating: conditionRating,
+          is_active: metadata.liveSelected,
+        })
+        .eq("id", equipmentId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Equipment added to stage inventory");
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-      addEquipmentForm.reset();
-      setAddDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to add equipment");
-    },
-  });
-
-  const updateEquipmentMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<StageEquipmentRecord> }) => {
-      const { error } = await supabase
-        .from("band_stage_equipment")
-        .update(updates)
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-      if (variables.updates.maintenance_status || variables.updates.condition_rating) {
-        queryClient.invalidateQueries({ queryKey: ["band-equipment-logs", bandId] });
-      }
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update equipment");
     },
   });
 
-  const maintenanceMutation = useMutation({
-    mutationFn: async (values: MaintenanceFormValues & { equipment: StageEquipmentRecord }) => {
-      if (!bandId) return;
+  const purchaseMutation = useMutation({
+    mutationFn: async (item: EquipmentCatalogItem) => {
+      if (!bandId) {
+        throw new Error("Join a band to purchase equipment");
+      }
 
-      const equipment = values.equipment;
-      const { id } = equipment;
-
-      const updates: Partial<StageEquipmentRecord> = {
-        condition_rating: values.conditionAfter,
-        maintenance_status: values.maintenanceStatus,
-        maintenance_due_at: values.maintenanceDueAt ? new Date(values.maintenanceDueAt).toISOString() : null,
-        is_active: values.markActive,
-        in_service: values.markInService,
+      const metadata: EquipmentMetadata = {
+        weight: item.weight,
+        size: item.size,
+        baseCondition: item.baseCondition,
+        showsPerformed: 0,
+        liveImpact: item.liveImpact,
+        rarity: item.rarity,
+        liveSelected: false,
+        value: item.cost,
+        lastConditionTier: item.baseCondition,
+        lastConditionPoints: 100,
       };
 
-      const { error: updateError } = await supabase
-        .from("band_stage_equipment")
-        .update(updates)
-        .eq("id", id);
+      const condition = calculateConditionState(metadata);
 
-      if (updateError) throw updateError;
-
-      const { error: logError } = await (supabase as any)
-        .from("band_equipment_maintenance_logs")
-        .insert({
-          band_equipment_id: id,
-          band_id: bandId,
-          performed_by: profile?.id ?? null,
-          action: values.action,
-          cost: values.cost,
-          notes: values.notes ?? null,
-          condition_before: equipment.condition_rating ?? equipment.quality_rating,
-          condition_after: values.conditionAfter,
-        });
-
-      if (logError) throw logError;
-    },
-    onSuccess: () => {
-      toast.success("Maintenance recorded");
-      queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-      queryClient.invalidateQueries({ queryKey: ["band-equipment-logs", bandId] });
-      maintenanceForm.reset();
-      setMaintenanceDialog(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to record maintenance");
-    },
-  });
-
-  const removeEquipmentMutation = useMutation({
-    mutationFn: async (equipmentId: string) => {
-      const { error } = await supabase
-        .from("band_stage_equipment")
-        .delete()
-        .eq("id", equipmentId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Equipment removed");
-      queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-      setDeleteTarget(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to remove equipment");
-    },
-  });
-
-  const addVehicleMutation = useMutation({
-    mutationFn: async (values: VehicleFormValues) => {
-      if (!bandId) return;
-      const { error } = await (supabase as any).from("band_vehicles").insert({
+      const { error } = await supabase.from("band_stage_equipment").insert({
         band_id: bandId,
-        name: values.name,
-        vehicle_type: values.vehicleType,
-        capacity: values.capacity,
-        location: values.location ?? null,
-        condition: values.condition,
-        notes: values.notes ?? null,
+        equipment_name: item.name,
+        equipment_type: item.type,
+        quality_rating: 80,
+        condition_rating: condition.points,
+        power_draw: null,
+        purchase_cost: item.cost,
+        purchase_date: new Date().toISOString(),
+        maintenance_due_at: null,
+        maintenance_status: "good",
+        size_units: sizeToUnits(item.size),
+        notes: JSON.stringify(buildMetadataPayload(metadata, condition)),
       });
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success("Vehicle added");
-      vehicleForm.reset();
-      queryClient.invalidateQueries({ queryKey: ["band-vehicles", bandId] });
-      setVehicleDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to add vehicle");
-    },
-  });
-
-  const updateVehicleMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<BandVehicleRecord> }) => {
-      const { error } = await (supabase as any)
-        .from("band_vehicles")
-        .update(updates as any)
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["band-vehicles", bandId] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update vehicle");
-    },
-  });
-
-  const removeVehicleMutation = useMutation({
-    mutationFn: async (vehicleId: string) => {
-      const { error } = await (supabase as any)
-        .from("band_vehicles")
-        .delete()
-        .eq("id", vehicleId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Vehicle removed");
-      queryClient.invalidateQueries({ queryKey: ["band-vehicles", bandId] });
+    onSuccess: (_, item) => {
+      toast.success(`${item.name} added to your stage inventory`);
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-      setDeleteVehicleTarget(null);
+      setCatalog((prev) =>
+        prev.map((entry) =>
+          entry.id === item.id
+            ? { ...entry, amountAvailable: Math.max(0, entry.amountAvailable - 1) }
+            : entry,
+        ),
+      );
+      setPurchaseDialogOpen(false);
+      setSelectedCatalogItem(null);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to remove vehicle");
+      toast.error(error.message || "Failed to buy equipment");
     },
   });
 
-  const assignVehicleMutation = useMutation({
-    mutationFn: async ({ equipmentId, vehicleId }: { equipmentId: string; vehicleId: string | null }) => {
-      const { error } = await supabase
-        .from("band_stage_equipment")
-        .update({ vehicle_id: vehicleId } as any)
-        .eq("id", equipmentId);
+  const enrichedEquipment = useMemo(() => {
+    return (equipment ?? []).map((item) => {
+      const metadata = parseMetadata(item);
+      const condition = calculateConditionState(metadata);
+      const normalizedMetadata = buildMetadataPayload(metadata, condition);
 
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Equipment assignment updated");
-      queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
-      setAssignDialog(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to assign vehicle");
-    },
-  });
-
-  const metrics = useMemo(() => {
-    if (!equipment || equipment.length === 0) {
       return {
-        total: 0,
-        active: 0,
-        averageCondition: 0,
-        totalPower: 0,
-        scheduledMaintenance: 0,
+        ...item,
+        metadata: normalizedMetadata,
+        condition,
       };
-    }
-
-    const total = equipment.length;
-    const active = equipment.filter((item) => item.is_active).length;
-    const averageCondition = Math.round(
-      equipment.reduce((sum, item) => sum + (item.condition_rating ?? 100), 0) / total
-    );
-    const totalPower = equipment.reduce((sum, item) => sum + (item.power_draw ?? 0), 0);
-    const scheduledMaintenance = equipment.filter((item) => {
-      if (!item.maintenance_due_at) return false;
-      const dueDate = new Date(item.maintenance_due_at);
-      return isBefore(dueDate, addDays(new Date(), 7));
-    }).length;
-
-    return { total, active, averageCondition, totalPower, scheduledMaintenance };
+    });
   }, [equipment]);
 
-  const vehicleAssignments = useMemo(() => {
-    if (!vehicles) return {} as Record<string, StageEquipmentRecord[]>;
-    const grouped: Record<string, StageEquipmentRecord[]> = {};
-    for (const vehicle of vehicles) {
-      grouped[vehicle.id] = [];
-    }
-    if (equipment) {
-      for (const item of equipment) {
-        if (item.vehicle_id) {
-          if (!grouped[item.vehicle_id]) {
-            grouped[item.vehicle_id] = [];
-          }
-          grouped[item.vehicle_id].push(item);
-        }
-      }
-    }
-    return grouped;
-  }, [vehicles, equipment]);
+  const inventory = useMemo(() => enrichedEquipment ?? [], [enrichedEquipment]);
+  const liveSetup = useMemo(
+    () => inventory.filter((item) => item.metadata.liveSelected || item.is_active),
+    [inventory],
+  );
 
-  const lowCondition = equipment?.filter((item) => (item.condition_rating ?? 0) <= 30) ?? [];
-  const offlineEquipment = equipment?.filter((item) => item.in_service === false) ?? [];
+  const totalValue = inventory.reduce((sum, item) => sum + (item.metadata.value ?? item.purchase_cost ?? 0), 0);
+  const totalConditionScore = inventory.reduce((sum, item) => sum + item.condition.score, 0);
+  const averageConditionScore = inventory.length > 0 ? totalConditionScore / inventory.length : 0;
+  const averageConditionTierIndex = Math.min(
+    CONDITION_ORDER.length - 1,
+    Math.max(0, Math.floor(averageConditionScore / 100)),
+  );
+  const averageConditionTier = CONDITION_ORDER[averageConditionTierIndex];
 
-  const renderEquipmentTable = () => {
-    if (loadingEquipment) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      );
-    }
-
-    if (!equipment || equipment.length === 0) {
-      return (
-        <div className="py-12 text-center text-sm text-muted-foreground">
-          No stage equipment yet. Add your first rig to start tracking power, condition, and maintenance.
-        </div>
-      );
-    }
-
-    return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Equipment</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Condition</TableHead>
-            <TableHead>Quality</TableHead>
-            <TableHead>Power</TableHead>
-            <TableHead>Vehicle</TableHead>
-            <TableHead>Maintenance</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {equipment.map((item) => {
-            const condition = item.condition_rating ?? 100;
-            const dueSoon = item.maintenance_due_at
-              ? isBefore(new Date(item.maintenance_due_at), addDays(new Date(), 7))
-              : false;
-
-            return (
-              <TableRow key={item.id} className={!item.in_service ? "bg-destructive/5" : undefined}>
-                <TableCell className="space-y-1">
-                  <div className="font-medium">{item.equipment_name}</div>
-                  {item.notes ? <div className="text-xs text-muted-foreground">{item.notes}</div> : null}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{item.equipment_type}</Badge>
-                </TableCell>
-                <TableCell className="space-y-1">
-                  <div className="flex flex-wrap gap-1">
-                    {item.is_active ? (
-                      <Badge className="bg-primary/80">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary">Standby</Badge>
-                    )}
-                    {item.in_service ? (
-                      <Badge variant="outline">In Service</Badge>
-                    ) : (
-                      <Badge variant="destructive">Offline</Badge>
-                    )}
-                  </div>
-                  {getStatusBadge(item.maintenance_status as MaintenanceStatus)}
-                </TableCell>
-                <TableCell className="w-40">
-                  <div className="flex items-center gap-2">
-                    <Progress value={condition} className="h-2" />
-                    <span className="text-sm font-medium">{condition}%</span>
-                  </div>
-                </TableCell>
-                <TableCell>{item.quality_rating}</TableCell>
-                <TableCell>{item.power_draw ? `${item.power_draw} W` : "—"}</TableCell>
-                <TableCell>
-                  {item.band_vehicles?.name ? (
-                    <div className="text-sm font-medium">{item.band_vehicles.name}</div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Unassigned</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {item.maintenance_due_at ? (
-                    <div className="space-y-1">
-                      <div className="text-sm">{formatDate(item.maintenance_due_at)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(item.maintenance_due_at), { addSuffix: true })}
-                      </div>
-                      {dueSoon ? (
-                        <Badge variant="destructive" className="gap-1 text-xs">
-                          <AlertTriangle className="h-3 w-3" /> Due soon
-                        </Badge>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Not scheduled</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Manage equipment</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() =>
-                          updateEquipmentMutation.mutate({
-                            id: item.id,
-                            updates: { is_active: !item.is_active },
-                          })
-                        }
-                      >
-                        {item.is_active ? "Mark as standby" : "Mark as active"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          updateEquipmentMutation.mutate({
-                            id: item.id,
-                            updates: { in_service: !item.in_service },
-                          })
-                        }
-                      >
-                        {item.in_service ? "Take offline" : "Return to service"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setMaintenanceDialog(item);
-                          maintenanceForm.reset({
-                            action: "inspection",
-                            cost: 0,
-                            conditionAfter: item.condition_rating ?? 100,
-                            maintenanceStatus: (item.maintenance_status as MaintenanceStatus) ?? "good",
-                            maintenanceDueAt: item.maintenance_due_at
-                              ? format(new Date(item.maintenance_due_at), "yyyy-MM-dd")
-                              : "",
-                            notes: "",
-                            markActive: Boolean(item.is_active),
-                            markInService: item.in_service !== false,
-                          });
-                        }}
-                      >
-                        Record maintenance
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setAssignDialog(item)}>
-                        Assign vehicle
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(item)}>
-                        Remove from inventory
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    );
+  const handleToggleLive = (item: (typeof inventory)[number]) => {
+    const nextMetadata = {
+      ...item.metadata,
+      liveSelected: !item.metadata.liveSelected,
+    };
+    updateEquipmentMutation.mutate({
+      equipmentId: item.id,
+      metadata: nextMetadata,
+      conditionRating: item.condition.points,
+    });
   };
 
-  const renderVehicles = () => {
-    if (loadingVehicles) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      );
-    }
+  const handleLogShow = (item: (typeof inventory)[number]) => {
+    const updatedMetadata: EquipmentMetadata = {
+      ...item.metadata,
+      showsPerformed: item.metadata.showsPerformed + 1,
+    };
+    const nextCondition = calculateConditionState(updatedMetadata);
+    const payload = buildMetadataPayload(updatedMetadata, nextCondition);
 
-    if (!vehicles || vehicles.length === 0) {
-      return (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            No transport assets configured yet. Add a van, bus, or truck to start planning loadouts and capacity.
-          </p>
-          <Button onClick={() => setVehicleDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add vehicle
-          </Button>
-        </div>
-      );
-    }
+    updateEquipmentMutation.mutate({
+      equipmentId: item.id,
+      metadata: payload,
+      conditionRating: nextCondition.points,
+    });
 
-    return (
-      <div className="grid gap-4 md:grid-cols-2">
-        {vehicles.map((vehicle) => {
-          const assignments = vehicleAssignments[vehicle.id] ?? [];
-          const usedCapacity = assignments.reduce((sum, item) => sum + (item.size_units ?? 0), 0);
-          const capacityPercent = vehicle.capacity > 0 ? Math.min(100, Math.round((usedCapacity / vehicle.capacity) * 100)) : 0;
-
-          return (
-            <Card key={vehicle.id} className="flex flex-col">
-              <CardHeader className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <CardTitle className="text-lg">{vehicle.name}</CardTitle>
-                    <CardDescription>{vehicle.vehicle_type}</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteVehicleTarget(vehicle)}>
-                      <AlertTriangle className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid gap-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Capacity</span>
-                    <span>
-                      {usedCapacity} / {vehicle.capacity} units
-                    </span>
-                  </div>
-                  <Progress value={capacityPercent} className="h-2" />
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Condition</span>
-                    <span>{vehicle.condition}%</span>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Truck className="h-4 w-4" />
-                    <span>{vehicle.location || "Location TBD"}</span>
-                  </div>
-                  {vehicle.notes ? <p className="text-muted-foreground">{vehicle.notes}</p> : null}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium">
-                    <span>Assigned equipment</span>
-                    <Badge variant="secondary">{assignments.length}</Badge>
-                  </div>
-                  {assignments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No equipment assigned yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {assignments.map((item) => (
-                        <div key={item.id} className="rounded border p-2">
-                          <div className="text-sm font-medium">{item.equipment_name}</div>
-                          <div className="text-xs text-muted-foreground">{item.equipment_type}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-auto flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      updateVehicleMutation.mutate({
-                        id: vehicle.id,
-                        updates: { condition: Math.min(100, vehicle.condition + 5) },
-                      })
-                    }
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" /> Tune-up
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() =>
-                      updateVehicleMutation.mutate({
-                        id: vehicle.id,
-                        updates: { location: vehicle.location || "On tour" },
-                      })
-                    }
-                  >
-                    <ShieldCheck className="mr-2 h-4 w-4" /> Update location
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
+    toast.message(`${item.equipment_name ?? "Equipment"} logged for another show`, {
+      description: `Condition now ${labelMap[nextCondition.tier]} (${nextCondition.points}/100).`,
+    });
   };
 
-  if (loadingBand) {
+  const filteredCatalog = useMemo(() => {
+    if (selectedType === "all") return catalog;
+    return catalog.filter((item) => item.type === selectedType);
+  }, [catalog, selectedType]);
+
+  const handleSubmitAdmin = adminForm.handleSubmit((values) => {
+    const newItem: EquipmentCatalogItem = {
+      id: generateId(),
+      name: values.name.trim(),
+      type: values.type,
+      cost: Number(values.cost) || 0,
+      liveImpact: values.liveImpact,
+      weight: values.weight,
+      size: values.size,
+      baseCondition: values.condition,
+      amountAvailable: Number(values.amountAvailable) || 0,
+      rarity: values.rarity,
+      description: values.description?.trim() || undefined,
+    };
+
+    setCatalog((prev) => [...prev, newItem]);
+    toast.success(`${newItem.name} added to the catalog`);
+    adminForm.reset();
+  });
+
+  const openPurchaseDialog = (item: EquipmentCatalogItem) => {
+    setSelectedCatalogItem(item);
+    setPurchaseDialogOpen(true);
+  };
+
+  if (loadingBand || loadingEquipment || loadingRole) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" /> Loading stage equipment data...
+        </div>
       </div>
     );
   }
 
-  if (!bandId) {
+  if (!profile || !bandId) {
     return (
-      <div className="container mx-auto space-y-6 p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Join a band to manage stage equipment</CardTitle>
-            <CardDescription>
-              Stage rigs, transport plans, and maintenance history unlock once you are part of a band on Rockmundo.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-3xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Join a band to manage stage equipment</CardTitle>
+              <CardDescription>
+                Stage gear lives with your band. Join or create a band to start tracking inventory, live rigs, and upgrades.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Alert>
+                <CircleDashed className="h-4 w-4" />
+                <AlertTitle>No band selected</AlertTitle>
+                <AlertDescription>
+                  Head to the bands hub to pick your crew. Once you're in, the full equipment system unlocks here.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Stage Equipment Control</h1>
-          <p className="text-muted-foreground">
-            Operational overview of {bandName}'s touring rigs, upkeep plans, and vehicle capacity.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Add stage equipment
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Add stage equipment</DialogTitle>
-                <DialogDescription>Capture the core specs for new touring gear.</DialogDescription>
-              </DialogHeader>
-              <form
-                className="space-y-4"
-                onSubmit={addEquipmentForm.handleSubmit((values) => addEquipmentMutation.mutate(values))}
-              >
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="equipmentName">Name</Label>
-                    <Input id="equipmentName" {...addEquipmentForm.register("equipmentName", { required: true })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="equipmentType">Category</Label>
-                    <Select
-                      value={addEquipmentForm.watch("equipmentType")}
-                      onValueChange={(value) => addEquipmentForm.setValue("equipmentType", value as AddEquipmentFormValues["equipmentType"])}
-                    >
-                      <SelectTrigger id="equipmentType">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EQUIPMENT_CATEGORIES.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="qualityRating">Quality</Label>
-                    <Input
-                      id="qualityRating"
-                      type="number"
-                      min={0}
-                      max={100}
-                      {...addEquipmentForm.register("qualityRating", { valueAsNumber: true })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="conditionRating">Condition</Label>
-                    <Input
-                      id="conditionRating"
-                      type="number"
-                      min={0}
-                      max={100}
-                      {...addEquipmentForm.register("conditionRating", { valueAsNumber: true })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sizeUnits">Size Units</Label>
-                    <Input
-                      id="sizeUnits"
-                      type="number"
-                      min={0}
-                      {...addEquipmentForm.register("sizeUnits", { valueAsNumber: true })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="powerDraw">Power (W)</Label>
-                    <Input
-                      id="powerDraw"
-                      type="number"
-                      min={0}
-                      {...addEquipmentForm.register("powerDraw", { valueAsNumber: true })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="purchaseCost">Purchase Cost</Label>
-                    <Input
-                      id="purchaseCost"
-                      type="number"
-                      min={0}
-                      {...addEquipmentForm.register("purchaseCost", { valueAsNumber: true })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="purchaseDate">Purchase Date</Label>
-                    <Input id="purchaseDate" type="date" {...addEquipmentForm.register("purchaseDate")} />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="maintenanceStatus">Maintenance Status</Label>
-                    <Select
-                      value={addEquipmentForm.watch("maintenanceStatus")}
-                      onValueChange={(value) =>
-                        addEquipmentForm.setValue("maintenanceStatus", value as MaintenanceStatus)
-                      }
-                    >
-                      <SelectTrigger id="maintenanceStatus">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MAINTENANCE_STATUS.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status.replace("_", " ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="maintenanceDueAt">Next Service</Label>
-                    <Input id="maintenanceDueAt" type="date" {...addEquipmentForm.register("maintenanceDueAt")} />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea id="notes" rows={3} {...addEquipmentForm.register("notes")} />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={addEquipmentMutation.isPending}>
-                  {addEquipmentMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving
-                    </>
-                  ) : (
-                    "Add equipment"
-                  )}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Truck className="mr-2 h-4 w-4" /> Add vehicle
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add transport asset</DialogTitle>
-                <DialogDescription>Track the vehicles moving your touring rig.</DialogDescription>
-              </DialogHeader>
-              <form
-                className="space-y-4"
-                onSubmit={vehicleForm.handleSubmit((values) => addVehicleMutation.mutate(values))}
-              >
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleName">Name</Label>
-                    <Input id="vehicleName" {...vehicleForm.register("name", { required: true })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleType">Type</Label>
-                    <Select
-                      value={vehicleForm.watch("vehicleType")}
-                      onValueChange={(value) =>
-                        vehicleForm.setValue("vehicleType", value as VehicleFormValues["vehicleType"])
-                      }
-                    >
-                      <SelectTrigger id="vehicleType">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VEHICLE_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleCapacity">Capacity</Label>
-                    <Input
-                      id="vehicleCapacity"
-                      type="number"
-                      min={0}
-                      {...vehicleForm.register("capacity", { valueAsNumber: true })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleCondition">Condition</Label>
-                    <Input
-                      id="vehicleCondition"
-                      type="number"
-                      min={0}
-                      max={100}
-                      {...vehicleForm.register("condition", { valueAsNumber: true })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleLocation">Location</Label>
-                    <Input id="vehicleLocation" {...vehicleForm.register("location")} />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="vehicleNotes">Notes</Label>
-                  <Textarea id="vehicleNotes" rows={3} {...vehicleForm.register("notes")} />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={addVehicleMutation.isPending}>
-                  {addVehicleMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving
-                    </>
-                  ) : (
-                    "Add vehicle"
-                  )}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Total assets</CardDescription>
-                <CardTitle className="text-2xl">{metrics.total}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Pieces of stage equipment logged.</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Active rigs</CardDescription>
-                <CardTitle className="text-2xl">{metrics.active}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Currently marked as active for shows.</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Average condition</CardDescription>
-                <CardTitle className="text-2xl">{metrics.averageCondition}%</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Health across all tracked gear.</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Total power</CardDescription>
-                <CardTitle className="text-2xl">{metrics.totalPower.toLocaleString()} W</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Output available for upcoming shows.</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {(lowCondition.length > 0 || offlineEquipment.length > 0 || metrics.scheduledMaintenance > 0) && (
-            <div className="grid gap-4 md:grid-cols-3">
-              {lowCondition.length > 0 ? (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Wear alerts</AlertTitle>
-                  <AlertDescription>
-                    {lowCondition.length} items are below 30% condition. Prioritize repairs to avoid show penalties.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              {metrics.scheduledMaintenance > 0 ? (
-                <Alert>
-                  <CalendarClock className="h-4 w-4" />
-                  <AlertTitle>Upcoming maintenance</AlertTitle>
-                  <AlertDescription>
-                    {metrics.scheduledMaintenance} pieces need service within the next week.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              {offlineEquipment.length > 0 ? (
-                <Alert>
-                  <ShieldCheck className="h-4 w-4" />
-                  <AlertTitle>Offline gear</AlertTitle>
-                  <AlertDescription>
-                    {offlineEquipment.length} items are currently offline. Toggle them back once repairs are complete.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
+    <div className="min-h-screen bg-background p-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+        <Card>
+          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle className="text-2xl">Stage Equipment • {bandName}</CardTitle>
+              <CardDescription>
+                Track owned gear, curate your live stage setup, and expand your catalog with precision upgrades.
+              </CardDescription>
             </div>
-          )}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <div>
+                <span className="font-semibold text-foreground">{inventory.length}</span> pieces owned
+              </div>
+              <div>
+                Live setup: <span className="font-semibold text-foreground">{liveSetup.length}</span>
+              </div>
+              <div>
+                Total value: <span className="font-semibold text-foreground">{formatCurrency(totalValue)}</span>
+              </div>
+              {inventory.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  Avg condition: <span className="font-semibold text-foreground">{labelMap[averageConditionTier]}</span>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+        </Card>
 
+        <Tabs defaultValue="inventory" className="space-y-4">
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="inventory">Current Equipment</TabsTrigger>
+            <TabsTrigger value="live">Live Stage Setup</TabsTrigger>
+            <TabsTrigger value="market">Buy Equipment</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="inventory" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Owned Equipment</CardTitle>
+                <CardDescription>
+                  Review your inventory, monitor condition degradation across shows, and decide what stays in the live rig.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {inventory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                    <Guitar className="h-10 w-10 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-foreground">No stage equipment yet.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Head to the market tab to pick up your first pieces and build a signature stage presence.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Equipment</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Value</TableHead>
+                          <TableHead>Condition</TableHead>
+                          <TableHead>Live Setup</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {inventory.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="font-semibold text-foreground">{item.equipment_name ?? "Equipment"}</div>
+                              <div className="text-xs text-muted-foreground">{item.metadata.liveImpact}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{item.equipment_type ?? "—"}</Badge>
+                            </TableCell>
+                            <TableCell>{formatCurrency(item.metadata.value ?? item.purchase_cost)}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-emerald-600 hover:bg-emerald-700">
+                                    {labelMap[item.condition.tier]}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {item.condition.points}/100 · {item.metadata.showsPerformed} shows
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                  <span>Weight: {labelMap[item.metadata.weight]}</span>
+                                  <span>Size: {labelMap[item.metadata.size]}</span>
+                                  <span>Rarity: {labelMap[item.metadata.rarity]}</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {item.metadata.liveSelected ? (
+                                <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+                                  In Live Setup
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">Not Selected</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="space-x-2 text-right">
+                              <Button
+                                variant={item.metadata.liveSelected ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => handleToggleLive(item)}
+                                disabled={updateEquipmentMutation.isPending}
+                              >
+                                {item.metadata.liveSelected ? "Remove" : "Add"}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleLogShow(item)}
+                                disabled={updateEquipmentMutation.isPending}
+                              >
+                                Log Show
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="live" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Live Stage Setup</CardTitle>
+                <CardDescription>
+                  The gear currently locked into your touring rig. Keep condition healthy to avoid mid-show failures.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {liveSetup.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                    <CircleDashed className="h-10 w-10 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-foreground">No equipment selected for the live setup.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Add gear from the inventory tab to curate your touring configuration.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {liveSetup.map((item) => (
+                      <Card key={item.id} className="border-primary/50">
+                        <CardHeader>
+                          <CardTitle className="text-lg">{item.equipment_name ?? "Equipment"}</CardTitle>
+                          <CardDescription>{item.metadata.liveImpact}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <Badge variant="secondary">{item.equipment_type ?? "—"}</Badge>
+                            <Badge variant="outline">{labelMap[item.metadata.weight]} weight</Badge>
+                            <Badge variant="outline">{labelMap[item.metadata.size]} size</Badge>
+                            <Badge variant="outline">{labelMap[item.metadata.rarity]}</Badge>
+                          </div>
+                          <div className="rounded-md bg-muted p-3 text-sm">
+                            <div className="flex items-center gap-2 text-foreground">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              {labelMap[item.condition.tier]} · {item.condition.points}/100
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.metadata.showsPerformed} shows logged · Value {formatCurrency(item.metadata.value)}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleLive(item)}
+                            disabled={updateEquipmentMutation.isPending}
+                          >
+                            Remove from live setup
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="market" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>Buy Stage Equipment</CardTitle>
+                  <CardDescription>
+                    Filter by stage equipment type and pick the upgrades that elevate your next run of shows.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm text-muted-foreground">Filter type</Label>
+                  <Select value={selectedType} onValueChange={(value) => setSelectedType(value as StageEquipmentType | "all") }>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      {EQUIPMENT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {filteredCatalog.map((item) => (
+                    <Card key={item.id} className="flex h-full flex-col justify-between">
+                      <CardHeader className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <CardTitle className="text-lg">{item.name}</CardTitle>
+                          <Badge variant="secondary">{item.type}</Badge>
+                        </div>
+                        <CardDescription>{item.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-3">
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline">{labelMap[item.weight]} weight</Badge>
+                          <Badge variant="outline">{labelMap[item.size]} size</Badge>
+                          <Badge variant="outline">{labelMap[item.baseCondition]}</Badge>
+                          <Badge variant="outline">{labelMap[item.rarity]}</Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="font-semibold text-foreground">{formatCurrency(item.cost)}</div>
+                          <div className="text-muted-foreground">{item.amountAvailable} available</div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{item.liveImpact}</p>
+                        <Button
+                          className="mt-2"
+                          onClick={() => openPurchaseDialog(item)}
+                          disabled={item.amountAvailable === 0 || purchaseMutation.isPending}
+                        >
+                          <ShoppingCart className="mr-2 h-4 w-4" /> Buy equipment
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {filteredCatalog.length === 0 && (
+                    <div className="col-span-2 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-8 text-center">
+                      <CircleDashed className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">No equipment in this category yet. Ask your admin to add more options.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {isAdmin() && (
           <Card>
             <CardHeader>
-              <CardTitle>Stage equipment</CardTitle>
-              <CardDescription>Track condition, maintenance, and transport assignments.</CardDescription>
-            </CardHeader>
-            <CardContent>{renderEquipmentTable()}</CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="vehicles" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transport fleet</CardTitle>
-              <CardDescription>Monitor capacity, locations, and assigned rigs.</CardDescription>
-            </CardHeader>
-            <CardContent>{renderVehicles()}</CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="maintenance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Maintenance history</CardTitle>
-              <CardDescription>Every repair and inspection logged against the touring rig.</CardDescription>
+              <CardTitle>Stage Equipment Admin</CardTitle>
+              <CardDescription>
+                Curate the global catalog. Define type, rarity, weight, and how each item impacts live performance before bands buy.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {loadingLogs ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+              <form onSubmit={handleSubmitAdmin} className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="admin-name">Equipment name</Label>
+                  <Input id="admin-name" placeholder="Enter equipment name" {...adminForm.register("name", { required: true })} />
                 </div>
-              ) : !maintenanceLogs || maintenanceLogs.length === 0 ? (
-                <p className="py-12 text-center text-sm text-muted-foreground">
-                  No maintenance logged yet. Record inspections and repairs to build a complete history.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {maintenanceLogs.map((log) => (
-                    <div key={log.id} className="rounded-lg border p-4">
-                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold">
-                            {log.band_stage_equipment?.equipment_name ?? "Equipment"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatDate(log.created_at)} · {log.action.replace("_", " ")}
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          <Badge variant="outline">Cost: ${log.cost.toLocaleString()}</Badge>
-                          <Badge variant="outline">Condition {log.condition_before ?? "?"}% → {log.condition_after ?? "?"}%</Badge>
-                        </div>
-                      </div>
-                      {log.notes ? <p className="mt-2 text-sm text-muted-foreground">{log.notes}</p> : null}
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  <Label>Equipment type</Label>
+                  <Controller
+                    control={adminForm.control}
+                    name="type"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EQUIPMENT_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label htmlFor="admin-cost">Cost</Label>
+                  <Input
+                    id="admin-cost"
+                    type="number"
+                    min={0}
+                    step={100}
+                    {...adminForm.register("cost", { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Live performance impact</Label>
+                  <Textarea
+                    placeholder="Describe how this gear influences a live show"
+                    className="min-h-[80px]"
+                    {...adminForm.register("liveImpact")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Weight</Label>
+                  <Controller
+                    control={adminForm.control}
+                    name="weight"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select weight" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {WEIGHT_OPTIONS.map((weight) => (
+                            <SelectItem key={weight} value={weight}>
+                              {labelMap[weight]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Size</Label>
+                  <Controller
+                    control={adminForm.control}
+                    name="size"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SIZE_OPTIONS.map((size) => (
+                            <SelectItem key={size} value={size}>
+                              {labelMap[size]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Condition</Label>
+                  <Controller
+                    control={adminForm.control}
+                    name="condition"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select condition" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CONDITION_ORDER.slice().reverse().map((condition) => (
+                            <SelectItem key={condition} value={condition}>
+                              {labelMap[condition]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-amount">Amount available</Label>
+                  <Input
+                    id="admin-amount"
+                    type="number"
+                    min={0}
+                    {...adminForm.register("amountAvailable", { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Rareity</Label>
+                  <Controller
+                    control={adminForm.control}
+                    name="rarity"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select rarity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RARITY_OPTIONS.map((rarity) => (
+                            <SelectItem key={rarity} value={rarity}>
+                              {labelMap[rarity]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Button type="submit" className="w-full md:w-auto">
+                    <Plus className="mr-2 h-4 w-4" /> Add equipment to catalog
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
-      <Dialog open={Boolean(maintenanceDialog)} onOpenChange={(open) => !open && setMaintenanceDialog(null)}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record maintenance</DialogTitle>
+            <DialogTitle>Confirm equipment purchase</DialogTitle>
             <DialogDescription>
-              Update condition and schedule the next service for {maintenanceDialog?.equipment_name}.
+              Add this equipment to your band's inventory and make it available for your live setup.
             </DialogDescription>
           </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={maintenanceForm.handleSubmit((values) =>
-              maintenanceDialog && maintenanceMutation.mutate({ ...values, equipment: maintenanceDialog })
-            )}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="maintenanceAction">Action</Label>
-                <Select
-                  value={maintenanceForm.watch("action")}
-                  onValueChange={(value) =>
-                    maintenanceForm.setValue("action", value as MaintenanceFormValues["action"])
-                  }
-                >
-                  <SelectTrigger id="maintenanceAction">
-                    <SelectValue placeholder="Select action" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MAINTENANCE_ACTIONS.map((action) => (
-                      <SelectItem key={action} value={action}>
-                        {action.replace("_", " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {selectedCatalogItem && (
+            <div className="space-y-3">
+              <div>
+                <div className="text-lg font-semibold text-foreground">{selectedCatalogItem.name}</div>
+                <div className="text-sm text-muted-foreground">{selectedCatalogItem.liveImpact}</div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="maintenanceCost">Cost</Label>
-                <Input
-                  id="maintenanceCost"
-                  type="number"
-                  min={0}
-                  {...maintenanceForm.register("cost", { valueAsNumber: true })}
-                />
+              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                <Badge variant="secondary">{selectedCatalogItem.type}</Badge>
+                <Badge variant="outline">{labelMap[selectedCatalogItem.weight]} weight</Badge>
+                <Badge variant="outline">{labelMap[selectedCatalogItem.size]} size</Badge>
+                <Badge variant="outline">{labelMap[selectedCatalogItem.rarity]}</Badge>
               </div>
+              <div className="text-sm text-muted-foreground">
+                Condition starts at <span className="font-medium text-foreground">{labelMap[selectedCatalogItem.baseCondition]}</span>. Expect wear after 30 shows.
+              </div>
+              <div className="text-lg font-semibold text-foreground">{formatCurrency(selectedCatalogItem.cost)}</div>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="conditionAfter">Condition after</Label>
-                <Input
-                  id="conditionAfter"
-                  type="number"
-                  min={0}
-                  max={100}
-                  {...maintenanceForm.register("conditionAfter", { valueAsNumber: true })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maintenanceStatus">Status</Label>
-                <Select
-                  value={maintenanceForm.watch("maintenanceStatus")}
-                  onValueChange={(value) =>
-                    maintenanceForm.setValue("maintenanceStatus", value as MaintenanceStatus)
-                  }
-                >
-                  <SelectTrigger id="maintenanceStatus">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MAINTENANCE_STATUS.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status.replace("_", " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="maintenanceDue">Next service</Label>
-                <Input id="maintenanceDue" type="date" {...maintenanceForm.register("maintenanceDueAt")} />
-              </div>
-              <div className="space-y-2">
-                <Label>Status toggles</Label>
-                <div className="flex flex-col gap-2 rounded border p-3 text-sm">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={maintenanceForm.watch("markActive")}
-                      onChange={(event) => maintenanceForm.setValue("markActive", event.target.checked)}
-                    />
-                    Active for shows
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={maintenanceForm.watch("markInService")}
-                      onChange={(event) => maintenanceForm.setValue("markInService", event.target.checked)}
-                    />
-                    In service
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="maintenanceNotes">Notes</Label>
-              <Textarea id="maintenanceNotes" rows={3} {...maintenanceForm.register("notes")} />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={maintenanceMutation.isPending}>
-              {maintenanceMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving
-                </>
-              ) : (
-                "Save maintenance"
-              )}
+          )}
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+            <Button variant="outline" onClick={() => setPurchaseDialogOpen(false)}>
+              <Minus className="mr-2 h-4 w-4" /> Cancel
             </Button>
-          </form>
+            <Button
+              onClick={() => selectedCatalogItem && purchaseMutation.mutate(selectedCatalogItem)}
+              disabled={!selectedCatalogItem || purchaseMutation.isPending}
+            >
+              {purchaseMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ShoppingCart className="mr-2 h-4 w-4" />
+              )}
+              Confirm purchase
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={Boolean(assignDialog)} onOpenChange={(open) => !open && setAssignDialog(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign vehicle</DialogTitle>
-            <DialogDescription>
-              Route {assignDialog?.equipment_name} to a transport asset for logistics planning.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Select
-              value={assignDialog?.vehicle_id ?? "none"}
-              onValueChange={(value) =>
-                assignDialog &&
-                assignVehicleMutation.mutate({ equipmentId: assignDialog.id, vehicleId: value === "none" ? null : value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select vehicle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Unassigned</SelectItem>
-                {vehicles?.map((vehicle) => (
-                  <SelectItem key={vehicle.id} value={vehicle.id}>
-                    {vehicle.name} ({vehicle.vehicle_type})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Assigning a vehicle helps the gig planner ensure capacity and transport bonuses are applied.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove equipment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete {deleteTarget?.equipment_name} from your stage inventory and any associated maintenance history.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteTarget && removeEquipmentMutation.mutate(deleteTarget.id)}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={Boolean(deleteVehicleTarget)} onOpenChange={(open) => !open && setDeleteVehicleTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove vehicle?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete {deleteVehicleTarget?.name} and unassign any gear currently routed through it.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteVehicleTarget && removeVehicleMutation.mutate(deleteVehicleTarget.id)}
-            >
-              Remove vehicle
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
