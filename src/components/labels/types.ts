@@ -27,7 +27,7 @@ export type LabelWithRelations = LabelRow & {
 export type ContractWithRelations = ContractRow & {
   labels?: Pick<LabelRow, "id" | "name" | "reputation_score" | "headquarters_city"> | null;
   label_roster_slots?: Pick<RosterSlotRow, "id" | "slot_number" | "status"> | null;
-  label_releases?: ReleaseRow[];
+  label_releases?: (ReleaseRow & { label_promotion_campaigns?: PromotionCampaignRow[] })[];
   label_royalty_statements?: RoyaltyStatementRow[];
   label_promotion_campaigns?: PromotionCampaignRow[];
 };
