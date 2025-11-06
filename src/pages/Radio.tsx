@@ -66,6 +66,23 @@ type RadioShowRecord = {
   time_slot: string;
 };
 
+type StationPlaySummary = {
+  total_spins: number;
+  total_listeners: number;
+  total_streams: number;
+  total_revenue: number;
+  total_hype: number;
+};
+
+type StationPlayTimelineEntry = {
+  play_date: string;
+  spins: number;
+  revenue: number;
+  listeners: number;
+  streams: number;
+  hype: number;
+};
+
 export default function Radio() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -225,6 +242,78 @@ export default function Radio() {
     () => aggregatedBandRevenue.reduce((sum, band) => sum + band.total, 0),
     [aggregatedBandRevenue]
   );
+
+  const { data: stationPlaySummary } = useQuery<StationPlaySummary | null>({
+    queryKey: ['station-play-summary', selectedStation],
+    queryFn: async () => {
+      if (!selectedStation) return null;
+
+      const { data, error } = await supabase.rpc('get_radio_station_play_summary', {
+        p_station_id: selectedStation,
+        p_days: 14,
+      });
+
+      if (error) throw error;
+
+      const summary = data && data.length > 0 ? data[0] : null;
+
+      return {
+        total_spins: Number(summary?.total_spins ?? 0),
+        total_listeners: Number(summary?.total_listeners ?? 0),
+        total_streams: Number(summary?.total_streams ?? 0),
+        total_revenue: Number(summary?.total_revenue ?? 0),
+        total_hype: Number(summary?.total_hype ?? 0),
+      };
+    },
+    enabled: !!selectedStation,
+  });
+
+  const { data: stationPlayTimeline } = useQuery<StationPlayTimelineEntry[]>({
+    queryKey: ['station-play-timeline', selectedStation],
+    queryFn: async () => {
+      if (!selectedStation) return [];
+
+      const { data, error } = await supabase.rpc('get_radio_station_play_timeline', {
+        p_station_id: selectedStation,
+        p_days: 14,
+      });
+
+      if (error) throw error;
+      return (data as StationPlayTimelineEntry[]) || [];
+    },
+    enabled: !!selectedStation,
+  });
+
+  const fourteenDayTimeline = useMemo(() => {
+    if (!selectedStation) return [];
+
+    const days: string[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 13; i >= 0; i--) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - i);
+      days.push(day.toISOString().split('T')[0]);
+    }
+
+    const timelineMap = new Map(
+      (stationPlayTimeline || []).map((entry) => [entry.play_date, entry])
+    );
+
+    return days.map((date) => {
+      const entry = timelineMap.get(date);
+
+      return {
+        date,
+        spins: Number(entry?.spins ?? 0),
+        revenue: Number(entry?.revenue ?? 0),
+        listeners: Number(entry?.listeners ?? 0),
+        streams: Number(entry?.streams ?? 0),
+        hype: Number(entry?.hype ?? 0),
+      };
+    });
+  }, [stationPlayTimeline, selectedStation]);
 
   const { data: recordedSongs } = useQuery({
     queryKey: ['recorded-songs', user?.id],
@@ -463,6 +552,8 @@ export default function Radio() {
       queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
       queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
+      queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['station-play-timeline'] });
       queryClient.invalidateQueries({ queryKey: ['top-radio-songs'] });
       toast.success('Your track is now spinning on the airwaves!');
       setSelectedSong('');
@@ -618,6 +709,27 @@ export default function Radio() {
 
                 {selectedStation && (
                   <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+                    {stationPlaySummary && (
+                      <div className="grid gap-3 md:grid-cols-4">
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spins (14 days)</p>
+                          <p className="text-2xl font-semibold">{stationPlaySummary.total_spins.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Listeners reached</p>
+                          <p className="text-2xl font-semibold">{stationPlaySummary.total_listeners.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Streams boosted</p>
+                          <p className="text-2xl font-semibold">{stationPlaySummary.total_streams.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estimated payouts (14 days)</p>
+                          <p className="text-2xl font-semibold">{currencyFormatter.format(stationPlaySummary.total_revenue || 0)}</p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-start gap-3">
                       <PlayCircle className="h-6 w-6 text-primary" />
                       <div>
@@ -689,6 +801,48 @@ export default function Radio() {
                       ) : (
                         <p className="text-xs text-muted-foreground">
                           No radio revenue logged yet today for this station. Keep submitting to earn automated payouts.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="rounded-md border border-primary/20 bg-background/70 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Clock className="h-4 w-4 text-primary" />
+                          14-Day Spin Timeline
+                        </div>
+                        <span className="text-xs text-muted-foreground">Aggregated from all spins in the last 14 days</span>
+                      </div>
+                      {fourteenDayTimeline.length > 0 ? (
+                        <div className="mt-3 grid gap-2 text-xs">
+                          {fourteenDayTimeline.map((day) => (
+                            <div
+                              key={day.date}
+                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
+                            >
+                              <span className="font-medium">
+                                {new Date(day.date).toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-4">
+                                <span className="text-muted-foreground">
+                                  {day.spins} spin{day.spins === 1 ? '' : 's'}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {day.listeners.toLocaleString()} listeners
+                                </span>
+                                <span className="font-semibold">
+                                  {currencyFormatter.format(day.revenue || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          No spins recorded in the last 14 days.
                         </p>
                       )}
                     </div>
