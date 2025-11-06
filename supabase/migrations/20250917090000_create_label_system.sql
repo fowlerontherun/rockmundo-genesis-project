@@ -432,6 +432,17 @@ for insert with check (
   )
 );
 
+create policy label_members_insert_creator_owner on public.label_members
+for insert with check (
+  label_members.role = 'owner'
+  and label_members.user_id = auth.uid()
+  and exists (
+    select 1 from public.labels l
+    where l.id = label_members.label_id
+      and l.created_by = auth.uid()
+  )
+);
+
 create policy label_members_update_owner on public.label_members
 for update using (
   exists (
