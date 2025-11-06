@@ -852,6 +852,54 @@ export type Database = {
           },
         ]
       }
+      stage_equipment_catalog: {
+        Row: {
+          amount_available: number
+          base_condition: string
+          cost: number
+          created_at: string
+          description: string | null
+          equipment_type: string
+          id: string
+          live_impact: string
+          name: string
+          rarity: string
+          size: string
+          updated_at: string
+          weight: string
+        }
+        Insert: {
+          amount_available?: number
+          base_condition: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          equipment_type: string
+          id?: string
+          live_impact: string
+          name: string
+          rarity: string
+          size: string
+          updated_at?: string
+          weight: string
+        }
+        Update: {
+          amount_available?: number
+          base_condition?: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          equipment_type?: string
+          id?: string
+          live_impact?: string
+          name?: string
+          rarity?: string
+          size?: string
+          updated_at?: string
+          weight?: string
+        }
+        Relationships: []
+      }
       bands: {
         Row: {
           artist_name: string | null

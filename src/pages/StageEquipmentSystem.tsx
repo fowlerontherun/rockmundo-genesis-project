@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
+
+type StageEquipmentCatalogRow = Database["public"]["Tables"]["stage_equipment_catalog"]["Row"];
 
 type StageEquipmentRecord = BandStageEquipmentRow & {
   notes?: string | null;
@@ -421,6 +423,147 @@ const StageEquipmentSystem = () => {
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
+  const mapCatalogRowToItem = (row: StageEquipmentCatalogRow): EquipmentCatalogItem => ({
+    id: row.id,
+    name: row.name,
+    type: row.equipment_type as StageEquipmentType,
+    cost: row.cost ?? 0,
+    liveImpact: row.live_impact ?? "",
+    weight: row.weight as WeightCategory,
+    size: row.size as SizeCategory,
+    baseCondition: row.base_condition as ConditionTier,
+    amountAvailable: row.amount_available ?? 0,
+    rarity: row.rarity as RarityTier,
+    description: row.description ?? undefined,
+  });
+
+  const buildCatalogPayload = (item: EquipmentCatalogItem) => ({
+    id: item.id,
+    name: item.name,
+    equipment_type: item.type,
+    cost: item.cost,
+    live_impact: item.liveImpact,
+    weight: item.weight,
+    size: item.size,
+    base_condition: item.baseCondition,
+    amount_available: item.amountAvailable,
+    rarity: item.rarity,
+    description: item.description ?? null,
+  });
+
+  const { data: catalogRows, isLoading: loadingCatalog } = useQuery<StageEquipmentCatalogRow[]>({
+    queryKey: ["stage-equipment-catalog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stage_equipment_catalog")
+        .select("*")
+        .order("equipment_type", { ascending: true })
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    onError: (error: Error) => {
+      console.error("Failed to load stage equipment catalog", error);
+      toast.error(error.message || "Failed to load equipment catalog");
+    },
+  });
+
+  useEffect(() => {
+    if (catalogRows === undefined) return;
+    if (catalogRows.length === 0) {
+      setCatalog([]);
+      return;
+    }
+
+    setCatalog(catalogRows.map((row) => mapCatalogRowToItem(row)));
+  }, [catalogRows]);
+
+  const catalogUpsertMutation = useMutation({
+    mutationFn: async ({ item }: { item: EquipmentCatalogItem }) => {
+      const { data, error } = await supabase
+        .from("stage_equipment_catalog")
+        .upsert(buildCatalogPayload(item), { onConflict: "id" })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as StageEquipmentCatalogRow;
+    },
+    onSuccess: (row) => {
+      const savedItem = mapCatalogRowToItem(row);
+      setCatalog((prev) => {
+        const exists = prev.some((item) => item.id === savedItem.id);
+        if (exists) {
+          return prev.map((item) => (item.id === savedItem.id ? savedItem : item));
+        }
+        return [...prev, savedItem];
+      });
+      setSelectedCatalogItem((prev) => (prev?.id === savedItem.id ? savedItem : prev));
+      queryClient.invalidateQueries({ queryKey: ["stage-equipment-catalog"] });
+    },
+    onError: (error: Error) => {
+      console.error("Failed to persist catalog item", error);
+    },
+  });
+
+  const catalogDeleteMutation = useMutation({
+    mutationFn: async ({ itemId }: { itemId: string }) => {
+      const { error } = await supabase
+        .from("stage_equipment_catalog")
+        .delete()
+        .eq("id", itemId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { itemId }) => {
+      setCatalog((prev) => prev.filter((item) => item.id !== itemId));
+      setSelectedCatalogItem((prev) => {
+        if (prev?.id === itemId) {
+          setPurchaseDialogOpen(false);
+          return null;
+        }
+        return prev;
+      });
+      queryClient.invalidateQueries({ queryKey: ["stage-equipment-catalog"] });
+    },
+    onError: (error: Error) => {
+      console.error("Failed to remove catalog item", error);
+      toast.error(error.message || "Failed to remove catalog item");
+    },
+  });
+
+  const updateCatalogAvailabilityMutation = useMutation({
+    mutationFn: async ({
+      itemId,
+      amountAvailable,
+    }: {
+      itemId: string;
+      amountAvailable: number;
+    }) => {
+      const { data, error } = await supabase
+        .from("stage_equipment_catalog")
+        .update({ amount_available: amountAvailable })
+        .eq("id", itemId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as StageEquipmentCatalogRow;
+    },
+    onSuccess: (row) => {
+      const updatedItem = mapCatalogRowToItem(row);
+      setCatalog((prev) =>
+        prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
+      );
+      queryClient.invalidateQueries({ queryKey: ["stage-equipment-catalog"] });
+    },
+    onError: (error: Error) => {
+      console.error("Failed to update catalog availability", error);
+      toast.error(error.message || "Failed to sync catalog availability");
+    },
+  });
+
   const { data: equipment, isLoading: loadingEquipment } = useQuery<StageEquipmentRecord[]>({
     queryKey: ["band-stage-equipment", bandId],
     queryFn: async () => {
@@ -508,13 +651,23 @@ const StageEquipmentSystem = () => {
     onSuccess: (_, item) => {
       toast.success(`${item.name} added to your stage inventory`);
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
+      let updatedAmount: number | null = null;
       setCatalog((prev) =>
-        prev.map((entry) =>
-          entry.id === item.id
-            ? { ...entry, amountAvailable: Math.max(0, entry.amountAvailable - 1) }
-            : entry,
-        ),
+        prev.map((entry) => {
+          if (entry.id === item.id) {
+            const amountAvailable = Math.max(0, entry.amountAvailable - 1);
+            updatedAmount = amountAvailable;
+            return { ...entry, amountAvailable };
+          }
+          return entry;
+        }),
       );
+      if (updatedAmount !== null) {
+        updateCatalogAvailabilityMutation.mutate({
+          itemId: item.id,
+          amountAvailable: updatedAmount,
+        });
+      }
       setPurchaseDialogOpen(false);
       setSelectedCatalogItem(null);
     },
@@ -636,7 +789,7 @@ const StageEquipmentSystem = () => {
     adminForm.reset(ADMIN_FORM_DEFAULTS);
   };
 
-  const handleRemoveCatalogItem = (itemId: string) => {
+  const handleRemoveCatalogItem = async (itemId: string) => {
     const itemToRemove = catalog.find((item) => item.id === itemId);
     if (!itemToRemove) return;
 
@@ -648,34 +801,36 @@ const StageEquipmentSystem = () => {
           );
     if (!confirmed) return;
 
-    setCatalog((prev) => prev.filter((item) => item.id !== itemId));
-    setSelectedCatalogItem((prev) => {
-      if (prev?.id === itemId) {
-        setPurchaseDialogOpen(false);
-        return null;
+    try {
+      await catalogDeleteMutation.mutateAsync({ itemId });
+      toast.success(`${itemToRemove.name} removed from the catalog`);
+      if (editingItemId === itemId) {
+        cancelEditCatalogItem();
       }
-      return prev;
-    });
-    toast.success(`${itemToRemove.name} removed from the catalog`);
-    if (editingItemId === itemId) {
-      cancelEditCatalogItem();
+    } catch (error) {
+      console.error("Failed to remove catalog item", error);
     }
   };
 
-  const handleSubmitAdmin = adminForm.handleSubmit((values) => {
-    if (editingItemId) {
-      const updatedItem = createCatalogItem(values, editingItemId);
-      setCatalog((prev) => prev.map((item) => (item.id === editingItemId ? updatedItem : item)));
-      setSelectedCatalogItem((prev) => (prev?.id === editingItemId ? updatedItem : prev));
-      toast.success(`${updatedItem.name} updated in the catalog`);
-      cancelEditCatalogItem();
-      return;
-    }
+  const handleSubmitAdmin = adminForm.handleSubmit(async (values) => {
+    const targetId = editingItemId ?? generateId();
+    const item = createCatalogItem(values, targetId);
 
-    const newItem = createCatalogItem(values);
-    setCatalog((prev) => [...prev, newItem]);
-    toast.success(`${newItem.name} added to the catalog`);
-    adminForm.reset(ADMIN_FORM_DEFAULTS);
+    try {
+      const savedRow = await catalogUpsertMutation.mutateAsync({ item });
+      const savedItem = mapCatalogRowToItem(savedRow);
+
+      if (editingItemId) {
+        toast.success(`${savedItem.name} updated in the catalog`);
+        cancelEditCatalogItem();
+      } else {
+        toast.success(`${savedItem.name} added to the catalog`);
+        adminForm.reset(ADMIN_FORM_DEFAULTS);
+      }
+    } catch (error) {
+      console.error("Failed to save catalog item", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save catalog item");
+    }
   });
 
   const openPurchaseDialog = (item: EquipmentCatalogItem) => {
@@ -683,7 +838,7 @@ const StageEquipmentSystem = () => {
     setPurchaseDialogOpen(true);
   };
 
-  if (loadingBand || loadingEquipment || loadingRole) {
+  if (loadingBand || loadingEquipment || loadingRole || loadingCatalog) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
@@ -1210,7 +1365,7 @@ const StageEquipmentSystem = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="text-destructive hover:text-destructive"
-                                onClick={() => handleRemoveCatalogItem(item.id)}
+                                onClick={() => void handleRemoveCatalogItem(item.id)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" /> Remove
                               </Button>
