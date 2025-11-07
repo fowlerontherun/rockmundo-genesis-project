@@ -38,6 +38,7 @@ import {
   LogOut,
   Disc,
   Wrench,
+  Clapperboard,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -103,6 +104,7 @@ export function AppSidebar() {
         { icon: Users, label: "Band", path: "/band" },
         { icon: Megaphone, label: "PR", path: "/pr" },
         { icon: Share2, label: "Social", path: "/social" },
+        { icon: Clapperboard, label: "Media", path: "/media" },
       ],
     },
     {
