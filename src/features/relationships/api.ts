@@ -381,10 +381,16 @@ export async function fetchBandMemberships(profileId: string) {
 }
 
 export async function fetchActivityFeedForProfile(profileId: string, limit = 30) {
+  const profile = await fetchProfileById(profileId);
+
+  if (!profile?.user_id) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from("activity_feed")
     .select("id, activity_type, message, metadata, created_at")
-    .eq("user_id", profileId)
+    .eq("user_id", profile.user_id)
     .order("created_at", { ascending: false })
     .limit(limit);
 
