@@ -26,7 +26,6 @@ import type {
   FestivalWeatherCondition,
 } from "@/data/festivals";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1054,6 +1053,42 @@ export default function Festivals() {
                             <span>{entry.label}</span>
                             <span>{currencyFormatter.format(entry.value)}</span>
                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="spend" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-3">
+              {Object.entries(pricingByCategory).map(([category, tiers]) => (
+                <Card key={category} className="h-full">
+                  <CardHeader>
+                    <CardTitle className="capitalize">{category}</CardTitle>
+                    <CardDescription>Per-head spend assumptions with attach modifiers.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tier</TableHead>
+                          <TableHead className="text-right">Spend/head</TableHead>
+                          <TableHead className="text-right">Attach Δ</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tiers.map((tier) => (
+                          <TableRow key={`${category}-${tier.tier}`}>
+                            <TableCell className="capitalize font-medium">{tier.tier}</TableCell>
+                            <TableCell className="text-right">{currencyFormatter.format(tier.spendPerHead)}</TableCell>
+                            <TableCell className="text-right">
+                              {tier.attachRateModifier === 1
+                                ? "±0%"
+                                : `${tier.attachRateModifier > 1 ? "+" : ""}${Math.round((tier.attachRateModifier - 1) * 100)}%`}
+                            </TableCell>
+                          </TableRow>
                         ))}
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">
