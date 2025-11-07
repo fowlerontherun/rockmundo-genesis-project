@@ -7,16 +7,46 @@ import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles } from "lucide-
 import { format } from "date-fns";
 import { useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
+import type { Database } from "@/lib/supabase-types";
 
 interface GigHistoryTabProps {
   bandId: string;
 }
 
+type GigOutcomeRow = Database['public']['Tables']['gig_outcomes']['Row'];
+type GigRow = Database['public']['Tables']['gigs']['Row'];
+type VenueRow = Database['public']['Tables']['venues']['Row'];
+type SetlistRow = Database['public']['Tables']['setlists']['Row'];
+type GigSongPerformanceRow = Database['public']['Tables']['gig_song_performances']['Row'] & {
+  songs: Pick<Database['public']['Tables']['songs']['Row'], 'title' | 'genre' | 'duration_seconds'> | null;
+};
+
+
+type GigHistoryOutcome = GigOutcomeRow & {
+  gigs: (GigRow & {
+    venues: Pick<VenueRow, 'name' | 'capacity' | 'location'> | null;
+    setlists: Pick<SetlistRow, 'name'> | null;
+  }) | null;
+};
+
+type GigOutcomeWithDetails = GigHistoryOutcome & {
+  gig_song_performances: GigSongPerformanceRow[];
+  breakdown_data: {
+    equipment_quality: number;
+    crew_skill: number;
+    band_chemistry: number;
+    member_skills: number;
+    merch_items_sold: number;
+  };
+  chemistry_impact: number;
+  equipment_wear_cost: number;
+};
+
 export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
-  const [selectedOutcome, setSelectedOutcome] = useState<any>(null);
+  const [selectedOutcome, setSelectedOutcome] = useState<GigOutcomeWithDetails | null>(null);
   const [showReport, setShowReport] = useState(false);
 
-  const { data: gigHistory, isLoading } = useQuery({
+  const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
     queryKey: ['gig-history', bandId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,16 +60,27 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           )
         `)
         .eq('gigs.band_id', bandId)
-        .not('completed_at', 'is', null)
+        .eq('gigs.status', 'completed')
+        .order('completed_at', { ascending: false, foreignTable: 'gigs' })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return (data ?? []) as GigHistoryOutcome[];
     },
     refetchInterval: 5000, // Refetch every 5 seconds to catch newly completed gigs
   });
 
-  const handleViewDetails = async (outcome: any) => {
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-destructive">
+          Failed to load gig history. Please try again shortly.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleViewDetails = async (outcome: GigHistoryOutcome) => {
     // Fetch song performances for this gig
     const { data: songPerfs } = await supabase
       .from('gig_song_performances')
@@ -49,7 +90,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
 
     setSelectedOutcome({
       ...outcome,
-      gig_song_performances: songPerfs || [],
+      gig_song_performances: (songPerfs ?? []) as GigSongPerformanceRow[],
       breakdown_data: {
         equipment_quality: outcome.equipment_quality_avg || 0,
         crew_skill: outcome.crew_skill_avg || 0,
@@ -67,7 +108,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
     return <div className="flex justify-center p-8">Loading gig history...</div>;
   }
 
-  if (!gigHistory || gigHistory.length === 0) {
+  if (gigHistory.length === 0) {
     return (
       <Card>
         <CardContent className="p-8 text-center text-muted-foreground">
@@ -77,8 +118,12 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
     );
   }
 
-  const totalGigScore = gigHistory.reduce((sum: number, outcome: any) => sum + Number(outcome.overall_rating || 0), 0);
-  const averageGigScore = totalGigScore / gigHistory.length;
+  const totalGigScore = gigHistory.reduce((sum: number, outcome: GigHistoryOutcome) => {
+    const numericRating = Number(outcome.overall_rating ?? 0);
+    const rating = Number.isFinite(numericRating) ? numericRating : 0;
+    return sum + rating;
+  }, 0);
+  const averageGigScore = gigHistory.length > 0 ? totalGigScore / gigHistory.length : 0;
 
   return (
     <>
@@ -100,7 +145,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
           </CardContent>
         </Card>
 
-        {gigHistory.map((outcome: any) => {
+        {gigHistory.map((outcome: GigHistoryOutcome) => {
           const gig = outcome.gigs;
           const venue = gig?.venues;
           const qualityInputs = [
@@ -190,21 +235,24 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
             </Card>
           );
         })}
-      </div>
+        </div>
 
-      {selectedOutcome && (
-        <GigOutcomeReport
-          isOpen={showReport}
-          onClose={() => {
-            setShowReport(false);
-            setSelectedOutcome(null);
-          }}
-          outcome={selectedOutcome}
-          venueName={selectedOutcome.gigs?.venues?.name || 'Unknown Venue'}
-          venueCapacity={selectedOutcome.gigs?.venues?.capacity || 0}
-          songs={[]}
-        />
-      )}
-    </>
-  );
-};
+        {selectedOutcome && (
+          <GigOutcomeReport
+            isOpen={showReport}
+            onClose={() => {
+              setShowReport(false);
+              setSelectedOutcome(null);
+            }}
+            outcome={selectedOutcome}
+            venueName={selectedOutcome.gigs?.venues?.name || 'Unknown Venue'}
+            venueCapacity={selectedOutcome.gigs?.venues?.capacity || 0}
+            songs={selectedOutcome.gig_song_performances.map((performance) => ({
+              id: performance.song_id || performance.id,
+              title: performance.songs?.title || 'Unknown Song'
+            }))}
+          />
+        )}
+      </>
+    );
+  };
