@@ -248,14 +248,15 @@ export default function Radio() {
     queryFn: async () => {
       if (!selectedStation) return null;
 
-      const { data, error } = await supabase.rpc('get_radio_station_play_summary', {
+      const { data, error } = await supabase.rpc('get_radio_station_play_summary' as any, {
         p_station_id: selectedStation,
         p_days: 14,
       });
 
       if (error) throw error;
 
-      const summary = data && data.length > 0 ? data[0] : null;
+      const results = Array.isArray(data) ? data : [];
+      const summary = results.length > 0 ? results[0] : null;
 
       return {
         total_spins: Number(summary?.total_spins ?? 0),
@@ -273,7 +274,7 @@ export default function Radio() {
     queryFn: async () => {
       if (!selectedStation) return [];
 
-      const { data, error } = await supabase.rpc('get_radio_station_play_timeline', {
+      const { data, error } = await supabase.rpc('get_radio_station_play_timeline' as any, {
         p_station_id: selectedStation,
         p_days: 14,
       });

@@ -84,7 +84,7 @@ const EquipmentStore = () => {
       const { data, error } = await supabase
         .from("player_equipment")
         .select(
-          `id, condition, is_equipped, created_at, equipment:equipment_items ( id, name, category, subcategory, price, rarity )`
+          `id, condition, is_equipped, created_at, equipment:equipment_items!equipment_id ( id, name, category, subcategory, price, rarity )`
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -97,7 +97,7 @@ const EquipmentStore = () => {
 
   const purchaseMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await supabase.rpc("purchase_equipment_item", { p_equipment_id: itemId });
+      const { error } = await supabase.rpc("purchase_equipment_item" as any, { p_equipment_id: itemId });
       if (error) throw error;
     },
     onSuccess: async () => {

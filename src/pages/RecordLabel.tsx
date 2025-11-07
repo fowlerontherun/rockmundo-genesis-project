@@ -67,11 +67,12 @@ const RecordLabel = () => {
 
       memberships?.forEach((membership) => {
         if (!membership.band_id || !membership.bands) return;
+        const band = membership.bands as any;
         entities.push({
           id: membership.band_id,
           bandId: membership.band_id,
-          name: membership.bands.name,
-          genre: membership.bands.genre,
+          name: band.name,
+          genre: band.genre,
           role: membership.role,
           type: "band",
         });

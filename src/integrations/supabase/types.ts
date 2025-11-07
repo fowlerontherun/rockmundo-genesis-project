@@ -901,43 +901,52 @@ export type Database = {
         Row: {
           band_id: string
           condition: string
+          condition_rating: number | null
           created_at: string
           equipment_name: string
           equipment_type: string
           id: string
+          is_active: boolean | null
           notes: string | null
           power_draw: number | null
           purchase_cost: number | null
           purchase_date: string | null
           quality_rating: number
+          size_units: number | null
           updated_at: string
         }
         Insert: {
           band_id: string
           condition?: string
+          condition_rating?: number | null
           created_at?: string
           equipment_name: string
           equipment_type: string
           id?: string
+          is_active?: boolean | null
           notes?: string | null
           power_draw?: number | null
           purchase_cost?: number | null
           purchase_date?: string | null
           quality_rating?: number
+          size_units?: number | null
           updated_at?: string
         }
         Update: {
           band_id?: string
           condition?: string
+          condition_rating?: number | null
           created_at?: string
           equipment_name?: string
           equipment_type?: string
           id?: string
+          is_active?: boolean | null
           notes?: string | null
           power_draw?: number | null
           purchase_cost?: number | null
           purchase_date?: string | null
           quality_rating?: number
+          size_units?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1541,6 +1550,7 @@ export type Database = {
           price: number
           rarity: string | null
           stat_boosts: Json | null
+          stock: number | null
           subcategory: string | null
         }
         Insert: {
@@ -1553,6 +1563,7 @@ export type Database = {
           price: number
           rarity?: string | null
           stat_boosts?: Json | null
+          stock?: number | null
           subcategory?: string | null
         }
         Update: {
@@ -1565,6 +1576,7 @@ export type Database = {
           price?: number
           rarity?: string | null
           stat_boosts?: Json | null
+          stock?: number | null
           subcategory?: string | null
         }
         Relationships: []
