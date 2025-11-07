@@ -1,4 +1,4 @@
-import { Bell, Loader2, MessageSquare, TrendingUp } from "lucide-react";
+import { Bell, Loader2, MessageSquare, TrendingUp, Video } from "lucide-react";
 
 import {
   Card,
@@ -16,6 +16,7 @@ import { TwaaterFeed } from "@/components/twaater/TwaaterFeed";
 import { TwaaterAccountSetup } from "@/components/twaater/TwaaterAccountSetup";
 import { TwaaterMentionsFeed } from "@/components/twaater/TwaaterMentionsFeed";
 import { useDailyTwaatXP } from "@/hooks/useDailyTwaatXP";
+import { DikCokExperience } from "@/components/dikcok/DikCokExperience";
 
 const SocialMedia = () => {
   const { profile } = useGameData();
@@ -48,7 +49,7 @@ const SocialMedia = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Social Media</h1>
           <p className="text-muted-foreground">
-            Share updates with fans and grow your following on Twaater.
+            Share updates with fans and grow your following on Twaater or craft viral clips on DikCok.
           </p>
         </div>
       </div>
@@ -57,6 +58,9 @@ const SocialMedia = () => {
         <TabsList>
           <TabsTrigger value="twaater" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" /> Twaater
+          </TabsTrigger>
+          <TabsTrigger value="dikcok" className="flex items-center gap-2">
+            <Video className="h-4 w-4" /> DikCok
           </TabsTrigger>
         </TabsList>
 
@@ -186,6 +190,10 @@ const SocialMedia = () => {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="dikcok" className="space-y-6">
+          <DikCokExperience profile={profile} />
         </TabsContent>
       </Tabs>
     </div>
