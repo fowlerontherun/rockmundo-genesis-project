@@ -26,7 +26,6 @@ serve(async (req) => {
         user_id,
         release_type,
         bands(fame, popularity, chemistry_level),
-        profiles!releases_user_id_fkey(fame, popularity),
         release_formats(id, format_type, unit_price, stock_quantity),
         release_songs(song:songs(quality_score))
       `)
@@ -34,11 +33,34 @@ serve(async (req) => {
 
     if (releasesError) throw releasesError;
 
+    const userIds = Array.from(
+      new Set((releases || []).map((release) => release.user_id).filter(Boolean))
+    );
+
+    let profilesMap = new Map<string, { fame?: number; popularity?: number }>();
+
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabaseClient
+        .from("profiles")
+        .select("id, fame, popularity")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      profilesMap = new Map(
+        (profiles || []).map((profile) => [profile.id as string, profile])
+      );
+    }
+
     let totalSales = 0;
 
     for (const release of releases || []) {
-      const artistFame = release.bands?.[0]?.fame || release.profiles?.[0]?.fame || 0;
-      const artistPopularity = release.bands?.[0]?.popularity || release.profiles?.[0]?.popularity || 0;
+      const profile = release.user_id
+        ? profilesMap.get(release.user_id as string)
+        : undefined;
+
+      const artistFame = release.bands?.[0]?.fame || profile?.fame || 0;
+      const artistPopularity = release.bands?.[0]?.popularity || profile?.popularity || 0;
       
       // Calculate average song quality
       const avgQuality = release.release_songs?.reduce((sum: number, rs: any) => 
