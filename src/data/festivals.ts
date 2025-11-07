@@ -607,3 +607,591 @@ export const calculators: FestivalCalculatorSummary[] = [
     keyInputs: ["last_year_profit", "last_year_score", "sentiment_trends", "sponsor_fit_history"],
   },
 ];
+
+export type FestivalPricingPolicy = "cheap" | "standard" | "pricey";
+
+export type FestivalWeatherCondition = "sun" | "cloud" | "rain" | "storm";
+
+export interface FestivalDayConfig {
+  weather: FestivalWeatherCondition;
+}
+
+export interface FestivalSimulationInput {
+  ownerType: FestivalOwnerType;
+  sizeTierId: FestivalSizeTier["id"];
+  days: number;
+  actsPerDay: number;
+  ticketPrice: number;
+  pricingPolicy: FestivalPricingPolicy;
+  hype: number; // 0-1
+  lineupQuality: number; // 0-1
+  priceSentiment: number; // -0.25 to 0.25
+  sponsorSentiment: number; // -0.15 to 0.15
+  performanceSentiment: number; // -0.12 to 0.12
+  sponsorFit: number; // -100 to 100
+  exclusiveSponsor: boolean;
+  weatherMitigation: boolean;
+  foodTier: FestivalPricingTier["tier"];
+  drinkTier: FestivalPricingTier["tier"];
+  merchTier: FestivalPricingTier["tier"];
+  daysConfig: FestivalDayConfig[];
+}
+
+export interface FestivalDemandBreakdown {
+  base: number;
+  hype: number;
+  lineup: number;
+  sentiment: number;
+  weather: number;
+  price: number;
+}
+
+export interface FestivalDayResult {
+  dayIndex: number;
+  weather: FestivalWeatherCondition;
+  demandIndex: number;
+  capacityUtilisation: number;
+  attendees: number;
+  ticketRevenue: number;
+  demandBreakdown: FestivalDemandBreakdown;
+}
+
+export interface FestivalRevenueTotals {
+  tickets: number;
+  food: number;
+  drink: number;
+  merch: number;
+  sponsors: number;
+  other: number;
+  total: number;
+}
+
+export interface FestivalExpenseTotals {
+  artistFees: number;
+  operations: number;
+  sponsorContra: number;
+  fnbCogs: number;
+  merchCogs: number;
+  misc: number;
+  total: number;
+}
+
+export interface FestivalScoreBreakdownEntry {
+  value: number;
+  z: number;
+}
+
+export interface FestivalScoreBreakdown {
+  profitMargin: FestivalScoreBreakdownEntry;
+  attendanceRate: FestivalScoreBreakdownEntry;
+  artistSatisfaction: FestivalScoreBreakdownEntry;
+  visitorSentiment: FestivalScoreBreakdownEntry;
+}
+
+export interface FestivalNextYearPreview {
+  suggestedTicketPrice: number;
+  suggestedLineupQuality: number;
+  focus: string;
+  sponsorStrategy: string;
+  attendanceNote: string;
+}
+
+export interface FestivalSlotFeeSummary {
+  counts: {
+    headline: number;
+    major: number;
+    support: number;
+    opener: number;
+  };
+  headlinerFee: number;
+  majorFee: number;
+  supportFee: number;
+  openerFee: number;
+  perDay: number;
+  total: number;
+}
+
+export interface FestivalSimulationResult {
+  tier: FestivalSizeTier;
+  costProfile: FestivalCostProfile;
+  license: FestivalLicenseDetail | null;
+  ownerType: FestivalOwnerType;
+  ticketPrice: number;
+  pricingPolicy: FestivalPricingPolicy;
+  demand: FestivalDayResult[];
+  totals: {
+    attendance: number;
+    attendanceRate: number;
+    revenue: FestivalRevenueTotals;
+    expenses: FestivalExpenseTotals;
+    profit: number;
+    margin: number;
+  };
+  sentiments: {
+    price: number;
+    sponsor: number;
+    performance: number;
+    visitor: number;
+    artist: number;
+  };
+  sponsor: {
+    income: number;
+    contra: number;
+    fit: number;
+    exclusive: boolean;
+  };
+  lineup: FestivalSlotFeeSummary;
+  feeGuidance: {
+    low: number;
+    high: number;
+    attribution: number;
+  };
+  festivalScore: number;
+  scoreBreakdown: FestivalScoreBreakdown;
+  nextYearPreview: FestivalNextYearPreview;
+}
+
+export const weatherOptions: Array<{
+  value: FestivalWeatherCondition;
+  label: string;
+  impact: number;
+  description: string;
+}> = [
+  { value: "sun", label: "Sunny", impact: 0.06, description: "Clear skies and warmth boost attendance by +6%." },
+  { value: "cloud", label: "Cloudy", impact: 0, description: "Neutral baseline with standard sentiment." },
+  { value: "rain", label: "Rain", impact: -0.08, description: "Wet weather suppresses casual attendance unless mitigated." },
+  { value: "storm", label: "Storm", impact: -0.15, description: "Severe conditions drive cancellations without heavy cover." },
+];
+
+const WEATHER_MITIGATION_BUFFER = 0.04;
+
+const WEATHER_IMPACT: Record<FestivalWeatherCondition, number> = {
+  sun: 0.06,
+  cloud: 0,
+  rain: -0.08,
+  storm: -0.15,
+};
+
+const MIN_HEADLINER_FEE_BY_TIER: Record<FestivalSizeTier["id"], [number, number]> = {
+  local: [500, 2000],
+  small: [10000, 40000],
+  medium: [60000, 250000],
+  large: [250000, 1200000],
+};
+
+const SLOT_FEE_MULTIPLIERS = {
+  major: 0.65,
+  support: 0.45,
+  opener: 0.25,
+};
+
+const SPONSOR_ECONOMICS: Record<
+  FestivalSizeTier["id"],
+  { base: number; variance: number; exclusiveBonus: number; contraRate: number }
+> = {
+  local: { base: 4000, variance: 2200, exclusiveBonus: 0.12, contraRate: 0.16 },
+  small: { base: 30000, variance: 20000, exclusiveBonus: 0.15, contraRate: 0.19 },
+  medium: { base: 120000, variance: 85000, exclusiveBonus: 0.18, contraRate: 0.22 },
+  large: { base: 380000, variance: 260000, exclusiveBonus: 0.22, contraRate: 0.25 },
+};
+
+const BASELINE_SCORE_STATS = {
+  profitMargin: { mean: 0.12, std: 0.08 },
+  attendanceRate: { mean: 0.8, std: 0.1 },
+  artistSatisfaction: { mean: 0.68, std: 0.12 },
+  visitorSentiment: { mean: 0.65, std: 0.1 },
+};
+
+const FOOD_COGS = 0.45;
+const DRINK_COGS = 0.35;
+const MERCH_COGS = 0.3;
+const HEADLINER_ATTRIBUTION = 0.28;
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const lerp = (min: number, max: number, t: number) => min + (max - min) * t;
+
+export function getFestivalSizeTierById(id: FestivalSizeTier["id"]): FestivalSizeTier {
+  return festivalSizeTiers.find((tier) => tier.id === id) ?? festivalSizeTiers[0];
+}
+
+export function getFestivalCostProfileByTier(id: FestivalSizeTier["id"]): FestivalCostProfile {
+  return festivalCostProfiles.find((profile) => profile.sizeTier === id) ?? festivalCostProfiles[0];
+}
+
+export function getFestivalLicenseByTier(id: FestivalSizeTier["id"]): FestivalLicenseDetail | null {
+  return festivalLicenseDetails.find((license) => license.sizeTier === id) ?? null;
+}
+
+export function getPricingTier(category: FestivalPricingTier["category"], tier: FestivalPricingTier["tier"]): FestivalPricingTier {
+  return (
+    pricingTiers.find((entry) => entry.category === category && entry.tier === tier) ||
+    pricingTiers.find((entry) => entry.category === category && entry.tier === "standard")!
+  );
+}
+
+const computePricingPolicy = (
+  ticketPrice: number,
+  [recommendedLow, recommendedHigh]: [number, number],
+): FestivalPricingPolicy => {
+  if (ticketPrice <= recommendedLow) {
+    return "cheap";
+  }
+  if (ticketPrice >= recommendedHigh) {
+    return "pricey";
+  }
+  return "standard";
+};
+
+const computeFPrice = (ticketPrice: number, recommendedMid: number) => {
+  if (recommendedMid <= 0) {
+    return 0;
+  }
+  const delta = (ticketPrice - recommendedMid) / recommendedMid;
+  if (delta <= 0) {
+    return 0.1 * Math.min(Math.abs(delta), 0.4);
+  }
+  return -0.18 * Math.min(delta, 0.4);
+};
+
+const calculateSlotCounts = (actsPerDay: number) => {
+  if (actsPerDay <= 0) {
+    return { headline: 0, major: 0, support: 0, opener: 0 };
+  }
+  const headline = 1;
+  const remaining = Math.max(actsPerDay - headline, 0);
+  const major = Math.min(2, remaining);
+  const support = Math.min(2, Math.max(remaining - major, 0));
+  const opener = Math.max(remaining - major - support, 0);
+  return { headline, major, support, opener };
+};
+
+const calculateArtistFeeSummary = (
+  tierId: FestivalSizeTier["id"],
+  lineupQuality: number,
+  actsPerDay: number,
+  days: number,
+): FestivalSlotFeeSummary => {
+  const range = MIN_HEADLINER_FEE_BY_TIER[tierId];
+  const quality = clamp(lineupQuality, 0, 1);
+  const scaledQuality = Math.pow(quality, 0.95);
+  const headlinerFee = lerp(range[0], range[1], scaledQuality);
+  const majorFee = headlinerFee * SLOT_FEE_MULTIPLIERS.major;
+  const supportFee = headlinerFee * SLOT_FEE_MULTIPLIERS.support;
+  const openerFee = headlinerFee * SLOT_FEE_MULTIPLIERS.opener;
+  const counts = calculateSlotCounts(actsPerDay);
+  const perDay =
+    headlinerFee * counts.headline +
+    majorFee * counts.major +
+    supportFee * counts.support +
+    openerFee * counts.opener;
+  return {
+    counts,
+    headlinerFee,
+    majorFee,
+    supportFee,
+    openerFee,
+    perDay,
+    total: perDay * days,
+  };
+};
+
+const computeZScore = (value: number, mean: number, std: number) => {
+  if (std === 0) {
+    return 0;
+  }
+  return (value - mean) / std;
+};
+
+const computeFestivalScore = (
+  profitMargin: number,
+  attendanceRate: number,
+  artistSatisfaction: number,
+  visitorSentiment: number,
+) => {
+  const zProfit = computeZScore(profitMargin, BASELINE_SCORE_STATS.profitMargin.mean, BASELINE_SCORE_STATS.profitMargin.std);
+  const zAttendance = computeZScore(
+    attendanceRate,
+    BASELINE_SCORE_STATS.attendanceRate.mean,
+    BASELINE_SCORE_STATS.attendanceRate.std,
+  );
+  const zArtist = computeZScore(
+    artistSatisfaction,
+    BASELINE_SCORE_STATS.artistSatisfaction.mean,
+    BASELINE_SCORE_STATS.artistSatisfaction.std,
+  );
+  const zVisitor = computeZScore(
+    visitorSentiment,
+    BASELINE_SCORE_STATS.visitorSentiment.mean,
+    BASELINE_SCORE_STATS.visitorSentiment.std,
+  );
+  const blended = 0.35 * zProfit + 0.35 * zAttendance + 0.15 * zArtist + 0.15 * zVisitor;
+  return {
+    score: clamp(50 + blended * 12, 0, 100),
+    breakdown: {
+      profitMargin: { value: profitMargin, z: zProfit },
+      attendanceRate: { value: attendanceRate, z: zAttendance },
+      artistSatisfaction: { value: artistSatisfaction, z: zArtist },
+      visitorSentiment: { value: visitorSentiment, z: zVisitor },
+    } as FestivalScoreBreakdown,
+  };
+};
+
+const computeNextYearPreview = (
+  ticketPrice: number,
+  attendanceRate: number,
+  [recommendedLow, recommendedHigh]: [number, number],
+  artistSatisfaction: number,
+  visitorSentiment: number,
+) => {
+  const targetMid = (recommendedLow + recommendedHigh) / 2;
+  const priceAdjustment =
+    attendanceRate > 1.02
+      ? Math.min(0.15, (attendanceRate - 1) * 0.45)
+      : attendanceRate < 0.78
+        ? Math.max(-0.2, (attendanceRate - 0.85) * 0.55)
+        : 0;
+  const suggestedTicketPrice = Math.round(
+    clamp(ticketPrice * (1 + priceAdjustment), recommendedLow * 0.7, recommendedHigh * 1.3),
+  );
+  const suggestedLineupQuality = clamp(artistSatisfaction + (0.72 - artistSatisfaction) * 0.4, 0.45, 0.95);
+  const focus =
+    attendanceRate > 1
+      ? "Demand exceeded capacity—consider adding a day or nudging price upward."
+      : attendanceRate < 0.78
+        ? "Attendance lagged—tighten pricing, boost hype beats, or shrink scope."
+        : "Healthy attendance—refine sponsor mix and keep hype cadence steady.";
+  const sponsorStrategy =
+    visitorSentiment < 0.55
+      ? "Swap out low-fit sponsors and reinvest in experiential activations to repair sentiment."
+      : visitorSentiment > 0.75
+        ? "Lock exclusive partners early; leverage high sentiment for premium cash deals."
+        : "Blend regional sponsors with community programs to hold sentiment while scaling cash.";
+  const attendanceNote =
+    attendanceRate >= 1.05
+      ? "Sell-through surpassed 105% of base capacity—upgrade infrastructure or shift pricing."
+      : attendanceRate <= 0.7
+        ? "Less than 70% of capacity filled—marketing uplift and ticket adjustments recommended."
+        : "Capacity usage within target band—monitor weather variance for next season.";
+  return {
+    suggestedTicketPrice,
+    suggestedLineupQuality,
+    focus,
+    sponsorStrategy,
+    attendanceNote,
+  } satisfies FestivalNextYearPreview;
+};
+
+export const defaultFestivalSimulationInput: FestivalSimulationInput = {
+  ownerType: "player",
+  sizeTierId: "small",
+  days: 2,
+  actsPerDay: 6,
+  ticketPrice: 32,
+  pricingPolicy: "standard",
+  hype: 0.55,
+  lineupQuality: 0.62,
+  priceSentiment: 0,
+  sponsorSentiment: 0.05,
+  performanceSentiment: 0.03,
+  sponsorFit: 40,
+  exclusiveSponsor: true,
+  weatherMitigation: true,
+  foodTier: "standard",
+  drinkTier: "standard",
+  merchTier: "standard",
+  daysConfig: [{ weather: "cloud" }, { weather: "sun" }],
+};
+
+export function simulateFestival(input: FestivalSimulationInput): FestivalSimulationResult {
+  const tier = getFestivalSizeTierById(input.sizeTierId);
+  const costProfile = getFestivalCostProfileByTier(tier.id);
+  const license = getFestivalLicenseByTier(tier.id);
+
+  const days = clamp(input.days, tier.dayRange[0], tier.dayRange[1]);
+  const actsPerDay = clamp(input.actsPerDay, Math.max(3, tier.baseActsPerDay - 2), Math.max(tier.baseActsPerDay + 4, 6));
+  const recommendedRange = tier.recommendedTicketPrice;
+  const recommendedMid = (recommendedRange[0] + recommendedRange[1]) / 2;
+  const minTicket = Math.max(5, recommendedRange[0] * 0.6);
+  const maxTicket = recommendedRange[1] * 1.4;
+  const ticketPrice = clamp(input.ticketPrice, minTicket, maxTicket);
+  const pricingPolicy = computePricingPolicy(ticketPrice, recommendedRange);
+
+  const hype = clamp(input.hype, 0, 1);
+  const lineupQuality = clamp(input.lineupQuality, 0, 1);
+  const priceSentiment = clamp(input.priceSentiment, -0.25, 0.25);
+  const sponsorSentiment = clamp(input.sponsorSentiment, -0.15, 0.15);
+  const performanceSentiment = clamp(input.performanceSentiment, -0.12, 0.12);
+  const sponsorFit = clamp(input.sponsorFit, -100, 100);
+
+  const sentiment = clamp(priceSentiment + sponsorSentiment + performanceSentiment, -0.3, 0.25);
+  const hypeTerm = 0.35 * hype;
+  const lineupTerm = 0.45 * lineupQuality;
+  const priceTerm = computeFPrice(ticketPrice, recommendedMid);
+  const baseAnchor = 0.35;
+
+  const daysConfig: FestivalDayConfig[] = Array.from({ length: days }, (_, index) => {
+    const existing = input.daysConfig[index];
+    return existing ? { weather: existing.weather } : { weather: "cloud" };
+  });
+
+  const dayResults: FestivalDayResult[] = daysConfig.map((day, index) => {
+    const weatherImpact =
+      WEATHER_IMPACT[day.weather] +
+      (input.weatherMitigation && (day.weather === "rain" || day.weather === "storm") ? WEATHER_MITIGATION_BUFFER : 0);
+    const demandIndex = clamp(baseAnchor + hypeTerm + lineupTerm + sentiment + weatherImpact + priceTerm, 0, 1.15);
+    const attendees = Math.round(tier.capacityCap * demandIndex);
+    const ticketRevenue = Math.round(attendees * ticketPrice);
+    const capacityUtilisation = tier.capacityCap > 0 ? attendees / tier.capacityCap : 0;
+    return {
+      dayIndex: index + 1,
+      weather: day.weather,
+      demandIndex,
+      capacityUtilisation,
+      attendees,
+      ticketRevenue,
+      demandBreakdown: {
+        base: baseAnchor,
+        hype: hypeTerm,
+        lineup: lineupTerm,
+        sentiment,
+        weather: weatherImpact,
+        price: priceTerm,
+      },
+    };
+  });
+
+  const totalAttendance = dayResults.reduce((sum, day) => sum + day.attendees, 0);
+  const averageAttendance = days > 0 ? totalAttendance / days : 0;
+  const ticketsGross = dayResults.reduce((sum, day) => sum + day.ticketRevenue, 0);
+
+  const foodTier = getPricingTier("food", input.foodTier);
+  const drinkTier = getPricingTier("drink", input.drinkTier);
+  const merchTier = getPricingTier("merch", input.merchTier);
+
+  const foodGross = Math.round(totalAttendance * foodTier.spendPerHead * foodTier.attachRateModifier);
+  const drinkGross = Math.round(totalAttendance * drinkTier.spendPerHead * drinkTier.attachRateModifier);
+  const merchGross = Math.round(totalAttendance * merchTier.spendPerHead * merchTier.attachRateModifier);
+
+  const sponsorConfig = SPONSOR_ECONOMICS[tier.id];
+  const sponsorFitRatio = sponsorFit / 100;
+  let sponsorIncome = sponsorConfig.base + sponsorConfig.variance * sponsorFitRatio;
+  if (input.exclusiveSponsor) {
+    sponsorIncome += sponsorConfig.base * sponsorConfig.exclusiveBonus;
+  }
+  sponsorIncome = Math.max(0, Math.round(sponsorIncome));
+  const sponsorContra = Math.round(sponsorIncome * sponsorConfig.contraRate);
+
+  const otherIncome = 0;
+  const totalRevenue = ticketsGross + foodGross + drinkGross + merchGross + sponsorIncome + otherIncome;
+
+  const foodCogs = Math.round(foodGross * FOOD_COGS);
+  const drinkCogs = Math.round(drinkGross * DRINK_COGS);
+  const merchCogs = Math.round(merchGross * MERCH_COGS);
+
+  const slotFeeSummary = calculateArtistFeeSummary(tier.id, lineupQuality, actsPerDay, days);
+
+  const operationsBase =
+    costProfile.oneOffStaffing +
+    costProfile.securityPerDay * days +
+    costProfile.insuranceFlat +
+    costProfile.stagePerDay * days +
+    costProfile.wastePermits +
+    costProfile.marketingFlat;
+  const operations = Math.round(operationsBase - sponsorContra);
+  const artistFees = Math.round(slotFeeSummary.total);
+  const licenseCost = input.ownerType === "player" && license ? license.annualRenewal : 0;
+
+  const totalExpenses = artistFees + operations + foodCogs + drinkCogs + merchCogs + licenseCost;
+  const profit = totalRevenue - totalExpenses;
+  const margin = totalRevenue > 0 ? profit / totalRevenue : 0;
+  const attendanceRate = tier.capacityCap > 0 ? totalAttendance / (tier.capacityCap * days) : 0;
+
+  const artistSatisfaction = clamp(0.48 + lineupQuality * 0.42 + performanceSentiment * 1.2, 0, 1);
+  const visitorSentiment = clamp(
+    0.56 + priceSentiment * 0.6 + sponsorSentiment * 0.8 + performanceSentiment * 0.7 + (attendanceRate - 0.85) * 0.2,
+    0,
+    1,
+  );
+
+  const { score: festivalScore, breakdown: scoreBreakdown } = computeFestivalScore(
+    margin,
+    attendanceRate,
+    artistSatisfaction,
+    visitorSentiment,
+  );
+
+  const nextYearPreview = computeNextYearPreview(
+    ticketPrice,
+    attendanceRate,
+    recommendedRange,
+    artistSatisfaction,
+    visitorSentiment,
+  );
+
+  const bandAttribution = HEADLINER_ATTRIBUTION * Math.max(0.35, Math.pow(lineupQuality, 0.85));
+  const feeGuidanceLow = Math.max(
+    MIN_HEADLINER_FEE_BY_TIER[tier.id][0],
+    Math.round(averageAttendance * ticketPrice * bandAttribution * 0.6),
+  );
+  const feeGuidanceHigh = Math.max(
+    feeGuidanceLow,
+    Math.round(averageAttendance * ticketPrice * bandAttribution * 0.9),
+  );
+
+  return {
+    tier,
+    costProfile,
+    license: input.ownerType === "player" ? license : null,
+    ownerType: input.ownerType,
+    ticketPrice,
+    pricingPolicy,
+    demand: dayResults,
+    totals: {
+      attendance: totalAttendance,
+      attendanceRate,
+      revenue: {
+        tickets: ticketsGross,
+        food: foodGross,
+        drink: drinkGross,
+        merch: merchGross,
+        sponsors: sponsorIncome,
+        other: otherIncome,
+        total: totalRevenue,
+      },
+      expenses: {
+        artistFees,
+        operations,
+        sponsorContra,
+        fnbCogs: foodCogs + drinkCogs,
+        merchCogs,
+        misc: licenseCost,
+        total: totalExpenses,
+      },
+      profit,
+      margin,
+    },
+    sentiments: {
+      price: priceSentiment,
+      sponsor: sponsorSentiment,
+      performance: performanceSentiment,
+      visitor: visitorSentiment,
+      artist: artistSatisfaction,
+    },
+    sponsor: {
+      income: sponsorIncome,
+      contra: sponsorContra,
+      fit: sponsorFitRatio,
+      exclusive: input.exclusiveSponsor,
+    },
+    lineup: slotFeeSummary,
+    feeGuidance: {
+      low: feeGuidanceLow,
+      high: feeGuidanceHigh,
+      attribution: bandAttribution,
+    },
+    festivalScore,
+    scoreBreakdown,
+    nextYearPreview,
+  };
+}
