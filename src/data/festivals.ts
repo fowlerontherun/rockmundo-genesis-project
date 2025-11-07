@@ -81,7 +81,7 @@ export interface FestivalDataModelTable {
   name: string;
   description: string;
   keyFields: string[];
-  scope: "core" | "booking" | "operations" | "reporting";
+  scope: "core" | "booking" | "operations" | "reporting" | "shared";
 }
 
 export interface FestivalApiEndpoint {
