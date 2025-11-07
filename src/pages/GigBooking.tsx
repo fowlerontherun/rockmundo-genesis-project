@@ -135,7 +135,7 @@ const GigBooking = () => {
         venues:venues!gigs_venue_id_fkey (*)
       `)
       .eq('band_id', bandId)
-      .in('status', ['scheduled', 'in_progress', 'ready_for_completion', 'completed'])
+      .in('status', ['scheduled', 'in_progress', 'ready_for_completion'])
       .order('scheduled_date', { ascending: true });
 
     if (error) {

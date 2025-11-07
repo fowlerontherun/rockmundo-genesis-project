@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, Users, Star, TrendingUp } from "lucide-react";
+import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
@@ -77,13 +77,42 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
     );
   }
 
+  const totalGigScore = gigHistory.reduce((sum: number, outcome: any) => sum + Number(outcome.overall_rating || 0), 0);
+  const averageGigScore = totalGigScore / gigHistory.length;
+
   return (
     <>
       <div className="space-y-4">
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Completed Gigs</p>
+              <p className="text-2xl font-semibold">{gigHistory.length}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Gig Score</p>
+              <p className="text-2xl font-semibold">{totalGigScore.toFixed(1)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Average Score</p>
+              <p className="text-2xl font-semibold">{averageGigScore.toFixed(1)}</p>
+            </div>
+          </CardContent>
+        </Card>
+
         {gigHistory.map((outcome: any) => {
           const gig = outcome.gigs;
           const venue = gig?.venues;
-          
+          const qualityInputs = [
+            outcome.equipment_quality_avg,
+            outcome.crew_skill_avg,
+            outcome.member_skill_avg,
+            outcome.band_chemistry_level
+          ].filter((value) => typeof value === 'number') as number[];
+          const qualityRating = qualityInputs.length
+            ? Math.round(qualityInputs.reduce((sum, value) => sum + value, 0) / qualityInputs.length)
+            : null;
+
           return (
             <Card key={outcome.id} className="hover:bg-accent/50 transition-colors">
               <CardHeader>
@@ -104,7 +133,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Star className="h-3 w-3" />
@@ -139,10 +168,19 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
                       +{outcome.fame_gained}
                     </div>
                   </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Sparkles className="h-3 w-3" />
+                      Quality Rating
+                    </div>
+                    <div className="font-semibold">
+                      {qualityRating !== null ? `${qualityRating}/100` : 'N/A'}
+                    </div>
+                  </div>
                 </div>
-                <Button 
-                  onClick={() => handleViewDetails(outcome)} 
-                  variant="outline" 
+                <Button
+                  onClick={() => handleViewDetails(outcome)}
+                  variant="outline"
                   size="sm"
                   className="w-full"
                 >
