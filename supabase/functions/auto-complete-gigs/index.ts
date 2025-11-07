@@ -47,7 +47,7 @@ serve(async (req) => {
         // Get setlist songs count and total duration
         const { data: setlistSongs, error: songsError } = await supabaseClient
           .from('setlist_songs')
-          .select('id, songs!inner(duration_seconds)')
+          .select('id, song_id, songs!inner(id, duration_seconds)')
           .eq('setlist_id', gig.setlist_id)
           .order('position');
 
@@ -95,7 +95,7 @@ serve(async (req) => {
               body: {
                 gigId: gig.id,
                 outcomeId: outcome.id,
-                songId: song.songs.id,
+                songId: song.song_id,
                 position: pos
               }
             });
