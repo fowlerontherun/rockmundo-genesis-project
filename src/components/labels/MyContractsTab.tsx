@@ -44,10 +44,10 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
         .from("artist_label_contracts")
         .select(`
           *,
-          labels(id, name, headquarters_city, reputation_score),
-          label_releases(*),
-          label_royalty_statements(*),
-          label_roster_slots(id, slot_number, status)
+          labels(id, name, reputation_score),
+          label_roster_slots(id, slot_number, status),
+          label_releases(id),
+          label_royalty_statements(id)
         `)
         .or(filters.join(","))
         .order("created_at", { ascending: false });
@@ -108,9 +108,6 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
                   {entity ? `${entity.name}` : "Unassigned entity"} · {label?.name ?? "Unknown label"}
                 </CardTitle>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  {label?.headquarters_city ? (
-                    <span>{label.headquarters_city}</span>
-                  ) : null}
                   <Badge variant="outline">Reputation {label?.reputation_score ?? 0}</Badge>
                   <Badge variant={STATUS_VARIANTS[contract.status ?? "pending"] ?? "secondary"}>
                     {contract.status}

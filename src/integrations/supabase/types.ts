@@ -7098,6 +7098,8 @@ export type Database = {
         Row: {
           base_duration_days: number | null
           base_price: number
+          class_end_hour: number | null
+          class_start_hour: number | null
           created_at: string | null
           description: string | null
           id: string
@@ -7114,6 +7116,8 @@ export type Database = {
         Insert: {
           base_duration_days?: number | null
           base_price: number
+          class_end_hour?: number | null
+          class_start_hour?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -7130,6 +7134,8 @@ export type Database = {
         Update: {
           base_duration_days?: number | null
           base_price?: number
+          class_end_hour?: number | null
+          class_start_hour?: number | null
           created_at?: string | null
           description?: string | null
           id?: string

@@ -45,13 +45,12 @@ export function ReleasePipelineTab({ artistEntities, territories }: ReleasePipel
         return { contracts: [], releases: [] };
       }
 
-      const { data: contracts, error: contractsError } = await supabase
+      const { data: contracts, error: contractsError} = await supabase
         .from("artist_label_contracts")
         .select(`
           *,
           labels(id, name, reputation_score),
           label_releases(id),
-          label_promotion_campaigns(id),
           label_royalty_statements(id)
         `)
         .or(filters.join(","));
