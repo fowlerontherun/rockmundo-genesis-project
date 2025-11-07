@@ -47,7 +47,6 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
           labels(id, name, headquarters_city, reputation_score),
           label_releases(*),
           label_royalty_statements(*),
-          label_promotion_campaigns(*),
           label_roster_slots(id, slot_number, status)
         `)
         .or(filters.join(","))
@@ -99,9 +98,7 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
         const recoupProgress = advanceAmount > 0 ? Math.min((recouped / advanceAmount) * 100, 100) : 100;
         const releaseQuota = contract.release_quota ?? 0;
         const releasesCompleted = contract.releases_completed ?? 0;
-        const territoryList = Array.isArray(contract.territories)
-          ? (contract.territories as string[])
-          : [];
+        const territoryList = contract.territories ?? [];
 
         return (
           <Card key={contract.id}>
@@ -121,7 +118,7 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
-                Royalty split: {contract.royalty_artist_pct}% artist / {contract.royalty_label_pct}% label
+                Royalty split: {contract.royalty_artist_pct}% artist / {contract.royalty_label_pct ?? (100 - contract.royalty_artist_pct)}% label
               </div>
             </CardHeader>
 

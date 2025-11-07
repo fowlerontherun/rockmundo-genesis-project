@@ -132,6 +132,104 @@ export type Database = {
           },
         ]
       }
+      artist_label_contracts: {
+        Row: {
+          advance_amount: number | null
+          artist_profile_id: string | null
+          band_id: string | null
+          created_at: string | null
+          deal_type_id: string
+          end_date: string
+          id: string
+          label_id: string
+          marketing_support: number | null
+          masters_owned_by_artist: boolean | null
+          recouped_amount: number | null
+          release_quota: number
+          releases_completed: number | null
+          roster_slot_id: string | null
+          royalty_artist_pct: number
+          royalty_label_pct: number | null
+          start_date: string
+          status: string | null
+          territories: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          advance_amount?: number | null
+          artist_profile_id?: string | null
+          band_id?: string | null
+          created_at?: string | null
+          deal_type_id: string
+          end_date: string
+          id?: string
+          label_id: string
+          marketing_support?: number | null
+          masters_owned_by_artist?: boolean | null
+          recouped_amount?: number | null
+          release_quota: number
+          releases_completed?: number | null
+          roster_slot_id?: string | null
+          royalty_artist_pct: number
+          royalty_label_pct?: number | null
+          start_date: string
+          status?: string | null
+          territories?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          advance_amount?: number | null
+          artist_profile_id?: string | null
+          band_id?: string | null
+          created_at?: string | null
+          deal_type_id?: string
+          end_date?: string
+          id?: string
+          label_id?: string
+          marketing_support?: number | null
+          masters_owned_by_artist?: boolean | null
+          recouped_amount?: number | null
+          release_quota?: number
+          releases_completed?: number | null
+          roster_slot_id?: string | null
+          royalty_artist_pct?: number
+          royalty_label_pct?: number | null
+          start_date?: string
+          status?: string | null
+          territories?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_label_contracts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_label_contracts_deal_type_id_fkey"
+            columns: ["deal_type_id"]
+            isOneToOne: false
+            referencedRelation: "label_deal_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_label_contracts_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_label_contracts_roster_slot_id_fkey"
+            columns: ["roster_slot_id"]
+            isOneToOne: false
+            referencedRelation: "label_roster_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audience_memory: {
         Row: {
           avg_experience_score: number | null
@@ -2333,6 +2431,364 @@ export type Database = {
           title?: string
           updated_at?: string | null
           work_days?: Json
+        }
+        Relationships: []
+      }
+      label_deal_types: {
+        Row: {
+          advance_max: number | null
+          advance_min: number | null
+          created_at: string | null
+          default_artist_royalty: number | null
+          default_label_royalty: number | null
+          default_release_quota: number | null
+          default_term_months: number | null
+          description: string | null
+          id: string
+          includes_advance: boolean | null
+          masters_owned_by_artist: boolean | null
+          name: string
+          royalty_artist_pct: number
+        }
+        Insert: {
+          advance_max?: number | null
+          advance_min?: number | null
+          created_at?: string | null
+          default_artist_royalty?: number | null
+          default_label_royalty?: number | null
+          default_release_quota?: number | null
+          default_term_months?: number | null
+          description?: string | null
+          id?: string
+          includes_advance?: boolean | null
+          masters_owned_by_artist?: boolean | null
+          name: string
+          royalty_artist_pct: number
+        }
+        Update: {
+          advance_max?: number | null
+          advance_min?: number | null
+          created_at?: string | null
+          default_artist_royalty?: number | null
+          default_label_royalty?: number | null
+          default_release_quota?: number | null
+          default_term_months?: number | null
+          description?: string | null
+          id?: string
+          includes_advance?: boolean | null
+          masters_owned_by_artist?: boolean | null
+          name?: string
+          royalty_artist_pct?: number
+        }
+        Relationships: []
+      }
+      label_promotion_campaigns: {
+        Row: {
+          budget: number
+          campaign_type: string
+          channels: string[] | null
+          created_at: string | null
+          effectiveness: number | null
+          end_date: string
+          id: string
+          notes: string | null
+          release_id: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          budget: number
+          campaign_type: string
+          channels?: string[] | null
+          created_at?: string | null
+          effectiveness?: number | null
+          end_date: string
+          id?: string
+          notes?: string | null
+          release_id: string
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          budget?: number
+          campaign_type?: string
+          channels?: string[] | null
+          created_at?: string | null
+          effectiveness?: number | null
+          end_date?: string
+          id?: string
+          notes?: string | null
+          release_id?: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_promotion_campaigns_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "label_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_releases: {
+        Row: {
+          contract_id: string
+          created_at: string | null
+          id: string
+          marketing_budget: number | null
+          masters_cost: number | null
+          notes: string | null
+          promotion_budget: number | null
+          release_date: string | null
+          release_id: string | null
+          release_type: string | null
+          revenue_generated: number | null
+          scheduled_date: string | null
+          status: string | null
+          territory_strategy: string | null
+          title: string
+          units_sold: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string | null
+          id?: string
+          marketing_budget?: number | null
+          masters_cost?: number | null
+          notes?: string | null
+          promotion_budget?: number | null
+          release_date?: string | null
+          release_id?: string | null
+          release_type?: string | null
+          revenue_generated?: number | null
+          scheduled_date?: string | null
+          status?: string | null
+          territory_strategy?: string | null
+          title: string
+          units_sold?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string | null
+          id?: string
+          marketing_budget?: number | null
+          masters_cost?: number | null
+          notes?: string | null
+          promotion_budget?: number | null
+          release_date?: string | null
+          release_id?: string | null
+          release_type?: string | null
+          revenue_generated?: number | null
+          scheduled_date?: string | null
+          status?: string | null
+          territory_strategy?: string | null
+          title?: string
+          units_sold?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_releases_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_releases_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_roster_slots: {
+        Row: {
+          contract_id: string | null
+          created_at: string | null
+          focus_genre: string | null
+          id: string
+          label_id: string
+          slot_number: number
+          status: string | null
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string | null
+          focus_genre?: string | null
+          id?: string
+          label_id: string
+          slot_number: number
+          status?: string | null
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string | null
+          focus_genre?: string | null
+          id?: string
+          label_id?: string
+          slot_number?: number
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_roster_slots_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_royalty_statements: {
+        Row: {
+          advance_deduction: number | null
+          artist_share: number
+          contract_id: string
+          created_at: string | null
+          gross_revenue: number
+          id: string
+          label_share: number
+          net_payout: number
+          paid: boolean | null
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          release_id: string | null
+        }
+        Insert: {
+          advance_deduction?: number | null
+          artist_share: number
+          contract_id: string
+          created_at?: string | null
+          gross_revenue: number
+          id?: string
+          label_share: number
+          net_payout: number
+          paid?: boolean | null
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          release_id?: string | null
+        }
+        Update: {
+          advance_deduction?: number | null
+          artist_share?: number
+          contract_id?: string
+          created_at?: string | null
+          gross_revenue?: number
+          id?: string
+          label_share?: number
+          net_payout?: number
+          paid?: boolean | null
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          release_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_royalty_statements_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_royalty_statements_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "label_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_territories: {
+        Row: {
+          created_at: string | null
+          id: string
+          label_id: string
+          territory_code: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label_id: string
+          territory_code: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label_id?: string
+          territory_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_territories_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_territories_territory_code_fkey"
+            columns: ["territory_code"]
+            isOneToOne: false
+            referencedRelation: "territories"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      labels: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          genre_focus: string[] | null
+          headquarters_city: string | null
+          id: string
+          logo_url: string | null
+          market_share: number | null
+          marketing_budget: number | null
+          name: string
+          reputation_score: number | null
+          roster_slot_capacity: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          genre_focus?: string[] | null
+          headquarters_city?: string | null
+          id?: string
+          logo_url?: string | null
+          market_share?: number | null
+          marketing_budget?: number | null
+          name: string
+          reputation_score?: number | null
+          roster_slot_capacity?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          genre_focus?: string[] | null
+          headquarters_city?: string | null
+          id?: string
+          logo_url?: string | null
+          market_share?: number | null
+          marketing_budget?: number | null
+          name?: string
+          reputation_score?: number | null
+          roster_slot_capacity?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -5894,6 +6350,27 @@ export type Database = {
           platform_name?: string
           quality_multiplier?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      territories: {
+        Row: {
+          code: string
+          created_at: string | null
+          name: string
+          region: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          name: string
+          region: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          name?: string
+          region?: string
         }
         Relationships: []
       }
