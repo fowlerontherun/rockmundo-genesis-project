@@ -44,11 +44,10 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
         .from("artist_label_contracts")
         .select(`
           *,
-          labels(id, name, headquarters_city, reputation_score),
-          label_releases(*),
-          label_royalty_statements(*),
-          label_promotion_campaigns(*),
-          label_roster_slots(id, slot_number, status)
+          labels(id, name, reputation_score),
+          label_roster_slots(id, slot_number, status),
+          label_releases(id),
+          label_royalty_statements(id)
         `)
         .or(filters.join(","))
         .order("created_at", { ascending: false });
@@ -57,7 +56,7 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
         throw error;
       }
 
-      return data as any as ContractWithRelations[];
+      return data as ContractWithRelations[];
     },
   });
 
@@ -99,9 +98,7 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
         const recoupProgress = advanceAmount > 0 ? Math.min((recouped / advanceAmount) * 100, 100) : 100;
         const releaseQuota = contract.release_quota ?? 0;
         const releasesCompleted = contract.releases_completed ?? 0;
-        const territoryList = Array.isArray(contract.territories)
-          ? (contract.territories as string[])
-          : [];
+        const territoryList = contract.territories ?? [];
 
         return (
           <Card key={contract.id}>
@@ -111,9 +108,6 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
                   {entity ? `${entity.name}` : "Unassigned entity"} · {label?.name ?? "Unknown label"}
                 </CardTitle>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  {label?.headquarters_city ? (
-                    <span>{label.headquarters_city}</span>
-                  ) : null}
                   <Badge variant="outline">Reputation {label?.reputation_score ?? 0}</Badge>
                   <Badge variant={STATUS_VARIANTS[contract.status ?? "pending"] ?? "secondary"}>
                     {contract.status}
@@ -121,7 +115,7 @@ export function MyContractsTab({ artistEntities }: MyContractsTabProps) {
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
-                Royalty split: {contract.royalty_artist_pct}% artist / {contract.royalty_label_pct}% label
+                Royalty split: {contract.royalty_artist_pct}% artist / {contract.royalty_label_pct ?? (100 - contract.royalty_artist_pct)}% label
               </div>
             </CardHeader>
 

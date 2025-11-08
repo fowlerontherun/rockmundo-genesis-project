@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useSetlists, useDeleteSetlist } from "@/hooks/useSetlists";
 import { SetlistEditor } from "@/components/setlist/SetlistEditor";
-import { SetlistSongManager } from "@/components/setlist/SetlistSongManager";
+import { EnhancedSetlistSongManager } from "@/components/setlist/EnhancedSetlistSongManager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -228,7 +228,7 @@ const SetlistManager = () => {
         )}
 
         {managingSongsSetlistId && (
-          <SetlistSongManager
+          <EnhancedSetlistSongManager
             setlistId={managingSongsSetlistId}
             bandId={band.id}
             onClose={() => setManagingSongsSetlistId(null)}

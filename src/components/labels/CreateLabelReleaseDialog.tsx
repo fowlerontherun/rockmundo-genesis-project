@@ -91,7 +91,7 @@ export function CreateLabelReleaseDialog({
       territory_strategy: selectedTerritories,
       status: "planning",
       notes: notes.trim() || null,
-    });
+    } as any);
 
     if (error) {
       toast({

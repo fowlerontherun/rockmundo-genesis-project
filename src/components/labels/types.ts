@@ -25,11 +25,10 @@ export type LabelWithRelations = LabelRow & {
 };
 
 export type ContractWithRelations = ContractRow & {
-  labels?: Pick<LabelRow, "id" | "name" | "reputation_score" | "headquarters_city"> | null;
+  labels?: Pick<LabelRow, "id" | "name" | "reputation_score"> | null;
   label_roster_slots?: Pick<RosterSlotRow, "id" | "slot_number" | "status"> | null;
-  label_releases?: ReleaseRow[];
-  label_royalty_statements?: RoyaltyStatementRow[];
-  label_promotion_campaigns?: PromotionCampaignRow[];
+  label_releases?: Pick<ReleaseRow, "id">[];
+  label_royalty_statements?: Pick<RoyaltyStatementRow, "id">[];
 };
 
 export type ReleaseWithRelations = ReleaseRow & {

@@ -162,7 +162,7 @@ export function RequestContractDialog({
       notes: notes.trim() || null,
       status: "pending",
       masters_owned_by_artist: dealTypes.find((deal) => deal.id === selectedDealTypeId)?.masters_owned_by_artist ?? false,
-    });
+    } as any);
 
     if (error) {
       toast({

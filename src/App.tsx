@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { GameDataProvider } from "./hooks/useGameData";
+import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalog-context";
+import { BandCrewCatalogProvider } from "./features/band-crew/catalog-context";
 import Auth from "./pages/Auth";
 import { lazyWithRetry } from "./utils/lazyWithRetry";
 
@@ -35,6 +37,7 @@ const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
+const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
@@ -54,6 +57,7 @@ const EnhancedFanManagement = lazyWithRetry(() => import("./pages/EnhancedFanMan
 const AdvancedGigSystem = lazyWithRetry(() => import("./pages/AdvancedGigSystem"));
 const StageEquipmentSystemPlan = lazyWithRetry(() => import("./pages/StageEquipmentSystemPlan"));
 const StageEquipmentSystem = lazyWithRetry(() => import("./pages/StageEquipmentSystem"));
+const BandCrewManagement = lazyWithRetry(() => import("./pages/BandCrewManagement"));
 const CompetitiveCharts = lazyWithRetry(() => import("./pages/CompetitiveCharts"));
 const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
@@ -86,6 +90,8 @@ const AdminTwaaterModeration = lazyWithRetry(() => import("./pages/admin/Twaater
 const AdminCronMonitor = lazyWithRetry(() => import("./pages/admin/CronMonitor"));
 const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConfig"));
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
+const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
+const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const Radio = lazyWithRetry(() => import("./pages/Radio"));
@@ -110,10 +116,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GameDataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+          <StageEquipmentCatalogProvider>
+            <BandCrewCatalogProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
               <Suspense
                 fallback={
                   <div className="flex h-screen w-full items-center justify-center">
@@ -145,6 +153,7 @@ function App() {
                     <Route path="setlists" element={<SetlistManager />} />
                     <Route path="travel" element={<Travel />} />
                     <Route path="social" element={<SocialMedia />} />
+                    <Route path="relationships" element={<Relationships />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />
@@ -152,6 +161,7 @@ function App() {
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
                     <Route path="stage-equipment" element={<StageEquipmentSystem />} />
+                    <Route path="band-crew" element={<BandCrewManagement />} />
                     <Route path="stage-equipment-system-plan" element={<StageEquipmentSystemPlan />} />
                     <Route path="finances" element={<Finances />} />
                     <Route path="underworld" element={<Underworld />} />
@@ -194,6 +204,8 @@ function App() {
                     <Route path="admin/rehearsal-rooms" element={<AdminRehearsalRooms />} />
                     <Route path="admin/travel" element={<AdminTravel />} />
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
+                    <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
+                    <Route path="admin/crew" element={<AdminCrewCatalog />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
                     <Route path="admin/streaming-platforms" element={<AdminStreamingPlatforms />} />
                     <Route path="admin/marketplace" element={<AdminMarketplace />} />
@@ -221,8 +233,10 @@ function App() {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
-            </BrowserRouter>
-          </TooltipProvider>
+                </BrowserRouter>
+              </TooltipProvider>
+            </BandCrewCatalogProvider>
+          </StageEquipmentCatalogProvider>
         </GameDataProvider>
       </AuthProvider>
     </QueryClientProvider>

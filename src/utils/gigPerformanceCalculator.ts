@@ -74,7 +74,8 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
   const productionMultiplier = 1 + (factors.productionNotesBonus || 0);
   
   // Convert to 25-star scale
-  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier;
+  const qualityDifficulty = 0.75 + (normalizedSongQuality / 100) * 0.25;
+  const finalScore = (baseScore / 100) * 25 * capacityMultiplier * variance * productionMultiplier * qualityDifficulty;
   const clampedScore = Math.max(0, Math.min(25, finalScore));
   
   // Determine crowd response based on score

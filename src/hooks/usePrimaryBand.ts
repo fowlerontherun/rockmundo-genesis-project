@@ -7,11 +7,14 @@ export interface PrimaryBandRecord {
   band_id: string;
   role: string;
   joined_at: string | null;
+  member_status: string | null;
+  is_touring_member: boolean | null;
   bands?: {
     id: string;
     name: string | null;
     fame: number | null;
     band_balance: number | null;
+    status: string | null;
   } | null;
 }
 
@@ -28,10 +31,25 @@ export const usePrimaryBand = () => {
       const { data, error } = await supabase
         .from("band_members")
         .select(
-          `id, band_id, role, joined_at, bands ( id, name, fame, band_balance )`
+          `
+            id,
+            band_id,
+            role,
+            joined_at,
+            member_status,
+            is_touring_member,
+            bands:bands!band_members_band_id_fkey (
+              id,
+              name,
+              fame,
+              band_balance,
+              status
+            )
+          `
         )
         .eq("user_id", user.id)
-        .order("joined_at", { ascending: true })
+        .eq("bands.status", "active")
+        .order("joined_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -39,7 +57,23 @@ export const usePrimaryBand = () => {
         throw error;
       }
 
-      return (data as PrimaryBandRecord) ?? null;
+      if (!data) {
+        return null;
+      }
+
+      if (data.is_touring_member) {
+        return null;
+      }
+
+      if (data.member_status && data.member_status !== "active") {
+        return null;
+      }
+
+      if (data.bands?.status && data.bands.status !== "active") {
+        return null;
+      }
+
+      return data as PrimaryBandRecord;
     },
     enabled: !!user?.id,
     staleTime: 60 * 1000,

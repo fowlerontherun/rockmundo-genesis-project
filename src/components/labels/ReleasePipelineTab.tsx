@@ -45,13 +45,12 @@ export function ReleasePipelineTab({ artistEntities, territories }: ReleasePipel
         return { contracts: [], releases: [] };
       }
 
-      const { data: contracts, error: contractsError } = await supabase
+      const { data: contracts, error: contractsError} = await supabase
         .from("artist_label_contracts")
         .select(`
           *,
           labels(id, name, reputation_score),
           label_releases(id),
-          label_promotion_campaigns(id),
           label_royalty_statements(id)
         `)
         .or(filters.join(","));
@@ -62,7 +61,7 @@ export function ReleasePipelineTab({ artistEntities, territories }: ReleasePipel
 
       const contractIds = contracts?.map((contract) => contract.id) ?? [];
       if (contractIds.length === 0) {
-        return { contracts: contracts as any as ContractWithRelations[], releases: [] };
+        return { contracts: contracts as ContractWithRelations[], releases: [] };
       }
 
       const { data: releases, error: releasesError } = await supabase
@@ -89,7 +88,7 @@ export function ReleasePipelineTab({ artistEntities, territories }: ReleasePipel
       }
 
       return {
-        contracts: contracts as any as ContractWithRelations[],
+        contracts: contracts as ContractWithRelations[],
         releases: releases as ReleaseWithRelations[],
       };
     },

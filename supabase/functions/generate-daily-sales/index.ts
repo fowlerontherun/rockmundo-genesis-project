@@ -1,9 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from "../_shared/job-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-triggered-by",
 };
 
 serve(async (req) => {
@@ -11,13 +19,30 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
-    // Get all released releases
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
+  let runId: string | null = null;
+  const startedAt = Date.now();
+  let totalSales = 0;
+  let releasesProcessed = 0;
+  let errorCount = 0;
+
+  try {
+    runId = await startJobRun({
+      jobName: "generate-daily-sales",
+      functionName: "generate-daily-sales",
+      supabaseClient,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    });
+
     const { data: releases, error: releasesError } = await supabaseClient
       .from("releases")
       .select(`
@@ -26,7 +51,6 @@ serve(async (req) => {
         user_id,
         release_type,
         bands(fame, popularity, chemistry_level),
-        profiles!releases_user_id_fkey(fame, popularity),
         release_formats(id, format_type, unit_price, stock_quantity),
         release_songs(song:songs(quality_score))
       `)
@@ -34,106 +58,157 @@ serve(async (req) => {
 
     if (releasesError) throw releasesError;
 
-    let totalSales = 0;
+    const userIds = Array.from(
+      new Set((releases || []).map((release) => release.user_id).filter(Boolean))
+    );
+
+    let profilesMap = new Map<string, { fame?: number; popularity?: number }>();
+
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabaseClient
+        .from("profiles")
+        .select("id, fame, popularity")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      profilesMap = new Map(
+        (profiles || []).map((profile) => [profile.id as string, profile])
+      );
+    }
 
     for (const release of releases || []) {
-      const artistFame = release.bands?.[0]?.fame || release.profiles?.[0]?.fame || 0;
-      const artistPopularity = release.bands?.[0]?.popularity || release.profiles?.[0]?.popularity || 0;
-      
-      // Calculate average song quality
-      const avgQuality = release.release_songs?.reduce((sum: number, rs: any) => 
-        sum + (rs.song?.quality_score || 50), 0
-      ) / (release.release_songs?.length || 1);
+      try {
+        releasesProcessed += 1;
 
-      // Base daily sales calculation
-      const fameMultiplier = 1 + (artistFame / 10000);
-      const popularityMultiplier = 1 + (artistPopularity / 10000);
-      const qualityMultiplier = avgQuality / 50;
+        const profile = release.user_id
+          ? profilesMap.get(release.user_id as string)
+          : undefined;
 
-      for (const format of release.release_formats || []) {
-        if (!format.stock_quantity || format.stock_quantity <= 0) continue;
+        const artistFame = release.bands?.[0]?.fame || profile?.fame || 0;
+        const artistPopularity = release.bands?.[0]?.popularity || profile?.popularity || 0;
 
-        // Calculate daily sales for this format
-        let baseSales = 0;
-        
-        switch (format.format_type) {
-          case 'digital':
-            baseSales = 5 + Math.floor(Math.random() * 20);
-            break;
-          case 'cd':
-            baseSales = 2 + Math.floor(Math.random() * 8);
-            break;
-          case 'vinyl':
-            baseSales = 1 + Math.floor(Math.random() * 5);
-            break;
-          case 'cassette':
-            baseSales = 1 + Math.floor(Math.random() * 3);
-            break;
-        }
+        const avgQuality =
+          (release.release_songs?.reduce(
+            (sum: number, rs: any) => sum + (rs.song?.quality_score || 50),
+            0
+          ) ?? 50) / (release.release_songs?.length || 1);
 
-        const calculatedSales = Math.floor(
-          baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier
-        );
-        
-        const actualSales = Math.min(calculatedSales, format.stock_quantity || 0);
+        const fameMultiplier = 1 + artistFame / 10000;
+        const popularityMultiplier = 1 + artistPopularity / 10000;
+        const qualityMultiplier = avgQuality / 50;
 
-        if (actualSales > 0) {
-          const revenue = actualSales * (format.unit_price || 0);
+        for (const format of release.release_formats || []) {
+          if (!format.stock_quantity || format.stock_quantity <= 0) continue;
 
-          // Insert sale record
-          await supabaseClient.from("release_sales").insert({
-            release_format_id: format.id,
-            quantity_sold: actualSales,
-            unit_price: format.unit_price,
-            total_amount: revenue,
-            sale_date: new Date().toISOString().split('T')[0],
-            sale_region: "global"
-          });
+          let baseSales = 0;
 
-          // Update stock quantity for physical formats
-          if (format.format_type !== 'digital') {
-            await supabaseClient
-              .from("release_formats")
-              .update({ stock_quantity: (format.stock_quantity || 0) - actualSales })
-              .eq("id", format.id);
+          switch (format.format_type) {
+            case "digital":
+              baseSales = 5 + Math.floor(Math.random() * 20);
+              break;
+            case "cd":
+              baseSales = 2 + Math.floor(Math.random() * 8);
+              break;
+            case "vinyl":
+              baseSales = 1 + Math.floor(Math.random() * 5);
+              break;
+            case "cassette":
+              baseSales = 1 + Math.floor(Math.random() * 3);
+              break;
           }
 
-          // Update release total revenue
-          await supabaseClient.rpc("increment_release_revenue", {
-            release_id: release.id,
-            amount: revenue
-          });
+          const calculatedSales = Math.floor(
+            baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier
+          );
 
-          // Add to band/user earnings
-          if (release.band_id) {
-            await supabaseClient.from("band_earnings").insert({
-              band_id: release.band_id,
-              amount: revenue,
-              source: "release_sales",
-              description: `Daily sales revenue`,
-              metadata: { format: format.format_type, units: actualSales }
+          const actualSales = Math.min(calculatedSales, format.stock_quantity || 0);
+
+          if (actualSales > 0) {
+            const revenue = actualSales * (format.unit_price || 0);
+
+            await supabaseClient.from("release_sales").insert({
+              release_format_id: format.id,
+              quantity_sold: actualSales,
+              unit_price: format.unit_price,
+              total_amount: revenue,
+              sale_date: new Date().toISOString().split("T")[0],
+              sale_region: "global",
             });
-          }
 
-          totalSales += actualSales;
+            if (format.format_type !== "digital") {
+              await supabaseClient
+                .from("release_formats")
+                .update({ stock_quantity: (format.stock_quantity || 0) - actualSales })
+                .eq("id", format.id);
+            }
+
+            await supabaseClient.rpc("increment_release_revenue", {
+              release_id: release.id,
+              amount: revenue,
+            });
+
+            if (release.band_id) {
+              await supabaseClient.from("band_earnings").insert({
+                band_id: release.band_id,
+                amount: revenue,
+                source: "release_sales",
+                description: `Daily sales revenue`,
+                metadata: { format: format.format_type, units: actualSales },
+              });
+            }
+
+            totalSales += actualSales;
+          }
         }
+      } catch (releaseError) {
+        errorCount += 1;
+        console.error(`Error processing release ${release.id}:`, releaseError);
       }
     }
 
     console.log(`Generated ${totalSales} total sales across all releases`);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
+    await completeJobRun({
+      jobName: "generate-daily-sales",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      processedCount: releasesProcessed,
+      errorCount,
+      resultSummary: {
+        releasesProcessed,
         totalSales,
-        message: `Generated sales for ${releases?.length || 0} releases`
+        errorCount,
+      },
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        totalSales,
+        releasesProcessed,
+        errors: errorCount,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    await failJobRun({
+      jobName: "generate-daily-sales",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      error,
+      resultSummary: {
+        totalSales,
+        releasesProcessed,
+        errorCount,
+      },
+    });
+
     console.error("Error generating sales:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

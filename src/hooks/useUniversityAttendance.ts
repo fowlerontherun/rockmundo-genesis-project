@@ -18,8 +18,8 @@ interface UniversityEnrollment {
     skill_slug: string;
     xp_per_day_min: number;
     xp_per_day_max: number;
-    class_start_hour: number | null;
-    class_end_hour: number | null;
+    class_start_hour: number;
+    class_end_hour: number;
   } | null;
 }
 

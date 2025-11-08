@@ -86,6 +86,7 @@ export function AppSidebar() {
         { icon: Calendar, label: "Gigs", path: "/gigs" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
+        { icon: HardHat, label: "Band Crew", path: "/band-crew" },
         { icon: Calendar, label: "Festivals", path: "/festivals" },
         { icon: Award, label: "Awards", path: "/awards" },
       ],
@@ -122,6 +123,8 @@ export function AppSidebar() {
       label: "Admin",
       items: [
         { icon: Settings, label: "Admin", path: "/admin" },
+        { icon: Wrench, label: "Stage Equipment", path: "/admin/stage-equipment" },
+        { icon: HardHat, label: "Crew Catalog", path: "/admin/crew" },
       ],
     },
   ];
