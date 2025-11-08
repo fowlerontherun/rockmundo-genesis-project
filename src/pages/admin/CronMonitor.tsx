@@ -42,12 +42,9 @@ export default function CronMonitor() {
   } = useQuery({
     queryKey: ["admin_cron_job_summary"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("admin_cron_job_summary")
-        .select("*")
-        .order("display_name", { ascending: true });
+      const { data, error } = await supabase.rpc("admin_get_cron_job_summary");
       if (error) throw error;
-      return data as CronJobSummary[];
+      return (data ?? []) as CronJobSummary[];
     },
     refetchInterval: 60000,
   });
@@ -61,15 +58,9 @@ export default function CronMonitor() {
   } = useQuery({
     queryKey: ["admin_cron_job_runs"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("admin_cron_job_runs")
-        .select(
-          "id, job_name, status, started_at, finished_at, processed_count, error_count, result_summary, error_message, triggered_by, duration_ms"
-        )
-        .order("started_at", { ascending: false })
-        .limit(50);
+      const { data, error } = await supabase.rpc("admin_get_cron_job_runs", { _limit: 50 });
       if (error) throw error;
-      return data as CronJobRun[];
+      return (data ?? []) as CronJobRun[];
     },
     refetchInterval: 60000,
   });
