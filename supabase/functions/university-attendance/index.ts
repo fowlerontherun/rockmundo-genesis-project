@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from "../_shared/job-logger.ts";
 
 // Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
 const MAX_SKILL_LEVEL = 100;
@@ -7,7 +14,7 @@ const MAX_SKILL_LEVEL = 100;
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-triggered-by",
 };
 
 interface Enrollment {
@@ -31,18 +38,37 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
+
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    {
+      auth: {
+        persistSession: false,
+      },
+    }
+  );
+
+  let runId: string | null = null;
+  const startedAt = Date.now();
+
+  let processedCount = 0;
+  let skippedCount = 0;
+  let totalXpAwarded = 0;
+
   try {
     console.log(`=== University Auto-Attendance Started at ${new Date().toISOString()} ===`);
-    
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          persistSession: false,
-        },
-      }
-    );
+
+    runId = await startJobRun({
+      jobName: "university-attendance",
+      functionName: "university-attendance",
+      supabaseClient,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    });
 
     const now = new Date();
     const today = now.toISOString().split("T")[0];
@@ -62,9 +88,6 @@ serve(async (req) => {
     }
 
     console.log(`Found ${enrollments?.length || 0} enrollments with auto_attend=true`);
-
-    let processedCount = 0;
-    let skippedCount = 0;
 
     for (const enrollment of enrollments || []) {
       console.log(`\n--- Processing enrollment ${enrollment.id} for profile ${enrollment.profile_id} ---`);
@@ -102,8 +125,9 @@ serve(async (req) => {
         Math.random() * (course.xp_per_day_max - course.xp_per_day_min + 1) +
           course.xp_per_day_min
       );
-      
+
       console.log(`Generated XP: ${xpEarned}`);
+      totalXpAwarded += xpEarned;
 
       // Create attendance record - set was_locked_out to false so activity feed logs it
       console.log('Creating attendance record...');
@@ -242,10 +266,25 @@ serve(async (req) => {
     console.log(`\n=== University Auto-Attendance Complete ===`);
     console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}`);
 
+    await completeJobRun({
+      jobName: "university-attendance",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      processedCount,
+      resultSummary: {
+        processedCount,
+        skippedCount,
+        totalXpAwarded,
+      },
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
-        processed: enrollments?.length || 0,
+        processed: processedCount,
+        skipped: skippedCount,
+        totalXpAwarded,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -253,8 +292,22 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error:", error);
+
+    await failJobRun({
+      jobName: "university-attendance",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      error,
+      resultSummary: {
+        processedCount,
+        skippedCount,
+        totalXpAwarded,
+      },
+    });
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

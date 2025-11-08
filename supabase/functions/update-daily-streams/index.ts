@@ -1,8 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from '../_shared/job-logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-triggered-by',
 };
 
 Deno.serve(async (req) => {
@@ -10,14 +17,31 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined;
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  let runId: string | null = null;
+  const startedAt = Date.now();
+  let streamUpdates = 0;
+  let salesUpdates = 0;
+  let errorCount = 0;
+
+  try {
     console.log('Starting daily streams and sales update...');
 
-    // Get all active song releases on streaming platforms
+    runId = await startJobRun({
+      jobName: 'update-daily-streams',
+      functionName: 'update-daily-streams',
+      supabaseClient: supabase,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    });
+
     const { data: streamingReleases, error: streamingError } = await supabase
       .from('song_releases')
       .select('id, song_id, platform_id, total_streams')
@@ -28,27 +52,23 @@ Deno.serve(async (req) => {
       throw streamingError;
     }
 
-    let streamUpdates = 0;
-    let salesUpdates = 0;
-
-    // Update streams for each release
     for (const release of streamingReleases || []) {
-      const dailyStreams = Math.floor(Math.random() * 4900) + 100;
-      const dailyRevenue = Math.floor(dailyStreams * 0.004);
+      try {
+        const dailyStreams = Math.floor(Math.random() * 4900) + 100;
+        const dailyRevenue = Math.floor(dailyStreams * 0.004);
 
-      // Direct update without RPC
-      const { error: updateError } = await supabase
-        .from('song_releases')
-        .update({
-          total_streams: (release.total_streams || 0) + dailyStreams,
-          total_revenue: dailyRevenue,
-        })
-        .eq('id', release.id);
+        const { error: updateError } = await supabase
+          .from('song_releases')
+          .update({
+            total_streams: (release.total_streams || 0) + dailyStreams,
+            total_revenue: dailyRevenue,
+          })
+          .eq('id', release.id);
 
-      if (!updateError) {
-        streamUpdates++;
-        
-        // Insert daily analytics
+        if (updateError) {
+          throw updateError;
+        }
+
         await supabase.from('streaming_analytics_daily').insert({
           song_release_id: release.id,
           analytics_date: new Date().toISOString().split('T')[0],
@@ -56,69 +76,103 @@ Deno.serve(async (req) => {
           daily_revenue: dailyRevenue,
           platform_id: release.platform_id,
         });
+
+        streamUpdates++;
+      } catch (streamError) {
+        errorCount += 1;
+        console.error(`Error processing streaming release ${release.id}:`, streamError);
       }
     }
 
-    // Get all active physical/digital releases
     const { data: physicalReleases, error: physicalError } = await supabase
       .from('release_formats')
       .select('id, release_id, format_type')
       .in('format_type', ['digital', 'cd', 'vinyl'])
-      .gte('release_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()); // Last 90 days
+      .gte('release_date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
 
     if (physicalError) {
       throw physicalError;
     }
 
-    // Generate daily sales for physical/digital releases
     for (const format of physicalReleases || []) {
-      // Random chance of sales (50% chance)
       if (Math.random() > 0.5) {
-        const quantity = Math.floor(Math.random() * 10) + 1;
-        let pricePerUnit = 10;
-        
-        if (format.format_type === 'cd') pricePerUnit = 15;
-        if (format.format_type === 'vinyl') pricePerUnit = 25;
+        try {
+          const quantity = Math.floor(Math.random() * 10) + 1;
+          let pricePerUnit = 10;
 
-        const totalAmount = quantity * pricePerUnit;
+          if (format.format_type === 'cd') pricePerUnit = 15;
+          if (format.format_type === 'vinyl') pricePerUnit = 25;
 
-        // Insert sale record
-        const { error: saleError } = await supabase
-          .from('release_sales')
-          .insert({
-            release_format_id: format.id,
-            quantity_sold: quantity,
-            total_amount: totalAmount,
-            sale_date: new Date().toISOString(),
-          });
+          const totalAmount = quantity * pricePerUnit;
 
-        if (!saleError) {
-          salesUpdates++;
+          const { error: saleError } = await supabase
+            .from('release_sales')
+            .insert({
+              release_format_id: format.id,
+              quantity_sold: quantity,
+              total_amount: totalAmount,
+              sale_date: new Date().toISOString(),
+            });
 
-          // Update release total revenue
+          if (saleError) {
+            throw saleError;
+          }
+
           await supabase.rpc('increment_release_revenue', {
             release_id: format.release_id,
             amount: totalAmount,
           });
+
+          salesUpdates++;
+        } catch (salesError) {
+          errorCount += 1;
+          console.error(`Error processing physical sales for format ${format.id}:`, salesError);
         }
       }
     }
 
     console.log(`Updated ${streamUpdates} streaming releases and generated ${salesUpdates} sales`);
 
+    await completeJobRun({
+      jobName: 'update-daily-streams',
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      processedCount: streamUpdates + salesUpdates,
+      errorCount,
+      resultSummary: {
+        streamUpdates,
+        salesUpdates,
+        errorCount,
+      },
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
         streamUpdates,
         salesUpdates,
-        message: `Updated ${streamUpdates} streaming releases and ${salesUpdates} sales`,
+        errors: errorCount,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    await failJobRun({
+      jobName: 'update-daily-streams',
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      error,
+      resultSummary: {
+        streamUpdates,
+        salesUpdates,
+        errorCount,
+      },
+    });
+
     console.error('Error updating daily streams:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
