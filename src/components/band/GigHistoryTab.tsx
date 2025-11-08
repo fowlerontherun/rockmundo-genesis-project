@@ -40,6 +40,8 @@ type GigOutcomeWithDetails = GigHistoryOutcome & {
   };
   chemistry_impact: number;
   equipment_wear_cost: number;
+  merch_sales: number;
+  crew_costs: number;
 };
 
 export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
