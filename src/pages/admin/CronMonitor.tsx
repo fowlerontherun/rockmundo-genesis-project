@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/lib/supabase-types";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 type CronJobSummary = Tables<"admin_cron_job_summary">;
 type CronJobRun = Tables<"admin_cron_job_runs">;
@@ -29,6 +30,11 @@ const formatDuration = (durationMs?: number | null) => {
   return `${(durationMs / 1000).toFixed(1)} s`;
 };
 
+const isMissingRpcFunctionError = (error: PostgrestError) =>
+  typeof error?.message === "string" &&
+  error.message.includes("Could not find the function") &&
+  error.message.includes("schema cache");
+
 export default function CronMonitor() {
   const { toast } = useToast();
   const [triggeringJob, setTriggeringJob] = useState<string | null>(null);
@@ -43,7 +49,17 @@ export default function CronMonitor() {
     queryKey: ["admin_cron_job_summary"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("admin_get_cron_job_summary");
-      if (error) throw error;
+      if (error) {
+        if (isMissingRpcFunctionError(error)) {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("admin_cron_job_summary")
+            .select("*")
+            .order("display_name");
+          if (fallbackError) throw fallbackError;
+          return (fallbackData ?? []) as CronJobSummary[];
+        }
+        throw error;
+      }
       return (data ?? []) as CronJobSummary[];
     },
     refetchInterval: 60000,
@@ -59,7 +75,18 @@ export default function CronMonitor() {
     queryKey: ["admin_cron_job_runs"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("admin_get_cron_job_runs", { _limit: 50 });
-      if (error) throw error;
+      if (error) {
+        if (isMissingRpcFunctionError(error)) {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("admin_cron_job_runs")
+            .select("*")
+            .order("started_at", { ascending: false })
+            .limit(50);
+          if (fallbackError) throw fallbackError;
+          return (fallbackData ?? []) as CronJobRun[];
+        }
+        throw error;
+      }
       return (data ?? []) as CronJobRun[];
     },
     refetchInterval: 60000,
