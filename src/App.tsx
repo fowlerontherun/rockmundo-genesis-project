@@ -102,6 +102,7 @@ const JamSessions = lazyWithRetry(() => import("./pages/JamSessions"));
 const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
+const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
@@ -216,6 +217,7 @@ function App() {
                     <Route path="radio" element={<Radio />} />
                     <Route path="performance" element={<Performance />} />
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />
+                    <Route path="media" element={<MediaNetworks />} />
                     <Route path="busking" element={<Navigate to="/performance?tab=busking" replace />} />
                     <Route path="jams" element={<Navigate to="/performance?tab=jams" replace />} />
                     <Route path="world" element={<WorldEnvironment />} />

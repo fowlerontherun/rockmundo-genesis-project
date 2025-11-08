@@ -80,6 +80,116 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_cron_job_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_count: number | null
+          error_message: string | null
+          id: string
+          items_affected: number | null
+          job_name: string
+          processed_count: number | null
+          request_id: string | null
+          request_payload: Json | null
+          result_summary: Json | null
+          status: string
+          triggered_by: string | null
+          function_name: string | null
+          started_at: string
+          finished_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          items_affected?: number | null
+          job_name: string
+          processed_count?: number | null
+          request_id?: string | null
+          request_payload?: Json | null
+          result_summary?: Json | null
+          status?: string
+          triggered_by?: string | null
+          function_name?: string | null
+          started_at?: string
+          finished_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          items_affected?: number | null
+          job_name?: string
+          processed_count?: number | null
+          request_id?: string | null
+          request_payload?: Json | null
+          result_summary?: Json | null
+          status?: string
+          triggered_by?: string | null
+          function_name?: string | null
+          started_at?: string
+          finished_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_cron_job_runs_job_name_fkey",
+            columns: ["job_name"],
+            isOneToOne: false,
+            referencedRelation: "admin_cron_jobs",
+            referencedColumns: ["job_name"]
+          }
+        ]
+      }
+      admin_cron_jobs: {
+        Row: {
+          allow_manual_trigger: boolean | null
+          category: string | null
+          cron_expression: string | null
+          created_at: string
+          description: string | null
+          display_name: string
+          edge_function_name: string | null
+          expected_frequency_minutes: number | null
+          is_active: boolean | null
+          job_name: string
+          schedule: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_manual_trigger?: boolean | null
+          category?: string | null
+          cron_expression?: string | null
+          created_at?: string
+          description?: string | null
+          display_name: string
+          edge_function_name?: string | null
+          expected_frequency_minutes?: number | null
+          is_active?: boolean | null
+          job_name: string
+          schedule?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_manual_trigger?: boolean | null
+          category?: string | null
+          cron_expression?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          edge_function_name?: string | null
+          expected_frequency_minutes?: number | null
+          is_active?: boolean | null
+          job_name?: string
+          schedule?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_song_gifts: {
         Row: {
           created_at: string | null
@@ -1443,6 +1553,66 @@ export type Database = {
           },
         ]
       }
+      crew_catalog: {
+        Row: {
+          assignment: string
+          background: string
+          created_at: string
+          experience: number
+          focus: string
+          headline: string
+          id: string
+          loyalty: number
+          morale: string
+          name: string
+          openings: number
+          role: string
+          salary: number
+          skill: number
+          specialties: string[]
+          traits: string[]
+          updated_at: string
+        }
+        Insert: {
+          assignment: string
+          background: string
+          created_at?: string
+          experience: number
+          focus: string
+          headline: string
+          id: string
+          loyalty: number
+          morale: string
+          name: string
+          openings?: number
+          role: string
+          salary: number
+          skill: number
+          specialties?: string[]
+          traits?: string[]
+          updated_at?: string
+        }
+        Update: {
+          assignment?: string
+          background?: string
+          created_at?: string
+          experience?: number
+          focus?: string
+          headline?: string
+          id?: string
+          loyalty?: number
+          morale?: string
+          name?: string
+          openings?: number
+          role?: string
+          salary?: number
+          skill?: number
+          specialties?: string[]
+          traits?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       education_mentors: {
         Row: {
           attribute_keys: Json
@@ -2076,7 +2246,10 @@ export type Database = {
           equipment_contrib: number | null
           gig_outcome_id: string
           id: string
+          item_type: string | null
           member_skill_contrib: number | null
+          performance_item_id: string | null
+          performance_item_name: string | null
           performance_score: number
           position: number
           rehearsal_contrib: number | null
@@ -2094,7 +2267,10 @@ export type Database = {
           equipment_contrib?: number | null
           gig_outcome_id: string
           id?: string
+          item_type?: string | null
           member_skill_contrib?: number | null
+          performance_item_id?: string | null
+          performance_item_name?: string | null
           performance_score: number
           position: number
           rehearsal_contrib?: number | null
@@ -2112,7 +2288,10 @@ export type Database = {
           equipment_contrib?: number | null
           gig_outcome_id?: string
           id?: string
+          item_type?: string | null
           member_skill_contrib?: number | null
+          performance_item_id?: string | null
+          performance_item_name?: string | null
           performance_score?: number
           position?: number
           rehearsal_contrib?: number | null
@@ -2127,6 +2306,13 @@ export type Database = {
             columns: ["gig_outcome_id"]
             isOneToOne: false
             referencedRelation: "gig_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_song_performances_performance_item_id_fkey"
+            columns: ["performance_item_id"]
+            isOneToOne: false
+            referencedRelation: "performance_items"
             referencedColumns: ["id"]
           },
           {
@@ -3093,6 +3279,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      performance_items: {
+        Row: {
+          base_quality: number
+          category: string
+          created_at: string | null
+          crowd_engagement_boost: number | null
+          description: string | null
+          duration_seconds: number
+          energy_impact: number | null
+          id: string
+          is_active: boolean | null
+          min_skill_level: number | null
+          name: string
+          required_genre: string | null
+          required_skill: string | null
+          skill_multiplier: number | null
+        }
+        Insert: {
+          base_quality?: number
+          category: string
+          created_at?: string | null
+          crowd_engagement_boost?: number | null
+          description?: string | null
+          duration_seconds?: number
+          energy_impact?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_skill_level?: number | null
+          name: string
+          required_genre?: string | null
+          required_skill?: string | null
+          skill_multiplier?: number | null
+        }
+        Update: {
+          base_quality?: number
+          category?: string
+          created_at?: string | null
+          crowd_engagement_boost?: number | null
+          description?: string | null
+          duration_seconds?: number
+          energy_impact?: number | null
+          id?: string
+          is_active?: boolean | null
+          min_skill_level?: number | null
+          name?: string
+          required_genre?: string | null
+          required_skill?: string | null
+          skill_multiplier?: number | null
+        }
+        Relationships: []
+      }
+      performance_items_catalog: {
+        Row: {
+          base_impact_max: number | null
+          base_impact_min: number | null
+          created_at: string | null
+          crowd_appeal: number | null
+          description: string | null
+          duration_seconds: number | null
+          energy_cost: number | null
+          id: string
+          item_category: string
+          min_skill_level: number | null
+          name: string
+          required_genre: string | null
+          required_skill: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_impact_max?: number | null
+          base_impact_min?: number | null
+          created_at?: string | null
+          crowd_appeal?: number | null
+          description?: string | null
+          duration_seconds?: number | null
+          energy_cost?: number | null
+          id?: string
+          item_category: string
+          min_skill_level?: number | null
+          name: string
+          required_genre?: string | null
+          required_skill?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_impact_max?: number | null
+          base_impact_min?: number | null
+          created_at?: string | null
+          crowd_appeal?: number | null
+          description?: string | null
+          duration_seconds?: number | null
+          energy_cost?: number | null
+          id?: string
+          item_category?: string
+          min_skill_level?: number | null
+          name?: string
+          required_genre?: string | null
+          required_skill?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       player_achievements: {
         Row: {
@@ -5164,10 +5452,13 @@ export type Database = {
           energy_level: number | null
           id: string
           is_encore: boolean | null
+          item_type: string | null
           notes: string | null
+          performance_item_id: string | null
           position: number
+          section: string | null
           setlist_id: string
-          song_id: string
+          song_id: string | null
           tempo_bpm: number | null
         }
         Insert: {
@@ -5176,10 +5467,13 @@ export type Database = {
           energy_level?: number | null
           id?: string
           is_encore?: boolean | null
+          item_type?: string | null
           notes?: string | null
+          performance_item_id?: string | null
           position: number
+          section?: string | null
           setlist_id: string
-          song_id: string
+          song_id?: string | null
           tempo_bpm?: number | null
         }
         Update: {
@@ -5188,13 +5482,23 @@ export type Database = {
           energy_level?: number | null
           id?: string
           is_encore?: boolean | null
+          item_type?: string | null
           notes?: string | null
+          performance_item_id?: string | null
           position?: number
+          section?: string | null
           setlist_id?: string
-          song_id?: string
+          song_id?: string | null
           tempo_bpm?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "setlist_songs_performance_item_id_fkey"
+            columns: ["performance_item_id"]
+            isOneToOne: false
+            referencedRelation: "performance_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "setlist_songs_setlist_id_fkey"
             columns: ["setlist_id"]
@@ -6180,6 +6484,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stage_equipment_catalog: {
+        Row: {
+          amount_available: number
+          base_condition: string
+          cost: number
+          created_at: string
+          description: string | null
+          id: string
+          live_impact: string
+          name: string
+          rarity: string
+          size: string
+          type: string
+          updated_at: string
+          weight: string
+        }
+        Insert: {
+          amount_available?: number
+          base_condition: string
+          cost: number
+          created_at?: string
+          description?: string | null
+          id: string
+          live_impact: string
+          name: string
+          rarity: string
+          size: string
+          type: string
+          updated_at?: string
+          weight: string
+        }
+        Update: {
+          amount_available?: number
+          base_condition?: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          live_impact?: string
+          name?: string
+          rarity?: string
+          size?: string
+          type?: string
+          updated_at?: string
+          weight?: string
+        }
+        Relationships: []
       }
       stage_events: {
         Row: {
@@ -7335,6 +7687,37 @@ export type Database = {
       }
     }
     Views: {
+      admin_cron_job_summary: {
+        Row: {
+          allow_manual_trigger: boolean | null
+          avg_duration_ms: number | null
+          category: string | null
+          created_at: string
+          description: string | null
+          display_name: string
+          edge_function_name: string | null
+          expected_frequency_minutes: number | null
+          is_active: boolean | null
+          job_name: string
+          schedule: string | null
+          updated_at: string
+          total_runs: number | null
+          success_runs: number | null
+          failure_runs: number | null
+          last_run_started_at: string | null
+          last_run_finished_at: string | null
+          last_run_status: string | null
+          last_run_processed_count: number | null
+          last_run_error_count: number | null
+          last_run_error_message: string | null
+          last_run_result_summary: Json | null
+          last_success_started_at: string | null
+          last_success_finished_at: string | null
+          last_error_started_at: string | null
+          last_manual_trigger_at: string | null
+        }
+        Relationships: []
+      }
       band_gift_notifications: {
         Row: {
           band_name: string | null
@@ -7361,6 +7744,60 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_cron_job_runs: {
+        Args: {
+          _limit?: number
+        }
+        Returns: {
+          created_at: string
+          duration_ms: number | null
+          error_count: number | null
+          error_message: string | null
+          id: string
+          items_affected: number | null
+          job_name: string
+          processed_count: number | null
+          request_id: string | null
+          request_payload: Json | null
+          result_summary: Json | null
+          status: string
+          triggered_by: string | null
+          function_name: string | null
+          started_at: string
+          finished_at: string | null
+        }[]
+      }
+      admin_get_cron_job_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          allow_manual_trigger: boolean | null
+          avg_duration_ms: number | null
+          category: string | null
+          created_at: string
+          description: string | null
+          display_name: string
+          edge_function_name: string | null
+          expected_frequency_minutes: number | null
+          is_active: boolean | null
+          job_name: string
+          schedule: string | null
+          updated_at: string
+          total_runs: number | null
+          success_runs: number | null
+          failure_runs: number | null
+          last_run_started_at: string | null
+          last_run_finished_at: string | null
+          last_run_status: string | null
+          last_run_processed_count: number | null
+          last_run_error_count: number | null
+          last_run_error_message: string | null
+          last_run_result_summary: Json | null
+          last_success_started_at: string | null
+          last_success_finished_at: string | null
+          last_error_started_at: string | null
+          last_manual_trigger_at: string | null
+        }[]
+      }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
       auto_complete_manufacturing: {
         Args: never

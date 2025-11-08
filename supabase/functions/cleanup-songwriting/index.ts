@@ -1,12 +1,47 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from '../_shared/job-logger.ts'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-triggered-by',
+}
 
 Deno.serve(async (req) => {
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
 
-    // Call auto-complete function for expired sessions
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
+  let runId: string | null = null
+  const startedAt = Date.now()
+  let completedSessions = 0
+  let convertedProjects = 0
+  let xpAwardedCount = 0
+  let xpAwardErrors = 0
+
+  try {
+    runId = await startJobRun({
+      jobName: 'cleanup-songwriting',
+      functionName: 'cleanup-songwriting',
+      supabaseClient: supabase,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    })
+
     const { data: autoCompleteResult, error: autoCompleteError } = await supabase
       .rpc('auto_complete_songwriting_sessions')
 
@@ -15,12 +50,11 @@ Deno.serve(async (req) => {
       throw autoCompleteError
     }
 
-    const completedSessions = autoCompleteResult?.[0]?.completed_sessions || 0
-    const convertedProjects = autoCompleteResult?.[0]?.converted_projects || 0
+    completedSessions = autoCompleteResult?.[0]?.completed_sessions || 0
+    convertedProjects = autoCompleteResult?.[0]?.converted_projects || 0
 
     console.log(`Auto-completed ${completedSessions} sessions, converted ${convertedProjects} projects`)
 
-    // Award XP for completed sessions via progression function
     if (completedSessions > 0) {
       const { data: sessions } = await supabase
         .from('songwriting_sessions')
@@ -30,43 +64,80 @@ Deno.serve(async (req) => {
         .limit(completedSessions)
 
       for (const session of sessions || []) {
-        if (session.xp_earned && session.songwriting_projects?.profiles?.id) {
-          await supabase.functions.invoke('progression', {
-            body: {
-              action: 'award_action_xp',
-              amount: session.xp_earned,
-              category: 'practice',
-              action_key: 'songwriting_session',
-              metadata: {
-                session_id: session.id,
-                project_id: session.project_id,
-                auto_completed: true
-              }
-            }
-          })
+        try {
+          if (session.xp_earned && session.songwriting_projects?.profiles?.id) {
+            await supabase.functions.invoke('progression', {
+              body: {
+                action: 'award_action_xp',
+                amount: session.xp_earned,
+                category: 'practice',
+                action_key: 'songwriting_session',
+                metadata: {
+                  session_id: session.id,
+                  project_id: session.project_id,
+                  auto_completed: true,
+                },
+              },
+            })
 
-          // Mark XP as awarded
-          await supabase
-            .from('songwriting_sessions')
-            .update({ xp_awarded: true })
-            .eq('id', session.id)
+            await supabase
+              .from('songwriting_sessions')
+              .update({ xp_awarded: true })
+              .eq('id', session.id)
+
+            xpAwardedCount += 1
+          }
+        } catch (xpError) {
+          xpAwardErrors += 1
+          console.error(`Error awarding XP for session ${session.id}:`, xpError)
         }
       }
     }
 
+    await completeJobRun({
+      jobName: 'cleanup-songwriting',
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      processedCount: completedSessions,
+      errorCount: xpAwardErrors,
+      resultSummary: {
+        completedSessions,
+        convertedProjects,
+        xpAwardsIssued: xpAwardedCount,
+        xpAwardErrors,
+      },
+    })
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         completedSessions,
-        convertedProjects
+        convertedProjects,
+        xpAwardsIssued: xpAwardedCount,
+        xpAwardErrors,
       }),
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    await failJobRun({
+      jobName: 'cleanup-songwriting',
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      error,
+      resultSummary: {
+        completedSessions,
+        convertedProjects,
+        xpAwardsIssued: xpAwardedCount,
+        xpAwardErrors,
+      },
+    })
+
     console.error('Cleanup error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: getErrorMessage(error) }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

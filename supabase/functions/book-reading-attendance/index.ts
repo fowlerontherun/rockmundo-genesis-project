@@ -1,18 +1,25 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from "../_shared/job-logger.ts";
 
 // Define MAX_SKILL_LEVEL locally (edge functions can't import from src/)
 const MAX_SKILL_LEVEL = 100;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-triggered-by",
 };
 
 async function processAttendance(supabaseClient: any) {
   console.log("Starting book reading attendance processing...");
 
-  // Get all active reading sessions
   const { data: sessions, error: sessionsError } = await supabaseClient
     .from("player_book_reading_sessions")
     .select(`
@@ -28,11 +35,13 @@ async function processAttendance(supabaseClient: any) {
   console.log(`Found ${sessions?.length || 0} active reading sessions`);
 
   const today = new Date().toISOString().split("T")[0];
-  const results = [];
+  const records: Array<Record<string, unknown>> = [];
+  let processedCount = 0;
+  let errorCount = 0;
+  let totalXpAwarded = 0;
 
   for (const session of sessions || []) {
     try {
-      // Check if already marked attendance today
       const { data: existing } = await supabaseClient
         .from("player_book_reading_attendance")
         .select("id")
@@ -45,12 +54,10 @@ async function processAttendance(supabaseClient: any) {
         continue;
       }
 
-      // Calculate XP to award
       const book = session.skill_books;
       const totalDays = book.base_reading_days;
       const skillGainPercentage = Number(book.skill_percentage_gain);
-      
-      // Get current skill level to calculate XP
+
       const { data: skillProgress } = await supabaseClient
         .from("skill_progress")
         .select("current_level, current_xp, required_xp")
@@ -61,16 +68,13 @@ async function processAttendance(supabaseClient: any) {
       const currentLevel = Math.min(skillProgress?.current_level || 1, MAX_SKILL_LEVEL);
       const currentXp = skillProgress?.current_xp || 0;
       const requiredXp = skillProgress?.required_xp || 100;
-      
-      // Calculate XP: skill_percentage_gain of required XP spread over reading days
+
       const totalSkillXp = Math.round(requiredXp * skillGainPercentage);
       const baseXpPerDay = Math.round(totalSkillXp / totalDays);
-      
-      // Add random variation: 1-200 XP per day
       const randomBonus = Math.floor(Math.random() * 200) + 1;
       const dailyXp = Math.max(1, Math.min(200, baseXpPerDay + randomBonus));
+      totalXpAwarded += dailyXp;
 
-      // Create attendance record
       const { error: attendanceError } = await supabaseClient
         .from("player_book_reading_attendance")
         .insert({
@@ -84,13 +88,11 @@ async function processAttendance(supabaseClient: any) {
         throw attendanceError;
       }
 
-      // Update skill progress
-      const newXp = currentXp + dailyXp;
+      const newXp = (skillProgress?.current_xp || 0) + dailyXp;
       let newLevel = currentLevel;
       let newRequiredXp = requiredXp;
       let remainingXp = newXp;
 
-      // Level up check (can level up multiple times)
       while (newLevel < MAX_SKILL_LEVEL && remainingXp >= newRequiredXp) {
         remainingXp -= newRequiredXp;
         newLevel += 1;
@@ -104,22 +106,24 @@ async function processAttendance(supabaseClient: any) {
 
       const { error: skillError } = await supabaseClient
         .from("skill_progress")
-        .upsert({
-          profile_id: session.profile_id,
-          skill_slug: book.skill_slug,
-          current_xp: remainingXp,
-          current_level: newLevel,
-          required_xp: newRequiredXp,
-          last_practiced_at: new Date().toISOString(),
-        }, {
-          onConflict: 'profile_id,skill_slug'
-        });
+        .upsert(
+          {
+            profile_id: session.profile_id,
+            skill_slug: book.skill_slug,
+            current_xp: remainingXp,
+            current_level: newLevel,
+            required_xp: newRequiredXp,
+            last_practiced_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "profile_id,skill_slug",
+          }
+        );
 
       if (skillError) {
         throw skillError;
       }
 
-      // Update session
       const newDaysRead = session.days_read + 1;
       const isComplete = newDaysRead >= totalDays;
 
@@ -137,7 +141,6 @@ async function processAttendance(supabaseClient: any) {
         throw updateError;
       }
 
-      // If completed, mark purchase as read
       if (isComplete) {
         await supabaseClient
           .from("player_book_purchases")
@@ -145,13 +148,12 @@ async function processAttendance(supabaseClient: any) {
           .eq("id", session.purchase_id);
       }
 
-      // Award profile XP
       const { data: profile } = await supabaseClient
         .from("profiles")
         .select("experience")
         .eq("id", session.profile_id)
         .maybeSingle();
-      
+
       if (profile) {
         await supabaseClient
           .from("profiles")
@@ -161,7 +163,6 @@ async function processAttendance(supabaseClient: any) {
           .eq("id", session.profile_id);
       }
 
-      // Log to experience ledger
       await supabaseClient
         .from("experience_ledger")
         .insert({
@@ -178,7 +179,7 @@ async function processAttendance(supabaseClient: any) {
           },
         });
 
-      results.push({
+      records.push({
         session_id: session.id,
         xp_awarded: dailyXp,
         days_read: newDaysRead,
@@ -186,18 +187,25 @@ async function processAttendance(supabaseClient: any) {
         completed: isComplete,
       });
 
+      processedCount += 1;
       console.log(`Processed session ${session.id}: ${dailyXp} XP, day ${newDaysRead}/${totalDays}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error processing session ${session.id}:`, error);
-      results.push({
+      records.push({
         session_id: session.id,
         error: error.message,
       });
+      errorCount += 1;
     }
   }
 
   console.log("Book reading attendance processing complete");
-  return results;
+  return {
+    records,
+    processedCount,
+    errorCount,
+    totalXpAwarded,
+  };
 }
 
 serve(async (req) => {
@@ -205,19 +213,50 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
-    const results = await processAttendance(supabaseClient);
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
+  let runId: string | null = null;
+  const startedAt = Date.now();
+
+  try {
+    runId = await startJobRun({
+      jobName: "book-reading-attendance",
+      functionName: "book-reading-attendance",
+      supabaseClient,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    });
+
+    const { records, processedCount, errorCount, totalXpAwarded } = await processAttendance(supabaseClient);
+
+    await completeJobRun({
+      jobName: "book-reading-attendance",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      processedCount,
+      errorCount,
+      resultSummary: {
+        processedCount,
+        errorCount,
+        totalXpAwarded,
+      },
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
-        processed: results.length,
-        results,
+        processed: processedCount,
+        errors: errorCount,
+        totalXpAwarded,
+        results: records,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -226,8 +265,17 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in book-reading-attendance:", error);
+
+    await failJobRun({
+      jobName: "book-reading-attendance",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      error,
+    });
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
