@@ -1,8 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from '../_shared/job-logger.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-triggered-by',
 }
 
 Deno.serve(async (req) => {
@@ -10,21 +18,38 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
+  let runId: string | null = null
+  const startedAt = Date.now()
+  let updatedCount = 0
+  let errorCount = 0
+  let totalProfiles = 0
+  let totalXpAggregated = 0
+
+  try {
     console.log(`=== Weekly Activity Calculation Started at ${new Date().toISOString()} ===`)
 
-    // Calculate date range for past 7 days
+    runId = await startJobRun({
+      jobName: 'calculate-weekly-activity',
+      functionName: 'calculate-weekly-activity',
+      supabaseClient: supabase,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    })
+
     const endDate = new Date()
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - 7)
 
     console.log(`Calculating activity from ${startDate.toISOString()} to ${endDate.toISOString()}`)
 
-    // Get all active profiles
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id')
@@ -34,14 +59,11 @@ Deno.serve(async (req) => {
       throw profilesError
     }
 
-    console.log(`Processing ${profiles?.length || 0} profiles`)
-
-    let updatedCount = 0
-    let errorCount = 0
+    totalProfiles = profiles?.length || 0
+    console.log(`Processing ${totalProfiles} profiles`)
 
     for (const profile of profiles || []) {
       try {
-        // Sum XP from experience_ledger for the past 7 days
         const { data: xpData, error: xpError } = await supabase
           .from('experience_ledger')
           .select('xp_amount')
@@ -56,19 +78,22 @@ Deno.serve(async (req) => {
         }
 
         const totalXp = xpData?.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0) || 0
+        totalXpAggregated += totalXp
 
-        // Update or insert weekly activity record
         const { error: updateError } = await supabase
           .from('player_weekly_activity')
-          .upsert({
-            profile_id: profile.id,
-            week_start: startDate.toISOString().split('T')[0],
-            week_end: endDate.toISOString().split('T')[0],
-            xp_earned: totalXp,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'profile_id,week_start'
-          })
+          .upsert(
+            {
+              profile_id: profile.id,
+              week_start: startDate.toISOString().split('T')[0],
+              week_end: endDate.toISOString().split('T')[0],
+              xp_earned: totalXp,
+              updated_at: new Date().toISOString(),
+            },
+            {
+              onConflict: 'profile_id,week_start',
+            }
+          )
 
         if (updateError) {
           console.error(`Error updating weekly activity for profile ${profile.id}:`, updateError)
@@ -88,18 +113,49 @@ Deno.serve(async (req) => {
     console.log(`=== Weekly Activity Calculation Complete ===`)
     console.log(`Updated: ${updatedCount}, Errors: ${errorCount}`)
 
+    await completeJobRun({
+      jobName: 'calculate-weekly-activity',
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      processedCount: updatedCount,
+      errorCount,
+      resultSummary: {
+        updatedCount,
+        errorCount,
+        totalProfiles,
+        totalXpAggregated,
+      },
+    })
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         profilesProcessed: updatedCount,
-        errors: errorCount
+        errors: errorCount,
+        totalProfiles,
+        totalXpAggregated,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    await failJobRun({
+      jobName: 'calculate-weekly-activity',
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      error,
+      resultSummary: {
+        updatedCount,
+        errorCount,
+        totalProfiles,
+        totalXpAggregated,
+      },
+    })
+
     console.error('Weekly activity calculation error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
