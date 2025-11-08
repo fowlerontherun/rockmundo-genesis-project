@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     const { data: streamingReleases, error: streamingError } = await supabase
       .from('song_releases')
-      .select('id, song_id, platform_id, total_streams')
+      .select('id, song_id, platform_id, total_streams, total_revenue')
       .eq('is_active', true)
       .eq('release_type', 'streaming');
 
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
           .from('song_releases')
           .update({
             total_streams: (release.total_streams || 0) + dailyStreams,
-            total_revenue: dailyRevenue,
+            total_revenue: (release.total_revenue || 0) + dailyRevenue,
           })
           .eq('id', release.id);
 
