@@ -269,7 +269,7 @@ export const DikCokExperience = ({ profile }: DikCokExperienceProps) => {
           </p>
         </div>
         <Badge variant="outline" className="gap-2 text-sm">
-          <Sparkles className="h-4 w-4" /> Creator Tier: {profile.stage_name ?? profile.username ?? "Unknown"}
+          <Sparkles className="h-4 w-4" /> Creator Tier: {profile.username ?? profile.display_name ?? "Unknown"}
         </Badge>
       </div>
 

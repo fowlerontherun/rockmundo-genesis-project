@@ -46,16 +46,16 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [selectedOutcome, setSelectedOutcome] = useState<GigOutcomeWithDetails | null>(null);
   const [showReport, setShowReport] = useState(false);
 
-  const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
+    const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
     queryKey: ['gig-history', bandId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('gig_outcomes')
         .select(`
           *,
-          gigs!inner(
+          gigs!gig_outcomes_gig_id_fkey!inner(
             *,
-            venues(name, capacity, location),
+            venues!gigs_venue_id_fkey(name, capacity, location),
             setlists(name)
           )
         `)
@@ -65,7 +65,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data ?? []) as GigHistoryOutcome[];
+      return (data ?? []) as unknown as GigHistoryOutcome[];
     },
     refetchInterval: 5000, // Refetch every 5 seconds to catch newly completed gigs
   });
@@ -99,8 +99,10 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         merch_items_sold: outcome.merch_items_sold || 0
       },
       chemistry_impact: outcome.chemistry_change || 0,
-      equipment_wear_cost: outcome.equipment_cost || 0
-    });
+      equipment_wear_cost: outcome.equipment_cost || 0,
+      merch_sales: outcome.merch_revenue || 0,
+      crew_costs: outcome.crew_cost || 0
+    } as GigOutcomeWithDetails);
     setShowReport(true);
   };
 
