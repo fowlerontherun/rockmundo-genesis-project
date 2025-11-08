@@ -140,13 +140,27 @@ Deno.serve(async (req) => {
             .eq('setlist_id', rehearsal.setlist_id)
 
           for (const song of setlistSongs || []) {
+            const { data: existingFamiliarity, error: familiarityFetchError } = await supabase
+              .from('band_song_familiarity')
+              .select('familiarity')
+              .eq('band_id', rehearsal.band_id)
+              .eq('song_id', song.song_id)
+              .maybeSingle()
+
+            if (familiarityFetchError) {
+              throw familiarityFetchError
+            }
+
+            const updatedFamiliarity =
+              (existingFamiliarity?.familiarity ?? 0) + familiarityGain
+
             await supabase
               .from('band_song_familiarity')
               .upsert(
                 {
                   band_id: rehearsal.band_id,
                   song_id: song.song_id,
-                  familiarity: supabase.rpc('increment', { x: familiarityGain }),
+                  familiarity: updatedFamiliarity,
                   updated_at: new Date().toISOString(),
                 },
                 {
