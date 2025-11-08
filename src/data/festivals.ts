@@ -524,7 +524,7 @@ export const dataModelTables: FestivalDataModelTable[] = [
     name: "twaater_posts",
     description: "Hooks for festival milestones: announcements, lineup drops, pricing changes, alerts, highlights, aftermovie.",
     keyFields: ["festival_id", "post_type", "published_at"],
-    category: "core",
+    scope: "core",
   },
 ];
 
