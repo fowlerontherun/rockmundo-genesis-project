@@ -74,7 +74,7 @@ export function RelationshipTimeline({ profileId, otherProfileId, userId, events
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {event.metadata?.reaction && (
+                    {event.metadata?.reaction && typeof event.metadata.reaction === 'string' && (
                       <Badge variant="secondary">Reacted with {event.metadata.reaction}</Badge>
                     )}
                     <Button
@@ -87,17 +87,17 @@ export function RelationshipTimeline({ profileId, otherProfileId, userId, events
                     </Button>
                   </div>
                 </div>
-                {event.metadata?.gift_amount && (
+                {event.metadata?.gift_amount && typeof event.metadata.gift_amount === 'number' && (
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Gifted {event.metadata.gift_amount} credits for {event.metadata.gift_reason ?? "support"}.
+                    Gifted {event.metadata.gift_amount} credits for {typeof event.metadata.gift_reason === 'string' ? event.metadata.gift_reason : "support"}.
                   </p>
                 )}
-                {event.metadata?.collaboration_type && (
+                {event.metadata?.collaboration_type && typeof event.metadata.collaboration_type === 'string' && (
                   <p className="mt-2 text-sm text-muted-foreground">
                     Collaboration type: {event.metadata.collaboration_type}
                   </p>
                 )}
-                {event.metadata?.permissions && (
+                {event.metadata?.permissions && typeof event.metadata.permissions === 'object' && event.metadata.permissions !== null && (
                   <p className="mt-2 text-sm text-muted-foreground">
                     Permissions updated: {Object.keys(event.metadata.permissions).join(", ")}
                   </p>
@@ -107,7 +107,7 @@ export function RelationshipTimeline({ profileId, otherProfileId, userId, events
                     <Button
                       key={option.id}
                       variant="outline"
-                      size="xs"
+                      size="sm"
                       onClick={() => handleReact(event.id, option.id)}
                     >
                       {option.label}

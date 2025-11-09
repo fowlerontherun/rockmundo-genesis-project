@@ -19,6 +19,15 @@ type VenueRow = Database['public']['Tables']['venues']['Row'];
 type SetlistRow = Database['public']['Tables']['setlists']['Row'];
 type GigSongPerformanceRow = Database['public']['Tables']['gig_song_performances']['Row'] & {
   songs: Pick<Database['public']['Tables']['songs']['Row'], 'title' | 'genre' | 'duration_seconds'> | null;
+  setlist_position: number;
+  song_quality_contribution: number;
+  rehearsal_contribution: number;
+  chemistry_contribution: number;
+  equipment_contribution: number;
+  crew_contribution: number;
+  member_skills_contribution: number;
+  crowd_response: string;
+  performance_score: number;
 };
 
 

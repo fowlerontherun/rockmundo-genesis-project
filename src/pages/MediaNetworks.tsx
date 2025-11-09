@@ -185,7 +185,7 @@ const getMediaTypeLabel = (type: MediaType) => {
     case "radio":
       return "Radio";
     default:
-      return type.toUpperCase();
+      return String(type).toUpperCase();
   }
 };
 
@@ -308,13 +308,19 @@ const MediaNetworks = () => {
   }, []);
 
   const pieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: PieLabelRenderProps) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
+    const numCx = Number(cx) || 0;
+    const numCy = Number(cy) || 0;
+    const numInnerRadius = Number(innerRadius) || 0;
+    const numOuterRadius = Number(outerRadius) || 0;
+    const numMidAngle = Number(midAngle) || 0;
+    
+    const radius = numInnerRadius + (numOuterRadius - numInnerRadius) * 0.6;
     const RADIAN = Math.PI / 180;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const x = numCx + radius * Math.cos(-numMidAngle * RADIAN);
+    const y = numCy + radius * Math.sin(-numMidAngle * RADIAN);
 
     return (
-      <text x={x} y={y} fill="white" textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" className="text-xs">
+      <text x={x} y={y} fill="white" textAnchor={x > numCx ? "start" : "end"} dominantBaseline="central" className="text-xs">
         {(percent ? percent * 100 : 0).toFixed(0)}%
       </text>
     );

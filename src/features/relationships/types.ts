@@ -27,7 +27,6 @@ export interface RelationshipSummary {
   tierMinimum: number;
   tierMaximum: number | null;
   progressToNextTier: number;
-  events: RelationshipEvent[];
   milestoneProgress: Array<{
     id: string;
     label: string;

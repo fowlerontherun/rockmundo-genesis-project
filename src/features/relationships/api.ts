@@ -161,7 +161,14 @@ export async function fetchRelationshipEvents({
 }
 
 function filterRelationshipEvents(
-  rows: Database["public"]["Tables"]["activity_feed"]["Row"][],
+  rows: Array<{ 
+    activity_type: string; 
+    created_at: string; 
+    id: string; 
+    message: string; 
+    metadata: any; 
+    user_id: string;
+  }>,
   otherProfileId: string,
   pairKey: string,
   limit: number,
@@ -361,10 +368,15 @@ export async function fetchPermissionHistory(
   return permissions as Record<string, unknown>;
 }
 
-export async function fetchBandMemberships(profileId: string) {
-  const { data, error } = await supabase
+export async function fetchBandMemberships(profileId: string): Promise<Array<{
+  band_id: string;
+  role: string | null;
+  bands: { id: string; name: string | null; genre: string | null; fame: number | null } | null;
+}>> {
+  // Use untyped client to avoid type instantiation depth issues
+  const { data, error }: { data: any; error: any } = await (supabase as any)
     .from("band_members")
-    .select("band_id, role, status, bands!inner(id, name, genre, fame)")
+    .select("band_id, role, bands!band_members_band_id_fkey(id, name, genre, fame)")
     .eq("profile_id", profileId)
     .order("created_at", { ascending: false });
 
@@ -372,12 +384,7 @@ export async function fetchBandMemberships(profileId: string) {
     throw error;
   }
 
-  return data as Array<{
-    band_id: string;
-    role: string | null;
-    status: string | null;
-    bands: { id: string; name: string | null; genre: string | null; fame: number | null } | null;
-  }>;
+  return data ?? [];
 }
 
 export async function fetchActivityFeedForProfile(profileId: string, limit = 30) {
