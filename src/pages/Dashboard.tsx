@@ -42,6 +42,7 @@ import { useAutoBookReading } from "@/hooks/useAutoBookReading";
 import { useAutoShiftClockOut } from "@/hooks/useAutoShiftClockOut";
 import { useAutoGigStart } from "@/hooks/useAutoGigStart";
 import { useGigNotifications } from "@/hooks/useGigNotifications";
+import { DaySchedule } from "@/components/schedule/DaySchedule";
 
 type ActivityFeedRow = Database["public"]["Tables"]["activity_feed"]["Row"];
 type ProfileActivityStatusRow = Database["public"]["Tables"]["profile_activity_statuses"]["Row"];
@@ -814,6 +815,9 @@ const Dashboard = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Day Schedule */}
+        <DaySchedule date={new Date()} userId={profile.user_id} />
 
         {/* Notifications */}
         <Card className="bg-card/80 backdrop-blur-sm border-primary/20">
