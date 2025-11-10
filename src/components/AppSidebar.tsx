@@ -40,6 +40,9 @@ import {
   Wrench,
   HardHat,
   HeartHandshake,
+  Target,
+  TrendingUp,
+  Map,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -71,6 +74,7 @@ export function AppSidebar() {
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: User, label: "Character", path: "/my-character" },
         { icon: Guitar, label: "Gear", path: "/gear" },
+        { icon: Calendar, label: "Schedule", path: "/schedule" },
       ],
     },
     {
@@ -78,6 +82,7 @@ export function AppSidebar() {
       items: [
         { icon: Music, label: "Music Hub", path: "/music" },
         { icon: GraduationCap, label: "Education", path: "/education" },
+        { icon: Target, label: "Skills", path: "/skills" },
       ],
     },
     {
@@ -98,6 +103,8 @@ export function AppSidebar() {
         { icon: Globe, label: "Cities", path: "/cities" },
         { icon: Plane, label: "Travel", path: "/travel" },
         { icon: Building2, label: "Current City", path: cityOverviewPath },
+        { icon: TrendingUp, label: "World Pulse", path: "/world-pulse" },
+        { icon: Map, label: "Tours", path: "/tours" },
       ],
     },
     {
