@@ -103,6 +103,7 @@ const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
+const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
 
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
@@ -145,6 +146,10 @@ function App() {
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
+                    <Route path="skills" element={<SkillsPage />} />
+                    <Route path="world-pulse" element={<WorldPulsePage />} />
+                    <Route path="tours" element={<TourManager />} />
+                    <Route path="tours-system" element={<TouringSystem />} />
                     <Route path="equipment" element={<EquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
                     
