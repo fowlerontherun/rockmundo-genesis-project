@@ -183,7 +183,7 @@ export function RehearsalsTab() {
       const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
       const familiarityGained = duration * 60;
 
-      const { error: rehearsalError } = await supabase
+      const { data: rehearsalData, error: rehearsalError } = await supabase
         .from('band_rehearsals')
         .insert([{
           band_id: userBand.id,
@@ -197,7 +197,9 @@ export function RehearsalsTab() {
           selected_song_id: songId,
           familiarity_gained: familiarityGained,
           status: 'in_progress',
-        }]);
+        }])
+        .select('id')
+        .single();
 
       if (rehearsalError) throw rehearsalError;
 
@@ -215,6 +217,9 @@ export function RehearsalsTab() {
 
       setShowBookingDialog(false);
       await loadData();
+      
+      // Return rehearsal ID for schedule integration
+      return rehearsalData?.id;
     } catch (error) {
       console.error('Error booking rehearsal:', error);
       toast({

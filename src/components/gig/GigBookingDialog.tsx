@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
+import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DollarSign, TrendingDown, TrendingUp, Users, Clock, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
