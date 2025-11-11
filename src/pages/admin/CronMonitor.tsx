@@ -10,11 +10,40 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables } from "@/lib/supabase-types";
 import type { PostgrestError } from "@supabase/supabase-js";
 
-type CronJobSummary = Tables<"admin_cron_job_summary">;
-type CronJobRun = Tables<"admin_cron_job_runs">;
+interface CronJobSummary {
+  job_name: string;
+  edge_function_name: string;
+  display_name: string;
+  description?: string | null;
+  schedule: string;
+  last_run_at?: string | null;
+  last_run_started_at?: string | null;
+  last_run_status?: string | null;
+  last_run_duration_ms?: number | null;
+  avg_duration_ms?: number | null;
+  total_runs?: number;
+  success_count?: number;
+  success_runs?: number;
+  error_count?: number;
+  allow_manual_trigger?: boolean;
+  last_manual_trigger_at?: string | null;
+}
+
+interface CronJobRun {
+  id: string;
+  job_name: string;
+  started_at: string;
+  completed_at?: string | null;
+  status: string;
+  duration_ms?: number | null;
+  error_message?: string | null;
+  result_summary?: any;
+  processed_count?: number | null;
+  error_count?: number | null;
+  triggered_by?: string | null;
+}
 
 const numberFormatter = new Intl.NumberFormat();
 
@@ -48,10 +77,10 @@ export default function CronMonitor() {
   } = useQuery({
     queryKey: ["admin_cron_job_summary"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_get_cron_job_summary");
+      const { data, error } = await (supabase as any).rpc("admin_get_cron_job_summary");
       if (error) {
         if (isMissingRpcFunctionError(error)) {
-          const { data: fallbackData, error: fallbackError } = await supabase
+          const { data: fallbackData, error: fallbackError } = await (supabase as any)
             .from("admin_cron_job_summary")
             .select("*")
             .order("display_name");
@@ -74,10 +103,10 @@ export default function CronMonitor() {
   } = useQuery({
     queryKey: ["admin_cron_job_runs"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_get_cron_job_runs", { _limit: 50 });
+      const { data, error } = await (supabase as any).rpc("admin_get_cron_job_runs", { _limit: 50 });
       if (error) {
         if (isMissingRpcFunctionError(error)) {
-          const { data: fallbackData, error: fallbackError } = await supabase
+          const { data: fallbackData, error: fallbackError } = await (supabase as any)
             .from("admin_cron_job_runs")
             .select("*")
             .order("started_at", { ascending: false })
