@@ -59,3 +59,6 @@ verify_jwt = false
 
 [functions.complete-release-manufacturing]
 verify_jwt = false
+
+[functions.generate-daily-sales]
+verify_jwt = false
