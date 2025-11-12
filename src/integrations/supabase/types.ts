@@ -1503,6 +1503,87 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_job_config: {
+        Row: {
+          allow_manual_trigger: boolean | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          edge_function_name: string
+          is_active: boolean | null
+          job_name: string
+          schedule: string
+          updated_at: string | null
+        }
+        Insert: {
+          allow_manual_trigger?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          edge_function_name: string
+          is_active?: boolean | null
+          job_name: string
+          schedule: string
+          updated_at?: string | null
+        }
+        Update: {
+          allow_manual_trigger?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          edge_function_name?: string
+          is_active?: boolean | null
+          job_name?: string
+          schedule?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      cron_job_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          duration_ms: number | null
+          error_count: number | null
+          error_message: string | null
+          id: string
+          job_name: string
+          processed_count: number | null
+          result_summary: Json | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          job_name: string
+          processed_count?: number | null
+          result_summary?: Json | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          job_name?: string
+          processed_count?: number | null
+          result_summary?: Json | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       education_mentors: {
         Row: {
           attribute_keys: Json
@@ -7577,6 +7658,68 @@ export type Database = {
       }
     }
     Views: {
+      admin_cron_job_runs: {
+        Row: {
+          completed_at: string | null
+          duration_ms: number | null
+          error_count: number | null
+          error_message: string | null
+          id: string | null
+          job_name: string | null
+          processed_count: number | null
+          result_summary: Json | null
+          started_at: string | null
+          status: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          duration_ms?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string | null
+          job_name?: string | null
+          processed_count?: number | null
+          result_summary?: Json | null
+          started_at?: string | null
+          status?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          duration_ms?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string | null
+          job_name?: string | null
+          processed_count?: number | null
+          result_summary?: Json | null
+          started_at?: string | null
+          status?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      admin_cron_job_summary: {
+        Row: {
+          allow_manual_trigger: boolean | null
+          avg_duration_ms: number | null
+          description: string | null
+          display_name: string | null
+          edge_function_name: string | null
+          error_count: number | null
+          job_name: string | null
+          last_manual_trigger_at: string | null
+          last_run_at: string | null
+          last_run_duration_ms: number | null
+          last_run_started_at: string | null
+          last_run_status: string | null
+          schedule: string | null
+          success_runs: number | null
+          total_runs: number | null
+        }
+        Relationships: []
+      }
       band_gift_notifications: {
         Row: {
           band_name: string | null
@@ -7603,6 +7746,54 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_cron_job_runs: {
+        Args: { _limit?: number }
+        Returns: {
+          completed_at: string | null
+          duration_ms: number | null
+          error_count: number | null
+          error_message: string | null
+          id: string | null
+          job_name: string | null
+          processed_count: number | null
+          result_summary: Json | null
+          started_at: string | null
+          status: string | null
+          triggered_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_cron_job_runs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_get_cron_job_summary: {
+        Args: never
+        Returns: {
+          allow_manual_trigger: boolean | null
+          avg_duration_ms: number | null
+          description: string | null
+          display_name: string | null
+          edge_function_name: string | null
+          error_count: number | null
+          job_name: string | null
+          last_manual_trigger_at: string | null
+          last_run_at: string | null
+          last_run_duration_ms: number | null
+          last_run_started_at: string | null
+          last_run_status: string | null
+          schedule: string | null
+          success_runs: number | null
+          total_runs: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_cron_job_summary"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       advance_gig_song: { Args: { p_gig_id: string }; Returns: undefined }
       auto_complete_manufacturing: {
         Args: never
