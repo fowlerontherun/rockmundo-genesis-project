@@ -51,7 +51,7 @@ serve(async (req) => {
         user_id,
         release_type,
         bands(fame, popularity, chemistry_level),
-        release_formats(id, format_type, unit_price, stock_quantity),
+        release_formats(id, format_type, retail_price, quantity),
         release_songs(song:songs(quality_score))
       `)
       .eq("release_status", "released");
@@ -99,7 +99,7 @@ serve(async (req) => {
         const qualityMultiplier = avgQuality / 50;
 
         for (const format of release.release_formats || []) {
-          if (!format.stock_quantity || format.stock_quantity <= 0) continue;
+          if (!format.quantity || format.quantity <= 0) continue;
 
           let baseSales = 0;
 
@@ -122,24 +122,24 @@ serve(async (req) => {
             baseSales * fameMultiplier * popularityMultiplier * qualityMultiplier
           );
 
-          const actualSales = Math.min(calculatedSales, format.stock_quantity || 0);
+          const actualSales = Math.min(calculatedSales, format.quantity || 0);
 
           if (actualSales > 0) {
-            const revenue = actualSales * (format.unit_price || 0);
+            const revenue = actualSales * (format.retail_price || 0);
 
             await supabaseClient.from("release_sales").insert({
               release_format_id: format.id,
               quantity_sold: actualSales,
-              unit_price: format.unit_price,
+              unit_price: format.retail_price,
               total_amount: revenue,
               sale_date: new Date().toISOString().split("T")[0],
-              sale_region: "global",
+              platform: "physical_store",
             });
 
             if (format.format_type !== "digital") {
               await supabaseClient
                 .from("release_formats")
-                .update({ stock_quantity: (format.stock_quantity || 0) - actualSales })
+                .update({ quantity: (format.quantity || 0) - actualSales })
                 .eq("id", format.id);
             }
 
