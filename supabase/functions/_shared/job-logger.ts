@@ -50,13 +50,10 @@ export async function startJobRun({
 }: StartJobRunParams): Promise<string | null> {
   try {
     const { data, error } = await supabaseClient
-      .from("admin_cron_job_runs")
+      .from("cron_job_runs")
       .insert({
         job_name: jobName,
-        function_name: functionName,
         triggered_by: triggeredBy ?? "cron",
-        request_payload: requestPayload ?? null,
-        request_id: requestId ?? null,
       })
       .select("id")
       .single();
@@ -86,14 +83,13 @@ export async function completeJobRun({
   if (!runId) return;
 
   const { error } = await supabaseClient
-    .from("admin_cron_job_runs")
+    .from("cron_job_runs")
     .update({
       status: "success",
-      finished_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
       duration_ms: durationMs ?? null,
       processed_count: processedCount ?? null,
       error_count: errorCount ?? null,
-      items_affected: itemsAffected ?? null,
       result_summary: resultSummary ?? null,
     })
     .eq("id", runId);
@@ -138,14 +134,13 @@ export async function failJobRun({
       : { error: errorMessage });
 
   const { error: updateError } = await supabaseClient
-    .from("admin_cron_job_runs")
+    .from("cron_job_runs")
     .update({
       status: "error",
-      finished_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
       duration_ms: durationMs ?? null,
       processed_count: processedCount ?? null,
       error_count: errorCount ?? null,
-      items_affected: itemsAffected ?? null,
       error_message: errorMessage,
       result_summary: summary,
     })

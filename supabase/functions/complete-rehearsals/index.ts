@@ -74,13 +74,10 @@ Deno.serve(async (req) => {
           .from('band_rehearsals')
           .update({
             status: 'completed',
-            actual_end: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
             xp_earned: xpEarned,
-            chemistry_gained: chemistryGain,
-            notes: rehearsal.notes
-              ? `${rehearsal.notes}\n\nAuto-completed: Earned ${xpEarned} XP, +${chemistryGain} chemistry`
-              : `Auto-completed: Earned ${xpEarned} XP, +${chemistryGain} chemistry`,
-            updated_at: new Date().toISOString(),
+            chemistry_gain: chemistryGain,
+            familiarity_gained: familiarityGain,
           })
           .eq('id', rehearsal.id)
 
