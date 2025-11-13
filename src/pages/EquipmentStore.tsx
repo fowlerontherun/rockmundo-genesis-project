@@ -2,14 +2,11 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  BadgeDollarSign,
-  Flame,
-  Infinity,
+  CheckCircle2,
+  Info,
   Loader2,
   PackageSearch,
-  RefreshCcw,
   Shield,
-  ShoppingBag,
   ShoppingCart,
   Sparkles,
   Zap,
@@ -18,6 +15,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import {
+  usePlayerEquipment,
+  type PlayerEquipmentWithItem,
+  type PlayerGearPoolStatus,
+} from "@/hooks/usePlayerEquipment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,43 +27,42 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  type EquipmentItemRecord,
-  type GearCategory,
-  normalizeEquipmentStatBoosts,
-} from "@/types/gear";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { GearComparisonDrawer, type ComparableGearItem } from "@/components/gear/GearComparisonDrawer";
+import { deriveQualityTier, getQualityLabel, qualityTierStyles } from "@/utils/gearQuality";
+import { getRarityLabel, parseRarityKey, rarityStyles } from "@/utils/gearRarity";
 
-interface CategoryOption {
-  value: string;
-  label: string;
-  sort: number;
-}
-
-interface StoreItem extends Omit<EquipmentItemRecord, "stat_boosts"> {
+interface RawStoreItem {
+  id: string;
+  name: string;
+  category: string;
+  subcategory: string | null;
+  price: number;
+  rarity: string | null;
+  description: string | null;
   stat_boosts: Record<string, number> | null;
   gear_category?: GearCategory | null;
 }
 
-interface OwnedEquipmentRecord {
-  id: string;
-  condition: number | null;
-  is_equipped: boolean | null;
-  created_at: string | null;
-  equipment?: EquipmentItemRecord | null;
+interface PurchaseResult {
+  player_equipment_id: string;
+  remaining_stock: number | null;
+  new_cash: number | null;
+  new_secondary_balance: number | null;
+  pool_category: string | null;
+  slot_kind: string | null;
+  remaining_pool_capacity: number | null;
 }
-
-const rarityStyles: Record<string, string> = {
-  common: "border-muted bg-muted/40 text-muted-foreground",
-  uncommon: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
-  rare: "border-blue-500/40 bg-blue-500/10 text-blue-600",
-  epic: "border-purple-500/40 bg-purple-500/10 text-purple-600",
-  legendary: "border-amber-500/40 bg-amber-500/10 text-amber-600",
-};
-
-const mapRowToItem = (row: EquipmentItemRecord): StoreItem => ({
-  ...row,
-  stat_boosts: normalizeEquipmentStatBoosts(row.stat_boosts),
-});
 
 const formatStatBoosts = (boosts: Record<string, number> | null) => {
   if (!boosts) return [];
@@ -70,107 +71,88 @@ const formatStatBoosts = (boosts: Record<string, number> | null) => {
     .map(([key, value]) => ({ key, value }));
 };
 
-const formatPurchaseLabel = (item: EquipmentItemRecord) => {
-  const hasCashCost = item.price_cash > 0;
-  const hasFameCost = item.price_fame > 0;
-
-  if (hasCashCost && hasFameCost) {
-    return `Purchase for $${item.price_cash.toLocaleString()} + ${item.price_fame.toLocaleString()} Fame`;
-  }
-
-  if (hasCashCost) {
-    return `Purchase for $${item.price_cash.toLocaleString()}`;
-  }
-
-  if (hasFameCost) {
-    return `Unlock for ${item.price_fame.toLocaleString()} Fame`;
-  }
-
-  return "Add to inventory";
-};
+const mapRowToItem = (row: RawStoreItem): StoreItem => ({
+  ...row,
+  qualityTier: deriveQualityTier(row.price, row.stat_boosts),
+  rarityKey: parseRarityKey(row.rarity),
+});
 
 const EquipmentStore = () => {
   const queryClient = useQueryClient();
   const { profile, refetch } = useGameData();
   const { user } = useAuth();
+  const { data: ownedEquipment, isLoading: loadingOwned, error: ownedError } = usePlayerEquipment();
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
+  const [confirmationItem, setConfirmationItem] = useState<StoreItem | null>(null);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [recentPurchases, setRecentPurchases] = useState<string[]>([]);
 
-  const { data: items, isLoading: loadingItems } = useQuery<StoreItem[]>({
+  const {
+    data: items,
+    isLoading: loadingItems,
+    error: itemsError,
+    refetch: refetchItems,
+  } = useQuery<StoreItem[]>({
     queryKey: ["equipment-store-items"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("equipment_items")
-        .select(
-          `id,
-           name,
-           category,
-           gear_category_id,
-           gear_category:gear_categories (id, slug, label, description, icon, sort_order),
-           subcategory,
-           price_cash,
-           price_fame,
-           rarity,
-           description,
-           stat_boosts,
-           stock,
-           is_stock_tracked,
-           auto_restock`
-        )
-        .order("price_cash");
+        .select("id, name, category, subcategory, price, rarity, description, stat_boosts, stock")
+        .order("price");
 
       if (error) throw error;
-      return ((data as EquipmentItemRecord[] | null) ?? []).map(mapRowToItem);
+      return (data as StoreItem[]) ?? [];
     },
   });
 
-  const { data: owned, isLoading: loadingOwned } = useQuery<OwnedEquipmentRecord[]>({
-    queryKey: ["player-equipment", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
+  const poolByCategory = useMemo(() => {
+    const map = new Map<string, PlayerGearPoolStatus>();
+    gearPoolStatus.forEach((status) => {
+      if (status?.category) {
+        map.set(status.category, status);
+      }
+    });
+    return map;
+  }, [gearPoolStatus]);
 
-      const { data, error } = await supabase
-        .from("player_equipment")
-        .select(
-          `id, condition, is_equipped, created_at, equipment:equipment_items!equipment_id (
-             id,
-             name,
-             category,
-             gear_category_id,
-             gear_category:gear_categories (id, slug, label, description, icon, sort_order),
-             subcategory,
-             price_cash,
-             price_fame,
-             rarity,
-             description,
-             stat_boosts,
-             stock,
-             is_stock_tracked,
-             auto_restock
-           )`
-        )
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return (data as OwnedEquipmentRecord[]) ?? [];
-    },
-    enabled: !!user?.id,
-  });
+  const {
+    data: equipmentData,
+    isLoading: loadingOwned,
+    error: equipmentError,
+  } = usePlayerEquipment();
+  const owned = equipmentData?.items ?? [];
+  const gearPoolStatus = equipmentData?.poolStatus ?? [];
 
   const purchaseMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await supabase.rpc("purchase_equipment_item" as any, { p_equipment_id: itemId });
+      const { data, error } = await supabase.rpc("purchase_equipment_item" as any, {
+        p_equipment_id: itemId,
+      });
       if (error) throw error;
+      return Array.isArray(data) && data.length > 0 ? (data[0] as PurchaseResult) : undefined;
     },
-    onSuccess: async () => {
-      toast.success("Equipment purchased");
+    onSuccess: async (result) => {
+      const remainingSlots = result?.remaining_pool_capacity;
+      const slotLabel = result?.slot_kind ?? "gear";
+      const slotMessage =
+        typeof remainingSlots === "number"
+          ? `${remainingSlots} ${slotLabel} slot${remainingSlots === 1 ? "" : "s"} remaining`
+          : "Ready for loadout assignment";
+      toast.success(`Equipment purchased. ${slotMessage}`);
       queryClient.invalidateQueries({ queryKey: ["equipment-store-items"] });
       queryClient.invalidateQueries({ queryKey: ["player-equipment", user?.id] });
       await refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Unable to complete purchase");
+      const message =
+        error.message?.includes("Gear pool is full")
+          ? error.message
+          : error.message || "Unable to complete purchase";
+      toast.error(message);
     },
   });
 
@@ -214,9 +196,9 @@ const EquipmentStore = () => {
   }, [items, category, search]);
 
   const ownedIds = useMemo(() => {
-    if (!owned) return new Set<string>();
-    return new Set(owned.map((entry) => entry.equipment?.id).filter(Boolean) as string[]);
-  }, [owned]);
+    if (!ownedEquipment) return new Set<string>();
+    return new Set(ownedEquipment.map((entry) => entry.equipment?.id).filter(Boolean) as string[]);
+  }, [ownedEquipment]);
 
   const cashOnHand = typeof profile?.cash === "number" ? profile.cash : 0;
   const fameScore = typeof profile?.fame === "number" ? profile.fame : 0;
@@ -281,41 +263,59 @@ const EquipmentStore = () => {
             </CardContent>
           </Card>
 
+          {gearPoolStatus.length > 0 ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Gear pool overview</CardTitle>
+                <CardDescription>Keep an eye on capacity before committing to purchases.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {gearPoolStatus.map((status) => {
+                  const categoryLabel = status.category ?? "uncategorized";
+                  const used = status.used_count ?? 0;
+                  const capacity = status.capacity ?? 0;
+                  const available = status.available_slots ?? Math.max(capacity - used, 0);
+                  return (
+                    <div key={categoryLabel} className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between text-sm font-medium">
+                        <span className="capitalize">{categoryLabel}</span>
+                        <Badge variant={available > 0 ? "secondary" : "destructive"}>{available} open</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {used}/{capacity} assigned • Slot type: {status.slot_kind ?? "–"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ) : null}
+
           {loadingItems ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : filteredItems.length === 0 ? (
             <Card>
-              <CardContent className="flex items-center gap-3 py-12 text-muted-foreground">
-                <PackageSearch className="h-5 w-5" />
-                <span>No equipment matches your filters.</span>
+              <CardContent className="space-y-3 py-12 text-center text-sm text-muted-foreground">
+                <div className="flex justify-center">
+                  <PackageSearch className="h-5 w-5" />
+                </div>
+                <p>No equipment matches your filters.</p>
+                <p>Reset filters or explore neighbouring categories to uncover compatible gear.</p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredItems.map((item) => {
                 const boosts = formatStatBoosts(item.stat_boosts);
-                const rarityKey = item.rarity?.toLowerCase() ?? "common";
-                const rarityClass = rarityStyles[rarityKey] ?? rarityStyles.common;
+                const rarityClass = rarityStyles[item.rarityKey];
+                const qualityClass = qualityTierStyles[item.qualityTier];
                 const isOwned = ownedIds.has(item.id);
-                const outOfStock = item.is_stock_tracked && (item.stock ?? 0) <= 0;
-
-                const stockTone = !item.is_stock_tracked
-                  ? "text-emerald-600"
-                  : outOfStock
-                  ? "text-destructive"
-                  : item.stock && item.stock <= 2
-                  ? "text-amber-600"
-                  : "text-muted-foreground";
-
-                const stockLabel = !item.is_stock_tracked
-                  ? "Unlimited availability"
-                  : outOfStock
-                  ? "Sold out"
-                  : `${item.stock ?? 0} in stock`;
-
-                const purchaseLabel = formatPurchaseLabel(item);
+                const outOfStock = (item.stock ?? 0) <= 0;
+                const poolStatus = poolByCategory.get(item.category);
+                const availableSlots = poolStatus?.available_slots ?? null;
+                const noCapacity = availableSlots !== null && (availableSlots ?? 0) <= 0;
 
                 return (
                   <Card key={item.id} className="flex flex-col border-2">
@@ -327,13 +327,35 @@ const EquipmentStore = () => {
                             {item.subcategory || item.gear_category?.label || item.category}
                           </CardDescription>
                         </div>
-                        <Badge variant="outline" className={rarityClass}>
-                          {item.rarity ?? "Common"}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="outline" className={rarityClass}>
+                            {getRarityLabel(item.rarityKey)}
+                          </Badge>
+                          <Badge variant="outline" className={qualityClass}>
+                            {getQualityLabel(item.qualityTier)}
+                          </Badge>
+                        </div>
                       </div>
                       {item.description ? (
                         <p className="text-sm text-muted-foreground">{item.description}</p>
                       ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedItem(item);
+                            setComparisonOpen(true);
+                          }}
+                        >
+                          Preview impact
+                        </Button>
+                        {justPurchased ? (
+                          <div className="flex items-center gap-2 rounded-md border border-emerald-400/50 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700">
+                            <CheckCircle2 className="h-4 w-4" /> Added to inventory
+                          </div>
+                        ) : null}
+                      </div>
                     </CardHeader>
                     <CardContent className="flex flex-1 flex-col gap-4">
                       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -389,13 +411,17 @@ const EquipmentStore = () => {
 
                       <Button
                         className="mt-auto"
-                        disabled={purchaseMutation.isPending || isOwned || outOfStock}
+                        disabled={
+                          purchaseMutation.isPending || isOwned || outOfStock || noCapacity
+                        }
                         onClick={() => purchaseMutation.mutate(item.id)}
                       >
                         {isOwned
                           ? "Already owned"
                           : outOfStock
                           ? "Out of stock"
+                          : noCapacity
+                          ? "Pool full"
                           : purchaseMutation.isPending
                           ? (
                               <>
@@ -404,6 +430,11 @@ const EquipmentStore = () => {
                             )
                           : purchaseLabel}
                       </Button>
+                      {noCapacity ? (
+                        <p className="text-xs text-destructive">
+                          No remaining {poolStatus?.slot_kind ?? item.category} slots. Adjust your gear pool to continue.
+                        </p>
+                      ) : null}
                     </CardContent>
                   </Card>
                 );
@@ -419,35 +450,64 @@ const EquipmentStore = () => {
               <CardDescription>Quick view of inventory ready to assign in your loadouts.</CardDescription>
             </CardHeader>
             <CardContent>
-              {loadingOwned ? (
+              {ownedError ? (
+                <div className="space-y-3 py-12 text-center text-sm">
+                  <p className="font-semibold text-destructive">We couldn&apos;t load your gear locker.</p>
+                  <p className="text-muted-foreground">Please refresh later. Purchases will still sync to your account.</p>
+                </div>
+              ) : loadingOwned ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-5 w-5 animate-spin" />
                 </div>
+              ) : equipmentError ? (
+                <p className="py-12 text-center text-sm text-destructive">
+                  {equipmentError instanceof Error ? equipmentError.message : "Unable to load inventory."}
+                </p>
               ) : !owned || owned.length === 0 ? (
                 <p className="py-12 text-center text-sm text-muted-foreground">
                   You haven&apos;t purchased any gear yet. Buy items from the storefront to populate your inventory.
                 </p>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {owned.map((entry) => (
-                    <div key={entry.id} className="rounded-lg border bg-card p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold">{entry.equipment?.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {entry.equipment?.gear_category?.label ?? entry.equipment?.category}
-                          </p>
-                        </div>
-                        {entry.is_equipped ? (
-                          <Badge variant="secondary" className="border-blue-500/40 bg-blue-500/10 text-blue-600">
-                            Equipped
+                  {ownedEquipment.map((entry) => (
+                    <Card key={entry.id} className="border">
+                      <CardContent className="space-y-3 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-semibold">
+                              {entry.equipment?.name ?? "Equipment"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {entry.equipment?.category}
+                              {entry.equipment?.subcategory ? ` · ${entry.equipment.subcategory}` : ""}
+                            </div>
+                          </div>
+                          <Badge variant={entry.is_equipped ? "default" : "secondary"}>
+                            {entry.is_equipped ? "Equipped" : "Stowed"}
                           </Badge>
-                        ) : null}
-                      </div>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        {entry.equipment?.rarity ? `Rarity: ${entry.equipment.rarity}` : null}
-                      </div>
-                    </div>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Condition</span>
+                          <span>{entry.condition ?? 100}%</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Purchase price</span>
+                          <span>${entry.equipment?.price?.toLocaleString() ?? "—"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Loadout slot</span>
+                          <span>{entry.loadout_slot_kind ?? "Unassigned"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Pool category</span>
+                          <span className="capitalize">{entry.pool_category ?? "—"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Status</span>
+                          <span>{entry.available_for_loadout ? "Available" : "Assigned"}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
@@ -455,6 +515,81 @@ const EquipmentStore = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <GearComparisonDrawer
+        item={selectedItem as ComparableGearItem | null}
+        open={comparisonOpen}
+        onOpenChange={(open) => {
+          setComparisonOpen(open);
+          if (!open) {
+            setSelectedItem(null);
+          }
+        }}
+        ownedEquipment={ownedEquipment}
+        cashOnHand={cashOnHand}
+      />
+
+      <AlertDialog
+        open={confirmationOpen}
+        onOpenChange={(open) => {
+          setConfirmationOpen(open);
+          if (!open) {
+            setConfirmationItem(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm purchase</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-sm">
+              {confirmationItem ? (
+                <>
+                  <p>
+                    Purchase <span className="font-semibold">{confirmationItem.name}</span> for
+                    {" "}
+                    <span className="font-semibold">${confirmationItem.price.toLocaleString()}</span>?
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="rounded-md border bg-muted/30 px-3 py-2">
+                      <span className="font-medium">Remaining balance:</span>{" "}
+                      ${Math.max(cashOnHand - confirmationItem.price, 0).toLocaleString()}
+                    </li>
+                    <li className="rounded-md border bg-muted/30 px-3 py-2">
+                      <span className="font-medium">Stock status:</span>{" "}
+                      {(confirmationItem.stock ?? 0) > 0
+                        ? `${confirmationItem.stock} remaining`
+                        : "Marked as out of stock"}
+                    </li>
+                    <li className="rounded-md border bg-muted/30 px-3 py-2">
+                      <span className="font-medium">Ownership check:</span>{" "}
+                      {ownedIds.has(confirmationItem.id)
+                        ? "You already own this equipment. Additional copies add to storage."
+                        : "No duplicates detected."}
+                    </li>
+                  </ul>
+                </>
+              ) : (
+                <p>Select an item to see its purchase breakdown.</p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={purchaseMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!confirmationItem || purchaseMutation.isPending}
+              onClick={() => confirmationItem && purchaseMutation.mutate(confirmationItem)}
+            >
+              {purchaseMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Processing
+                </span>
+              ) : (
+                "Confirm purchase"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

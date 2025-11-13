@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,22 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Line,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   Radio as RadioIcon,
   Music,
@@ -21,6 +36,7 @@ import {
   PlayCircle,
   DollarSign,
   Sparkles,
+  Download,
 } from "lucide-react";
 import type { Database } from "@/lib/supabase-types";
 
@@ -29,6 +45,7 @@ type ProcessRadioSubmissionSummary = Database["public"]["Functions"]["process_ra
 type BandRadioEarning = {
   band_id: string;
   amount: number;
+  created_at: string;
   bands?: { name?: string | null } | null;
   metadata?: Record<string, unknown> | null;
 };
@@ -67,6 +84,39 @@ type RadioShowRecord = {
   host_name: string;
   show_genres: string[] | null;
   time_slot: string;
+  listener_multiplier: number | null;
+};
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
+
+const calculateRadioPlayMetrics = ({
+  listenerBase,
+  listenerMultiplier,
+  songHype,
+  totalRadioPlays,
+}: {
+  listenerBase: number;
+  listenerMultiplier: number;
+  songHype: number;
+  totalRadioPlays: number;
+}) => {
+  const hypeFactor = 0.75 + clamp(songHype / 1200, 0, 0.9);
+  const fatiguePenalty = 1 - clamp(totalRadioPlays / 80, 0, 0.35);
+  const effectiveMultiplier = Math.max(listenerMultiplier, 0.1);
+  const effectiveListenerBase = Math.max(listenerBase, 0);
+
+  const listeners = Math.max(
+    100,
+    Math.round(effectiveListenerBase * effectiveMultiplier * hypeFactor * fatiguePenalty)
+  );
+
+  const hypeGain = Math.max(1, Math.round(listeners * 0.002));
+  const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
+  const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+
+  return { listeners, hypeGain, streamsBoost, radioRevenue };
 };
 
 type StationPlaySummary = {
@@ -86,20 +136,42 @@ type StationPlayTimelineEntry = {
   hype: number;
 };
 
+type RecordedSongRecord = {
+  id: string;
+  title: string;
+  genre: string | null;
+  quality_score: number | null;
+  band_id: string | null;
+};
+
 export default function Radio() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<any>(null);
 
   // Get current user
-  useState(() => {
+  useEffect(() => {
+    let isMounted = true;
+
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+      if (isMounted) {
+        setUser(data.user);
+      }
     });
   });
-  const [selectedStation, setSelectedStation] = useState<string>("");
+  const [selectedStation, setSelectedStation] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("radio-selected-station") ?? "";
+    }
+    return "";
+  });
   const [selectedSong, setSelectedSong] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"submit" | "submissions" | "trending">("submit");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
+  const [metricsRange, setMetricsRange] = useState<7 | 14 | 30>(14);
+
+  const getErrorMessage = (error: unknown, fallback = 'An unexpected error occurred.') =>
+    error instanceof Error ? error.message : fallback;
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -110,12 +182,17 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
 
-  const { data: stations } = useQuery<RadioStationRecord[]>({
+  const {
+    data: stations,
+    isLoading: stationsLoading,
+    isError: stationsError,
+    error: stationsErrorData,
+  } = useQuery<RadioStationRecord[]>({
     queryKey: ['radio-stations', filterType],
     queryFn: async () => {
       let query = supabase
@@ -134,11 +211,41 @@ export default function Radio() {
     },
   });
 
+  useEffect(() => {
+    if (!stations || stations.length === 0) return;
+
+    const stationExists = stations.some((station) => station.id === selectedStation);
+
+    if (selectedStation && !stationExists) {
+      setSelectedStation(stations[0].id);
+      return;
+    }
+
+    if (!selectedStation) {
+      setSelectedStation(stations[0].id);
+    }
+  }, [stations, selectedStation]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (selectedStation) {
+      localStorage.setItem("radio-selected-station", selectedStation);
+    } else {
+      localStorage.removeItem("radio-selected-station");
+    }
+  }, [selectedStation]);
+
   const activeStation = useMemo(() => {
     return stations?.find((station) => station.id === selectedStation);
   }, [stations, selectedStation]);
 
-  const { data: shows } = useQuery<RadioShowRecord[]>({
+  const {
+    data: shows,
+    isLoading: showsLoading,
+    isError: showsError,
+    error: showsErrorData,
+  } = useQuery<RadioShowRecord[]>({
     queryKey: ['radio-shows', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
@@ -153,6 +260,18 @@ export default function Radio() {
     },
     enabled: !!selectedStation,
   });
+
+  useEffect(() => {
+    if (!shows || shows.length === 0) {
+      setSelectedShow("");
+      return;
+    }
+
+    setSelectedShow((current) => {
+      const isValidSelection = shows.some((show) => show.id === current);
+      return isValidSelection ? current : shows[0].id;
+    });
+  }, [shows]);
 
   const { data: nowPlaying } = useQuery<NowPlayingRecord | null>({
     queryKey: ['station-now-playing', selectedStation],
@@ -186,7 +305,12 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const { data: bandRadioEarnings } = useQuery<BandRadioEarning[]>({
+  const {
+    data: bandRadioEarnings,
+    isLoading: bandRadioEarningsLoading,
+    isError: bandRadioEarningsError,
+    error: bandRadioEarningsErrorData,
+  } = useQuery<BandRadioEarning[]>({
     queryKey: ['band-radio-earnings', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
@@ -207,28 +331,53 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const aggregatedBandRevenue = useMemo(() => {
+  type AggregatedBandRevenue = {
+    bandId: string;
+    name: string;
+    total: number;
+    plays: number;
+    latestPlayAt: string | null;
+    latestShowName: string | null;
+  };
+
+  const aggregatedBandRevenue: AggregatedBandRevenue[] = useMemo(() => {
     if (!bandRadioEarnings) return [];
 
-    const revenueMap = new Map<string, { name: string; total: number; plays: number }>();
+    const revenueMap = new Map<string, AggregatedBandRevenue>();
 
     for (const earning of bandRadioEarnings) {
       const key = earning.band_id;
+      const metadata = (earning.metadata as { [key: string]: unknown } | null) ?? null;
+      const metadataShowName = metadata && typeof metadata.show_name === 'string' ? metadata.show_name : null;
+      const metadataPlayTime = metadata && typeof metadata.play_time === 'string' ? metadata.play_time : null;
+
       const entry = revenueMap.get(key) || {
+        bandId: key,
         name: earning.bands?.name || 'Unknown Band',
         total: 0,
         plays: 0,
+        latestPlayAt: null,
+        latestShowName: null,
       };
 
       entry.total += earning.amount;
       entry.plays += 1;
+
+      const candidatePlayAt = metadataPlayTime || earning.created_at;
+      const currentPlayAt = entry.latestPlayAt;
+
+      const candidateDate = candidatePlayAt ? new Date(candidatePlayAt).getTime() : null;
+      const currentDate = currentPlayAt ? new Date(currentPlayAt).getTime() : null;
+
+      if (candidateDate !== null && (currentDate === null || candidateDate >= currentDate)) {
+        entry.latestPlayAt = candidatePlayAt;
+        entry.latestShowName = metadataShowName ?? entry.latestShowName;
+      }
+
       revenueMap.set(key, entry);
     }
 
-    return Array.from(revenueMap.entries()).map(([bandId, info]) => ({
-      bandId,
-      ...info,
-    }));
+    return Array.from(revenueMap.values()).sort((a, b) => b.total - a.total);
   }, [bandRadioEarnings]);
 
   const currencyFormatter = useMemo(
@@ -241,19 +390,65 @@ export default function Radio() {
     []
   );
 
+  const formatPlayTimestamp = (timestamp: string | null) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleExportRevenue = () => {
+    if (typeof window === 'undefined' || !aggregatedBandRevenue.length) return;
+
+    const headers = ['Band Name', 'Plays', 'Revenue (USD)', 'Latest Spin', 'Show Name'];
+    const rows = aggregatedBandRevenue.map((entry) => [
+      entry.name,
+      entry.plays.toString(),
+      entry.total.toFixed(2),
+      formatPlayTimestamp(entry.latestPlayAt) ?? '',
+      entry.latestShowName ?? '',
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((value) => {
+            const stringValue = String(value ?? '');
+            const escapedValue = stringValue.replace(/"/g, '""');
+            return `"${escapedValue}"`;
+          })
+          .join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stationSlug = (activeStation?.name ?? 'radio-station')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '') || 'radio-station';
+    link.href = url;
+    link.setAttribute('download', `${stationSlug}-daily-revenue.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const dailyRevenueTotal = useMemo(
     () => aggregatedBandRevenue.reduce((sum, band) => sum + band.total, 0),
     [aggregatedBandRevenue]
   );
 
   const { data: stationPlaySummary } = useQuery<StationPlaySummary | null>({
-    queryKey: ['station-play-summary', selectedStation],
+    queryKey: ['station-play-summary', selectedStation, metricsRange],
     queryFn: async () => {
       if (!selectedStation) return null;
 
       const { data, error } = await supabase.rpc('get_radio_station_play_summary' as any, {
         p_station_id: selectedStation,
-        p_days: 14,
+        p_days: metricsRange,
       });
 
       if (error) throw error;
@@ -273,13 +468,13 @@ export default function Radio() {
   });
 
   const { data: stationPlayTimeline } = useQuery<StationPlayTimelineEntry[]>({
-    queryKey: ['station-play-timeline', selectedStation],
+    queryKey: ['station-play-timeline', selectedStation, metricsRange],
     queryFn: async () => {
       if (!selectedStation) return [];
 
       const { data, error } = await supabase.rpc('get_radio_station_play_timeline' as any, {
         p_station_id: selectedStation,
-        p_days: 14,
+        p_days: metricsRange,
       });
 
       if (error) throw error;
@@ -288,14 +483,14 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const fourteenDayTimeline = useMemo(() => {
+  const timelineData = useMemo(() => {
     if (!selectedStation) return [];
 
     const days: string[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 13; i >= 0; i--) {
+    for (let i = metricsRange - 1; i >= 0; i--) {
       const day = new Date(today);
       day.setDate(today.getDate() - i);
       days.push(day.toISOString().split('T')[0]);
@@ -317,9 +512,79 @@ export default function Radio() {
         hype: Number(entry?.hype ?? 0),
       };
     });
-  }, [stationPlayTimeline, selectedStation]);
+  }, [stationPlayTimeline, selectedStation, metricsRange]);
 
-  const { data: recordedSongs } = useQuery({
+  const timelineChartConfig = useMemo<ChartConfig>(
+    () => ({
+      spins: {
+        label: 'Spins',
+        color: 'hsl(var(--chart-1))',
+      },
+      listeners: {
+        label: 'Listeners',
+        color: 'hsl(var(--chart-2))',
+      },
+      revenue: {
+        label: 'Revenue',
+        color: 'hsl(var(--chart-3))',
+      },
+    }),
+    []
+  );
+
+  const timelineSummaryStats = useMemo(() => {
+    if (!timelineData.length) {
+      return { avgSpins: 0, avgListeners: 0, avgRevenue: 0 };
+    }
+
+    const totals = timelineData.reduce(
+      (acc, day) => ({
+        spins: acc.spins + day.spins,
+        listeners: acc.listeners + day.listeners,
+        revenue: acc.revenue + day.revenue,
+      }),
+      { spins: 0, listeners: 0, revenue: 0 }
+    );
+
+    return {
+      avgSpins: totals.spins / timelineData.length,
+      avgListeners: totals.listeners / timelineData.length,
+      avgRevenue: totals.revenue / timelineData.length,
+    };
+  }, [timelineData]);
+
+  const timelineHasData = useMemo(
+    () =>
+      timelineData.some(
+        (entry) => entry.spins > 0 || entry.listeners > 0 || entry.revenue > 0
+      ),
+    [timelineData]
+  );
+
+  const formatTimelineDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
+  const timelineTooltipFormatter = (value: number | string, name: string) => {
+    const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+
+    switch (name) {
+      case 'spins':
+        return [numericValue.toLocaleString(), 'Spins'];
+      case 'listeners':
+        return [numericValue.toLocaleString(), 'Listeners'];
+      case 'revenue':
+        return [currencyFormatter.format(numericValue), 'Revenue'];
+      default:
+        return [numericValue.toLocaleString(), name];
+    }
+  };
+
+  const { data: recordedSongs } = useQuery<RecordedSongRecord[]>({
     queryKey: ['recorded-songs', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -329,10 +594,86 @@ export default function Radio() {
         .eq('status', 'recorded')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return (data as RecordedSongRecord[]) || [];
     },
     enabled: !!user?.id,
   });
+
+  const selectedSongData = useMemo(() => {
+    if (!selectedSong) return null;
+    return recordedSongs?.find((song) => song.id === selectedSong) ?? null;
+  }, [recordedSongs, selectedSong]);
+
+  const primaryBand = useMemo(() => {
+    const bandsData = (profile as any)?.bands;
+    if (!bandsData) return null;
+    return Array.isArray(bandsData) ? bandsData[0] : bandsData;
+  }, [profile]);
+
+  const bandFame = Number(primaryBand?.fame ?? 0);
+  const hasBand = Boolean(primaryBand?.id);
+
+  const stationAcceptedGenres = useMemo<string[]>(() => {
+    return activeStation?.accepted_genres ?? [];
+  }, [activeStation]);
+
+  const normalizedAcceptedGenres = useMemo(
+    () => stationAcceptedGenres.map((genre) => genre.toLowerCase()),
+    [stationAcceptedGenres],
+  );
+
+  const songGenre = (selectedSongData?.genre ?? '').toLowerCase();
+
+  const stationRequirements = useMemo<{ quality: number; fame: number }>(() => {
+    if (!activeStation) {
+      return { quality: 0, fame: 0 };
+    }
+
+    const baseQuality = 400 + (activeStation.quality_level - 1) * 200;
+    const listenerQualityAdjustment = Math.min(
+      400,
+      Math.round(((activeStation.listener_base ?? 0) / 50000) * 100),
+    );
+    const qualityRequirement = Math.min(2000, baseQuality + listenerQualityAdjustment);
+
+    const fameBase = Math.max(0, (activeStation.quality_level - 1) * 250);
+    const fameListenerAdjustment = Math.round(((activeStation.listener_base ?? 0) / 100000) * 100);
+    const fameRequirement = Math.max(0, fameBase + fameListenerAdjustment);
+
+    return {
+      quality: Math.round(qualityRequirement),
+      fame: Math.round(fameRequirement),
+    };
+  }, [activeStation]);
+
+  const songQuality = Number(selectedSongData?.quality_score ?? 0);
+
+  const genreMatches = useMemo(() => {
+    if (!selectedSong) return true;
+    if (normalizedAcceptedGenres.length === 0) return true;
+    if (!songGenre) return false;
+    return normalizedAcceptedGenres.includes(songGenre);
+  }, [normalizedAcceptedGenres, selectedSong, songGenre]);
+
+  const meetsQualityRequirement = useMemo(() => {
+    if (!selectedSong) return true;
+    if (!stationRequirements.quality) return true;
+    return songQuality >= stationRequirements.quality;
+  }, [selectedSong, stationRequirements.quality, songQuality]);
+
+  const meetsFameRequirement = useMemo(() => {
+    if (!selectedSong) return true;
+    if (!stationRequirements.fame) return true;
+    return bandFame >= stationRequirements.fame;
+  }, [bandFame, selectedSong, stationRequirements.fame]);
+
+  const canSubmit = Boolean(
+    selectedStation &&
+    selectedSong &&
+    genreMatches &&
+    meetsQualityRequirement &&
+    meetsFameRequirement,
+  );
 
   const { data: mySubmissions } = useQuery({
     queryKey: ['my-radio-submissions', user?.id],
@@ -343,12 +684,17 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .order('submitted_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
 
-  const { data: topSongs } = useQuery({
+  const {
+    data: topSongs,
+    isLoading: topSongsLoading,
+    isError: topSongsError,
+    error: topSongsErrorData,
+  } = useQuery({
     queryKey: ['top-radio-songs'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -361,10 +707,45 @@ export default function Radio() {
     },
   });
 
+  useEffect(() => {
+    if (recordedSongs?.length === 0) {
+      setSelectedSong('');
+    }
+  }, [recordedSongs]);
+
   const submitSong = useMutation({
     mutationFn: async () => {
       if (!selectedStation || !selectedSong) {
         throw new Error('Please select a station and song');
+      }
+
+      if (!selectedSongData) {
+        throw new Error('Please select a song that meets the station requirements');
+      }
+
+      if (normalizedAcceptedGenres.length > 0) {
+        const normalizedGenre = (selectedSongData.genre ?? '').toLowerCase();
+        if (!normalizedGenre || !normalizedAcceptedGenres.includes(normalizedGenre)) {
+          const acceptedList = stationAcceptedGenres.join(', ');
+          throw new Error(
+            acceptedList
+              ? `This station is currently accepting: ${acceptedList}.`
+              : 'This station has restricted genre requirements right now.',
+          );
+        }
+      }
+
+      if (stationRequirements.quality && songQuality < stationRequirements.quality) {
+        throw new Error(
+          `This station requires a song quality of ${stationRequirements.quality.toLocaleString()} or higher.`,
+        );
+      }
+
+      if (stationRequirements.fame && bandFame < stationRequirements.fame) {
+        const fameRequirementMessage = hasBand
+          ? `Your band needs at least ${stationRequirements.fame.toLocaleString()} fame to submit here.`
+          : 'Join or create a band to build the fame required for this station.';
+        throw new Error(fameRequirementMessage);
       }
 
       // Check if already submitted this week
@@ -372,16 +753,18 @@ export default function Radio() {
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekStartDate = weekStart.toISOString().split('T')[0];
 
-      const { data: existing } = await supabase
-        .from('radio_submissions')
-        .select('id')
-        .eq('station_id', selectedStation)
-        .eq('song_id', selectedSong)
-        .eq('week_submitted', weekStartDate)
-        .maybeSingle();
+      if (weekCheckError) {
+        console.error('Failed to verify radio submission window', weekCheckError);
+        throw new Error('Unable to verify submission window. Please try again.');
+      }
+
+      const weekCheck = Array.isArray(weekCheckData) ? weekCheckData[0] : weekCheckData;
+      const weekStartDate = weekCheck?.week_start_date ?? formatUtcDate(getUtcWeekStart(new Date(), 1));
 
       if (existing) {
-        throw new Error('You have already submitted this song to this station this week');
+        throw new Error(
+          "You've already submitted this track to this station this week. Try another station or wait until next week."
+        );
       }
 
       const { data: submission, error } = await supabase
@@ -432,9 +815,23 @@ export default function Radio() {
       setSelectedSong('');
     },
     onError: (error: any) => {
-      toast.error(error.message);
+      const message = error?.message ?? 'An unexpected error occurred while submitting your track.';
+
+      if (
+        typeof message === 'string' &&
+        message.includes("You've already submitted this track to this station this week")
+      ) {
+        toast.info(
+          "You've already submitted this track to this station this week. Try another station or wait until next week."
+        );
+        return;
+      }
+
+      toast.error(message);
     },
   });
+
+  const submitDisabled = submitSong.isPending || !canSubmit;
 
   const getQualityColor = (level: number) => {
     if (level >= 4) return 'text-yellow-500';
@@ -465,7 +862,9 @@ export default function Radio() {
           <RadioIcon className="h-8 w-8" />
           <div>
             <h1 className="text-4xl font-oswald">Radio Airplay</h1>
-            <p className="text-muted-foreground">Submit your songs to radio stations and build hype</p>
+            <p className="text-muted-foreground">
+              Submit your songs to radio stations and build hype with predictable reach
+            </p>
           </div>
         </div>
 
@@ -473,11 +872,12 @@ export default function Radio() {
           <Music className="h-4 w-4" />
           <AlertDescription>
             Submit your recorded songs to radio stations. Higher quality stations are more selective but reach more listeners.
-            Songs can be played up to 7 times per week if added to playlists. Each play increases hype, streams, and sales!
+            Audience reach scales with each show's listener multiplier and your song's hype, so build momentum to grow your
+            streams and sales with every spin.
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="submit" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList>
             <TabsTrigger value="submit">Submit Song</TabsTrigger>
             <TabsTrigger value="submissions">My Submissions</TabsTrigger>
@@ -491,6 +891,38 @@ export default function Radio() {
                 <CardDescription>Choose a station and one of your recorded songs to submit</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {!isProfileLoading && (
+                  canSubmitSongs ? (
+                    <Alert className="border-primary/30 bg-primary/5">
+                      <Sparkles className="h-4 w-4" />
+                      <AlertTitle>
+                        Submitting as {primaryBand?.name || 'your band'}
+                      </AlertTitle>
+                      <AlertDescription>
+                        Keep your band&apos;s reputation strong—each spin boosts fame. Current fame:{' '}
+                        {Math.round((primaryBand?.fame ?? 0) * 10) / 10}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert variant="destructive">
+                      <XCircle className="h-4 w-4" />
+                      <AlertTitle>Band required for radio submissions</AlertTitle>
+                      <AlertDescription>
+                        Create or lead a band before pitching songs to stations. Radio deals are handled through band
+                        managers.
+                      </AlertDescription>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => navigate('/band')}
+                      >
+                        Go to Band Manager
+                      </Button>
+                    </Alert>
+                  )
+                )}
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Filter Stations</label>
                   <div className="flex gap-2">
@@ -522,7 +954,10 @@ export default function Radio() {
                       className={`cursor-pointer transition-colors ${
                         selectedStation === station.id ? 'border-primary' : ''
                       }`}
-                      onClick={() => setSelectedStation(station.id)}
+                      onClick={() => {
+                        setSelectedStation(station.id);
+                        setSelectedShow('');
+                      }}
                     >
                       <CardHeader>
                         <div className="flex items-start justify-between">
@@ -573,34 +1008,177 @@ export default function Radio() {
                                 </Badge>
                               ))}
                             </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-4 w-2/3" />
+                            <div className="space-y-2 pt-1">
+                              <Skeleton className="h-3 w-24" />
+                              <div className="flex flex-wrap gap-1">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                  <Skeleton key={i} className="h-5 w-16" />
+                                ))}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    : stations?.map((station) => (
+                        <Card
+                          key={station.id}
+                          className={`cursor-pointer transition-colors ${
+                            selectedStation === station.id ? 'border-primary' : ''
+                          }`}
+                          onClick={() => setSelectedStation(station.id)}
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{station.name}</CardTitle>
+                                <CardDescription>{station.frequency}</CardDescription>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < station.quality_level
+                                        ? 'fill-yellow-500 text-yellow-500'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Type:</span>
+                              <Badge variant="outline">{station.station_type}</Badge>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Location:</span>
+                              <span className="text-sm">
+                                {station.station_type === 'national'
+                                  ? station.country
+                                  : `${station.cities?.name}, ${station.cities?.country}`}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Listeners:</span>
+                              <span className="font-semibold">
+                                {station.listener_base.toLocaleString()}
+                              </span>
+                            </div>
+                            {station.accepted_genres?.length > 0 && (
+                              <div className="pt-2">
+                                <p className="mb-1 text-xs text-muted-foreground">Accepts:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {station.accepted_genres.map((genre: string) => (
+                                    <Badge key={genre} variant="secondary" className="text-xs">
+                                      {genre}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
                 </div>
+
+                {!stationsLoading && !stationsError && (stations?.length ?? 0) === 0 && (
+                  <p className="text-sm text-muted-foreground">No stations found for this filter.</p>
+                )}
 
                 {selectedStation && (
                   <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
-                    {stationPlaySummary && (
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spins (14 days)</p>
-                          <p className="text-2xl font-semibold">{stationPlaySummary.total_spins.toLocaleString()}</p>
-                        </div>
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Listeners reached</p>
-                          <p className="text-2xl font-semibold">{stationPlaySummary.total_listeners.toLocaleString()}</p>
-                        </div>
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Streams boosted</p>
-                          <p className="text-2xl font-semibold">{stationPlaySummary.total_streams.toLocaleString()}</p>
-                        </div>
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estimated payouts (14 days)</p>
-                          <p className="text-2xl font-semibold">{currencyFormatter.format(stationPlaySummary.total_revenue || 0)}</p>
-                        </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-wide text-primary">Station Performance</p>
+                        <p className="text-xs text-muted-foreground">
+                          Aggregated over the last {metricsRange} days
+                        </p>
                       </div>
+                      <div className="flex items-center gap-2">
+                        {([7, 14, 30] as const).map((range) => (
+                          <Button
+                            key={range}
+                            size="sm"
+                            variant={metricsRange === range ? "default" : "outline"}
+                            onClick={() => setMetricsRange(range)}
+                          >
+                            {range}D
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {stationPlaySummary && (
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <Card className="border-primary/30 bg-background/80 shadow-sm">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Total Spins
+                            </CardTitle>
+                            <RadioIcon className="h-4 w-4 text-primary" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-semibold">
+                              {stationPlaySummary.total_spins.toLocaleString()}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Across {metricsRange} day window
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card className="border-primary/30 bg-background/80 shadow-sm">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Listeners Reached
+                            </CardTitle>
+                            <Users className="h-4 w-4 text-primary" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-semibold">
+                              {stationPlaySummary.total_listeners.toLocaleString()}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Unique listeners during this period
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card className="border-primary/30 bg-background/80 shadow-sm">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Estimated Payouts
+                            </CardTitle>
+                            <DollarSign className="h-4 w-4 text-primary" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-semibold">
+                              {currencyFormatter.format(stationPlaySummary.total_revenue || 0)}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Projected from reported spins</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+
+                    {stationPlaySummary && (
+                      <div className="rounded-md border border-primary/20 bg-background/60 p-3 text-xs text-muted-foreground">
+                        Streams boosted over this window:
+                        <span className="ml-1 font-semibold text-foreground">
+                          {stationPlaySummary.total_streams.toLocaleString()}
+                        </span>
+                      </div>
+                    ) : (
+                      !stationPlaySummaryError && (
+                        <p className="text-xs text-muted-foreground">
+                          Summary data will appear after the station records more plays.
+                        </p>
+                      )
                     )}
 
                     <div className="flex items-start gap-3">
@@ -614,7 +1192,30 @@ export default function Radio() {
                         </p>
                       </div>
                     </div>
-                    {nowPlaying ? (
+
+                    {nowPlayingError && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Unable to load now playing</AlertTitle>
+                        <AlertDescription>
+                          {getErrorMessage(nowPlayingErrorData)}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {nowPlayingLoading ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-3">
+                          <Skeleton className="h-6 w-3/4" />
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                        <div className="space-y-2">
+                          {Array.from({ length: 3 }).map((_, index) => (
+                            <Skeleton key={`now-playing-${index}`} className="h-10 w-full" />
+                          ))}
+                        </div>
+                      </div>
+                    ) : nowPlaying ? (
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <p className="text-xl font-semibold">{nowPlaying.songs?.title}</p>
@@ -641,35 +1242,87 @@ export default function Radio() {
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-md border border-dashed border-primary/20 bg-background/80 p-4 text-sm text-muted-foreground">
-                        No spins recorded yet today. Submitting a song will immediately trigger airplay for this station.
-                      </div>
+                      !nowPlayingError && (
+                        <div className="rounded-md border border-dashed border-primary/20 bg-background/80 p-4 text-sm text-muted-foreground">
+                          No spins recorded yet today. Submitting a song will immediately trigger airplay for this station.
+                        </div>
+                      )
                     )}
 
-                    <div className="space-y-3 rounded-md border border-primary/20 bg-background/70 p-3">
-                      <div className="flex items-center justify-between">
+                    <div className="space-y-4 rounded-md border border-primary/20 bg-background/70 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-sm font-medium">
                           <DollarSign className="h-4 w-4 text-primary" />
                           Daily Band Revenue
                         </div>
-                        <span className="text-sm font-semibold">
-                          {currencyFormatter.format(dailyRevenueTotal || 0)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">
+                            {currencyFormatter.format(dailyRevenueTotal || 0)}
+                          </span>
+                          {aggregatedBandRevenue.length > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                              onClick={handleExportRevenue}
+                            >
+                              <Download className="h-4 w-4" />
+                              Export CSV
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {aggregatedBandRevenue.length > 0 ? (
-                        <div className="space-y-2 text-sm">
-                          {aggregatedBandRevenue.map((entry) => (
-                            <div
-                              key={entry.bandId}
-                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
-                            >
-                              <div>
-                                <p className="font-medium">{entry.name}</p>
-                                <p className="text-xs text-muted-foreground">{entry.plays} play{entry.plays === 1 ? '' : 's'} today</p>
-                              </div>
-                              <span className="font-semibold">{currencyFormatter.format(entry.total)}</span>
-                            </div>
-                          ))}
+                        <div className="space-y-4 text-sm">
+                          <div className="space-y-2">
+                            {aggregatedBandRevenue.map((entry) => {
+                              const latestPlayDisplay = formatPlayTimestamp(entry.latestPlayAt);
+                              return (
+                                <div
+                                  key={entry.bandId}
+                                  className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
+                                >
+                                  <div>
+                                    <p className="font-medium">{entry.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {entry.plays} play{entry.plays === 1 ? '' : 's'} today
+                                    </p>
+                                    {latestPlayDisplay && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Last spin {latestPlayDisplay}
+                                        {entry.latestShowName ? ` • ${entry.latestShowName}` : ''}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="font-semibold">{currencyFormatter.format(entry.total)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="overflow-hidden rounded-md border border-border/60 bg-background/90">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Band</TableHead>
+                                  <TableHead className="w-24">Plays</TableHead>
+                                  <TableHead className="w-32">Revenue</TableHead>
+                                  <TableHead className="w-40">Latest Spin</TableHead>
+                                  <TableHead className="w-48">Show</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {aggregatedBandRevenue.map((entry) => (
+                                  <TableRow key={`${entry.bandId}-detail`}>
+                                    <TableCell className="font-medium">{entry.name}</TableCell>
+                                    <TableCell>{entry.plays}</TableCell>
+                                    <TableCell>{currencyFormatter.format(entry.total)}</TableCell>
+                                    <TableCell>{formatPlayTimestamp(entry.latestPlayAt) ?? '—'}</TableCell>
+                                    <TableCell>{entry.latestShowName ?? '—'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">
@@ -682,106 +1335,209 @@ export default function Radio() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm font-medium">
                           <Clock className="h-4 w-4 text-primary" />
-                          14-Day Spin Timeline
+                          {metricsRange}-Day Performance Timeline
                         </div>
-                        <span className="text-xs text-muted-foreground">Aggregated from all spins in the last 14 days</span>
+                        <span className="text-xs text-muted-foreground">
+                          Spins, listeners & revenue trends
+                        </span>
                       </div>
-                      {fourteenDayTimeline.length > 0 ? (
-                        <div className="mt-3 grid gap-2 text-xs">
-                          {fourteenDayTimeline.map((day) => (
-                            <div
-                              key={day.date}
-                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
-                            >
-                              <span className="font-medium">
-                                {new Date(day.date).toLocaleDateString(undefined, {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                              <div className="flex flex-wrap items-center gap-4">
-                                <span className="text-muted-foreground">
-                                  {day.spins} spin{day.spins === 1 ? '' : 's'}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {day.listeners.toLocaleString()} listeners
-                                </span>
-                                <span className="font-semibold">
-                                  {currencyFormatter.format(day.revenue || 0)}
-                                </span>
-                              </div>
+                      {timelineHasData ? (
+                        <>
+                          <div className="mt-4 h-64">
+                            <ChartContainer config={timelineChartConfig} className="h-full w-full">
+                              <AreaChart data={timelineData} margin={{ left: 12, right: 12, top: 12, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="radio-spins" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--color-spins)" stopOpacity={0.35} />
+                                    <stop offset="95%" stopColor="var(--color-spins)" stopOpacity={0.05} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                                <XAxis
+                                  dataKey="date"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tickMargin={8}
+                                  tickFormatter={formatTimelineDate}
+                                />
+                                <YAxis
+                                  yAxisId="left"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  width={60}
+                                  tickFormatter={(value) => Number(value).toLocaleString()}
+                                />
+                                <YAxis
+                                  yAxisId="right"
+                                  orientation="right"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  width={70}
+                                  tickFormatter={(value) => currencyFormatter.format(Number(value))}
+                                />
+                                <ChartTooltip
+                                  cursor={{ strokeDasharray: '4 4' }}
+                                  content={
+                                    <ChartTooltipContent
+                                      labelFormatter={formatTimelineDate}
+                                      formatter={timelineTooltipFormatter}
+                                    />
+                                  }
+                                />
+                                <Area
+                                  yAxisId="left"
+                                  type="monotone"
+                                  dataKey="spins"
+                                  stroke="var(--color-spins)"
+                                  fill="url(#radio-spins)"
+                                  strokeWidth={2}
+                                  activeDot={{ r: 4 }}
+                                />
+                                <Line
+                                  yAxisId="left"
+                                  type="monotone"
+                                  dataKey="listeners"
+                                  stroke="var(--color-listeners)"
+                                  strokeWidth={2}
+                                  dot={false}
+                                />
+                                <Line
+                                  yAxisId="right"
+                                  type="monotone"
+                                  dataKey="revenue"
+                                  stroke="var(--color-revenue)"
+                                  strokeWidth={2}
+                                  strokeDasharray="6 4"
+                                  dot={false}
+                                />
+                              </AreaChart>
+                            </ChartContainer>
+                          </div>
+                          <div className="grid gap-2 pt-3 text-xs text-muted-foreground sm:grid-cols-3">
+                            <div className="rounded-md border border-border/60 bg-background/80 p-3">
+                              <p className="font-medium text-foreground">
+                                {Math.round(timelineSummaryStats.avgSpins).toLocaleString()}
+                              </p>
+                              <p>Avg spins per day</p>
                             </div>
-                          ))}
-                        </div>
+                            <div className="rounded-md border border-border/60 bg-background/80 p-3">
+                              <p className="font-medium text-foreground">
+                                {Math.round(timelineSummaryStats.avgListeners).toLocaleString()}
+                              </p>
+                              <p>Avg listeners per day</p>
+                            </div>
+                            <div className="rounded-md border border-border/60 bg-background/80 p-3">
+                              <p className="font-medium text-foreground">
+                                {currencyFormatter.format(timelineSummaryStats.avgRevenue || 0)}
+                              </p>
+                              <p>Avg revenue per day</p>
+                            </div>
+                          </div>
+                        </>
                       ) : (
                         <p className="mt-3 text-xs text-muted-foreground">
-                          No spins recorded in the last 14 days.
+                          No spins recorded in the last {metricsRange} days.
                         </p>
                       )}
                     </div>
-                  </div>
-                )}
 
                 {selectedStation && shows && shows.length > 0 && (
                   <div className="pt-4">
                     <h3 className="text-lg font-semibold mb-2">Shows on this station:</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {shows.map((show) => (
-                        <div key={show.id} className="p-3 border rounded-lg">
-                          <p className="font-medium">{show.show_name}</p>
-                          <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {show.show_genres?.map((genre: string) => (
-                              <Badge key={genre} variant="outline" className="text-xs">
-                                {genre}
-                              </Badge>
-                            ))}
+                        <button
+                          key={show.id}
+                          type="button"
+                          onClick={() => setSelectedShow(show.id)}
+                          aria-pressed={selectedShow === show.id}
+                          className={`text-left p-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 ${
+                            selectedShow === show.id
+                              ? 'border-primary bg-primary/10 shadow-sm'
+                              : 'hover:border-primary/60 hover:bg-background/80'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium">{show.show_name}</p>
+                            <Badge variant="secondary" className="text-xs">
+                              {show.time_slot}
+                            </Badge>
                           </div>
-                        </div>
+                          <p className="text-sm text-muted-foreground mt-1">Host: {show.host_name}</p>
+                          {show.show_genres?.length ? (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {show.show_genres.map((genre: string) => (
+                                <Badge key={genre} variant="outline" className="text-xs">
+                                  {genre}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Accepts all genres
+                            </p>
+                          )}
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Select Song</label>
-                  <Select value={selectedSong} onValueChange={setSelectedSong}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a recorded song" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {recordedSongs?.map((song) => (
-                        <SelectItem key={song.id} value={song.id}>
-                          {song.title} ({song.genre}) - Quality: {song.quality_score}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {recordedSongs && recordedSongs.length === 0 ? (
+                  <EmptyState
+                    icon={Music}
+                    title="No recorded songs yet"
+                    description="Record a track in the studio to unlock radio submissions."
+                    action={
+                      <Button onClick={() => navigate('/recording-studio')}>
+                        Record a new song
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Select Song</label>
+                      <Select
+                        value={selectedSong}
+                        onValueChange={setSelectedSong}
+                        disabled={!recordedSongs?.length}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a recorded song" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {recordedSongs?.map((song) => (
+                            <SelectItem key={song.id} value={song.id}>
+                              {song.title} ({song.genre}) - Quality: {song.quality_score}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <Button
-                  onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
-                  className="w-full"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Submit to Radio Station
-                </Button>
+                    <Button
+                      onClick={() => submitSong.mutate()}
+                      disabled={
+                        !selectedStation ||
+                        !selectedSong ||
+                        submitSong.isPending ||
+                        !recordedSongs?.length
+                      }
+                      className="w-full"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit to Radio Station
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="submissions" className="space-y-4">
-            {mySubmissions?.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">
-                    No submissions yet. Submit your first song to a radio station!
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              mySubmissions?.map((submission) => (
+            {mySubmissions && mySubmissions.length > 0 ? (
+              mySubmissions.map((submission) => (
                 <Card key={submission.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -824,7 +1580,18 @@ export default function Radio() {
                   </CardContent>
                 </Card>
               ))
-            )}
+            ) : mySubmissions ? (
+              <EmptyState
+                icon={RadioIcon}
+                title="You haven't submitted any songs yet"
+                description="Share a recorded track with a station to start building hype from radio spins."
+                action={
+                  <Button onClick={() => setActiveTab('submit')}>
+                    Submit a song
+                  </Button>
+                }
+              />
+            ) : null}
           </TabsContent>
 
           <TabsContent value="trending" className="space-y-4">
@@ -834,29 +1601,42 @@ export default function Radio() {
                 <CardDescription>Songs with the most hype from radio airplay</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {topSongs?.map((song, index) => (
-                    <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                        <span className="font-bold">{index + 1}</span>
+                {topSongs && topSongs.length > 0 ? (
+                  <div className="space-y-3">
+                    {topSongs.map((song, index) => (
+                      <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                          <span className="font-bold">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{song.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            by {song.profiles?.display_name}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-green-500" />
+                          <span className="font-semibold">{song.hype || 0} hype</span>
+                        </div>
+                        <Badge variant="outline">{song.genre}</Badge>
+                        {song.total_radio_plays > 0 && (
+                          <Badge variant="secondary">{song.total_radio_plays} plays</Badge>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{song.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          by {song.profiles?.display_name}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                        <span className="font-semibold">{song.hype || 0} hype</span>
-                      </div>
-                      <Badge variant="outline">{song.genre}</Badge>
-                      {song.total_radio_plays > 0 && (
-                        <Badge variant="secondary">{song.total_radio_plays} plays</Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : topSongs ? (
+                  <EmptyState
+                    icon={Sparkles}
+                    title="No radio charts yet"
+                    description="Once artists start submitting songs, the most hyped tracks will appear here."
+                    action={
+                      <Button onClick={() => setActiveTab('submit')}>
+                        Submit a song
+                      </Button>
+                    }
+                  />
+                ) : null}
               </CardContent>
             </Card>
 

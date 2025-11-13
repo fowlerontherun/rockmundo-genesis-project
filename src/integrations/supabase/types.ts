@@ -3767,32 +3767,44 @@ export type Database = {
       }
       player_equipment: {
         Row: {
+          available_at: string | null
+          available_for_loadout: boolean
           condition: number | null
           created_at: string | null
           equipment_id: string
           equipped: boolean | null
           id: string
           is_equipped: boolean | null
+          loadout_slot_kind: string | null
+          pool_category: string | null
           purchased_at: string | null
           user_id: string
         }
         Insert: {
+          available_at?: string | null
+          available_for_loadout?: boolean
           condition?: number | null
           created_at?: string | null
           equipment_id: string
           equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
+          loadout_slot_kind?: string | null
+          pool_category?: string | null
           purchased_at?: string | null
           user_id: string
         }
         Update: {
+          available_at?: string | null
+          available_for_loadout?: boolean
           condition?: number | null
           created_at?: string | null
           equipment_id?: string
           equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
+          loadout_slot_kind?: string | null
+          pool_category?: string | null
           purchased_at?: string | null
           user_id?: string
         }
@@ -3812,6 +3824,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_equipment_ownership_history: {
+        Row: {
+          action: string
+          created_at: string
+          equipment_id: string
+          id: string
+          metadata: Json
+          player_equipment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          equipment_id: string
+          id?: string
+          metadata?: Json
+          player_equipment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          equipment_id?: string
+          id?: string
+          metadata?: Json
+          player_equipment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_equipment_ownership_history_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_equipment_ownership_history_player_equipment_id_fkey"
+            columns: ["player_equipment_id"]
+            isOneToOne: false
+            referencedRelation: "player_equipment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_gear_pool: {
+        Row: {
+          capacity: number
+          category: string
+          created_at: string
+          id: string
+          slot_kind: string
+          updated_at: string
+          used_count: number
+          user_id: string
+        }
+        Insert: {
+          capacity?: number
+          category: string
+          created_at?: string
+          id?: string
+          slot_kind: string
+          updated_at?: string
+          used_count?: number
+          user_id: string
+        }
+        Update: {
+          capacity?: number
+          category?: string
+          created_at?: string
+          id?: string
+          slot_kind?: string
+          updated_at?: string
+          used_count?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       player_mentor_sessions: {
         Row: {
@@ -4487,6 +4577,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          reserved_funds: number | null
           character_birth_date: string | null
           created_at: string | null
           current_activity: string | null
@@ -4514,6 +4605,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -4541,6 +4633,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -5374,9 +5467,17 @@ export type Database = {
           created_at: string
           id: string
           image_quality: string
+          kpi_chart_target: string | null
+          kpi_view_target: number | null
           location_style: string | null
+          primary_platform: string | null
           production_notes: string | null
           release_id: string | null
+          shoot_end_date: string | null
+          shoot_start_date: string | null
+          status: string
+          sync_strategy: string
+          target_release_date: string | null
           theme: string
           updated_at: string
           user_id: string
@@ -5392,9 +5493,17 @@ export type Database = {
           created_at?: string
           id?: string
           image_quality: string
+          kpi_chart_target?: string | null
+          kpi_view_target?: number | null
           location_style?: string | null
+          primary_platform?: string | null
           production_notes?: string | null
           release_id?: string | null
+          shoot_end_date?: string | null
+          shoot_start_date?: string | null
+          status?: string
+          sync_strategy?: string
+          target_release_date?: string | null
           theme: string
           updated_at?: string
           user_id: string
@@ -5410,9 +5519,17 @@ export type Database = {
           created_at?: string
           id?: string
           image_quality?: string
+          kpi_chart_target?: string | null
+          kpi_view_target?: number | null
           location_style?: string | null
+          primary_platform?: string | null
           production_notes?: string | null
           release_id?: string | null
+          shoot_end_date?: string | null
+          shoot_start_date?: string | null
+          status?: string
+          sync_strategy?: string
+          target_release_date?: string | null
           theme?: string
           updated_at?: string
           user_id?: string
@@ -5439,6 +5556,7 @@ export type Database = {
         Row: {
           chart_name: string | null
           chart_position: number | null
+          chart_target: string | null
           chart_velocity: number | null
           created_at: string
           id: string
@@ -5446,13 +5564,16 @@ export type Database = {
           mtv_program: string | null
           mtv_spins: number | null
           music_video_id: string
+          platform: string | null
           updated_at: string
+          views_target: number | null
           youtube_video_id: string | null
           youtube_views: number | null
         }
         Insert: {
           chart_name?: string | null
           chart_position?: number | null
+          chart_target?: string | null
           chart_velocity?: number | null
           created_at?: string
           id?: string
@@ -5460,13 +5581,16 @@ export type Database = {
           mtv_program?: string | null
           mtv_spins?: number | null
           music_video_id: string
+          platform?: string | null
           updated_at?: string
+          views_target?: number | null
           youtube_video_id?: string | null
           youtube_views?: number | null
         }
         Update: {
           chart_name?: string | null
           chart_position?: number | null
+          chart_target?: string | null
           chart_velocity?: number | null
           created_at?: string
           id?: string
@@ -5474,7 +5598,9 @@ export type Database = {
           mtv_program?: string | null
           mtv_spins?: number | null
           music_video_id?: string
+          platform?: string | null
           updated_at?: string
+          views_target?: number | null
           youtube_video_id?: string | null
           youtube_views?: number | null
         }
@@ -7937,6 +8063,24 @@ export type Database = {
           },
         ]
       }
+      gear_slot_catalog: {
+        Row: {
+          category: string
+          default_capacity: number
+          slot_kind: string
+        }
+        Insert: {
+          category: string
+          default_capacity?: number
+          slot_kind: string
+        }
+        Update: {
+          category?: string
+          default_capacity?: number
+          slot_kind?: string
+        }
+        Relationships: []
+      }
       gear_items: {
         Row: {
           created_at: string
@@ -8234,6 +8378,20 @@ export type Database = {
         }
         Relationships: []
       }
+      player_gear_pool_status: {
+        Row: {
+          available_slots: number | null
+          capacity: number | null
+          catalog_slot_kind: string | null
+          category: string | null
+          default_capacity: number | null
+          slot_kind: string | null
+          updated_at: string | null
+          used_count: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       band_gift_notifications: {
         Row: {
           band_name: string | null
@@ -8339,6 +8497,18 @@ export type Database = {
           p_skill_songwriting: number
         }
         Returns: Json
+      }
+      check_radio_submission_week: {
+        Args: {
+          p_station_id: string
+          p_song_id: string
+          p_anchor?: number
+          p_reference?: string
+        }
+        Returns: {
+          week_start_date: string | null
+          already_submitted: boolean | null
+        }[]
       }
       check_scheduling_conflict: {
         Args: {
