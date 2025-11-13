@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { type EquipmentItemRecord } from "@/types/gear";
 
 export interface PlayerEquipmentWithItem {
   available_at: string | null;

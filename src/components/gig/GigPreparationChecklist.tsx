@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, XCircle, Music, Users, Zap, Sparkles, Loader2 } from "lucide-react";
-import type { GearModifierEffects } from "@/utils/gearModifiers";
+import { EMPTY_GEAR_EFFECTS, type GearModifierEffects } from "@/utils/gearModifiers";
+import { GEAR_TARGETS } from "@/utils/gigNarrative";
 
 interface RehearsalData {
   song_id: string;
@@ -55,6 +56,58 @@ export const GigPreparationChecklist = ({
 
   const hasGearBonuses = Boolean(gearEffects && gearEffects.breakdown.length > 0);
   const formattedGearEffects = gearEffects;
+  const baselineGearEffects = EMPTY_GEAR_EFFECTS;
+
+  const gearComparisons = formattedGearEffects
+    ? [
+        {
+          key: "attendance",
+          label: "Crowd Energy",
+          current: formattedGearEffects.attendanceBonusPercent,
+          baseline: baselineGearEffects.attendanceBonusPercent,
+          target: GEAR_TARGETS.attendanceBonusPercent,
+          formatCurrent: (value: number) => `+${value.toFixed(1)}%`,
+          formatReference: (value: number) => `+${value.toFixed(1)}%`,
+          gapLabel: "boost",
+          onTrackCopy: "Crowd is primed—expect a noticeable bump in turnout.",
+        },
+        {
+          key: "reliability",
+          label: "Rig Stability",
+          current: formattedGearEffects.reliabilitySwingReductionPercent,
+          baseline: baselineGearEffects.reliabilitySwingReductionPercent,
+          target: GEAR_TARGETS.reliabilitySwingReductionPercent,
+          formatCurrent: (value: number) => `-${value.toFixed(1)}% swing`,
+          formatReference: (value: number) => `-${value.toFixed(1)}%`,
+          gapLabel: "stability",
+          onTrackCopy: "Dialed-in pedals should keep the set steady throughout.",
+        },
+        {
+          key: "revenue",
+          label: "Payout Lift",
+          current: formattedGearEffects.revenueBonusPercent,
+          baseline: baselineGearEffects.revenueBonusPercent,
+          target: GEAR_TARGETS.revenueBonusPercent,
+          formatCurrent: (value: number) => `+${value.toFixed(1)}%`,
+          formatReference: (value: number) => `+${value.toFixed(1)}%`,
+          gapLabel: "revenue",
+          onTrackCopy: "Merch and tickets are positioned for a healthy upsell.",
+        },
+        {
+          key: "fame",
+          label: "Reputation Boost",
+          current: formattedGearEffects.fameBonusPercent,
+          baseline: baselineGearEffects.fameBonusPercent,
+          target: GEAR_TARGETS.fameBonusPercent,
+          formatCurrent: (value: number) => `+${value.toFixed(1)}%`,
+          formatReference: (value: number) => `+${value.toFixed(1)}%`,
+          gapLabel: "buzz",
+          onTrackCopy: "Signature rigs should leave a strong impression on promoters.",
+        },
+      ]
+    : [];
+
+  const gearGaps = gearComparisons.filter((metric) => metric.current < metric.target);
 
   const getReadinessColor = () => {
     if (readinessScore >= 4) return "default";
@@ -210,51 +263,74 @@ export const GigPreparationChecklist = ({
 
           {!gearLoading && (!formattedGearEffects || formattedGearEffects.breakdown.length === 0) && (
             <p className="text-sm text-muted-foreground">
-              Equip high-end microphones, pedals, and processors to unlock performance boosts before the show.
+              Equip high-end microphones, pedals, and processors to unlock capped performance boosts and keep breakdown risk low.
             </p>
           )}
 
-          {hasGearBonuses && formattedGearEffects && (
-            <div className="space-y-2">
+          {gearComparisons.length > 0 && (
+            <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Crowd Energy</span>
-                    <span className="font-semibold text-primary">+{formattedGearEffects.attendanceBonusPercent.toFixed(1)}%</span>
-                  </div>
-                </div>
-                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Rig Stability</span>
-                    <span className="font-semibold text-primary">-{formattedGearEffects.reliabilitySwingReductionPercent.toFixed(1)}%</span>
-                  </div>
-                </div>
-                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Payout Lift</span>
-                    <span className="font-semibold text-primary">+{formattedGearEffects.revenueBonusPercent.toFixed(1)}%</span>
-                  </div>
-                </div>
-                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Reputation Boost</span>
-                    <span className="font-semibold text-primary">+{formattedGearEffects.fameBonusPercent.toFixed(1)}%</span>
-                  </div>
-                </div>
+                {gearComparisons.map((metric) => {
+                  const meetsTarget = metric.current >= metric.target;
+                  const gapAmount = Math.max(0, metric.target - metric.current);
+
+                  return (
+                    <div
+                      key={metric.key}
+                      className={`rounded-md border border-dashed p-2 text-xs ${
+                        meetsTarget ? 'border-primary/40' : 'border-destructive/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{metric.label}</span>
+                        <span className={`font-semibold ${meetsTarget ? 'text-primary' : 'text-destructive'}`}>
+                          {metric.formatCurrent(metric.current)}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>Baseline {metric.formatReference(metric.baseline)}</span>
+                        <span>Target {metric.formatReference(metric.target)}</span>
+                      </div>
+                      {meetsTarget ? (
+                        <p className="mt-2 text-[11px] text-muted-foreground">{metric.onTrackCopy}</p>
+                      ) : (
+                        <div className="mt-2 flex items-start gap-1 text-[11px] text-destructive">
+                          <AlertCircle className="mt-[2px] h-3 w-3" />
+                          <span>
+                            Needs {gapAmount.toFixed(1)}% more {metric.gapLabel} to hit the target.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="space-y-1 pl-6">
-                {formattedGearEffects.breakdown.map((entry) => (
-                  <div key={entry.key} className="flex flex-col text-sm">
-                    <span className="flex items-center gap-2 font-medium">
-                      <CheckCircle2 className="h-3 w-3 text-primary" />
-                      {entry.label}
-                      <Badge variant="outline" className="text-xs">{entry.value}</Badge>
-                    </span>
-                    <span className="pl-5 text-xs text-muted-foreground">{entry.description}</span>
-                  </div>
-                ))}
-              </div>
+              {gearGaps.length > 0 && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {gearGaps.length === gearComparisons.length
+                      ? 'Gear bonuses are below target across the board. Consider equipping higher-tier items before showtime.'
+                      : 'Some bonuses are below the recommended targets. Swap or upgrade gear to close the gaps before the gig.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {formattedGearEffects && formattedGearEffects.breakdown.length > 0 && (
+                <div className="space-y-1 pl-6">
+                  {formattedGearEffects.breakdown.map((entry) => (
+                    <div key={entry.key} className="flex flex-col text-sm">
+                      <span className="flex items-center gap-2 font-medium">
+                        <CheckCircle2 className="h-3 w-3 text-primary" />
+                        {entry.label}
+                        <Badge variant="outline" className="text-xs">{entry.value}</Badge>
+                      </span>
+                      <span className="pl-5 text-xs text-muted-foreground">{entry.description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

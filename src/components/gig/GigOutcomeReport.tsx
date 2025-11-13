@@ -9,6 +9,7 @@ import {
   type GearEffectBreakdown,
   type GearModifierEffects,
 } from "@/utils/gearModifiers";
+import { buildGearOutcomeNarrative, type GearOutcomeNarrative } from "@/utils/gigNarrative";
 
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
@@ -53,6 +54,7 @@ interface GigOutcome {
     equipmentQualityBonus: number;
     attendanceBonusPercent: number;
     reliabilitySwingReductionPercent: number;
+    breakdownRiskPercent?: number;
     revenueBonusPercent: number;
     fameBonusPercent: number;
     breakdown?: GearEffectBreakdown[];
@@ -68,6 +70,7 @@ interface Props {
   venueCapacity: number;
   songs?: Array<{ id: string; title: string }>;
   gearEffects?: GearModifierEffects | null;
+  gearNarrative?: GearOutcomeNarrative | null;
 }
 
 export const GigOutcomeReport = ({
@@ -78,6 +81,7 @@ export const GigOutcomeReport = ({
   venueCapacity,
   songs = [],
   gearEffects,
+  gearNarrative,
 }: Props) => {
   if (!outcome) return null;
 
@@ -127,6 +131,7 @@ export const GigOutcomeReport = ({
     const revenueBonus = safeNumber(outcome.promoter_modifier);
     const fameBonus = safeNumber(outcome.venue_loyalty_bonus);
     const equipmentBonus = safeNumber(outcome.band_synergy_modifier);
+    const breakdownRisk = safeNumber(outcome.gear_effects?.breakdownRiskPercent);
 
     const derived: GearModifierEffects = {
       ...EMPTY_GEAR_EFFECTS,
@@ -135,6 +140,7 @@ export const GigOutcomeReport = ({
       attendanceBonusPercent: attendanceBonus,
       reliabilityStability: reliabilityBonus / 100,
       reliabilitySwingReductionPercent: reliabilityBonus,
+      breakdownRiskPercent: breakdownRisk,
       revenueMultiplier: 1 + revenueBonus / 100,
       revenueBonusPercent: revenueBonus,
       fameMultiplier: 1 + fameBonus / 100,
@@ -150,7 +156,7 @@ export const GigOutcomeReport = ({
           key: "signal-chain",
           label: "Signal Chain Quality",
           value: `+${equipmentBonus.toFixed(1)} EQ`,
-          description: "Stage gear raised your equipment score for each song.",
+          description: "Stage gear raised your equipment score until the tour cap kicked in.",
         });
       }
 
@@ -159,7 +165,7 @@ export const GigOutcomeReport = ({
           key: "crowd-engagement",
           label: "Crowd Engagement",
           value: `+${attendanceBonus.toFixed(1)}%`,
-          description: "High-end microphones drew a livelier crowd response.",
+          description: "High-end microphones drew a livelier crowd response before the cap.",
         });
       }
 
@@ -168,7 +174,16 @@ export const GigOutcomeReport = ({
           key: "rig-reliability",
           label: "Rig Reliability",
           value: `-${reliabilityBonus.toFixed(1)}% swing`,
-          description: "Rare pedals kept the set running without hiccups.",
+          description: "Reliability mods steadied the set until the safety cap.",
+        });
+      }
+
+      if (breakdownRisk > 0.25) {
+        fallbackBreakdown.push({
+          key: "breakdown-risk",
+          label: "Breakdown Risk",
+          value: `+${breakdownRisk.toFixed(1)}%`,
+          description: "Fragile components left you exposed to breakdown swings.",
         });
       }
 
@@ -177,7 +192,7 @@ export const GigOutcomeReport = ({
           key: "payout",
           label: "Payout Lift",
           value: `+${revenueBonus.toFixed(1)}%`,
-          description: "Premium tone encouraged higher ticket and merch sales.",
+          description: "Premium tone encouraged sales until diminishing returns kicked in.",
         });
       }
 
@@ -186,7 +201,7 @@ export const GigOutcomeReport = ({
           key: "reputation",
           label: "Reputation Gains",
           value: `+${fameBonus.toFixed(1)}%`,
-          description: "Signature rigs impressed promoters and fans alike.",
+          description: "Signature rigs impressed promoters within the fame cap.",
         });
       }
 
@@ -197,12 +212,18 @@ export const GigOutcomeReport = ({
   };
 
   const effectiveGearEffects = gearEffects ?? buildFallbackGearEffects();
+  const narrative = gearNarrative ?? buildGearOutcomeNarrative({
+    outcome,
+    gearEffects: effectiveGearEffects,
+    setlistLength: songs.length,
+  });
   const hasGearImpact =
     effectiveGearEffects.breakdown.length > 0 ||
     effectiveGearEffects.attendanceBonusPercent !== 0 ||
     effectiveGearEffects.revenueBonusPercent !== 0 ||
     effectiveGearEffects.fameBonusPercent !== 0 ||
-    effectiveGearEffects.equipmentQualityBonus !== 0;
+    effectiveGearEffects.equipmentQualityBonus !== 0 ||
+    effectiveGearEffects.breakdownRiskPercent > 0;
 
   const grade = getPerformanceGrade(overallRating);
   const starsFilled = Math.floor(overallRating);
@@ -356,6 +377,9 @@ export const GigOutcomeReport = ({
                       +{effectiveGearEffects.attendanceBonusPercent.toFixed(1)}%
                     </p>
                     <p className="text-xs text-muted-foreground">Audience enthusiasm driven by microphones and vocal rigs.</p>
+                    {narrative.attendanceLine && (
+                      <p className="text-xs text-muted-foreground mt-1">{narrative.attendanceLine}</p>
+                    )}
                   </div>
                   <div className="rounded-md border border-dashed border-primary/40 p-3">
                     <p className="text-muted-foreground">Rig Stability</p>
@@ -363,6 +387,9 @@ export const GigOutcomeReport = ({
                       -{effectiveGearEffects.reliabilitySwingReductionPercent.toFixed(1)}%
                     </p>
                     <p className="text-xs text-muted-foreground">High-end pedals prevented negative performance swings.</p>
+                    {narrative.reliabilityLine && (
+                      <p className="text-xs text-muted-foreground mt-1">{narrative.reliabilityLine}</p>
+                    )}
                   </div>
                   <div className="rounded-md border border-dashed border-primary/40 p-3">
                     <p className="text-muted-foreground">Payout Boost</p>
@@ -370,6 +397,9 @@ export const GigOutcomeReport = ({
                       +{effectiveGearEffects.revenueBonusPercent.toFixed(1)}%
                     </p>
                     <p className="text-xs text-muted-foreground">Premium tone increased ticket and merch returns.</p>
+                    {narrative.revenueLine && (
+                      <p className="text-xs text-muted-foreground mt-1">{narrative.revenueLine}</p>
+                    )}
                   </div>
                   <div className="rounded-md border border-dashed border-primary/40 p-3">
                     <p className="text-muted-foreground">Reputation Gain</p>
@@ -377,6 +407,9 @@ export const GigOutcomeReport = ({
                       +{effectiveGearEffects.fameBonusPercent.toFixed(1)}%
                     </p>
                     <p className="text-xs text-muted-foreground">Signature gear amplified fame gained from the show.</p>
+                    {narrative.fameLine && (
+                      <p className="text-xs text-muted-foreground mt-1">{narrative.fameLine}</p>
+                    )}
                   </div>
                 </div>
 

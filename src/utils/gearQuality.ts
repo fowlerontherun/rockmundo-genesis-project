@@ -31,10 +31,10 @@ const calculateBoostTotal = (statBoosts?: Record<string, number> | null) => {
 };
 
 export const deriveQualityTier = (
-  price: number | null | undefined,
+  cashPrice: number | null | undefined,
   statBoosts?: Record<string, number> | null
 ): GearQualityTier => {
-  const normalizedPrice = typeof price === "number" && Number.isFinite(price) ? price : 0;
+  const normalizedPrice = typeof cashPrice === "number" && Number.isFinite(cashPrice) ? cashPrice : 0;
   const boostTotal = calculateBoostTotal(statBoosts);
 
   if (boostTotal >= 40 || normalizedPrice >= 6000) {
