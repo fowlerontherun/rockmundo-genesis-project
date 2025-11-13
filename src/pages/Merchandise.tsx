@@ -31,6 +31,7 @@ type MerchandiseRecord = Database["public"]["Tables"]["player_merchandise"]["Row
 
 type FormState = {
   designName: string;
+  category: string;
   itemType: string;
   cost: string;
   price: string;
@@ -49,6 +50,7 @@ type MerchandiseStatus = "in_stock" | "low_stock" | "sold_out";
 
 const INITIAL_FORM: FormState = {
   designName: "",
+  category: "",
   itemType: "",
   cost: "",
   price: "",
@@ -63,7 +65,84 @@ const INITIAL_DESIGNER_FORM: DesignerForm = {
   finish: "standard",
 };
 
-const productCategories = ["Apparel", "Accessories", "Collectibles", "Experiences", "Digital", "Bundles"];
+const productBlueprints = [
+  {
+    category: "Apparel",
+    items: [
+      { label: "Graphic Tee", cost: 7 },
+      { label: "Premium Hoodie", cost: 24 },
+      { label: "Tour Crewneck", cost: 18 },
+      { label: "Embroidered Cap", cost: 10 },
+    ],
+  },
+  {
+    category: "Accessories",
+    items: [
+      { label: "Holographic Sticker Pack", cost: 2 },
+      { label: "Lanyard + Laminate", cost: 5 },
+      { label: "Enamel Pin", cost: 4 },
+      { label: "Tour Tote Bag", cost: 6 },
+    ],
+  },
+  {
+    category: "Collectibles",
+    items: [
+      { label: "Signed Poster", cost: 3 },
+      { label: "Limited Art Print", cost: 8 },
+      { label: "Numbered Vinyl Variant", cost: 12 },
+      { label: "Tour Photo Zine", cost: 6 },
+    ],
+  },
+  {
+    category: "Experiences",
+    items: [
+      { label: "Soundcheck Hang", cost: 0 },
+      { label: "Backstage Meet & Greet", cost: 5 },
+      { label: "VIP Lounge Access", cost: 9 },
+      { label: "Private Listening Session", cost: 7 },
+    ],
+  },
+  {
+    category: "Digital",
+    items: [
+      { label: "Exclusive Remix Pack", cost: 1 },
+      { label: "Behind-the-Scenes Mini Doc", cost: 3 },
+      { label: "Lyric Book PDF", cost: 1 },
+      { label: "Virtual Listening Party Pass", cost: 2 },
+    ],
+  },
+  {
+    category: "Bundles",
+    items: [
+      { label: "Tour Essentials Bundle", cost: 20 },
+      { label: "Deluxe Fan Bundle", cost: 28 },
+      { label: "Digital Drop Bundle", cost: 5 },
+      { label: "Release Week Mystery Pack", cost: 16 },
+    ],
+  },
+] as const;
+
+const findBlueprintCategory = (category: string | null) =>
+  productBlueprints.find((entry) => entry.category === category) ?? null;
+
+const findBlueprintItem = (itemType: string | null) => {
+  if (!itemType) return null;
+  for (const entry of productBlueprints) {
+    const match = entry.items.find((item) => item.label === itemType);
+    if (match) {
+      return { category: entry.category, ...match };
+    }
+  }
+  return null;
+};
+
+const formatProductType = (itemType: string | null) => {
+  const blueprint = findBlueprintItem(itemType);
+  if (blueprint) {
+    return `${blueprint.category} · ${blueprint.label}`;
+  }
+  return itemType || "Uncategorized";
+};
 
 const finishLabels: Record<DesignerForm["finish"], string> = {
   standard: "Standard tee",
@@ -156,10 +235,12 @@ const Merchandise = () => {
 
   useEffect(() => {
     if (selectedProduct) {
+      const blueprint = findBlueprintItem(selectedProduct.item_type);
       setEditForm({
         designName: selectedProduct.design_name ?? "",
-        itemType: selectedProduct.item_type ?? "",
-        cost: safeNumber(selectedProduct.cost_to_produce).toString(),
+        category: blueprint?.category ?? "",
+        itemType: blueprint?.label ?? selectedProduct.item_type ?? "",
+        cost: (blueprint?.cost ?? safeNumber(selectedProduct.cost_to_produce)).toString(),
         price: safeNumber(selectedProduct.selling_price).toString(),
         stock: safeNumber(selectedProduct.stock_quantity).toString(),
       });
@@ -215,7 +296,8 @@ const Merchandise = () => {
     const categoryMap = new Map<string, { units: number; revenue: number; skus: number }>();
 
     merchandise.forEach((product) => {
-      const key = product.item_type || "Uncategorized";
+      const blueprint = findBlueprintItem(product.item_type);
+      const key = blueprint?.category ?? product.item_type ?? "Uncategorized";
       const entry = categoryMap.get(key) ?? { units: 0, revenue: 0, skus: 0 };
       entry.units += safeNumber(product.stock_quantity);
       entry.revenue += safeNumber(product.selling_price) * safeNumber(product.stock_quantity);
@@ -238,28 +320,39 @@ const Merchandise = () => {
   );
 
   const addProductMutation = useMutation({
-    mutationFn: async ({ designName, itemType, cost, price, stock }: FormState) => {
+    mutationFn: async ({ designName, category, itemType, price, stock }: FormState) => {
       if (!bandId) {
         throw new Error("Join a band to manage merchandise");
       }
 
-      const parsedCost = Math.max(0, Math.round(Number(cost)));
       const parsedPrice = Math.max(0, Math.round(Number(price)));
       const parsedStock = Math.max(0, Math.round(Number(stock)));
+
+      if (!category.trim()) {
+        throw new Error("Select a product category");
+      }
 
       if (!designName.trim()) {
         throw new Error("Product name is required");
       }
 
       if (!itemType.trim()) {
-        throw new Error("Select a product category");
+        throw new Error("Select a product type");
       }
+
+      const blueprint = findBlueprintItem(itemType);
+
+      if (!blueprint || blueprint.category !== category) {
+        throw new Error("Choose a valid product type for the selected category");
+      }
+
+      const derivedCost = Math.max(0, Math.round(Number(blueprint.cost)));
 
       const { error } = await supabase.from("player_merchandise").insert({
         band_id: bandId,
         design_name: designName.trim(),
-        item_type: itemType.trim(),
-        cost_to_produce: parsedCost,
+        item_type: blueprint.label,
+        cost_to_produce: derivedCost,
         selling_price: parsedPrice,
         stock_quantity: parsedStock,
       });
@@ -284,21 +377,36 @@ const Merchandise = () => {
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: async ({ designName, itemType, cost, price, stock }: FormState) => {
+    mutationFn: async ({ designName, category, itemType, price, stock }: FormState) => {
       if (!selectedProduct) {
         throw new Error("Select a product to update");
       }
 
-      const parsedCost = Math.max(0, Math.round(Number(cost)));
       const parsedPrice = Math.max(0, Math.round(Number(price)));
       const parsedStock = Math.max(0, Math.round(Number(stock)));
+
+      if (!category.trim()) {
+        throw new Error("Select a product category");
+      }
+
+      if (!itemType.trim()) {
+        throw new Error("Select a product type");
+      }
+
+      const blueprint = findBlueprintItem(itemType);
+
+      if (!blueprint || blueprint.category !== category) {
+        throw new Error("Choose a valid product type for the selected category");
+      }
+
+      const derivedCost = Math.max(0, Math.round(Number(blueprint.cost)));
 
       const { error } = await supabase
         .from("player_merchandise")
         .update({
           design_name: designName.trim(),
-          item_type: itemType.trim(),
-          cost_to_produce: parsedCost,
+          item_type: blueprint.label,
+          cost_to_produce: derivedCost,
           selling_price: parsedPrice,
           stock_quantity: parsedStock,
         })
@@ -550,7 +658,7 @@ const Merchandise = () => {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden xl:table-cell">{product.item_type || "Uncategorized"}</TableCell>
+                          <TableCell className="hidden xl:table-cell">{formatProductType(product.item_type)}</TableCell>
                           <TableCell>{currencyFormatter.format(safeNumber(product.cost_to_produce))}</TableCell>
                           <TableCell>{currencyFormatter.format(safeNumber(product.selling_price))}</TableCell>
                           <TableCell>{numberFormatter.format(safeNumber(product.stock_quantity))}</TableCell>
@@ -612,7 +720,9 @@ const Merchandise = () => {
                       <div className="flex flex-col">
                         <span className="font-semibold">{product.design_name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {statusLabels[getStatus(product.stock_quantity)]} · {numberFormatter.format(safeNumber(product.stock_quantity))} units
+                          {formatProductType(product.item_type)} · {statusLabels[getStatus(product.stock_quantity)]} · {numberFormatter.format(
+                            safeNumber(product.stock_quantity),
+                          )} units
                         </span>
                       </div>
                       <Button
@@ -659,16 +769,50 @@ const Merchandise = () => {
                     Category
                   </label>
                   <Select
-                    value={newProductForm.itemType}
-                    onValueChange={(value) => setNewProductForm((prev) => ({ ...prev, itemType: value }))}
+                    value={newProductForm.category}
+                    onValueChange={(value) =>
+                      setNewProductForm((prev) => ({
+                        ...prev,
+                        category: value,
+                        itemType: "",
+                        cost: "",
+                      }))
+                    }
                   >
                     <SelectTrigger id="new-item-type">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {productCategories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                      {productBlueprints.map((entry) => (
+                        <SelectItem key={entry.category} value={entry.category}>
+                          {entry.category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="new-item-subtype">
+                    Product Type
+                  </label>
+                  <Select
+                    value={newProductForm.itemType}
+                    onValueChange={(value) =>
+                      setNewProductForm((prev) => ({
+                        ...prev,
+                        itemType: value,
+                        cost: findBlueprintItem(value)?.cost.toString() ?? "",
+                      }))
+                    }
+                    disabled={!newProductForm.category}
+                  >
+                    <SelectTrigger id="new-item-subtype">
+                      <SelectValue placeholder="Select product type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {findBlueprintCategory(newProductForm.category)?.items.map((item) => (
+                        <SelectItem key={item.label} value={item.label}>
+                          {item.label} · {currencyFormatter.format(item.cost)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -685,7 +829,7 @@ const Merchandise = () => {
                     step={1}
                     placeholder="12"
                     value={newProductForm.cost}
-                    onChange={(event) => setNewProductForm((prev) => ({ ...prev, cost: event.target.value }))}
+                    readOnly
                     required
                   />
                 </div>
@@ -782,16 +926,50 @@ const Merchandise = () => {
                       Category
                     </label>
                     <Select
-                      value={editForm.itemType}
-                      onValueChange={(value) => setEditForm((prev) => ({ ...prev, itemType: value }))}
+                      value={editForm.category}
+                      onValueChange={(value) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          category: value,
+                          itemType: "",
+                          cost: "",
+                        }))
+                      }
                     >
                       <SelectTrigger id="edit-item-type">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {productCategories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        {productBlueprints.map((entry) => (
+                          <SelectItem key={entry.category} value={entry.category}>
+                            {entry.category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="edit-item-subtype">
+                      Product Type
+                    </label>
+                    <Select
+                      value={editForm.itemType}
+                      onValueChange={(value) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          itemType: value,
+                          cost: findBlueprintItem(value)?.cost.toString() ?? "",
+                        }))
+                      }
+                      disabled={!editForm.category}
+                    >
+                      <SelectTrigger id="edit-item-subtype">
+                        <SelectValue placeholder="Select product type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {findBlueprintCategory(editForm.category)?.items.map((item) => (
+                          <SelectItem key={item.label} value={item.label}>
+                            {item.label} · {currencyFormatter.format(item.cost)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -807,7 +985,7 @@ const Merchandise = () => {
                       min={0}
                       step={1}
                       value={editForm.cost}
-                      onChange={(event) => setEditForm((prev) => ({ ...prev, cost: event.target.value }))}
+                      readOnly
                       required
                     />
                   </div>
