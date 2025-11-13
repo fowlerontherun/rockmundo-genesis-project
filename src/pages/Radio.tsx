@@ -21,11 +21,14 @@ import {
   PlayCircle,
   DollarSign,
   Sparkles,
+  Download,
 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type BandRadioEarning = {
   band_id: string;
   amount: number;
+  created_at: string;
   bands?: { name?: string | null } | null;
   metadata?: Record<string, unknown> | null;
 };
@@ -204,28 +207,53 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const aggregatedBandRevenue = useMemo(() => {
+  type AggregatedBandRevenue = {
+    bandId: string;
+    name: string;
+    total: number;
+    plays: number;
+    latestPlayAt: string | null;
+    latestShowName: string | null;
+  };
+
+  const aggregatedBandRevenue: AggregatedBandRevenue[] = useMemo(() => {
     if (!bandRadioEarnings) return [];
 
-    const revenueMap = new Map<string, { name: string; total: number; plays: number }>();
+    const revenueMap = new Map<string, AggregatedBandRevenue>();
 
     for (const earning of bandRadioEarnings) {
       const key = earning.band_id;
+      const metadata = (earning.metadata as { [key: string]: unknown } | null) ?? null;
+      const metadataShowName = metadata && typeof metadata.show_name === 'string' ? metadata.show_name : null;
+      const metadataPlayTime = metadata && typeof metadata.play_time === 'string' ? metadata.play_time : null;
+
       const entry = revenueMap.get(key) || {
+        bandId: key,
         name: earning.bands?.name || 'Unknown Band',
         total: 0,
         plays: 0,
+        latestPlayAt: null,
+        latestShowName: null,
       };
 
       entry.total += earning.amount;
       entry.plays += 1;
+
+      const candidatePlayAt = metadataPlayTime || earning.created_at;
+      const currentPlayAt = entry.latestPlayAt;
+
+      const candidateDate = candidatePlayAt ? new Date(candidatePlayAt).getTime() : null;
+      const currentDate = currentPlayAt ? new Date(currentPlayAt).getTime() : null;
+
+      if (candidateDate !== null && (currentDate === null || candidateDate >= currentDate)) {
+        entry.latestPlayAt = candidatePlayAt;
+        entry.latestShowName = metadataShowName ?? entry.latestShowName;
+      }
+
       revenueMap.set(key, entry);
     }
 
-    return Array.from(revenueMap.entries()).map(([bandId, info]) => ({
-      bandId,
-      ...info,
-    }));
+    return Array.from(revenueMap.values()).sort((a, b) => b.total - a.total);
   }, [bandRadioEarnings]);
 
   const currencyFormatter = useMemo(
@@ -237,6 +265,52 @@ export default function Radio() {
       }),
     []
   );
+
+  const formatPlayTimestamp = (timestamp: string | null) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleExportRevenue = () => {
+    if (typeof window === 'undefined' || !aggregatedBandRevenue.length) return;
+
+    const headers = ['Band Name', 'Plays', 'Revenue (USD)', 'Latest Spin', 'Show Name'];
+    const rows = aggregatedBandRevenue.map((entry) => [
+      entry.name,
+      entry.plays.toString(),
+      entry.total.toFixed(2),
+      formatPlayTimestamp(entry.latestPlayAt) ?? '',
+      entry.latestShowName ?? '',
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((value) => {
+            const stringValue = String(value ?? '');
+            const escapedValue = stringValue.replace(/"/g, '""');
+            return `"${escapedValue}"`;
+          })
+          .join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stationSlug = (activeStation?.name ?? 'radio-station')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '') || 'radio-station';
+    link.href = url;
+    link.setAttribute('download', `${stationSlug}-daily-revenue.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const dailyRevenueTotal = useMemo(
     () => aggregatedBandRevenue.reduce((sum, band) => sum + band.total, 0),
@@ -411,7 +485,7 @@ export default function Radio() {
 
       const { data: show } = await supabase
         .from('radio_shows')
-        .select('id, name')
+        .select('id, show_name')
         .eq('station_id', selectedStation)
         .eq('is_active', true)
         .order('time_slot', { ascending: true })
@@ -539,6 +613,9 @@ export default function Radio() {
                     station_name: stationData.name,
                     song_id: selectedSongData.id,
                     play_id: playRecord?.id,
+                    play_time: playRecord?.played_at,
+                    show_id: (show as any)?.id ?? null,
+                    show_name: (show as any)?.show_name ?? null,
                   },
                 });
               }
@@ -774,30 +851,80 @@ export default function Radio() {
                       </div>
                     )}
 
-                    <div className="space-y-3 rounded-md border border-primary/20 bg-background/70 p-3">
-                      <div className="flex items-center justify-between">
+                    <div className="space-y-4 rounded-md border border-primary/20 bg-background/70 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-sm font-medium">
                           <DollarSign className="h-4 w-4 text-primary" />
                           Daily Band Revenue
                         </div>
-                        <span className="text-sm font-semibold">
-                          {currencyFormatter.format(dailyRevenueTotal || 0)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">
+                            {currencyFormatter.format(dailyRevenueTotal || 0)}
+                          </span>
+                          {aggregatedBandRevenue.length > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                              onClick={handleExportRevenue}
+                            >
+                              <Download className="h-4 w-4" />
+                              Export CSV
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {aggregatedBandRevenue.length > 0 ? (
-                        <div className="space-y-2 text-sm">
-                          {aggregatedBandRevenue.map((entry) => (
-                            <div
-                              key={entry.bandId}
-                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
-                            >
-                              <div>
-                                <p className="font-medium">{entry.name}</p>
-                                <p className="text-xs text-muted-foreground">{entry.plays} play{entry.plays === 1 ? '' : 's'} today</p>
-                              </div>
-                              <span className="font-semibold">{currencyFormatter.format(entry.total)}</span>
-                            </div>
-                          ))}
+                        <div className="space-y-4 text-sm">
+                          <div className="space-y-2">
+                            {aggregatedBandRevenue.map((entry) => {
+                              const latestPlayDisplay = formatPlayTimestamp(entry.latestPlayAt);
+                              return (
+                                <div
+                                  key={entry.bandId}
+                                  className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
+                                >
+                                  <div>
+                                    <p className="font-medium">{entry.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {entry.plays} play{entry.plays === 1 ? '' : 's'} today
+                                    </p>
+                                    {latestPlayDisplay && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Last spin {latestPlayDisplay}
+                                        {entry.latestShowName ? ` • ${entry.latestShowName}` : ''}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="font-semibold">{currencyFormatter.format(entry.total)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="overflow-hidden rounded-md border border-border/60 bg-background/90">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Band</TableHead>
+                                  <TableHead className="w-24">Plays</TableHead>
+                                  <TableHead className="w-32">Revenue</TableHead>
+                                  <TableHead className="w-40">Latest Spin</TableHead>
+                                  <TableHead className="w-48">Show</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {aggregatedBandRevenue.map((entry) => (
+                                  <TableRow key={`${entry.bandId}-detail`}>
+                                    <TableCell className="font-medium">{entry.name}</TableCell>
+                                    <TableCell>{entry.plays}</TableCell>
+                                    <TableCell>{currencyFormatter.format(entry.total)}</TableCell>
+                                    <TableCell>{formatPlayTimestamp(entry.latestPlayAt) ?? '—'}</TableCell>
+                                    <TableCell>{entry.latestShowName ?? '—'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">
