@@ -6,6 +6,11 @@ import { ShoppingCart, Sparkles, PackageSearch, Shield, Zap, Loader2 } from "luc
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
+import {
+  usePlayerEquipment,
+  type PlayerEquipmentWithItem,
+  type PlayerGearPoolStatus,
+} from "@/hooks/usePlayerEquipment";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,19 +31,14 @@ interface StoreItem {
   stock?: number | null;
 }
 
-interface OwnedEquipmentRecord {
-  id: string;
-  condition: number | null;
-  is_equipped: boolean | null;
-  created_at: string | null;
-  equipment?: {
-    id: string;
-    name: string;
-    category: string;
-    subcategory: string | null;
-    price: number;
-    rarity: string | null;
-  } | null;
+interface PurchaseResult {
+  player_equipment_id: string;
+  remaining_stock: number | null;
+  new_cash: number | null;
+  new_secondary_balance: number | null;
+  pool_category: string | null;
+  slot_kind: string | null;
+  remaining_pool_capacity: number | null;
 }
 
 const rarityStyles: Record<string, string> = {
@@ -76,38 +76,50 @@ const EquipmentStore = () => {
     },
   });
 
-  const { data: owned, isLoading: loadingOwned } = useQuery<OwnedEquipmentRecord[]>({
-    queryKey: ["player-equipment", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
+  const poolByCategory = useMemo(() => {
+    const map = new Map<string, PlayerGearPoolStatus>();
+    gearPoolStatus.forEach((status) => {
+      if (status?.category) {
+        map.set(status.category, status);
+      }
+    });
+    return map;
+  }, [gearPoolStatus]);
 
-      const { data, error } = await supabase
-        .from("player_equipment")
-        .select(
-          `id, condition, is_equipped, created_at, equipment:equipment_items!equipment_id ( id, name, category, subcategory, price, rarity )`
-        )
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return (data as OwnedEquipmentRecord[]) ?? [];
-    },
-    enabled: !!user?.id,
-  });
+  const {
+    data: equipmentData,
+    isLoading: loadingOwned,
+    error: equipmentError,
+  } = usePlayerEquipment();
+  const owned = equipmentData?.items ?? [];
+  const gearPoolStatus = equipmentData?.poolStatus ?? [];
 
   const purchaseMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await supabase.rpc("purchase_equipment_item" as any, { p_equipment_id: itemId });
+      const { data, error } = await supabase.rpc("purchase_equipment_item" as any, {
+        p_equipment_id: itemId,
+      });
       if (error) throw error;
+      return Array.isArray(data) && data.length > 0 ? (data[0] as PurchaseResult) : undefined;
     },
-    onSuccess: async () => {
-      toast.success("Equipment purchased");
+    onSuccess: async (result) => {
+      const remainingSlots = result?.remaining_pool_capacity;
+      const slotLabel = result?.slot_kind ?? "gear";
+      const slotMessage =
+        typeof remainingSlots === "number"
+          ? `${remainingSlots} ${slotLabel} slot${remainingSlots === 1 ? "" : "s"} remaining`
+          : "Ready for loadout assignment";
+      toast.success(`Equipment purchased. ${slotMessage}`);
       queryClient.invalidateQueries({ queryKey: ["equipment-store-items"] });
       queryClient.invalidateQueries({ queryKey: ["player-equipment", user?.id] });
       await refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Unable to complete purchase");
+      const message =
+        error.message?.includes("Gear pool is full")
+          ? error.message
+          : error.message || "Unable to complete purchase";
+      toast.error(message);
     },
   });
 
@@ -185,6 +197,34 @@ const EquipmentStore = () => {
             </CardContent>
           </Card>
 
+          {gearPoolStatus.length > 0 ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Gear pool overview</CardTitle>
+                <CardDescription>Keep an eye on capacity before committing to purchases.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {gearPoolStatus.map((status) => {
+                  const categoryLabel = status.category ?? "uncategorized";
+                  const used = status.used_count ?? 0;
+                  const capacity = status.capacity ?? 0;
+                  const available = status.available_slots ?? Math.max(capacity - used, 0);
+                  return (
+                    <div key={categoryLabel} className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between text-sm font-medium">
+                        <span className="capitalize">{categoryLabel}</span>
+                        <Badge variant={available > 0 ? "secondary" : "destructive"}>{available} open</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {used}/{capacity} assigned • Slot type: {status.slot_kind ?? "–"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ) : null}
+
           {loadingItems ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin" />
@@ -203,6 +243,9 @@ const EquipmentStore = () => {
                 const rarityClass = item.rarity ? rarityStyles[item.rarity.toLowerCase()] : "border-muted";
                 const isOwned = ownedIds.has(item.id);
                 const outOfStock = (item.stock ?? 0) <= 0;
+                const poolStatus = poolByCategory.get(item.category);
+                const availableSlots = poolStatus?.available_slots ?? null;
+                const noCapacity = availableSlots !== null && (availableSlots ?? 0) <= 0;
 
                 return (
                   <Card key={item.id} className="flex flex-col border-2">
@@ -252,13 +295,17 @@ const EquipmentStore = () => {
 
                       <Button
                         className="mt-auto"
-                        disabled={purchaseMutation.isPending || isOwned || outOfStock}
+                        disabled={
+                          purchaseMutation.isPending || isOwned || outOfStock || noCapacity
+                        }
                         onClick={() => purchaseMutation.mutate(item.id)}
                       >
                         {isOwned
                           ? "Already owned"
                           : outOfStock
                           ? "Out of stock"
+                          : noCapacity
+                          ? "Pool full"
                           : purchaseMutation.isPending
                           ? (
                               <>
@@ -267,6 +314,11 @@ const EquipmentStore = () => {
                             )
                           : `Purchase for $${item.price.toLocaleString()}`}
                       </Button>
+                      {noCapacity ? (
+                        <p className="text-xs text-destructive">
+                          No remaining {poolStatus?.slot_kind ?? item.category} slots. Adjust your gear pool to continue.
+                        </p>
+                      ) : null}
                     </CardContent>
                   </Card>
                 );
@@ -286,6 +338,10 @@ const EquipmentStore = () => {
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
+              ) : equipmentError ? (
+                <p className="py-12 text-center text-sm text-destructive">
+                  {equipmentError instanceof Error ? equipmentError.message : "Unable to load inventory."}
+                </p>
               ) : !owned || owned.length === 0 ? (
                 <p className="py-12 text-center text-sm text-muted-foreground">
                   You haven't purchased any equipment yet. Browse the store to build your rig.
@@ -316,6 +372,18 @@ const EquipmentStore = () => {
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Purchase price</span>
                           <span>${entry.equipment?.price?.toLocaleString() ?? "—"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Loadout slot</span>
+                          <span>{entry.loadout_slot_kind ?? "Unassigned"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Pool category</span>
+                          <span className="capitalize">{entry.pool_category ?? "—"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Status</span>
+                          <span>{entry.available_for_loadout ? "Available" : "Assigned"}</span>
                         </div>
                       </CardContent>
                     </Card>

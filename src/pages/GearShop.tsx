@@ -12,7 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { usePlayerEquipment } from "@/hooks/usePlayerEquipment";
+import {
+  usePlayerEquipment,
+  type PlayerGearPoolStatus,
+} from "@/hooks/usePlayerEquipment";
 import { supabase } from "@/integrations/supabase/client";
 import {
   GearQualityTier,
@@ -50,6 +53,16 @@ type RawEquipmentRow = {
   stat_boosts: Record<string, number> | null;
   stock: number | null;
 };
+
+interface PurchaseResult {
+  player_equipment_id: string;
+  remaining_stock: number | null;
+  new_cash: number | null;
+  new_secondary_balance: number | null;
+  pool_category: string | null;
+  slot_kind: string | null;
+  remaining_pool_capacity: number | null;
+}
 
 const QUALITY_FILTERS: QualityFilterValue[] = [
   "all",
@@ -109,7 +122,9 @@ const GearShop = () => {
   const queryClient = useQueryClient();
   const { profile, refetch } = useGameData();
   const { user } = useAuth();
-  const { data: ownedEquipment } = usePlayerEquipment();
+  const { data: equipmentData } = usePlayerEquipment();
+  const ownedEquipment = equipmentData?.items ?? [];
+  const gearPoolStatus = equipmentData?.poolStatus ?? [];
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -132,22 +147,45 @@ const GearShop = () => {
     },
   });
 
+  const poolByCategory = useMemo(() => {
+    const map = new Map<string, PlayerGearPoolStatus>();
+    gearPoolStatus.forEach((status) => {
+      if (status?.category) {
+        map.set(status.category, status);
+      }
+    });
+    return map;
+  }, [gearPoolStatus]);
+
   const purchaseMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await supabase.rpc("purchase_equipment_item" as any, { p_equipment_id: itemId });
+      const { data, error } = await supabase.rpc("purchase_equipment_item" as any, {
+        p_equipment_id: itemId,
+      });
       if (error) {
         throw error;
       }
+      return Array.isArray(data) && data.length > 0 ? (data[0] as PurchaseResult) : undefined;
     },
-    onSuccess: async () => {
-      toast.success("Gear purchased");
+    onSuccess: async (result) => {
+      const remainingSlots = result?.remaining_pool_capacity;
+      const slotLabel = result?.slot_kind ?? "gear";
+      const slotMessage =
+        typeof remainingSlots === "number"
+          ? `${remainingSlots} ${slotLabel} slot${remainingSlots === 1 ? "" : "s"} remaining`
+          : "Ready for loadout assignment";
+      toast.success(`Gear purchased. ${slotMessage}`);
       queryClient.invalidateQueries({ queryKey: ["gear-shop-items"] });
       queryClient.invalidateQueries({ queryKey: ["equipment-store-items"] });
       queryClient.invalidateQueries({ queryKey: ["player-equipment", user?.id] });
       await refetch();
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Unable to complete purchase");
+      const message =
+        error.message?.includes("Gear pool is full")
+          ? error.message
+          : error.message || "Unable to complete purchase";
+      toast.error(message);
     },
   });
 
@@ -172,10 +210,6 @@ const GearShop = () => {
   }, [items]);
 
   const ownedIds = useMemo(() => {
-    if (!ownedEquipment) {
-      return new Set<string>();
-    }
-
     const ids = ownedEquipment
       .map((entry) => entry.equipment?.id)
       .filter((value): value is string => Boolean(value));
@@ -273,6 +307,34 @@ const GearShop = () => {
         </CardContent>
       </Card>
 
+      {gearPoolStatus.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Gear pool overview</CardTitle>
+            <CardDescription>Track remaining capacity before locking in purchases.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {gearPoolStatus.map((status) => {
+              const categoryLabel = status.category ?? "uncategorized";
+              const used = status.used_count ?? 0;
+              const capacity = status.capacity ?? 0;
+              const available = status.available_slots ?? Math.max(capacity - used, 0);
+              return (
+                <div key={categoryLabel} className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between text-sm font-medium">
+                    <span className="capitalize">{categoryLabel}</span>
+                    <Badge variant={available > 0 ? "secondary" : "destructive"}>{available} open</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {used}/{capacity} assigned • Slot type: {status.slot_kind ?? "–"}
+                  </p>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Tabs defaultValue="catalogue" className="space-y-6">
         <TabsList>
           <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
@@ -299,6 +361,9 @@ const GearShop = () => {
                 const qualityClass = qualityTierStyles[item.qualityTier];
                 const isOwned = ownedIds.has(item.id);
                 const outOfStock = (item.stock ?? 0) <= 0;
+                const poolStatus = poolByCategory.get(item.category);
+                const availableSlots = poolStatus?.available_slots ?? null;
+                const noCapacity = availableSlots !== null && (availableSlots ?? 0) <= 0;
 
                 const stockTone = outOfStock
                   ? "text-destructive"
@@ -361,13 +426,17 @@ const GearShop = () => {
 
                       <Button
                         className="mt-auto"
-                        disabled={purchaseMutation.isPending || isOwned || outOfStock}
+                        disabled={
+                          purchaseMutation.isPending || isOwned || outOfStock || noCapacity
+                        }
                         onClick={() => purchaseMutation.mutate(item.id)}
                       >
                         {isOwned
                           ? "Already owned"
                           : outOfStock
                           ? "Out of stock"
+                          : noCapacity
+                          ? "Pool full"
                           : purchaseMutation.isPending
                           ? (
                               <>
@@ -376,6 +445,12 @@ const GearShop = () => {
                             )
                           : `Purchase for $${item.price.toLocaleString()}`}
                       </Button>
+                      {noCapacity ? (
+                        <p className="text-xs text-destructive">
+                          No remaining {poolStatus?.slot_kind ?? item.category} slots. Retire gear or expand
+                          capacity before buying.
+                        </p>
+                      ) : null}
                     </CardContent>
                   </Card>
                 );
@@ -421,6 +496,18 @@ const GearShop = () => {
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Condition</span>
                           <span>{entry.condition ?? 100}%</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Loadout slot</span>
+                          <span>{entry.loadout_slot_kind ?? "Unassigned"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Pool category</span>
+                          <span className="capitalize">{entry.pool_category ?? "—"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Status</span>
+                          <span>{entry.available_for_loadout ? "Available" : "Assigned"}</span>
                         </div>
                         {entry.equipment?.stat_boosts ? (
                           <div className="flex flex-wrap gap-1 text-[10px]">
