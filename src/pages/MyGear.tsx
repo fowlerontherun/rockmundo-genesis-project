@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import {
   OTHER_GEAR_LIMIT,
@@ -17,8 +18,101 @@ import {
   type LoadoutPedalSlot,
   type LoadoutState,
 } from "@/data/personal-loadout";
+import { usePlayerEquipment, type PlayerEquipmentWithItem } from "@/hooks/usePlayerEquipment";
+import { getQualityLabel, qualityTierStyles, deriveQualityTier } from "@/utils/gearQuality";
+import { GearRarityKey, getRarityLabel, parseRarityKey, rarityStyles } from "@/utils/gearRarity";
 
 const UNASSIGNED_VALUE = "unassigned";
+
+const normalizeStatBoosts = (value?: Record<string, number> | null) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const entries = Object.entries(value).reduce<Array<[string, number]>>((accumulator, [key, raw]) => {
+    const numeric = typeof raw === "number" && Number.isFinite(raw) ? raw : Number(raw);
+
+    if (Number.isFinite(numeric)) {
+      accumulator.push([key, numeric]);
+    }
+
+    return accumulator;
+  }, []);
+
+  return entries.length ? Object.fromEntries(entries) : undefined;
+};
+
+const mapCategoryToSections = (category: string, subcategory?: string | null) => {
+  const normalizedCategory = category.toLowerCase();
+  const normalizedSubcategory = subcategory?.toLowerCase() ?? "";
+
+  if (normalizedCategory.includes("mic") || normalizedCategory === "vocal") {
+    return ["vocal", "other"] as const;
+  }
+
+  if (normalizedCategory.includes("pedal") || normalizedCategory.includes("effect") || normalizedSubcategory.includes("pedal")) {
+    return ["pedal", "other"] as const;
+  }
+
+  if (normalizedCategory.includes("amp") || normalizedCategory.includes("guitar") || normalizedCategory.includes("instrument")) {
+    return ["other"] as const;
+  }
+
+  if (normalizedCategory.includes("audio") || normalizedCategory.includes("monitor") || normalizedCategory.includes("interface")) {
+    return ["other"] as const;
+  }
+
+  return ["other"] as const;
+};
+
+const getQualityBadgeClass = (gear: GearDefinition) =>
+  gear.qualityTierKey ? qualityTierStyles[gear.qualityTierKey] : "border-muted bg-muted/40 text-muted-foreground";
+
+const getRarityBadgeClass = (gear: GearDefinition) =>
+  gear.rarityKey ? rarityStyles[gear.rarityKey as GearRarityKey] : "border-muted bg-muted/40 text-muted-foreground";
+
+const getStatBoostEntries = (boosts?: Record<string, number>) => {
+  if (!boosts) {
+    return [];
+  }
+
+  return Object.entries(boosts).filter(([, value]) => typeof value === "number");
+};
+
+const formatSectionList = (sections: GearDefinition["sections"]) =>
+  sections
+    .map((section) => `${section.charAt(0).toUpperCase()}${section.slice(1)}`)
+    .join(" • ");
+
+const buildInventoryGearDefinition = (entry: PlayerEquipmentWithItem): GearDefinition | null => {
+  if (!entry.equipment) {
+    return null;
+  }
+
+  const { equipment } = entry;
+  const statBoosts = normalizeStatBoosts(equipment.stat_boosts);
+  const qualityTier = deriveQualityTier(equipment.price, statBoosts);
+  const sections = mapCategoryToSections(equipment.category, equipment.subcategory);
+  const rarityKey = parseRarityKey(equipment.rarity);
+
+  return {
+    id: entry.id,
+    name: equipment.name,
+    manufacturer: undefined,
+    sections: Array.from(new Set(sections)) as GearDefinition["sections"],
+    quality: getQualityLabel(qualityTier) as GearDefinition["quality"],
+    rarity: getRarityLabel(equipment.rarity) as GearDefinition["rarity"],
+    description: equipment.description ?? undefined,
+    price: equipment.price,
+    statBoosts,
+    stock: equipment.stock ?? null,
+    equipmentItemId: equipment.id,
+    inventoryId: entry.id,
+    source: "inventory",
+    rarityKey,
+    qualityTierKey: qualityTier,
+  };
+};
 
 const createFreshLoadout = (): LoadoutState =>
   JSON.parse(JSON.stringify(initialLoadoutState)) as LoadoutState;
@@ -30,23 +124,55 @@ const MyGear: React.FC = () => {
   const [loadout, setLoadout] = useState<LoadoutState>(() => createFreshLoadout());
   const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
   const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
+  const {
+    data: inventory,
+    isLoading: loadingInventory,
+    error: inventoryError,
+  } = usePlayerEquipment();
+  const inventoryErrorMessage = inventoryError
+    ? inventoryError instanceof Error
+      ? inventoryError.message
+      : String(inventoryError)
+    : null;
+
+  const presetGear = useMemo(
+    () =>
+      gearDefinitions.map((gear) => ({
+        ...gear,
+        source: gear.source ?? "preset",
+        rarityKey: gear.rarityKey ?? parseRarityKey(gear.rarity),
+      })),
+    []
+  );
+
+  const inventoryGear = useMemo(() => {
+    if (!inventory) {
+      return [] as GearDefinition[];
+    }
+
+    return inventory
+      .map((entry) => buildInventoryGearDefinition(entry))
+      .filter((gear): gear is GearDefinition => Boolean(gear));
+  }, [inventory]);
+
+  const allGearOptions = useMemo(() => [...presetGear, ...inventoryGear], [presetGear, inventoryGear]);
 
   const gearById = useMemo(
-    () => new Map<string, GearDefinition>(gearDefinitions.map((gear) => [gear.id, gear])),
-    []
+    () => new Map<string, GearDefinition>(allGearOptions.map((gear) => [gear.id, gear])),
+    [allGearOptions]
   );
 
   const vocalGearOptions = useMemo(
-    () => gearDefinitions.filter((gear) => gear.sections.includes("vocal")),
-    []
+    () => allGearOptions.filter((gear) => gear.sections.includes("vocal")),
+    [allGearOptions]
   );
   const pedalGearOptions = useMemo(
-    () => gearDefinitions.filter((gear) => gear.sections.includes("pedal")),
-    []
+    () => allGearOptions.filter((gear) => gear.sections.includes("pedal")),
+    [allGearOptions]
   );
   const otherGearOptions = useMemo(
-    () => gearDefinitions.filter((gear) => gear.sections.includes("other")),
-    []
+    () => allGearOptions.filter((gear) => gear.sections.includes("other")),
+    [allGearOptions]
   );
 
   const handleResetLoadout = () => {
@@ -252,9 +378,33 @@ const MyGear: React.FC = () => {
     }
 
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="secondary">{selectedGear.quality}</Badge>
-        <Badge variant="outline">{selectedGear.rarity}</Badge>
+      <div className="flex flex-col gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={getQualityBadgeClass(selectedGear)}>
+            {selectedGear.quality}
+          </Badge>
+          <Badge variant="outline" className={getRarityBadgeClass(selectedGear)}>
+            {selectedGear.rarity}
+          </Badge>
+          {selectedGear.source === "inventory" ? <Badge variant="secondary">Owned</Badge> : null}
+        </div>
+        <div className="text-muted-foreground">
+          Cost: {typeof selectedGear.price === "number" ? `$${selectedGear.price.toLocaleString()}` : "—"}
+        </div>
+        {typeof selectedGear.stock === "number" ? (
+          <div className="text-muted-foreground">
+            Shop stock: {selectedGear.stock <= 0 ? "Sold out" : selectedGear.stock}
+          </div>
+        ) : null}
+        {getStatBoostEntries(selectedGear.statBoosts).length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {getStatBoostEntries(selectedGear.statBoosts).map(([stat, value]) => (
+              <Badge key={stat} variant="outline" className={getRarityBadgeClass(selectedGear)}>
+                {stat}: +{value}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -290,6 +440,78 @@ const MyGear: React.FC = () => {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{loadout.metadata.notes}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Inventory highlights</CardTitle>
+          <CardDescription>Purchased gear from the shop is ready for slot assignments and stat bonuses.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {inventoryErrorMessage ? (
+            <Alert variant="destructive" className="max-w-2xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Inventory unavailable</AlertTitle>
+              <AlertDescription>{inventoryErrorMessage}</AlertDescription>
+            </Alert>
+          ) : loadingInventory ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : inventoryGear.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">
+              You haven&apos;t purchased any gear yet. Visit the Gear Shop to unlock stat-boosting equipment tiers.
+            </p>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {inventoryGear.map((gear) => {
+                const boosts = getStatBoostEntries(gear.statBoosts);
+
+                return (
+                  <div key={gear.id} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">{gear.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatSectionList(gear.sections)}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant="outline" className={getQualityBadgeClass(gear)}>
+                          {gear.quality}
+                        </Badge>
+                        <Badge variant="outline" className={getRarityBadgeClass(gear)}>
+                          {gear.rarity}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <span>Cost</span>
+                      <span className="text-right">
+                        {typeof gear.price === "number" ? `$${gear.price.toLocaleString()}` : "—"}
+                      </span>
+                      <span>Shop stock</span>
+                      <span className="text-right">
+                        {typeof gear.stock === "number"
+                          ? gear.stock <= 0
+                            ? "Sold out"
+                            : gear.stock
+                          : "—"}
+                      </span>
+                    </div>
+                    {boosts.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-1 text-[10px]">
+                        {boosts.map(([stat, value]) => (
+                          <Badge key={stat} variant="outline" className={getRarityBadgeClass(gear)}>
+                            {stat}: +{value}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -347,7 +569,12 @@ const MyGear: React.FC = () => {
                             <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
                             {vocalGearOptions.map((gear) => (
                               <SelectItem key={gear.id} value={gear.id}>
-                                {gear.name}
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{gear.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {gear.source === "inventory" ? "Owned" : "Preset"} • {gear.rarity}
+                                  </span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -418,7 +645,12 @@ const MyGear: React.FC = () => {
                             <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
                             {pedalGearOptions.map((gear) => (
                               <SelectItem key={gear.id} value={gear.id}>
-                                {gear.name}
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{gear.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {gear.source === "inventory" ? "Owned" : "Preset"} • {gear.rarity}
+                                  </span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -513,7 +745,12 @@ const MyGear: React.FC = () => {
                             <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
                             {otherGearOptions.map((gear) => (
                               <SelectItem key={gear.id} value={gear.id}>
-                                {gear.name}
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{gear.name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {gear.source === "inventory" ? "Owned" : "Preset"} • {gear.rarity}
+                                  </span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>

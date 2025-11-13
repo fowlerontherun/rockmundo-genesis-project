@@ -32,6 +32,7 @@ const Performance = lazyWithRetry(() => import("./pages/Performance"));
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
+const GearShop = lazyWithRetry(() => import("./pages/GearShop"));
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
 
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
@@ -229,6 +230,7 @@ function App() {
                     {/* <Route path="world-map" element={<WorldMap />} /> */}
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
+                    <Route path="gear-shop" element={<GearShop />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />
