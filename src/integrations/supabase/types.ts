@@ -7812,6 +7812,188 @@ export type Database = {
           },
         ]
       }
+      gear_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          gear_type: Database["public"]["Enums"]["gear_type"]
+          id: string
+          manufacturer: string | null
+          metadata: Json
+          name: string
+          quality: Database["public"]["Enums"]["gear_quality"]
+          rarity: Database["public"]["Enums"]["gear_rarity"]
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          gear_type: Database["public"]["Enums"]["gear_type"]
+          id?: string
+          manufacturer?: string | null
+          metadata?: Json
+          name: string
+          quality?: Database["public"]["Enums"]["gear_quality"]
+          rarity?: Database["public"]["Enums"]["gear_rarity"]
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          gear_type?: Database["public"]["Enums"]["gear_type"]
+          id?: string
+          manufacturer?: string | null
+          metadata?: Json
+          name?: string
+          quality?: Database["public"]["Enums"]["gear_quality"]
+          rarity?: Database["public"]["Enums"]["gear_rarity"]
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      personal_loadout_items: {
+        Row: {
+          created_at: string
+          gear_item_id: string
+          id: string
+          loadout_id: string
+          notes: string | null
+          slot_kind: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gear_item_id: string
+          id?: string
+          loadout_id: string
+          notes?: string | null
+          slot_kind: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gear_item_id?: string
+          id?: string
+          loadout_id?: string
+          notes?: string | null
+          slot_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_loadout_items_gear_item_id_fkey"
+            columns: ["gear_item_id"]
+            isOneToOne: false
+            referencedRelation: "gear_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_loadout_items_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "personal_loadouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personal_loadout_pedal_slots: {
+        Row: {
+          created_at: string
+          gear_item_id: string | null
+          id: string
+          loadout_id: string
+          notes: string | null
+          slot_number: number
+          slot_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gear_item_id?: string | null
+          id?: string
+          loadout_id: string
+          notes?: string | null
+          slot_number: number
+          slot_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gear_item_id?: string | null
+          id?: string
+          loadout_id?: string
+          notes?: string | null
+          slot_number?: number
+          slot_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_loadout_pedal_slots_gear_item_id_fkey"
+            columns: ["gear_item_id"]
+            isOneToOne: false
+            referencedRelation: "gear_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_loadout_pedal_slots_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "personal_loadouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personal_loadouts: {
+        Row: {
+          character_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          primary_instrument: string | null
+          role: string | null
+          scenario: string | null
+          updated_at: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          primary_instrument?: string | null
+          role?: string | null
+          scenario?: string | null
+          updated_at?: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          primary_instrument?: string | null
+          role?: string | null
+          scenario?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_loadouts_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       admin_cron_job_runs: {
@@ -8023,6 +8205,24 @@ export type Database = {
       chat_participant_status: "online" | "offline" | "typing" | "away"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
+      gear_quality:
+        | "budget"
+        | "standard"
+        | "professional"
+        | "boutique"
+        | "experimental"
+      gear_rarity: "common" | "uncommon" | "rare" | "epic" | "legendary"
+      gear_type:
+        | "instrument"
+        | "pedal"
+        | "amplifier"
+        | "speaker_cabinet"
+        | "pedalboard"
+        | "vocal_rig"
+        | "microphone"
+        | "outboard"
+        | "accessory"
+        | "utility"
       show_type_enum: "concert" | "festival" | "private" | "street"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
