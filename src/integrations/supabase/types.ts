@@ -7947,6 +7947,57 @@ export type Database = {
           },
         ]
       }
+      personal_loadout_slots: {
+        Row: {
+          created_at: string
+          gear_item_id: string
+          gear_type: Database["public"]["Enums"]["gear_type"]
+          id: string
+          loadout_id: string
+          notes: string | null
+          pedal_position: number | null
+          pedal_stage: Database["public"]["Enums"]["pedal_chain_stage"] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gear_item_id: string
+          gear_type: Database["public"]["Enums"]["gear_type"]
+          id?: string
+          loadout_id: string
+          notes?: string | null
+          pedal_position?: number | null
+          pedal_stage?: Database["public"]["Enums"]["pedal_chain_stage"] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gear_item_id?: string
+          gear_type?: Database["public"]["Enums"]["gear_type"]
+          id?: string
+          loadout_id?: string
+          notes?: string | null
+          pedal_position?: number | null
+          pedal_stage?: Database["public"]["Enums"]["pedal_chain_stage"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_loadout_slots_gear_item_id_fkey"
+            columns: ["gear_item_id"]
+            isOneToOne: false
+            referencedRelation: "gear_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_loadout_slots_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "personal_loadouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_loadouts: {
         Row: {
           character_id: string
@@ -8223,6 +8274,17 @@ export type Database = {
         | "outboard"
         | "accessory"
         | "utility"
+      pedal_chain_stage:
+        | "input"
+        | "preamp"
+        | "drive"
+        | "modulation"
+        | "ambient"
+        | "utility"
+        | "loop"
+        | "multi_fx"
+        | "expression"
+        | "output"
       show_type_enum: "concert" | "festival" | "private" | "street"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
