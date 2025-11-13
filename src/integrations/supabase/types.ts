@@ -4487,6 +4487,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          reserved_funds: number | null
           character_birth_date: string | null
           created_at: string | null
           current_activity: string | null
@@ -4514,6 +4515,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -4541,6 +4543,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
