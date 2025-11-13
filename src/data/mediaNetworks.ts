@@ -25,7 +25,7 @@ export interface ShowFormatModule {
 
 export interface MediaShow {
   id: string;
-  name: string;
+  show_name: string;
   mediaType: MediaType;
   host: string;
   genre: string;
@@ -212,7 +212,7 @@ export const showFormatModules: ShowFormatModule[] = [
 export const mediaShows: MediaShow[] = [
   {
     id: "show-latewave",
-    name: "Latewave Live",
+    show_name: "Latewave Live",
     mediaType: "tv",
     host: "Mira Sol",
     genre: "Talk & Performance",
@@ -226,7 +226,7 @@ export const mediaShows: MediaShow[] = [
   },
   {
     id: "show-deepcuts",
-    name: "Deep Cuts Anthology",
+    show_name: "Deep Cuts Anthology",
     mediaType: "podcast",
     host: "Aiden Kross",
     genre: "Narrative Documentary",
@@ -240,7 +240,7 @@ export const mediaShows: MediaShow[] = [
   },
   {
     id: "show-signalboost",
-    name: "Signal Boost",
+    show_name: "Signal Boost",
     mediaType: "radio",
     host: "DJ Vela",
     genre: "Live Performance Spotlight",
@@ -254,7 +254,7 @@ export const mediaShows: MediaShow[] = [
   },
   {
     id: "show-orbit",
-    name: "Orbit Sessions",
+    show_name: "Orbit Sessions",
     mediaType: "podcast",
     host: "Lyra Chen",
     genre: "Artist Masterclasses",
@@ -268,7 +268,7 @@ export const mediaShows: MediaShow[] = [
   },
   {
     id: "show-starlane",
-    name: "Starlane Weekly",
+    show_name: "Starlane Weekly",
     mediaType: "tv",
     host: "Rex Harper",
     genre: "Music News Magazine",
@@ -282,7 +282,7 @@ export const mediaShows: MediaShow[] = [
   },
   {
     id: "show-midnight",
-    name: "Midnight Frequencies",
+    show_name: "Midnight Frequencies",
     mediaType: "radio",
     host: "DJ Sora",
     genre: "Experimental Nightwave",

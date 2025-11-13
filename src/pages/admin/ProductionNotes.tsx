@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -14,6 +14,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Sparkles, Filter } from "lucide-react";
 import { z } from "zod";
+import { cn } from "@/lib/utils";
+
+const COOLDOWN_DEFAULT = 0;
+const COOLDOWN_MIN = 0;
+const COOLDOWN_MAX = 50;
+
+const isCooldownOutOfRange = (value: number) => value < COOLDOWN_MIN || value > COOLDOWN_MAX;
+
+const sanitizeCooldownValue = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return COOLDOWN_DEFAULT;
+  }
+
+  return Math.trunc(value);
+};
 
 const productionNoteSchema = z.object({
   name: z.string().min(1, "Name required"),
@@ -26,11 +41,26 @@ const productionNoteSchema = z.object({
   required_fame: z.number().optional(),
   required_venue_prestige: z.number().optional(),
   cost_per_use: z.number().min(0).default(0),
-  cooldown_shows: z.number().min(0).default(0),
+  cooldown_shows: z.number().min(COOLDOWN_MIN).max(COOLDOWN_MAX).default(COOLDOWN_DEFAULT),
   rarity: z.enum(['common', 'uncommon', 'rare', 'legendary'])
 });
 
 type ProductionNote = z.infer<typeof productionNoteSchema> & { id: string };
+
+type ProductionNoteFormData = {
+  name: string;
+  description: string;
+  category: ProductionNote['category'];
+  impact_type: ProductionNote['impact_type'];
+  impact_value: number;
+  required_skill_slug: string;
+  required_skill_value: number;
+  required_fame: number;
+  required_venue_prestige: number;
+  cost_per_use: number;
+  cooldown_shows: number;
+  rarity: ProductionNote['rarity'];
+};
 
 const ProductionNotes = () => {
   const queryClient = useQueryClient();
@@ -40,7 +70,7 @@ const ProductionNotes = () => {
   const [rarityFilter, setRarityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProductionNoteFormData>({
     name: "",
     description: "",
     category: "lighting" as const,
@@ -51,9 +81,18 @@ const ProductionNotes = () => {
     required_fame: 0,
     required_venue_prestige: 0,
     cost_per_use: 0,
-    cooldown_shows: 0,
+    cooldown_shows: COOLDOWN_DEFAULT,
     rarity: "common" as const
   });
+  const [cooldownError, setCooldownError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isCooldownOutOfRange(formData.cooldown_shows)) {
+      setCooldownError(`Cooldown must be between ${COOLDOWN_MIN} and ${COOLDOWN_MAX} shows.`);
+    } else {
+      setCooldownError(null);
+    }
+  }, [formData.cooldown_shows]);
 
   const { data: notes, isLoading } = useQuery({
     queryKey: ['admin-production-notes', categoryFilter, rarityFilter],
@@ -146,10 +185,11 @@ const ProductionNotes = () => {
       required_fame: 0,
       required_venue_prestige: 0,
       cost_per_use: 0,
-      cooldown_shows: 0,
+      cooldown_shows: COOLDOWN_DEFAULT,
       rarity: "common"
     });
     setEditingNote(null);
+    setCooldownError(null);
   };
 
   const handleEdit = (note: ProductionNote) => {
@@ -157,26 +197,61 @@ const ProductionNotes = () => {
     setFormData({
       name: note.name,
       description: note.description,
-      category: note.category as any,
-      impact_type: note.impact_type as any,
+      category: note.category,
+      impact_type: note.impact_type,
       impact_value: note.impact_value,
       required_skill_slug: note.required_skill_slug || "",
       required_skill_value: note.required_skill_value || 0,
       required_fame: note.required_fame || 0,
       required_venue_prestige: note.required_venue_prestige || 0,
       cost_per_use: note.cost_per_use || 0,
-      cooldown_shows: note.cooldown_shows || 0,
-      rarity: note.rarity as any
+      cooldown_shows: sanitizeCooldownValue(note.cooldown_shows ?? COOLDOWN_DEFAULT),
+      rarity: note.rarity
     });
     setIsDialogOpen(true);
   };
 
+  const handleCooldownChange = (value: string) => {
+    if (value === "") {
+      setFormData((prev) => ({ ...prev, cooldown_shows: COOLDOWN_DEFAULT }));
+      return;
+    }
+
+    const numericValue = Number(value);
+
+    if (Number.isNaN(numericValue)) {
+      setFormData((prev) => ({ ...prev, cooldown_shows: COOLDOWN_DEFAULT }));
+      toast.message("Cooldown reset to default", {
+        description: `Value must be a number. Using ${COOLDOWN_DEFAULT} shows.`,
+      });
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, cooldown_shows: numericValue }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      const validatedData = productionNoteSchema.parse(formData);
-      
+      const sanitizedCooldown = sanitizeCooldownValue(formData.cooldown_shows);
+
+      if (sanitizedCooldown !== formData.cooldown_shows) {
+        setFormData((prev) => ({ ...prev, cooldown_shows: sanitizedCooldown }));
+      }
+
+      if (isCooldownOutOfRange(sanitizedCooldown)) {
+        const message = `Cooldown must be between ${COOLDOWN_MIN} and ${COOLDOWN_MAX} shows.`;
+        setCooldownError(message);
+        toast.error(message);
+        return;
+      }
+
+      const validatedData = productionNoteSchema.parse({
+        ...formData,
+        cooldown_shows: sanitizedCooldown
+      });
+
       if (editingNote) {
         updateMutation.mutate({ id: editingNote.id, data: validatedData });
       } else {
@@ -335,10 +410,21 @@ const ProductionNotes = () => {
                     <Input
                       id="cooldown_shows"
                       type="number"
-                      min="0"
+                      min={COOLDOWN_MIN}
+                      max={COOLDOWN_MAX}
                       value={formData.cooldown_shows}
-                      onChange={(e) => setFormData({ ...formData, cooldown_shows: parseInt(e.target.value) })}
+                      onChange={(e) => handleCooldownChange(e.target.value)}
+                      aria-invalid={cooldownError ? "true" : "false"}
+                      className={cn(
+                        cooldownError ? "border-destructive focus-visible:ring-destructive" : "",
+                      )}
                     />
+                    <p className={cn("text-xs mt-1", cooldownError ? "text-destructive" : "text-muted-foreground")}
+                    >
+                      {cooldownError
+                        ? cooldownError
+                        : `Set how many shows must pass before this note can be reused (${COOLDOWN_MIN}-${COOLDOWN_MAX}).`}
+                    </p>
                   </div>
                   
                   <div>
@@ -473,42 +559,61 @@ const ProductionNotes = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredNotes?.map((note) => (
-                    <div key={note.id} className="border rounded-lg p-4 hover:bg-accent transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold">{note.name}</h3>
-                            <Badge variant={getRarityColor(note.rarity)}>
-                              {note.rarity}
-                            </Badge>
-                            {note.cost_per_use > 0 && (
-                              <Badge variant="outline">${note.cost_per_use}</Badge>
+                  {filteredNotes?.map((note) => {
+                    const noteCooldownInvalid = isCooldownOutOfRange(note.cooldown_shows);
+
+                    return (
+                      <div
+                        key={note.id}
+                        className={cn(
+                          "border rounded-lg p-4 transition-colors",
+                          noteCooldownInvalid ? "border-destructive/70 bg-destructive/10" : "hover:bg-accent"
+                        )}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold">{note.name}</h3>
+                              <Badge variant={getRarityColor(note.rarity)}>
+                                {note.rarity}
+                              </Badge>
+                              {note.cost_per_use > 0 && (
+                                <Badge variant="outline">${note.cost_per_use}</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">{note.description}</p>
+
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              <Badge variant="secondary">{note.category.replace('_', ' ')}</Badge>
+                              <Badge variant="outline">
+                                {note.impact_type}: +{((note.impact_value - 1) * 100).toFixed(0)}%
+                              </Badge>
+
+                              {note.required_fame > 0 && (
+                                <Badge variant="outline">Fame: {note.required_fame}+</Badge>
+                              )}
+                              {note.required_venue_prestige > 0 && (
+                                <Badge variant="outline">Venue: {note.required_venue_prestige}★+</Badge>
+                              )}
+                              {note.required_skill_slug && (
+                                <Badge variant="outline">Skill: {note.required_skill_slug}</Badge>
+                              )}
+                              <Badge
+                                variant={noteCooldownInvalid ? "destructive" : "outline"}
+                              >
+                                Cooldown: {note.cooldown_shows} shows
+                              </Badge>
+                            </div>
+                            {noteCooldownInvalid && (
+                              <p className="text-xs text-destructive mt-2">
+                                Cooldown should be between {COOLDOWN_MIN} and {COOLDOWN_MAX} shows. Edit to correct.
+                              </p>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">{note.description}</p>
-                          
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            <Badge variant="secondary">{note.category.replace('_', ' ')}</Badge>
-                            <Badge variant="outline">
-                              {note.impact_type}: +{((note.impact_value - 1) * 100).toFixed(0)}%
-                            </Badge>
-                            
-                            {note.required_fame > 0 && (
-                              <Badge variant="outline">Fame: {note.required_fame}+</Badge>
-                            )}
-                            {note.required_venue_prestige > 0 && (
-                              <Badge variant="outline">Venue: {note.required_venue_prestige}★+</Badge>
-                            )}
-                            {note.required_skill_slug && (
-                              <Badge variant="outline">Skill: {note.required_skill_slug}</Badge>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(note)}>
-                            <Edit className="h-4 w-4" />
+
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(note)}>
+                              <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
@@ -523,8 +628,9 @@ const ProductionNotes = () => {
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>

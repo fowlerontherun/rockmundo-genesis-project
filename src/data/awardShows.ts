@@ -38,7 +38,7 @@ export interface AwardRewards {
 
 export interface AwardShow {
   id: string;
-  name: string;
+  show_name: string;
   year: number;
   venue: string;
   district: string;
@@ -54,7 +54,7 @@ export interface AwardShow {
 export const awardShows: AwardShow[] = [
   {
     id: "2025-riverlight",
-    name: "Riverlight Music Laurels",
+    show_name: "Riverlight Music Laurels",
     year: 2025,
     venue: "Royal Festival Hall",
     district: "Southbank, London",
@@ -147,7 +147,7 @@ export const awardShows: AwardShow[] = [
   },
   {
     id: "2025-northbank",
-    name: "Northbank Vanguard Awards",
+    show_name: "Northbank Vanguard Awards",
     year: 2025,
     venue: "Alexandra Palace",
     district: "North London",
@@ -240,7 +240,7 @@ export const awardShows: AwardShow[] = [
   },
   {
     id: "2026-thames-rising",
-    name: "Thames Rising Honors",
+    show_name: "Thames Rising Honors",
     year: 2026,
     venue: "The O2 Arena",
     district: "Greenwich Peninsula, London",
@@ -333,7 +333,7 @@ export const awardShows: AwardShow[] = [
   },
   {
     id: "2026-skyline-laurels",
-    name: "Skyline Laurels Showcase",
+    show_name: "Skyline Laurels Showcase",
     year: 2026,
     venue: "Roundhouse",
     district: "Camden, London",

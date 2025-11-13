@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, Plus, RefreshCcw, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 import {
   OTHER_GEAR_LIMIT,
@@ -104,15 +105,27 @@ const createFreshLoadout = (): LoadoutState =>
 const formatSlotLabel = (slot: LoadoutPedalSlot) =>
   `${slot.slotType.charAt(0).toUpperCase()}${slot.slotType.slice(1)} slot`;
 
+type LoadoutTabKey = "vocal" | "pedal" | "other";
+
+interface PrefillNoticeState {
+  gearId: string;
+  tab: LoadoutTabKey;
+  assigned: boolean;
+}
+
 const MyGear: React.FC = () => {
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [loadout, setLoadout] = useState<LoadoutState>(() => createFreshLoadout());
   const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
   const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
   const {
-    data: inventory,
+    data: equipmentData,
     isLoading: loadingInventory,
     error: inventoryError,
   } = usePlayerEquipment();
+  const inventory: PlayerEquipmentWithItem[] = equipmentData?.items ?? [];
+  const gearPoolStatus = equipmentData?.poolStatus ?? [];
   const inventoryErrorMessage = inventoryError
     ? inventoryError instanceof Error
       ? inventoryError.message
@@ -130,7 +143,7 @@ const MyGear: React.FC = () => {
   );
 
   const inventoryGear = useMemo(() => {
-    if (!inventory) {
+    if (!inventory.length) {
       return [] as GearDefinition[];
     }
 
@@ -145,6 +158,88 @@ const MyGear: React.FC = () => {
     () => new Map<string, GearDefinition>(allGearOptions.map((gear) => [gear.id, gear])),
     [allGearOptions]
   );
+
+  const [activeTab, setActiveTab] = useState<LoadoutTabKey>("vocal");
+  const [prefillNotice, setPrefillNotice] = useState<PrefillNoticeState | null>(null);
+  const [pendingPreselectId, setPendingPreselectId] = useState<string | null>(() => {
+    const state = location.state as { preselectGearId?: string | null } | null;
+    return state?.preselectGearId ?? searchParams.get("gearId");
+  });
+
+  useEffect(() => {
+    const state = location.state as { preselectGearId?: string | null } | null;
+    if (state?.preselectGearId) {
+      setPendingPreselectId(state.preselectGearId);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!pendingPreselectId) {
+      return;
+    }
+
+    const gear = gearById.get(pendingPreselectId);
+    if (!gear) {
+      return;
+    }
+
+    let targetTab: LoadoutTabKey = gear.sections.includes("vocal")
+      ? "vocal"
+      : gear.sections.includes("pedal")
+      ? "pedal"
+      : "other";
+    let assigned = false;
+
+    setLoadout((prev) => {
+      if (gear.sections.includes("vocal")) {
+        const openSlot = prev.vocalSetup.find((slot) => !slot.gearId);
+        if (openSlot) {
+          assigned = true;
+          targetTab = "vocal";
+          return {
+            ...prev,
+            vocalSetup: prev.vocalSetup.map((slot) =>
+              slot.id === openSlot.id ? { ...slot, gearId: gear.id, equipped: true } : slot
+            ),
+          };
+        }
+      }
+
+      if (!assigned && gear.sections.includes("pedal")) {
+        const openSlot = prev.pedalBoard.find((slot) => !slot.gearId);
+        if (openSlot) {
+          assigned = true;
+          targetTab = "pedal";
+          return {
+            ...prev,
+            pedalBoard: prev.pedalBoard.map((slot) =>
+              slot.slotNumber === openSlot.slotNumber ? { ...slot, gearId: gear.id, equipped: true } : slot
+            ),
+          };
+        }
+      }
+
+      if (!assigned && gear.sections.includes("other")) {
+        const openItem = prev.otherGear.find((item) => !item.gearId);
+        if (openItem) {
+          assigned = true;
+          targetTab = "other";
+          return {
+            ...prev,
+            otherGear: prev.otherGear.map((item) =>
+              item.id === openItem.id ? { ...item, gearId: gear.id, equipped: true } : item
+            ),
+          };
+        }
+      }
+
+      return prev;
+    });
+
+    setActiveTab(targetTab);
+    setPrefillNotice({ gearId: gear.id, tab: targetTab, assigned });
+    setPendingPreselectId(null);
+  }, [pendingPreselectId, gearById, setLoadout]);
 
   const vocalGearOptions = useMemo(
     () => allGearOptions.filter((gear) => gear.sections.includes("vocal")),
@@ -362,11 +457,56 @@ const MyGear: React.FC = () => {
     }));
   };
 
-  const assignedPedalCount = useMemo(
-    () => loadout.pedalBoard.filter((slot) => Boolean(slot.gearId)).length,
-    [loadout.pedalBoard]
-  );
-  const remainingPedalSlots = PEDAL_SLOT_LIMIT - assignedPedalCount;
+  const tabLabelMap: Record<LoadoutTabKey, string> = {
+    vocal: "Vocal Setup",
+    pedal: "Pedal Board",
+    other: "Auxiliary Gear",
+  };
+
+  const noticeGear = prefillNotice ? gearById.get(prefillNotice.gearId) : null;
+  const handleDismissNotice = () => setPrefillNotice(null);
+
+  const renderGearStatus = (gearId: string | null) => {
+    if (!gearId) {
+      return <Badge variant="outline">Unassigned</Badge>;
+    }
+
+    const selectedGear = gearById.get(gearId);
+    if (!selectedGear) {
+      return <Badge variant="outline">Unknown Gear</Badge>;
+    }
+
+    return (
+      <div className="flex flex-col gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={getQualityBadgeClass(selectedGear)}>
+            {selectedGear.quality}
+          </Badge>
+          <Badge variant="outline" className={getRarityBadgeClass(selectedGear)}>
+            {selectedGear.rarity}
+          </Badge>
+          {selectedGear.source === "inventory" ? <Badge variant="secondary">Owned</Badge> : null}
+        </div>
+        <div className="text-muted-foreground">
+          Cost: {typeof selectedGear.price === "number" ? `$${selectedGear.price.toLocaleString()}` : "—"}
+        </div>
+        {typeof selectedGear.stock === "number" ? (
+          <div className="text-muted-foreground">
+            Shop stock: {selectedGear.stock <= 0 ? "Sold out" : selectedGear.stock}
+          </div>
+        ) : null}
+        {getStatBoostEntries(selectedGear.statBoosts).length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {getStatBoostEntries(selectedGear.statBoosts).map(([stat, value]) => (
+              <Badge key={stat} variant="outline" className={getRarityBadgeClass(selectedGear)}>
+                {stat}: +{value}
+              </Badge>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -377,12 +517,30 @@ const MyGear: React.FC = () => {
             Build and tune your performance rig. Assign microphones, dial in pedal board slots, and track auxiliary gear in a
             single view. Inline editors update the loadout instantly while enforcing slot limits and compatibility rules.
           </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleResetLoadout}>
-          <RefreshCcw className="h-4 w-4" />
-          Reset to defaults
-        </Button>
       </div>
+      <Button variant="outline" size="sm" onClick={handleResetLoadout}>
+        <RefreshCcw className="h-4 w-4" />
+        Reset to defaults
+      </Button>
+    </div>
+
+      {prefillNotice && noticeGear ? (
+        <Alert className="border-primary/40 bg-primary/5">
+          <AlertTitle className="flex items-center justify-between gap-2 text-sm font-semibold">
+            <span>
+              {noticeGear.name} {prefillNotice.assigned ? "equipped" : "ready"} in {tabLabelMap[prefillNotice.tab]}
+            </span>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleDismissNotice}>
+              Dismiss
+            </Button>
+          </AlertTitle>
+          <AlertDescription className="text-sm">
+            {prefillNotice.assigned
+              ? "We slotted your latest purchase into the first available position. Adjust placement if needed."
+              : "All slots are filled—open the highlighted tab to choose where this gear should live."}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <Card>
         <CardHeader className="flex flex-wrap items-start justify-between gap-4">
@@ -426,9 +584,13 @@ const MyGear: React.FC = () => {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {inventoryGear.map((gear) => {
                 const boosts = getStatBoostEntries(gear.statBoosts);
+                const highlight = prefillNotice?.gearId === gear.id;
+                const cardClasses = highlight
+                  ? "rounded-lg border border-primary p-4 shadow-[0_0_0_2px] shadow-primary/20"
+                  : "rounded-lg border p-4";
 
                 return (
-                  <div key={gear.id} className="rounded-lg border p-4">
+                  <div key={gear.id} className={cardClasses}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold">{gear.name}</p>
@@ -474,7 +636,7 @@ const MyGear: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="vocal" className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as LoadoutTabKey)} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="vocal">Vocal Setup</TabsTrigger>
           <TabsTrigger value="pedal">Pedal Board</TabsTrigger>
