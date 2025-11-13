@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -13,6 +13,14 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Radio, Trash2, Plus, Edit2 } from "lucide-react";
 import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const GENRES = SKILL_TREE_DEFINITIONS
   .filter((skill: any) => skill.metadata?.category === 'genre')
@@ -32,6 +40,17 @@ export default function RadioStations() {
   const queryClient = useQueryClient();
   const [editingStation, setEditingStation] = useState<any>(null);
   const [editingShow, setEditingShow] = useState<any>(null);
+  const [editStationData, setEditStationData] = useState({
+    name: "",
+    station_type: "national" as "national" | "local",
+    country: "",
+    city_id: null as string | null,
+    quality_level: 3,
+    listener_base: 10000,
+    accepted_genres: [] as string[],
+    description: "",
+    frequency: "",
+  });
   const [newStation, setNewStation] = useState({
     name: '',
     station_type: 'national' as 'national' | 'local',
@@ -133,7 +152,26 @@ export default function RadioStations() {
       toast.success('Station updated');
       setEditingStation(null);
     },
+    onError: (error: any) => {
+      toast.error('Failed to update station: ' + error.message);
+    },
   });
+
+  useEffect(() => {
+    if (editingStation) {
+      setEditStationData({
+        name: editingStation.name ?? '',
+        station_type: editingStation.station_type ?? 'national',
+        country: editingStation.country ?? '',
+        city_id: editingStation.city_id ?? null,
+        quality_level: editingStation.quality_level ?? 3,
+        listener_base: editingStation.listener_base ?? 10000,
+        accepted_genres: editingStation.accepted_genres ?? [],
+        description: editingStation.description ?? '',
+        frequency: editingStation.frequency ?? '',
+      });
+    }
+  }, [editingStation]);
 
   const deleteStation = useMutation({
     mutationFn: async (id: string) => {
@@ -419,6 +457,216 @@ export default function RadioStations() {
                 </Card>
               ))}
             </div>
+            <Dialog
+              open={!!editingStation}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingStation(null);
+                }
+              }}
+            >
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Radio Station</DialogTitle>
+                  <DialogDescription>
+                    Update the details of the selected radio station.
+                  </DialogDescription>
+                </DialogHeader>
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!editingStation) return;
+                    const updates = {
+                      name: editStationData.name,
+                      frequency: editStationData.frequency,
+                      station_type: editStationData.station_type,
+                      quality_level: editStationData.quality_level,
+                      listener_base: editStationData.listener_base,
+                      accepted_genres: editStationData.accepted_genres,
+                      description: editStationData.description,
+                      country:
+                        editStationData.station_type === 'national'
+                          ? editStationData.country
+                          : null,
+                      city_id:
+                        editStationData.station_type === 'local'
+                          ? editStationData.city_id
+                          : null,
+                    };
+
+                    updateStation.mutate({
+                      id: editingStation.id,
+                      updates,
+                    });
+                  }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Station Name</Label>
+                      <Input
+                        value={editStationData.name}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            name: e.target.value,
+                          })
+                        }
+                        placeholder="ROCK FM"
+                      />
+                    </div>
+                    <div>
+                      <Label>Frequency (FM/AM)</Label>
+                      <Input
+                        value={editStationData.frequency}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            frequency: e.target.value,
+                          })
+                        }
+                        placeholder="98.5 FM"
+                      />
+                    </div>
+                    <div>
+                      <Label>Type</Label>
+                      <Select
+                        value={editStationData.station_type}
+                        onValueChange={(value: 'national' | 'local') =>
+                          setEditStationData({
+                            ...editStationData,
+                            station_type: value,
+                            city_id: value === 'local' ? editStationData.city_id : null,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="national">National</SelectItem>
+                          <SelectItem value="local">Local</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {editStationData.station_type === 'national' ? (
+                      <div>
+                        <Label>Country</Label>
+                        <Input
+                          value={editStationData.country}
+                          onChange={(e) =>
+                            setEditStationData({
+                              ...editStationData,
+                              country: e.target.value,
+                            })
+                          }
+                          placeholder="USA"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <Label>City</Label>
+                        <Select
+                          value={editStationData.city_id || ''}
+                          onValueChange={(value) =>
+                            setEditStationData({
+                              ...editStationData,
+                              city_id: value,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select city" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cities?.map((city) => (
+                              <SelectItem key={city.id} value={city.id}>
+                                {city.name}, {city.country}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Quality Level (1-5)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={editStationData.quality_level}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            quality_level: parseInt(e.target.value) || 1,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Listener Base</Label>
+                      <Input
+                        type="number"
+                        value={editStationData.listener_base}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            listener_base: parseInt(e.target.value) || 0,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      value={editStationData.description}
+                      onChange={(e) =>
+                        setEditStationData({
+                          ...editStationData,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Station description..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Accepted Genres (max 4)</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {GENRES.map((genre) => (
+                        <Badge
+                          key={genre}
+                          variant={editStationData.accepted_genres.includes(genre) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            toggleGenre(genre, editStationData.accepted_genres, (genres) =>
+                              setEditStationData({
+                                ...editStationData,
+                                accepted_genres: genres,
+                              })
+                            )
+                          }
+                        >
+                          {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingStation(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={!editStationData.name || updateStation.isPending}>
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="shows" className="space-y-6">
