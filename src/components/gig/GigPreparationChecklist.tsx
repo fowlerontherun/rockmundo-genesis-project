@@ -210,7 +210,7 @@ export const GigPreparationChecklist = ({
 
           {!gearLoading && (!formattedGearEffects || formattedGearEffects.breakdown.length === 0) && (
             <p className="text-sm text-muted-foreground">
-              Equip high-end microphones, pedals, and processors to unlock performance boosts before the show.
+              Equip high-end microphones, pedals, and processors to unlock capped performance boosts and keep breakdown risk low.
             </p>
           )}
 
@@ -229,6 +229,14 @@ export const GigPreparationChecklist = ({
                     <span className="font-semibold text-primary">-{formattedGearEffects.reliabilitySwingReductionPercent.toFixed(1)}%</span>
                   </div>
                 </div>
+                <div className="rounded-md border border-dashed border-destructive/40 p-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Breakdown Risk</span>
+                    <span className={`font-semibold ${formattedGearEffects.breakdownRiskPercent > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                      +{formattedGearEffects.breakdownRiskPercent.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
                 <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Payout Lift</span>
@@ -242,6 +250,12 @@ export const GigPreparationChecklist = ({
                   </div>
                 </div>
               </div>
+
+              {formattedGearEffects.breakdownRiskPercent > 0 && (
+                <p className="text-xs text-destructive">
+                  Watch for breakdown risk: fragile components can widen attendance swings if left unaddressed.
+                </p>
+              )}
 
               <div className="space-y-1 pl-6">
                 {formattedGearEffects.breakdown.map((entry) => (
