@@ -64,6 +64,39 @@ type RadioShowRecord = {
   host_name: string;
   show_genres: string[] | null;
   time_slot: string;
+  listener_multiplier: number | null;
+};
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
+
+const calculateRadioPlayMetrics = ({
+  listenerBase,
+  listenerMultiplier,
+  songHype,
+  totalRadioPlays,
+}: {
+  listenerBase: number;
+  listenerMultiplier: number;
+  songHype: number;
+  totalRadioPlays: number;
+}) => {
+  const hypeFactor = 0.75 + clamp(songHype / 1200, 0, 0.9);
+  const fatiguePenalty = 1 - clamp(totalRadioPlays / 80, 0, 0.35);
+  const effectiveMultiplier = Math.max(listenerMultiplier, 0.1);
+  const effectiveListenerBase = Math.max(listenerBase, 0);
+
+  const listeners = Math.max(
+    100,
+    Math.round(effectiveListenerBase * effectiveMultiplier * hypeFactor * fatiguePenalty)
+  );
+
+  const hypeGain = Math.max(1, Math.round(listeners * 0.002));
+  const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
+  const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+
+  return { listeners, hypeGain, streamsBoost, radioRevenue };
 };
 
 type StationPlaySummary = {
@@ -411,7 +444,7 @@ export default function Radio() {
 
       const { data: show } = await supabase
         .from('radio_shows')
-        .select('id, name')
+        .select('id, show_name, listener_multiplier')
         .eq('station_id', selectedStation)
         .eq('is_active', true)
         .order('time_slot', { ascending: true })
@@ -433,7 +466,7 @@ export default function Radio() {
         const { data: existingPlaylist } = await supabase
           .from('radio_playlists')
           .select('*')
-          .eq('show_id', (show as any).id)
+          .eq('show_id', show.id)
           .eq('song_id', selectedSong)
           .eq('week_start_date', weekStartDate)
           .maybeSingle();
@@ -453,7 +486,7 @@ export default function Radio() {
           const { data: newPlaylist } = await supabase
             .from('radio_playlists')
             .insert({
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               week_start_date: weekStartDate,
               added_at: nowIso,
@@ -467,19 +500,18 @@ export default function Radio() {
         }
 
         if (playlistId) {
-          const listeners = Math.max(
-            100,
-            Math.round((stationData.listener_base || 0) * (0.55 + Math.random() * 0.35))
-          );
-          const hypeGain = Math.max(1, Math.round(listeners * 0.002));
-          const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
-          const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+          const { listeners, hypeGain, streamsBoost, radioRevenue } = calculateRadioPlayMetrics({
+            listenerBase: stationData.listener_base || 0,
+            listenerMultiplier: Number(show.listener_multiplier ?? 1),
+            songHype: Number(selectedSongData.hype || 0),
+            totalRadioPlays: Number(selectedSongData.total_radio_plays || 0),
+          });
 
           const { data: playRecord } = await supabase
             .from('radio_plays')
             .insert({
               playlist_id: playlistId,
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               station_id: selectedStation,
               listeners,
@@ -593,7 +625,9 @@ export default function Radio() {
           <RadioIcon className="h-8 w-8" />
           <div>
             <h1 className="text-4xl font-oswald">Radio Airplay</h1>
-            <p className="text-muted-foreground">Submit your songs to radio stations and build hype</p>
+            <p className="text-muted-foreground">
+              Submit your songs to radio stations and build hype with predictable reach
+            </p>
           </div>
         </div>
 
@@ -601,7 +635,8 @@ export default function Radio() {
           <Music className="h-4 w-4" />
           <AlertDescription>
             Submit your recorded songs to radio stations. Higher quality stations are more selective but reach more listeners.
-            Songs can be played up to 7 times per week if added to playlists. Each play increases hype, streams, and sales!
+            Audience reach scales with each show's listener multiplier and your song's hype, so build momentum to grow your
+            streams and sales with every spin.
           </AlertDescription>
         </Alert>
 
@@ -858,6 +893,9 @@ export default function Radio() {
                         <div key={show.id} className="p-3 border rounded-lg">
                           <p className="font-medium">{show.show_name}</p>
                           <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Listener reach multiplier: {(Number(show.listener_multiplier ?? 1)).toFixed(2)}x
+                          </p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {show.show_genres?.map((genre: string) => (
                               <Badge key={genre} variant="outline" className="text-xs">
