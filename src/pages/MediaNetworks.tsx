@@ -363,7 +363,7 @@ const MediaNetworks = () => {
               <SelectContent>
                 {filteredShows.map((show) => (
                   <SelectItem key={show.id} value={show.id}>
-                    {show.name}
+                    {show.show_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -570,7 +570,7 @@ const MediaNetworks = () => {
                         {getMediaTypeLabel(item.mediaType)}
                       </TableCell>
                       <TableCell>{facility.name}</TableCell>
-                      <TableCell>{show.name}</TableCell>
+                      <TableCell>{show.show_name}</TableCell>
                       <TableCell>{exclusivityLabels[item.exclusivity]}</TableCell>
                       <TableCell>
                         <Progress value={item.rehearsalRequirement} className="h-2" />

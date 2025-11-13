@@ -411,12 +411,20 @@ export default function Radio() {
 
       const { data: show } = await supabase
         .from('radio_shows')
-        .select('id, name')
+        .select('id, show_name, host_name, time_slot')
         .eq('station_id', selectedStation)
         .eq('is_active', true)
         .order('time_slot', { ascending: true })
         .limit(1)
-        .maybeSingle();
+        .maybeSingle<RadioShowRecord>();
+
+      if (!show) {
+        await supabase
+          .from('radio_submissions')
+          .delete()
+          .eq('id', data.id);
+        throw new Error('No active shows are available for this station right now. Please try again later.');
+      }
 
       await supabase
         .from('radio_submissions')
@@ -433,7 +441,7 @@ export default function Radio() {
         const { data: existingPlaylist } = await supabase
           .from('radio_playlists')
           .select('*')
-          .eq('show_id', (show as any).id)
+          .eq('show_id', show.id)
           .eq('song_id', selectedSong)
           .eq('week_start_date', weekStartDate)
           .maybeSingle();
@@ -453,7 +461,7 @@ export default function Radio() {
           const { data: newPlaylist } = await supabase
             .from('radio_playlists')
             .insert({
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               week_start_date: weekStartDate,
               added_at: nowIso,
@@ -479,7 +487,7 @@ export default function Radio() {
             .from('radio_plays')
             .insert({
               playlist_id: playlistId,
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               station_id: selectedStation,
               listeners,
