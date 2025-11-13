@@ -1,14 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MusicVideoConfigurator, MusicVideoConfiguratorResult } from "./MusicVideoConfigurator";
 import { MusicVideoSummaryCard, type MusicVideoConfigWithRelations } from "./MusicVideoSummaryCard";
+import type { Database } from "@/integrations/supabase/types";
 import { buildPlanFromRow, derivePlanMetadata } from "@/lib/musicVideoMetrics";
-import { Lightbulb, Video, Youtube, Tv } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Lightbulb, Video, Youtube, Tv, KanbanSquare, List } from "lucide-react";
 
 interface MusicVideoReleaseTabProps {
   userId: string;
@@ -16,6 +19,9 @@ interface MusicVideoReleaseTabProps {
 
 export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
   const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"list" | "board">("list");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: bandMemberships, isLoading: bandLoading } = useQuery({
     queryKey: ["music-video-band-memberships", userId],
@@ -100,6 +106,14 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         location_style: payload.locationStyle ?? null,
         production_notes: payload.productionNotes ?? null,
         youtube_video_url: payload.youtubeUrl ?? null,
+        status: payload.status,
+        target_release_date: payload.targetReleaseDate ?? null,
+        shoot_start_date: payload.shootStartDate ?? null,
+        shoot_end_date: payload.shootEndDate ?? null,
+        primary_platform: payload.primaryPlatform ?? null,
+        sync_strategy: payload.syncStrategy,
+        kpi_view_target: payload.kpiViewTarget ?? null,
+        kpi_chart_target: payload.kpiChartTarget ?? null,
       };
 
       const { data, error } = await supabase
@@ -131,6 +145,44 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
     },
   });
 
+  const updateMusicVideo = useMutation({
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: Database["public"]["Tables"]["music_video_configs"]["Update"];
+    }) => {
+      const { data, error } = await supabase
+        .from("music_video_configs")
+        .update(updates)
+        .eq("id", id)
+        .select(`
+          *,
+          releases:releases(id, title, release_type, artist_name),
+          music_video_metrics(*)
+        `)
+        .single();
+
+      if (error) throw error;
+      return data as MusicVideoConfigWithRelations;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["music-video-configs", userId] });
+      toast({
+        title: "Music video updated",
+        description: "Workflow settings have been saved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const syncMetrics = useMutation({
     mutationFn: async (config: MusicVideoConfigWithRelations) => {
       const { plan, chartName, mtvProgram, youtubeVideoId } = derivePlanMetadata(config);
@@ -147,6 +199,9 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
             mtv_program: mtvProgram,
             mtv_spins: plan.mtvSpins,
             last_synced_at: new Date().toISOString(),
+            platform: config.primary_platform ?? "youtube",
+            views_target: config.kpi_view_target ?? null,
+            chart_target: config.kpi_chart_target ?? null,
           },
           { onConflict: "music_video_id" }
         )
@@ -205,6 +260,59 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         )
       : null;
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      planned: 0,
+      in_production: 0,
+      post_production: 0,
+      released: 0,
+      draft: 0,
+      archived: 0,
+    };
+
+    configs.forEach((config) => {
+      counts[config.status] = (counts[config.status] ?? 0) + 1;
+    });
+
+    return counts;
+  }, [configs]);
+
+  const filteredConfigs = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return configs.filter((config) => {
+      if (statusFilter !== "all" && config.status !== statusFilter) return false;
+
+      if (!query) return true;
+
+      const haystack = [
+        config.theme,
+        config.art_style,
+        config.primary_platform,
+        config.production_notes,
+        config.releases?.title,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [configs, statusFilter, searchTerm]);
+
+  const boardColumns = [
+    { key: "draft", title: "Draft", description: "Early concept development" },
+    { key: "planned", title: "Planned", description: "Awaiting production kickoff" },
+    { key: "in_production", title: "In Production", description: "Filming underway" },
+    { key: "post_production", title: "Post", description: "Editing & finishing" },
+    { key: "released", title: "Released", description: "Live for fans" },
+    { key: "archived", title: "Archived", description: "Stored for reference" },
+  ];
+
+  const handleStatusChange = (config: MusicVideoConfigWithRelations, status: string) => {
+    if (config.status === status) return;
+    updateMusicVideo.mutate({ id: config.id, updates: { status } });
+  };
+
   const isLoading = bandLoading || releasesLoading || configsLoading;
 
   return (
@@ -262,6 +370,33 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         </div>
       )}
 
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Planned</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{statusCounts.planned ?? 0}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">In Production</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{statusCounts.in_production ?? 0}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Post Production</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{statusCounts.post_production ?? 0}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Released</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{statusCounts.released ?? 0}</CardContent>
+        </Card>
+      </div>
+
       <MusicVideoConfigurator
         releases={releases}
         onCreate={(result) => createMusicVideo.mutate(result)}
@@ -274,8 +409,51 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-semibold">Video Rollout Tracker</h3>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">{configs.length} planned</Badge>
+            <Badge variant="secondary">{filteredConfigs.length} visible</Badge>
             {averageChart && <Badge variant="outline">Avg chart #{averageChart}</Badge>}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            {["all", "draft", "planned", "in_production", "post_production", "released", "archived"].map((status) => (
+              <Button
+                key={status}
+                size="sm"
+                variant={statusFilter === status ? "default" : "outline"}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status === "all" ? "All" : status.replace(/_/g, " ")}
+              </Button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              placeholder="Search campaigns"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="w-full sm:w-60"
+            />
+            <div className="flex items-center gap-1">
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="gap-1"
+              >
+                <List className="h-4 w-4" />
+                List
+              </Button>
+              <Button
+                variant={viewMode === "board" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("board")}
+                className="gap-1"
+              >
+                <KanbanSquare className="h-4 w-4" />
+                Board
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -295,16 +473,55 @@ export function MusicVideoReleaseTab({ userId }: MusicVideoReleaseTabProps) {
               </p>
             </CardContent>
           </Card>
+        ) : viewMode === "board" ? (
+          <div className="grid gap-4 xl:grid-cols-5 lg:grid-cols-3">
+            {boardColumns.map((column) => {
+              const columnConfigs = filteredConfigs.filter((config) => config.status === column.key);
+              return (
+                <Card key={column.key} className="border-dashed">
+                  <CardHeader className="space-y-1">
+                    <CardTitle className="text-sm font-semibold">{column.title}</CardTitle>
+                    <p className="text-xs text-muted-foreground">{column.description}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {columnConfigs.length === 0 ? (
+                      <div className="text-xs text-muted-foreground text-center py-6">No campaigns</div>
+                    ) : (
+                      columnConfigs.map((config) => (
+                        <MusicVideoSummaryCard
+                          key={config.id}
+                          config={config}
+                          syncing={syncMetrics.isPending && syncMetrics.variables?.id === config.id}
+                          onSyncMetrics={() => syncMetrics.mutate(config)}
+                          onStatusChange={(status) => handleStatusChange(config, status)}
+                          variant="compact"
+                        />
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         ) : (
           <div className="grid gap-4">
-            {configs.map((config) => (
-              <MusicVideoSummaryCard
-                key={config.id}
-                config={config}
-                syncing={syncMetrics.isPending && syncMetrics.variables?.id === config.id}
-                onSyncMetrics={() => syncMetrics.mutate(config)}
-              />
-            ))}
+            {filteredConfigs.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  No campaigns match your filters.
+                </CardContent>
+              </Card>
+            ) : (
+              filteredConfigs.map((config) => (
+                <MusicVideoSummaryCard
+                  key={config.id}
+                  config={config}
+                  syncing={syncMetrics.isPending && syncMetrics.variables?.id === config.id}
+                  onSyncMetrics={() => syncMetrics.mutate(config)}
+                  onStatusChange={(status) => handleStatusChange(config, status)}
+                />
+              ))
+            )}
           </div>
         )}
       </div>

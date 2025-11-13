@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
   Radio as RadioIcon,
@@ -22,6 +22,20 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+import { formatUtcDate, getUtcWeekStart } from "@/utils/week";
+
+type ProfileBand = {
+  id: string;
+  name: string | null;
+  fame: number | null;
+};
+
+type ProfileRecord = {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  bands?: ProfileBand[] | ProfileBand | null;
+};
 
 type BandRadioEarning = {
   band_id: string;
@@ -64,6 +78,39 @@ type RadioShowRecord = {
   host_name: string;
   show_genres: string[] | null;
   time_slot: string;
+  listener_multiplier: number | null;
+};
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
+
+const calculateRadioPlayMetrics = ({
+  listenerBase,
+  listenerMultiplier,
+  songHype,
+  totalRadioPlays,
+}: {
+  listenerBase: number;
+  listenerMultiplier: number;
+  songHype: number;
+  totalRadioPlays: number;
+}) => {
+  const hypeFactor = 0.75 + clamp(songHype / 1200, 0, 0.9);
+  const fatiguePenalty = 1 - clamp(totalRadioPlays / 80, 0, 0.35);
+  const effectiveMultiplier = Math.max(listenerMultiplier, 0.1);
+  const effectiveListenerBase = Math.max(listenerBase, 0);
+
+  const listeners = Math.max(
+    100,
+    Math.round(effectiveListenerBase * effectiveMultiplier * hypeFactor * fatiguePenalty)
+  );
+
+  const hypeGain = Math.max(1, Math.round(listeners * 0.002));
+  const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
+  const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+
+  return { listeners, hypeGain, streamsBoost, radioRevenue };
 };
 
 type StationPlaySummary = {
@@ -89,9 +136,13 @@ export default function Radio() {
   const [user, setUser] = useState<any>(null);
 
   // Get current user
-  useState(() => {
+  useEffect(() => {
+    let isMounted = true;
+
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+      if (isMounted) {
+        setUser(data.user);
+      }
     });
   });
   const [selectedStation, setSelectedStation] = useState<string>(() => {
@@ -103,7 +154,11 @@ export default function Radio() {
   const [selectedSong, setSelectedSong] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
 
-  const { data: profile } = useQuery({
+  // Load the user's profile so we can surface their band leadership context and
+  // gate radio submissions when they are not managing a band. This keeps the
+  // radio flow aligned with the simulation's requirement that only band leaders
+  // can pitch songs to stations.
+  const { data: profile, isLoading: isProfileLoading } = useQuery<ProfileRecord | null>({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -112,10 +167,18 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
-      return data;
+      return (data as ProfileRecord) ?? null;
     },
     enabled: !!user?.id,
   });
+
+  const profileBands = useMemo<ProfileBand[]>(() => {
+    if (!profile?.bands) return [];
+    return Array.isArray(profile.bands) ? profile.bands : [profile.bands];
+  }, [profile]);
+
+  const primaryBand = profileBands[0] ?? null;
+  const canSubmitSongs = profileBands.length > 0;
 
   const { data: stations } = useQuery<RadioStationRecord[]>({
     queryKey: ['radio-stations', filterType],
@@ -394,20 +457,20 @@ export default function Radio() {
         throw new Error('Please select a station and song');
       }
 
-      // Check if already submitted this week
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      const weekStartDate = weekStart.toISOString().split('T')[0];
+      const { data: weekCheckData, error: weekCheckError } = await supabase.rpc('check_radio_submission_week', {
+        p_station_id: selectedStation,
+        p_song_id: selectedSong,
+      });
 
-      const { data: existing } = await supabase
-        .from('radio_submissions')
-        .select('id')
-        .eq('station_id', selectedStation)
-        .eq('song_id', selectedSong)
-        .eq('week_submitted', weekStartDate)
-        .maybeSingle();
+      if (weekCheckError) {
+        console.error('Failed to verify radio submission window', weekCheckError);
+        throw new Error('Unable to verify submission window. Please try again.');
+      }
 
-      if (existing) {
+      const weekCheck = Array.isArray(weekCheckData) ? weekCheckData[0] : weekCheckData;
+      const weekStartDate = weekCheck?.week_start_date ?? formatUtcDate(getUtcWeekStart(new Date(), 1));
+
+      if (weekCheck?.already_submitted) {
         throw new Error('You have already submitted this song to this station this week');
       }
 
@@ -441,7 +504,7 @@ export default function Radio() {
 
       const { data: show } = await supabase
         .from('radio_shows')
-        .select('id, name')
+        .select('id, show_name, listener_multiplier')
         .eq('station_id', selectedStation)
         .eq('is_active', true)
         .order('time_slot', { ascending: true })
@@ -463,7 +526,7 @@ export default function Radio() {
         const { data: existingPlaylist } = await supabase
           .from('radio_playlists')
           .select('*')
-          .eq('show_id', (show as any).id)
+          .eq('show_id', show.id)
           .eq('song_id', selectedSong)
           .eq('week_start_date', weekStartDate)
           .maybeSingle();
@@ -483,7 +546,7 @@ export default function Radio() {
           const { data: newPlaylist } = await supabase
             .from('radio_playlists')
             .insert({
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               week_start_date: weekStartDate,
               added_at: nowIso,
@@ -497,19 +560,18 @@ export default function Radio() {
         }
 
         if (playlistId) {
-          const listeners = Math.max(
-            100,
-            Math.round((stationData.listener_base || 0) * (0.55 + Math.random() * 0.35))
-          );
-          const hypeGain = Math.max(1, Math.round(listeners * 0.002));
-          const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
-          const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+          const { listeners, hypeGain, streamsBoost, radioRevenue } = calculateRadioPlayMetrics({
+            listenerBase: stationData.listener_base || 0,
+            listenerMultiplier: Number(show.listener_multiplier ?? 1),
+            songHype: Number(selectedSongData.hype || 0),
+            totalRadioPlays: Number(selectedSongData.total_radio_plays || 0),
+          });
 
           const { data: playRecord } = await supabase
             .from('radio_plays')
             .insert({
               playlist_id: playlistId,
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               station_id: selectedStation,
               listeners,
@@ -581,6 +643,8 @@ export default function Radio() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['recorded-songs', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['recorded-songs', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
       queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
       queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
@@ -623,7 +687,9 @@ export default function Radio() {
           <RadioIcon className="h-8 w-8" />
           <div>
             <h1 className="text-4xl font-oswald">Radio Airplay</h1>
-            <p className="text-muted-foreground">Submit your songs to radio stations and build hype</p>
+            <p className="text-muted-foreground">
+              Submit your songs to radio stations and build hype with predictable reach
+            </p>
           </div>
         </div>
 
@@ -631,7 +697,8 @@ export default function Radio() {
           <Music className="h-4 w-4" />
           <AlertDescription>
             Submit your recorded songs to radio stations. Higher quality stations are more selective but reach more listeners.
-            Songs can be played up to 7 times per week if added to playlists. Each play increases hype, streams, and sales!
+            Audience reach scales with each show's listener multiplier and your song's hype, so build momentum to grow your
+            streams and sales with every spin.
           </AlertDescription>
         </Alert>
 
@@ -649,6 +716,38 @@ export default function Radio() {
                 <CardDescription>Choose a station and one of your recorded songs to submit</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {!isProfileLoading && (
+                  canSubmitSongs ? (
+                    <Alert className="border-primary/30 bg-primary/5">
+                      <Sparkles className="h-4 w-4" />
+                      <AlertTitle>
+                        Submitting as {primaryBand?.name || 'your band'}
+                      </AlertTitle>
+                      <AlertDescription>
+                        Keep your band&apos;s reputation strong—each spin boosts fame. Current fame:{' '}
+                        {Math.round((primaryBand?.fame ?? 0) * 10) / 10}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert variant="destructive">
+                      <XCircle className="h-4 w-4" />
+                      <AlertTitle>Band required for radio submissions</AlertTitle>
+                      <AlertDescription>
+                        Create or lead a band before pitching songs to stations. Radio deals are handled through band
+                        managers.
+                      </AlertDescription>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => navigate('/band')}
+                      >
+                        Go to Band Manager
+                      </Button>
+                    </Alert>
+                  )
+                )}
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Filter Stations</label>
                   <div className="flex gap-2">
@@ -888,6 +987,9 @@ export default function Radio() {
                         <div key={show.id} className="p-3 border rounded-lg">
                           <p className="font-medium">{show.show_name}</p>
                           <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Listener reach multiplier: {(Number(show.listener_multiplier ?? 1)).toFixed(2)}x
+                          </p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {show.show_genres?.map((genre: string) => (
                               <Badge key={genre} variant="outline" className="text-xs">
@@ -904,7 +1006,7 @@ export default function Radio() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Select Song</label>
                   <Select value={selectedSong} onValueChange={setSelectedSong}>
-                    <SelectTrigger>
+                    <SelectTrigger disabled={!canSubmitSongs}>
                       <SelectValue placeholder="Choose a recorded song" />
                     </SelectTrigger>
                     <SelectContent>
@@ -919,7 +1021,7 @@ export default function Radio() {
 
                 <Button
                   onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
+                  disabled={!selectedStation || !selectedSong || submitSong.isPending || !canSubmitSongs}
                   className="w-full"
                 >
                   <Send className="h-4 w-4 mr-2" />
