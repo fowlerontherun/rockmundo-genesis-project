@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
   Radio as RadioIcon,
@@ -22,6 +22,19 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+
+type ProfileBand = {
+  id: string;
+  name: string | null;
+  fame: number | null;
+};
+
+type ProfileRecord = {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  bands?: ProfileBand[] | ProfileBand | null;
+};
 
 type BandRadioEarning = {
   band_id: string;
@@ -98,7 +111,11 @@ export default function Radio() {
   const [selectedSong, setSelectedSong] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
 
-  const { data: profile } = useQuery({
+  // Load the user's profile so we can surface their band leadership context and
+  // gate radio submissions when they are not managing a band. This keeps the
+  // radio flow aligned with the simulation's requirement that only band leaders
+  // can pitch songs to stations.
+  const { data: profile, isLoading: isProfileLoading } = useQuery<ProfileRecord | null>({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -107,10 +124,18 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
-      return data;
+      return (data as ProfileRecord) ?? null;
     },
     enabled: !!user?.id,
   });
+
+  const profileBands = useMemo<ProfileBand[]>(() => {
+    if (!profile?.bands) return [];
+    return Array.isArray(profile.bands) ? profile.bands : [profile.bands];
+  }, [profile]);
+
+  const primaryBand = profileBands[0] ?? null;
+  const canSubmitSongs = profileBands.length > 0;
 
   const { data: stations } = useQuery<RadioStationRecord[]>({
     queryKey: ['radio-stations', filterType],
@@ -619,6 +644,38 @@ export default function Radio() {
                 <CardDescription>Choose a station and one of your recorded songs to submit</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {!isProfileLoading && (
+                  canSubmitSongs ? (
+                    <Alert className="border-primary/30 bg-primary/5">
+                      <Sparkles className="h-4 w-4" />
+                      <AlertTitle>
+                        Submitting as {primaryBand?.name || 'your band'}
+                      </AlertTitle>
+                      <AlertDescription>
+                        Keep your band&apos;s reputation strong—each spin boosts fame. Current fame:{' '}
+                        {Math.round((primaryBand?.fame ?? 0) * 10) / 10}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert variant="destructive">
+                      <XCircle className="h-4 w-4" />
+                      <AlertTitle>Band required for radio submissions</AlertTitle>
+                      <AlertDescription>
+                        Create or lead a band before pitching songs to stations. Radio deals are handled through band
+                        managers.
+                      </AlertDescription>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => navigate('/band')}
+                      >
+                        Go to Band Manager
+                      </Button>
+                    </Alert>
+                  )
+                )}
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Filter Stations</label>
                   <div className="flex gap-2">
@@ -874,7 +931,7 @@ export default function Radio() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Select Song</label>
                   <Select value={selectedSong} onValueChange={setSelectedSong}>
-                    <SelectTrigger>
+                    <SelectTrigger disabled={!canSubmitSongs}>
                       <SelectValue placeholder="Choose a recorded song" />
                     </SelectTrigger>
                     <SelectContent>
@@ -889,7 +946,7 @@ export default function Radio() {
 
                 <Button
                   onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
+                  disabled={!selectedStation || !selectedSong || submitSong.isPending || !canSubmitSongs}
                   className="w-full"
                 >
                   <Send className="h-4 w-4 mr-2" />
