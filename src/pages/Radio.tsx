@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -89,11 +89,19 @@ export default function Radio() {
   const [user, setUser] = useState<any>(null);
 
   // Get current user
-  useState(() => {
+  useEffect(() => {
+    let isMounted = true;
+
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+      if (isMounted) {
+        setUser(data.user);
+      }
     });
-  });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const [selectedStation, setSelectedStation] = useState<string>("");
   const [selectedSong, setSelectedSong] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
