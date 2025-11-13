@@ -107,7 +107,7 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
-      return submission;
+      return data;
     },
     enabled: !!user?.id,
   });
@@ -326,7 +326,7 @@ export default function Radio() {
         .eq('status', 'recorded')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return submission;
+      return data;
     },
     enabled: !!user?.id,
   });
@@ -340,7 +340,7 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .order('submitted_at', { ascending: false });
       if (error) throw error;
-      return submission;
+      return data;
     },
     enabled: !!user?.id,
   });
