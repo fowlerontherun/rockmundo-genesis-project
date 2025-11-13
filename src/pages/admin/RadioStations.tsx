@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -9,10 +9,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Radio, Trash2, Plus, Edit2 } from "lucide-react";
+import { Radio, Trash2, Plus, Edit2, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
 import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const GENRES = SKILL_TREE_DEFINITIONS
   .filter((skill: any) => skill.metadata?.category === 'genre')
@@ -32,6 +48,17 @@ export default function RadioStations() {
   const queryClient = useQueryClient();
   const [editingStation, setEditingStation] = useState<any>(null);
   const [editingShow, setEditingShow] = useState<any>(null);
+  const [editStationData, setEditStationData] = useState({
+    name: "",
+    station_type: "national" as "national" | "local",
+    country: "",
+    city_id: null as string | null,
+    quality_level: 3,
+    listener_base: 10000,
+    accepted_genres: [] as string[],
+    description: "",
+    frequency: "",
+  });
   const [newStation, setNewStation] = useState({
     name: '',
     station_type: 'national' as 'national' | 'local',
@@ -53,6 +80,9 @@ export default function RadioStations() {
     show_genres: [] as string[],
     description: '',
   });
+  const [submissionToReview, setSubmissionToReview] = useState<any>(null);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const { data: stations, isLoading: stationsLoading } = useQuery({
     queryKey: ['admin-radio-stations'],
@@ -73,6 +103,20 @@ export default function RadioStations() {
         .from('radio_shows')
         .select('*, radio_stations(name)')
         .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: submissions, isLoading: submissionsLoading } = useQuery({
+    queryKey: ['admin-radio-submissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('radio_submissions')
+        .select(
+          '*, songs(title, genre, band_id, hype, total_radio_plays, streams, revenue), radio_stations(name, listener_base), profiles(display_name)'
+        )
+        .order('submitted_at', { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -133,7 +177,26 @@ export default function RadioStations() {
       toast.success('Station updated');
       setEditingStation(null);
     },
+    onError: (error: any) => {
+      toast.error('Failed to update station: ' + error.message);
+    },
   });
+
+  useEffect(() => {
+    if (editingStation) {
+      setEditStationData({
+        name: editingStation.name ?? '',
+        station_type: editingStation.station_type ?? 'national',
+        country: editingStation.country ?? '',
+        city_id: editingStation.city_id ?? null,
+        quality_level: editingStation.quality_level ?? 3,
+        listener_base: editingStation.listener_base ?? 10000,
+        accepted_genres: editingStation.accepted_genres ?? [],
+        description: editingStation.description ?? '',
+        frequency: editingStation.frequency ?? '',
+      });
+    }
+  }, [editingStation]);
 
   const deleteStation = useMutation({
     mutationFn: async (id: string) => {
@@ -189,6 +252,236 @@ export default function RadioStations() {
     },
   });
 
+  const approveSubmission = useMutation<{ showMissing: boolean }, any, any>({
+    mutationFn: async (submission: any) => {
+      const now = new Date();
+      const nowIso = now.toISOString();
+
+      const { data: songData, error: songError } = await supabase
+        .from('songs')
+        .select('id, title, hype, band_id, total_radio_plays, streams, revenue')
+        .eq('id', submission.song_id)
+        .single();
+      if (songError) throw songError;
+
+      const { data: stationData, error: stationError } = await supabase
+        .from('radio_stations')
+        .select('id, name, listener_base')
+        .eq('id', submission.station_id)
+        .single();
+      if (stationError) throw stationError;
+
+      const { data: showData, error: showError } = await supabase
+        .from('radio_shows')
+        .select('id, name')
+        .eq('station_id', submission.station_id)
+        .eq('is_active', true)
+        .order('time_slot', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (showError) throw showError;
+
+      const { error: updateError } = await supabase
+        .from('radio_submissions')
+        .update({
+          status: 'accepted',
+          reviewed_at: nowIso,
+          rejection_reason: null,
+        })
+        .eq('id', submission.id);
+      if (updateError) throw updateError;
+
+      if (!songData || !stationData) {
+        return { showMissing: false };
+      }
+
+      if (!showData) {
+        return { showMissing: true };
+      }
+
+      const weekStartDate =
+        submission.week_submitted ||
+        (() => {
+          const weekStart = new Date(now);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          return weekStart.toISOString().split('T')[0];
+        })();
+
+      let playlistId: string | null = null;
+
+      const { data: existingPlaylist } = await supabase
+        .from('radio_playlists')
+        .select('*')
+        .eq('show_id', (showData as any).id)
+        .eq('song_id', submission.song_id)
+        .eq('week_start_date', weekStartDate)
+        .maybeSingle();
+
+      if (existingPlaylist) {
+        const { error: playlistUpdateError } = await supabase
+          .from('radio_playlists')
+          .update({
+            times_played: (existingPlaylist.times_played || 0) + 1,
+            added_at: nowIso,
+            is_active: true,
+          })
+          .eq('id', existingPlaylist.id);
+        if (playlistUpdateError) throw playlistUpdateError;
+
+        playlistId = existingPlaylist.id;
+      } else {
+        const { data: newPlaylist, error: playlistInsertError } = await supabase
+          .from('radio_playlists')
+          .insert({
+            show_id: (showData as any).id,
+            song_id: submission.song_id,
+            week_start_date: weekStartDate,
+            added_at: nowIso,
+            is_active: true,
+            times_played: 1,
+          })
+          .select()
+          .single();
+        if (playlistInsertError) throw playlistInsertError;
+
+        playlistId = newPlaylist?.id ?? null;
+      }
+
+      if (!playlistId) {
+        return { showMissing: false };
+      }
+
+      const listeners = Math.max(
+        100,
+        Math.round((stationData.listener_base || 0) * (0.55 + Math.random() * 0.35))
+      );
+      const hypeGain = Math.max(1, Math.round(listeners * 0.002));
+      const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
+      const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+
+      const { data: playRecord, error: playError } = await supabase
+        .from('radio_plays')
+        .insert({
+          playlist_id: playlistId,
+          show_id: (showData as any).id,
+          song_id: submission.song_id,
+          station_id: submission.station_id,
+          listeners,
+          played_at: nowIso,
+          hype_gained: hypeGain,
+          streams_boost: streamsBoost,
+          sales_boost: radioRevenue,
+        })
+        .select()
+        .single();
+      if (playError) throw playError;
+
+      const { error: songUpdateError } = await supabase
+        .from('songs')
+        .update({
+          hype: (songData.hype || 0) + hypeGain,
+          total_radio_plays: (songData.total_radio_plays || 0) + 1,
+          last_radio_play: nowIso,
+          streams: (songData.streams || 0) + streamsBoost,
+          revenue: (songData.revenue || 0) + radioRevenue,
+        })
+        .eq('id', submission.song_id);
+      if (songUpdateError) throw songUpdateError;
+
+      if (songData.band_id) {
+        const { data: band, error: bandError } = await supabase
+          .from('bands')
+          .select('fame')
+          .eq('id', songData.band_id)
+          .single();
+
+        if (!bandError && band) {
+          const fameGain = 0.1;
+
+          const { error: bandUpdateError } = await supabase
+            .from('bands')
+            .update({ fame: (band.fame || 0) + fameGain })
+            .eq('id', songData.band_id);
+          if (bandUpdateError) throw bandUpdateError;
+
+          const { error: fameEventError } = await supabase.from('band_fame_events').insert({
+            band_id: songData.band_id,
+            fame_gained: fameGain,
+            event_type: 'radio_play',
+            event_data: {
+              station_id: submission.station_id,
+              station_name: stationData.name,
+              play_id: playRecord?.id,
+            },
+          });
+          if (fameEventError) throw fameEventError;
+
+          if (radioRevenue > 0) {
+            const { error: bandEarningsError } = await supabase.from('band_earnings').insert({
+              band_id: songData.band_id,
+              amount: radioRevenue,
+              source: 'radio_play',
+              description: `Radio play on ${stationData.name}`,
+              metadata: {
+                station_id: submission.station_id,
+                station_name: stationData.name,
+                song_id: songData.id,
+                play_id: playRecord?.id,
+              },
+            });
+            if (bandEarningsError) throw bandEarningsError;
+          }
+        }
+      }
+
+      return { showMissing: false };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-radio-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
+      queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
+      queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['station-play-timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['top-radio-songs'] });
+
+      if (result?.showMissing) {
+        toast.success('Submission approved. No active show found, so scheduling was skipped.');
+      } else {
+        toast.success('Submission approved and scheduled for airplay.');
+      }
+    },
+    onError: (error: any) => {
+      toast.error('Failed to approve submission: ' + error.message);
+    },
+  });
+
+  const rejectSubmission = useMutation<any, any, { submissionId: string; reason: string }>({
+    mutationFn: async ({ submissionId, reason }) => {
+      const nowIso = new Date().toISOString();
+      const { error } = await supabase
+        .from('radio_submissions')
+        .update({
+          status: 'rejected',
+          rejection_reason: reason,
+          reviewed_at: nowIso,
+        })
+        .eq('id', submissionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-radio-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
+      toast.success('Submission rejected.');
+      setIsRejectDialogOpen(false);
+      setSubmissionToReview(null);
+      setRejectionReason('');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to reject submission: ' + error.message);
+    },
+  });
+
   const toggleGenre = (genre: string, list: string[], setter: (list: string[]) => void) => {
     if (list.includes(genre)) {
       setter(list.filter(g => g !== genre));
@@ -198,6 +491,11 @@ export default function RadioStations() {
       toast.error('Maximum 4 genres allowed');
     }
   };
+
+  const pendingSubmissions =
+    submissions?.filter((submission: any) => submission.status === 'pending') ?? [];
+  const reviewedSubmissions =
+    submissions?.filter((submission: any) => submission.status !== 'pending') ?? [];
 
   if (stationsLoading) {
     return (
@@ -223,6 +521,7 @@ export default function RadioStations() {
         <Tabs defaultValue="stations" className="w-full">
           <TabsList>
             <TabsTrigger value="stations">Radio Stations</TabsTrigger>
+            <TabsTrigger value="submissions">Submissions</TabsTrigger>
             <TabsTrigger value="shows">Radio Shows</TabsTrigger>
           </TabsList>
 
@@ -419,6 +718,337 @@ export default function RadioStations() {
                 </Card>
               ))}
             </div>
+            <Dialog
+              open={!!editingStation}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingStation(null);
+                }
+              }}
+            >
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Radio Station</DialogTitle>
+                  <DialogDescription>
+                    Update the details of the selected radio station.
+                  </DialogDescription>
+                </DialogHeader>
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!editingStation) return;
+                    const updates = {
+                      name: editStationData.name,
+                      frequency: editStationData.frequency,
+                      station_type: editStationData.station_type,
+                      quality_level: editStationData.quality_level,
+                      listener_base: editStationData.listener_base,
+                      accepted_genres: editStationData.accepted_genres,
+                      description: editStationData.description,
+                      country:
+                        editStationData.station_type === 'national'
+                          ? editStationData.country
+                          : null,
+                      city_id:
+                        editStationData.station_type === 'local'
+                          ? editStationData.city_id
+                          : null,
+                    };
+
+                    updateStation.mutate({
+                      id: editingStation.id,
+                      updates,
+                    });
+                  }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Station Name</Label>
+                      <Input
+                        value={editStationData.name}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            name: e.target.value,
+                          })
+                        }
+                        placeholder="ROCK FM"
+                      />
+                    </div>
+                    <div>
+                      <Label>Frequency (FM/AM)</Label>
+                      <Input
+                        value={editStationData.frequency}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            frequency: e.target.value,
+                          })
+                        }
+                        placeholder="98.5 FM"
+                      />
+                    </div>
+                    <div>
+                      <Label>Type</Label>
+                      <Select
+                        value={editStationData.station_type}
+                        onValueChange={(value: 'national' | 'local') =>
+                          setEditStationData({
+                            ...editStationData,
+                            station_type: value,
+                            city_id: value === 'local' ? editStationData.city_id : null,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="national">National</SelectItem>
+                          <SelectItem value="local">Local</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {editStationData.station_type === 'national' ? (
+                      <div>
+                        <Label>Country</Label>
+                        <Input
+                          value={editStationData.country}
+                          onChange={(e) =>
+                            setEditStationData({
+                              ...editStationData,
+                              country: e.target.value,
+                            })
+                          }
+                          placeholder="USA"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <Label>City</Label>
+                        <Select
+                          value={editStationData.city_id || ''}
+                          onValueChange={(value) =>
+                            setEditStationData({
+                              ...editStationData,
+                              city_id: value,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select city" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cities?.map((city) => (
+                              <SelectItem key={city.id} value={city.id}>
+                                {city.name}, {city.country}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div>
+                      <Label>Quality Level (1-5)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={editStationData.quality_level}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            quality_level: parseInt(e.target.value) || 1,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Listener Base</Label>
+                      <Input
+                        type="number"
+                        value={editStationData.listener_base}
+                        onChange={(e) =>
+                          setEditStationData({
+                            ...editStationData,
+                            listener_base: parseInt(e.target.value) || 0,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      value={editStationData.description}
+                      onChange={(e) =>
+                        setEditStationData({
+                          ...editStationData,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Station description..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Accepted Genres (max 4)</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {GENRES.map((genre) => (
+                        <Badge
+                          key={genre}
+                          variant={editStationData.accepted_genres.includes(genre) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            toggleGenre(genre, editStationData.accepted_genres, (genres) =>
+                              setEditStationData({
+                                ...editStationData,
+                                accepted_genres: genres,
+                              })
+                            )
+                          }
+                        >
+                          {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingStation(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={!editStationData.name || updateStation.isPending}>
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          <TabsContent value="submissions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Submissions</CardTitle>
+                <CardDescription>
+                  Review and approve songs before they hit the airwaves.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {submissionsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading submissions...</p>
+                ) : pendingSubmissions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No pending submissions right now.</p>
+                ) : (
+                  pendingSubmissions.map((submission: any) => {
+                    const isApproving =
+                      approveSubmission.isPending &&
+                      (approveSubmission.variables as any)?.id === submission.id;
+
+                    return (
+                      <div key={submission.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold">{submission.songs?.title}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {submission.profiles?.display_name} • {submission.radio_stations?.name}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span>
+                              Submitted {new Date(submission.submitted_at).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <Badge variant="outline" className="uppercase">
+                            {submission.songs?.genre || 'Unknown Genre'}
+                          </Badge>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSubmissionToReview(submission);
+                                setRejectionReason('');
+                                setIsRejectDialogOpen(true);
+                              }}
+                              disabled={approveSubmission.isPending || rejectSubmission.isPending}
+                            >
+                              Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => approveSubmission.mutate(submission)}
+                              disabled={isApproving || rejectSubmission.isPending}
+                            >
+                              {isApproving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                'Approve & Schedule'
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recently Reviewed</CardTitle>
+                <CardDescription>
+                  Keep tabs on the decisions your team has made.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {submissionsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading submissions...</p>
+                ) : reviewedSubmissions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No reviewed submissions yet.</p>
+                ) : (
+                  reviewedSubmissions.slice(0, 10).map((submission: any) => (
+                    <div
+                      key={submission.id}
+                      className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border rounded-lg p-4"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {submission.status === 'accepted' ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                          <h3 className="font-semibold">{submission.songs?.title}</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {submission.profiles?.display_name} • {submission.radio_stations?.name}
+                        </p>
+                        {submission.status === 'rejected' && submission.rejection_reason && (
+                          <p className="text-xs text-red-500">
+                            Reason: {submission.rejection_reason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Reviewed{' '}
+                        {submission.reviewed_at
+                          ? new Date(submission.reviewed_at).toLocaleString()
+                          : '—'}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="shows" className="space-y-6">
@@ -583,6 +1213,66 @@ export default function RadioStations() {
             </div>
           </TabsContent>
         </Tabs>
+        <Dialog
+          open={isRejectDialogOpen}
+          onOpenChange={(open) => {
+            setIsRejectDialogOpen(open);
+            if (!open) {
+              setSubmissionToReview(null);
+              setRejectionReason('');
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Submission</DialogTitle>
+              <DialogDescription>
+                Share a brief note so artists understand why their song wasn't approved.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm">
+                <span className="font-semibold">{submissionToReview?.songs?.title}</span>{' '}
+                by {submissionToReview?.profiles?.display_name}
+              </p>
+              <Textarea
+                placeholder="Let the artist know why this submission isn't a fit."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsRejectDialogOpen(false);
+                  setSubmissionToReview(null);
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (submissionToReview) {
+                    rejectSubmission.mutate({
+                      submissionId: submissionToReview.id,
+                      reason: rejectionReason.trim(),
+                    });
+                  }
+                }}
+                disabled={!rejectionReason.trim() || rejectSubmission.isPending}
+              >
+                {rejectSubmission.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Reject Submission'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminRoute>
   );

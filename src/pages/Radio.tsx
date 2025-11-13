@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   Radio as RadioIcon,
@@ -22,6 +23,20 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+import { formatUtcDate, getUtcWeekStart } from "@/utils/week";
+
+type ProfileBand = {
+  id: string;
+  name: string | null;
+  fame: number | null;
+};
+
+type ProfileRecord = {
+  id: string;
+  user_id: string;
+  display_name: string | null;
+  bands?: ProfileBand[] | ProfileBand | null;
+};
 
 type BandRadioEarning = {
   band_id: string;
@@ -64,6 +79,39 @@ type RadioShowRecord = {
   host_name: string;
   show_genres: string[] | null;
   time_slot: string;
+  listener_multiplier: number | null;
+};
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
+
+const calculateRadioPlayMetrics = ({
+  listenerBase,
+  listenerMultiplier,
+  songHype,
+  totalRadioPlays,
+}: {
+  listenerBase: number;
+  listenerMultiplier: number;
+  songHype: number;
+  totalRadioPlays: number;
+}) => {
+  const hypeFactor = 0.75 + clamp(songHype / 1200, 0, 0.9);
+  const fatiguePenalty = 1 - clamp(totalRadioPlays / 80, 0, 0.35);
+  const effectiveMultiplier = Math.max(listenerMultiplier, 0.1);
+  const effectiveListenerBase = Math.max(listenerBase, 0);
+
+  const listeners = Math.max(
+    100,
+    Math.round(effectiveListenerBase * effectiveMultiplier * hypeFactor * fatiguePenalty)
+  );
+
+  const hypeGain = Math.max(1, Math.round(listeners * 0.002));
+  const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
+  const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
+
+  return { listeners, hypeGain, streamsBoost, radioRevenue };
 };
 
 type StationPlaySummary = {
@@ -89,14 +137,26 @@ export default function Radio() {
   const [user, setUser] = useState<any>(null);
 
   // Get current user
-  useState(() => {
+  useEffect(() => {
+    let isMounted = true;
+
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+      if (isMounted) {
+        setUser(data.user);
+      }
     });
   });
-  const [selectedStation, setSelectedStation] = useState<string>("");
+  const [selectedStation, setSelectedStation] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("radio-selected-station") ?? "";
+    }
+    return "";
+  });
   const [selectedSong, setSelectedSong] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
+
+  const getErrorMessage = (error: unknown, fallback = 'An unexpected error occurred.') =>
+    error instanceof Error ? error.message : fallback;
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -107,12 +167,17 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
 
-  const { data: stations } = useQuery<RadioStationRecord[]>({
+  const {
+    data: stations,
+    isLoading: stationsLoading,
+    isError: stationsError,
+    error: stationsErrorData,
+  } = useQuery<RadioStationRecord[]>({
     queryKey: ['radio-stations', filterType],
     queryFn: async () => {
       let query = supabase
@@ -131,11 +196,41 @@ export default function Radio() {
     },
   });
 
+  useEffect(() => {
+    if (!stations || stations.length === 0) return;
+
+    const stationExists = stations.some((station) => station.id === selectedStation);
+
+    if (selectedStation && !stationExists) {
+      setSelectedStation(stations[0].id);
+      return;
+    }
+
+    if (!selectedStation) {
+      setSelectedStation(stations[0].id);
+    }
+  }, [stations, selectedStation]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (selectedStation) {
+      localStorage.setItem("radio-selected-station", selectedStation);
+    } else {
+      localStorage.removeItem("radio-selected-station");
+    }
+  }, [selectedStation]);
+
   const activeStation = useMemo(() => {
     return stations?.find((station) => station.id === selectedStation);
   }, [stations, selectedStation]);
 
-  const { data: shows } = useQuery<RadioShowRecord[]>({
+  const {
+    data: shows,
+    isLoading: showsLoading,
+    isError: showsError,
+    error: showsErrorData,
+  } = useQuery<RadioShowRecord[]>({
     queryKey: ['radio-shows', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
@@ -151,7 +246,12 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const { data: nowPlaying } = useQuery<NowPlayingRecord | null>({
+  const {
+    data: nowPlaying,
+    isLoading: nowPlayingLoading,
+    isError: nowPlayingError,
+    error: nowPlayingErrorData,
+  } = useQuery<NowPlayingRecord | null>({
     queryKey: ['station-now-playing', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return null;
@@ -183,7 +283,12 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const { data: bandRadioEarnings } = useQuery<BandRadioEarning[]>({
+  const {
+    data: bandRadioEarnings,
+    isLoading: bandRadioEarningsLoading,
+    isError: bandRadioEarningsError,
+    error: bandRadioEarningsErrorData,
+  } = useQuery<BandRadioEarning[]>({
     queryKey: ['band-radio-earnings', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
@@ -243,7 +348,12 @@ export default function Radio() {
     [aggregatedBandRevenue]
   );
 
-  const { data: stationPlaySummary } = useQuery<StationPlaySummary | null>({
+  const {
+    data: stationPlaySummary,
+    isLoading: stationPlaySummaryLoading,
+    isError: stationPlaySummaryError,
+    error: stationPlaySummaryErrorData,
+  } = useQuery<StationPlaySummary | null>({
     queryKey: ['station-play-summary', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return null;
@@ -269,7 +379,12 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const { data: stationPlayTimeline } = useQuery<StationPlayTimelineEntry[]>({
+  const {
+    data: stationPlayTimeline,
+    isLoading: stationPlayTimelineLoading,
+    isError: stationPlayTimelineError,
+    error: stationPlayTimelineErrorData,
+  } = useQuery<StationPlayTimelineEntry[]>({
     queryKey: ['station-play-timeline', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return [];
@@ -316,7 +431,12 @@ export default function Radio() {
     });
   }, [stationPlayTimeline, selectedStation]);
 
-  const { data: recordedSongs } = useQuery({
+  const {
+    data: recordedSongs,
+    isLoading: recordedSongsLoading,
+    isError: recordedSongsError,
+    error: recordedSongsErrorData,
+  } = useQuery({
     queryKey: ['recorded-songs', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -326,12 +446,17 @@ export default function Radio() {
         .eq('status', 'recorded')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
 
-  const { data: mySubmissions } = useQuery({
+  const {
+    data: mySubmissions,
+    isLoading: mySubmissionsLoading,
+    isError: mySubmissionsError,
+    error: mySubmissionsErrorData,
+  } = useQuery({
     queryKey: ['my-radio-submissions', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -340,12 +465,17 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .order('submitted_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
 
-  const { data: topSongs } = useQuery({
+  const {
+    data: topSongs,
+    isLoading: topSongsLoading,
+    isError: topSongsError,
+    error: topSongsErrorData,
+  } = useQuery({
     queryKey: ['top-radio-songs'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -358,31 +488,107 @@ export default function Radio() {
     },
   });
 
+  useEffect(() => {
+    const errors = [
+      {
+        hasError: stationsError,
+        error: stationsErrorData,
+        title: 'Unable to load radio stations',
+      },
+      {
+        hasError: showsError,
+        error: showsErrorData,
+        title: 'Unable to load station shows',
+      },
+      {
+        hasError: nowPlayingError,
+        error: nowPlayingErrorData,
+        title: 'Unable to load now playing details',
+      },
+      {
+        hasError: bandRadioEarningsError,
+        error: bandRadioEarningsErrorData,
+        title: 'Unable to load band radio earnings',
+      },
+      {
+        hasError: stationPlaySummaryError,
+        error: stationPlaySummaryErrorData,
+        title: 'Unable to load station summary',
+      },
+      {
+        hasError: stationPlayTimelineError,
+        error: stationPlayTimelineErrorData,
+        title: 'Unable to load station timeline',
+      },
+      {
+        hasError: recordedSongsError,
+        error: recordedSongsErrorData,
+        title: 'Unable to load recorded songs',
+      },
+      {
+        hasError: mySubmissionsError,
+        error: mySubmissionsErrorData,
+        title: 'Unable to load your submissions',
+      },
+      {
+        hasError: topSongsError,
+        error: topSongsErrorData,
+        title: 'Unable to load trending songs',
+      },
+    ];
+
+    errors.forEach(({ hasError, error, title }) => {
+      if (hasError) {
+        toast.error(title, {
+          description: getErrorMessage(error),
+        });
+      }
+    });
+  }, [
+    stationsError,
+    stationsErrorData,
+    showsError,
+    showsErrorData,
+    nowPlayingError,
+    nowPlayingErrorData,
+    bandRadioEarningsError,
+    bandRadioEarningsErrorData,
+    stationPlaySummaryError,
+    stationPlaySummaryErrorData,
+    stationPlayTimelineError,
+    stationPlayTimelineErrorData,
+    recordedSongsError,
+    recordedSongsErrorData,
+    mySubmissionsError,
+    mySubmissionsErrorData,
+    topSongsError,
+    topSongsErrorData,
+  ]);
+
   const submitSong = useMutation({
     mutationFn: async () => {
       if (!selectedStation || !selectedSong) {
         throw new Error('Please select a station and song');
       }
 
-      // Check if already submitted this week
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      const weekStartDate = weekStart.toISOString().split('T')[0];
+      const { data: weekCheckData, error: weekCheckError } = await supabase.rpc('check_radio_submission_week', {
+        p_station_id: selectedStation,
+        p_song_id: selectedSong,
+      });
 
-      const { data: existing } = await supabase
-        .from('radio_submissions')
-        .select('id')
-        .eq('station_id', selectedStation)
-        .eq('song_id', selectedSong)
-        .eq('week_submitted', weekStartDate)
-        .maybeSingle();
-
-      if (existing) {
-        throw new Error('You have already submitted this song to this station this week');
+      if (weekCheckError) {
+        console.error('Failed to verify radio submission window', weekCheckError);
+        throw new Error('Unable to verify submission window. Please try again.');
       }
 
-      const now = new Date();
-      const nowIso = now.toISOString();
+      const weekCheck = Array.isArray(weekCheckData) ? weekCheckData[0] : weekCheckData;
+      const weekStartDate = weekCheck?.week_start_date ?? formatUtcDate(getUtcWeekStart(new Date(), 1));
+
+      if (existing) {
+        throw new Error(
+          "You've already submitted this track to this station this week. Try another station or wait until next week."
+        );
+      }
 
       const { data, error } = await supabase
         .from('radio_submissions')
@@ -553,30 +759,37 @@ export default function Radio() {
             }
           }
         }
+
+        throw error;
+      }
+
+      if (!submission) {
+        throw new Error('Failed to create radio submission.');
       }
 
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
-      queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
-      queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
-      queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['station-play-timeline'] });
-      queryClient.invalidateQueries({ queryKey: ['top-radio-songs'] });
-      toast.success('Your track is now spinning on the airwaves!');
+      toast.success('Submission received! The station team will review it soon.');
       setSelectedSong('');
     },
     onError: (error: any) => {
-      toast.error(error.message);
+      const message = error?.message ?? 'An unexpected error occurred while submitting your track.';
+
+      if (
+        typeof message === 'string' &&
+        message.includes("You've already submitted this track to this station this week")
+      ) {
+        toast.info(
+          "You've already submitted this track to this station this week. Try another station or wait until next week."
+        );
+        return;
+      }
+
+      toast.error(message);
     },
   });
-
-  const getQualityColor = (level: number) => {
-    if (level >= 4) return 'text-yellow-500';
-    if (level >= 3) return 'text-blue-500';
-    return 'text-gray-500';
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -601,7 +814,9 @@ export default function Radio() {
           <RadioIcon className="h-8 w-8" />
           <div>
             <h1 className="text-4xl font-oswald">Radio Airplay</h1>
-            <p className="text-muted-foreground">Submit your songs to radio stations and build hype</p>
+            <p className="text-muted-foreground">
+              Submit your songs to radio stations and build hype with predictable reach
+            </p>
           </div>
         </div>
 
@@ -609,7 +824,8 @@ export default function Radio() {
           <Music className="h-4 w-4" />
           <AlertDescription>
             Submit your recorded songs to radio stations. Higher quality stations are more selective but reach more listeners.
-            Songs can be played up to 7 times per week if added to playlists. Each play increases hype, streams, and sales!
+            Audience reach scales with each show's listener multiplier and your song's hype, so build momentum to grow your
+            streams and sales with every spin.
           </AlertDescription>
         </Alert>
 
@@ -627,6 +843,38 @@ export default function Radio() {
                 <CardDescription>Choose a station and one of your recorded songs to submit</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {!isProfileLoading && (
+                  canSubmitSongs ? (
+                    <Alert className="border-primary/30 bg-primary/5">
+                      <Sparkles className="h-4 w-4" />
+                      <AlertTitle>
+                        Submitting as {primaryBand?.name || 'your band'}
+                      </AlertTitle>
+                      <AlertDescription>
+                        Keep your band&apos;s reputation strong—each spin boosts fame. Current fame:{' '}
+                        {Math.round((primaryBand?.fame ?? 0) * 10) / 10}
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert variant="destructive">
+                      <XCircle className="h-4 w-4" />
+                      <AlertTitle>Band required for radio submissions</AlertTitle>
+                      <AlertDescription>
+                        Create or lead a band before pitching songs to stations. Radio deals are handled through band
+                        managers.
+                      </AlertDescription>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => navigate('/band')}
+                      >
+                        Go to Band Manager
+                      </Button>
+                    </Alert>
+                  )
+                )}
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Filter Stations</label>
                   <div className="flex gap-2">
@@ -651,74 +899,139 @@ export default function Radio() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {stations?.map((station) => (
-                    <Card
-                      key={station.id}
-                      className={`cursor-pointer transition-colors ${
-                        selectedStation === station.id ? 'border-primary' : ''
-                      }`}
-                      onClick={() => setSelectedStation(station.id)}
-                    >
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{station.name}</CardTitle>
-                            <CardDescription>{station.frequency}</CardDescription>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < station.quality_level
-                                    ? 'fill-yellow-500 text-yellow-500'
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Type:</span>
-                          <Badge variant="outline">{station.station_type}</Badge>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Location:</span>
-                          <span className="text-sm">
-                            {station.station_type === 'national'
-                              ? station.country
-                              : `${station.cities?.name}, ${station.cities?.country}`}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Listeners:</span>
-                          <span className="font-semibold">
-                            {station.listener_base.toLocaleString()}
-                          </span>
-                        </div>
-                        {station.accepted_genres?.length > 0 && (
-                          <div className="pt-2">
-                            <p className="text-xs text-muted-foreground mb-1">Accepts:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {station.accepted_genres.map((genre: string) => (
-                                <Badge key={genre} variant="secondary" className="text-xs">
-                                  {genre}
-                                </Badge>
-                              ))}
+                {stationsError && (
+                  <Alert variant="destructive">
+                    <AlertTitle>Unable to load stations</AlertTitle>
+                    <AlertDescription>
+                      {getErrorMessage(stationsErrorData)}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {stationsLoading
+                    ? Array.from({ length: 4 }).map((_, index) => (
+                        <Card key={`station-skeleton-${index}`} className="space-y-4">
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-2">
+                                <Skeleton className="h-5 w-40" />
+                                <Skeleton className="h-4 w-24" />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Skeleton key={i} className="h-4 w-4 rounded-full" />
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-4 w-2/3" />
+                            <div className="space-y-2 pt-1">
+                              <Skeleton className="h-3 w-24" />
+                              <div className="flex flex-wrap gap-1">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                  <Skeleton key={i} className="h-5 w-16" />
+                                ))}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    : stations?.map((station) => (
+                        <Card
+                          key={station.id}
+                          className={`cursor-pointer transition-colors ${
+                            selectedStation === station.id ? 'border-primary' : ''
+                          }`}
+                          onClick={() => setSelectedStation(station.id)}
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">{station.name}</CardTitle>
+                                <CardDescription>{station.frequency}</CardDescription>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < station.quality_level
+                                        ? 'fill-yellow-500 text-yellow-500'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Type:</span>
+                              <Badge variant="outline">{station.station_type}</Badge>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Location:</span>
+                              <span className="text-sm">
+                                {station.station_type === 'national'
+                                  ? station.country
+                                  : `${station.cities?.name}, ${station.cities?.country}`}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Listeners:</span>
+                              <span className="font-semibold">
+                                {station.listener_base.toLocaleString()}
+                              </span>
+                            </div>
+                            {station.accepted_genres?.length > 0 && (
+                              <div className="pt-2">
+                                <p className="mb-1 text-xs text-muted-foreground">Accepts:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {station.accepted_genres.map((genre: string) => (
+                                    <Badge key={genre} variant="secondary" className="text-xs">
+                                      {genre}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
                 </div>
+
+                {!stationsLoading && !stationsError && (stations?.length ?? 0) === 0 && (
+                  <p className="text-sm text-muted-foreground">No stations found for this filter.</p>
+                )}
 
                 {selectedStation && (
                   <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
-                    {stationPlaySummary && (
+                    {stationPlaySummaryError && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Unable to load station summary</AlertTitle>
+                        <AlertDescription>
+                          {getErrorMessage(stationPlaySummaryErrorData)}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {stationPlaySummaryLoading ? (
+                      <div className="grid gap-3 md:grid-cols-4">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                          <div
+                            key={`summary-skeleton-${index}`}
+                            className="rounded-md border border-primary/20 bg-background/80 p-3"
+                          >
+                            <Skeleton className="h-3 w-24" />
+                            <Skeleton className="mt-2 h-6 w-1/2" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : stationPlaySummary ? (
                       <div className="grid gap-3 md:grid-cols-4">
                         <div className="rounded-md border border-primary/20 bg-background/80 p-3">
                           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spins (14 days)</p>
@@ -737,6 +1050,12 @@ export default function Radio() {
                           <p className="text-2xl font-semibold">{currencyFormatter.format(stationPlaySummary.total_revenue || 0)}</p>
                         </div>
                       </div>
+                    ) : (
+                      !stationPlaySummaryError && (
+                        <p className="text-xs text-muted-foreground">
+                          Summary data will appear after the station records more plays.
+                        </p>
+                      )
                     )}
 
                     <div className="flex items-start gap-3">
@@ -750,7 +1069,30 @@ export default function Radio() {
                         </p>
                       </div>
                     </div>
-                    {nowPlaying ? (
+
+                    {nowPlayingError && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Unable to load now playing</AlertTitle>
+                        <AlertDescription>
+                          {getErrorMessage(nowPlayingErrorData)}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {nowPlayingLoading ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-3">
+                          <Skeleton className="h-6 w-3/4" />
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                        <div className="space-y-2">
+                          {Array.from({ length: 3 }).map((_, index) => (
+                            <Skeleton key={`now-playing-${index}`} className="h-10 w-full" />
+                          ))}
+                        </div>
+                      </div>
+                    ) : nowPlaying ? (
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <p className="text-xl font-semibold">{nowPlaying.songs?.title}</p>
@@ -777,9 +1119,11 @@ export default function Radio() {
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-md border border-dashed border-primary/20 bg-background/80 p-4 text-sm text-muted-foreground">
-                        No spins recorded yet today. Submitting a song will immediately trigger airplay for this station.
-                      </div>
+                      !nowPlayingError && (
+                        <div className="rounded-md border border-dashed border-primary/20 bg-background/80 p-4 text-sm text-muted-foreground">
+                          No spins recorded yet today. Submitting a song will immediately trigger airplay for this station.
+                        </div>
+                      )
                     )}
 
                     <div className="space-y-3 rounded-md border border-primary/20 bg-background/70 p-3">
@@ -792,7 +1136,20 @@ export default function Radio() {
                           {currencyFormatter.format(dailyRevenueTotal || 0)}
                         </span>
                       </div>
-                      {aggregatedBandRevenue.length > 0 ? (
+                      {bandRadioEarningsLoading ? (
+                        <div className="space-y-2 text-sm">
+                          {Array.from({ length: 3 }).map((_, index) => (
+                            <Skeleton key={`revenue-skeleton-${index}`} className="h-10 w-full" />
+                          ))}
+                        </div>
+                      ) : bandRadioEarningsError ? (
+                        <Alert variant="destructive">
+                          <AlertTitle>Unable to load earnings</AlertTitle>
+                          <AlertDescription>
+                            {getErrorMessage(bandRadioEarningsErrorData)}
+                          </AlertDescription>
+                        </Alert>
+                      ) : aggregatedBandRevenue.length > 0 ? (
                         <div className="space-y-2 text-sm">
                           {aggregatedBandRevenue.map((entry) => (
                             <div
@@ -822,7 +1179,21 @@ export default function Radio() {
                         </div>
                         <span className="text-xs text-muted-foreground">Aggregated from all spins in the last 14 days</span>
                       </div>
-                      {fourteenDayTimeline.length > 0 ? (
+                      {stationPlayTimelineError && (
+                        <Alert variant="destructive" className="mt-3">
+                          <AlertTitle>Unable to load timeline</AlertTitle>
+                          <AlertDescription>
+                            {getErrorMessage(stationPlayTimelineErrorData)}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      {stationPlayTimelineLoading ? (
+                        <div className="mt-3 space-y-2 text-xs">
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <Skeleton key={`timeline-skeleton-${index}`} className="h-10 w-full" />
+                          ))}
+                        </div>
+                      ) : fourteenDayTimeline.length > 0 ? (
                         <div className="mt-3 grid gap-2 text-xs">
                           {fourteenDayTimeline.map((day) => (
                             <div
@@ -850,54 +1221,108 @@ export default function Radio() {
                           ))}
                         </div>
                       ) : (
-                        <p className="mt-3 text-xs text-muted-foreground">
-                          No spins recorded in the last 14 days.
-                        </p>
+                        !stationPlayTimelineError && (
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            No spins recorded in the last 14 days.
+                          </p>
+                        )
                       )}
                     </div>
-                  </div>
-                )}
 
-                {selectedStation && shows && shows.length > 0 && (
-                  <div className="pt-4">
-                    <h3 className="text-lg font-semibold mb-2">Shows on this station:</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {shows.map((show) => (
-                        <div key={show.id} className="p-3 border rounded-lg">
-                          <p className="font-medium">{show.show_name}</p>
-                          <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {show.show_genres?.map((genre: string) => (
-                              <Badge key={genre} variant="outline" className="text-xs">
-                                {genre}
-                              </Badge>
-                            ))}
-                          </div>
+                    <div className="space-y-3 pt-4">
+                      <h3 className="text-lg font-semibold">Shows on this station:</h3>
+                      {showsError && (
+                        <Alert variant="destructive">
+                          <AlertTitle>Unable to load station shows</AlertTitle>
+                          <AlertDescription>
+                            {getErrorMessage(showsErrorData)}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      {showsLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {Array.from({ length: 4 }).map((_, index) => (
+                            <div key={`show-skeleton-${index}`} className="p-3 border rounded-lg">
+                              <Skeleton className="h-4 w-1/2" />
+                              <Skeleton className="mt-2 h-3 w-1/3" />
+                              <div className="mt-3 flex flex-wrap gap-1">
+                                {Array.from({ length: 3 }).map((_, tagIndex) => (
+                                  <Skeleton key={tagIndex} className="h-5 w-16" />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : shows && shows.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {shows.map((show) => (
+                            <div key={show.id} className="p-3 border rounded-lg">
+                              <p className="font-medium">{show.show_name}</p>
+                              <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {show.show_genres?.map((genre: string) => (
+                                  <Badge key={genre} variant="outline" className="text-xs">
+                                    {genre}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        !showsError && (
+                          <p className="text-sm text-muted-foreground">
+                            No active shows are configured for this station yet.
+                          </p>
+                        )
+                      )}
                     </div>
                   </div>
                 )}
 
                 <div>
                   <label className="text-sm font-medium mb-2 block">Select Song</label>
-                  <Select value={selectedSong} onValueChange={setSelectedSong}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a recorded song" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {recordedSongs?.map((song) => (
-                        <SelectItem key={song.id} value={song.id}>
-                          {song.title} ({song.genre}) - Quality: {song.quality_score}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {recordedSongsError && (
+                    <Alert variant="destructive" className="mb-3">
+                      <AlertTitle>Unable to load recorded songs</AlertTitle>
+                      <AlertDescription>
+                        {getErrorMessage(recordedSongsErrorData)}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {recordedSongsLoading ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Select
+                      value={selectedSong}
+                      onValueChange={setSelectedSong}
+                      disabled={recordedSongsError || !recordedSongs?.length}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            recordedSongsError
+                              ? 'Unable to load songs'
+                              : recordedSongs?.length
+                              ? 'Choose a recorded song'
+                              : 'No recorded songs available'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {recordedSongs?.map((song) => (
+                          <SelectItem key={song.id} value={song.id}>
+                            {song.title} ({song.genre}) - Quality: {song.quality_score}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <Button
                   onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
+                  disabled={!selectedStation || !selectedSong || submitSong.isPending || !canSubmitSongs}
                   className="w-full"
                 >
                   <Send className="h-4 w-4 mr-2" />
@@ -908,7 +1333,32 @@ export default function Radio() {
           </TabsContent>
 
           <TabsContent value="submissions" className="space-y-4">
-            {mySubmissions?.length === 0 ? (
+            {mySubmissionsError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Unable to load your submissions</AlertTitle>
+                <AlertDescription>
+                  {getErrorMessage(mySubmissionsErrorData)}
+                </AlertDescription>
+              </Alert>
+            ) : mySubmissionsLoading ? (
+              Array.from({ length: 2 }).map((_, index) => (
+                <Card key={`submission-skeleton-${index}`}>
+                  <CardHeader>
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-1/2" />
+                      <Skeleton className="h-4 w-1/3" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {Array.from({ length: 3 }).map((_, lineIndex) => (
+                        <Skeleton key={lineIndex} className="h-4 w-full" />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : mySubmissions && mySubmissions.length === 0 ? (
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-center text-muted-foreground">
@@ -970,29 +1420,62 @@ export default function Radio() {
                 <CardDescription>Songs with the most hype from radio airplay</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {topSongs?.map((song, index) => (
-                    <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                        <span className="font-bold">{index + 1}</span>
+                {topSongsError && (
+                  <Alert variant="destructive" className="mb-3">
+                    <AlertTitle>Unable to load trending songs</AlertTitle>
+                    <AlertDescription>
+                      {getErrorMessage(topSongsErrorData)}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {topSongsLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div
+                        key={`top-song-skeleton-${index}`}
+                        className="flex items-center gap-4 rounded-lg border p-3"
+                      >
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-3 w-1/3" />
+                        </div>
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-5 w-20" />
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{song.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          by {song.profiles?.display_name}
-                        </p>
+                    ))}
+                  </div>
+                ) : topSongs && topSongs.length > 0 ? (
+                  <div className="space-y-3">
+                    {topSongs.map((song, index) => (
+                      <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                          <span className="font-bold">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{song.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            by {song.profiles?.display_name}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-green-500" />
+                          <span className="font-semibold">{song.hype || 0} hype</span>
+                        </div>
+                        <Badge variant="outline">{song.genre}</Badge>
+                        {song.total_radio_plays > 0 && (
+                          <Badge variant="secondary">{song.total_radio_plays} plays</Badge>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                        <span className="font-semibold">{song.hype || 0} hype</span>
-                      </div>
-                      <Badge variant="outline">{song.genre}</Badge>
-                      {song.total_radio_plays > 0 && (
-                        <Badge variant="secondary">{song.total_radio_plays} plays</Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  !topSongsError && (
+                    <p className="text-sm text-muted-foreground">
+                      No trending radio songs are available yet.
+                    </p>
+                  )
+                )}
               </CardContent>
             </Card>
 
