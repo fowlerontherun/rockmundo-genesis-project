@@ -30,6 +30,7 @@ export interface GearModifierEffects {
   attendanceBonusPercent: number;
   reliabilityStability: number;
   reliabilitySwingReductionPercent: number;
+  breakdownRiskPercent: number;
   revenueMultiplier: number;
   revenueBonusPercent: number;
   fameMultiplier: number;
@@ -58,6 +59,7 @@ export const EMPTY_GEAR_EFFECTS: GearModifierEffects = {
   attendanceBonusPercent: 0,
   reliabilityStability: 0,
   reliabilitySwingReductionPercent: 0,
+  breakdownRiskPercent: 0,
   revenueMultiplier: 1,
   revenueBonusPercent: 0,
   fameMultiplier: 1,
@@ -109,6 +111,66 @@ export function mapEquippedGearRows(rows: PlayerEquipmentRow[] | null | undefine
     });
 }
 
+const RELIABILITY_KEYWORDS = [
+  "reliab",
+  "stability",
+  "integrity",
+  "durab",
+  "rig",
+  "signal",
+  "shield",
+  "redundancy",
+];
+
+const DURABILITY_PENALTY_KEYWORDS = [
+  "durab",
+  "fragile",
+  "wear",
+  "stress",
+  "fault",
+  "glitch",
+  "crackle",
+  "penalty",
+];
+
+const matchesReliabilityKey = (key: string) =>
+  RELIABILITY_KEYWORDS.some((keyword) => key.includes(keyword));
+
+const matchesPenaltyKey = (key: string) =>
+  DURABILITY_PENALTY_KEYWORDS.some((keyword) => key.includes(keyword));
+
+const analyzeReliabilityStats = (stats: Record<string, number> | undefined) => {
+  let hasReliabilityKey = false;
+  let positive = 0;
+  let negative = 0;
+
+  if (!stats) {
+    return { hasReliabilityKey, positive, negative };
+  }
+
+  for (const [rawKey, rawValue] of Object.entries(stats)) {
+    const key = rawKey.toLowerCase();
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+
+    if (matchesReliabilityKey(key)) {
+      hasReliabilityKey = true;
+      if (value > 0) {
+        positive += value;
+        continue;
+      }
+    }
+
+    if (value < 0 && (matchesReliabilityKey(key) || matchesPenaltyKey(key))) {
+      negative += Math.abs(value);
+    }
+  }
+
+  return { hasReliabilityKey, positive, negative };
+};
+
 const getRarityReliabilityBonus = (rarity: string | null): number => {
   switch ((rarity ?? "").toLowerCase()) {
     case "legendary":
@@ -136,11 +198,13 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
   let performancePoints = 0;
   let vocalPresencePoints = 0;
   let famePoints = 0;
-  let reliabilityPoints = 0;
+  let reliabilityBonusPool = 0;
+  let reliabilityPenaltyPool = 0;
 
   for (const item of items) {
     const stats = item.statBoosts ?? {};
-    performancePoints += stats.performance ?? 0;
+    const performanceBoost = stats.performance ?? 0;
+    performancePoints += performanceBoost;
     vocalPresencePoints += (stats.vocals ?? 0) + (stats.stage_presence ?? 0);
     famePoints += stats.fame ?? 0;
 
@@ -153,8 +217,22 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
       name.includes("pedal") ||
       name.includes("stomp");
 
-    if (isPedal) {
-      reliabilityPoints += getRarityReliabilityBonus(item.rarity ?? null);
+    const reliabilityMetrics = analyzeReliabilityStats(stats);
+
+    if (isPedal && reliabilityMetrics.hasReliabilityKey) {
+      const baseBonus = getRarityReliabilityBonus(item.rarity ?? null);
+      if (baseBonus > 0) {
+        const scaling = reliabilityMetrics.positive >= 2 ? 1 : reliabilityMetrics.positive > 0 ? 0.5 : 0;
+        reliabilityBonusPool += baseBonus * scaling;
+      }
+    }
+
+    if (reliabilityMetrics.positive > 0) {
+      reliabilityBonusPool += Math.min(0.03, reliabilityMetrics.positive * 0.004);
+    }
+
+    if (reliabilityMetrics.negative > 0) {
+      reliabilityPenaltyPool += Math.min(0.04, reliabilityMetrics.negative * 0.01);
     }
 
     // High-end vocal chains often bundle performance boosts, treat microphones similarly
@@ -163,8 +241,11 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
       subcategory.includes("mic") ||
       (item.category ?? "").toLowerCase().includes("microphone");
 
-    if (isMicrophone) {
-      vocalPresencePoints += stats.performance ?? 0;
+    if (isMicrophone && performanceBoost > 0) {
+      const threshold = 2;
+      const cappedPerformance = Math.min(5, performanceBoost);
+      const scaling = performanceBoost >= threshold ? 1 : 0.5;
+      vocalPresencePoints += cappedPerformance * scaling;
     }
   }
 
@@ -172,8 +253,10 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
   const attendanceBonusPercent = Math.min(25, vocalPresencePoints * 0.8);
   const crowdEngagementMultiplier = 1 + attendanceBonusPercent / 100;
 
-  const reliabilityStability = Math.min(0.05, reliabilityPoints);
-  const reliabilitySwingReductionPercent = reliabilityStability * 100;
+  const netReliability = Math.max(0, reliabilityBonusPool - reliabilityPenaltyPool);
+  const reliabilityStability = Math.min(0.05, netReliability);
+  const reliabilitySwingReductionPercent = Math.max(0, reliabilityStability * 100);
+  const breakdownRiskPercent = Math.min(40, Math.max(0, reliabilityPenaltyPool) * 100);
 
   const revenueBonusPercent = Math.min(18, performancePoints * 0.6 + vocalPresencePoints * 0.3);
   const revenueMultiplier = 1 + revenueBonusPercent / 100;
@@ -188,7 +271,7 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
       key: "signal-chain",
       label: "Signal Chain Quality",
       value: `+${equipmentQualityBonus.toFixed(1)} EQ`,
-      description: "Premium processors and amps lift your equipment score every song.",
+      description: "Premium processors raise your equipment score until the touring cap kicks in.",
     });
   }
 
@@ -197,7 +280,7 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
       key: "crowd-engagement",
       label: "Crowd Engagement",
       value: `+${formatPercent(attendanceBonusPercent)}`,
-      description: "High-end microphones and vocal rigs energize the audience.",
+      description: "High-end vocal chains energize the audience with capped gains for starter gear.",
     });
   }
 
@@ -206,7 +289,16 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
       key: "rig-reliability",
       label: "Rig Reliability",
       value: `-${formatPercent(reliabilitySwingReductionPercent)}`,
-      description: "Rare pedals steady your signal chain and prevent rough nights.",
+      description: "Reliability mods steady your rig and shave off variance until the safety cap.",
+    });
+  }
+
+  if (breakdownRiskPercent > 0.5) {
+    breakdown.push({
+      key: "breakdown-risk",
+      label: "Breakdown Risk",
+      value: `+${formatPercent(breakdownRiskPercent)}`,
+      description: "Fragile components raise failure odds and widen night-to-night swings.",
     });
   }
 
@@ -215,7 +307,7 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
       key: "payout",
       label: "Merch & Payout Boost",
       value: `+${formatPercent(revenueBonusPercent)}`,
-      description: "Polished tone keeps fans spending after the show.",
+      description: "Polished tone keeps fans spending, with diminishing returns past premium tiers.",
     });
   }
 
@@ -224,7 +316,7 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
       key: "reputation",
       label: "Reputation Gains",
       value: `+${formatPercent(fameBonusPercent)}`,
-      description: "Signature gear leaves a lasting impression on the scene.",
+      description: "Signature gear leaves a mark until the scene recognition cap is reached.",
     });
   }
 
@@ -234,6 +326,7 @@ export function calculateGearModifiers(items: EquippedGearItem[]): GearModifierE
     attendanceBonusPercent,
     reliabilityStability,
     reliabilitySwingReductionPercent,
+    breakdownRiskPercent,
     revenueMultiplier,
     revenueBonusPercent,
     fameMultiplier,
