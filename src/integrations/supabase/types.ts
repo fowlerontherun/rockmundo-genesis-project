@@ -3904,6 +3904,117 @@ export type Database = {
           },
         ]
       }
+      player_scheduled_activities: {
+        Row: {
+          activity_type: string
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          linked_gig_id: string | null
+          linked_job_shift_id: string | null
+          linked_recording_id: string | null
+          linked_rehearsal_id: string | null
+          location: string | null
+          metadata: Json | null
+          profile_id: string
+          reminder_minutes_before: number | null
+          reminder_sent: boolean | null
+          scheduled_end: string
+          scheduled_start: string
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          linked_gig_id?: string | null
+          linked_job_shift_id?: string | null
+          linked_recording_id?: string | null
+          linked_rehearsal_id?: string | null
+          location?: string | null
+          metadata?: Json | null
+          profile_id: string
+          reminder_minutes_before?: number | null
+          reminder_sent?: boolean | null
+          scheduled_end: string
+          scheduled_start: string
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          linked_gig_id?: string | null
+          linked_job_shift_id?: string | null
+          linked_recording_id?: string | null
+          linked_rehearsal_id?: string | null
+          location?: string | null
+          metadata?: Json | null
+          profile_id?: string
+          reminder_minutes_before?: number | null
+          reminder_sent?: boolean | null
+          scheduled_end?: string
+          scheduled_start?: string
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_scheduled_activities_linked_gig_id_fkey"
+            columns: ["linked_gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_scheduled_activities_linked_job_shift_id_fkey"
+            columns: ["linked_job_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_scheduled_activities_linked_recording_id_fkey"
+            columns: ["linked_recording_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_scheduled_activities_linked_rehearsal_id_fkey"
+            columns: ["linked_rehearsal_id"]
+            isOneToOne: false
+            referencedRelation: "band_rehearsals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_scheduled_activities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_skills: {
         Row: {
           bass: number
@@ -5325,6 +5436,51 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setlist_performance_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_encore: boolean | null
+          notes: string | null
+          performance_item_id: string
+          position: number
+          setlist_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_encore?: boolean | null
+          notes?: string | null
+          performance_item_id: string
+          position: number
+          setlist_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_encore?: boolean | null
+          notes?: string | null
+          performance_item_id?: string
+          position?: number
+          setlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setlist_performance_items_performance_item_id_fkey"
+            columns: ["performance_item_id"]
+            isOneToOne: false
+            referencedRelation: "performance_items_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setlist_performance_items_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
             referencedColumns: ["id"]
           },
         ]
@@ -7824,6 +7980,15 @@ export type Database = {
           p_skill_songwriting: number
         }
         Returns: Json
+      }
+      check_scheduling_conflict: {
+        Args: {
+          p_end: string
+          p_exclude_id?: string
+          p_start: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       get_setlist_total_duration: {

@@ -1,9 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from "../_shared/job-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-triggered-by",
 };
 
 serve(async (req) => {
@@ -11,11 +18,26 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
+
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
+  let runId: string | null = null;
+  const startedAt = Date.now();
+
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    runId = await startJobRun({
+      jobName: "auto-complete-gigs",
+      functionName: "auto-complete-gigs",
+      supabaseClient,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    });
 
     console.log('[auto-complete-gigs] Checking for gigs to complete...');
 
@@ -131,6 +153,15 @@ serve(async (req) => {
 
     console.log(`[auto-complete-gigs] Processed ${processedCount} songs, completed ${completedCount} gigs`);
 
+    await completeJobRun({
+      jobName: "auto-complete-gigs",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      processedCount: processedCount,
+      resultSummary: { completedGigs: completedCount, totalChecked: inProgressGigs?.length || 0 },
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -142,8 +173,17 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in auto-complete-gigs:", error);
+
+    await failJobRun({
+      jobName: "auto-complete-gigs",
+      runId,
+      supabaseClient,
+      durationMs: Date.now() - startedAt,
+      error,
+    });
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

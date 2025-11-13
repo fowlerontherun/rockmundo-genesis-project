@@ -1,8 +1,16 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import {
+  completeJobRun,
+  failJobRun,
+  getErrorMessage,
+  safeJson,
+  startJobRun,
+} from "../_shared/job-logger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-triggered-by',
 };
 
 interface ScheduledActivity {
@@ -24,10 +32,25 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  let runId: string | null = null;
+  const startedAt = Date.now();
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    runId = await startJobRun({
+      jobName: "process-scheduled-activities",
+      functionName: "process-scheduled-activities",
+      supabaseClient: supabase,
+      triggeredBy,
+      requestPayload: payload ?? null,
+      requestId: payload?.requestId ?? null,
+    });
 
     const now = new Date().toISOString();
     let processedCount = 0;
@@ -111,6 +134,15 @@ Deno.serve(async (req) => {
 
     processedCount = startedCount + completedCount;
 
+    await completeJobRun({
+      jobName: "process-scheduled-activities",
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      processedCount,
+      resultSummary: { startedCount, completedCount, missedCount: toMiss?.length || 0 },
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -123,8 +155,17 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('Error processing scheduled activities:', error);
+
+    await failJobRun({
+      jobName: "process-scheduled-activities",
+      runId,
+      supabaseClient: supabase,
+      durationMs: Date.now() - startedAt,
+      error,
+    });
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: getErrorMessage(error) }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
