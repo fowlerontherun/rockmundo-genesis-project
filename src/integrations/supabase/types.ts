@@ -5374,9 +5374,17 @@ export type Database = {
           created_at: string
           id: string
           image_quality: string
+          kpi_chart_target: string | null
+          kpi_view_target: number | null
           location_style: string | null
+          primary_platform: string | null
           production_notes: string | null
           release_id: string | null
+          shoot_end_date: string | null
+          shoot_start_date: string | null
+          status: string
+          sync_strategy: string
+          target_release_date: string | null
           theme: string
           updated_at: string
           user_id: string
@@ -5392,9 +5400,17 @@ export type Database = {
           created_at?: string
           id?: string
           image_quality: string
+          kpi_chart_target?: string | null
+          kpi_view_target?: number | null
           location_style?: string | null
+          primary_platform?: string | null
           production_notes?: string | null
           release_id?: string | null
+          shoot_end_date?: string | null
+          shoot_start_date?: string | null
+          status?: string
+          sync_strategy?: string
+          target_release_date?: string | null
           theme: string
           updated_at?: string
           user_id: string
@@ -5410,9 +5426,17 @@ export type Database = {
           created_at?: string
           id?: string
           image_quality?: string
+          kpi_chart_target?: string | null
+          kpi_view_target?: number | null
           location_style?: string | null
+          primary_platform?: string | null
           production_notes?: string | null
           release_id?: string | null
+          shoot_end_date?: string | null
+          shoot_start_date?: string | null
+          status?: string
+          sync_strategy?: string
+          target_release_date?: string | null
           theme?: string
           updated_at?: string
           user_id?: string
@@ -5439,6 +5463,7 @@ export type Database = {
         Row: {
           chart_name: string | null
           chart_position: number | null
+          chart_target: string | null
           chart_velocity: number | null
           created_at: string
           id: string
@@ -5446,13 +5471,16 @@ export type Database = {
           mtv_program: string | null
           mtv_spins: number | null
           music_video_id: string
+          platform: string | null
           updated_at: string
+          views_target: number | null
           youtube_video_id: string | null
           youtube_views: number | null
         }
         Insert: {
           chart_name?: string | null
           chart_position?: number | null
+          chart_target?: string | null
           chart_velocity?: number | null
           created_at?: string
           id?: string
@@ -5460,13 +5488,16 @@ export type Database = {
           mtv_program?: string | null
           mtv_spins?: number | null
           music_video_id: string
+          platform?: string | null
           updated_at?: string
+          views_target?: number | null
           youtube_video_id?: string | null
           youtube_views?: number | null
         }
         Update: {
           chart_name?: string | null
           chart_position?: number | null
+          chart_target?: string | null
           chart_velocity?: number | null
           created_at?: string
           id?: string
@@ -5474,7 +5505,9 @@ export type Database = {
           mtv_program?: string | null
           mtv_spins?: number | null
           music_video_id?: string
+          platform?: string | null
           updated_at?: string
+          views_target?: number | null
           youtube_video_id?: string | null
           youtube_views?: number | null
         }
