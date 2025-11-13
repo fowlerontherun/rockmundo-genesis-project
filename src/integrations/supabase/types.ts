@@ -8373,6 +8373,18 @@ export type Database = {
         }
         Returns: Json
       }
+      check_radio_submission_week: {
+        Args: {
+          p_station_id: string
+          p_song_id: string
+          p_anchor?: number
+          p_reference?: string
+        }
+        Returns: {
+          week_start_date: string | null
+          already_submitted: boolean | null
+        }[]
+      }
       check_scheduling_conflict: {
         Args: {
           p_end: string

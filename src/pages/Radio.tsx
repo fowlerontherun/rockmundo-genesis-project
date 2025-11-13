@@ -22,6 +22,7 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+import { formatUtcDate, getUtcWeekStart } from "@/utils/week";
 
 type ProfileBand = {
   id: string;
@@ -397,20 +398,20 @@ export default function Radio() {
         throw new Error('Please select a station and song');
       }
 
-      // Check if already submitted this week
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      const weekStartDate = weekStart.toISOString().split('T')[0];
+      const { data: weekCheckData, error: weekCheckError } = await supabase.rpc('check_radio_submission_week', {
+        p_station_id: selectedStation,
+        p_song_id: selectedSong,
+      });
 
-      const { data: existing } = await supabase
-        .from('radio_submissions')
-        .select('id')
-        .eq('station_id', selectedStation)
-        .eq('song_id', selectedSong)
-        .eq('week_submitted', weekStartDate)
-        .maybeSingle();
+      if (weekCheckError) {
+        console.error('Failed to verify radio submission window', weekCheckError);
+        throw new Error('Unable to verify submission window. Please try again.');
+      }
 
-      if (existing) {
+      const weekCheck = Array.isArray(weekCheckData) ? weekCheckData[0] : weekCheckData;
+      const weekStartDate = weekCheck?.week_start_date ?? formatUtcDate(getUtcWeekStart(new Date(), 1));
+
+      if (weekCheck?.already_submitted) {
         throw new Error('You have already submitted this song to this station this week');
       }
 
