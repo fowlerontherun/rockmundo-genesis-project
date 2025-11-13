@@ -1,5 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
-import { calculateSongPerformance, calculateMerchSales, getPerformanceGrade, type PerformanceFactors } from "./gigPerformanceCalculator";
+import {
+  calculateSongPerformance,
+  calculateMerchSales,
+  getPerformanceGrade,
+  type PerformanceFactors,
+} from "./gigPerformanceCalculator";
+import {
+  EMPTY_GEAR_EFFECTS,
+  calculateGearModifiers,
+  mapEquippedGearRows,
+  type EquippedGearItem,
+  type GearModifierEffects,
+  type PlayerEquipmentRow,
+} from "./gearModifiers";
 
 interface GigExecutionData {
   gigId: string;
@@ -43,10 +56,37 @@ export async function executeGigPerformance(data: GigExecutionData) {
 
   if (!band) throw new Error('Band not found');
 
+  // Fetch equipped player gear for modifier calculations
+  let equippedGearItems: EquippedGearItem[] = [];
+  let gearEffects: GearModifierEffects = { ...EMPTY_GEAR_EFFECTS };
+
+  const memberIds = members
+    .map((member) => member.user_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+  if (memberIds.length > 0) {
+    const { data: gearRows, error: gearError } = await supabase
+      .from('player_equipment')
+      .select(
+        'id, user_id, equipment_id, is_equipped, equipment:equipment_items!equipment_id (id, name, category, subcategory, rarity, stat_boosts)'
+      )
+      .in('user_id', memberIds)
+      .eq('is_equipped', true);
+
+    if (gearError) {
+      throw gearError;
+    }
+
+    equippedGearItems = mapEquippedGearRows(gearRows as PlayerEquipmentRow[]);
+    gearEffects = calculateGearModifiers(equippedGearItems);
+  }
+
   // Calculate performance factors
-  const equipmentQuality = equipment.length > 0
+  const baseEquipmentQuality = equipment.length > 0
     ? equipment.reduce((sum, eq) => sum + eq.quality_rating, 0) / equipment.length
     : 40;
+
+  const equipmentQuality = Math.min(100, baseEquipmentQuality + gearEffects.equipmentQualityBonus);
 
   const crewSkillLevel = crew.length > 0
     ? crew.reduce((sum, c) => sum + c.skill_level, 0) / crew.length
@@ -58,10 +98,15 @@ export async function executeGigPerformance(data: GigExecutionData) {
     ? members.reduce((sum, m) => sum + (m.skill_contribution || 50), 0) / members.length
     : 50;
 
-  // Calculate actual attendance (with some variance)
+  // Calculate actual attendance (with variance adjusted by gear reliability and hype)
   const baseAttendance = Math.floor(venueCapacity * 0.7); // Base 70% capacity
-  const variance = Math.random() * 0.3 - 0.15; // -15% to +15% variance
-  const actualAttendance = Math.max(1, Math.floor(baseAttendance * (1 + variance)));
+  const attendanceVarianceRange = 0.3 - gearEffects.reliabilityStability * 1.2;
+  const boundedVarianceRange = Math.max(0.1, attendanceVarianceRange);
+  const varianceSwing = (Math.random() * boundedVarianceRange) - boundedVarianceRange / 2;
+  const attendanceFromVariance = Math.max(0, 1 + varianceSwing + gearEffects.reliabilityStability);
+  const gearAttendanceMultiplier = Math.max(0.5, gearEffects.crowdEngagementMultiplier);
+  const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier;
+  const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
   const venueCapacityUsed = (actualAttendance / venueCapacity) * 100;
 
   // Calculate performance for each song
@@ -76,7 +121,8 @@ export async function executeGigPerformance(data: GigExecutionData) {
       equipmentQuality,
       crewSkillLevel,
       memberSkillAverage,
-      venueCapacityUsed
+      venueCapacityUsed,
+      gearReliabilityBonus: gearEffects.reliabilityStability
     };
 
     const result = calculateSongPerformance(factors);
@@ -100,12 +146,17 @@ export async function executeGigPerformance(data: GigExecutionData) {
   const overallRating = songPerformances.reduce((sum, p) => sum + p.performance_score, 0) / songPerformances.length;
 
   // Calculate merch sales
-  const merchSales = calculateMerchSales(
+  const merchBase = calculateMerchSales(
     actualAttendance,
     band.fame || 0,
     overallRating,
     merch
   );
+
+  const merchSales = {
+    totalRevenue: Math.round(merchBase.totalRevenue * gearEffects.revenueMultiplier),
+    itemsSold: Math.max(0, Math.round(merchBase.itemsSold * gearEffects.revenueMultiplier))
+  };
 
   // Calculate costs
   const crewCosts = crew.reduce((sum, c) => sum + c.salary_per_gig, 0);
@@ -115,12 +166,12 @@ export async function executeGigPerformance(data: GigExecutionData) {
   }, 0);
 
   // Calculate revenue and profit
-  const ticketRevenue = actualAttendance * ticketPrice;
+  const ticketRevenue = Math.round(actualAttendance * ticketPrice * gearEffects.revenueMultiplier);
   const totalRevenue = ticketRevenue + merchSales.totalRevenue;
   const netProfit = totalRevenue - crewCosts - equipmentWearCost;
 
   // Calculate fame gained
-  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5);
+  const fameGained = Math.round((overallRating / 25) * actualAttendance * 0.5 * gearEffects.fameMultiplier);
 
   // Calculate chemistry impact
   let chemistryImpact = 0;
@@ -168,7 +219,12 @@ export async function executeGigPerformance(data: GigExecutionData) {
       chemistry_change: chemistryImpact,
       merch_items_sold: merchSales.itemsSold,
       venue_name: venueData?.name,
-      venue_capacity: venueData?.capacity
+      venue_capacity: venueData?.capacity,
+      band_synergy_modifier: Number(gearEffects.equipmentQualityBonus.toFixed(2)),
+      social_buzz_impact: Number(gearEffects.attendanceBonusPercent.toFixed(2)),
+      audience_memory_impact: Number(gearEffects.reliabilitySwingReductionPercent.toFixed(2)),
+      promoter_modifier: Number(gearEffects.revenueBonusPercent.toFixed(2)),
+      venue_loyalty_bonus: Number(gearEffects.fameBonusPercent.toFixed(2))
     })
     .select()
     .single();

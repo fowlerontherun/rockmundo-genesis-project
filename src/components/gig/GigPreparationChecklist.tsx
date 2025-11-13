@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle, XCircle, Music, Users, Zap } from "lucide-react";
+import { CheckCircle2, AlertCircle, XCircle, Music, Users, Zap, Sparkles, Loader2 } from "lucide-react";
+import type { GearModifierEffects } from "@/utils/gearModifiers";
 
 interface RehearsalData {
   song_id: string;
@@ -15,6 +16,9 @@ interface GigPreparationChecklistProps {
   equipmentCount: number;
   crewCount: number;
   bandChemistry: number;
+  gearEffects?: GearModifierEffects | null;
+  equippedGearCount?: number;
+  gearLoading?: boolean;
 }
 
 export const GigPreparationChecklist = ({
@@ -22,7 +26,10 @@ export const GigPreparationChecklist = ({
   rehearsals,
   equipmentCount,
   crewCount,
-  bandChemistry
+  bandChemistry,
+  gearEffects,
+  equippedGearCount = 0,
+  gearLoading = false
 }: GigPreparationChecklistProps) => {
   
   // Calculate rehearsal readiness
@@ -45,6 +52,9 @@ export const GigPreparationChecklist = ({
   const wellRehearsed = rehearsalPercentage >= 80;
 
   const readinessScore = [hasEquipment, hasCrew, goodChemistry, wellRehearsed].filter(Boolean).length;
+
+  const hasGearBonuses = Boolean(gearEffects && gearEffects.breakdown.length > 0);
+  const formattedGearEffects = gearEffects;
 
   const getReadinessColor = () => {
     if (readinessScore >= 4) return "default";
@@ -167,6 +177,86 @@ export const GigPreparationChecklist = ({
               </>
             )}
           </div>
+        </div>
+
+        {/* Gear Impact */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">Gear Impact</span>
+            <div className="flex items-center gap-2">
+              {gearLoading ? (
+                <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading
+                </Badge>
+              ) : hasGearBonuses ? (
+                <Badge variant="default" className="flex items-center gap-1 text-xs">
+                  <Sparkles className="h-3 w-3" />
+                  Active Bonuses
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs">
+                  No Bonuses
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {equippedGearCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {equippedGearCount} bonus {equippedGearCount === 1 ? 'item is' : 'items are'} equipped by your bandmates.
+            </p>
+          )}
+
+          {!gearLoading && (!formattedGearEffects || formattedGearEffects.breakdown.length === 0) && (
+            <p className="text-sm text-muted-foreground">
+              Equip high-end microphones, pedals, and processors to unlock performance boosts before the show.
+            </p>
+          )}
+
+          {hasGearBonuses && formattedGearEffects && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Crowd Energy</span>
+                    <span className="font-semibold text-primary">+{formattedGearEffects.attendanceBonusPercent.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Rig Stability</span>
+                    <span className="font-semibold text-primary">-{formattedGearEffects.reliabilitySwingReductionPercent.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Payout Lift</span>
+                    <span className="font-semibold text-primary">+{formattedGearEffects.revenueBonusPercent.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="rounded-md border border-dashed border-primary/40 p-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Reputation Boost</span>
+                    <span className="font-semibold text-primary">+{formattedGearEffects.fameBonusPercent.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1 pl-6">
+                {formattedGearEffects.breakdown.map((entry) => (
+                  <div key={entry.key} className="flex flex-col text-sm">
+                    <span className="flex items-center gap-2 font-medium">
+                      <CheckCircle2 className="h-3 w-3 text-primary" />
+                      {entry.label}
+                      <Badge variant="outline" className="text-xs">{entry.value}</Badge>
+                    </span>
+                    <span className="pl-5 text-xs text-muted-foreground">{entry.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {readinessScore < 3 && (

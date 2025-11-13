@@ -7,6 +7,7 @@ export interface PerformanceFactors {
   memberSkillAverage: number; // 0-150 from band skill calculator
   venueCapacityUsed: number;  // 0-100 percentage
   productionNotesBonus?: number; // 0-0.30 (0-30% bonus from production notes)
+  gearReliabilityBonus?: number; // 0-0.05 (reduces negative variance swings)
 }
 
 export interface SongPerformanceResult {
@@ -67,8 +68,11 @@ export function calculateSongPerformance(factors: PerformanceFactors): SongPerfo
     capacityMultiplier = 0.85; // empty venue = bad energy
   }
   
-  // Add random variance (±5%) for realism
-  const variance = 0.95 + (Math.random() * 0.1);
+  // Add random variance (±5%) for realism with gear reliability dampening swings
+  const reliabilityBonus = Math.max(0, Math.min(0.05, factors.gearReliabilityBonus ?? 0));
+  const varianceFloor = 0.95 + reliabilityBonus;
+  const varianceRange = Math.max(0.02, 0.1 - reliabilityBonus * 1.5);
+  const variance = varianceFloor + Math.random() * varianceRange;
   
   // Apply production notes bonus
   const productionMultiplier = 1 + (factors.productionNotesBonus || 0);

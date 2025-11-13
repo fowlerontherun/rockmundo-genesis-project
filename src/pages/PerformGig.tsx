@@ -14,6 +14,7 @@ import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
 import { format } from 'date-fns';
+import { useBandGearEffects } from '@/hooks/useBandGearEffects';
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -35,6 +36,13 @@ export default function PerformGig() {
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
+
+  const { data: bandGearData, isLoading: bandGearLoading } = useBandGearEffects(gig?.band_id ?? null, {
+    enabled: !!gig?.band_id,
+  });
+
+  const gearEffects = bandGearData?.gearEffects;
+  const equippedGearCount = bandGearData?.gearItems.length ?? 0;
 
   const loadGig = useCallback(async () => {
     if (!gigId || !user) return;
@@ -109,7 +117,15 @@ export default function PerformGig() {
             merch_items_sold: existingOutcome.merch_items_sold || 0
           },
           chemistry_impact: existingOutcome.chemistry_change || 0,
-          equipment_wear_cost: existingOutcome.equipment_cost || 0
+          equipment_wear_cost: existingOutcome.equipment_cost || 0,
+          gear_effects: {
+            equipmentQualityBonus: existingOutcome.band_synergy_modifier || 0,
+            attendanceBonusPercent: existingOutcome.social_buzz_impact || 0,
+            reliabilitySwingReductionPercent: existingOutcome.audience_memory_impact || 0,
+            revenueBonusPercent: existingOutcome.promoter_modifier || 0,
+            fameBonusPercent: existingOutcome.venue_loyalty_bonus || 0,
+            breakdown: existingOutcome.gear_effects?.breakdown,
+          }
         };
         setOutcome(transformedOutcome);
         setShowOutcome(true);
@@ -295,6 +311,9 @@ export default function PerformGig() {
           equipmentCount={equipmentCount}
           crewCount={crewCount}
           bandChemistry={bandChemistry}
+          gearEffects={gearEffects}
+          equippedGearCount={equippedGearCount}
+          gearLoading={bandGearLoading}
         />
       )}
 
@@ -391,6 +410,7 @@ export default function PerformGig() {
         venueName={gig.venues?.name || 'Unknown Venue'}
         venueCapacity={gig.venues?.capacity || 0}
         songs={setlistSongs.map(s => ({ id: s.song_id, title: s.songs?.title || 'Unknown' }))}
+        gearEffects={gearEffects}
       />
     </div>
   );

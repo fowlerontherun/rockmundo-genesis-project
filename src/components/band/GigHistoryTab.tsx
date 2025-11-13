@@ -7,6 +7,7 @@ import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles } from "lucide-
 import { format } from "date-fns";
 import { useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
+import { useBandGearEffects } from "@/hooks/useBandGearEffects";
 import type { Database } from "@/lib/supabase-types";
 
 interface GigHistoryTabProps {
@@ -51,11 +52,23 @@ type GigOutcomeWithDetails = GigHistoryOutcome & {
   equipment_wear_cost: number;
   merch_sales: number;
   crew_costs: number;
+  gear_effects?: {
+    equipmentQualityBonus: number;
+    attendanceBonusPercent: number;
+    reliabilitySwingReductionPercent: number;
+    revenueBonusPercent: number;
+    fameBonusPercent: number;
+    breakdown?: Array<{ key: string; label: string; value: string; description: string }>;
+  };
 };
 
 export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [selectedOutcome, setSelectedOutcome] = useState<GigOutcomeWithDetails | null>(null);
   const [showReport, setShowReport] = useState(false);
+
+  const { data: selectedGearData } = useBandGearEffects(selectedOutcome?.gigs?.band_id ?? bandId, {
+    enabled: showReport && Boolean(selectedOutcome?.gigs?.band_id ?? bandId),
+  });
 
     const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
     queryKey: ['gig-history', bandId],
@@ -112,7 +125,15 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
       chemistry_impact: outcome.chemistry_change || 0,
       equipment_wear_cost: outcome.equipment_cost || 0,
       merch_sales: outcome.merch_revenue || 0,
-      crew_costs: outcome.crew_cost || 0
+      crew_costs: outcome.crew_cost || 0,
+      gear_effects: {
+        equipmentQualityBonus: outcome.band_synergy_modifier || 0,
+        attendanceBonusPercent: outcome.social_buzz_impact || 0,
+        reliabilitySwingReductionPercent: outcome.audience_memory_impact || 0,
+        revenueBonusPercent: outcome.promoter_modifier || 0,
+        fameBonusPercent: outcome.venue_loyalty_bonus || 0,
+        breakdown: outcome.gear_effects?.breakdown,
+      }
     } as GigOutcomeWithDetails);
     setShowReport(true);
   };
@@ -264,6 +285,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
               id: performance.song_id || performance.id,
               title: performance.songs?.title || 'Unknown Song'
             }))}
+            gearEffects={selectedGearData?.gearEffects}
           />
         )}
       </>
