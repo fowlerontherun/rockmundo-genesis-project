@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BadgeDollarSign, Filter, Loader2, PackageSearch, Shield, ShoppingBag, ShoppingCart, Sparkles } from "lucide-react";
@@ -31,35 +31,49 @@ import {
   qualityTierStyles,
 } from "@/utils/gearQuality";
 import { GearRarityKey, getRarityLabel, parseRarityKey, rarityStyles } from "@/utils/gearRarity";
+import { GearComparisonDrawer, type ComparableGearItem } from "@/components/gear/GearComparisonDrawer";
+import type { PlayerEquipmentWithItem } from "@/hooks/usePlayerEquipment";
 
-interface GearShopItem {
-  id: string;
-  name: string;
-  category: string;
-  subcategory: string | null;
-  price: number;
-  rarity: string | null;
-  description: string | null;
+interface GearShopItem extends Omit<EquipmentItemRecord, "stat_boosts"> {
   stat_boosts: Record<string, number> | null;
-  stock: number | null;
+  gear_category?: GearCategory | null;
   qualityTier: GearQualityTier;
   rarityKey: GearRarityKey;
 }
 
+interface GearShopSnapshotRow {
+  equipment_id: string;
+  stock: number | null;
+  cash: number | null;
+  reserved_funds: number | null;
+}
+
+interface PurchaseResultRow {
+  player_equipment_id: string | null;
+  remaining_stock: number | null;
+  new_cash: number | null;
+}
+
+interface OptimisticReservationState {
+  reservedStock: number;
+  reservedFunds: number;
+}
+
+type PurchaseMutationInput = {
+  item: GearShopItem;
+};
+
+type PurchaseMutationContext = {
+  itemId: string;
+  price: number;
+};
+
+const SNAPSHOT_QUERY_KEY = ["gear-shop-snapshot"] as const;
+
 type QualityFilterValue = "all" | GearQualityTier;
 type RarityFilterValue = "all" | GearRarityKey;
-
-type RawEquipmentRow = {
-  id: string;
-  name: string;
-  category: string;
-  subcategory: string | null;
-  price: number;
-  rarity: string | null;
-  description: string | null;
-  stat_boosts: Record<string, number> | null;
-  stock: number | null;
-};
+type CurrencyFilterValue = "all" | "cash" | "fame" | "hybrid";
+type StockFilterValue = "all" | "limited" | "unlimited" | "auto-restock";
 
 const QUALITY_FILTERS: QualityFilterValue[] = [
   "all",
@@ -70,33 +84,23 @@ const QUALITY_FILTERS: QualityFilterValue[] = [
   "experimental",
 ];
 
-const normalizeStatBoosts = (value: unknown): Record<string, number> | null => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
+const CURRENCY_FILTER_OPTIONS: Array<{ value: CurrencyFilterValue; label: string }> = [
+  { value: "all", label: "All costs" },
+  { value: "cash", label: "Cash only" },
+  { value: "fame", label: "Fame only" },
+  { value: "hybrid", label: "Cash + Fame" },
+];
 
-  const entries: Array<[string, number]> = [];
+const STOCK_FILTER_OPTIONS: Array<{ value: StockFilterValue; label: string }> = [
+  { value: "all", label: "Any stock policy" },
+  { value: "limited", label: "Limited stock" },
+  { value: "unlimited", label: "Unlimited stock" },
+  { value: "auto-restock", label: "Auto restock" },
+];
 
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    const numericValue = typeof raw === "number" && Number.isFinite(raw) ? raw : Number(raw);
-
-    if (!Number.isFinite(numericValue)) {
-      continue;
-    }
-
-    entries.push([key, numericValue]);
-  }
-
-  if (entries.length === 0) {
-    return null;
-  }
-
-  return Object.fromEntries(entries);
-};
-
-const mapRowToItem = (row: RawEquipmentRow): GearShopItem => {
-  const statBoosts = normalizeStatBoosts(row.stat_boosts);
-  const qualityTier = deriveQualityTier(row.price, statBoosts);
+const mapRowToItem = (row: EquipmentItemRecord): GearShopItem => {
+  const statBoosts = normalizeEquipmentStatBoosts(row.stat_boosts);
+  const qualityTier = deriveQualityTier(row.price_cash, statBoosts);
   const rarityKey = parseRarityKey(row.rarity);
 
   return {
@@ -155,14 +159,29 @@ const GearShop = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("equipment_items")
-        .select("id, name, category, subcategory, price, rarity, description, stat_boosts, stock")
-        .order("price");
+        .select(
+          `id,
+           name,
+           category,
+           gear_category_id,
+           gear_category:gear_categories (id, slug, label, description, icon, sort_order),
+           subcategory,
+           price_cash,
+           price_fame,
+           rarity,
+           description,
+           stat_boosts,
+           stock,
+           is_stock_tracked,
+           auto_restock`
+        )
+        .order("price_cash");
 
       if (error) {
         throw error;
       }
 
-      return ((data as RawEquipmentRow[] | null) ?? []).map(mapRowToItem);
+      return ((data as EquipmentItemRecord[] | null) ?? []).map(mapRowToItem);
     },
   });
 
@@ -192,18 +211,37 @@ const GearShop = () => {
       queryClient.invalidateQueries({ queryKey: ["player-equipment", user?.id] });
       await refetch();
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Unable to complete purchase");
+    onSettled: () => {
+      setActivePurchaseId(null);
     },
   });
 
-  const categories = useMemo(() => {
+  const categoryOptions = useMemo<CategoryOption[]>(() => {
     if (!items) {
-      return ["all"];
+      return [{ value: "all", label: "All categories", sort: -1 }];
     }
 
-    const unique = new Set(items.map((item) => item.category));
-    return ["all", ...Array.from(unique)];
+    const mapped = new Map<string, CategoryOption>();
+
+    items.forEach((item) => {
+      const slug = item.gear_category?.slug ?? item.category;
+      const label = item.gear_category?.label ?? item.category;
+      const sort = item.gear_category?.sort_order ?? Number.MAX_SAFE_INTEGER;
+
+      if (!mapped.has(slug)) {
+        mapped.set(slug, { value: slug, label, sort });
+      }
+    });
+
+    const sorted = Array.from(mapped.values()).sort((a, b) => {
+      if (a.sort === b.sort) {
+        return a.label.localeCompare(b.label);
+      }
+
+      return a.sort - b.sort;
+    });
+
+    return [{ value: "all", label: "All categories", sort: -1 }, ...sorted];
   }, [items]);
 
   const rarityFilters = useMemo(() => {
@@ -235,14 +273,24 @@ const GearShop = () => {
     }
 
     return items.filter((item) => {
-      const matchesCategory = category === "all" || item.category === category;
+      const categorySlug = item.gear_category?.slug ?? item.category;
+      const matchesCategory = category === "all" || categorySlug === category;
       const matchesRarity = rarity === "all" || item.rarityKey === rarity;
       const matchesQuality = quality === "all" || item.qualityTier === quality;
       const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
+      const matchesCurrency = matchesCurrencyFilter(item, currencyFilter);
+      const matchesStockPolicy = matchesStockFilter(item, stockFilter);
 
-      return matchesCategory && matchesRarity && matchesQuality && matchesSearch;
+      return (
+        matchesCategory &&
+        matchesRarity &&
+        matchesQuality &&
+        matchesCurrency &&
+        matchesStockPolicy &&
+        matchesSearch
+      );
     });
-  }, [items, category, rarity, quality, search]);
+  }, [items, category, rarity, quality, currencyFilter, stockFilter, search]);
 
   const equippedInCategory = useMemo(() => {
     if (!equipPrompt || !ownedEquipment) {
@@ -337,6 +385,34 @@ const GearShop = () => {
   };
 
   const cashOnHand = typeof profile?.cash === "number" ? profile.cash : 0;
+  const profileReservedFunds = parseNumericValue(profile?.reserved_funds, 0);
+
+  const snapshotMap = useMemo(() => {
+    const map = new Map<string, GearShopSnapshotRow>();
+
+    if (Array.isArray(snapshotRows)) {
+      snapshotRows.forEach((row) => {
+        if (row?.equipment_id) {
+          map.set(row.equipment_id, row);
+        }
+      });
+    }
+
+    return map;
+  }, [snapshotRows]);
+
+  const baselineCash = snapshotRows && snapshotRows.length > 0 ? parseNumericValue(snapshotRows[0]?.cash, cashOnHand) : cashOnHand;
+  const baselineReservedFunds =
+    snapshotRows && snapshotRows.length > 0
+      ? parseNumericValue(snapshotRows[0]?.reserved_funds, profileReservedFunds)
+      : profileReservedFunds;
+
+  const totalOptimisticReservedFunds = useMemo(() => {
+    return Object.values(optimisticReservations).reduce((total, entry) => total + entry.reservedFunds, 0);
+  }, [optimisticReservations]);
+
+  const totalReservedFunds = baselineReservedFunds + totalOptimisticReservedFunds;
+  const availableBudget = Math.max(baselineCash - totalReservedFunds, 0);
 
   return (
     <>

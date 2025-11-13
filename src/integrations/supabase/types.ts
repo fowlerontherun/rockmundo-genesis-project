@@ -4487,6 +4487,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           cash: number | null
+          reserved_funds: number | null
           character_birth_date: string | null
           created_at: string | null
           current_activity: string | null
@@ -4514,6 +4515,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -4541,6 +4543,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
+          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -5359,6 +5362,164 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      music_video_configs: {
+        Row: {
+          art_style: string
+          band_id: string | null
+          budget_amount: number
+          budget_tier: string
+          cast_option: string
+          cast_quality: string | null
+          created_at: string
+          id: string
+          image_quality: string
+          kpi_chart_target: string | null
+          kpi_view_target: number | null
+          location_style: string | null
+          primary_platform: string | null
+          production_notes: string | null
+          release_id: string | null
+          shoot_end_date: string | null
+          shoot_start_date: string | null
+          status: string
+          sync_strategy: string
+          target_release_date: string | null
+          theme: string
+          updated_at: string
+          user_id: string
+          youtube_video_url: string | null
+        }
+        Insert: {
+          art_style: string
+          band_id?: string | null
+          budget_amount?: number
+          budget_tier: string
+          cast_option: string
+          cast_quality?: string | null
+          created_at?: string
+          id?: string
+          image_quality: string
+          kpi_chart_target?: string | null
+          kpi_view_target?: number | null
+          location_style?: string | null
+          primary_platform?: string | null
+          production_notes?: string | null
+          release_id?: string | null
+          shoot_end_date?: string | null
+          shoot_start_date?: string | null
+          status?: string
+          sync_strategy?: string
+          target_release_date?: string | null
+          theme: string
+          updated_at?: string
+          user_id: string
+          youtube_video_url?: string | null
+        }
+        Update: {
+          art_style?: string
+          band_id?: string | null
+          budget_amount?: number
+          budget_tier?: string
+          cast_option?: string
+          cast_quality?: string | null
+          created_at?: string
+          id?: string
+          image_quality?: string
+          kpi_chart_target?: string | null
+          kpi_view_target?: number | null
+          location_style?: string | null
+          primary_platform?: string | null
+          production_notes?: string | null
+          release_id?: string | null
+          shoot_end_date?: string | null
+          shoot_start_date?: string | null
+          status?: string
+          sync_strategy?: string
+          target_release_date?: string | null
+          theme?: string
+          updated_at?: string
+          user_id?: string
+          youtube_video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_video_configs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_configs_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      music_video_metrics: {
+        Row: {
+          chart_name: string | null
+          chart_position: number | null
+          chart_target: string | null
+          chart_velocity: number | null
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          mtv_program: string | null
+          mtv_spins: number | null
+          music_video_id: string
+          platform: string | null
+          updated_at: string
+          views_target: number | null
+          youtube_video_id: string | null
+          youtube_views: number | null
+        }
+        Insert: {
+          chart_name?: string | null
+          chart_position?: number | null
+          chart_target?: string | null
+          chart_velocity?: number | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          mtv_program?: string | null
+          mtv_spins?: number | null
+          music_video_id: string
+          platform?: string | null
+          updated_at?: string
+          views_target?: number | null
+          youtube_video_id?: string | null
+          youtube_views?: number | null
+        }
+        Update: {
+          chart_name?: string | null
+          chart_position?: number | null
+          chart_target?: string | null
+          chart_velocity?: number | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          mtv_program?: string | null
+          mtv_spins?: number | null
+          music_video_id?: string
+          platform?: string | null
+          updated_at?: string
+          views_target?: number | null
+          youtube_video_id?: string | null
+          youtube_views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_video_metrics_music_video_id_fkey"
+            columns: ["music_video_id"]
+            isOneToOne: true
+            referencedRelation: "music_video_configs"
             referencedColumns: ["id"]
           },
         ]
@@ -7947,6 +8108,57 @@ export type Database = {
           },
         ]
       }
+      personal_loadout_slots: {
+        Row: {
+          created_at: string
+          gear_item_id: string
+          gear_type: Database["public"]["Enums"]["gear_type"]
+          id: string
+          loadout_id: string
+          notes: string | null
+          pedal_position: number | null
+          pedal_stage: Database["public"]["Enums"]["pedal_chain_stage"] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gear_item_id: string
+          gear_type: Database["public"]["Enums"]["gear_type"]
+          id?: string
+          loadout_id: string
+          notes?: string | null
+          pedal_position?: number | null
+          pedal_stage?: Database["public"]["Enums"]["pedal_chain_stage"] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gear_item_id?: string
+          gear_type?: Database["public"]["Enums"]["gear_type"]
+          id?: string
+          loadout_id?: string
+          notes?: string | null
+          pedal_position?: number | null
+          pedal_stage?: Database["public"]["Enums"]["pedal_chain_stage"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_loadout_slots_gear_item_id_fkey"
+            columns: ["gear_item_id"]
+            isOneToOne: false
+            referencedRelation: "gear_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_loadout_slots_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "personal_loadouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_loadouts: {
         Row: {
           character_id: string
@@ -8164,6 +8376,18 @@ export type Database = {
         }
         Returns: Json
       }
+      check_radio_submission_week: {
+        Args: {
+          p_station_id: string
+          p_song_id: string
+          p_anchor?: number
+          p_reference?: string
+        }
+        Returns: {
+          week_start_date: string | null
+          already_submitted: boolean | null
+        }[]
+      }
       check_scheduling_conflict: {
         Args: {
           p_end: string
@@ -8223,6 +8447,17 @@ export type Database = {
         | "outboard"
         | "accessory"
         | "utility"
+      pedal_chain_stage:
+        | "input"
+        | "preamp"
+        | "drive"
+        | "modulation"
+        | "ambient"
+        | "utility"
+        | "loop"
+        | "multi_fx"
+        | "expression"
+        | "output"
       show_type_enum: "concert" | "festival" | "private" | "street"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
