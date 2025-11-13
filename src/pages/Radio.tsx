@@ -15,6 +15,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Area,
   AreaChart,
@@ -163,7 +164,7 @@ export default function Radio() {
     return "";
   });
   const [selectedSong, setSelectedSong] = useState<string>("");
-  const [selectedShow, setSelectedShow] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"submit" | "submissions" | "trending">("submit");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
   const [metricsRange, setMetricsRange] = useState<7 | 14 | 30>(14);
 
@@ -705,81 +706,10 @@ export default function Radio() {
   });
 
   useEffect(() => {
-    const errors = [
-      {
-        hasError: stationsError,
-        error: stationsErrorData,
-        title: 'Unable to load radio stations',
-      },
-      {
-        hasError: showsError,
-        error: showsErrorData,
-        title: 'Unable to load station shows',
-      },
-      {
-        hasError: nowPlayingError,
-        error: nowPlayingErrorData,
-        title: 'Unable to load now playing details',
-      },
-      {
-        hasError: bandRadioEarningsError,
-        error: bandRadioEarningsErrorData,
-        title: 'Unable to load band radio earnings',
-      },
-      {
-        hasError: stationPlaySummaryError,
-        error: stationPlaySummaryErrorData,
-        title: 'Unable to load station summary',
-      },
-      {
-        hasError: stationPlayTimelineError,
-        error: stationPlayTimelineErrorData,
-        title: 'Unable to load station timeline',
-      },
-      {
-        hasError: recordedSongsError,
-        error: recordedSongsErrorData,
-        title: 'Unable to load recorded songs',
-      },
-      {
-        hasError: mySubmissionsError,
-        error: mySubmissionsErrorData,
-        title: 'Unable to load your submissions',
-      },
-      {
-        hasError: topSongsError,
-        error: topSongsErrorData,
-        title: 'Unable to load trending songs',
-      },
-    ];
-
-    errors.forEach(({ hasError, error, title }) => {
-      if (hasError) {
-        toast.error(title, {
-          description: getErrorMessage(error),
-        });
-      }
-    });
-  }, [
-    stationsError,
-    stationsErrorData,
-    showsError,
-    showsErrorData,
-    nowPlayingError,
-    nowPlayingErrorData,
-    bandRadioEarningsError,
-    bandRadioEarningsErrorData,
-    stationPlaySummaryError,
-    stationPlaySummaryErrorData,
-    stationPlayTimelineError,
-    stationPlayTimelineErrorData,
-    recordedSongsError,
-    recordedSongsErrorData,
-    mySubmissionsError,
-    mySubmissionsErrorData,
-    topSongsError,
-    topSongsErrorData,
-  ]);
+    if (recordedSongs?.length === 0) {
+      setSelectedSong('');
+    }
+  }, [recordedSongs]);
 
   const submitSong = useMutation({
     mutationFn: async () => {
@@ -1071,7 +1001,7 @@ export default function Radio() {
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="submit" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList>
             <TabsTrigger value="submit">Submit Song</TabsTrigger>
             <TabsTrigger value="submissions">My Submissions</TabsTrigger>
@@ -1677,197 +1607,61 @@ export default function Radio() {
                   </div>
                 )}
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Select Song</label>
-                  {recordedSongsError && (
-                    <Alert variant="destructive" className="mb-3">
-                      <AlertTitle>Unable to load recorded songs</AlertTitle>
-                      <AlertDescription>
-                        {getErrorMessage(recordedSongsErrorData)}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {recordedSongsLoading ? (
-                    <Skeleton className="h-10 w-full" />
-                  ) : (
-                    <Select
-                      value={selectedSong}
-                      onValueChange={setSelectedSong}
-                      disabled={recordedSongsError || !recordedSongs?.length}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            recordedSongsError
-                              ? 'Unable to load songs'
-                              : recordedSongs?.length
-                              ? 'Choose a recorded song'
-                              : 'No recorded songs available'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {recordedSongs?.map((song) => (
-                          <SelectItem key={song.id} value={song.id}>
-                            {song.title} ({song.genre}) - Quality: {song.quality_score}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-
-                {activeStation && (
-                  <div className="rounded-md border border-border/60 bg-background/80 p-3 space-y-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">Station Requirements</span>
-                      <Badge variant="outline">Level {activeStation.quality_level}</Badge>
-                    </div>
-                    {stationAcceptedGenres.length > 0 ? (
-                      <>
-                        <p className="text-xs text-muted-foreground">Accepted genres</p>
-                        <div className="flex flex-wrap gap-1">
-                          {stationAcceptedGenres.map((genre) => (
-                            <Badge key={genre} variant="secondary" className="text-xs">
-                              {genre}
-                            </Badge>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">This station accepts all genres.</p>
-                    )}
-                    {selectedSong && (
-                      <div className="space-y-2">
-                        <div
-                          className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs sm:text-sm ${
-                            genreMatches
-                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                              : 'border-destructive/40 bg-destructive/10 text-destructive'
-                          }`}
-                        >
-                          <span>Genre match</span>
-                          <span className="font-semibold">
-                            {selectedSongData?.genre ?? 'None'}
-                          </span>
-                        </div>
-                        {stationRequirements.quality > 0 && (
-                          <div
-                            className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs sm:text-sm ${
-                              meetsQualityRequirement
-                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                : 'border-destructive/40 bg-destructive/10 text-destructive'
-                            }`}
-                          >
-                            <span>Song quality</span>
-                            <span className="font-semibold">
-                              {Math.round(songQuality).toLocaleString()} /{' '}
-                              {stationRequirements.quality.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                        {stationRequirements.fame > 0 && (
-                          <div
-                            className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs sm:text-sm ${
-                              meetsFameRequirement
-                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                : 'border-destructive/40 bg-destructive/10 text-destructive'
-                            }`}
-                          >
-                            <span>Band fame</span>
-                            <span className="font-semibold">
-                              {Math.round(bandFame).toLocaleString()} /{' '}
-                              {stationRequirements.fame.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {selectedSong && activeStation && (
-                  <div className="space-y-2">
-                    {!genreMatches && (
-                      <Alert variant="destructive">
-                        <AlertDescription>
-                          {stationAcceptedGenres.length > 0
-                            ? `This station prefers ${stationAcceptedGenres.join(', ')}. Pick a song in one of those genres to submit.`
-                            : 'Please assign a genre to this song before submitting.'}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    {!meetsQualityRequirement && stationRequirements.quality > 0 && (
-                      <Alert variant="destructive">
-                        <AlertDescription>
-                          {`This station requires a song quality of ${stationRequirements.quality.toLocaleString()} or higher. Your track is currently ${Math.round(songQuality).toLocaleString()}.`}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    {!meetsFameRequirement && stationRequirements.fame > 0 && (
-                      <Alert variant="destructive">
-                        <AlertDescription>
-                          {hasBand
-                            ? `Your band has ${Math.round(bandFame).toLocaleString()} fame. Earn ${Math.max(0, stationRequirements.fame - bandFame).toLocaleString()} more to unlock this station.`
-                            : 'Join or create a band to build the fame required for this station.'}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                )}
-
-                <Button
-                  onClick={() => {
-                    if (!submitDisabled) {
-                      submitSong.mutate();
+                {recordedSongs && recordedSongs.length === 0 ? (
+                  <EmptyState
+                    icon={Music}
+                    title="No recorded songs yet"
+                    description="Record a track in the studio to unlock radio submissions."
+                    action={
+                      <Button onClick={() => navigate('/recording-studio')}>
+                        Record a new song
+                      </Button>
                     }
-                  }}
-                  disabled={submitDisabled}
-                  className="w-full"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Submit to Radio Station
-                </Button>
+                  />
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Select Song</label>
+                      <Select
+                        value={selectedSong}
+                        onValueChange={setSelectedSong}
+                        disabled={!recordedSongs?.length}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a recorded song" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {recordedSongs?.map((song) => (
+                            <SelectItem key={song.id} value={song.id}>
+                              {song.title} ({song.genre}) - Quality: {song.quality_score}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      onClick={() => submitSong.mutate()}
+                      disabled={
+                        !selectedStation ||
+                        !selectedSong ||
+                        submitSong.isPending ||
+                        !recordedSongs?.length
+                      }
+                      className="w-full"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit to Radio Station
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="submissions" className="space-y-4">
-            {mySubmissionsError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Unable to load your submissions</AlertTitle>
-                <AlertDescription>
-                  {getErrorMessage(mySubmissionsErrorData)}
-                </AlertDescription>
-              </Alert>
-            ) : mySubmissionsLoading ? (
-              Array.from({ length: 2 }).map((_, index) => (
-                <Card key={`submission-skeleton-${index}`}>
-                  <CardHeader>
-                    <div className="space-y-2">
-                      <Skeleton className="h-5 w-1/2" />
-                      <Skeleton className="h-4 w-1/3" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {Array.from({ length: 3 }).map((_, lineIndex) => (
-                        <Skeleton key={lineIndex} className="h-4 w-full" />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : mySubmissions && mySubmissions.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">
-                    No submissions yet. Submit your first song to a radio station!
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              mySubmissions?.map((submission) => (
+            {mySubmissions && mySubmissions.length > 0 ? (
+              mySubmissions.map((submission) => (
                 <Card key={submission.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -1910,7 +1704,18 @@ export default function Radio() {
                   </CardContent>
                 </Card>
               ))
-            )}
+            ) : mySubmissions ? (
+              <EmptyState
+                icon={RadioIcon}
+                title="You haven't submitted any songs yet"
+                description="Share a recorded track with a station to start building hype from radio spins."
+                action={
+                  <Button onClick={() => setActiveTab('submit')}>
+                    Submit a song
+                  </Button>
+                }
+              />
+            ) : null}
           </TabsContent>
 
           <TabsContent value="trending" className="space-y-4">
@@ -1920,36 +1725,11 @@ export default function Radio() {
                 <CardDescription>Songs with the most hype from radio airplay</CardDescription>
               </CardHeader>
               <CardContent>
-                {topSongsError && (
-                  <Alert variant="destructive" className="mb-3">
-                    <AlertTitle>Unable to load trending songs</AlertTitle>
-                    <AlertDescription>
-                      {getErrorMessage(topSongsErrorData)}
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {topSongsLoading ? (
-                  <div className="space-y-3">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <div
-                        key={`top-song-skeleton-${index}`}
-                        className="flex items-center gap-4 rounded-lg border p-3"
-                      >
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-4 w-1/2" />
-                          <Skeleton className="h-3 w-1/3" />
-                        </div>
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-5 w-20" />
-                      </div>
-                    ))}
-                  </div>
-                ) : topSongs && topSongs.length > 0 ? (
+                {topSongs && topSongs.length > 0 ? (
                   <div className="space-y-3">
                     {topSongs.map((song, index) => (
                       <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
                           <span className="font-bold">{index + 1}</span>
                         </div>
                         <div className="flex-1">
@@ -1969,13 +1749,18 @@ export default function Radio() {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  !topSongsError && (
-                    <p className="text-sm text-muted-foreground">
-                      No trending radio songs are available yet.
-                    </p>
-                  )
-                )}
+                ) : topSongs ? (
+                  <EmptyState
+                    icon={Sparkles}
+                    title="No radio charts yet"
+                    description="Once artists start submitting songs, the most hyped tracks will appear here."
+                    action={
+                      <Button onClick={() => setActiveTab('submit')}>
+                        Submit a song
+                      </Button>
+                    }
+                  />
+                ) : null}
               </CardContent>
             </Card>
 
