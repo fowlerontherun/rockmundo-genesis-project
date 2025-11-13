@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -13,6 +13,62 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Radio, Trash2, Plus, Edit2 } from "lucide-react";
 import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+type StationFormState = {
+  name: string;
+  station_type: "national" | "local";
+  country: string;
+  city_id: string | null;
+  quality_level: number;
+  listener_base: number;
+  accepted_genres: string[];
+  description: string;
+  frequency: string;
+};
+
+type StationValidationErrors = {
+  name?: string;
+  location?: string;
+};
+
+const validateStationForm = (station: StationFormState): StationValidationErrors => {
+  const errors: StationValidationErrors = {};
+
+  if (!station.name.trim()) {
+    errors.name = "Station name is required.";
+  }
+
+  if (station.station_type === "national") {
+    if (!station.country.trim()) {
+      errors.location = "Country is required for national stations.";
+    }
+  } else {
+    if (!station.city_id) {
+      errors.location = "City is required for local stations.";
+    }
+  }
+
+  return errors;
+};
+
+const formatStationForPersistence = (station: StationFormState): StationFormState => ({
+  ...station,
+  country: station.station_type === "national" ? station.country.trim() : "",
+  city_id:
+    station.station_type === "local"
+      ? station.city_id && station.city_id !== ""
+        ? station.city_id
+        : null
+      : null,
+});
 
 const GENRES = SKILL_TREE_DEFINITIONS
   .filter((skill: any) => skill.metadata?.category === 'genre')
@@ -32,17 +88,49 @@ export default function RadioStations() {
   const queryClient = useQueryClient();
   const [editingStation, setEditingStation] = useState<any>(null);
   const [editingShow, setEditingShow] = useState<any>(null);
-  const [newStation, setNewStation] = useState({
-    name: '',
-    station_type: 'national' as 'national' | 'local',
-    country: '',
-    city_id: null as string | null,
+  const [newStation, setNewStation] = useState<StationFormState>({
+    name: "",
+    station_type: "national",
+    country: "",
+    city_id: null,
     quality_level: 3,
     listener_base: 10000,
-    accepted_genres: [] as string[],
-    description: '',
-    frequency: '',
+    accepted_genres: [],
+    description: "",
+    frequency: "",
   });
+  const [editStationForm, setEditStationForm] = useState<StationFormState | null>(null);
+  const createStationErrors: StationValidationErrors = useMemo(
+    () => validateStationForm(newStation),
+    [newStation],
+  );
+  const isCreateStationValid = useMemo(
+    () => Object.keys(createStationErrors).length === 0,
+    [createStationErrors],
+  );
+  const editStationErrors: StationValidationErrors = useMemo(
+    () => (editStationForm ? validateStationForm(editStationForm) : {}),
+    [editStationForm],
+  );
+  const isEditStationValid = editStationForm ? Object.keys(editStationErrors).length === 0 : false;
+
+  useEffect(() => {
+    if (editingStation) {
+      setEditStationForm({
+        name: editingStation.name ?? "",
+        station_type: editingStation.station_type ?? "national",
+        country: editingStation.country ?? "",
+        city_id: editingStation.city_id ? String(editingStation.city_id) : null,
+        quality_level: editingStation.quality_level ?? 3,
+        listener_base: editingStation.listener_base ?? 10000,
+        accepted_genres: editingStation.accepted_genres ?? [],
+        description: editingStation.description ?? "",
+        frequency: editingStation.frequency ?? "",
+      });
+    } else {
+      setEditStationForm(null);
+    }
+  }, [editingStation]);
   const [newShow, setNewShow] = useState({
     station_id: '',
     show_name: '',
@@ -91,10 +179,11 @@ export default function RadioStations() {
   });
 
   const createStation = useMutation({
-    mutationFn: async (station: typeof newStation) => {
+    mutationFn: async (station: StationFormState) => {
+      const payload = formatStationForPersistence(station);
       const { data, error } = await supabase
         .from('radio_stations')
-        .insert([station])
+        .insert([payload])
         .select()
         .single();
       if (error) throw error;
@@ -104,15 +193,15 @@ export default function RadioStations() {
       queryClient.invalidateQueries({ queryKey: ['admin-radio-stations'] });
       toast.success('Radio station created successfully');
       setNewStation({
-        name: '',
-        station_type: 'national',
-        country: '',
+        name: "",
+        station_type: "national",
+        country: "",
         city_id: null,
         quality_level: 3,
         listener_base: 10000,
         accepted_genres: [],
-        description: '',
-        frequency: '',
+        description: "",
+        frequency: "",
       });
     },
     onError: (error: any) => {
@@ -199,6 +288,25 @@ export default function RadioStations() {
     }
   };
 
+  const handleCreateStation = () => {
+    if (!isCreateStationValid) {
+      return;
+    }
+
+    createStation.mutate(newStation);
+  };
+
+  const handleUpdateStation = () => {
+    if (!editingStation || !editStationForm || !isEditStationValid) {
+      return;
+    }
+
+    updateStation.mutate({
+      id: editingStation.id,
+      updates: formatStationForPersistence(editStationForm),
+    });
+  };
+
   if (stationsLoading) {
     return (
       <AdminRoute>
@@ -241,7 +349,11 @@ export default function RadioStations() {
                       value={newStation.name}
                       onChange={(e) => setNewStation({ ...newStation, name: e.target.value })}
                       placeholder="ROCK FM"
+                      aria-invalid={!!createStationErrors.name}
                     />
+                    {createStationErrors.name && (
+                      <p className="text-sm text-destructive mt-1">{createStationErrors.name}</p>
+                    )}
                   </div>
                   <div>
                     <Label>Frequency (FM/AM)</Label>
@@ -256,7 +368,12 @@ export default function RadioStations() {
                     <Select
                       value={newStation.station_type}
                       onValueChange={(value: 'national' | 'local') =>
-                        setNewStation({ ...newStation, station_type: value, city_id: null })
+                        setNewStation({
+                          ...newStation,
+                          station_type: value,
+                          country: value === 'national' ? newStation.country : '',
+                          city_id: value === 'local' ? newStation.city_id : null,
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -275,7 +392,11 @@ export default function RadioStations() {
                         value={newStation.country}
                         onChange={(e) => setNewStation({ ...newStation, country: e.target.value })}
                         placeholder="USA"
+                        aria-invalid={!!createStationErrors.location}
                       />
+                      {newStation.station_type === 'national' && createStationErrors.location && (
+                        <p className="text-sm text-destructive mt-1">{createStationErrors.location}</p>
+                      )}
                     </div>
                   ) : (
                     <div>
@@ -284,7 +405,7 @@ export default function RadioStations() {
                         value={newStation.city_id || ''}
                         onValueChange={(value) => setNewStation({ ...newStation, city_id: value })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-invalid={!!createStationErrors.location}>
                           <SelectValue placeholder="Select city" />
                         </SelectTrigger>
                         <SelectContent>
@@ -295,6 +416,9 @@ export default function RadioStations() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {newStation.station_type === 'local' && createStationErrors.location && (
+                        <p className="text-sm text-destructive mt-1">{createStationErrors.location}</p>
+                      )}
                     </div>
                   )}
                   <div>
@@ -347,7 +471,10 @@ export default function RadioStations() {
                     ))}
                   </div>
                 </div>
-                <Button onClick={() => createStation.mutate(newStation)} disabled={!newStation.name}>
+                <Button
+                  onClick={() => handleCreateStation()}
+                  disabled={!isCreateStationValid || createStation.isPending}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Create Station
                 </Button>
@@ -583,6 +710,183 @@ export default function RadioStations() {
             </div>
           </TabsContent>
         </Tabs>
+        <Dialog
+          open={!!editingStation}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingStation(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Edit Radio Station</DialogTitle>
+              <DialogDescription>Update the radio station details.</DialogDescription>
+            </DialogHeader>
+            {editStationForm && (
+              <>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Station Name</Label>
+                      <Input
+                        value={editStationForm.name}
+                        onChange={(e) =>
+                          setEditStationForm({ ...editStationForm, name: e.target.value })
+                        }
+                        placeholder="ROCK FM"
+                        aria-invalid={!!editStationErrors.name}
+                      />
+                      {editStationErrors.name && (
+                        <p className="text-sm text-destructive mt-1">{editStationErrors.name}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>Frequency (FM/AM)</Label>
+                      <Input
+                        value={editStationForm.frequency}
+                        onChange={(e) =>
+                          setEditStationForm({ ...editStationForm, frequency: e.target.value })
+                        }
+                        placeholder="98.5 FM"
+                      />
+                    </div>
+                    <div>
+                      <Label>Type</Label>
+                      <Select
+                        value={editStationForm.station_type}
+                        onValueChange={(value: 'national' | 'local') =>
+                          setEditStationForm({
+                            ...editStationForm,
+                            station_type: value,
+                            country: value === 'national' ? editStationForm.country : '',
+                            city_id: value === 'local' ? editStationForm.city_id : null,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="national">National</SelectItem>
+                          <SelectItem value="local">Local</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {editStationForm.station_type === 'national' ? (
+                      <div>
+                        <Label>Country</Label>
+                        <Input
+                          value={editStationForm.country}
+                          onChange={(e) =>
+                            setEditStationForm({ ...editStationForm, country: e.target.value })
+                          }
+                          placeholder="USA"
+                          aria-invalid={!!editStationErrors.location}
+                        />
+                        {editStationForm.station_type === 'national' && editStationErrors.location && (
+                          <p className="text-sm text-destructive mt-1">{editStationErrors.location}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <Label>City</Label>
+                        <Select
+                          value={editStationForm.city_id || ''}
+                          onValueChange={(value) =>
+                            setEditStationForm({ ...editStationForm, city_id: value })
+                          }
+                        >
+                          <SelectTrigger aria-invalid={!!editStationErrors.location}>
+                            <SelectValue placeholder="Select city" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cities?.map((city) => (
+                              <SelectItem key={city.id} value={city.id}>
+                                {city.name}, {city.country}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {editStationForm.station_type === 'local' && editStationErrors.location && (
+                          <p className="text-sm text-destructive mt-1">{editStationErrors.location}</p>
+                        )}
+                      </div>
+                    )}
+                    <div>
+                      <Label>Quality Level (1-5)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={editStationForm.quality_level}
+                        onChange={(e) =>
+                          setEditStationForm({
+                            ...editStationForm,
+                            quality_level: parseInt(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Listener Base</Label>
+                      <Input
+                        type="number"
+                        value={editStationForm.listener_base}
+                        onChange={(e) =>
+                          setEditStationForm({
+                            ...editStationForm,
+                            listener_base: parseInt(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      value={editStationForm.description}
+                      onChange={(e) =>
+                        setEditStationForm({ ...editStationForm, description: e.target.value })
+                      }
+                      placeholder="Station description..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Accepted Genres (max 4)</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {GENRES.map((genre) => (
+                        <Badge
+                          key={genre}
+                          variant={editStationForm.accepted_genres.includes(genre) ? 'default' : 'outline'}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            toggleGenre(genre, editStationForm.accepted_genres, (genres) =>
+                              setEditStationForm({ ...editStationForm, accepted_genres: genres })
+                            )
+                          }
+                        >
+                          {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditingStation(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpdateStation}
+                    disabled={!isEditStationValid || updateStation.isPending}
+                  >
+                    {updateStation.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminRoute>
   );
