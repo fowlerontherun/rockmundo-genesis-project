@@ -7,9 +7,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { toast } from "sonner";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Line,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   Radio as RadioIcon,
   Music,
@@ -22,6 +35,7 @@ import {
   PlayCircle,
   DollarSign,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { formatUtcDate, getUtcWeekStart } from "@/utils/week";
 
@@ -163,6 +177,7 @@ export default function Radio() {
   const [selectedSong, setSelectedSong] = useState<string>("");
   const [selectedShow, setSelectedShow] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
+  const [metricsRange, setMetricsRange] = useState<7 | 14 | 30>(14);
 
   const getErrorMessage = (error: unknown, fallback = 'An unexpected error occurred.') =>
     error instanceof Error ? error.message : fallback;
@@ -364,19 +379,14 @@ export default function Radio() {
     [aggregatedBandRevenue]
   );
 
-  const {
-    data: stationPlaySummary,
-    isLoading: stationPlaySummaryLoading,
-    isError: stationPlaySummaryError,
-    error: stationPlaySummaryErrorData,
-  } = useQuery<StationPlaySummary | null>({
-    queryKey: ['station-play-summary', selectedStation],
+  const { data: stationPlaySummary } = useQuery<StationPlaySummary | null>({
+    queryKey: ['station-play-summary', selectedStation, metricsRange],
     queryFn: async () => {
       if (!selectedStation) return null;
 
       const { data, error } = await supabase.rpc('get_radio_station_play_summary' as any, {
         p_station_id: selectedStation,
-        p_days: 14,
+        p_days: metricsRange,
       });
 
       if (error) throw error;
@@ -395,19 +405,14 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const {
-    data: stationPlayTimeline,
-    isLoading: stationPlayTimelineLoading,
-    isError: stationPlayTimelineError,
-    error: stationPlayTimelineErrorData,
-  } = useQuery<StationPlayTimelineEntry[]>({
-    queryKey: ['station-play-timeline', selectedStation],
+  const { data: stationPlayTimeline } = useQuery<StationPlayTimelineEntry[]>({
+    queryKey: ['station-play-timeline', selectedStation, metricsRange],
     queryFn: async () => {
       if (!selectedStation) return [];
 
       const { data, error } = await supabase.rpc('get_radio_station_play_timeline' as any, {
         p_station_id: selectedStation,
-        p_days: 14,
+        p_days: metricsRange,
       });
 
       if (error) throw error;
@@ -416,14 +421,14 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const fourteenDayTimeline = useMemo(() => {
+  const timelineData = useMemo(() => {
     if (!selectedStation) return [];
 
     const days: string[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 13; i >= 0; i--) {
+    for (let i = metricsRange - 1; i >= 0; i--) {
       const day = new Date(today);
       day.setDate(today.getDate() - i);
       days.push(day.toISOString().split('T')[0]);
@@ -445,7 +450,77 @@ export default function Radio() {
         hype: Number(entry?.hype ?? 0),
       };
     });
-  }, [stationPlayTimeline, selectedStation]);
+  }, [stationPlayTimeline, selectedStation, metricsRange]);
+
+  const timelineChartConfig = useMemo<ChartConfig>(
+    () => ({
+      spins: {
+        label: 'Spins',
+        color: 'hsl(var(--chart-1))',
+      },
+      listeners: {
+        label: 'Listeners',
+        color: 'hsl(var(--chart-2))',
+      },
+      revenue: {
+        label: 'Revenue',
+        color: 'hsl(var(--chart-3))',
+      },
+    }),
+    []
+  );
+
+  const timelineSummaryStats = useMemo(() => {
+    if (!timelineData.length) {
+      return { avgSpins: 0, avgListeners: 0, avgRevenue: 0 };
+    }
+
+    const totals = timelineData.reduce(
+      (acc, day) => ({
+        spins: acc.spins + day.spins,
+        listeners: acc.listeners + day.listeners,
+        revenue: acc.revenue + day.revenue,
+      }),
+      { spins: 0, listeners: 0, revenue: 0 }
+    );
+
+    return {
+      avgSpins: totals.spins / timelineData.length,
+      avgListeners: totals.listeners / timelineData.length,
+      avgRevenue: totals.revenue / timelineData.length,
+    };
+  }, [timelineData]);
+
+  const timelineHasData = useMemo(
+    () =>
+      timelineData.some(
+        (entry) => entry.spins > 0 || entry.listeners > 0 || entry.revenue > 0
+      ),
+    [timelineData]
+  );
+
+  const formatTimelineDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
+
+  const timelineTooltipFormatter = (value: number | string, name: string) => {
+    const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+
+    switch (name) {
+      case 'spins':
+        return [numericValue.toLocaleString(), 'Spins'];
+      case 'listeners':
+        return [numericValue.toLocaleString(), 'Listeners'];
+      case 'revenue':
+        return [currencyFormatter.format(numericValue), 'Revenue'];
+      default:
+        return [numericValue.toLocaleString(), name];
+    }
+  };
 
   const { data: recordedSongs } = useQuery<RecordedSongRecord[]>({
     queryKey: ['recorded-songs', user?.id],
@@ -1142,45 +1217,84 @@ export default function Radio() {
 
                 {selectedStation && (
                   <div className="space-y-4 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
-                    {stationPlaySummaryError && (
-                      <Alert variant="destructive">
-                        <AlertTitle>Unable to load station summary</AlertTitle>
-                        <AlertDescription>
-                          {getErrorMessage(stationPlaySummaryErrorData)}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {stationPlaySummaryLoading ? (
-                      <div className="grid gap-3 md:grid-cols-4">
-                        {Array.from({ length: 4 }).map((_, index) => (
-                          <div
-                            key={`summary-skeleton-${index}`}
-                            className="rounded-md border border-primary/20 bg-background/80 p-3"
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-wide text-primary">Station Performance</p>
+                        <p className="text-xs text-muted-foreground">
+                          Aggregated over the last {metricsRange} days
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {([7, 14, 30] as const).map((range) => (
+                          <Button
+                            key={range}
+                            size="sm"
+                            variant={metricsRange === range ? "default" : "outline"}
+                            onClick={() => setMetricsRange(range)}
                           >
-                            <Skeleton className="h-3 w-24" />
-                            <Skeleton className="mt-2 h-6 w-1/2" />
-                          </div>
+                            {range}D
+                          </Button>
                         ))}
                       </div>
-                    ) : stationPlaySummary ? (
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Spins (14 days)</p>
-                          <p className="text-2xl font-semibold">{stationPlaySummary.total_spins.toLocaleString()}</p>
-                        </div>
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Listeners reached</p>
-                          <p className="text-2xl font-semibold">{stationPlaySummary.total_listeners.toLocaleString()}</p>
-                        </div>
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Streams boosted</p>
-                          <p className="text-2xl font-semibold">{stationPlaySummary.total_streams.toLocaleString()}</p>
-                        </div>
-                        <div className="rounded-md border border-primary/20 bg-background/80 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estimated payouts (14 days)</p>
-                          <p className="text-2xl font-semibold">{currencyFormatter.format(stationPlaySummary.total_revenue || 0)}</p>
-                        </div>
+                    </div>
+
+                    {stationPlaySummary && (
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <Card className="border-primary/30 bg-background/80 shadow-sm">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Total Spins
+                            </CardTitle>
+                            <RadioIcon className="h-4 w-4 text-primary" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-semibold">
+                              {stationPlaySummary.total_spins.toLocaleString()}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Across {metricsRange} day window
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card className="border-primary/30 bg-background/80 shadow-sm">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Listeners Reached
+                            </CardTitle>
+                            <Users className="h-4 w-4 text-primary" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-semibold">
+                              {stationPlaySummary.total_listeners.toLocaleString()}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Unique listeners during this period
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card className="border-primary/30 bg-background/80 shadow-sm">
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Estimated Payouts
+                            </CardTitle>
+                            <DollarSign className="h-4 w-4 text-primary" />
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-semibold">
+                              {currencyFormatter.format(stationPlaySummary.total_revenue || 0)}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Projected from reported spins</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+
+                    {stationPlaySummary && (
+                      <div className="rounded-md border border-primary/20 bg-background/60 p-3 text-xs text-muted-foreground">
+                        Streams boosted over this window:
+                        <span className="ml-1 font-semibold text-foreground">
+                          {stationPlaySummary.total_streams.toLocaleString()}
+                        </span>
                       </div>
                     ) : (
                       !stationPlaySummaryError && (
@@ -1307,57 +1421,109 @@ export default function Radio() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm font-medium">
                           <Clock className="h-4 w-4 text-primary" />
-                          14-Day Spin Timeline
+                          {metricsRange}-Day Performance Timeline
                         </div>
-                        <span className="text-xs text-muted-foreground">Aggregated from all spins in the last 14 days</span>
+                        <span className="text-xs text-muted-foreground">
+                          Spins, listeners & revenue trends
+                        </span>
                       </div>
-                      {stationPlayTimelineError && (
-                        <Alert variant="destructive" className="mt-3">
-                          <AlertTitle>Unable to load timeline</AlertTitle>
-                          <AlertDescription>
-                            {getErrorMessage(stationPlayTimelineErrorData)}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                      {stationPlayTimelineLoading ? (
-                        <div className="mt-3 space-y-2 text-xs">
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <Skeleton key={`timeline-skeleton-${index}`} className="h-10 w-full" />
-                          ))}
-                        </div>
-                      ) : fourteenDayTimeline.length > 0 ? (
-                        <div className="mt-3 grid gap-2 text-xs">
-                          {fourteenDayTimeline.map((day) => (
-                            <div
-                              key={day.date}
-                              className="flex items-center justify-between rounded-md border border-border/60 bg-background/90 px-3 py-2"
-                            >
-                              <span className="font-medium">
-                                {new Date(day.date).toLocaleDateString(undefined, {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                              <div className="flex flex-wrap items-center gap-4">
-                                <span className="text-muted-foreground">
-                                  {day.spins} spin{day.spins === 1 ? '' : 's'}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {day.listeners.toLocaleString()} listeners
-                                </span>
-                                <span className="font-semibold">
-                                  {currencyFormatter.format(day.revenue || 0)}
-                                </span>
-                              </div>
+                      {timelineHasData ? (
+                        <>
+                          <div className="mt-4 h-64">
+                            <ChartContainer config={timelineChartConfig} className="h-full w-full">
+                              <AreaChart data={timelineData} margin={{ left: 12, right: 12, top: 12, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="radio-spins" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--color-spins)" stopOpacity={0.35} />
+                                    <stop offset="95%" stopColor="var(--color-spins)" stopOpacity={0.05} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                                <XAxis
+                                  dataKey="date"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tickMargin={8}
+                                  tickFormatter={formatTimelineDate}
+                                />
+                                <YAxis
+                                  yAxisId="left"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  width={60}
+                                  tickFormatter={(value) => Number(value).toLocaleString()}
+                                />
+                                <YAxis
+                                  yAxisId="right"
+                                  orientation="right"
+                                  tickLine={false}
+                                  axisLine={false}
+                                  width={70}
+                                  tickFormatter={(value) => currencyFormatter.format(Number(value))}
+                                />
+                                <ChartTooltip
+                                  cursor={{ strokeDasharray: '4 4' }}
+                                  content={
+                                    <ChartTooltipContent
+                                      labelFormatter={formatTimelineDate}
+                                      formatter={timelineTooltipFormatter}
+                                    />
+                                  }
+                                />
+                                <Area
+                                  yAxisId="left"
+                                  type="monotone"
+                                  dataKey="spins"
+                                  stroke="var(--color-spins)"
+                                  fill="url(#radio-spins)"
+                                  strokeWidth={2}
+                                  activeDot={{ r: 4 }}
+                                />
+                                <Line
+                                  yAxisId="left"
+                                  type="monotone"
+                                  dataKey="listeners"
+                                  stroke="var(--color-listeners)"
+                                  strokeWidth={2}
+                                  dot={false}
+                                />
+                                <Line
+                                  yAxisId="right"
+                                  type="monotone"
+                                  dataKey="revenue"
+                                  stroke="var(--color-revenue)"
+                                  strokeWidth={2}
+                                  strokeDasharray="6 4"
+                                  dot={false}
+                                />
+                              </AreaChart>
+                            </ChartContainer>
+                          </div>
+                          <div className="grid gap-2 pt-3 text-xs text-muted-foreground sm:grid-cols-3">
+                            <div className="rounded-md border border-border/60 bg-background/80 p-3">
+                              <p className="font-medium text-foreground">
+                                {Math.round(timelineSummaryStats.avgSpins).toLocaleString()}
+                              </p>
+                              <p>Avg spins per day</p>
                             </div>
-                          ))}
-                        </div>
+                            <div className="rounded-md border border-border/60 bg-background/80 p-3">
+                              <p className="font-medium text-foreground">
+                                {Math.round(timelineSummaryStats.avgListeners).toLocaleString()}
+                              </p>
+                              <p>Avg listeners per day</p>
+                            </div>
+                            <div className="rounded-md border border-border/60 bg-background/80 p-3">
+                              <p className="font-medium text-foreground">
+                                {currencyFormatter.format(timelineSummaryStats.avgRevenue || 0)}
+                              </p>
+                              <p>Avg revenue per day</p>
+                            </div>
+                          </div>
+                        </>
                       ) : (
-                        !stationPlayTimelineError && (
-                          <p className="mt-3 text-xs text-muted-foreground">
-                            No spins recorded in the last 14 days.
-                          </p>
-                        )
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          No spins recorded in the last {metricsRange} days.
+                        </p>
                       )}
                     </div>
 
