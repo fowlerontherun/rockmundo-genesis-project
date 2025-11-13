@@ -344,14 +344,38 @@ export default function Radio() {
     return recordedSongs?.find((song) => song.id === selectedSong) ?? null;
   }, [recordedSongs, selectedSong]);
 
-  const primaryBand = useMemo(() => {
+  const profileBands = useMemo(() => {
     const bandsData = (profile as any)?.bands;
-    if (!bandsData) return null;
-    return Array.isArray(bandsData) ? bandsData[0] : bandsData;
+    if (!bandsData) return [];
+    return Array.isArray(bandsData) ? bandsData : [bandsData];
   }, [profile]);
 
-  const bandFame = Number(primaryBand?.fame ?? 0);
-  const hasBand = Boolean(primaryBand?.id);
+  const selectedSongBandId = selectedSongData?.band_id ?? null;
+
+  const selectedBandFromProfile = useMemo(() => {
+    if (!selectedSongBandId) return null;
+    return profileBands.find((band: any) => band?.id === selectedSongBandId) ?? null;
+  }, [profileBands, selectedSongBandId]);
+
+  const { data: fetchedSelectedBand } = useQuery<{ id: string; fame: number | null } | null>({
+    queryKey: ['band-fame', selectedSongBandId],
+    queryFn: async () => {
+      if (!selectedSongBandId) return null;
+      const { data, error } = await supabase
+        .from('bands')
+        .select('id, fame')
+        .eq('id', selectedSongBandId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as { id: string; fame: number | null }) ?? null;
+    },
+    enabled: Boolean(selectedSongBandId && !selectedBandFromProfile),
+  });
+
+  const selectedBand = selectedBandFromProfile ?? fetchedSelectedBand ?? null;
+
+  const bandFame = Number(selectedBand?.fame ?? 0);
+  const hasBand = Boolean(selectedBand?.id);
 
   const stationAcceptedGenres = useMemo<string[]>(() => {
     return activeStation?.accepted_genres ?? [];
