@@ -584,6 +584,8 @@ export default function Radio() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['recorded-songs', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['recorded-songs', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
       queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
       queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
