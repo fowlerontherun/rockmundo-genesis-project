@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, DollarSign, Users, Star, TrendingUp, Sparkles } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { GigOutcomeReport } from "@/components/gig/GigOutcomeReport";
 import { useBandGearEffects } from "@/hooks/useBandGearEffects";
 import type { Database } from "@/lib/supabase-types";
+import { buildGearOutcomeNarrative } from "@/utils/gigNarrative";
 
 interface GigHistoryTabProps {
   bandId: string;
@@ -70,7 +71,19 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
     enabled: showReport && Boolean(selectedOutcome?.gigs?.band_id ?? bandId),
   });
 
-    const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
+  const selectedBandGearEffects = selectedGearData?.gearEffects;
+
+  const gearNarrative = useMemo(() => {
+    if (!selectedOutcome) return null;
+
+    return buildGearOutcomeNarrative({
+      outcome: selectedOutcome,
+      gearEffects: selectedBandGearEffects ?? selectedOutcome.gear_effects,
+      setlistLength: selectedOutcome.gig_song_performances?.length ?? 0,
+    });
+  }, [selectedBandGearEffects, selectedOutcome]);
+
+  const { data: gigHistory = [], isLoading, error } = useQuery<GigHistoryOutcome[]>({
     queryKey: ['gig-history', bandId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -285,7 +298,8 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
               id: performance.song_id || performance.id,
               title: performance.songs?.title || 'Unknown Song'
             }))}
-            gearEffects={selectedGearData?.gearEffects}
+            gearEffects={selectedBandGearEffects ?? selectedOutcome.gear_effects}
+            gearNarrative={gearNarrative}
           />
         )}
       </>
