@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -96,6 +96,7 @@ export default function Radio() {
   });
   const [selectedStation, setSelectedStation] = useState<string>("");
   const [selectedSong, setSelectedSong] = useState<string>("");
+  const [selectedShow, setSelectedShow] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
 
   const { data: profile } = useQuery({
@@ -150,6 +151,18 @@ export default function Radio() {
     },
     enabled: !!selectedStation,
   });
+
+  useEffect(() => {
+    if (!shows || shows.length === 0) {
+      setSelectedShow("");
+      return;
+    }
+
+    setSelectedShow((current) => {
+      const isValidSelection = shows.some((show) => show.id === current);
+      return isValidSelection ? current : shows[0].id;
+    });
+  }, [shows]);
 
   const { data: nowPlaying } = useQuery<NowPlayingRecord | null>({
     queryKey: ['station-now-playing', selectedStation],
@@ -364,6 +377,33 @@ export default function Radio() {
         throw new Error('Please select a station and song');
       }
 
+      const show = shows?.find((entry) => entry.id === selectedShow);
+
+      if (!show) {
+        throw new Error('Please choose a show for this station');
+      }
+
+      const { data: selectedSongData, error: selectedSongError } = await supabase
+        .from('songs')
+        .select('id, title, genre, hype, band_id, total_radio_plays, streams, revenue')
+        .eq('id', selectedSong)
+        .single();
+
+      if (selectedSongError) throw selectedSongError;
+
+      if (!selectedSongData) {
+        throw new Error('Selected song could not be found');
+      }
+
+      if (show.show_genres?.length && selectedSongData.genre) {
+        const allowedGenres = show.show_genres.map((genre) => genre.toLowerCase());
+        if (!allowedGenres.includes(selectedSongData.genre.toLowerCase())) {
+          throw new Error(
+            `This show only accepts ${show.show_genres.join(', ')} submissions. Please choose a matching track.`
+          );
+        }
+      }
+
       // Check if already submitted this week
       const weekStart = new Date();
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
@@ -397,26 +437,11 @@ export default function Radio() {
 
       if (error) throw error;
 
-      const { data: selectedSongData } = await supabase
-        .from('songs')
-        .select('id, title, hype, band_id, total_radio_plays, streams, revenue')
-        .eq('id', selectedSong)
-        .single();
-
       const { data: stationData } = await supabase
         .from('radio_stations')
         .select('id, name, listener_base')
         .eq('id', selectedStation)
         .single();
-
-      const { data: show } = await supabase
-        .from('radio_shows')
-        .select('id, name')
-        .eq('station_id', selectedStation)
-        .eq('is_active', true)
-        .order('time_slot', { ascending: true })
-        .limit(1)
-        .maybeSingle();
 
       await supabase
         .from('radio_submissions')
@@ -433,7 +458,7 @@ export default function Radio() {
         const { data: existingPlaylist } = await supabase
           .from('radio_playlists')
           .select('*')
-          .eq('show_id', (show as any).id)
+          .eq('show_id', show.id)
           .eq('song_id', selectedSong)
           .eq('week_start_date', weekStartDate)
           .maybeSingle();
@@ -453,7 +478,7 @@ export default function Radio() {
           const { data: newPlaylist } = await supabase
             .from('radio_playlists')
             .insert({
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               week_start_date: weekStartDate,
               added_at: nowIso,
@@ -479,7 +504,7 @@ export default function Radio() {
             .from('radio_plays')
             .insert({
               playlist_id: playlistId,
-              show_id: (show as any).id,
+              show_id: show.id,
               song_id: selectedSong,
               station_id: selectedStation,
               listeners,
@@ -650,7 +675,10 @@ export default function Radio() {
                       className={`cursor-pointer transition-colors ${
                         selectedStation === station.id ? 'border-primary' : ''
                       }`}
-                      onClick={() => setSelectedStation(station.id)}
+                      onClick={() => {
+                        setSelectedStation(station.id);
+                        setSelectedShow('');
+                      }}
                     >
                       <CardHeader>
                         <div className="flex items-start justify-between">
@@ -855,17 +883,38 @@ export default function Radio() {
                     <h3 className="text-lg font-semibold mb-2">Shows on this station:</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {shows.map((show) => (
-                        <div key={show.id} className="p-3 border rounded-lg">
-                          <p className="font-medium">{show.show_name}</p>
-                          <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {show.show_genres?.map((genre: string) => (
-                              <Badge key={genre} variant="outline" className="text-xs">
-                                {genre}
-                              </Badge>
-                            ))}
+                        <button
+                          key={show.id}
+                          type="button"
+                          onClick={() => setSelectedShow(show.id)}
+                          aria-pressed={selectedShow === show.id}
+                          className={`text-left p-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 ${
+                            selectedShow === show.id
+                              ? 'border-primary bg-primary/10 shadow-sm'
+                              : 'hover:border-primary/60 hover:bg-background/80'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium">{show.show_name}</p>
+                            <Badge variant="secondary" className="text-xs">
+                              {show.time_slot}
+                            </Badge>
                           </div>
-                        </div>
+                          <p className="text-sm text-muted-foreground mt-1">Host: {show.host_name}</p>
+                          {show.show_genres?.length ? (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {show.show_genres.map((genre: string) => (
+                                <Badge key={genre} variant="outline" className="text-xs">
+                                  {genre}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Accepts all genres
+                            </p>
+                          )}
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -889,7 +938,7 @@ export default function Radio() {
 
                 <Button
                   onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
+                  disabled={!selectedStation || !selectedSong || !selectedShow || submitSong.isPending}
                   className="w-full"
                 >
                   <Send className="h-4 w-4 mr-2" />
