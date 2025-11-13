@@ -44,21 +44,14 @@ const TIME_SLOTS = [
   { value: 'weekend', label: 'Weekend Special' },
 ];
 
+const MIN_LISTENER_MULTIPLIER = 0.5;
+const MAX_LISTENER_MULTIPLIER = 5;
+
 export default function RadioStations() {
   const queryClient = useQueryClient();
   const [editingStation, setEditingStation] = useState<any>(null);
   const [editingShow, setEditingShow] = useState<any>(null);
-  const [editStationData, setEditStationData] = useState({
-    name: "",
-    station_type: "national" as "national" | "local",
-    country: "",
-    city_id: null as string | null,
-    quality_level: 3,
-    listener_base: 10000,
-    accepted_genres: [] as string[],
-    description: "",
-    frequency: "",
-  });
+  const [editShowData, setEditShowData] = useState<typeof newShow | null>(null);
   const [newStation, setNewStation] = useState({
     name: '',
     station_type: 'national' as 'national' | 'local',
@@ -235,6 +228,27 @@ export default function RadioStations() {
         show_genres: [],
         description: '',
       });
+    },
+    onError: (error: any) => {
+      toast.error('Failed to create show: ' + error.message);
+    },
+  });
+
+  const updateShow = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: typeof newShow }) => {
+      const { error } = await supabase
+        .from('radio_shows')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-radio-shows'] });
+      toast.success('Radio show updated successfully');
+      setEditingShow(null);
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update show: ' + error.message);
     },
   });
 
@@ -492,10 +506,75 @@ export default function RadioStations() {
     }
   };
 
-  const pendingSubmissions =
-    submissions?.filter((submission: any) => submission.status === 'pending') ?? [];
-  const reviewedSubmissions =
-    submissions?.filter((submission: any) => submission.status !== 'pending') ?? [];
+  useEffect(() => {
+    if (editingShow) {
+      setEditShowData({
+        station_id: editingShow.station_id,
+        show_name: editingShow.show_name,
+        host_name: editingShow.host_name,
+        time_slot: editingShow.time_slot,
+        day_of_week: editingShow.day_of_week ?? null,
+        listener_multiplier: Number(editingShow.listener_multiplier) || 1.0,
+        show_genres: Array.isArray(editingShow.show_genres) ? editingShow.show_genres : [],
+        description: editingShow.description ?? '',
+      });
+    } else {
+      setEditShowData(null);
+    }
+  }, [editingShow]);
+
+  const handleCreateShow = () => {
+    if (!newShow.station_id || !newShow.show_name) {
+      toast.error('Station and show name are required');
+      return;
+    }
+
+    if (
+      Number.isNaN(newShow.listener_multiplier) ||
+      newShow.listener_multiplier < MIN_LISTENER_MULTIPLIER ||
+      newShow.listener_multiplier > MAX_LISTENER_MULTIPLIER
+    ) {
+      toast.error(`Listener multiplier must be between ${MIN_LISTENER_MULTIPLIER}x and ${MAX_LISTENER_MULTIPLIER}x`);
+      return;
+    }
+
+    if (newShow.show_genres.length > 4) {
+      toast.error('Maximum 4 genres allowed');
+      return;
+    }
+
+    createShow.mutate(newShow);
+  };
+
+  const handleUpdateShow = () => {
+    if (!editingShow || !editShowData) return;
+
+    if (!editShowData.station_id || !editShowData.show_name) {
+      toast.error('Station and show name are required');
+      return;
+    }
+
+    if (
+      Number.isNaN(editShowData.listener_multiplier) ||
+      editShowData.listener_multiplier < MIN_LISTENER_MULTIPLIER ||
+      editShowData.listener_multiplier > MAX_LISTENER_MULTIPLIER
+    ) {
+      toast.error(`Listener multiplier must be between ${MIN_LISTENER_MULTIPLIER}x and ${MAX_LISTENER_MULTIPLIER}x`);
+      return;
+    }
+
+    if (editShowData.show_genres.length > 4) {
+      toast.error('Maximum 4 genres allowed');
+      return;
+    }
+
+    updateShow.mutate({
+      id: editingShow.id,
+      updates: {
+        ...editShowData,
+      },
+    });
+  };
 
   if (stationsLoading) {
     return (
@@ -1117,6 +1196,8 @@ export default function RadioStations() {
                     <Input
                       type="number"
                       step="0.1"
+                      min={MIN_LISTENER_MULTIPLIER}
+                      max={MAX_LISTENER_MULTIPLIER}
                       value={newShow.listener_multiplier}
                       onChange={(e) =>
                         setNewShow({ ...newShow, listener_multiplier: parseFloat(e.target.value) })
@@ -1152,7 +1233,7 @@ export default function RadioStations() {
                   </div>
                 </div>
                 <Button
-                  onClick={() => createShow.mutate(newShow)}
+                  onClick={handleCreateShow}
                   disabled={!newShow.station_id || !newShow.show_name}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -1171,13 +1252,22 @@ export default function RadioStations() {
                         <CardTitle className="text-lg">{show.show_name}</CardTitle>
                         <CardDescription>{show.radio_stations?.name}</CardDescription>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteShow.mutate(show.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingShow(show)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteShow.mutate(show.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -1213,62 +1303,137 @@ export default function RadioStations() {
             </div>
           </TabsContent>
         </Tabs>
+
         <Dialog
-          open={isRejectDialogOpen}
+          open={!!editingShow}
           onOpenChange={(open) => {
-            setIsRejectDialogOpen(open);
             if (!open) {
-              setSubmissionToReview(null);
-              setRejectionReason('');
+              setEditingShow(null);
             }
           }}
         >
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Reject Submission</DialogTitle>
-              <DialogDescription>
-                Share a brief note so artists understand why their song wasn't approved.
-              </DialogDescription>
+              <DialogTitle>Edit Radio Show</DialogTitle>
+              <DialogDescription>Update the show's details and listener settings.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              <p className="text-sm">
-                <span className="font-semibold">{submissionToReview?.songs?.title}</span>{' '}
-                by {submissionToReview?.profiles?.display_name}
-              </p>
-              <Textarea
-                placeholder="Let the artist know why this submission isn't a fit."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-              />
-            </div>
+
+            {editShowData && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Radio Station</Label>
+                    <Select
+                      value={editShowData.station_id}
+                      onValueChange={(value) =>
+                        setEditShowData({ ...editShowData, station_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select station" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stations?.map((station) => (
+                          <SelectItem key={station.id} value={station.id}>
+                            {station.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Show Name</Label>
+                    <Input
+                      value={editShowData.show_name}
+                      onChange={(e) =>
+                        setEditShowData({ ...editShowData, show_name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Host Name</Label>
+                    <Input
+                      value={editShowData.host_name}
+                      onChange={(e) =>
+                        setEditShowData({ ...editShowData, host_name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label>Time Slot</Label>
+                    <Select
+                      value={editShowData.time_slot}
+                      onValueChange={(value) =>
+                        setEditShowData({ ...editShowData, time_slot: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_SLOTS.map((slot) => (
+                          <SelectItem key={slot.value} value={slot.value}>
+                            {slot.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Listener Multiplier</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min={MIN_LISTENER_MULTIPLIER}
+                      max={MAX_LISTENER_MULTIPLIER}
+                      value={editShowData.listener_multiplier}
+                      onChange={(e) =>
+                        setEditShowData({
+                          ...editShowData,
+                          listener_multiplier: parseFloat(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={editShowData.description}
+                    onChange={(e) =>
+                      setEditShowData({ ...editShowData, description: e.target.value })
+                    }
+                    placeholder="Show description..."
+                  />
+                </div>
+                <div>
+                  <Label>Show Genres (max 4)</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {GENRES.map((genre) => (
+                      <Badge
+                        key={genre}
+                        variant={editShowData.show_genres.includes(genre) ? 'default' : 'outline'}
+                        className="cursor-pointer"
+                        onClick={() =>
+                          toggleGenre(genre, editShowData.show_genres, (genres) =>
+                            setEditShowData({ ...editShowData, show_genres: genres })
+                          )
+                        }
+                      >
+                        {genre}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsRejectDialogOpen(false);
-                  setSubmissionToReview(null);
-                  setRejectionReason('');
-                }}
-              >
+              <Button variant="outline" onClick={() => setEditingShow(null)}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  if (submissionToReview) {
-                    rejectSubmission.mutate({
-                      submissionId: submissionToReview.id,
-                      reason: rejectionReason.trim(),
-                    });
-                  }
-                }}
-                disabled={!rejectionReason.trim() || rejectSubmission.isPending}
-              >
-                {rejectSubmission.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Reject Submission'
-                )}
+              <Button onClick={handleUpdateShow} disabled={updateShow.isPending}>
+                Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>
