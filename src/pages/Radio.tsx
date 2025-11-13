@@ -22,6 +22,9 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+import type { Database } from "@/lib/supabase-types";
+
+type ProcessRadioSubmissionSummary = Database["public"]["Functions"]["process_radio_submission"]["Returns"];
 
 type BandRadioEarning = {
   band_id: string;
@@ -381,10 +384,7 @@ export default function Radio() {
         throw new Error('You have already submitted this song to this station this week');
       }
 
-      const now = new Date();
-      const nowIso = now.toISOString();
-
-      const { data, error } = await supabase
+      const { data: submission, error } = await supabase
         .from('radio_submissions')
         .insert({
           song_id: selectedSong,
@@ -396,167 +396,39 @@ export default function Radio() {
         .single();
 
       if (error) throw error;
+      const { data: summary, error: rpcError } = await supabase.rpc('process_radio_submission', {
+        p_submission_id: submission.id,
+      });
 
-      const { data: selectedSongData } = await supabase
-        .from('songs')
-        .select('id, title, hype, band_id, total_radio_plays, streams, revenue')
-        .eq('id', selectedSong)
-        .single();
+      if (rpcError) throw rpcError;
 
-      const { data: stationData } = await supabase
-        .from('radio_stations')
-        .select('id, name, listener_base')
-        .eq('id', selectedStation)
-        .single();
-
-      const { data: show } = await supabase
-        .from('radio_shows')
-        .select('id, name')
-        .eq('station_id', selectedStation)
-        .eq('is_active', true)
-        .order('time_slot', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      await supabase
-        .from('radio_submissions')
-        .update({
-          status: 'accepted',
-          reviewed_at: nowIso,
-          rejection_reason: null,
-        })
-        .eq('id', data.id);
-
-      if (selectedSongData && stationData && show) {
-        let playlistId: string | null = null;
-
-        const { data: existingPlaylist } = await supabase
-          .from('radio_playlists')
-          .select('*')
-          .eq('show_id', (show as any).id)
-          .eq('song_id', selectedSong)
-          .eq('week_start_date', weekStartDate)
-          .maybeSingle();
-
-        if (existingPlaylist) {
-          await supabase
-            .from('radio_playlists')
-            .update({
-              times_played: (existingPlaylist.times_played || 0) + 1,
-              added_at: nowIso,
-              is_active: true,
-            })
-            .eq('id', existingPlaylist.id);
-
-          playlistId = existingPlaylist.id;
-        } else {
-          const { data: newPlaylist } = await supabase
-            .from('radio_playlists')
-            .insert({
-              show_id: (show as any).id,
-              song_id: selectedSong,
-              week_start_date: weekStartDate,
-              added_at: nowIso,
-              is_active: true,
-              times_played: 1,
-            })
-            .select()
-            .single();
-
-          playlistId = newPlaylist?.id ?? null;
-        }
-
-        if (playlistId) {
-          const listeners = Math.max(
-            100,
-            Math.round((stationData.listener_base || 0) * (0.55 + Math.random() * 0.35))
-          );
-          const hypeGain = Math.max(1, Math.round(listeners * 0.002));
-          const streamsBoost = Math.max(10, Math.round(listeners * 0.6));
-          const radioRevenue = Math.max(5, Math.round(listeners * 0.015));
-
-          const { data: playRecord } = await supabase
-            .from('radio_plays')
-            .insert({
-              playlist_id: playlistId,
-              show_id: (show as any).id,
-              song_id: selectedSong,
-              station_id: selectedStation,
-              listeners,
-              played_at: nowIso,
-              hype_gained: hypeGain,
-              streams_boost: streamsBoost,
-              sales_boost: radioRevenue,
-            })
-            .select()
-            .single();
-
-          await supabase
-            .from('songs')
-            .update({
-              hype: (selectedSongData.hype || 0) + hypeGain,
-              total_radio_plays: (selectedSongData.total_radio_plays || 0) + 1,
-              last_radio_play: nowIso,
-              streams: (selectedSongData.streams || 0) + streamsBoost,
-              revenue: (selectedSongData.revenue || 0) + radioRevenue,
-            })
-            .eq('id', selectedSong);
-
-          if (selectedSongData.band_id) {
-            const { data: band } = await supabase
-              .from('bands')
-              .select('fame')
-              .eq('id', selectedSongData.band_id)
-              .single();
-
-            if (band) {
-              const fameGain = 0.1;
-
-              await supabase
-                .from('bands')
-                .update({ fame: (band.fame || 0) + fameGain })
-                .eq('id', selectedSongData.band_id);
-
-              await supabase.from('band_fame_events').insert({
-                band_id: selectedSongData.band_id,
-                fame_gained: fameGain,
-                event_type: 'radio_play',
-                event_data: {
-                  station_id: selectedStation,
-                  station_name: stationData.name,
-                  play_id: playRecord?.id,
-                },
-              });
-
-              if (radioRevenue > 0) {
-                await supabase.from('band_earnings').insert({
-                  band_id: selectedSongData.band_id,
-                  amount: radioRevenue,
-                  source: 'radio_play',
-                  description: `Radio play on ${stationData.name}`,
-                  metadata: {
-                    station_id: selectedStation,
-                    station_name: stationData.name,
-                    song_id: selectedSongData.id,
-                    play_id: playRecord?.id,
-                  },
-                });
-              }
-            }
-          }
-        }
-      }
-
-      return data;
+      return { submission, summary: summary as ProcessRadioSubmissionSummary | null };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['station-now-playing'] });
       queryClient.invalidateQueries({ queryKey: ['band-radio-earnings'] });
       queryClient.invalidateQueries({ queryKey: ['station-play-summary'] });
       queryClient.invalidateQueries({ queryKey: ['station-play-timeline'] });
       queryClient.invalidateQueries({ queryKey: ['top-radio-songs'] });
-      toast.success('Your track is now spinning on the airwaves!');
+      const summary = result?.summary ?? null;
+      if (summary) {
+        const listeners = summary.listeners.toLocaleString();
+        const streams = summary.streams_boost.toLocaleString();
+        const hypeGain = summary.hype_gain;
+        const sales = summary.sales_boost.toLocaleString();
+        const timesPlayed = summary.playlist_times_played;
+        const rotationMessage = summary.is_new_playlist
+          ? 'added to the station rotation'
+          : `spun again (total plays this week: ${timesPlayed})`;
+
+        toast.success(
+          `Your track reached ${listeners} listeners, gained ${hypeGain} hype, ` +
+            `added ${streams} streams, generated ${sales} sales, and was ${rotationMessage}.`
+        );
+      } else {
+        toast.success('Your track is now spinning on the airwaves!');
+      }
       setSelectedSong('');
     },
     onError: (error: any) => {
