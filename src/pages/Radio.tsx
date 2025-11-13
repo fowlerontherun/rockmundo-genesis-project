@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Radio as RadioIcon,
   Music,
@@ -96,6 +97,7 @@ export default function Radio() {
   });
   const [selectedStation, setSelectedStation] = useState<string>("");
   const [selectedSong, setSelectedSong] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"submit" | "submissions" | "trending">("submit");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
 
   const { data: profile } = useQuery({
@@ -358,6 +360,12 @@ export default function Radio() {
     },
   });
 
+  useEffect(() => {
+    if (recordedSongs?.length === 0) {
+      setSelectedSong('');
+    }
+  }, [recordedSongs]);
+
   const submitSong = useMutation({
     mutationFn: async () => {
       if (!selectedStation || !selectedSong) {
@@ -605,7 +613,7 @@ export default function Radio() {
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="submit" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList>
             <TabsTrigger value="submit">Submit Song</TabsTrigger>
             <TabsTrigger value="submissions">My Submissions</TabsTrigger>
@@ -871,45 +879,61 @@ export default function Radio() {
                   </div>
                 )}
 
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Select Song</label>
-                  <Select value={selectedSong} onValueChange={setSelectedSong}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a recorded song" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {recordedSongs?.map((song) => (
-                        <SelectItem key={song.id} value={song.id}>
-                          {song.title} ({song.genre}) - Quality: {song.quality_score}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {recordedSongs && recordedSongs.length === 0 ? (
+                  <EmptyState
+                    icon={Music}
+                    title="No recorded songs yet"
+                    description="Record a track in the studio to unlock radio submissions."
+                    action={
+                      <Button onClick={() => navigate('/recording-studio')}>
+                        Record a new song
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Select Song</label>
+                      <Select
+                        value={selectedSong}
+                        onValueChange={setSelectedSong}
+                        disabled={!recordedSongs?.length}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a recorded song" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {recordedSongs?.map((song) => (
+                            <SelectItem key={song.id} value={song.id}>
+                              {song.title} ({song.genre}) - Quality: {song.quality_score}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <Button
-                  onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
-                  className="w-full"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Submit to Radio Station
-                </Button>
+                    <Button
+                      onClick={() => submitSong.mutate()}
+                      disabled={
+                        !selectedStation ||
+                        !selectedSong ||
+                        submitSong.isPending ||
+                        !recordedSongs?.length
+                      }
+                      className="w-full"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit to Radio Station
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="submissions" className="space-y-4">
-            {mySubmissions?.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">
-                    No submissions yet. Submit your first song to a radio station!
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              mySubmissions?.map((submission) => (
+            {mySubmissions && mySubmissions.length > 0 ? (
+              mySubmissions.map((submission) => (
                 <Card key={submission.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -952,7 +976,18 @@ export default function Radio() {
                   </CardContent>
                 </Card>
               ))
-            )}
+            ) : mySubmissions ? (
+              <EmptyState
+                icon={RadioIcon}
+                title="You haven't submitted any songs yet"
+                description="Share a recorded track with a station to start building hype from radio spins."
+                action={
+                  <Button onClick={() => setActiveTab('submit')}>
+                    Submit a song
+                  </Button>
+                }
+              />
+            ) : null}
           </TabsContent>
 
           <TabsContent value="trending" className="space-y-4">
@@ -962,29 +997,42 @@ export default function Radio() {
                 <CardDescription>Songs with the most hype from radio airplay</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {topSongs?.map((song, index) => (
-                    <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                        <span className="font-bold">{index + 1}</span>
+                {topSongs && topSongs.length > 0 ? (
+                  <div className="space-y-3">
+                    {topSongs.map((song, index) => (
+                      <div key={song.id} className="flex items-center gap-4 p-3 border rounded-lg">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                          <span className="font-bold">{index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{song.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            by {song.profiles?.display_name}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-green-500" />
+                          <span className="font-semibold">{song.hype || 0} hype</span>
+                        </div>
+                        <Badge variant="outline">{song.genre}</Badge>
+                        {song.total_radio_plays > 0 && (
+                          <Badge variant="secondary">{song.total_radio_plays} plays</Badge>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{song.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          by {song.profiles?.display_name}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-500" />
-                        <span className="font-semibold">{song.hype || 0} hype</span>
-                      </div>
-                      <Badge variant="outline">{song.genre}</Badge>
-                      {song.total_radio_plays > 0 && (
-                        <Badge variant="secondary">{song.total_radio_plays} plays</Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : topSongs ? (
+                  <EmptyState
+                    icon={Sparkles}
+                    title="No radio charts yet"
+                    description="Once artists start submitting songs, the most hyped tracks will appear here."
+                    action={
+                      <Button onClick={() => setActiveTab('submit')}>
+                        Submit a song
+                      </Button>
+                    }
+                  />
+                ) : null}
               </CardContent>
             </Card>
 
