@@ -36,6 +36,10 @@ begin
     raise exception 'Radio submission % not found', p_submission_id using errcode = 'P0002';
   end if;
 
+  if v_submission.user_id is distinct from auth.uid() then
+    raise exception 'Not authorized to process submission %', p_submission_id using errcode = '42501';
+  end if;
+
   select *
     into v_song
     from songs
