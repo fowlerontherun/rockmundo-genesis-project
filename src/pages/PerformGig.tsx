@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth-context';
@@ -15,6 +15,7 @@ import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
 import { format } from 'date-fns';
 import { useBandGearEffects } from '@/hooks/useBandGearEffects';
+import { buildGearOutcomeNarrative } from '@/utils/gigNarrative';
 
 type GigWithVenue = Database['public']['Tables']['gigs']['Row'] & {
   venues: Database['public']['Tables']['venues']['Row'] | null;
@@ -231,6 +232,18 @@ export default function PerformGig() {
   const venueLocation = gig.venues?.location || 'Unknown Location';
   const capacity = gig.venues?.capacity || 0;
 
+  const setlistLength = setlistSongs.length;
+
+  const gearOutcomeNarrative = useMemo(() => {
+    if (!outcome) return null;
+
+    return buildGearOutcomeNarrative({
+      outcome,
+      gearEffects: gearEffects ?? undefined,
+      setlistLength,
+    });
+  }, [outcome, gearEffects, setlistLength]);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Button
@@ -411,6 +424,7 @@ export default function PerformGig() {
         venueCapacity={gig.venues?.capacity || 0}
         songs={setlistSongs.map(s => ({ id: s.song_id, title: s.songs?.title || 'Unknown' }))}
         gearEffects={gearEffects}
+        gearNarrative={gearOutcomeNarrative}
       />
     </div>
   );
