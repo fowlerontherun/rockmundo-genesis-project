@@ -263,7 +263,7 @@ export const GigPreparationChecklist = ({
 
           {!gearLoading && (!formattedGearEffects || formattedGearEffects.breakdown.length === 0) && (
             <p className="text-sm text-muted-foreground">
-              Equip high-end microphones, pedals, and processors to unlock performance boosts before the show.
+              Equip high-end microphones, pedals, and processors to unlock capped performance boosts and keep breakdown risk low.
             </p>
           )}
 
