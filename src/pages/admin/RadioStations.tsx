@@ -37,6 +37,8 @@ type StationFormState = {
 type StationValidationErrors = {
   name?: string;
   location?: string;
+  quality_level?: string;
+  listener_base?: string;
 };
 
 const validateStationForm = (station: StationFormState): StationValidationErrors => {
@@ -44,6 +46,18 @@ const validateStationForm = (station: StationFormState): StationValidationErrors
 
   if (!station.name.trim()) {
     errors.name = "Station name is required.";
+  }
+
+  if (!Number.isFinite(station.quality_level)) {
+    errors.quality_level = "Quality level is required.";
+  } else if (!Number.isInteger(station.quality_level) || station.quality_level < 1 || station.quality_level > 5) {
+    errors.quality_level = "Quality level must be a whole number between 1 and 5.";
+  }
+
+  if (!Number.isFinite(station.listener_base)) {
+    errors.listener_base = "Listener base is required.";
+  } else if (!Number.isInteger(station.listener_base) || station.listener_base < 1) {
+    errors.listener_base = "Listener base must be a positive whole number.";
   }
 
   if (station.station_type === "national") {
@@ -61,6 +75,12 @@ const validateStationForm = (station: StationFormState): StationValidationErrors
 
 const formatStationForPersistence = (station: StationFormState): StationFormState => ({
   ...station,
+  quality_level: Number.isFinite(station.quality_level)
+    ? Math.min(5, Math.max(1, Math.round(station.quality_level)))
+    : 1,
+  listener_base: Number.isFinite(station.listener_base)
+    ? Math.max(1, Math.round(station.listener_base))
+    : 1,
   country: station.station_type === "national" ? station.country.trim() : "",
   city_id:
     station.station_type === "local"
@@ -428,20 +448,28 @@ export default function RadioStations() {
                       min="1"
                       max="5"
                       value={newStation.quality_level}
+                      aria-invalid={!!createStationErrors.quality_level}
                       onChange={(e) =>
-                        setNewStation({ ...newStation, quality_level: parseInt(e.target.value) })
+                        setNewStation({ ...newStation, quality_level: parseInt(e.target.value, 10) })
                       }
                     />
+                    {createStationErrors.quality_level && (
+                      <p className="text-sm text-destructive mt-1">{createStationErrors.quality_level}</p>
+                    )}
                   </div>
                   <div>
                     <Label>Listener Base</Label>
                     <Input
                       type="number"
                       value={newStation.listener_base}
+                      aria-invalid={!!createStationErrors.listener_base}
                       onChange={(e) =>
-                        setNewStation({ ...newStation, listener_base: parseInt(e.target.value) })
+                        setNewStation({ ...newStation, listener_base: parseInt(e.target.value, 10) })
                       }
                     />
+                    {createStationErrors.listener_base && (
+                      <p className="text-sm text-destructive mt-1">{createStationErrors.listener_base}</p>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -820,26 +848,34 @@ export default function RadioStations() {
                         min="1"
                         max="5"
                         value={editStationForm.quality_level}
+                        aria-invalid={!!editStationErrors.quality_level}
                         onChange={(e) =>
                           setEditStationForm({
                             ...editStationForm,
-                            quality_level: parseInt(e.target.value),
+                            quality_level: parseInt(e.target.value, 10),
                           })
                         }
                       />
+                      {editStationErrors.quality_level && (
+                        <p className="text-sm text-destructive mt-1">{editStationErrors.quality_level}</p>
+                      )}
                     </div>
                     <div>
                       <Label>Listener Base</Label>
                       <Input
                         type="number"
                         value={editStationForm.listener_base}
+                        aria-invalid={!!editStationErrors.listener_base}
                         onChange={(e) =>
                           setEditStationForm({
                             ...editStationForm,
-                            listener_base: parseInt(e.target.value),
+                            listener_base: parseInt(e.target.value, 10),
                           })
                         }
                       />
+                      {editStationErrors.listener_base && (
+                        <p className="text-sm text-destructive mt-1">{editStationErrors.listener_base}</p>
+                      )}
                     </div>
                   </div>
                   <div>
