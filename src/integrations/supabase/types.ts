@@ -5363,6 +5363,131 @@ export type Database = {
           },
         ]
       }
+      music_video_configs: {
+        Row: {
+          art_style: string
+          band_id: string | null
+          budget_amount: number
+          budget_tier: string
+          cast_option: string
+          cast_quality: string | null
+          created_at: string
+          id: string
+          image_quality: string
+          location_style: string | null
+          production_notes: string | null
+          release_id: string | null
+          theme: string
+          updated_at: string
+          user_id: string
+          youtube_video_url: string | null
+        }
+        Insert: {
+          art_style: string
+          band_id?: string | null
+          budget_amount?: number
+          budget_tier: string
+          cast_option: string
+          cast_quality?: string | null
+          created_at?: string
+          id?: string
+          image_quality: string
+          location_style?: string | null
+          production_notes?: string | null
+          release_id?: string | null
+          theme: string
+          updated_at?: string
+          user_id: string
+          youtube_video_url?: string | null
+        }
+        Update: {
+          art_style?: string
+          band_id?: string | null
+          budget_amount?: number
+          budget_tier?: string
+          cast_option?: string
+          cast_quality?: string | null
+          created_at?: string
+          id?: string
+          image_quality?: string
+          location_style?: string | null
+          production_notes?: string | null
+          release_id?: string | null
+          theme?: string
+          updated_at?: string
+          user_id?: string
+          youtube_video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_video_configs_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_configs_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      music_video_metrics: {
+        Row: {
+          chart_name: string | null
+          chart_position: number | null
+          chart_velocity: number | null
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          mtv_program: string | null
+          mtv_spins: number | null
+          music_video_id: string
+          updated_at: string
+          youtube_video_id: string | null
+          youtube_views: number | null
+        }
+        Insert: {
+          chart_name?: string | null
+          chart_position?: number | null
+          chart_velocity?: number | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          mtv_program?: string | null
+          mtv_spins?: number | null
+          music_video_id: string
+          updated_at?: string
+          youtube_video_id?: string | null
+          youtube_views?: number | null
+        }
+        Update: {
+          chart_name?: string | null
+          chart_position?: number | null
+          chart_velocity?: number | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          mtv_program?: string | null
+          mtv_spins?: number | null
+          music_video_id?: string
+          updated_at?: string
+          youtube_video_id?: string | null
+          youtube_views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_video_metrics_music_video_id_fkey"
+            columns: ["music_video_id"]
+            isOneToOne: true
+            referencedRelation: "music_video_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       season_genre_modifiers: {
         Row: {
           created_at: string
