@@ -33,6 +33,7 @@ import {
   Briefcase,
   DollarSign,
   Store,
+  Package,
   ShoppingCart,
   Settings,
   LogOut,
@@ -121,7 +122,8 @@ export function AppSidebar() {
       items: [
         { icon: Briefcase, label: "Employment", path: "/employment" },
         { icon: DollarSign, label: "Finances", path: "/finances" },
-        { icon: Store, label: "Inventory", path: "/inventory" },
+        { icon: Store, label: "Gear Shop", path: "/gear-shop" },
+        { icon: Package, label: "Inventory", path: "/inventory" },
         { icon: ShoppingCart, label: "Merch", path: "/merchandise" },
         { icon: Disc, label: "Record Labels", path: "/labels" },
         { icon: Building2, label: "Venues", path: "/venues" },

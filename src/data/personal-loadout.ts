@@ -1,7 +1,20 @@
 export type LoadoutSectionKey = "vocal" | "pedal" | "other";
 
-export type GearQuality = "Pristine" | "Stage Ready" | "Road Worn" | "Studio Kept";
-export type GearRarity = "Common" | "Uncommon" | "Rare" | "Legendary";
+import type { GearQualityTier } from "@/utils/gearQuality";
+import type { GearRarityKey } from "@/utils/gearRarity";
+
+export type GearQuality =
+  | "Pristine"
+  | "Stage Ready"
+  | "Road Worn"
+  | "Studio Kept"
+  | "Budget"
+  | "Standard"
+  | "Professional"
+  | "Boutique"
+  | "Experimental";
+export type GearRarity = "Common" | "Uncommon" | "Rare" | "Legendary" | "Epic";
+export type GearSource = "preset" | "inventory";
 export type PedalSlotType =
   | "input"
   | "dynamics"
@@ -21,6 +34,14 @@ export interface GearDefinition {
   rarity: GearRarity;
   compatiblePedalSlots?: PedalSlotType[];
   description?: string;
+  price?: number;
+  statBoosts?: Record<string, number>;
+  stock?: number | null;
+  equipmentItemId?: string;
+  inventoryId?: string;
+  source?: GearSource;
+  rarityKey?: GearRarityKey;
+  qualityTierKey?: GearQualityTier;
 }
 
 export interface LoadoutMetadata {
