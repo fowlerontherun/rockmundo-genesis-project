@@ -8539,6 +8539,23 @@ export type Database = {
         Args: { amount: number; release_id: string }
         Returns: undefined
       }
+      process_radio_submission: {
+        Args: { p_submission_id: string; p_force_failure?: string | null }
+        Returns: {
+          submission_id: string
+          playlist_id: string
+          play_id: string
+          listeners: number
+          hype_gain: number
+          streams_boost: number
+          sales_boost: number
+          week_start_date: string
+          show_id: string
+          band_id: string | null
+          playlist_times_played: number
+          is_new_playlist: boolean
+        }
+      }
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
