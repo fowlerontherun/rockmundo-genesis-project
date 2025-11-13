@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, Trash2, Music, Clock, Star } from "lucide-react";
+import { Plus, GripVertical, Trash2, Music, Clock, Star, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { calculateSetlistDuration, formatDuration } from "@/utils/setlistDuration";
 import {
@@ -45,6 +45,7 @@ export const SetlistSongManager = ({
   const { data: setlistSongs, isLoading } = useSetlistSongs(setlistId);
   const addSongMutation = useAddSongToSetlist();
   const removeSongMutation = useRemoveSongFromSetlist();
+  const reorderMutation = useReorderSetlistSongs();
 
   const toggleEncoreMutation = useMutation({
     mutationFn: async ({ songId, isEncore }: { songId: string; isEncore: boolean }) => {
@@ -115,12 +116,30 @@ export const SetlistSongManager = ({
     setSelectedSongId("");
   };
 
-  const handleRemoveSong = (songId: string) => {
-    removeSongMutation.mutate({ setlistId, songId });
+  const handleRemoveSong = (setlistSongId: string) => {
+    removeSongMutation.mutate({ setlistId, setlistSongId });
   };
 
   const handleToggleEncore = (songId: string, currentEncore: boolean) => {
     toggleEncoreMutation.mutate({ songId, isEncore: !currentEncore });
+  };
+
+  const handleMove = (index: number, direction: "up" | "down") => {
+    if (!setlistSongs || reorderMutation.isPending) return;
+
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= setlistSongs.length) return;
+
+    const newOrder = [...setlistSongs];
+    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+
+    reorderMutation.mutate({
+      setlistId,
+      songUpdates: newOrder.map((song, idx) => ({
+        id: song.id,
+        position: idx + 1,
+      })),
+    });
   };
 
   const songCount = setlistSongs?.length || 0;
@@ -239,23 +258,47 @@ export const SetlistSongManager = ({
                         </div>
                       )}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleEncore(ss.song_id, ss.is_encore || false)}
-                      disabled={toggleEncoreMutation.isPending || (!ss.is_encore && encoreCount >= 2)}
-                      title={!ss.is_encore && encoreCount >= 2 ? "Maximum 2 encore songs" : "Mark as encore"}
-                    >
-                      <Star className={`h-4 w-4 ${ss.is_encore ? 'fill-current' : ''}`} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveSong(ss.song_id)}
-                      disabled={removeSongMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleMove(index, "up")}
+                          disabled={index === 0 || reorderMutation.isPending}
+                          title="Move up"
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleMove(index, "down")}
+                          disabled={index === (setlistSongs?.length || 0) - 1 || reorderMutation.isPending}
+                          title="Move down"
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleEncore(ss.song_id, ss.is_encore || false)}
+                        disabled={toggleEncoreMutation.isPending || (!ss.is_encore && encoreCount >= 2)}
+                        title={!ss.is_encore && encoreCount >= 2 ? "Maximum 2 encore songs" : "Mark as encore"}
+                      >
+                        <Star className={`h-4 w-4 ${ss.is_encore ? 'fill-current' : ''}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveSong(ss.id)}
+                        disabled={removeSongMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -168,7 +168,11 @@ export const EnhancedSetlistSongManager = ({
     },
   });
 
-  const songsInSetlist = new Set(setlistSongs?.map((ss) => ss.song_id).filter(Boolean));
+  const songsInSetlist = new Set(
+    (setlistSongs ?? [])
+      .map((ss) => ss.song_id)
+      .filter((id): id is string => Boolean(id))
+  );
   const unaddedSongs = availableSongs?.filter((song) => !songsInSetlist.has(song.id));
 
   const handleAddSong = async () => {
@@ -183,8 +187,8 @@ export const EnhancedSetlistSongManager = ({
     setSelectedSongId("");
   };
 
-  const handleRemoveSong = (songId: string) => {
-    removeSongMutation.mutate({ setlistId, songId });
+  const handleRemoveSong = (setlistSongId: string) => {
+    removeSongMutation.mutate({ setlistId, setlistSongId });
   };
 
   const mainSetlist = setlistSongs?.filter(s => s.section === 'main') || [];
@@ -257,7 +261,7 @@ export const EnhancedSetlistSongManager = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleRemoveSong(isPerformanceItem ? ss.performance_item_id : ss.song_id)}
+            onClick={() => handleRemoveSong(ss.id)}
             disabled={removeSongMutation.isPending}
           >
             <Trash2 className="h-4 w-4" />

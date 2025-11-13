@@ -17,11 +17,21 @@ export interface Setlist {
 export interface SetlistSong {
   id: string;
   setlist_id: string;
-  song_id: string;
+  song_id: string | null;
+  performance_item_id?: string | null;
+  item_type?: string | null;
+  section?: string | null;
+  is_encore?: boolean | null;
   position: number;
   notes: string | null;
   created_at: string;
   songs?: any;
+  performance_items_catalog?: {
+    id: string;
+    name: string;
+    item_category: string;
+    spotlight_level?: string | null;
+  } | null;
 }
 
 export const useSetlists = (bandId: string | null) => {
@@ -67,6 +77,12 @@ export const useSetlistSongs = (setlistId: string | null) => {
             quality_score,
             duration_seconds,
             duration_display
+          ),
+          performance_items_catalog (
+            id,
+            name,
+            item_category,
+            spotlight_level
           )
         `)
         .eq("setlist_id", setlistId)
@@ -248,12 +264,18 @@ export const useRemoveSongFromSetlist = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ setlistId, songId }: { setlistId: string; songId: string }) => {
+    mutationFn: async ({
+      setlistId,
+      setlistSongId,
+    }: {
+      setlistId: string;
+      setlistSongId: string;
+    }) => {
       const { error } = await supabase
         .from("setlist_songs")
         .delete()
-        .eq("setlist_id", setlistId)
-        .eq("song_id", songId);
+        .eq("id", setlistSongId)
+        .eq("setlist_id", setlistId);
 
       if (error) throw error;
     },
