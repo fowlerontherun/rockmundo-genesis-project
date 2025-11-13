@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -20,18 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { usePlayerEquipment } from "@/hooks/usePlayerEquipment";
@@ -52,6 +41,35 @@ interface GearShopItem extends Omit<EquipmentItemRecord, "stat_boosts"> {
   qualityTier: GearQualityTier;
   rarityKey: GearRarityKey;
 }
+
+interface GearShopSnapshotRow {
+  equipment_id: string;
+  stock: number | null;
+  cash: number | null;
+  reserved_funds: number | null;
+}
+
+interface PurchaseResultRow {
+  player_equipment_id: string | null;
+  remaining_stock: number | null;
+  new_cash: number | null;
+}
+
+interface OptimisticReservationState {
+  reservedStock: number;
+  reservedFunds: number;
+}
+
+type PurchaseMutationInput = {
+  item: GearShopItem;
+};
+
+type PurchaseMutationContext = {
+  itemId: string;
+  price: number;
+};
+
+const SNAPSHOT_QUERY_KEY = ["gear-shop-snapshot"] as const;
 
 type QualityFilterValue = "all" | GearQualityTier;
 type RarityFilterValue = "all" | GearRarityKey;
@@ -164,18 +182,48 @@ const GearShop = () => {
   const [category, setCategory] = useState<string>("all");
   const [rarity, setRarity] = useState<RarityFilterValue>("all");
   const [quality, setQuality] = useState<QualityFilterValue>("all");
-  const [comparisonOpen, setComparisonOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<GearShopItem | null>(null);
-  const [confirmationItem, setConfirmationItem] = useState<GearShopItem | null>(null);
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
-  const [recentPurchases, setRecentPurchases] = useState<string[]>([]);
+  const [optimisticReservations, setOptimisticReservations] = useState<Record<string, OptimisticReservationState>>({});
+  const [activePurchaseId, setActivePurchaseId] = useState<string | null>(null);
 
-  const {
-    data: items,
-    isLoading: loadingItems,
-    error: itemsError,
-    refetch: refetchItems,
-  } = useQuery<GearShopItem[]>({
+  const parseNumericValue = (value: unknown, fallback = 0) =>
+    typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+  const adjustReservation = (itemId: string, stockDelta: number, fundsDelta: number) => {
+    setOptimisticReservations((previous) => {
+      const current = previous[itemId] ?? { reservedStock: 0, reservedFunds: 0 };
+      const nextStock = Math.max(current.reservedStock + stockDelta, 0);
+      const nextFunds = Math.max(current.reservedFunds + fundsDelta, 0);
+
+      if (nextStock === 0 && nextFunds === 0) {
+        const { [itemId]: _, ...rest } = previous;
+        return rest;
+      }
+
+      return {
+        ...previous,
+        [itemId]: {
+          reservedStock: nextStock,
+          reservedFunds: nextFunds,
+        },
+      };
+    });
+  };
+
+  const { data: snapshotRows } = useQuery<GearShopSnapshotRow[]>({
+    queryKey: SNAPSHOT_QUERY_KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_gear_shop_item_snapshot" as any);
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as GearShopSnapshotRow[] | null) ?? [];
+    },
+    enabled: Boolean(user),
+  });
+
+  const { data: items, isLoading: loadingItems } = useQuery<GearShopItem[]>({
     queryKey: ["gear-shop-items"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -206,93 +254,84 @@ const GearShop = () => {
     },
   });
 
-  const handleOpenComparison = (item: GearShopItem) => {
-    setSelectedItem(item);
-    setComparisonOpen(true);
-  };
-
-  const handleInitiatePurchase = (item: GearShopItem) => {
-    setConfirmationItem(item);
-    setConfirmationOpen(true);
-  };
-
-  const purchaseMutation = useMutation({
-    mutationFn: async (item: GearShopItem) => {
-      const { error } = await supabase.rpc("purchase_equipment_item" as any, { p_equipment_id: item.id });
+  const purchaseMutation = useMutation<PurchaseResultRow | null, Error, PurchaseMutationInput, PurchaseMutationContext>({
+    mutationFn: async ({ item }) => {
+      const { data, error } = await supabase.rpc("purchase_equipment_item" as any, { p_equipment_id: item.id });
       if (error) {
         throw error;
       }
+
+      const rows = (data as PurchaseResultRow[] | null) ?? [];
+      return rows[0] ?? null;
     },
-    onSuccess: async (_, item) => {
-      toast.success(`${item.name} added to your inventory`);
+    onMutate: ({ item }) => {
+      setActivePurchaseId(item.id);
+      adjustReservation(item.id, 1, item.price);
+      return {
+        itemId: item.id,
+        price: item.price,
+      };
+    },
+    onError: (error, variables, context) => {
+      if (context) {
+        adjustReservation(context.itemId, -1, -context.price);
+      }
 
-      setRecentPurchases((previous) => {
-        if (previous.includes(item.id)) {
-          return previous;
-        }
-        return [...previous, item.id];
-      });
+      const message = error.message || "Unable to complete purchase";
+      toast.error(`${message}. Reservation released.`);
+      queryClient.invalidateQueries({ queryKey: SNAPSHOT_QUERY_KEY });
+    },
+    onSuccess: async (result, variables) => {
+      const { item } = variables;
 
-      queryClient.setQueryData<GearShopItem[] | undefined>(["gear-shop-items"], (current) => {
-        if (!current) {
-          return current;
-        }
-
-        return current.map((entry) =>
-          entry.id === item.id
-            ? {
-                ...entry,
-                stock:
-                  typeof entry.stock === "number" && Number.isFinite(entry.stock)
-                    ? Math.max(entry.stock - 1, 0)
-                    : entry.stock,
-              }
-            : entry,
+      let snapshotRowsAfterPurchase: GearShopSnapshotRow[] = [];
+      try {
+        const { data: refreshedData, error: snapshotError } = await supabase.rpc(
+          "get_gear_shop_item_snapshot" as any,
+          { p_equipment_id: null },
         );
-      });
 
-      queryClient.setQueryData<PlayerEquipmentWithItem[] | undefined>(
-        ["player-equipment", user?.id],
-        (current) => {
-          const existing = current ?? [];
+        if (snapshotError) {
+          throw snapshotError;
+        }
 
-          const alreadyPresent = existing.some((entry) => entry.equipment?.id === item.id);
+        snapshotRowsAfterPurchase = (refreshedData as GearShopSnapshotRow[] | null) ?? [];
+        queryClient.setQueryData(SNAPSHOT_QUERY_KEY, snapshotRowsAfterPurchase);
+      } catch (snapshotError) {
+        console.error("Failed to refresh gear snapshot", snapshotError);
+        queryClient.invalidateQueries({ queryKey: SNAPSHOT_QUERY_KEY });
+      }
 
-          if (alreadyPresent) {
-            return existing;
-          }
+      const profileReservedFunds = parseNumericValue(profile?.reserved_funds, 0);
+      const snapshotForItem = snapshotRowsAfterPurchase.find((row) => row.equipment_id === item.id) ?? null;
+      const resolvedCash = snapshotForItem
+        ? parseNumericValue(snapshotForItem.cash, parseNumericValue(result?.new_cash, 0))
+        : parseNumericValue(result?.new_cash, 0);
+      const resolvedReservedFunds = snapshotForItem
+        ? parseNumericValue(snapshotForItem.reserved_funds, profileReservedFunds)
+        : profileReservedFunds;
+      const resolvedStock = snapshotForItem
+        ? parseNumericValue(snapshotForItem.stock, parseNumericValue(result?.remaining_stock, 0))
+        : parseNumericValue(result?.remaining_stock, 0);
 
-          const optimisticEntry: PlayerEquipmentWithItem = {
-            id: `optimistic-${Date.now()}`,
-            equipment_id: item.id,
-            condition: 100,
-            is_equipped: false,
-            created_at: new Date().toISOString(),
-            equipment: {
-              id: item.id,
-              name: item.name,
-              category: item.category,
-              subcategory: item.subcategory,
-              price: item.price,
-              rarity: item.rarityKey,
-              description: item.description,
-              stat_boosts: item.stat_boosts,
-              stock: item.stock,
-            },
-          };
+      const remainingBudget = Math.max(resolvedCash - resolvedReservedFunds, 0);
+      const remainingStock = Math.max(resolvedStock, 0);
 
-          return [optimisticEntry, ...existing];
-        },
+      toast.success(
+        `Gear purchased. Remaining budget: $${remainingBudget.toLocaleString()} · Stock left: ${remainingStock} in stock`,
       );
 
-      setConfirmationOpen(false);
-      setConfirmationItem(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["gear-shop-items"] }),
+        queryClient.invalidateQueries({ queryKey: ["equipment-store-items"] }),
+        queryClient.invalidateQueries({ queryKey: ["player-equipment", user?.id] }),
+      ]);
+
+      adjustReservation(item.id, -1, -item.price);
       await refetch();
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Unable to complete purchase");
-      setConfirmationOpen(false);
-      setConfirmationItem(null);
+    onSettled: () => {
+      setActivePurchaseId(null);
     },
   });
 
@@ -373,7 +412,34 @@ const GearShop = () => {
   }, [items, category, rarity, quality, currencyFilter, stockFilter, search]);
 
   const cashOnHand = typeof profile?.cash === "number" ? profile.cash : 0;
-  const fameScore = typeof profile?.fame === "number" ? profile.fame : 0;
+  const profileReservedFunds = parseNumericValue(profile?.reserved_funds, 0);
+
+  const snapshotMap = useMemo(() => {
+    const map = new Map<string, GearShopSnapshotRow>();
+
+    if (Array.isArray(snapshotRows)) {
+      snapshotRows.forEach((row) => {
+        if (row?.equipment_id) {
+          map.set(row.equipment_id, row);
+        }
+      });
+    }
+
+    return map;
+  }, [snapshotRows]);
+
+  const baselineCash = snapshotRows && snapshotRows.length > 0 ? parseNumericValue(snapshotRows[0]?.cash, cashOnHand) : cashOnHand;
+  const baselineReservedFunds =
+    snapshotRows && snapshotRows.length > 0
+      ? parseNumericValue(snapshotRows[0]?.reserved_funds, profileReservedFunds)
+      : profileReservedFunds;
+
+  const totalOptimisticReservedFunds = useMemo(() => {
+    return Object.values(optimisticReservations).reduce((total, entry) => total + entry.reservedFunds, 0);
+  }, [optimisticReservations]);
+
+  const totalReservedFunds = baselineReservedFunds + totalOptimisticReservedFunds;
+  const availableBudget = Math.max(baselineCash - totalReservedFunds, 0);
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -384,18 +450,14 @@ const GearShop = () => {
             Outfit your rig with curated gear tiers. Rarity and quality directly amplify your performance stats.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 shadow-sm">
-            <BadgeDollarSign className="h-4 w-4 text-primary" />
-            <span className="font-medium">Cash</span>
-            <Separator orientation="vertical" className="h-4" />
-            <span>${cashOnHand.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 shadow-sm">
-            <Sparkles className="h-4 w-4 text-amber-500" />
-            <span className="font-medium">Fame</span>
-            <Separator orientation="vertical" className="h-4" />
-            <span>{fameScore.toLocaleString()}</span>
+        <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-2 text-sm shadow-sm">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <div className="flex flex-col text-right">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Available budget</span>
+            <span className="text-lg font-semibold">${availableBudget.toLocaleString()}</span>
+            <span className="text-xs text-muted-foreground">
+              Total ${baselineCash.toLocaleString()} · Reserved ${totalReservedFunds.toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
@@ -560,16 +622,75 @@ const GearShop = () => {
                 const rarityClass = rarityStyles[item.rarityKey];
                 const qualityClass = qualityTierStyles[item.qualityTier];
                 const isOwned = ownedIds.has(item.id);
-                const outOfStock = (item.stock ?? 0) <= 0;
-                const justPurchased = recentPurchases.includes(item.id);
-
-                const stockTone = !item.is_stock_tracked
-                  ? "text-emerald-600"
-                  : outOfStock
+                const reservationForItem = optimisticReservations[item.id];
+                const reservedStock = reservationForItem?.reservedStock ?? 0;
+                const reservedFundsForItem = reservationForItem?.reservedFunds ?? 0;
+                const snapshot = snapshotMap.get(item.id);
+                const baseStock = snapshot
+                  ? parseNumericValue(snapshot.stock, item.stock ?? 0)
+                  : parseNumericValue(item.stock, 0);
+                const displayStock = Math.max(baseStock - reservedStock, 0);
+                const stockTone = displayStock <= 0
                   ? "text-destructive"
-                  : item.stock && item.stock <= 2
+                  : displayStock <= 2
                   ? "text-amber-600"
                   : "text-muted-foreground";
+                const totalReservedExcludingCurrent = Math.max(totalOptimisticReservedFunds - reservedFundsForItem, 0);
+                const availableBudgetForItem = Math.max(
+                  baselineCash - (baselineReservedFunds + totalReservedExcludingCurrent),
+                  0,
+                );
+                const insufficientFunds = reservedStock === 0 && availableBudgetForItem < item.price;
+                const fundsShortfall = Math.max(item.price - availableBudgetForItem, 0);
+                const insufficientStock = displayStock <= 0;
+                const isReserved = reservedStock > 0;
+                const isProcessing = purchaseMutation.isPending && activePurchaseId === item.id;
+                const buttonDisabled =
+                  purchaseMutation.isPending ||
+                  isOwned ||
+                  insufficientStock ||
+                  insufficientFunds ||
+                  isReserved;
+
+                let disableReason: string | null = null;
+                if (isOwned) {
+                  disableReason = "You already own this gear.";
+                } else if (isProcessing || isReserved) {
+                  disableReason = "Purchase in progress. We'll confirm once it completes.";
+                } else if (purchaseMutation.isPending) {
+                  disableReason = "Please wait for the current purchase to finish.";
+                } else if (insufficientStock) {
+                  disableReason = reservedStock > 0
+                    ? "Your pending reservation has locked the last unit."
+                    : "No stock available right now.";
+                } else if (insufficientFunds) {
+                  disableReason = fundsShortfall > 0
+                    ? `Need $${fundsShortfall.toLocaleString()} more available budget after reservations.`
+                    : "Insufficient funds.";
+                }
+
+                let buttonLabel: ReactNode = `Purchase for $${item.price.toLocaleString()}`;
+                if (isOwned) {
+                  buttonLabel = "Already owned";
+                } else if (isProcessing) {
+                  buttonLabel = (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing
+                    </>
+                  );
+                } else if (isReserved) {
+                  buttonLabel = "Reserving...";
+                } else if (insufficientStock) {
+                  buttonLabel = "Out of stock";
+                } else if (insufficientFunds) {
+                  buttonLabel = "Insufficient funds";
+                }
+
+                const stockLabel = displayStock <= 0
+                  ? "Sold out"
+                  : reservedStock > 0
+                  ? `${displayStock} in stock (${reservedStock} reserved)`
+                  : `${displayStock} in stock`;
 
                 const stockLabel = !item.is_stock_tracked
                   ? "Unlimited availability"
@@ -625,13 +746,9 @@ const GearShop = () => {
                           <Shield className="h-4 w-4" />
                           <span>{item.gear_category?.label ?? item.category}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-amber-600">
-                          <Flame className="h-4 w-4" />
-                          <span>
-                            {item.price_fame > 0
-                              ? `${item.price_fame.toLocaleString()} Fame`
-                              : "No fame cost"}
-                          </span>
+                        <div className="flex items-center gap-2">
+                          <ShoppingBag className="h-4 w-4" />
+                          <span className={stockTone}>{stockLabel}</span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <ShoppingBag className="h-4 w-4" />
@@ -667,23 +784,22 @@ const GearShop = () => {
                         </div>
                       ) : null}
 
-                      <Button
-                        className="mt-auto"
-                        disabled={purchaseMutation.isPending || isOwned || outOfStock}
-                        onClick={() => handleInitiatePurchase(item)}
-                      >
-                        {isOwned
-                          ? "Already owned"
-                          : outOfStock
-                          ? "Out of stock"
-                          : purchaseMutation.isPending
-                          ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing
-                              </>
-                            )
-                          : purchaseLabel}
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              className="mt-auto"
+                              disabled={buttonDisabled}
+                              onClick={() => purchaseMutation.mutate({ item })}
+                            >
+                              {buttonLabel}
+                            </Button>
+                          </TooltipTrigger>
+                          {disableReason ? (
+                            <TooltipContent className="max-w-xs text-sm">{disableReason}</TooltipContent>
+                          ) : null}
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardContent>
                   </Card>
                 );
