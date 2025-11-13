@@ -2,8 +2,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Star, TrendingUp, TrendingDown, Minus, Music, DollarSign } from "lucide-react";
+import { Star, TrendingUp, TrendingDown, Minus, Music, DollarSign, Sparkles, CheckCircle2 } from "lucide-react";
 import { getPerformanceGrade } from "@/utils/gigPerformanceCalculator";
+import {
+  EMPTY_GEAR_EFFECTS,
+  type GearEffectBreakdown,
+  type GearModifierEffects,
+} from "@/utils/gearModifiers";
 
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
@@ -39,6 +44,19 @@ interface GigOutcome {
     member_skills: number;
     merch_items_sold: number;
   };
+  band_synergy_modifier?: number | null;
+  social_buzz_impact?: number | null;
+  audience_memory_impact?: number | null;
+  promoter_modifier?: number | null;
+  venue_loyalty_bonus?: number | null;
+  gear_effects?: {
+    equipmentQualityBonus: number;
+    attendanceBonusPercent: number;
+    reliabilitySwingReductionPercent: number;
+    revenueBonusPercent: number;
+    fameBonusPercent: number;
+    breakdown?: GearEffectBreakdown[];
+  };
   gig_song_performances?: SongPerformance[];
 }
 
@@ -49,9 +67,18 @@ interface Props {
   venueName: string;
   venueCapacity: number;
   songs?: Array<{ id: string; title: string }>;
+  gearEffects?: GearModifierEffects | null;
 }
 
-export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [] }: Props) => {
+export const GigOutcomeReport = ({
+  isOpen,
+  onClose,
+  outcome,
+  venueName,
+  venueCapacity,
+  songs = [],
+  gearEffects,
+}: Props) => {
   if (!outcome) return null;
 
   const safeNumber = (value: number | string | null | undefined) => {
@@ -93,6 +120,89 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
     member_skills: safeNumber(outcome.breakdown_data?.member_skills),
     merch_items_sold: safeNumber(outcome.breakdown_data?.merch_items_sold),
   };
+
+  const buildFallbackGearEffects = (): GearModifierEffects => {
+    const attendanceBonus = safeNumber(outcome.social_buzz_impact);
+    const reliabilityBonus = safeNumber(outcome.audience_memory_impact);
+    const revenueBonus = safeNumber(outcome.promoter_modifier);
+    const fameBonus = safeNumber(outcome.venue_loyalty_bonus);
+    const equipmentBonus = safeNumber(outcome.band_synergy_modifier);
+
+    const derived: GearModifierEffects = {
+      ...EMPTY_GEAR_EFFECTS,
+      equipmentQualityBonus: equipmentBonus,
+      crowdEngagementMultiplier: 1 + attendanceBonus / 100,
+      attendanceBonusPercent: attendanceBonus,
+      reliabilityStability: reliabilityBonus / 100,
+      reliabilitySwingReductionPercent: reliabilityBonus,
+      revenueMultiplier: 1 + revenueBonus / 100,
+      revenueBonusPercent: revenueBonus,
+      fameMultiplier: 1 + fameBonus / 100,
+      fameBonusPercent: fameBonus,
+      breakdown: outcome.gear_effects?.breakdown ?? [],
+    };
+
+    if (!derived.breakdown.length) {
+      const fallbackBreakdown: GearEffectBreakdown[] = [];
+
+      if (equipmentBonus > 0.25) {
+        fallbackBreakdown.push({
+          key: "signal-chain",
+          label: "Signal Chain Quality",
+          value: `+${equipmentBonus.toFixed(1)} EQ`,
+          description: "Stage gear raised your equipment score for each song.",
+        });
+      }
+
+      if (attendanceBonus > 0.25) {
+        fallbackBreakdown.push({
+          key: "crowd-engagement",
+          label: "Crowd Engagement",
+          value: `+${attendanceBonus.toFixed(1)}%`,
+          description: "High-end microphones drew a livelier crowd response.",
+        });
+      }
+
+      if (reliabilityBonus > 0.25) {
+        fallbackBreakdown.push({
+          key: "rig-reliability",
+          label: "Rig Reliability",
+          value: `-${reliabilityBonus.toFixed(1)}% swing`,
+          description: "Rare pedals kept the set running without hiccups.",
+        });
+      }
+
+      if (revenueBonus > 0.25) {
+        fallbackBreakdown.push({
+          key: "payout",
+          label: "Payout Lift",
+          value: `+${revenueBonus.toFixed(1)}%`,
+          description: "Premium tone encouraged higher ticket and merch sales.",
+        });
+      }
+
+      if (fameBonus > 0.25) {
+        fallbackBreakdown.push({
+          key: "reputation",
+          label: "Reputation Gains",
+          value: `+${fameBonus.toFixed(1)}%`,
+          description: "Signature rigs impressed promoters and fans alike.",
+        });
+      }
+
+      derived.breakdown = fallbackBreakdown;
+    }
+
+    return derived;
+  };
+
+  const effectiveGearEffects = gearEffects ?? buildFallbackGearEffects();
+  const hasGearImpact =
+    effectiveGearEffects.breakdown.length > 0 ||
+    effectiveGearEffects.attendanceBonusPercent !== 0 ||
+    effectiveGearEffects.revenueBonusPercent !== 0 ||
+    effectiveGearEffects.fameBonusPercent !== 0 ||
+    effectiveGearEffects.equipmentQualityBonus !== 0;
 
   const grade = getPerformanceGrade(overallRating);
   const starsFilled = Math.floor(overallRating);
@@ -229,6 +339,67 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
               </p>
             </CardContent>
           </Card>
+
+          {hasGearImpact && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  Gear Bonuses Applied
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-md border border-dashed border-primary/40 p-3">
+                    <p className="text-muted-foreground">Crowd Energy</p>
+                    <p className="text-xl font-semibold text-primary">
+                      +{effectiveGearEffects.attendanceBonusPercent.toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">Audience enthusiasm driven by microphones and vocal rigs.</p>
+                  </div>
+                  <div className="rounded-md border border-dashed border-primary/40 p-3">
+                    <p className="text-muted-foreground">Rig Stability</p>
+                    <p className="text-xl font-semibold text-primary">
+                      -{effectiveGearEffects.reliabilitySwingReductionPercent.toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">High-end pedals prevented negative performance swings.</p>
+                  </div>
+                  <div className="rounded-md border border-dashed border-primary/40 p-3">
+                    <p className="text-muted-foreground">Payout Boost</p>
+                    <p className="text-xl font-semibold text-primary">
+                      +{effectiveGearEffects.revenueBonusPercent.toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">Premium tone increased ticket and merch returns.</p>
+                  </div>
+                  <div className="rounded-md border border-dashed border-primary/40 p-3">
+                    <p className="text-muted-foreground">Reputation Gain</p>
+                    <p className="text-xl font-semibold text-primary">
+                      +{effectiveGearEffects.fameBonusPercent.toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">Signature gear amplified fame gained from the show.</p>
+                  </div>
+                </div>
+
+                {effectiveGearEffects.breakdown.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Breakdown</p>
+                    <div className="space-y-1 pl-2">
+                      {effectiveGearEffects.breakdown.map((entry) => (
+                        <div key={entry.key} className="flex flex-col text-xs">
+                          <span className="flex items-center gap-2 font-medium text-sm">
+                            <CheckCircle2 className="h-3 w-3 text-primary" />
+                            {entry.label}
+                            <Badge variant="outline" className="text-xs">{entry.value}</Badge>
+                          </span>
+                          <span className="pl-5 text-muted-foreground">{entry.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Setlist Performance */}
           {songPerformances.length > 0 && (
