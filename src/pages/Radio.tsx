@@ -107,7 +107,7 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
@@ -326,7 +326,7 @@ export default function Radio() {
         .eq('status', 'recorded')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
@@ -340,7 +340,7 @@ export default function Radio() {
         .eq('user_id', user?.id)
         .order('submitted_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return submission;
     },
     enabled: !!user?.id,
   });
@@ -378,24 +378,45 @@ export default function Radio() {
         .maybeSingle();
 
       if (existing) {
-        throw new Error('You have already submitted this song to this station this week');
+        throw new Error(
+          "You've already submitted this track to this station this week. Try another station or wait until next week."
+        );
       }
 
       const now = new Date();
       const nowIso = now.toISOString();
 
-      const { data, error } = await supabase
-        .from('radio_submissions')
-        .insert({
-          song_id: selectedSong,
-          user_id: user?.id,
-          station_id: selectedStation,
-          week_submitted: weekStartDate,
-        })
-        .select()
-        .single();
+      let submission: any = null;
+      try {
+        const { data, error } = await supabase
+          .from('radio_submissions')
+          .insert({
+            song_id: selectedSong,
+            user_id: user?.id,
+            station_id: selectedStation,
+            week_submitted: weekStartDate,
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) {
+          throw error;
+        }
+
+        submission = data;
+      } catch (error: any) {
+        if (error?.code === '23505' || error?.message?.includes('one_submission_per_week')) {
+          throw new Error(
+            "You've already submitted this track to this station this week. Try another station or wait until next week."
+          );
+        }
+
+        throw error;
+      }
+
+      if (!submission) {
+        throw new Error('Failed to create radio submission.');
+      }
 
       const { data: selectedSongData } = await supabase
         .from('songs')
@@ -425,7 +446,7 @@ export default function Radio() {
           reviewed_at: nowIso,
           rejection_reason: null,
         })
-        .eq('id', data.id);
+        .eq('id', submission.id);
 
       if (selectedSongData && stationData && show) {
         let playlistId: string | null = null;
@@ -547,7 +568,7 @@ export default function Radio() {
         }
       }
 
-      return data;
+      return submission;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-radio-submissions'] });
@@ -560,7 +581,19 @@ export default function Radio() {
       setSelectedSong('');
     },
     onError: (error: any) => {
-      toast.error(error.message);
+      const message = error?.message ?? 'An unexpected error occurred while submitting your track.';
+
+      if (
+        typeof message === 'string' &&
+        message.includes("You've already submitted this track to this station this week")
+      ) {
+        toast.info(
+          "You've already submitted this track to this station this week. Try another station or wait until next week."
+        );
+        return;
+      }
+
+      toast.error(message);
     },
   });
 
