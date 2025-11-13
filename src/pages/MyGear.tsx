@@ -21,27 +21,10 @@ import {
 import { usePlayerEquipment, type PlayerEquipmentWithItem } from "@/hooks/usePlayerEquipment";
 import { getQualityLabel, qualityTierStyles, deriveQualityTier } from "@/utils/gearQuality";
 import { GearRarityKey, getRarityLabel, parseRarityKey, rarityStyles } from "@/utils/gearRarity";
+import { normalizeEquipmentStatBoosts } from "@/types/gear";
 
 const UNASSIGNED_VALUE = "unassigned";
 const PEDAL_SLOT_LIMIT = initialLoadoutState.pedalBoard.length;
-
-const normalizeStatBoosts = (value?: Record<string, number> | null) => {
-  if (!value) {
-    return undefined;
-  }
-
-  const entries = Object.entries(value).reduce<Array<[string, number]>>((accumulator, [key, raw]) => {
-    const numeric = typeof raw === "number" && Number.isFinite(raw) ? raw : Number(raw);
-
-    if (Number.isFinite(numeric)) {
-      accumulator.push([key, numeric]);
-    }
-
-    return accumulator;
-  }, []);
-
-  return entries.length ? Object.fromEntries(entries) : undefined;
-};
 
 const mapCategoryToSections = (category: string, subcategory?: string | null) => {
   const normalizedCategory = category.toLowerCase();
@@ -91,8 +74,8 @@ const buildInventoryGearDefinition = (entry: PlayerEquipmentWithItem): GearDefin
   }
 
   const { equipment } = entry;
-  const statBoosts = normalizeStatBoosts(equipment.stat_boosts);
-  const qualityTier = deriveQualityTier(equipment.price, statBoosts);
+  const statBoosts = normalizeEquipmentStatBoosts(equipment.stat_boosts);
+  const qualityTier = deriveQualityTier(equipment.price_cash, statBoosts);
   const sections = mapCategoryToSections(equipment.category, equipment.subcategory);
   const rarityKey = parseRarityKey(equipment.rarity);
 
@@ -104,8 +87,8 @@ const buildInventoryGearDefinition = (entry: PlayerEquipmentWithItem): GearDefin
     quality: getQualityLabel(qualityTier) as GearDefinition["quality"],
     rarity: getRarityLabel(equipment.rarity) as GearDefinition["rarity"],
     description: equipment.description ?? undefined,
-    price: equipment.price,
-    statBoosts,
+    price: equipment.price_cash,
+    statBoosts: statBoosts ?? undefined,
     stock: equipment.stock ?? null,
     equipmentItemId: equipment.id,
     inventoryId: entry.id,
