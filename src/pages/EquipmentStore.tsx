@@ -47,7 +47,7 @@ interface RawStoreItem {
   rarity: string | null;
   description: string | null;
   stat_boosts: Record<string, number> | null;
-  stock?: number | null;
+  gear_category?: GearCategory | null;
 }
 
 interface StoreItem extends RawStoreItem {
@@ -58,7 +58,7 @@ interface StoreItem extends RawStoreItem {
 const formatStatBoosts = (boosts: Record<string, number> | null) => {
   if (!boosts) return [];
   return Object.entries(boosts)
-    .filter(([_, value]) => typeof value === "number")
+    .filter(([, value]) => typeof value === "number")
     .map(([key, value]) => ({ key, value }));
 };
 
@@ -92,8 +92,23 @@ const EquipmentStore = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("equipment_items")
-        .select("id, name, category, subcategory, price, rarity, description, stat_boosts, stock")
-        .order("price");
+        .select(
+          `id,
+           name,
+           category,
+           gear_category_id,
+           gear_category:gear_categories (id, slug, label, description, icon, sort_order),
+           subcategory,
+           price_cash,
+           price_fame,
+           rarity,
+           description,
+           stat_boosts,
+           stock,
+           is_stock_tracked,
+           auto_restock`
+        )
+        .order("price_cash");
 
       if (error) throw error;
       return ((data as RawStoreItem[] | null) ?? []).map(mapRowToItem);
@@ -195,16 +210,40 @@ const EquipmentStore = () => {
     },
   });
 
-  const categories = useMemo(() => {
-    const unique = new Set<string>();
-    items?.forEach((item) => unique.add(item.category));
-    return ["all", ...Array.from(unique)];
+  const categories = useMemo<CategoryOption[]>(() => {
+    if (!items) {
+      return [{ value: "all", label: "All categories", sort: -1 }];
+    }
+
+    const mapped = new Map<string, CategoryOption>();
+
+    items.forEach((item) => {
+      const slug = item.gear_category?.slug ?? item.category;
+      const label = item.gear_category?.label ?? item.category;
+      const sort = item.gear_category?.sort_order ?? Number.MAX_SAFE_INTEGER;
+
+      if (!mapped.has(slug)) {
+        mapped.set(slug, { value: slug, label, sort });
+      }
+    });
+
+    const sorted = Array.from(mapped.values()).sort((a, b) => {
+      if (a.sort === b.sort) {
+        return a.label.localeCompare(b.label);
+      }
+
+      return a.sort - b.sort;
+    });
+
+    return [{ value: "all", label: "All categories", sort: -1 }, ...sorted];
   }, [items]);
 
   const filteredItems = useMemo(() => {
     if (!items) return [];
+
     return items.filter((item) => {
-      const matchesCategory = category === "all" || item.category === category;
+      const categorySlug = item.gear_category?.slug ?? item.category;
+      const matchesCategory = category === "all" || categorySlug === category;
       const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
       return matchesCategory && matchesSearch;
     });
@@ -216,6 +255,7 @@ const EquipmentStore = () => {
   }, [ownedEquipment]);
 
   const cashOnHand = typeof profile?.cash === "number" ? profile.cash : 0;
+  const fameScore = typeof profile?.fame === "number" ? profile.fame : 0;
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -226,11 +266,19 @@ const EquipmentStore = () => {
             Outfit your rig with premium instruments, lighting packages, and touring essentials.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm shadow-sm">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span className="font-medium">Budget</span>
-          <Separator orientation="vertical" className="h-4" />
-          <span>${cashOnHand.toLocaleString()}</span>
+        <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 shadow-sm">
+            <BadgeDollarSign className="h-4 w-4 text-primary" />
+            <span className="font-medium">Cash</span>
+            <Separator orientation="vertical" className="h-4" />
+            <span>${cashOnHand.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 shadow-sm">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <span className="font-medium">Fame</span>
+            <Separator orientation="vertical" className="h-4" />
+            <span>{fameScore.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
@@ -247,20 +295,20 @@ const EquipmentStore = () => {
               <CardDescription>Filter by category or search for a specific piece of gear.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 md:flex-row">
-              <div className="flex w-full gap-3 md:max-w-sm">
+              <div className="flex w-full gap-3 md:max-w-xl">
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search equipment..."
                 />
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="min-w-[140px]">
+                  <SelectTrigger className="min-w-[180px]">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option === "all" ? "All" : option}
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.value === "all" ? "All categories" : option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -331,7 +379,9 @@ const EquipmentStore = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <CardTitle className="text-xl">{item.name}</CardTitle>
-                          <CardDescription>{item.subcategory || item.category}</CardDescription>
+                          <CardDescription>
+                            {item.subcategory || item.gear_category?.label || item.category}
+                          </CardDescription>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <Badge variant="outline" className={rarityClass}>
@@ -367,20 +417,42 @@ const EquipmentStore = () => {
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="flex items-center gap-2">
                           <ShoppingCart className="h-4 w-4 text-primary" />
-                          <span className="font-semibold">${item.price.toLocaleString()}</span>
+                          <span className="font-semibold">
+                            {item.price_cash > 0 ? `$${item.price_cash.toLocaleString()}` : "No cash cost"}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Shield className="h-4 w-4" />
-                          <span>{item.category}</span>
+                          <span>{item.gear_category?.label ?? item.category}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-amber-600">
+                          <Flame className="h-4 w-4" />
+                          <span>
+                            {item.price_fame > 0 ? `${item.price_fame.toLocaleString()} Fame` : "No fame cost"}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
-                          <Zap className="h-4 w-4" />
-                          <span>{item.stock ?? 0} in stock</span>
+                          <ShoppingBag className="h-4 w-4" />
+                          <span className={stockTone}>{stockLabel}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Sparkles className="h-4 w-4" />
-                          <span>{isOwned ? "Owned" : "Available"}</span>
-                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        {!item.is_stock_tracked ? (
+                          <Badge variant="secondary" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600">
+                            <Infinity className="mr-1 h-3 w-3" /> Unlimited stock
+                          </Badge>
+                        ) : null}
+                        {item.auto_restock && item.is_stock_tracked ? (
+                          <Badge variant="secondary" className="border-blue-500/40 bg-blue-500/10 text-blue-600">
+                            <RefreshCcw className="mr-1 h-3 w-3" /> Auto restock
+                          </Badge>
+                        ) : null}
+                        {isOwned ? (
+                          <Badge variant="secondary" className="border-primary/40 bg-primary/10 text-primary">
+                            Already owned
+                          </Badge>
+                        ) : null}
                       </div>
 
                       {boosts.length > 0 ? (
@@ -411,7 +483,7 @@ const EquipmentStore = () => {
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing
                               </>
                             )
-                          : `Purchase for $${item.price.toLocaleString()}`}
+                          : purchaseLabel}
                       </Button>
                     </CardContent>
                   </Card>
@@ -421,11 +493,11 @@ const EquipmentStore = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="owned" className="space-y-6">
+        <TabsContent value="owned">
           <Card>
             <CardHeader>
-              <CardTitle>Owned equipment</CardTitle>
-              <CardDescription>Personal instruments and gear ready for rehearsal or staging.</CardDescription>
+              <CardTitle>Owned gear</CardTitle>
+              <CardDescription>Quick view of inventory ready to assign in your loadouts.</CardDescription>
             </CardHeader>
             <CardContent>
               {ownedError ? (
@@ -435,11 +507,11 @@ const EquipmentStore = () => {
                 </div>
               ) : loadingOwned ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 </div>
               ) : !ownedEquipment || ownedEquipment.length === 0 ? (
                 <p className="py-12 text-center text-sm text-muted-foreground">
-                  You haven't purchased any equipment yet. Browse the store to build your rig.
+                  You haven&apos;t purchased any gear yet. Buy items from the storefront to populate your inventory.
                 </p>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">

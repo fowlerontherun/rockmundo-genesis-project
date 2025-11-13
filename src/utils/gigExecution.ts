@@ -100,10 +100,12 @@ export async function executeGigPerformance(data: GigExecutionData) {
 
   // Calculate actual attendance (with variance adjusted by gear reliability and hype)
   const baseAttendance = Math.floor(venueCapacity * 0.7); // Base 70% capacity
-  const attendanceVarianceRange = 0.3 - gearEffects.reliabilityStability * 1.2;
-  const boundedVarianceRange = Math.max(0.1, attendanceVarianceRange);
-  const varianceSwing = (Math.random() * boundedVarianceRange) - boundedVarianceRange / 2;
-  const attendanceFromVariance = Math.max(0, 1 + varianceSwing + gearEffects.reliabilityStability);
+  const riskVarianceExpansion = gearEffects.breakdownRiskPercent / 150;
+  const attendanceVarianceRange = 0.3 + riskVarianceExpansion - gearEffects.reliabilityStability * 1.2;
+  const boundedVarianceRange = Math.min(0.6, Math.max(0.1, attendanceVarianceRange));
+  const varianceSwing = Math.random() * boundedVarianceRange - boundedVarianceRange / 2;
+  const stabilityBias = gearEffects.reliabilityStability - gearEffects.breakdownRiskPercent / 200;
+  const attendanceFromVariance = Math.max(0, 1 + varianceSwing + stabilityBias);
   const gearAttendanceMultiplier = Math.max(0.5, gearEffects.crowdEngagementMultiplier);
   const attendanceBeforeCap = baseAttendance * attendanceFromVariance * gearAttendanceMultiplier;
   const actualAttendance = Math.max(1, Math.min(venueCapacity, Math.floor(attendanceBeforeCap)));
