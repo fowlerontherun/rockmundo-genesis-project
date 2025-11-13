@@ -11,11 +11,11 @@ const CompetitiveCharts = () => {
   const [country, setCountry] = useState("all");
   const [genre, setGenre] = useState("all");
 
-  // Fetch chart entries
-  const { data: chartEntries } = useQuery({
-    queryKey: ["chart-entries"],
+  // Fetch chart entries for today
+  const { data: chartEntries, isLoading } = useQuery({
+    queryKey: ["chart-entries", country, genre],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("chart_entries")
         .select(`
           *,
@@ -28,51 +28,23 @@ const CompetitiveCharts = () => {
             profiles:user_id (stage_name)
           )
         `)
+        .eq("chart_date", new Date().toISOString().split('T')[0])
         .order("rank", { ascending: true });
 
+      if (genre !== "all") {
+        query = query.eq("genre", genre);
+      }
+
+      if (country !== "all") {
+        query = query.eq("country", country);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch streaming data from song_releases
-  const { data: streamingData } = useQuery({
-    queryKey: ["streaming-charts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("song_releases")
-        .select(`
-          song_id,
-          total_streams,
-          songs (
-            title,
-            genre,
-            user_id,
-            band_id,
-            bands (name),
-            profiles:user_id (stage_name)
-          )
-        `)
-        .eq("is_active", true)
-        .order("total_streams", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-
-      // Aggregate by song (in case same song on multiple platforms)
-      const aggregated = data?.reduce((acc: any[], curr) => {
-        const existing = acc.find(item => item.song_id === curr.song_id);
-        if (existing) {
-          existing.total_streams += curr.total_streams;
-        } else {
-          acc.push({ ...curr });
-        }
-        return acc;
-      }, []) || [];
-
-      return aggregated.sort((a, b) => b.total_streams - a.total_streams);
-    },
-  });
 
   const getTrendIcon = (trend: string) => {
     if (trend === "up") return <TrendingUp className="h-4 w-4 text-green-500" />;
@@ -81,11 +53,20 @@ const CompetitiveCharts = () => {
   };
 
   const renderChartTable = (data: any[], type: string) => {
+    if (isLoading) {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>Loading chart data...</p>
+        </div>
+      );
+    }
+
     if (!data || data.length === 0) {
       return (
         <div className="text-center py-12 text-muted-foreground">
           <Music className="h-16 w-16 mx-auto mb-4 opacity-50" />
           <p>No chart data available yet</p>
+          <p className="text-sm mt-2">Charts are updated daily at 3 AM</p>
         </div>
       );
     }
@@ -150,21 +131,6 @@ const CompetitiveCharts = () => {
     );
   };
 
-  const filterData = (data: any[]) => {
-    if (!data) return [];
-    
-    let filtered = [...data];
-    
-    if (genre !== "all") {
-      filtered = filtered.filter(entry => entry.songs?.genre === genre);
-    }
-    
-    // Country filtering would require additional data in the schema
-    // For now, we'll keep all data when "all" is selected
-    
-    return filtered;
-  };
-
   const streamChartData = chartEntries?.filter(e => e.chart_type === "streaming") || [];
   const recordSalesData = chartEntries?.filter(e => e.chart_type === "record_sales") || [];
   const digitalSalesData = chartEntries?.filter(e => e.chart_type === "digital_sales") || [];
@@ -176,7 +142,9 @@ const CompetitiveCharts = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Music Charts</h1>
-          <p className="text-muted-foreground">Track your musical success against other artists</p>
+          <p className="text-muted-foreground">
+            Track your musical success against other artists • Updated daily at 3 AM
+          </p>
         </div>
       </div>
 
@@ -239,7 +207,7 @@ const CompetitiveCharts = () => {
               <CardDescription>Most streamed songs across all platforms</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderChartTable(filterData(streamingData || streamChartData), "streams")}
+              {renderChartTable(streamChartData, "streams")}
             </CardContent>
           </Card>
         </TabsContent>
@@ -251,7 +219,7 @@ const CompetitiveCharts = () => {
               <CardDescription>Top selling digital downloads</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderChartTable(filterData(digitalSalesData), "sales")}
+              {renderChartTable(digitalSalesData, "sales")}
             </CardContent>
           </Card>
         </TabsContent>
@@ -263,7 +231,7 @@ const CompetitiveCharts = () => {
               <CardDescription>Top selling CDs</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderChartTable(filterData(cdSalesData), "sales")}
+              {renderChartTable(cdSalesData, "sales")}
             </CardContent>
           </Card>
         </TabsContent>
@@ -275,7 +243,7 @@ const CompetitiveCharts = () => {
               <CardDescription>Top selling vinyl records</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderChartTable(filterData(vinylSalesData), "sales")}
+              {renderChartTable(vinylSalesData, "sales")}
             </CardContent>
           </Card>
         </TabsContent>
@@ -287,7 +255,7 @@ const CompetitiveCharts = () => {
               <CardDescription>Combined physical record sales</CardDescription>
             </CardHeader>
             <CardContent>
-              {renderChartTable(filterData(recordSalesData), "sales")}
+              {renderChartTable(recordSalesData, "sales")}
             </CardContent>
           </Card>
         </TabsContent>

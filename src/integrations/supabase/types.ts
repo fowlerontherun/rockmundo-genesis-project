@@ -7965,6 +7965,7 @@ export type Database = {
         }[]
       }
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
+      calculate_chart_trends: { Args: never; Returns: undefined }
       calculate_setlist_duration: {
         Args: { p_setlist_id: string }
         Returns: number
