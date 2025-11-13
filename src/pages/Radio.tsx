@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -94,7 +94,12 @@ export default function Radio() {
       setUser(data.user);
     });
   });
-  const [selectedStation, setSelectedStation] = useState<string>("");
+  const [selectedStation, setSelectedStation] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("radio-selected-station") ?? "";
+    }
+    return "";
+  });
   const [selectedSong, setSelectedSong] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
 
@@ -130,6 +135,31 @@ export default function Radio() {
       return (data as RadioStationRecord[]) || [];
     },
   });
+
+  useEffect(() => {
+    if (!stations || stations.length === 0) return;
+
+    const stationExists = stations.some((station) => station.id === selectedStation);
+
+    if (selectedStation && !stationExists) {
+      setSelectedStation(stations[0].id);
+      return;
+    }
+
+    if (!selectedStation) {
+      setSelectedStation(stations[0].id);
+    }
+  }, [stations, selectedStation]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (selectedStation) {
+      localStorage.setItem("radio-selected-station", selectedStation);
+    } else {
+      localStorage.removeItem("radio-selected-station");
+    }
+  }, [selectedStation]);
 
   const activeStation = useMemo(() => {
     return stations?.find((station) => station.id === selectedStation);
