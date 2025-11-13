@@ -83,6 +83,14 @@ type StationPlayTimelineEntry = {
   hype: number;
 };
 
+type RecordedSongRecord = {
+  id: string;
+  title: string;
+  genre: string | null;
+  quality_score: number | null;
+  band_id: string | null;
+};
+
 export default function Radio() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -316,7 +324,7 @@ export default function Radio() {
     });
   }, [stationPlayTimeline, selectedStation]);
 
-  const { data: recordedSongs } = useQuery({
+  const { data: recordedSongs } = useQuery<RecordedSongRecord[]>({
     queryKey: ['recorded-songs', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -326,10 +334,86 @@ export default function Radio() {
         .eq('status', 'recorded')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return (data as RecordedSongRecord[]) || [];
     },
     enabled: !!user?.id,
   });
+
+  const selectedSongData = useMemo(() => {
+    if (!selectedSong) return null;
+    return recordedSongs?.find((song) => song.id === selectedSong) ?? null;
+  }, [recordedSongs, selectedSong]);
+
+  const primaryBand = useMemo(() => {
+    const bandsData = (profile as any)?.bands;
+    if (!bandsData) return null;
+    return Array.isArray(bandsData) ? bandsData[0] : bandsData;
+  }, [profile]);
+
+  const bandFame = Number(primaryBand?.fame ?? 0);
+  const hasBand = Boolean(primaryBand?.id);
+
+  const stationAcceptedGenres = useMemo<string[]>(() => {
+    return activeStation?.accepted_genres ?? [];
+  }, [activeStation]);
+
+  const normalizedAcceptedGenres = useMemo(
+    () => stationAcceptedGenres.map((genre) => genre.toLowerCase()),
+    [stationAcceptedGenres],
+  );
+
+  const songGenre = (selectedSongData?.genre ?? '').toLowerCase();
+
+  const stationRequirements = useMemo<{ quality: number; fame: number }>(() => {
+    if (!activeStation) {
+      return { quality: 0, fame: 0 };
+    }
+
+    const baseQuality = 400 + (activeStation.quality_level - 1) * 200;
+    const listenerQualityAdjustment = Math.min(
+      400,
+      Math.round(((activeStation.listener_base ?? 0) / 50000) * 100),
+    );
+    const qualityRequirement = Math.min(2000, baseQuality + listenerQualityAdjustment);
+
+    const fameBase = Math.max(0, (activeStation.quality_level - 1) * 250);
+    const fameListenerAdjustment = Math.round(((activeStation.listener_base ?? 0) / 100000) * 100);
+    const fameRequirement = Math.max(0, fameBase + fameListenerAdjustment);
+
+    return {
+      quality: Math.round(qualityRequirement),
+      fame: Math.round(fameRequirement),
+    };
+  }, [activeStation]);
+
+  const songQuality = Number(selectedSongData?.quality_score ?? 0);
+
+  const genreMatches = useMemo(() => {
+    if (!selectedSong) return true;
+    if (normalizedAcceptedGenres.length === 0) return true;
+    if (!songGenre) return false;
+    return normalizedAcceptedGenres.includes(songGenre);
+  }, [normalizedAcceptedGenres, selectedSong, songGenre]);
+
+  const meetsQualityRequirement = useMemo(() => {
+    if (!selectedSong) return true;
+    if (!stationRequirements.quality) return true;
+    return songQuality >= stationRequirements.quality;
+  }, [selectedSong, stationRequirements.quality, songQuality]);
+
+  const meetsFameRequirement = useMemo(() => {
+    if (!selectedSong) return true;
+    if (!stationRequirements.fame) return true;
+    return bandFame >= stationRequirements.fame;
+  }, [bandFame, selectedSong, stationRequirements.fame]);
+
+  const canSubmit = Boolean(
+    selectedStation &&
+    selectedSong &&
+    genreMatches &&
+    meetsQualityRequirement &&
+    meetsFameRequirement,
+  );
 
   const { data: mySubmissions } = useQuery({
     queryKey: ['my-radio-submissions', user?.id],
@@ -362,6 +446,35 @@ export default function Radio() {
     mutationFn: async () => {
       if (!selectedStation || !selectedSong) {
         throw new Error('Please select a station and song');
+      }
+
+      if (!selectedSongData) {
+        throw new Error('Please select a song that meets the station requirements');
+      }
+
+      if (normalizedAcceptedGenres.length > 0) {
+        const normalizedGenre = (selectedSongData.genre ?? '').toLowerCase();
+        if (!normalizedGenre || !normalizedAcceptedGenres.includes(normalizedGenre)) {
+          const acceptedList = stationAcceptedGenres.join(', ');
+          throw new Error(
+            acceptedList
+              ? `This station is currently accepting: ${acceptedList}.`
+              : 'This station has restricted genre requirements right now.',
+          );
+        }
+      }
+
+      if (stationRequirements.quality && songQuality < stationRequirements.quality) {
+        throw new Error(
+          `This station requires a song quality of ${stationRequirements.quality.toLocaleString()} or higher.`,
+        );
+      }
+
+      if (stationRequirements.fame && bandFame < stationRequirements.fame) {
+        const fameRequirementMessage = hasBand
+          ? `Your band needs at least ${stationRequirements.fame.toLocaleString()} fame to submit here.`
+          : 'Join or create a band to build the fame required for this station.';
+        throw new Error(fameRequirementMessage);
       }
 
       // Check if already submitted this week
@@ -563,6 +676,8 @@ export default function Radio() {
       toast.error(error.message);
     },
   });
+
+  const submitDisabled = submitSong.isPending || !canSubmit;
 
   const getQualityColor = (level: number) => {
     if (level >= 4) return 'text-yellow-500';
@@ -887,9 +1002,112 @@ export default function Radio() {
                   </Select>
                 </div>
 
+                {activeStation && (
+                  <div className="rounded-md border border-border/60 bg-background/80 p-3 space-y-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">Station Requirements</span>
+                      <Badge variant="outline">Level {activeStation.quality_level}</Badge>
+                    </div>
+                    {stationAcceptedGenres.length > 0 ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">Accepted genres</p>
+                        <div className="flex flex-wrap gap-1">
+                          {stationAcceptedGenres.map((genre) => (
+                            <Badge key={genre} variant="secondary" className="text-xs">
+                              {genre}
+                            </Badge>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">This station accepts all genres.</p>
+                    )}
+                    {selectedSong && (
+                      <div className="space-y-2">
+                        <div
+                          className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs sm:text-sm ${
+                            genreMatches
+                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                              : 'border-destructive/40 bg-destructive/10 text-destructive'
+                          }`}
+                        >
+                          <span>Genre match</span>
+                          <span className="font-semibold">
+                            {selectedSongData?.genre ?? 'None'}
+                          </span>
+                        </div>
+                        {stationRequirements.quality > 0 && (
+                          <div
+                            className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs sm:text-sm ${
+                              meetsQualityRequirement
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'border-destructive/40 bg-destructive/10 text-destructive'
+                            }`}
+                          >
+                            <span>Song quality</span>
+                            <span className="font-semibold">
+                              {Math.round(songQuality).toLocaleString()} /{' '}
+                              {stationRequirements.quality.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        {stationRequirements.fame > 0 && (
+                          <div
+                            className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs sm:text-sm ${
+                              meetsFameRequirement
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'border-destructive/40 bg-destructive/10 text-destructive'
+                            }`}
+                          >
+                            <span>Band fame</span>
+                            <span className="font-semibold">
+                              {Math.round(bandFame).toLocaleString()} /{' '}
+                              {stationRequirements.fame.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedSong && activeStation && (
+                  <div className="space-y-2">
+                    {!genreMatches && (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          {stationAcceptedGenres.length > 0
+                            ? `This station prefers ${stationAcceptedGenres.join(', ')}. Pick a song in one of those genres to submit.`
+                            : 'Please assign a genre to this song before submitting.'}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {!meetsQualityRequirement && stationRequirements.quality > 0 && (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          {`This station requires a song quality of ${stationRequirements.quality.toLocaleString()} or higher. Your track is currently ${Math.round(songQuality).toLocaleString()}.`}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {!meetsFameRequirement && stationRequirements.fame > 0 && (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          {hasBand
+                            ? `Your band has ${Math.round(bandFame).toLocaleString()} fame. Earn ${Math.max(0, stationRequirements.fame - bandFame).toLocaleString()} more to unlock this station.`
+                            : 'Join or create a band to build the fame required for this station.'}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
+
                 <Button
-                  onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending}
+                  onClick={() => {
+                    if (!submitDisabled) {
+                      submitSong.mutate();
+                    }
+                  }}
+                  disabled={submitDisabled}
                   className="w-full"
                 >
                   <Send className="h-4 w-4 mr-2" />
