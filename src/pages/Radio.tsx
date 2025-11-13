@@ -153,6 +153,7 @@ export default function Radio() {
     return "";
   });
   const [selectedSong, setSelectedSong] = useState<string>("");
+  const [selectedShow, setSelectedShow] = useState<string>("");
   const [filterType, setFilterType] = useState<'all' | 'national' | 'local'>('all');
 
   const getErrorMessage = (error: unknown, fallback = 'An unexpected error occurred.') =>
@@ -246,12 +247,19 @@ export default function Radio() {
     enabled: !!selectedStation,
   });
 
-  const {
-    data: nowPlaying,
-    isLoading: nowPlayingLoading,
-    isError: nowPlayingError,
-    error: nowPlayingErrorData,
-  } = useQuery<NowPlayingRecord | null>({
+  useEffect(() => {
+    if (!shows || shows.length === 0) {
+      setSelectedShow("");
+      return;
+    }
+
+    setSelectedShow((current) => {
+      const isValidSelection = shows.some((show) => show.id === current);
+      return isValidSelection ? current : shows[0].id;
+    });
+  }, [shows]);
+
+  const { data: nowPlaying } = useQuery<NowPlayingRecord | null>({
     queryKey: ['station-now-playing', selectedStation],
     queryFn: async () => {
       if (!selectedStation) return null;
@@ -571,10 +579,37 @@ export default function Radio() {
         throw new Error('Please select a station and song');
       }
 
-      const { data: weekCheckData, error: weekCheckError } = await supabase.rpc('check_radio_submission_week', {
-        p_station_id: selectedStation,
-        p_song_id: selectedSong,
-      });
+      const show = shows?.find((entry) => entry.id === selectedShow);
+
+      if (!show) {
+        throw new Error('Please choose a show for this station');
+      }
+
+      const { data: selectedSongData, error: selectedSongError } = await supabase
+        .from('songs')
+        .select('id, title, genre, hype, band_id, total_radio_plays, streams, revenue')
+        .eq('id', selectedSong)
+        .single();
+
+      if (selectedSongError) throw selectedSongError;
+
+      if (!selectedSongData) {
+        throw new Error('Selected song could not be found');
+      }
+
+      if (show.show_genres?.length && selectedSongData.genre) {
+        const allowedGenres = show.show_genres.map((genre) => genre.toLowerCase());
+        if (!allowedGenres.includes(selectedSongData.genre.toLowerCase())) {
+          throw new Error(
+            `This show only accepts ${show.show_genres.join(', ')} submissions. Please choose a matching track.`
+          );
+        }
+      }
+
+      // Check if already submitted this week
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStartDate = weekStart.toISOString().split('T')[0];
 
       if (weekCheckError) {
         console.error('Failed to verify radio submission window', weekCheckError);
@@ -603,34 +638,11 @@ export default function Radio() {
 
       if (error) throw error;
 
-      const { data: selectedSongData } = await supabase
-        .from('songs')
-        .select('id, title, hype, band_id, total_radio_plays, streams, revenue')
-        .eq('id', selectedSong)
-        .single();
-
       const { data: stationData } = await supabase
         .from('radio_stations')
         .select('id, name, listener_base')
         .eq('id', selectedStation)
         .single();
-
-      const { data: show } = await supabase
-        .from('radio_shows')
-        .select('id, show_name, host_name, time_slot')
-        .eq('station_id', selectedStation)
-        .eq('is_active', true)
-        .order('time_slot', { ascending: true })
-        .limit(1)
-        .maybeSingle<RadioShowRecord>();
-
-      if (!show) {
-        await supabase
-          .from('radio_submissions')
-          .delete()
-          .eq('id', data.id);
-        throw new Error('No active shows are available for this station right now. Please try again later.');
-      }
 
       await supabase
         .from('radio_submissions')
@@ -899,30 +911,66 @@ export default function Radio() {
                   </div>
                 </div>
 
-                {stationsError && (
-                  <Alert variant="destructive">
-                    <AlertTitle>Unable to load stations</AlertTitle>
-                    <AlertDescription>
-                      {getErrorMessage(stationsErrorData)}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {stationsLoading
-                    ? Array.from({ length: 4 }).map((_, index) => (
-                        <Card key={`station-skeleton-${index}`} className="space-y-4">
-                          <CardHeader>
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-2">
-                                <Skeleton className="h-5 w-40" />
-                                <Skeleton className="h-4 w-24" />
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Skeleton key={i} className="h-4 w-4 rounded-full" />
-                                ))}
-                              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {stations?.map((station) => (
+                    <Card
+                      key={station.id}
+                      className={`cursor-pointer transition-colors ${
+                        selectedStation === station.id ? 'border-primary' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedStation(station.id);
+                        setSelectedShow('');
+                      }}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{station.name}</CardTitle>
+                            <CardDescription>{station.frequency}</CardDescription>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < station.quality_level
+                                    ? 'fill-yellow-500 text-yellow-500'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Type:</span>
+                          <Badge variant="outline">{station.station_type}</Badge>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Location:</span>
+                          <span className="text-sm">
+                            {station.station_type === 'national'
+                              ? station.country
+                              : `${station.cities?.name}, ${station.cities?.country}`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Listeners:</span>
+                          <span className="font-semibold">
+                            {station.listener_base.toLocaleString()}
+                          </span>
+                        </div>
+                        {station.accepted_genres?.length > 0 && (
+                          <div className="pt-2">
+                            <p className="text-xs text-muted-foreground mb-1">Accepts:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {station.accepted_genres.map((genre: string) => (
+                                <Badge key={genre} variant="secondary" className="text-xs">
+                                  {genre}
+                                </Badge>
+                              ))}
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-3">
@@ -1229,53 +1277,44 @@ export default function Radio() {
                       )}
                     </div>
 
-                    <div className="space-y-3 pt-4">
-                      <h3 className="text-lg font-semibold">Shows on this station:</h3>
-                      {showsError && (
-                        <Alert variant="destructive">
-                          <AlertTitle>Unable to load station shows</AlertTitle>
-                          <AlertDescription>
-                            {getErrorMessage(showsErrorData)}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                      {showsLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {Array.from({ length: 4 }).map((_, index) => (
-                            <div key={`show-skeleton-${index}`} className="p-3 border rounded-lg">
-                              <Skeleton className="h-4 w-1/2" />
-                              <Skeleton className="mt-2 h-3 w-1/3" />
-                              <div className="mt-3 flex flex-wrap gap-1">
-                                {Array.from({ length: 3 }).map((_, tagIndex) => (
-                                  <Skeleton key={tagIndex} className="h-5 w-16" />
-                                ))}
-                              </div>
+                {selectedStation && shows && shows.length > 0 && (
+                  <div className="pt-4">
+                    <h3 className="text-lg font-semibold mb-2">Shows on this station:</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {shows.map((show) => (
+                        <button
+                          key={show.id}
+                          type="button"
+                          onClick={() => setSelectedShow(show.id)}
+                          aria-pressed={selectedShow === show.id}
+                          className={`text-left p-3 border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 ${
+                            selectedShow === show.id
+                              ? 'border-primary bg-primary/10 shadow-sm'
+                              : 'hover:border-primary/60 hover:bg-background/80'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium">{show.show_name}</p>
+                            <Badge variant="secondary" className="text-xs">
+                              {show.time_slot}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">Host: {show.host_name}</p>
+                          {show.show_genres?.length ? (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {show.show_genres.map((genre: string) => (
+                                <Badge key={genre} variant="outline" className="text-xs">
+                                  {genre}
+                                </Badge>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      ) : shows && shows.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {shows.map((show) => (
-                            <div key={show.id} className="p-3 border rounded-lg">
-                              <p className="font-medium">{show.show_name}</p>
-                              <p className="text-sm text-muted-foreground">Host: {show.host_name}</p>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {show.show_genres?.map((genre: string) => (
-                                  <Badge key={genre} variant="outline" className="text-xs">
-                                    {genre}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        !showsError && (
-                          <p className="text-sm text-muted-foreground">
-                            No active shows are configured for this station yet.
-                          </p>
-                        )
-                      )}
+                          ) : (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Accepts all genres
+                            </p>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1322,7 +1361,7 @@ export default function Radio() {
 
                 <Button
                   onClick={() => submitSong.mutate()}
-                  disabled={!selectedStation || !selectedSong || submitSong.isPending || !canSubmitSongs}
+                  disabled={!selectedStation || !selectedSong || !selectedShow || submitSong.isPending}
                   className="w-full"
                 >
                   <Send className="h-4 w-4 mr-2" />
