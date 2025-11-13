@@ -36,6 +36,14 @@ export interface MusicVideoConfiguratorResult {
   productionNotes?: string | null;
   youtubeUrl?: string | null;
   budgetAmount: number;
+  status: string;
+  targetReleaseDate?: string | null;
+  shootStartDate?: string | null;
+  shootEndDate?: string | null;
+  primaryPlatform?: string | null;
+  kpiViewTarget?: number | null;
+  kpiChartTarget?: string | null;
+  syncStrategy: string;
 }
 
 interface MusicVideoConfiguratorProps {
@@ -106,6 +114,14 @@ export function MusicVideoConfigurator({ releases, onCreate, isSaving }: MusicVi
   const [locationStyle, setLocationStyle] = useState<string | null>("studio_with_led");
   const [productionNotes, setProductionNotes] = useState<string>("");
   const [youtubeUrl, setYoutubeUrl] = useState<string>("");
+  const [status, setStatus] = useState("planned");
+  const [targetReleaseDate, setTargetReleaseDate] = useState<string>("");
+  const [shootStartDate, setShootStartDate] = useState<string>("");
+  const [shootEndDate, setShootEndDate] = useState<string>("");
+  const [primaryPlatform, setPrimaryPlatform] = useState<string>("youtube");
+  const [syncStrategy, setSyncStrategy] = useState<string>("manual");
+  const [kpiViewTarget, setKpiViewTarget] = useState<string>("");
+  const [kpiChartTarget, setKpiChartTarget] = useState<string>("billboard_hot_100");
 
   useEffect(() => {
     if (!selectedRelease && releases[0]?.id) {
@@ -142,6 +158,14 @@ export function MusicVideoConfigurator({ releases, onCreate, isSaving }: MusicVi
       productionNotes: productionNotes || undefined,
       youtubeUrl: youtubeUrl || undefined,
       budgetAmount: plan.budgetAmount,
+      status,
+      targetReleaseDate: targetReleaseDate || undefined,
+      shootStartDate: shootStartDate || undefined,
+      shootEndDate: shootEndDate || undefined,
+      primaryPlatform: primaryPlatform || undefined,
+      syncStrategy,
+      kpiViewTarget: kpiViewTarget ? Number(kpiViewTarget) : undefined,
+      kpiChartTarget: kpiChartTarget || undefined,
     });
   };
 
@@ -295,6 +319,98 @@ export function MusicVideoConfigurator({ releases, onCreate, isSaving }: MusicVi
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Campaign Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="planned">Planned</SelectItem>
+                  <SelectItem value="in_production">In Production</SelectItem>
+                  <SelectItem value="post_production">Post Production</SelectItem>
+                  <SelectItem value="released">Released</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Primary Platform</Label>
+              <Select value={primaryPlatform} onValueChange={setPrimaryPlatform}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="youtube">YouTube</SelectItem>
+                  <SelectItem value="mtv">MTV</SelectItem>
+                  <SelectItem value="vevo">Vevo</SelectItem>
+                  <SelectItem value="tiktok">TikTok</SelectItem>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="regional_tv">Regional TV</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sync Strategy</Label>
+              <Select value={syncStrategy} onValueChange={setSyncStrategy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select sync strategy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">Manual</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="webhook">Webhook</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Target Release Date</Label>
+              <Input type="date" value={targetReleaseDate} onChange={(event) => setTargetReleaseDate(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Shoot Start</Label>
+              <Input type="date" value={shootStartDate} onChange={(event) => setShootStartDate(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Shoot End</Label>
+              <Input type="date" value={shootEndDate} onChange={(event) => setShootEndDate(event.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Views KPI Target</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="e.g. 500000"
+                value={kpiViewTarget}
+                onChange={(event) => setKpiViewTarget(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Chart KPI Target</Label>
+              <Select value={kpiChartTarget} onValueChange={setKpiChartTarget}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select chart" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="billboard_hot_100">Billboard Hot 100</SelectItem>
+                  <SelectItem value="global_200">Billboard Global 200</SelectItem>
+                  <SelectItem value="spotify_global_top_50">Spotify Global Top 50</SelectItem>
+                  <SelectItem value="apple_music_us_top_100">Apple Music US Top 100</SelectItem>
+                  <SelectItem value="regional_tv_top_20">Regional TV Top 20</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid gap-4">
@@ -371,6 +487,14 @@ export function MusicVideoConfigurator({ releases, onCreate, isSaving }: MusicVi
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              <Youtube className="h-4 w-4" />
+              <span>Primary Platform</span>
+            </div>
+            <Badge variant="outline">{primaryPlatform.replace(/_/g, " ")}</Badge>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               <span>Location Plan</span>
             </div>
@@ -399,6 +523,32 @@ export function MusicVideoConfigurator({ releases, onCreate, isSaving }: MusicVi
                 <Sparkles className="h-4 w-4" />
                 {plan.mtvSpins}
               </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Views KPI Target</span>
+              <span className="font-semibold">{kpiViewTarget ? Number(kpiViewTarget).toLocaleString() : "--"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Chart KPI Target</span>
+              <Badge variant="secondary">{kpiChartTarget.replace(/_/g, " ")}</Badge>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>Target Release</span>
+              <span>{targetReleaseDate ? new Date(targetReleaseDate).toLocaleDateString() : "TBD"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Shoot Window</span>
+              <span>
+                {shootStartDate ? new Date(shootStartDate).toLocaleDateString() : "--"} - {" "}
+                {shootEndDate ? new Date(shootEndDate).toLocaleDateString() : "--"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Sync Strategy</span>
+              <span className="font-medium text-foreground">{syncStrategy.replace(/_/g, " ")}</span>
             </div>
           </div>
         </CardContent>
