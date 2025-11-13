@@ -69,7 +69,7 @@ export default function AwardShows() {
                 </Badge>
               </div>
               <div className="space-y-2">
-                <CardTitle className="text-2xl">{show.name}</CardTitle>
+                <CardTitle className="text-2xl">{show.show_name}</CardTitle>
                 <CardDescription>{show.overview}</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
