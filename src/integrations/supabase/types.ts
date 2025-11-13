@@ -3767,32 +3767,44 @@ export type Database = {
       }
       player_equipment: {
         Row: {
+          available_at: string | null
+          available_for_loadout: boolean
           condition: number | null
           created_at: string | null
           equipment_id: string
           equipped: boolean | null
           id: string
           is_equipped: boolean | null
+          loadout_slot_kind: string | null
+          pool_category: string | null
           purchased_at: string | null
           user_id: string
         }
         Insert: {
+          available_at?: string | null
+          available_for_loadout?: boolean
           condition?: number | null
           created_at?: string | null
           equipment_id: string
           equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
+          loadout_slot_kind?: string | null
+          pool_category?: string | null
           purchased_at?: string | null
           user_id: string
         }
         Update: {
+          available_at?: string | null
+          available_for_loadout?: boolean
           condition?: number | null
           created_at?: string | null
           equipment_id?: string
           equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
+          loadout_slot_kind?: string | null
+          pool_category?: string | null
           purchased_at?: string | null
           user_id?: string
         }
@@ -3812,6 +3824,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_equipment_ownership_history: {
+        Row: {
+          action: string
+          created_at: string
+          equipment_id: string
+          id: string
+          metadata: Json
+          player_equipment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          equipment_id: string
+          id?: string
+          metadata?: Json
+          player_equipment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          equipment_id?: string
+          id?: string
+          metadata?: Json
+          player_equipment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_equipment_ownership_history_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_equipment_ownership_history_player_equipment_id_fkey"
+            columns: ["player_equipment_id"]
+            isOneToOne: false
+            referencedRelation: "player_equipment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_gear_pool: {
+        Row: {
+          capacity: number
+          category: string
+          created_at: string
+          id: string
+          slot_kind: string
+          updated_at: string
+          used_count: number
+          user_id: string
+        }
+        Insert: {
+          capacity?: number
+          category: string
+          created_at?: string
+          id?: string
+          slot_kind: string
+          updated_at?: string
+          used_count?: number
+          user_id: string
+        }
+        Update: {
+          capacity?: number
+          category?: string
+          created_at?: string
+          id?: string
+          slot_kind?: string
+          updated_at?: string
+          used_count?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       player_mentor_sessions: {
         Row: {
@@ -7973,6 +8063,24 @@ export type Database = {
           },
         ]
       }
+      gear_slot_catalog: {
+        Row: {
+          category: string
+          default_capacity: number
+          slot_kind: string
+        }
+        Insert: {
+          category: string
+          default_capacity?: number
+          slot_kind: string
+        }
+        Update: {
+          category?: string
+          default_capacity?: number
+          slot_kind?: string
+        }
+        Relationships: []
+      }
       gear_items: {
         Row: {
           created_at: string
@@ -8267,6 +8375,20 @@ export type Database = {
           schedule: string | null
           success_runs: number | null
           total_runs: number | null
+        }
+        Relationships: []
+      }
+      player_gear_pool_status: {
+        Row: {
+          available_slots: number | null
+          capacity: number | null
+          catalog_slot_kind: string | null
+          category: string | null
+          default_capacity: number | null
+          slot_kind: string | null
+          updated_at: string | null
+          used_count: number | null
+          user_id: string | null
         }
         Relationships: []
       }

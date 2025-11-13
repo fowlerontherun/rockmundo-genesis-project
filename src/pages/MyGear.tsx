@@ -120,10 +120,12 @@ const MyGear: React.FC = () => {
   const [pedalValidation, setPedalValidation] = useState<Record<number, string | null>>({});
   const [otherValidation, setOtherValidation] = useState<Record<string, string | null>>({});
   const {
-    data: inventory,
+    data: equipmentData,
     isLoading: loadingInventory,
     error: inventoryError,
   } = usePlayerEquipment();
+  const inventory: PlayerEquipmentWithItem[] = equipmentData?.items ?? [];
+  const gearPoolStatus = equipmentData?.poolStatus ?? [];
   const inventoryErrorMessage = inventoryError
     ? inventoryError instanceof Error
       ? inventoryError.message
@@ -141,7 +143,7 @@ const MyGear: React.FC = () => {
   );
 
   const inventoryGear = useMemo(() => {
-    if (!inventory) {
+    if (!inventory.length) {
       return [] as GearDefinition[];
     }
 

@@ -21,8 +21,10 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
-import { usePlayerEquipment } from "@/hooks/usePlayerEquipment";
-import { useEquipPlayerEquipment } from "@/hooks/usePlayerEquipmentMutations";
+import {
+  usePlayerEquipment,
+  type PlayerGearPoolStatus,
+} from "@/hooks/usePlayerEquipment";
 import { supabase } from "@/integrations/supabase/client";
 import {
   GearQualityTier,
@@ -68,12 +70,15 @@ type PurchaseMutationContext = {
   price: number;
 };
 
-const SNAPSHOT_QUERY_KEY = ["gear-shop-snapshot"] as const;
-
-type QualityFilterValue = "all" | GearQualityTier;
-type RarityFilterValue = "all" | GearRarityKey;
-type CurrencyFilterValue = "all" | "cash" | "fame" | "hybrid";
-type StockFilterValue = "all" | "limited" | "unlimited" | "auto-restock";
+interface PurchaseResult {
+  player_equipment_id: string;
+  remaining_stock: number | null;
+  new_cash: number | null;
+  new_secondary_balance: number | null;
+  pool_category: string | null;
+  slot_kind: string | null;
+  remaining_pool_capacity: number | null;
+}
 
 const QUALITY_FILTERS: QualityFilterValue[] = [
   "all",
@@ -144,9 +149,9 @@ const GearShop = () => {
   const queryClient = useQueryClient();
   const { profile, refetch } = useGameData();
   const { user } = useAuth();
-  const { data: ownedEquipment } = usePlayerEquipment();
-  const { equipGear, isUpdating: equipping } = useEquipPlayerEquipment();
-  const navigate = useNavigate();
+  const { data: equipmentData } = usePlayerEquipment();
+  const ownedEquipment = equipmentData?.items ?? [];
+  const gearPoolStatus = equipmentData?.poolStatus ?? [];
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -185,34 +190,45 @@ const GearShop = () => {
     },
   });
 
-  const purchaseMutation = useMutation<PurchaseMutationResult, Error, GearShopItem>({
-    mutationFn: async (item) => {
-      const { data, error } = await supabase.rpc("purchase_equipment_item" as any, {
-        p_equipment_id: item.id,
-      });
+  const poolByCategory = useMemo(() => {
+    const map = new Map<string, PlayerGearPoolStatus>();
+    gearPoolStatus.forEach((status) => {
+      if (status?.category) {
+        map.set(status.category, status);
+      }
+    });
+    return map;
+  }, [gearPoolStatus]);
 
+  const purchaseMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { data, error } = await supabase.rpc("purchase_equipment_item" as any, {
+        p_equipment_id: itemId,
+      });
       if (error) {
         throw error;
       }
-
-      const payload = Array.isArray(data) ? data?.[0] : data;
-
-      return {
-        playerEquipmentId: payload?.v_player_equipment_id ?? null,
-        remainingStock: payload?.v_remaining_stock ?? null,
-        newCash: payload?.v_new_cash ?? null,
-      } satisfies PurchaseMutationResult;
+      return Array.isArray(data) && data.length > 0 ? (data[0] as PurchaseResult) : undefined;
     },
-    onSuccess: async (result, item) => {
-      toast.success("Gear purchased");
-      setEquipPrompt({ item, playerEquipmentId: result.playerEquipmentId });
+    onSuccess: async (result) => {
+      const remainingSlots = result?.remaining_pool_capacity;
+      const slotLabel = result?.slot_kind ?? "gear";
+      const slotMessage =
+        typeof remainingSlots === "number"
+          ? `${remainingSlots} ${slotLabel} slot${remainingSlots === 1 ? "" : "s"} remaining`
+          : "Ready for loadout assignment";
+      toast.success(`Gear purchased. ${slotMessage}`);
       queryClient.invalidateQueries({ queryKey: ["gear-shop-items"] });
       queryClient.invalidateQueries({ queryKey: ["equipment-store-items"] });
       queryClient.invalidateQueries({ queryKey: ["player-equipment", user?.id] });
       await refetch();
     },
-    onSettled: () => {
-      setActivePurchaseId(null);
+    onError: (error: Error) => {
+      const message =
+        error.message?.includes("Gear pool is full")
+          ? error.message
+          : error.message || "Unable to complete purchase";
+      toast.error(message);
     },
   });
 
@@ -256,10 +272,6 @@ const GearShop = () => {
   }, [items]);
 
   const ownedIds = useMemo(() => {
-    if (!ownedEquipment) {
-      return new Set<string>();
-    }
-
     const ids = ownedEquipment
       .map((entry) => entry.equipment?.id)
       .filter((value): value is string => Boolean(value));
@@ -431,99 +443,238 @@ const GearShop = () => {
             <span>${cashOnHand.toLocaleString()}</span>
           </div>
         </div>
+        <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm shadow-sm">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="font-medium">Budget</span>
+          <Separator orientation="vertical" className="h-4" />
+          <span>${cashOnHand.toLocaleString()}</span>
+        </div>
+      </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Filter className="h-4 w-4" /> Filters
+          </CardTitle>
+          <CardDescription>Search by item type, rarity tier, or quality band to zero in on upgrades.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-4">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search gear..."
+            className="md:col-span-2"
+          />
+
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="Item type" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === "all" ? "All types" : option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={rarity} onValueChange={(value) => setRarity(value as RarityFilterValue)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Rarity" />
+            </SelectTrigger>
+            <SelectContent>
+              {rarityFilters.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === "all" ? "All rarities" : getRarityLabel(option)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={quality} onValueChange={(value) => setQuality(value as QualityFilterValue)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Quality tier" />
+            </SelectTrigger>
+            <SelectContent>
+              {QUALITY_FILTERS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === "all" ? "All quality" : getQualityLabel(option)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {gearPoolStatus.length > 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="h-4 w-4" /> Filters
-            </CardTitle>
-            <CardDescription>Search by item type, rarity tier, or quality band to zero in on upgrades.</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Gear pool overview</CardTitle>
+            <CardDescription>Track remaining capacity before locking in purchases.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-4">
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search gear..."
-              className="md:col-span-2"
-            />
-
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Item type" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option === "all" ? "All types" : option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={rarity} onValueChange={(value) => setRarity(value as RarityFilterValue)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Rarity" />
-              </SelectTrigger>
-              <SelectContent>
-                {rarityFilters.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option === "all" ? "All rarities" : getRarityLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={quality} onValueChange={(value) => setQuality(value as QualityFilterValue)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Quality tier" />
-              </SelectTrigger>
-              <SelectContent>
-                {QUALITY_FILTERS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option === "all" ? "All quality" : getQualityLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {gearPoolStatus.map((status) => {
+              const categoryLabel = status.category ?? "uncategorized";
+              const used = status.used_count ?? 0;
+              const capacity = status.capacity ?? 0;
+              const available = status.available_slots ?? Math.max(capacity - used, 0);
+              return (
+                <div key={categoryLabel} className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between text-sm font-medium">
+                    <span className="capitalize">{categoryLabel}</span>
+                    <Badge variant={available > 0 ? "secondary" : "destructive"}>{available} open</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {used}/{capacity} assigned • Slot type: {status.slot_kind ?? "–"}
+                  </p>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
+      ) : null}
 
-        <Tabs defaultValue="catalogue" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
-            <TabsTrigger value="owned">Owned gear</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="catalogue" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
+          <TabsTrigger value="owned">Owned gear</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="catalogue" className="space-y-6">
-            {loadingItems ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <Card>
-                <CardContent className="flex items-center gap-3 py-12 text-muted-foreground">
-                  <PackageSearch className="h-5 w-5" />
-                  <span>No gear matches your filters.</span>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filteredItems.map((item) => {
-                  const boosts = formatStatBoosts(item.stat_boosts);
-                  const rarityClass = rarityStyles[item.rarityKey];
-                  const qualityClass = qualityTierStyles[item.qualityTier];
-                  const isOwned = ownedIds.has(item.id);
-                  const outOfStock = (item.stock ?? 0) <= 0;
+        <TabsContent value="catalogue" className="space-y-6">
+          {loadingItems ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <Card>
+              <CardContent className="flex items-center gap-3 py-12 text-muted-foreground">
+                <PackageSearch className="h-5 w-5" />
+                <span>No gear matches your filters.</span>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredItems.map((item) => {
+                const boosts = formatStatBoosts(item.stat_boosts);
+                const rarityClass = rarityStyles[item.rarityKey];
+                const qualityClass = qualityTierStyles[item.qualityTier];
+                const isOwned = ownedIds.has(item.id);
+                const outOfStock = (item.stock ?? 0) <= 0;
+                const poolStatus = poolByCategory.get(item.category);
+                const availableSlots = poolStatus?.available_slots ?? null;
+                const noCapacity = availableSlots !== null && (availableSlots ?? 0) <= 0;
 
-                  const stockTone = outOfStock
-                    ? "text-destructive"
-                    : item.stock && item.stock <= 2
-                    ? "text-amber-600"
-                    : "text-muted-foreground";
+                const stockTone = outOfStock
+                  ? "text-destructive"
+                  : item.stock && item.stock <= 2
+                  ? "text-amber-600"
+                  : "text-muted-foreground";
 
-                  return (
-                    <Card key={item.id} className="flex flex-col border-2">
-                      <CardHeader className="space-y-3">
+                return (
+                  <Card key={item.id} className="flex flex-col border-2">
+                    <CardHeader className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="text-xl">{item.name}</CardTitle>
+                          <CardDescription>{item.subcategory || item.category}</CardDescription>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="outline" className={rarityClass}>
+                            {getRarityLabel(item.rarityKey)}
+                          </Badge>
+                          <Badge variant="outline" className={qualityClass}>
+                            {getQualityLabel(item.qualityTier)}
+                          </Badge>
+                        </div>
+                      </div>
+                      {item.description ? (
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      ) : null}
+                    </CardHeader>
+                    <CardContent className="flex flex-1 flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <ShoppingCart className="h-4 w-4 text-primary" />
+                          <span className="font-semibold">${item.price.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Shield className="h-4 w-4" />
+                          <span>{item.category}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ShoppingBag className="h-4 w-4" />
+                          <span className={`${stockTone}`}>
+                            {outOfStock ? "Sold out" : `${item.stock ?? 0} in stock`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <BadgeDollarSign className="h-4 w-4" />
+                          <span>{isOwned ? "Owned" : "Available"}</span>
+                        </div>
+                      </div>
+
+                      {boosts.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {boosts.map(([stat, value]) => (
+                            <Badge key={stat} variant="outline" className={rarityClass}>
+                              {stat}: +{value}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      <Button
+                        className="mt-auto"
+                        disabled={
+                          purchaseMutation.isPending || isOwned || outOfStock || noCapacity
+                        }
+                        onClick={() => purchaseMutation.mutate(item.id)}
+                      >
+                        {isOwned
+                          ? "Already owned"
+                          : outOfStock
+                          ? "Out of stock"
+                          : noCapacity
+                          ? "Pool full"
+                          : purchaseMutation.isPending
+                          ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing
+                              </>
+                            )
+                          : `Purchase for $${item.price.toLocaleString()}`}
+                      </Button>
+                      {noCapacity ? (
+                        <p className="text-xs text-destructive">
+                          No remaining {poolStatus?.slot_kind ?? item.category} slots. Retire gear or expand
+                          capacity before buying.
+                        </p>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="owned">
+          <Card>
+            <CardHeader>
+              <CardTitle>Owned gear</CardTitle>
+              <CardDescription>Quick view of inventory ready to assign in your loadouts.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!ownedEquipment || ownedEquipment.length === 0 ? (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  You haven&apos;t purchased any gear yet. Buy items from the catalogue to populate your loadout inventory.
+                </p>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {ownedEquipment.map((entry) => (
+                    <Card key={entry.id} className="border">
+                      <CardContent className="space-y-3 py-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <CardTitle className="text-xl">{item.name}</CardTitle>
@@ -563,11 +714,26 @@ const GearShop = () => {
                             <span>{isOwned ? "Owned" : "Available"}</span>
                           </div>
                         </div>
-
-                        {boosts.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 text-xs">
-                            {boosts.map(([stat, value]) => (
-                              <Badge key={stat} variant="outline" className={rarityClass}>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Loadout slot</span>
+                          <span>{entry.loadout_slot_kind ?? "Unassigned"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Pool category</span>
+                          <span className="capitalize">{entry.pool_category ?? "—"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Status</span>
+                          <span>{entry.available_for_loadout ? "Available" : "Assigned"}</span>
+                        </div>
+                        {entry.equipment?.stat_boosts ? (
+                          <div className="flex flex-wrap gap-1 text-[10px]">
+                            {Object.entries(entry.equipment.stat_boosts).map(([stat, value]) => (
+                              <Badge
+                                key={stat}
+                                variant="outline"
+                                className={rarityStyles[parseRarityKey(entry.equipment?.rarity)]}
+                              >
                                 {stat}: +{value}
                               </Badge>
                             ))}
