@@ -12,7 +12,17 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, PackagePlus, RefreshCcw, Trash2, UploadCloud } from "lucide-react";
+import {
+  Loader2,
+  PackagePlus,
+  RefreshCcw,
+  Trash2,
+  UploadCloud,
+  BarChart3,
+  ClipboardList,
+  Sparkles,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -162,6 +172,40 @@ const statusVariants: Record<MerchandiseStatus, "default" | "secondary" | "destr
   sold_out: "destructive",
 };
 
+type TabConfig = {
+  value: "overview" | "add-product" | "manage-product" | "designer";
+  label: string;
+  description: string;
+  icon: LucideIcon;
+};
+
+const TAB_CONFIG: TabConfig[] = [
+  {
+    value: "overview",
+    label: "Overview",
+    description: "Performance & alerts",
+    icon: BarChart3,
+  },
+  {
+    value: "add-product",
+    label: "Add Product",
+    description: "Launch something new",
+    icon: PackagePlus,
+  },
+  {
+    value: "manage-product",
+    label: "Manage Inventory",
+    description: "Restock & adjust",
+    icon: ClipboardList,
+  },
+  {
+    value: "designer",
+    label: "T-Shirt Designer",
+    description: "Plan the visuals",
+    icon: Sparkles,
+  },
+];
+
 const safeNumber = (value: number | null) => (typeof value === "number" && !Number.isNaN(value) ? value : 0);
 
 const getStatus = (stock: number | null): MerchandiseStatus => {
@@ -185,6 +229,7 @@ const Merchandise = () => {
   const bandName = primaryBand?.bands?.name ?? "Band";
 
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabConfig["value"]>("overview");
   const [newProductForm, setNewProductForm] = useState<FormState>(INITIAL_FORM);
   const [editForm, setEditForm] = useState<FormState>(INITIAL_FORM);
   const [designerForm, setDesignerForm] = useState<DesignerForm>(INITIAL_DESIGNER_FORM);
@@ -541,12 +586,47 @@ const Merchandise = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="add-product">Add Product</TabsTrigger>
-          <TabsTrigger value="manage-product">Manage Inventory</TabsTrigger>
-          <TabsTrigger value="designer">Custom T-Shirt Designer</TabsTrigger>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as TabConfig["value"])}
+        className="space-y-6"
+      >
+        <TabsList className="-mx-4 flex w-[calc(100%+2rem)] gap-3 overflow-x-auto px-4 pb-2 md:hidden">
+          {TAB_CONFIG.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="flex min-w-[200px] flex-1 flex-col items-start gap-1 rounded-2xl border border-border bg-background px-4 py-3 text-left text-sm font-semibold shadow-sm transition data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+              >
+                <span className="flex items-center gap-2 text-sm">
+                  <Icon className="h-4 w-4 text-muted-foreground data-[state=active]:text-primary-foreground" />
+                  {tab.label}
+                </span>
+                <span className="text-xs font-normal text-muted-foreground data-[state=active]:text-primary-foreground/80">
+                  {tab.description}
+                </span>
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+
+        <TabsList className="hidden w-full grid-cols-4 gap-2 rounded-xl bg-muted/40 p-1 md:grid">
+          {TAB_CONFIG.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <Icon className="hidden h-4 w-4 text-muted-foreground md:block lg:hidden" />
+                <span className="hidden lg:inline">{tab.label}</span>
+                <span className="lg:hidden">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -625,57 +705,59 @@ const Merchandise = () => {
                     <p className="text-2xl font-semibold">{currencyFormatter.format(summary.totalCost)}</p>
                   </div>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="hidden xl:table-cell">Category</TableHead>
-                      <TableHead>Cost</TableHead>
-                      <TableHead>Sale</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead className="hidden lg:table-cell">Potential</TableHead>
-                      <TableHead className="hidden lg:table-cell">Margin</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Array.isArray(merchandise) && merchandise.map((product) => {
-                      const margin = calculateMargin(product);
-                      const unitProfit = safeNumber(product.selling_price) - safeNumber(product.cost_to_produce);
-                      const potential = safeNumber(product.selling_price) * safeNumber(product.stock_quantity);
-                      const status = getStatus(product.stock_quantity);
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead className="hidden xl:table-cell">Category</TableHead>
+                        <TableHead>Cost</TableHead>
+                        <TableHead>Sale</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead className="hidden lg:table-cell">Potential</TableHead>
+                        <TableHead className="hidden lg:table-cell">Margin</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.isArray(merchandise) && merchandise.map((product) => {
+                        const margin = calculateMargin(product);
+                        const unitProfit = safeNumber(product.selling_price) - safeNumber(product.cost_to_produce);
+                        const potential = safeNumber(product.selling_price) * safeNumber(product.stock_quantity);
+                        const status = getStatus(product.stock_quantity);
 
-                      return (
-                        <TableRow key={product.id}>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold">{product.design_name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {percentFormatter.format(margin)} margin · {currencyFormatter.format(unitProfit)} / unit
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden xl:table-cell">{formatProductType(product.item_type)}</TableCell>
-                          <TableCell>{currencyFormatter.format(safeNumber(product.cost_to_produce))}</TableCell>
-                          <TableCell>{currencyFormatter.format(safeNumber(product.selling_price))}</TableCell>
-                          <TableCell>{numberFormatter.format(safeNumber(product.stock_quantity))}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{currencyFormatter.format(potential)}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{percentFormatter.format(margin)}</TableCell>
-                          <TableCell>
-                            <Badge variant={statusVariants[status]}>{statusLabels[status]}</Badge>
+                        return (
+                          <TableRow key={product.id}>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-semibold">{product.design_name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {percentFormatter.format(margin)} margin · {currencyFormatter.format(unitProfit)} / unit
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden xl:table-cell">{formatProductType(product.item_type)}</TableCell>
+                            <TableCell>{currencyFormatter.format(safeNumber(product.cost_to_produce))}</TableCell>
+                            <TableCell>{currencyFormatter.format(safeNumber(product.selling_price))}</TableCell>
+                            <TableCell>{numberFormatter.format(safeNumber(product.stock_quantity))}</TableCell>
+                            <TableCell className="hidden lg:table-cell">{currencyFormatter.format(potential)}</TableCell>
+                            <TableCell className="hidden lg:table-cell">{percentFormatter.format(margin)}</TableCell>
+                            <TableCell>
+                              <Badge variant={statusVariants[status]}>{statusLabels[status]}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {(!merchandise || !Array.isArray(merchandise) || merchandise.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                            No merchandise found yet. Add your first product to start tracking performance.
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
-                    {(!merchandise || !Array.isArray(merchandise) || merchandise.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
-                          No merchandise found yet. Add your first product to start tracking performance.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
 
