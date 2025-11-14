@@ -104,6 +104,7 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
+const LifestyleHomes = lazyWithRetry(() => import("./pages/lifestyle/homes"));
 
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
@@ -152,6 +153,7 @@ function App() {
                     <Route path="tours-system" element={<TouringSystem />} />
                     <Route path="equipment" element={<EnhancedEquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
+                    <Route path="lifestyle/homes" element={<LifestyleHomes />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/:cityId" element={<City />} />

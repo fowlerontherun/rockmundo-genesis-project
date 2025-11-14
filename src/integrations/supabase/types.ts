@@ -2961,6 +2961,212 @@ export type Database = {
         }
         Relationships: []
       }
+      lifestyle_properties: {
+        Row: {
+          available: boolean
+          area_sq_ft: number | null
+          base_price: number
+          bathrooms: number
+          bedrooms: number
+          city: string
+          created_at: string
+          description: string | null
+          district: string | null
+          energy_rating: string | null
+          highlight_features: string[]
+          id: string
+          image_url: string | null
+          lifestyle_fit: Json
+          lot_size_sq_ft: number | null
+          name: string
+          property_type: string
+          rating: number | null
+        }
+        Insert: {
+          available?: boolean
+          area_sq_ft?: number | null
+          base_price: number
+          bathrooms: number
+          bedrooms: number
+          city: string
+          created_at?: string
+          description?: string | null
+          district?: string | null
+          energy_rating?: string | null
+          highlight_features?: string[]
+          id?: string
+          image_url?: string | null
+          lifestyle_fit?: Json
+          lot_size_sq_ft?: number | null
+          name: string
+          property_type: string
+          rating?: number | null
+        }
+        Update: {
+          available?: boolean
+          area_sq_ft?: number | null
+          base_price?: number
+          bathrooms?: number
+          bedrooms?: number
+          city?: string
+          created_at?: string
+          description?: string | null
+          district?: string | null
+          energy_rating?: string | null
+          highlight_features?: string[]
+          id?: string
+          image_url?: string | null
+          lifestyle_fit?: Json
+          lot_size_sq_ft?: number | null
+          name?: string
+          property_type?: string
+          rating?: number | null
+        }
+        Relationships: []
+      }
+      lifestyle_property_features: {
+        Row: {
+          description: string | null
+          feature_name: string
+          feature_type: string
+          id: string
+          impact: Json
+          property_id: string
+          upgrade_cost: number
+        }
+        Insert: {
+          description?: string | null
+          feature_name: string
+          feature_type: string
+          id?: string
+          impact?: Json
+          property_id: string
+          upgrade_cost?: number
+        }
+        Update: {
+          description?: string | null
+          feature_name?: string
+          feature_type?: string
+          id?: string
+          impact?: Json
+          property_id?: string
+          upgrade_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_features_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      lifestyle_property_financing_options: {
+        Row: {
+          closing_cost_pct: number | null
+          description: string | null
+          down_payment_pct: number
+          id: string
+          interest_rate: number
+          name: string
+          property_id: string
+          requirements: Json
+          term_months: number
+        }
+        Insert: {
+          closing_cost_pct?: number | null
+          description?: string | null
+          down_payment_pct?: number
+          id?: string
+          interest_rate?: number
+          name: string
+          property_id: string
+          requirements?: Json
+          term_months?: number
+        }
+        Update: {
+          closing_cost_pct?: number | null
+          description?: string | null
+          down_payment_pct?: number
+          id?: string
+          interest_rate?: number
+          name?: string
+          property_id?: string
+          requirements?: Json
+          term_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_financing_options_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      lifestyle_property_purchases: {
+        Row: {
+          created_at: string
+          financing_option_id: string | null
+          id: string
+          notes: string | null
+          property_id: string
+          purchase_price: number
+          selected_features: Json
+          status: string
+          total_upgrade_cost: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          financing_option_id?: string | null
+          id?: string
+          notes?: string | null
+          property_id: string
+          purchase_price: number
+          selected_features?: Json
+          status?: string
+          total_upgrade_cost?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          financing_option_id?: string | null
+          id?: string
+          notes?: string | null
+          property_id?: string
+          purchase_price?: number
+          selected_features?: Json
+          status?: string
+          total_upgrade_cost?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifestyle_property_purchases_financing_option_id_fkey"
+            columns: ["financing_option_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_property_financing_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lifestyle_property_purchases_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "lifestyle_properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lifestyle_property_purchases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       manufacturing_costs: {
         Row: {
           cost_per_unit: number
