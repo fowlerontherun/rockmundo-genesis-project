@@ -1249,6 +1249,239 @@ export type Database = {
         }
         Relationships: []
       }
+      casting_call_roles: {
+        Row: {
+          availability_requirements: string | null
+          casting_call_id: string
+          compensation_notes: string | null
+          contract_type: string | null
+          created_at: string
+          description: string | null
+          gender: string | null
+          id: string
+          name: string
+          required_skills: string[] | null
+          role_type: string | null
+          age_range: string | null
+        }
+        Insert: {
+          availability_requirements?: string | null
+          casting_call_id: string
+          compensation_notes?: string | null
+          contract_type?: string | null
+          created_at?: string
+          description?: string | null
+          gender?: string | null
+          id?: string
+          name: string
+          required_skills?: string[] | null
+          role_type?: string | null
+          age_range?: string | null
+        }
+        Update: {
+          availability_requirements?: string | null
+          casting_call_id?: string
+          compensation_notes?: string | null
+          contract_type?: string | null
+          created_at?: string
+          description?: string | null
+          gender?: string | null
+          id?: string
+          name?: string
+          required_skills?: string[] | null
+          role_type?: string | null
+          age_range?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_call_roles_casting_call_id_fkey"
+            columns: ["casting_call_id"]
+            isOneToOne: false
+            referencedRelation: "casting_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casting_calls: {
+        Row: {
+          application_deadline: string | null
+          compensation_max: number | null
+          compensation_min: number | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          is_remote_friendly: boolean | null
+          location: string | null
+          production_company: string | null
+          project_type: string
+          status: string | null
+          title: string
+          union_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_deadline?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          is_remote_friendly?: boolean | null
+          location?: string | null
+          production_company?: string | null
+          project_type: string
+          status?: string | null
+          title: string
+          union_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_deadline?: string | null
+          compensation_max?: number | null
+          compensation_min?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          is_remote_friendly?: boolean | null
+          location?: string | null
+          production_company?: string | null
+          project_type?: string
+          status?: string | null
+          title?: string
+          union_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_calls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casting_reviews: {
+        Row: {
+          created_at: string
+          decision: string
+          feedback: string | null
+          id: string
+          reviewer_profile_id: string | null
+          score: number | null
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decision?: string
+          feedback?: string | null
+          id?: string
+          reviewer_profile_id?: string | null
+          score?: number | null
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          feedback?: string | null
+          id?: string
+          reviewer_profile_id?: string | null
+          score?: number | null
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_reviews_reviewer_profile_id_fkey"
+            columns: ["reviewer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casting_reviews_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "casting_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      casting_submissions: {
+        Row: {
+          audition_video_url: string | null
+          casting_call_id: string
+          casting_call_role_id: string | null
+          cover_letter: string | null
+          created_at: string
+          experience_summary: string | null
+          id: string
+          portfolio_url: string | null
+          resume_url: string | null
+          status: string
+          talent_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          audition_video_url?: string | null
+          casting_call_id: string
+          casting_call_role_id?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          experience_summary?: string | null
+          id?: string
+          portfolio_url?: string | null
+          resume_url?: string | null
+          status?: string
+          talent_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          audition_video_url?: string | null
+          casting_call_id?: string
+          casting_call_role_id?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          experience_summary?: string | null
+          id?: string
+          portfolio_url?: string | null
+          resume_url?: string | null
+          status?: string
+          talent_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "casting_submissions_casting_call_id_fkey"
+            columns: ["casting_call_id"]
+            isOneToOne: false
+            referencedRelation: "casting_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casting_submissions_casting_call_role_id_fkey"
+            columns: ["casting_call_role_id"]
+            isOneToOne: false
+            referencedRelation: "casting_call_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casting_submissions_talent_profile_id_fkey"
+            columns: ["talent_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chart_entries: {
         Row: {
           chart_date: string | null
