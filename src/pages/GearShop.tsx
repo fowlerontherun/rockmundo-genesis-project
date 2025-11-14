@@ -672,7 +672,14 @@ const GearShop = () => {
                 </p>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {ownedEquipment.map((entry) => (
+                  {ownedEquipment.map((entry) => {
+                    const item = entry.equipment;
+                    if (!item) return null;
+                    
+                    const rarityClass = rarityStyles[parseRarityKey(item.rarity)];
+                    const qualityClass = qualityTierStyles[deriveQualityTier(item.price_cash, item.stat_boosts as Record<string, number>)];
+                    
+                    return (
                     <Card key={entry.id} className="border">
                       <CardContent className="space-y-3 py-4">
                         <div className="flex items-start justify-between gap-3">
@@ -682,18 +689,16 @@ const GearShop = () => {
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             <Badge variant="outline" className={rarityClass}>
-                              {getRarityLabel(item.rarityKey)}
+                              {getRarityLabel(parseRarityKey(item.rarity))}
                             </Badge>
                             <Badge variant="outline" className={qualityClass}>
-                              {getQualityLabel(item.qualityTier)}
+                              {getQualityLabel(deriveQualityTier(item.price_cash, item.stat_boosts as Record<string, number>))}
                             </Badge>
                           </div>
                         </div>
                         {item.description ? (
                           <p className="text-sm text-muted-foreground">{item.description}</p>
                         ) : null}
-                      </CardHeader>
-                      <CardContent className="flex flex-1 flex-col gap-4">
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div className="flex items-center gap-2">
                             <ShoppingCart className="h-4 w-4 text-primary" />
