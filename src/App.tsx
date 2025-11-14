@@ -33,6 +33,7 @@ const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 // Equipment store pages removed - replaced by EnhancedEquipmentStore
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
+const Onboarding = lazyWithRetry(() => import("./pages/onboarding/OnboardingWizard"));
 
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
@@ -142,6 +143,7 @@ function App() {
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Index />} />
                     <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
                     <Route path="bands/:bandId/management" element={<BandManagementPage />} />
                     <Route path="gigs" element={<GigBooking />} />
