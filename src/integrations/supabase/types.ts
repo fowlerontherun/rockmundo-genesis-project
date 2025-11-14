@@ -8962,6 +8962,115 @@ export type Database = {
         }
         Relationships: []
       }
+      side_hustle_minigame_attempts: {
+        Row: {
+          accuracy: number
+          activity_id: string
+          cash_reward: number
+          created_at: string
+          difficulty: number
+          id: string
+          metadata: Json | null
+          minigame_type: string
+          profile_id: string
+          score: number
+          success: boolean
+          duration_seconds: number
+          xp_earned: number
+        }
+        Insert: {
+          accuracy: number
+          activity_id: string
+          cash_reward: number
+          created_at?: string
+          difficulty: number
+          id?: string
+          metadata?: Json | null
+          minigame_type: string
+          profile_id: string
+          score: number
+          success?: boolean
+          duration_seconds: number
+          xp_earned: number
+        }
+        Update: {
+          accuracy?: number
+          activity_id?: string
+          cash_reward?: number
+          created_at?: string
+          difficulty?: number
+          id?: string
+          metadata?: Json | null
+          minigame_type?: string
+          profile_id?: string
+          score?: number
+          success?: boolean
+          duration_seconds?: number
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "side_hustle_minigame_attempts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      side_hustle_progress: {
+        Row: {
+          activity_id: string
+          best_score: number
+          created_at: string
+          experience: number
+          id: string
+          last_played_at: string | null
+          last_result: string | null
+          level: number
+          minigame_type: string
+          profile_id: string
+          total_attempts: number
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          best_score?: number
+          created_at?: string
+          experience?: number
+          id?: string
+          last_played_at?: string | null
+          last_result?: string | null
+          level?: number
+          minigame_type: string
+          profile_id: string
+          total_attempts?: number
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          best_score?: number
+          created_at?: string
+          experience?: number
+          id?: string
+          last_played_at?: string | null
+          last_result?: string | null
+          level?: number
+          minigame_type?: string
+          profile_id?: string
+          total_attempts?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "side_hustle_progress_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_loadout_items: {
         Row: {
           created_at: string
