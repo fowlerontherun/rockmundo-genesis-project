@@ -38,6 +38,7 @@ const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
 const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
+const CommunityMentorship = lazyWithRetry(() => import("./pages/community/mentorship"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
@@ -159,6 +160,7 @@ function App() {
                     <Route path="travel" element={<Travel />} />
                     <Route path="social" element={<SocialMedia />} />
                     <Route path="relationships" element={<Relationships />} />
+                    <Route path="community/mentorship" element={<CommunityMentorship />} />
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />

@@ -44,6 +44,7 @@ import {
   Target,
   TrendingUp,
   Map,
+  Handshake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -115,6 +116,7 @@ export function AppSidebar() {
         { icon: Megaphone, label: "PR", path: "/pr" },
         { icon: Share2, label: "Social", path: "/social" },
         { icon: HeartHandshake, label: "Relationships", path: "/relationships" },
+        { icon: Handshake, label: "Mentorship", path: "/community/mentorship" },
       ],
     },
     {

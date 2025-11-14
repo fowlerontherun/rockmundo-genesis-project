@@ -1443,6 +1443,221 @@ export type Database = {
           },
         ]
       }
+      community_mentorship_goals: {
+        Row: {
+          check_ins: Json
+          created_at: string
+          description: string | null
+          focus_areas: string[]
+          id: string
+          impact_score: number
+          last_check_in: string | null
+          match_id: string
+          metrics: Json
+          milestone_order: number
+          progress: number
+          status: string
+          support_notes: string | null
+          target_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          check_ins?: Json
+          created_at?: string
+          description?: string | null
+          focus_areas?: string[]
+          id?: string
+          impact_score?: number
+          last_check_in?: string | null
+          match_id: string
+          metrics?: Json
+          milestone_order?: number
+          progress?: number
+          status?: string
+          support_notes?: string | null
+          target_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          check_ins?: Json
+          created_at?: string
+          description?: string | null
+          focus_areas?: string[]
+          id?: string
+          impact_score?: number
+          last_check_in?: string | null
+          match_id?: string
+          metrics?: Json
+          milestone_order?: number
+          progress?: number
+          status?: string
+          support_notes?: string | null
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentorship_goals_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "community_mentorship_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_mentorship_matches: {
+        Row: {
+          alignment_score: number
+          created_at: string
+          ended_at: string | null
+          focus_areas: string[]
+          id: string
+          initiated_by_profile_id: string
+          mentor_profile_id: string
+          mentee_profile_id: string
+          mentorship_cadence: string
+          notes: string | null
+          started_at: string | null
+          status: string
+          support_topics: string[]
+          updated_at: string
+        }
+        Insert: {
+          alignment_score?: number
+          created_at?: string
+          ended_at?: string | null
+          focus_areas?: string[]
+          id?: string
+          initiated_by_profile_id: string
+          mentor_profile_id: string
+          mentee_profile_id: string
+          mentorship_cadence?: string
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          support_topics?: string[]
+          updated_at?: string
+        }
+        Update: {
+          alignment_score?: number
+          created_at?: string
+          ended_at?: string | null
+          focus_areas?: string[]
+          id?: string
+          initiated_by_profile_id?: string
+          mentor_profile_id?: string
+          mentee_profile_id?: string
+          mentorship_cadence?: string
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          support_topics?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentorship_matches_initiated_by_profile_id_fkey"
+            columns: ["initiated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentorship_matches_mentor_profile_id_fkey"
+            columns: ["mentor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentorship_matches_mentee_profile_id_fkey"
+            columns: ["mentee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_mentorship_profiles: {
+        Row: {
+          availability_status: string
+          bio: string | null
+          compatibility_tags: string[]
+          created_at: string
+          current_mentees: number
+          experience_level: string
+          focus_areas: string[]
+          headline: string | null
+          id: string
+          is_open_to_learn: boolean
+          is_open_to_mentor: boolean
+          last_active_at: string | null
+          meeting_preferences: string[]
+          mentor_capacity: number
+          mentorship_style: string[]
+          preferred_genres: string[]
+          profile_id: string
+          support_topics: string[]
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          availability_status?: string
+          bio?: string | null
+          compatibility_tags?: string[]
+          created_at?: string
+          current_mentees?: number
+          experience_level?: string
+          focus_areas?: string[]
+          headline?: string | null
+          id?: string
+          is_open_to_learn?: boolean
+          is_open_to_mentor?: boolean
+          last_active_at?: string | null
+          meeting_preferences?: string[]
+          mentor_capacity?: number
+          mentorship_style?: string[]
+          preferred_genres?: string[]
+          profile_id: string
+          support_topics?: string[]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          availability_status?: string
+          bio?: string | null
+          compatibility_tags?: string[]
+          created_at?: string
+          current_mentees?: number
+          experience_level?: string
+          focus_areas?: string[]
+          headline?: string | null
+          id?: string
+          is_open_to_learn?: boolean
+          is_open_to_mentor?: boolean
+          last_active_at?: string | null
+          meeting_preferences?: string[]
+          mentor_capacity?: number
+          mentorship_style?: string[]
+          preferred_genres?: string[]
+          profile_id?: string
+          support_topics?: string[]
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentorship_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_catalog: {
         Row: {
           assignment: string
