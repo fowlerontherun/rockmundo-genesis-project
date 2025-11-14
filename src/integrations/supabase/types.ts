@@ -3048,6 +3048,237 @@ export type Database = {
         }
         Relationships: []
       }
+      leaderboard_badge_awards: {
+        Row: {
+          awarded_at: string
+          badge_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          profile_id: string | null
+          rank: number | null
+          season_id: string | null
+          user_id: string
+        }
+        Insert: {
+          awarded_at?: string
+          badge_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          profile_id?: string | null
+          rank?: number | null
+          season_id?: string | null
+          user_id: string
+        }
+        Update: {
+          awarded_at?: string
+          badge_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          profile_id?: string | null
+          rank?: number | null
+          season_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_badge_awards_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_badge_awards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_badge_awards_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboard_badges: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          name: string
+          rarity: string
+          season_id: string | null
+          tier: string | null
+          criteria: Json
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          name: string
+          rarity?: string
+          season_id?: string | null
+          tier?: string | null
+          criteria?: Json
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          rarity?: string
+          season_id?: string | null
+          tier?: string | null
+          criteria?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_badges_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboard_season_snapshots: {
+        Row: {
+          awarded_badges: Json
+          breakdown: Json
+          created_at: string
+          division: string
+          experience: number | null
+          fame: number | null
+          final_rank: number | null
+          final_score: number | null
+          id: string
+          instrument: string
+          profile_id: string | null
+          recorded_at: string
+          region: string
+          season_id: string
+          tier: string | null
+          total_achievements: number | null
+          total_gigs: number | null
+          total_revenue: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          awarded_badges?: Json
+          breakdown?: Json
+          created_at?: string
+          division?: string
+          experience?: number | null
+          fame?: number | null
+          final_rank?: number | null
+          final_score?: number | null
+          id?: string
+          instrument?: string
+          profile_id?: string | null
+          recorded_at?: string
+          region?: string
+          season_id: string
+          tier?: string | null
+          total_achievements?: number | null
+          total_gigs?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          awarded_badges?: Json
+          breakdown?: Json
+          created_at?: string
+          division?: string
+          experience?: number | null
+          fame?: number | null
+          final_rank?: number | null
+          final_score?: number | null
+          id?: string
+          instrument?: string
+          profile_id?: string | null
+          recorded_at?: string
+          region?: string
+          season_id?: string
+          tier?: string | null
+          total_achievements?: number | null
+          total_gigs?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_season_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_season_snapshots_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboard_seasons: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          reward_summary: Json
+          slug: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          reward_summary?: Json
+          slug: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          reward_summary?: Json
+          slug?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manufacturing_costs: {
         Row: {
           cost_per_unit: number
