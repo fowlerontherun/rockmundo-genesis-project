@@ -460,11 +460,10 @@ const GearShop = () => {
         </div>
         <div className="flex items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm shadow-sm">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="font-medium">Budget</span>
+          <span className="font-medium">Available</span>
           <Separator orientation="vertical" className="h-4" />
-          <span>${cashOnHand.toLocaleString()}</span>
+          <span>${availableBudget.toLocaleString()}</span>
         </div>
-      </div>
 
       <Card>
         <CardHeader>
