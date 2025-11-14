@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { RecordingStage, RecordingStatus } from "@/lib/workflows/recording";
 
 export interface RecordingProducer {
   id: string;
@@ -33,13 +34,23 @@ export interface RecordingSession {
   quality_before: number;
   quality_after: number;
   quality_improvement: number;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  status: RecordingStatus;
+  stage?: RecordingStage | null;
   scheduled_start: string;
   scheduled_end: string;
+  started_at?: string | null;
   completed_at: string | null;
   session_data: any;
+  total_takes?: number | null;
+  quality_gain?: number | null;
+  notes?: string | null;
+  engineer_id?: string | null;
+  engineer_name?: string | null;
   created_at: string;
   updated_at: string;
+  city_studios?: { name?: string | null; quality_rating?: number | null } | null;
+  recording_producers?: { name?: string | null; tier?: string | null } | null;
+  songs?: { title?: string | null; genre?: string | null } | null;
 }
 
 export interface OrchestraOption {
@@ -103,7 +114,7 @@ export const useRecordingSessions = (userId: string) => {
         console.error('Error fetching recording sessions:', error);
         throw error;
       }
-      return data || [];
+      return (data || []) as RecordingSession[];
     },
   });
 };
