@@ -213,23 +213,16 @@ const Merchandise = () => {
     },
     enabled: Boolean(bandId),
     staleTime: 30 * 1000,
-    onError: (error: Error) => {
-      toast({
-        title: "Unable to load merchandise",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   useEffect(() => {
-    if (!selectedProductId && merchandise.length > 0) {
+    if (!selectedProductId && merchandise && Array.isArray(merchandise) && merchandise.length > 0) {
       setSelectedProductId(merchandise[0].id);
     }
   }, [merchandise, selectedProductId]);
 
   const selectedProduct = useMemo(
-    () => merchandise.find((item) => item.id === selectedProductId) ?? null,
+    () => (Array.isArray(merchandise) ? merchandise.find((item) => item.id === selectedProductId) : null) ?? null,
     [merchandise, selectedProductId],
   );
 
@@ -250,7 +243,7 @@ const Merchandise = () => {
   }, [selectedProduct]);
 
   const summary = useMemo(() => {
-    if (!merchandise.length) {
+    if (!Array.isArray(merchandise) || !merchandise.length) {
       return {
         totalSkus: 0,
         totalUnits: 0,
@@ -295,15 +288,17 @@ const Merchandise = () => {
   const categoryMetrics = useMemo(() => {
     const categoryMap = new Map<string, { units: number; revenue: number; skus: number }>();
 
-    merchandise.forEach((product) => {
-      const blueprint = findBlueprintItem(product.item_type);
-      const key = blueprint?.category ?? product.item_type ?? "Uncategorized";
-      const entry = categoryMap.get(key) ?? { units: 0, revenue: 0, skus: 0 };
-      entry.units += safeNumber(product.stock_quantity);
-      entry.revenue += safeNumber(product.selling_price) * safeNumber(product.stock_quantity);
-      entry.skus += 1;
-      categoryMap.set(key, entry);
-    });
+    if (Array.isArray(merchandise)) {
+      merchandise.forEach((product) => {
+        const blueprint = findBlueprintItem(product.item_type);
+        const key = blueprint?.category ?? product.item_type ?? "Uncategorized";
+        const entry = categoryMap.get(key) ?? { units: 0, revenue: 0, skus: 0 };
+        entry.units += safeNumber(product.stock_quantity);
+        entry.revenue += safeNumber(product.selling_price) * safeNumber(product.stock_quantity);
+        entry.skus += 1;
+        categoryMap.set(key, entry);
+      });
+    }
 
     return Array.from(categoryMap.entries())
       .map(([category, stats]) => ({ category, ...stats }))
@@ -312,10 +307,12 @@ const Merchandise = () => {
 
   const restockAlerts = useMemo(
     () =>
-      merchandise
-        .filter((product) => getStatus(product.stock_quantity) !== "in_stock")
-        .sort((a, b) => safeNumber(a.stock_quantity) - safeNumber(b.stock_quantity))
-        .slice(0, 5),
+      Array.isArray(merchandise)
+        ? merchandise
+            .filter((product) => getStatus(product.stock_quantity) !== "in_stock")
+            .sort((a, b) => safeNumber(a.stock_quantity) - safeNumber(b.stock_quantity))
+            .slice(0, 5)
+        : [],
     [merchandise],
   );
 
@@ -642,7 +639,7 @@ const Merchandise = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {merchandise.map((product) => {
+                    {Array.isArray(merchandise) && merchandise.map((product) => {
                       const margin = calculateMargin(product);
                       const unitProfit = safeNumber(product.selling_price) - safeNumber(product.cost_to_produce);
                       const potential = safeNumber(product.selling_price) * safeNumber(product.stock_quantity);
@@ -670,7 +667,7 @@ const Merchandise = () => {
                         </TableRow>
                       );
                     })}
-                    {merchandise.length === 0 && (
+                    {(!merchandise || !Array.isArray(merchandise) || merchandise.length === 0) && (
                       <TableRow>
                         <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
                           No merchandise found yet. Add your first product to start tracking performance.
@@ -891,13 +888,13 @@ const Merchandise = () => {
                 <Select
                   value={selectedProductId ?? ""}
                   onValueChange={(value) => setSelectedProductId(value)}
-                  disabled={!merchandise.length}
+                  disabled={!merchandise || !Array.isArray(merchandise) || !merchandise.length}
                 >
                   <SelectTrigger id="manage-product-select">
                     <SelectValue placeholder="Choose a product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {merchandise.map((product) => (
+                    {Array.isArray(merchandise) && merchandise.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.design_name}
                       </SelectItem>

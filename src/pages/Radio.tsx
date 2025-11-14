@@ -311,7 +311,7 @@ export default function Radio() {
         .eq("user_id", user.id)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as RadioSubmissionRow[];
+      return (data ?? []) as any[];
     },
     enabled: !!user?.id,
   });
@@ -610,7 +610,7 @@ export default function Radio() {
                             {shows.map((show) => (
                               <li key={show.id} className="flex items-center justify-between">
                                 <span className="font-medium">{show.show_name}</span>
-                                <span className="text-muted-foreground">{show.time_slot?.replaceAll("_", " ")}</span>
+                                <span className="text-muted-foreground">{show.time_slot?.replace(/_/g, " ")}</span>
                               </li>
                             ))}
                           </ul>
