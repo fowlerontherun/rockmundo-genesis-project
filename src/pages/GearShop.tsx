@@ -35,6 +35,20 @@ import {
 import { GearRarityKey, getRarityLabel, parseRarityKey, rarityStyles } from "@/utils/gearRarity";
 import { GearComparisonDrawer, type ComparableGearItem } from "@/components/gear/GearComparisonDrawer";
 import type { PlayerEquipmentWithItem } from "@/hooks/usePlayerEquipment";
+import type { Database } from "@/lib/supabase-types";
+
+type EquipmentItemRecord = Database["public"]["Tables"]["equipment_items"]["Row"];
+type GearCategory = Database["public"]["Tables"]["gear_categories"]["Row"];
+
+type RarityFilterValue = "all" | "common" | "uncommon" | "rare" | "epic" | "legendary";
+type QualityFilterValue = "all" | "budget" | "standard" | "professional" | "boutique" | "experimental";
+type CurrencyFilterValue = "all" | "cash" | "fame" | "hybrid";
+type StockFilterValue = "all" | "limited" | "unlimited" | "auto-restock";
+
+const normalizeEquipmentStatBoosts = (boosts: any): Record<string, number> | null => {
+  if (!boosts || typeof boosts !== "object") return null;
+  return boosts as Record<string, number>;
+};
 
 interface GearShopItem extends Omit<EquipmentItemRecord, "stat_boosts"> {
   stat_boosts: Record<string, number> | null;
@@ -147,6 +161,7 @@ const formatNumericValue = (value: number) =>
 
 const GearShop = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { profile, refetch } = useGameData();
   const { user } = useAuth();
   const { data: equipmentData } = usePlayerEquipment();
@@ -782,9 +797,7 @@ const GearShop = () => {
         <DialogHeader>
           <DialogTitle>Gear purchase successful</DialogTitle>
           <DialogDescription>
-            {equipPrompt
-              ? `You bought a ${equipPrompt.itemName}. Pool: ${equipPrompt.pool}. Remaining capacity: ${equipPrompt.remaining ?? "—"}`
-              : ""}
+            {equipPrompt ? `You bought ${equipPrompt.item.name}!` : ""}
           </DialogDescription>
         </DialogHeader>
         <Separator />
@@ -803,19 +816,13 @@ const GearShop = () => {
           <Button variant="outline" onClick={handleClosePrompt}>
             I'll assign later
           </Button>
-          <Button onClick={goToMyGear}>
-            {equipPrompt?.navigating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening…
-              </>
-            ) : (
-              "Assign now"
-            )}
+          <Button onClick={handleOpenLoadout}>
+            Assign now
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </>
+    </>
   );
 };
 
