@@ -107,6 +107,7 @@ const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
+const VirtualConcertScheduling = lazyWithRetry(() => import("./pages/concerts/virtual"));
 
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
 const NarrativeStoryPage = lazyWithRetry(
@@ -151,6 +152,7 @@ function App() {
                     <Route path="music" element={<MusicHub />} />
                     <Route path="song-manager" element={<SongManager />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
+                    <Route path="concerts/virtual" element={<VirtualConcertScheduling />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="skills" element={<SkillsPage />} />
