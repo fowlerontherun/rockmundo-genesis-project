@@ -198,6 +198,20 @@ export default function RadioStations() {
     },
   });
 
+  // Computed submissions
+  const pendingSubmissions = useMemo(() => {
+    return submissions?.filter((s: any) => s.status === 'pending') || [];
+  }, [submissions]);
+
+  const reviewedSubmissions = useMemo(() => {
+    return submissions?.filter((s: any) => s.status !== 'pending') || [];
+  }, [submissions]);
+
+  // Handler for creating show
+  const handleCreateShow = () => {
+    createShow.mutate(newShow);
+  };
+
   const createStation = useMutation({
     mutationFn: async (station: StationFormState) => {
       const payload = formatStationForPersistence(station);
@@ -841,22 +855,22 @@ export default function RadioStations() {
                   className="space-y-4"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (!editingStation) return;
+                    if (!editingStation || !editStationForm) return;
                     const updates = {
-                      name: editStationData.name,
-                      frequency: editStationData.frequency,
-                      station_type: editStationData.station_type,
-                      quality_level: editStationData.quality_level,
-                      listener_base: editStationData.listener_base,
-                      accepted_genres: editStationData.accepted_genres,
-                      description: editStationData.description,
+                      name: editStationForm.name,
+                      frequency: editStationForm.frequency,
+                      station_type: editStationForm.station_type,
+                      quality_level: editStationForm.quality_level,
+                      listener_base: editStationForm.listener_base,
+                      accepted_genres: editStationForm.accepted_genres,
+                      description: editStationForm.description,
                       country:
-                        editStationData.station_type === 'national'
-                          ? editStationData.country
+                        editStationForm.station_type === 'national'
+                          ? editStationForm.country
                           : null,
                       city_id:
-                        editStationData.station_type === 'local'
-                          ? editStationData.city_id
+                        editStationForm.station_type === 'local'
+                          ? editStationForm.city_id
                           : null,
                     };
 
@@ -870,10 +884,10 @@ export default function RadioStations() {
                     <div>
                       <Label>Station Name</Label>
                       <Input
-                        value={editStationData.name}
+                        value={editStationForm?.name || ''}
                         onChange={(e) =>
-                          setEditStationData({
-                            ...editStationData,
+                          editStationForm && setEditStationForm({
+                            ...editStationForm,
                             name: e.target.value,
                           })
                         }
@@ -883,10 +897,10 @@ export default function RadioStations() {
                     <div>
                       <Label>Frequency (FM/AM)</Label>
                       <Input
-                        value={editStationData.frequency}
+                        value={editStationForm?.frequency || ''}
                         onChange={(e) =>
-                          setEditStationData({
-                            ...editStationData,
+                          editStationForm && setEditStationForm({
+                            ...editStationForm,
                             frequency: e.target.value,
                           })
                         }
@@ -896,12 +910,12 @@ export default function RadioStations() {
                     <div>
                       <Label>Type</Label>
                       <Select
-                        value={editStationData.station_type}
+                        value={editStationForm?.station_type || 'national'}
                         onValueChange={(value: 'national' | 'local') =>
-                          setEditStationData({
-                            ...editStationData,
+                          editStationForm && setEditStationForm({
+                            ...editStationForm,
                             station_type: value,
-                            city_id: value === 'local' ? editStationData.city_id : null,
+                            city_id: value === 'local' ? editStationForm.city_id : null,
                           })
                         }
                       >
@@ -914,14 +928,14 @@ export default function RadioStations() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {editStationData.station_type === 'national' ? (
+                    {editStationForm?.station_type === 'national' ? (
                       <div>
                         <Label>Country</Label>
                         <Input
-                          value={editStationData.country}
+                          value={editStationForm?.country || ''}
                           onChange={(e) =>
-                            setEditStationData({
-                              ...editStationData,
+                            editStationForm && setEditStationForm({
+                              ...editStationForm,
                               country: e.target.value,
                             })
                           }
@@ -932,10 +946,10 @@ export default function RadioStations() {
                       <div>
                         <Label>City</Label>
                         <Select
-                          value={editStationData.city_id || ''}
+                          value={editStationForm?.city_id || ''}
                           onValueChange={(value) =>
-                            setEditStationData({
-                              ...editStationData,
+                            editStationForm && setEditStationForm({
+                              ...editStationForm,
                               city_id: value,
                             })
                           }
@@ -959,10 +973,10 @@ export default function RadioStations() {
                         type="number"
                         min="1"
                         max="5"
-                        value={editStationData.quality_level}
+                        value={editStationForm?.quality_level || 3}
                         onChange={(e) =>
-                          setEditStationData({
-                            ...editStationData,
+                          editStationForm && setEditStationForm({
+                            ...editStationForm,
                             quality_level: parseInt(e.target.value) || 1,
                           })
                         }
@@ -972,10 +986,10 @@ export default function RadioStations() {
                       <Label>Listener Base</Label>
                       <Input
                         type="number"
-                        value={editStationData.listener_base}
+                        value={editStationForm?.listener_base || 0}
                         onChange={(e) =>
-                          setEditStationData({
-                            ...editStationData,
+                          editStationForm && setEditStationForm({
+                            ...editStationForm,
                             listener_base: parseInt(e.target.value) || 0,
                           })
                         }
@@ -985,10 +999,10 @@ export default function RadioStations() {
                   <div>
                     <Label>Description</Label>
                     <Textarea
-                      value={editStationData.description}
+                      value={editStationForm?.description || ''}
                       onChange={(e) =>
-                        setEditStationData({
-                          ...editStationData,
+                        editStationForm && setEditStationForm({
+                          ...editStationForm,
                           description: e.target.value,
                         })
                       }
@@ -1001,12 +1015,12 @@ export default function RadioStations() {
                       {GENRES.map((genre) => (
                         <Badge
                           key={genre}
-                          variant={editStationData.accepted_genres.includes(genre) ? "default" : "outline"}
+                          variant={editStationForm?.accepted_genres.includes(genre) ? "default" : "outline"}
                           className="cursor-pointer"
                           onClick={() =>
-                            toggleGenre(genre, editStationData.accepted_genres, (genres) =>
-                              setEditStationData({
-                                ...editStationData,
+                            editStationForm && toggleGenre(genre, editStationForm.accepted_genres, (genres) =>
+                              setEditStationForm({
+                                ...editStationForm,
                                 accepted_genres: genres,
                               })
                             )
@@ -1025,7 +1039,7 @@ export default function RadioStations() {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={!editStationData.name || updateStation.isPending}>
+                    <Button type="submit" disabled={!editStationForm?.name || updateStation.isPending}>
                       Save Changes
                     </Button>
                   </DialogFooter>
