@@ -6011,6 +6011,100 @@ export type Database = {
           },
         ]
       }
+      story_choices: {
+        Row: {
+          choice_id: string
+          choice_label: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          node_id: string
+          result_summary: string | null
+          story_id: string
+          story_state_id: string
+          user_id: string
+        }
+        Insert: {
+          choice_id: string
+          choice_label?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          node_id: string
+          result_summary?: string | null
+          story_id: string
+          story_state_id: string
+          user_id: string
+        }
+        Update: {
+          choice_id?: string
+          choice_label?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          node_id?: string
+          result_summary?: string | null
+          story_id?: string
+          story_state_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_choices_story_state_id_fkey"
+            columns: ["story_state_id"]
+            isOneToOne: false
+            referencedRelation: "story_states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_states: {
+        Row: {
+          created_at: string
+          current_node_id: string
+          flags: Json
+          id: string
+          metadata: Json | null
+          profile_id: string | null
+          story_id: string
+          updated_at: string
+          user_id: string
+          visited_node_ids: string[]
+        }
+        Insert: {
+          created_at?: string
+          current_node_id: string
+          flags?: Json
+          id?: string
+          metadata?: Json | null
+          profile_id?: string | null
+          story_id: string
+          updated_at?: string
+          user_id: string
+          visited_node_ids?: string[]
+        }
+        Update: {
+          created_at?: string
+          current_node_id?: string
+          flags?: Json
+          id?: string
+          metadata?: Json | null
+          profile_id?: string | null
+          story_id?: string
+          updated_at?: string
+          user_id?: string
+          visited_node_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_states_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skill_books: {
         Row: {
           author: string | null
