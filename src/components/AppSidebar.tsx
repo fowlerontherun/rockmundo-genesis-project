@@ -44,6 +44,7 @@ import {
   Target,
   TrendingUp,
   Map,
+  Crown,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -75,6 +76,7 @@ export function AppSidebar() {
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: User, label: "Character", path: "/my-character" },
         { icon: Guitar, label: "Gear", path: "/gear" },
+        { icon: Crown, label: "Legacy", path: "/legacy" },
         { icon: Calendar, label: "Schedule", path: "/schedule" },
       ],
     },
