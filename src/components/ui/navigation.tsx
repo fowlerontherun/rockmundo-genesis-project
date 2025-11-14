@@ -39,6 +39,19 @@ import {
   Award,
   Briefcase,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+type NavItem = {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  search?: string;
+};
+
+type NavSection = {
+  title: string;
+  items: NavItem[];
+};
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -50,7 +63,7 @@ const Navigation = () => {
 
   const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
 
-  const navSections = [
+  const navSections: NavSection[] = [
     {
       title: "🏠 Home",
       items: [
@@ -64,6 +77,12 @@ const Navigation = () => {
       items: [
         { icon: Music, label: "Music Hub", path: "/music" },
         { icon: GraduationCap, label: "Education", path: "/education" },
+        {
+          icon: Music4,
+          label: "Music Videos",
+          path: "/release-manager",
+          search: "?tab=video",
+        },
       ],
     },
     {
@@ -127,9 +146,15 @@ const Navigation = () => {
     setIsOpen(false);
   };
 
-  const isActive = (path: string) => {
+  const isActive = (itemOrPath: NavItem | string) => {
+    const path = typeof itemOrPath === "string" ? itemOrPath : itemOrPath.path;
+    const search = typeof itemOrPath === "string" ? undefined : itemOrPath.search;
+
     if (location.pathname === path) {
-      return true;
+      if (!search) {
+        return true;
+      }
+      return location.search === search;
     }
 
     if (!path || path === "/") {
@@ -139,8 +164,12 @@ const Navigation = () => {
     return location.pathname.startsWith(`${path}/`);
   };
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
+  const handleNavigation = (path: string, search?: string) => {
+    if (search) {
+      navigate({ pathname: path, search });
+    } else {
+      navigate(path);
+    }
     setIsOpen(false);
   };
 
@@ -174,14 +203,14 @@ const Navigation = () => {
                 return (
                   <Button
                     key={`${item.path}-${item.label}`}
-                    variant={isActive(item.path) ? "secondary" : "ghost"}
+                    variant={isActive(item) ? "secondary" : "ghost"}
                     className={`w-full justify-start gap-3 ${
-                      isActive(item.path)
+                      isActive(item)
                         ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
-                    onClick={() => handleNavigation(item.path)}
-                    aria-current={isActive(item.path) ? "page" : undefined}
+                    onClick={() => handleNavigation(item.path, item.search)}
+                    aria-current={isActive(item) ? "page" : undefined}
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
