@@ -699,26 +699,6 @@ const GearShop = () => {
                         {item.description ? (
                           <p className="text-sm text-muted-foreground">{item.description}</p>
                         ) : null}
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="flex items-center gap-2">
-                            <ShoppingCart className="h-4 w-4 text-primary" />
-                            <span className="font-semibold">${item.price.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Shield className="h-4 w-4" />
-                            <span>{item.category}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <ShoppingBag className="h-4 w-4" />
-                            <span className={`${stockTone}`}>
-                              {outOfStock ? "Sold out" : `${item.stock ?? 0} in stock`}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <BadgeDollarSign className="h-4 w-4" />
-                            <span>{isOwned ? "Owned" : "Available"}</span>
-                          </div>
-                        </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Loadout slot</span>
                           <span>{entry.loadout_slot_kind ?? "Unassigned"}</span>
@@ -744,176 +724,98 @@ const GearShop = () => {
                             ))}
                           </div>
                         ) : null}
-
-                        <Button
-                          className="mt-auto"
-                          disabled={purchaseMutation.isPending || isOwned || outOfStock}
-                          onClick={() => purchaseMutation.mutate(item)}
-                        >
-                          {isOwned
-                            ? "Already owned"
-                            : outOfStock
-                            ? "Out of stock"
-                            : purchaseMutation.isPending
-                            ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing
-                                </>
-                              )
-                            : `Purchase for $${item.price.toLocaleString()}`}
-                        </Button>
                       </CardContent>
                     </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="owned">
-            <Card>
-              <CardHeader>
-                <CardTitle>Owned gear</CardTitle>
-                <CardDescription>Quick view of inventory ready to assign in your loadouts.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!ownedEquipment || ownedEquipment.length === 0 ? (
-                  <p className="py-12 text-center text-sm text-muted-foreground">
-                    You haven&apos;t purchased any gear yet. Buy items from the catalogue to populate your loadout inventory.
-                  </p>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {ownedEquipment.map((entry) => (
-                      <Card key={entry.id} className="border">
-                        <CardContent className="space-y-3 py-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="text-sm font-semibold">{entry.equipment?.name ?? "Equipment"}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {entry.equipment?.category}
-                                {entry.equipment?.subcategory ? ` · ${entry.equipment.subcategory}` : ""}
-                              </div>
-                            </div>
-                            {entry.equipment ? (
-                              <Badge variant="outline" className={rarityStyles[parseRarityKey(entry.equipment.rarity)]}>
-                                {getRarityLabel(entry.equipment.rarity)}
-                              </Badge>
-                            ) : null}
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Purchase price</span>
-                            <span>${entry.equipment?.price?.toLocaleString() ?? "—"}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Condition</span>
-                            <span>{entry.condition ?? 100}%</span>
-                          </div>
-                          {entry.equipment?.stat_boosts ? (
-                            <div className="flex flex-wrap gap-1 text-[10px]">
-                              {Object.entries(entry.equipment.stat_boosts).map(([stat, value]) => (
-                                <Badge
-                                  key={stat}
-                                  variant="outline"
-                                  className={rarityStyles[parseRarityKey(entry.equipment?.rarity)]}
-                                >
-                                  {stat}: +{value}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : null}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      <Dialog open={!!equipPrompt} onOpenChange={(open) => (!open ? handleClosePrompt() : undefined)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Equip {equipPrompt?.item.name}?</DialogTitle>
-            <DialogDescription>
-              Add your new purchase straight to the active loadout or keep it stowed for later.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
-              <div className="flex items-center gap-2 font-semibold">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span>Fresh gear unlocked</span>
-              </div>
-              <p className="mt-2 text-muted-foreground">
-                {equippedInCategory?.equipment?.name
-                  ? `Equipping will replace ${equippedInCategory.equipment.name} in your ${equipPrompt?.item.category.toLowerCase()} rig.`
-                  : "Equip now to activate its stat bonuses immediately."}
-              </p>
-            </div>
-
-            {statComparisons.length > 0 ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <span>Stat</span>
-                  <span className="text-right">Current</span>
-                  <span className="text-right">With upgrade</span>
+                    );
+                  })}
                 </div>
-                {statComparisons.map((entry) => {
-                  const diffTone =
-                    entry.diff > 0 ? "text-emerald-600" : entry.diff < 0 ? "text-destructive" : "text-muted-foreground";
-                  return (
-                    <div key={entry.stat} className="grid grid-cols-3 items-center gap-2 text-sm">
-                      <span className="font-medium">{formatStatLabel(entry.stat)}</span>
-                      <span className="text-right text-muted-foreground">{formatNumericValue(entry.currentValue)}</span>
-                      <span className={`text-right font-semibold ${diffTone}`}>
-                        {formatNumericValue(entry.nextValue)}
-                        {entry.diff !== 0 ? (
-                          <span className="ml-1 text-xs font-normal">
-                            {entry.diff > 0 ? "+" : ""}
-                            {formatNumericValue(entry.diff)}
-                          </span>
-                        ) : null}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                This piece doesn&apos;t alter stats but still updates your visual loadout.
-              </p>
-            )}
-          </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-            <Button variant="ghost" className="w-full sm:w-auto" onClick={handleClosePrompt}>
-              Keep in inventory
-            </Button>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-              <Button variant="secondary" className="w-full sm:w-auto" onClick={handleOpenLoadout}>
-                Open loadout planner
-              </Button>
-              <Button
-                className="w-full sm:w-auto"
-                onClick={handleEquipNow}
-                disabled={equipping || !equipPrompt?.playerEquipmentId}
-              >
-                {equipping ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Equipping
-                  </>
-                ) : (
-                  "Equip now"
-                )}
-              </Button>
+        <TabsContent value="compare">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compare gear</CardTitle>
+              <CardDescription>Side-by-side comparison of owned and catalog items.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {ownedEquipment && ownedEquipment.length > 0 ? (
+                <GearComparisonDrawer
+                  ownedItems={ownedEquipment.map((entry): ComparableGearItem => ({
+                    id: entry.id,
+                    name: entry.equipment?.name ?? "Unknown",
+                    category: entry.equipment?.category ?? "misc",
+                    subcategory: entry.equipment?.subcategory ?? undefined,
+                    rarity: entry.equipment?.rarity ?? "common",
+                    price_cash: entry.equipment?.price_cash ?? 0,
+                    stat_boosts: entry.equipment?.stat_boosts as Record<string, number> | null,
+                    description: entry.equipment?.description ?? undefined,
+                    is_owned: true,
+                  }))}
+                  catalogItems={catalogItems.map((item): ComparableGearItem => ({
+                    id: item.id,
+                    name: item.name,
+                    category: item.category,
+                    subcategory: item.subcategory ?? undefined,
+                    rarity: item.rarity,
+                    price_cash: item.price_cash,
+                    stat_boosts: item.stat_boosts,
+                    description: item.description ?? undefined,
+                    is_owned: ownedEquipmentIds.has(item.id),
+                  }))}
+                />
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  Purchase some gear first to enable comparisons.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+
+    <Dialog open={!!equipPrompt} onOpenChange={(open) => (!open ? handleClosePrompt() : undefined)}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Gear purchase successful</DialogTitle>
+          <DialogDescription>
+            {equipPrompt
+              ? `You bought a ${equipPrompt.itemName}. Pool: ${equipPrompt.pool}. Remaining capacity: ${equipPrompt.remaining ?? "—"}`
+              : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <Separator />
+        <div className="space-y-4">
+          <p>Would you like to immediately assign it to a loadout, or manage it later?</p>
+          <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+            <div>
+              • <strong>Assign now:</strong> Jump to My Gear and pick the loadout slot.
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+            <div>
+              • <strong>Later:</strong> Continue shopping. Bought gear appears in the Owned tab.
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClosePrompt}>
+            I'll assign later
+          </Button>
+          <Button onClick={goToMyGear}>
+            {equipPrompt?.navigating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opening…
+              </>
+            ) : (
+              "Assign now"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
   );
 };
 
