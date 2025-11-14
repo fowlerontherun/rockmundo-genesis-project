@@ -6,7 +6,7 @@ import { format, addHours, isSameHour, isPast, isFuture } from "date-fns";
 import { 
   Clock, Play, CheckCircle, Plus, X, Calendar,
   Music, Guitar, Headphones, Briefcase, GraduationCap,
-  BookOpen, Users, Video, Heart, MapPin
+  BookOpen, Users, Video, Heart, MapPin, Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScheduledActivities, useStartActivity, useCompleteActivity, useDeleteScheduledActivity, type ScheduledActivity, type ActivityType } from "@/hooks/useScheduledActivities";
@@ -30,6 +30,7 @@ const ACTIVITY_ICONS: Record<ActivityType, typeof Music> = {
   mentorship: Users,
   youtube_video: Video,
   health: Heart,
+  skill_practice: Target,
   other: Calendar,
 };
 
@@ -46,6 +47,7 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   mentorship: "bg-green-500/20 border-green-500/50 text-green-700 dark:text-green-300",
   youtube_video: "bg-rose-500/20 border-rose-500/50 text-rose-700 dark:text-rose-300",
   health: "bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300",
+  skill_practice: "bg-yellow-500/20 border-yellow-500/50 text-yellow-700 dark:text-yellow-300",
   other: "bg-slate-500/20 border-slate-500/50 text-slate-700 dark:text-slate-300",
 };
 
