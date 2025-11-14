@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -15,6 +15,24 @@ export default function ReleaseManager() {
   const { user } = useAuth();
   const userId = user?.id;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabParam = searchParams.get("tab");
+  const validTabs = new Set(["releases", "sales", "video"]);
+  const currentTab = validTabs.has(tabParam ?? "") ? (tabParam as string) : "releases";
+
+  const handleTabChange = (value: string) => {
+    const nextTab = validTabs.has(value) ? value : "releases";
+    const params = new URLSearchParams(searchParams);
+
+    if (nextTab === "releases") {
+      params.delete("tab");
+    } else {
+      params.set("tab", nextTab);
+    }
+
+    setSearchParams(params, { replace: true });
+  };
 
   // Auto-check for completed manufacturing
   useAutoReleaseManufacturing(userId || null);
@@ -51,7 +69,7 @@ export default function ReleaseManager() {
         </p>
       </div>
 
-      <Tabs defaultValue="releases" className="w-full">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="releases">My Releases</TabsTrigger>
           <TabsTrigger value="sales">Sales & Revenue</TabsTrigger>
