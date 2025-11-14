@@ -47,6 +47,7 @@ const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
+const Legacy = lazyWithRetry(() => import("./pages/legacy"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
@@ -165,6 +166,7 @@ function App() {
                     <Route path="social" element={<SocialMedia />} />
                     <Route path="relationships" element={<Relationships />} />
                     <Route path="pr" element={<PublicRelations />} />
+                    <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
                     <Route path="festivals" element={<Festivals />} />
                     <Route path="awards" element={<AwardShows />} />
