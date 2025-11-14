@@ -65,6 +65,7 @@ const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const Twaater = lazyWithRetry(() => import("./pages/Twaater"));
+const CommunityFeed = lazyWithRetry(() => import("./pages/community/feed"));
 const AdminExperienceRewards = lazyWithRetry(() => import("./pages/admin/ExperienceRewards"));
 const AdminUniversities = lazyWithRetry(() => import("./pages/admin/Universities"));
 const AdminCourses = lazyWithRetry(() => import("./pages/admin/Courses"));
@@ -154,6 +155,7 @@ function App() {
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
+                    <Route path="community/feed" element={<CommunityFeed />} />
                     <Route path="tours" element={<TourManager />} />
                     <Route path="tours-system" element={<TouringSystem />} />
                     <Route path="equipment" element={<EnhancedEquipmentStore />} />
