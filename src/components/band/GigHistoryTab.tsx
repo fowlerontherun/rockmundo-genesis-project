@@ -53,16 +53,8 @@ type GigOutcomeWithDetails = GigHistoryOutcome & {
   equipment_wear_cost: number;
   merch_sales: number;
   crew_costs: number;
-  gear_effects?: {
-    equipmentQualityBonus: number;
-    attendanceBonusPercent: number;
-    reliabilitySwingReductionPercent: number;
-    revenueBonusPercent: number;
-    fameBonusPercent: number;
-    breakdown?: Array<{ key: string; label: string; value: string; description: string }>;
-  };
+  gear_effects?: import("@/utils/gearModifiers").GearModifierEffects;
 };
-
 export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
   const [selectedOutcome, setSelectedOutcome] = useState<GigOutcomeWithDetails | null>(null);
   const [showReport, setShowReport] = useState(false);
@@ -78,7 +70,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
 
     return buildGearOutcomeNarrative({
       outcome: selectedOutcome,
-      gearEffects: selectedBandGearEffects ?? selectedOutcome.gear_effects,
+      gearEffects: selectedBandGearEffects ?? (selectedOutcome as any).gear_effects,
       setlistLength: selectedOutcome.gig_song_performances?.length ?? 0,
     });
   }, [selectedBandGearEffects, selectedOutcome]);
