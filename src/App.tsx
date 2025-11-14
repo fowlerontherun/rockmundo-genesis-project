@@ -107,6 +107,9 @@ const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
 
 const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
+const NarrativeStoryPage = lazyWithRetry(
+  () => import("./pages/events/narratives/[storyId]"),
+);
 const Finances = lazyWithRetry(() => import("./pages/Finances"));
 const Merchandise = lazyWithRetry(() => import("./pages/Merchandise"));
 const MyGear = lazyWithRetry(() => import("./pages/MyGear"));
@@ -177,7 +180,8 @@ function App() {
                     <Route path="song-market" element={<SongMarket />} />
                     <Route path="recording-studio" element={<RecordingStudio />} />
                     <Route path="release-manager" element={<ReleaseManager />} />
-                    
+                    <Route path="events/narratives/:storyId" element={<NarrativeStoryPage />} />
+
                     {/* Redirects for removed placeholder pages */}
                     <Route path="tours" element={<RedirectTo to="/travel" />} />
                     <Route path="schedule" element={<RedirectTo to="/dashboard" />} />
