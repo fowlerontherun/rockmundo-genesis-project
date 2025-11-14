@@ -16,6 +16,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar-context";
 import {
   Home,
+  Bot,
   User,
   Guitar,
   Music,
@@ -74,6 +75,7 @@ export function AppSidebar() {
       label: "Home",
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
+        { icon: Bot, label: "Advisor", path: "/advisor" },
         { icon: User, label: "Character", path: "/my-character" },
         { icon: Guitar, label: "Gear", path: "/gear" },
         { icon: Crown, label: "Legacy", path: "/legacy" },

@@ -42,6 +42,7 @@ const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
 const StreamingPlatforms = lazyWithRetry(() => import("./pages/StreamingPlatforms"));
+const AdvisorPage = lazyWithRetry(() => import("./pages/advisor"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Songwriting = lazyWithRetry(() => import("./pages/Songwriting"));
 const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
@@ -154,6 +155,7 @@ function App() {
                     <Route path="music" element={<MusicHub />} />
                     <Route path="song-manager" element={<SongManager />} />
                     <Route path="streaming-platforms" element={<StreamingPlatforms />} />
+                    <Route path="advisor" element={<AdvisorPage />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
                     <Route path="skills" element={<SkillsPage />} />
