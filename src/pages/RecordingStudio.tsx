@@ -135,7 +135,7 @@ export default function RecordingStudio() {
                   <p className="text-muted-foreground font-medium">No recording sessions yet</p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Start by creating songs in the{" "}
-                    <Link to="/songwriting" className="text-primary underline font-medium">
+                    <Link to="/studio/songwriting" className="text-primary underline font-medium">
                       Songwriting
                     </Link>{" "}
                     section, then come back here to record them professionally.

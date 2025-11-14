@@ -6863,6 +6863,82 @@ export type Database = {
           },
         ]
       }
+      songwriting_drafts: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          last_edited_by: string | null
+          project_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          last_edited_by?: string | null
+          project_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          last_edited_by?: string | null
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songwriting_drafts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "songwriting_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      songwriting_draft_revisions: {
+        Row: {
+          content: Json | null
+          created_at: string
+          created_by: string | null
+          draft_id: string
+          id: string
+          summary: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          created_by?: string | null
+          draft_id: string
+          id?: string
+          summary?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          created_by?: string | null
+          draft_id?: string
+          id?: string
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "songwriting_draft_revisions_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "songwriting_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_equipment_catalog: {
         Row: {
           amount_available: number
