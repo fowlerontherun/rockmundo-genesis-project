@@ -26,7 +26,7 @@ const MusicStudio = () => {
       title: "Songwriting",
       description: "Create original songs with AI-powered lyrics generation, collaborate with co-writers, and manage your creative projects.",
       icon: Play,
-      path: "/songwriting",
+      path: "/studio/songwriting",
       color: "bg-blue-500/10 text-blue-500",
       highlights: ["AI Lyrics", "Collaboration", "Genre Variety"],
     },
