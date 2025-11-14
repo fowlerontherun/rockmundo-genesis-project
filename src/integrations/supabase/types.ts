@@ -138,21 +138,28 @@ export type Database = {
           artist_profile_id: string | null
           band_id: string | null
           created_at: string | null
-          deal_type_id: string
-          end_date: string
+          deal_type_id: string | null
+          end_date: string | null
           id: string
           label_id: string
-          marketing_support: number | null
+          last_statement_at: string | null
+          lifetime_artist_payout: number | null
+          lifetime_gross_revenue: number | null
+          lifetime_label_profit: number | null
           masters_owned_by_artist: boolean | null
+          notes: string | null
+          options: Json | null
           recouped_amount: number | null
-          release_quota: number
+          release_quota: number | null
           releases_completed: number | null
+          requested_by: string | null
           roster_slot_id: string | null
           royalty_artist_pct: number
           royalty_label_pct: number | null
-          start_date: string
+          start_date: string | null
           status: string | null
-          territories: string[] | null
+          term_months: number | null
+          territories: Json | null
           updated_at: string | null
         }
         Insert: {
@@ -160,21 +167,28 @@ export type Database = {
           artist_profile_id?: string | null
           band_id?: string | null
           created_at?: string | null
-          deal_type_id: string
-          end_date: string
+          deal_type_id?: string | null
+          end_date?: string | null
           id?: string
           label_id: string
-          marketing_support?: number | null
+          last_statement_at?: string | null
+          lifetime_artist_payout?: number | null
+          lifetime_gross_revenue?: number | null
+          lifetime_label_profit?: number | null
           masters_owned_by_artist?: boolean | null
+          notes?: string | null
+          options?: Json | null
           recouped_amount?: number | null
-          release_quota: number
+          release_quota?: number | null
           releases_completed?: number | null
+          requested_by?: string | null
           roster_slot_id?: string | null
           royalty_artist_pct: number
           royalty_label_pct?: number | null
-          start_date: string
+          start_date?: string | null
           status?: string | null
-          territories?: string[] | null
+          term_months?: number | null
+          territories?: Json | null
           updated_at?: string | null
         }
         Update: {
@@ -182,21 +196,28 @@ export type Database = {
           artist_profile_id?: string | null
           band_id?: string | null
           created_at?: string | null
-          deal_type_id?: string
-          end_date?: string
+          deal_type_id?: string | null
+          end_date?: string | null
           id?: string
           label_id?: string
-          marketing_support?: number | null
+          last_statement_at?: string | null
+          lifetime_artist_payout?: number | null
+          lifetime_gross_revenue?: number | null
+          lifetime_label_profit?: number | null
           masters_owned_by_artist?: boolean | null
+          notes?: string | null
+          options?: Json | null
           recouped_amount?: number | null
-          release_quota?: number
+          release_quota?: number | null
           releases_completed?: number | null
+          requested_by?: string | null
           roster_slot_id?: string | null
           royalty_artist_pct?: number
           royalty_label_pct?: number | null
-          start_date?: string
+          start_date?: string | null
           status?: string | null
-          territories?: string[] | null
+          term_months?: number | null
+          territories?: Json | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2705,58 +2726,73 @@ export type Database = {
         Row: {
           contract_id: string
           created_at: string | null
+          digital_revenue: number | null
+          gross_revenue: number | null
           id: string
           marketing_budget: number | null
           masters_cost: number | null
           notes: string | null
+          other_revenue: number | null
+          physical_revenue: number | null
+          production_quality: number | null
           promotion_budget: number | null
           release_date: string | null
-          release_id: string | null
           release_type: string | null
-          revenue_generated: number | null
+          sales_units: number | null
           scheduled_date: string | null
           status: string | null
-          territory_strategy: string | null
+          streaming_revenue: number | null
+          sync_revenue: number | null
+          territory_strategy: Json | null
           title: string
-          units_sold: number | null
           updated_at: string | null
         }
         Insert: {
           contract_id: string
           created_at?: string | null
+          digital_revenue?: number | null
+          gross_revenue?: number | null
           id?: string
           marketing_budget?: number | null
           masters_cost?: number | null
           notes?: string | null
+          other_revenue?: number | null
+          physical_revenue?: number | null
+          production_quality?: number | null
           promotion_budget?: number | null
           release_date?: string | null
-          release_id?: string | null
-          release_type?: string | null
-          revenue_generated?: number | null
+          release_type: string
+          sales_units?: number | null
           scheduled_date?: string | null
           status?: string | null
-          territory_strategy?: string | null
+          streaming_revenue?: number | null
+          sync_revenue?: number | null
+          territory_strategy?: Json | null
           title: string
-          units_sold?: number | null
           updated_at?: string | null
         }
         Update: {
           contract_id?: string
           created_at?: string | null
+          digital_revenue?: number | null
+          gross_revenue?: number | null
           id?: string
           marketing_budget?: number | null
           masters_cost?: number | null
           notes?: string | null
+          other_revenue?: number | null
+          physical_revenue?: number | null
+          production_quality?: number | null
           promotion_budget?: number | null
           release_date?: string | null
-          release_id?: string | null
           release_type?: string | null
-          revenue_generated?: number | null
+          sales_units?: number | null
           scheduled_date?: string | null
           status?: string | null
-          territory_strategy?: string | null
+          streaming_revenue?: number | null
+          sync_revenue?: number | null
+          territory_strategy?: Json | null
           title?: string
-          units_sold?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2765,13 +2801,6 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "artist_label_contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "label_releases_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
-            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
         ]
@@ -2915,6 +2944,8 @@ export type Database = {
       }
       labels: {
         Row: {
+          annual_revenue_target: number | null
+          cash_reserves: number | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -2925,11 +2956,15 @@ export type Database = {
           market_share: number | null
           marketing_budget: number | null
           name: string
+          operating_budget: number | null
           reputation_score: number | null
           roster_slot_capacity: number | null
+          strategy_notes: string | null
           updated_at: string | null
         }
         Insert: {
+          annual_revenue_target?: number | null
+          cash_reserves?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2940,11 +2975,15 @@ export type Database = {
           market_share?: number | null
           marketing_budget?: number | null
           name: string
+          operating_budget?: number | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
+          strategy_notes?: string | null
           updated_at?: string | null
         }
         Update: {
+          annual_revenue_target?: number | null
+          cash_reserves?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2955,8 +2994,10 @@ export type Database = {
           market_share?: number | null
           marketing_budget?: number | null
           name?: string
+          operating_budget?: number | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
+          strategy_notes?: string | null
           updated_at?: string | null
         }
         Relationships: []
