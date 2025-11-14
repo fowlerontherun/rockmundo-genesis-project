@@ -21,14 +21,6 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Radio, Trash2, Plus, Edit2, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
 import { SKILL_TREE_DEFINITIONS } from "@/data/skillTree";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 type StationFormState = {
   name: string;
@@ -255,21 +247,6 @@ export default function RadioStations() {
     },
   });
 
-  useEffect(() => {
-    if (editingStation) {
-      setEditStationData({
-        name: editingStation.name ?? '',
-        station_type: editingStation.station_type ?? 'national',
-        country: editingStation.country ?? '',
-        city_id: editingStation.city_id ?? null,
-        quality_level: editingStation.quality_level ?? 3,
-        listener_base: editingStation.listener_base ?? 10000,
-        accepted_genres: editingStation.accepted_genres ?? [],
-        description: editingStation.description ?? '',
-        frequency: editingStation.frequency ?? '',
-      });
-    }
-  }, [editingStation]);
 
   const deleteStation = useMutation({
     mutationFn: async (id: string) => {

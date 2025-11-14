@@ -31,8 +31,7 @@ const GigBooking = lazyWithRetry(() => import("./pages/GigBooking"));
 const Performance = lazyWithRetry(() => import("./pages/Performance"));
 const MyCharacter = lazyWithRetry(() => import("./pages/MyCharacter"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
-const EquipmentStore = lazyWithRetry(() => import("./pages/EquipmentStore"));
-const GearShop = lazyWithRetry(() => import("./pages/GearShop"));
+// Equipment store pages removed - replaced by EnhancedEquipmentStore
 const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
 
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
@@ -151,7 +150,7 @@ function App() {
                     <Route path="world-pulse" element={<WorldPulsePage />} />
                     <Route path="tours" element={<TourManager />} />
                     <Route path="tours-system" element={<TouringSystem />} />
-                    <Route path="equipment" element={<EquipmentStore />} />
+                    <Route path="equipment" element={<EnhancedEquipmentStore />} />
                     <Route path="fans" element={<FanManagement />} />
                     
                     <Route path="cities" element={<WorldEnvironment />} />
@@ -230,7 +229,7 @@ function App() {
                     {/* <Route path="world-map" element={<WorldMap />} /> */}
                     <Route path="inventory" element={<InventoryManager />} />
                     <Route path="gear" element={<MyGear />} />
-                    <Route path="gear-shop" element={<GearShop />} />
+                    <Route path="gear-shop" element={<MyGear />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="statistics" element={<PlayerStatistics />} />
                     <Route path="my-character/edit" element={<MyCharacterEdit />} />

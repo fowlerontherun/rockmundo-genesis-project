@@ -125,7 +125,7 @@ export default function PerformGig() {
             reliabilitySwingReductionPercent: existingOutcome.audience_memory_impact || 0,
             revenueBonusPercent: existingOutcome.promoter_modifier || 0,
             fameBonusPercent: existingOutcome.venue_loyalty_bonus || 0,
-            breakdown: existingOutcome.gear_effects?.breakdown,
+            breakdown: (existingOutcome as any).gear_effects?.breakdown,
           }
         };
         setOutcome(transformedOutcome);

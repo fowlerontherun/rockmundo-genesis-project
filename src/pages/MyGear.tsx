@@ -76,7 +76,7 @@ const buildInventoryGearDefinition = (entry: PlayerEquipmentWithItem): GearDefin
 
   const { equipment } = entry;
   const statBoosts = normalizeEquipmentStatBoosts(equipment.stat_boosts);
-  const qualityTier = deriveQualityTier(equipment.price_cash, statBoosts);
+  const qualityTier = deriveQualityTier(equipment.price, statBoosts);
   const sections = mapCategoryToSections(equipment.category, equipment.subcategory);
   const rarityKey = parseRarityKey(equipment.rarity);
 
@@ -88,7 +88,7 @@ const buildInventoryGearDefinition = (entry: PlayerEquipmentWithItem): GearDefin
     quality: getQualityLabel(qualityTier) as GearDefinition["quality"],
     rarity: getRarityLabel(equipment.rarity) as GearDefinition["rarity"],
     description: equipment.description ?? undefined,
-    price: equipment.price_cash,
+    price: equipment.price,
     statBoosts: statBoosts ?? undefined,
     stock: equipment.stock ?? null,
     equipmentItemId: equipment.id,
@@ -661,7 +661,7 @@ const MyGear: React.FC = () => {
             onGearChange={handlePedalGearChange}
             onEquippedChange={handlePedalEquippedChange}
             gearLookup={gearById}
-            remainingSlots={remainingPedalSlots}
+            remainingSlots={undefined}
           />
         </TabsContent>
 

@@ -137,7 +137,7 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         reliabilitySwingReductionPercent: outcome.audience_memory_impact || 0,
         revenueBonusPercent: outcome.promoter_modifier || 0,
         fameBonusPercent: outcome.venue_loyalty_bonus || 0,
-        breakdown: outcome.gear_effects?.breakdown,
+        breakdown: (outcome as any).gear_effects?.breakdown,
       }
     } as GigOutcomeWithDetails);
     setShowReport(true);
