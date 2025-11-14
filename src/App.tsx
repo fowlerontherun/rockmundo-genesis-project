@@ -47,7 +47,7 @@ const SongMarket = lazyWithRetry(() => import("./pages/SongMarket"));
 const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
-const City = lazyWithRetry(() => import("./pages/City"));
+const City = lazyWithRetry(() => import("./pages/cities/[cityId]"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
 const AwardShows = lazyWithRetry(() => import("./pages/AwardShows"));
