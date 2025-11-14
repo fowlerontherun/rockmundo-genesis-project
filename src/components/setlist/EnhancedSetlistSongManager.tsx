@@ -103,7 +103,11 @@ export const EnhancedSetlistSongManager = ({
       const encoreCount = setlistSongs?.filter(s => s.section === 'encore').length || 0;
       const { error } = await supabase
         .from("setlist_songs")
-        .update({ section: 'encore', position: encoreCount + 1 })
+        .update({ 
+          section: 'encore', 
+          position: encoreCount + 1,
+          is_encore: true 
+        })
         .eq("setlist_id", setlistId)
         .eq(itemType === 'song' ? 'song_id' : 'performance_item_id', songId);
       
@@ -120,7 +124,11 @@ export const EnhancedSetlistSongManager = ({
       const mainCount = setlistSongs?.filter(s => s.section === 'main').length || 0;
       const { error } = await supabase
         .from("setlist_songs")
-        .update({ section: 'main', position: mainCount + 1 })
+        .update({ 
+          section: 'main', 
+          position: mainCount + 1,
+          is_encore: false 
+        })
         .eq("setlist_id", setlistId)
         .eq(itemType === 'song' ? 'song_id' : 'performance_item_id', songId);
       
@@ -179,11 +187,30 @@ export const EnhancedSetlistSongManager = ({
     if (!selectedSongId) return;
 
     const nextPosition = (setlistSongs?.filter(s => s.section === 'main').length || 0) + 1;
-    addSongMutation.mutate({
-      setlistId,
-      songId: selectedSongId,
-      position: nextPosition,
-    });
+    
+    // Insert with section and item_type
+    const { error } = await supabase
+      .from("setlist_songs")
+      .insert({
+        setlist_id: setlistId,
+        song_id: selectedSongId,
+        position: nextPosition,
+        section: 'main',
+        item_type: 'song',
+      });
+    
+    if (error) {
+      toast({
+        title: "Failed to add song",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
+    queryClient.invalidateQueries({ queryKey: ["setlists"] });
+    toast({ title: "Song added to setlist" });
     setSelectedSongId("");
   };
 
