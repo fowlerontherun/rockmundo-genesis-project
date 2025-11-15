@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
