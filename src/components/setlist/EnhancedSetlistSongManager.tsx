@@ -183,34 +183,19 @@ export const EnhancedSetlistSongManager = ({
   );
   const unaddedSongs = availableSongs?.filter((song) => !songsInSetlist.has(song.id));
 
-  const handleAddSong = async () => {
+  const handleAddSong = () => {
     if (!selectedSongId) return;
 
     const nextPosition = (setlistSongs?.filter(s => s.section === 'main').length || 0) + 1;
     
-    // Insert with section and item_type
-    const { error } = await supabase
-      .from("setlist_songs")
-      .insert({
-        setlist_id: setlistId,
-        song_id: selectedSongId,
-        position: nextPosition,
-        section: 'main',
-        item_type: 'song',
-      });
+    addSongMutation.mutate({
+      setlistId,
+      songId: selectedSongId,
+      position: nextPosition,
+      section: 'main',
+      itemType: 'song',
+    });
     
-    if (error) {
-      toast({
-        title: "Failed to add song",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
-    queryClient.invalidateQueries({ queryKey: ["setlists"] });
-    toast({ title: "Song added to setlist" });
     setSelectedSongId("");
   };
 
@@ -244,7 +229,7 @@ export const EnhancedSetlistSongManager = ({
           <div className="flex items-baseline gap-2">
             <span className="font-medium">{index + 1}.</span>
             <span className="font-medium">
-              {isPerformanceItem ? ss.performance_items_catalog?.name : ss.songs?.title || "Unknown"}
+              {isPerformanceItem ? ss.performance_items?.name : ss.songs?.title || "Unknown"}
             </span>
             {isPerformanceItem && (
               <Badge variant="secondary" className="text-xs">
