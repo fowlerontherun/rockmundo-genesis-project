@@ -240,7 +240,7 @@ export const EnhancedSetlistSongManager = ({
           </div>
           <div className="text-sm text-muted-foreground">
             {isPerformanceItem 
-              ? ss.performance_items_catalog?.item_category?.replace('_', ' ')
+              ? ss.performance_items?.category?.replace('_', ' ')
               : `${ss.songs?.genre} • Quality: ${ss.songs?.quality_score || "N/A"}`
             }
           </div>
