@@ -312,7 +312,7 @@ const buildInsightsFromSummaries = (
                     momentumCandidate.topPlatform.streams /
                       Math.max(momentumCandidate.totalStreams, 1),
                   ),
-                  trend: "neutral",
+                  trend: "neutral" as const,
                 },
               ]
             : []),
@@ -388,7 +388,7 @@ const buildInsightsFromSummaries = (
               {
                 label: "Completion",
                 value: formatPercent(skipRiskCandidate.avgCompletionRate),
-                trend: "neutral",
+                trend: "neutral" as const,
               },
             ]
           : []),
@@ -446,7 +446,7 @@ const buildInsightsFromSummaries = (
               {
                 label: "Skip rate",
                 value: formatPercent(skipRate),
-                trend: skipRate < 0.25 ? "up" : "neutral",
+                trend: skipRate < 0.25 ? ("up" as const) : ("neutral" as const),
               },
             ]
           : []),
