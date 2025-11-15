@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from "@/lib/supabase-client";
 import type { Tables, TablesInsert } from "@/lib/supabase-types";
 

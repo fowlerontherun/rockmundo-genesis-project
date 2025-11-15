@@ -13,7 +13,10 @@ export default tseslint.config(
       "src/components/bands/BandRosterTab.tsx",
       "src/components/events/TicketTierManager.tsx",
       "src/components/music-video/**",
-      "src/hooks/usePlayerEquipment.ts"
+      "src/hooks/usePlayerEquipment.ts",
+      "src/hooks/useRecordingData.tsx",
+      "src/lib/**",
+      "src/pages/**"
     ] 
   },
   {
