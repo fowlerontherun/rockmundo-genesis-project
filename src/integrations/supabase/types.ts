@@ -1443,6 +1443,93 @@ export type Database = {
           },
         ]
       }
+      contract_clauses: {
+        Row: {
+          clause_key: string
+          contract_type: string
+          created_at: string | null
+          default_terms: Json | null
+          description: string | null
+          id: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          clause_key: string
+          contract_type: string
+          created_at?: string | null
+          default_terms?: Json | null
+          description?: string | null
+          id?: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          clause_key?: string
+          contract_type?: string
+          created_at?: string | null
+          default_terms?: Json | null
+          description?: string | null
+          id?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      contract_negotiations: {
+        Row: {
+          clause_id: string
+          contract_id: string
+          counter_terms: Json | null
+          created_at: string | null
+          id: string
+          last_action_by: string | null
+          proposed_terms: Json | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          clause_id: string
+          contract_id: string
+          counter_terms?: Json | null
+          created_at?: string | null
+          id?: string
+          last_action_by?: string | null
+          proposed_terms?: Json | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          clause_id?: string
+          contract_id?: string
+          counter_terms?: Json | null
+          created_at?: string | null
+          id?: string
+          last_action_by?: string | null
+          proposed_terms?: Json | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_negotiations_clause_id_fkey"
+            columns: ["clause_id"]
+            isOneToOne: false
+            referencedRelation: "contract_clauses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_negotiations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_catalog: {
         Row: {
           assignment: string
