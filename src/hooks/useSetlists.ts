@@ -81,7 +81,7 @@ export const useSetlistSongs = (setlistId: string | null) => {
           performance_items (
             id,
             name,
-            item_category,
+            category,
             spotlight_level
           )
         `)
