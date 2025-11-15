@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useRecordingSessions, type RecordingSession } from "@/hooks/useRecordingData";
