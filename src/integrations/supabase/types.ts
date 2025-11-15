@@ -132,111 +132,27 @@ export type Database = {
           },
         ]
       }
-      community_post_reactions: {
-        Row: {
-          created_at: string
-          id: string
-          post_id: string
-          profile_id: string
-          reaction_type: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          post_id: string
-          profile_id: string
-          reaction_type: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          post_id?: string
-          profile_id?: string
-          reaction_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_post_reactions_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "community_posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_post_reactions_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      community_posts: {
-        Row: {
-          author_id: string
-          content: string
-          created_at: string
-          id: string
-          media_url: string | null
-          updated_at: string
-        }
-        Insert: {
-          author_id: string
-          content: string
-          created_at?: string
-          id?: string
-          media_url?: string | null
-          updated_at?: string
-        }
-        Update: {
-          author_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-          media_url?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_posts_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       artist_label_contracts: {
         Row: {
           advance_amount: number | null
           artist_profile_id: string | null
           band_id: string | null
           created_at: string | null
-          deal_type_id: string | null
-          end_date: string | null
+          deal_type_id: string
+          end_date: string
           id: string
           label_id: string
-          last_statement_at: string | null
-          lifetime_artist_payout: number | null
-          lifetime_gross_revenue: number | null
-          lifetime_label_profit: number | null
+          marketing_support: number | null
           masters_owned_by_artist: boolean | null
-          notes: string | null
-          options: Json | null
           recouped_amount: number | null
-          release_quota: number | null
+          release_quota: number
           releases_completed: number | null
-          requested_by: string | null
           roster_slot_id: string | null
           royalty_artist_pct: number
           royalty_label_pct: number | null
-          start_date: string | null
+          start_date: string
           status: string | null
-          term_months: number | null
-          territories: Json | null
+          territories: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -244,28 +160,21 @@ export type Database = {
           artist_profile_id?: string | null
           band_id?: string | null
           created_at?: string | null
-          deal_type_id?: string | null
-          end_date?: string | null
+          deal_type_id: string
+          end_date: string
           id?: string
           label_id: string
-          last_statement_at?: string | null
-          lifetime_artist_payout?: number | null
-          lifetime_gross_revenue?: number | null
-          lifetime_label_profit?: number | null
+          marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
-          notes?: string | null
-          options?: Json | null
           recouped_amount?: number | null
-          release_quota?: number | null
+          release_quota: number
           releases_completed?: number | null
-          requested_by?: string | null
           roster_slot_id?: string | null
           royalty_artist_pct: number
           royalty_label_pct?: number | null
-          start_date?: string | null
+          start_date: string
           status?: string | null
-          term_months?: number | null
-          territories?: Json | null
+          territories?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -273,28 +182,21 @@ export type Database = {
           artist_profile_id?: string | null
           band_id?: string | null
           created_at?: string | null
-          deal_type_id?: string | null
-          end_date?: string | null
+          deal_type_id?: string
+          end_date?: string
           id?: string
           label_id?: string
-          last_statement_at?: string | null
-          lifetime_artist_payout?: number | null
-          lifetime_gross_revenue?: number | null
-          lifetime_label_profit?: number | null
+          marketing_support?: number | null
           masters_owned_by_artist?: boolean | null
-          notes?: string | null
-          options?: Json | null
           recouped_amount?: number | null
-          release_quota?: number | null
+          release_quota?: number
           releases_completed?: number | null
-          requested_by?: string | null
           roster_slot_id?: string | null
           royalty_artist_pct?: number
           royalty_label_pct?: number | null
-          start_date?: string | null
+          start_date?: string
           status?: string | null
-          term_months?: number | null
-          territories?: Json | null
+          territories?: string[] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -324,93 +226,6 @@ export type Database = {
             columns: ["roster_slot_id"]
             isOneToOne: false
             referencedRelation: "label_roster_slots"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contract_clauses: {
-        Row: {
-          clause_key: string
-          contract_type: string
-          created_at: string | null
-          default_terms: Json | null
-          description: string | null
-          id: string
-          sort_order: number | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          clause_key: string
-          contract_type: string
-          created_at?: string | null
-          default_terms?: Json | null
-          description?: string | null
-          id?: string
-          sort_order?: number | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          clause_key?: string
-          contract_type?: string
-          created_at?: string | null
-          default_terms?: Json | null
-          description?: string | null
-          id?: string
-          sort_order?: number | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      contract_negotiations: {
-        Row: {
-          clause_id: string
-          contract_id: string
-          counter_terms: Json | null
-          created_at: string | null
-          id: string
-          last_action_by: string | null
-          proposed_terms: Json | null
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          clause_id: string
-          contract_id: string
-          counter_terms?: Json | null
-          created_at?: string | null
-          id?: string
-          last_action_by?: string | null
-          proposed_terms?: Json | null
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          clause_id?: string
-          contract_id?: string
-          counter_terms?: Json | null
-          created_at?: string | null
-          id?: string
-          last_action_by?: string | null
-          proposed_terms?: Json | null
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contract_negotiations_clause_id_fkey"
-            columns: ["clause_id"]
-            isOneToOne: false
-            referencedRelation: "contract_clauses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contract_negotiations_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "artist_label_contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -1248,239 +1063,6 @@ export type Database = {
           weekly_fans?: number | null
         }
         Relationships: []
-      }
-      casting_call_roles: {
-        Row: {
-          availability_requirements: string | null
-          casting_call_id: string
-          compensation_notes: string | null
-          contract_type: string | null
-          created_at: string
-          description: string | null
-          gender: string | null
-          id: string
-          name: string
-          required_skills: string[] | null
-          role_type: string | null
-          age_range: string | null
-        }
-        Insert: {
-          availability_requirements?: string | null
-          casting_call_id: string
-          compensation_notes?: string | null
-          contract_type?: string | null
-          created_at?: string
-          description?: string | null
-          gender?: string | null
-          id?: string
-          name: string
-          required_skills?: string[] | null
-          role_type?: string | null
-          age_range?: string | null
-        }
-        Update: {
-          availability_requirements?: string | null
-          casting_call_id?: string
-          compensation_notes?: string | null
-          contract_type?: string | null
-          created_at?: string
-          description?: string | null
-          gender?: string | null
-          id?: string
-          name?: string
-          required_skills?: string[] | null
-          role_type?: string | null
-          age_range?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "casting_call_roles_casting_call_id_fkey"
-            columns: ["casting_call_id"]
-            isOneToOne: false
-            referencedRelation: "casting_calls"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      casting_calls: {
-        Row: {
-          application_deadline: string | null
-          compensation_max: number | null
-          compensation_min: number | null
-          created_at: string
-          created_by: string | null
-          currency: string | null
-          description: string | null
-          id: string
-          is_remote_friendly: boolean | null
-          location: string | null
-          production_company: string | null
-          project_type: string
-          status: string | null
-          title: string
-          union_status: string | null
-          updated_at: string
-        }
-        Insert: {
-          application_deadline?: string | null
-          compensation_max?: number | null
-          compensation_min?: number | null
-          created_at?: string
-          created_by?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          is_remote_friendly?: boolean | null
-          location?: string | null
-          production_company?: string | null
-          project_type: string
-          status?: string | null
-          title: string
-          union_status?: string | null
-          updated_at?: string
-        }
-        Update: {
-          application_deadline?: string | null
-          compensation_max?: number | null
-          compensation_min?: number | null
-          created_at?: string
-          created_by?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          is_remote_friendly?: boolean | null
-          location?: string | null
-          production_company?: string | null
-          project_type?: string
-          status?: string | null
-          title?: string
-          union_status?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "casting_calls_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      casting_reviews: {
-        Row: {
-          created_at: string
-          decision: string
-          feedback: string | null
-          id: string
-          reviewer_profile_id: string | null
-          score: number | null
-          submission_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          decision?: string
-          feedback?: string | null
-          id?: string
-          reviewer_profile_id?: string | null
-          score?: number | null
-          submission_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          decision?: string
-          feedback?: string | null
-          id?: string
-          reviewer_profile_id?: string | null
-          score?: number | null
-          submission_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "casting_reviews_reviewer_profile_id_fkey"
-            columns: ["reviewer_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "casting_reviews_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "casting_submissions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      casting_submissions: {
-        Row: {
-          audition_video_url: string | null
-          casting_call_id: string
-          casting_call_role_id: string | null
-          cover_letter: string | null
-          created_at: string
-          experience_summary: string | null
-          id: string
-          portfolio_url: string | null
-          resume_url: string | null
-          status: string
-          talent_profile_id: string
-          updated_at: string
-        }
-        Insert: {
-          audition_video_url?: string | null
-          casting_call_id: string
-          casting_call_role_id?: string | null
-          cover_letter?: string | null
-          created_at?: string
-          experience_summary?: string | null
-          id?: string
-          portfolio_url?: string | null
-          resume_url?: string | null
-          status?: string
-          talent_profile_id: string
-          updated_at?: string
-        }
-        Update: {
-          audition_video_url?: string | null
-          casting_call_id?: string
-          casting_call_role_id?: string | null
-          cover_letter?: string | null
-          created_at?: string
-          experience_summary?: string | null
-          id?: string
-          portfolio_url?: string | null
-          resume_url?: string | null
-          status?: string
-          talent_profile_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "casting_submissions_casting_call_id_fkey"
-            columns: ["casting_call_id"]
-            isOneToOne: false
-            referencedRelation: "casting_calls"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "casting_submissions_casting_call_role_id_fkey"
-            columns: ["casting_call_role_id"]
-            isOneToOne: false
-            referencedRelation: "casting_call_roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "casting_submissions_talent_profile_id_fkey"
-            columns: ["talent_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       chart_entries: {
         Row: {
@@ -3123,73 +2705,58 @@ export type Database = {
         Row: {
           contract_id: string
           created_at: string | null
-          digital_revenue: number | null
-          gross_revenue: number | null
           id: string
           marketing_budget: number | null
           masters_cost: number | null
           notes: string | null
-          other_revenue: number | null
-          physical_revenue: number | null
-          production_quality: number | null
           promotion_budget: number | null
           release_date: string | null
+          release_id: string | null
           release_type: string | null
-          sales_units: number | null
+          revenue_generated: number | null
           scheduled_date: string | null
           status: string | null
-          streaming_revenue: number | null
-          sync_revenue: number | null
-          territory_strategy: Json | null
+          territory_strategy: string | null
           title: string
+          units_sold: number | null
           updated_at: string | null
         }
         Insert: {
           contract_id: string
           created_at?: string | null
-          digital_revenue?: number | null
-          gross_revenue?: number | null
           id?: string
           marketing_budget?: number | null
           masters_cost?: number | null
           notes?: string | null
-          other_revenue?: number | null
-          physical_revenue?: number | null
-          production_quality?: number | null
           promotion_budget?: number | null
           release_date?: string | null
-          release_type: string
-          sales_units?: number | null
+          release_id?: string | null
+          release_type?: string | null
+          revenue_generated?: number | null
           scheduled_date?: string | null
           status?: string | null
-          streaming_revenue?: number | null
-          sync_revenue?: number | null
-          territory_strategy?: Json | null
+          territory_strategy?: string | null
           title: string
+          units_sold?: number | null
           updated_at?: string | null
         }
         Update: {
           contract_id?: string
           created_at?: string | null
-          digital_revenue?: number | null
-          gross_revenue?: number | null
           id?: string
           marketing_budget?: number | null
           masters_cost?: number | null
           notes?: string | null
-          other_revenue?: number | null
-          physical_revenue?: number | null
-          production_quality?: number | null
           promotion_budget?: number | null
           release_date?: string | null
+          release_id?: string | null
           release_type?: string | null
-          sales_units?: number | null
+          revenue_generated?: number | null
           scheduled_date?: string | null
           status?: string | null
-          streaming_revenue?: number | null
-          sync_revenue?: number | null
-          territory_strategy?: Json | null
+          territory_strategy?: string | null
           title?: string
+          units_sold?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3198,6 +2765,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "artist_label_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_releases_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
         ]
@@ -3341,8 +2915,6 @@ export type Database = {
       }
       labels: {
         Row: {
-          annual_revenue_target: number | null
-          cash_reserves: number | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -3353,15 +2925,11 @@ export type Database = {
           market_share: number | null
           marketing_budget: number | null
           name: string
-          operating_budget: number | null
           reputation_score: number | null
           roster_slot_capacity: number | null
-          strategy_notes: string | null
           updated_at: string | null
         }
         Insert: {
-          annual_revenue_target?: number | null
-          cash_reserves?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -3372,15 +2940,11 @@ export type Database = {
           market_share?: number | null
           marketing_budget?: number | null
           name: string
-          operating_budget?: number | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
-          strategy_notes?: string | null
           updated_at?: string | null
         }
         Update: {
-          annual_revenue_target?: number | null
-          cash_reserves?: number | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -3391,242 +2955,9 @@ export type Database = {
           market_share?: number | null
           marketing_budget?: number | null
           name?: string
-          operating_budget?: number | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
-          strategy_notes?: string | null
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      leaderboard_badge_awards: {
-        Row: {
-          awarded_at: string
-          badge_id: string
-          created_at: string
-          id: string
-          metadata: Json
-          profile_id: string | null
-          rank: number | null
-          season_id: string | null
-          user_id: string
-        }
-        Insert: {
-          awarded_at?: string
-          badge_id: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          profile_id?: string | null
-          rank?: number | null
-          season_id?: string | null
-          user_id: string
-        }
-        Update: {
-          awarded_at?: string
-          badge_id?: string
-          created_at?: string
-          id?: string
-          metadata?: Json
-          profile_id?: string | null
-          rank?: number | null
-          season_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leaderboard_badge_awards_badge_id_fkey"
-            columns: ["badge_id"]
-            isOneToOne: false
-            referencedRelation: "leaderboard_badges"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leaderboard_badge_awards_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leaderboard_badge_awards_season_id_fkey"
-            columns: ["season_id"]
-            isOneToOne: false
-            referencedRelation: "leaderboard_seasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leaderboard_badges: {
-        Row: {
-          code: string
-          created_at: string
-          description: string | null
-          icon: string
-          id: string
-          name: string
-          rarity: string
-          season_id: string | null
-          tier: string | null
-          criteria: Json
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          description?: string | null
-          icon?: string
-          id?: string
-          name: string
-          rarity?: string
-          season_id?: string | null
-          tier?: string | null
-          criteria?: Json
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          description?: string | null
-          icon?: string
-          id?: string
-          name?: string
-          rarity?: string
-          season_id?: string | null
-          tier?: string | null
-          criteria?: Json
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leaderboard_badges_season_id_fkey"
-            columns: ["season_id"]
-            isOneToOne: false
-            referencedRelation: "leaderboard_seasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leaderboard_season_snapshots: {
-        Row: {
-          awarded_badges: Json
-          breakdown: Json
-          created_at: string
-          division: string
-          experience: number | null
-          fame: number | null
-          final_rank: number | null
-          final_score: number | null
-          id: string
-          instrument: string
-          profile_id: string | null
-          recorded_at: string
-          region: string
-          season_id: string
-          tier: string | null
-          total_achievements: number | null
-          total_gigs: number | null
-          total_revenue: number | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          awarded_badges?: Json
-          breakdown?: Json
-          created_at?: string
-          division?: string
-          experience?: number | null
-          fame?: number | null
-          final_rank?: number | null
-          final_score?: number | null
-          id?: string
-          instrument?: string
-          profile_id?: string | null
-          recorded_at?: string
-          region?: string
-          season_id: string
-          tier?: string | null
-          total_achievements?: number | null
-          total_gigs?: number | null
-          total_revenue?: number | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          awarded_badges?: Json
-          breakdown?: Json
-          created_at?: string
-          division?: string
-          experience?: number | null
-          fame?: number | null
-          final_rank?: number | null
-          final_score?: number | null
-          id?: string
-          instrument?: string
-          profile_id?: string | null
-          recorded_at?: string
-          region?: string
-          season_id?: string
-          tier?: string | null
-          total_achievements?: number | null
-          total_gigs?: number | null
-          total_revenue?: number | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leaderboard_season_snapshots_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leaderboard_season_snapshots_season_id_fkey"
-            columns: ["season_id"]
-            isOneToOne: false
-            referencedRelation: "leaderboard_seasons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leaderboard_seasons: {
-        Row: {
-          created_at: string
-          description: string | null
-          end_date: string
-          id: string
-          name: string
-          reward_summary: Json
-          slug: string
-          start_date: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          end_date: string
-          id?: string
-          name: string
-          reward_summary?: Json
-          slug: string
-          start_date: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          end_date?: string
-          id?: string
-          name?: string
-          reward_summary?: Json
-          slug?: string
-          start_date?: string
-          status?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -4436,44 +3767,32 @@ export type Database = {
       }
       player_equipment: {
         Row: {
-          available_at: string | null
-          available_for_loadout: boolean
           condition: number | null
           created_at: string | null
           equipment_id: string
           equipped: boolean | null
           id: string
           is_equipped: boolean | null
-          loadout_slot_kind: string | null
-          pool_category: string | null
           purchased_at: string | null
           user_id: string
         }
         Insert: {
-          available_at?: string | null
-          available_for_loadout?: boolean
           condition?: number | null
           created_at?: string | null
           equipment_id: string
           equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
-          loadout_slot_kind?: string | null
-          pool_category?: string | null
           purchased_at?: string | null
           user_id: string
         }
         Update: {
-          available_at?: string | null
-          available_for_loadout?: boolean
           condition?: number | null
           created_at?: string | null
           equipment_id?: string
           equipped?: boolean | null
           id?: string
           is_equipped?: boolean | null
-          loadout_slot_kind?: string | null
-          pool_category?: string | null
           purchased_at?: string | null
           user_id?: string
         }
@@ -4493,84 +3812,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      player_equipment_ownership_history: {
-        Row: {
-          action: string
-          created_at: string
-          equipment_id: string
-          id: string
-          metadata: Json
-          player_equipment_id: string | null
-          user_id: string
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          equipment_id: string
-          id?: string
-          metadata?: Json
-          player_equipment_id?: string | null
-          user_id: string
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          equipment_id?: string
-          id?: string
-          metadata?: Json
-          player_equipment_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_equipment_ownership_history_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "equipment_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_equipment_ownership_history_player_equipment_id_fkey"
-            columns: ["player_equipment_id"]
-            isOneToOne: false
-            referencedRelation: "player_equipment"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      player_gear_pool: {
-        Row: {
-          capacity: number
-          category: string
-          created_at: string
-          id: string
-          slot_kind: string
-          updated_at: string
-          used_count: number
-          user_id: string
-        }
-        Insert: {
-          capacity?: number
-          category: string
-          created_at?: string
-          id?: string
-          slot_kind: string
-          updated_at?: string
-          used_count?: number
-          user_id: string
-        }
-        Update: {
-          capacity?: number
-          category?: string
-          created_at?: string
-          id?: string
-          slot_kind?: string
-          updated_at?: string
-          used_count?: number
-          user_id?: string
-        }
-        Relationships: []
       }
       player_mentor_sessions: {
         Row: {
@@ -5246,7 +4487,6 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           cash: number | null
-          reserved_funds: number | null
           character_birth_date: string | null
           created_at: string | null
           current_activity: string | null
@@ -5274,7 +4514,6 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
-          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -5302,7 +4541,6 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           cash?: number | null
-          reserved_funds?: number | null
           character_birth_date?: string | null
           created_at?: string | null
           current_activity?: string | null
@@ -6125,164 +5363,6 @@ export type Database = {
           },
         ]
       }
-      music_video_configs: {
-        Row: {
-          art_style: string
-          band_id: string | null
-          budget_amount: number
-          budget_tier: string
-          cast_option: string
-          cast_quality: string | null
-          created_at: string
-          id: string
-          image_quality: string
-          kpi_chart_target: string | null
-          kpi_view_target: number | null
-          location_style: string | null
-          primary_platform: string | null
-          production_notes: string | null
-          release_id: string | null
-          shoot_end_date: string | null
-          shoot_start_date: string | null
-          status: string
-          sync_strategy: string
-          target_release_date: string | null
-          theme: string
-          updated_at: string
-          user_id: string
-          youtube_video_url: string | null
-        }
-        Insert: {
-          art_style: string
-          band_id?: string | null
-          budget_amount?: number
-          budget_tier: string
-          cast_option: string
-          cast_quality?: string | null
-          created_at?: string
-          id?: string
-          image_quality: string
-          kpi_chart_target?: string | null
-          kpi_view_target?: number | null
-          location_style?: string | null
-          primary_platform?: string | null
-          production_notes?: string | null
-          release_id?: string | null
-          shoot_end_date?: string | null
-          shoot_start_date?: string | null
-          status?: string
-          sync_strategy?: string
-          target_release_date?: string | null
-          theme: string
-          updated_at?: string
-          user_id: string
-          youtube_video_url?: string | null
-        }
-        Update: {
-          art_style?: string
-          band_id?: string | null
-          budget_amount?: number
-          budget_tier?: string
-          cast_option?: string
-          cast_quality?: string | null
-          created_at?: string
-          id?: string
-          image_quality?: string
-          kpi_chart_target?: string | null
-          kpi_view_target?: number | null
-          location_style?: string | null
-          primary_platform?: string | null
-          production_notes?: string | null
-          release_id?: string | null
-          shoot_end_date?: string | null
-          shoot_start_date?: string | null
-          status?: string
-          sync_strategy?: string
-          target_release_date?: string | null
-          theme?: string
-          updated_at?: string
-          user_id?: string
-          youtube_video_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "music_video_configs_band_id_fkey"
-            columns: ["band_id"]
-            isOneToOne: false
-            referencedRelation: "bands"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "music_video_configs_release_id_fkey"
-            columns: ["release_id"]
-            isOneToOne: false
-            referencedRelation: "releases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      music_video_metrics: {
-        Row: {
-          chart_name: string | null
-          chart_position: number | null
-          chart_target: string | null
-          chart_velocity: number | null
-          created_at: string
-          id: string
-          last_synced_at: string | null
-          mtv_program: string | null
-          mtv_spins: number | null
-          music_video_id: string
-          platform: string | null
-          updated_at: string
-          views_target: number | null
-          youtube_video_id: string | null
-          youtube_views: number | null
-        }
-        Insert: {
-          chart_name?: string | null
-          chart_position?: number | null
-          chart_target?: string | null
-          chart_velocity?: number | null
-          created_at?: string
-          id?: string
-          last_synced_at?: string | null
-          mtv_program?: string | null
-          mtv_spins?: number | null
-          music_video_id: string
-          platform?: string | null
-          updated_at?: string
-          views_target?: number | null
-          youtube_video_id?: string | null
-          youtube_views?: number | null
-        }
-        Update: {
-          chart_name?: string | null
-          chart_position?: number | null
-          chart_target?: string | null
-          chart_velocity?: number | null
-          created_at?: string
-          id?: string
-          last_synced_at?: string | null
-          mtv_program?: string | null
-          mtv_spins?: number | null
-          music_video_id?: string
-          platform?: string | null
-          updated_at?: string
-          views_target?: number | null
-          youtube_video_id?: string | null
-          youtube_views?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "music_video_metrics_music_video_id_fkey"
-            columns: ["music_video_id"]
-            isOneToOne: true
-            referencedRelation: "music_video_configs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       season_genre_modifiers: {
         Row: {
           created_at: string
@@ -6673,100 +5753,6 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_history_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      story_choices: {
-        Row: {
-          choice_id: string
-          choice_label: string | null
-          created_at: string
-          id: string
-          metadata: Json | null
-          node_id: string
-          result_summary: string | null
-          story_id: string
-          story_state_id: string
-          user_id: string
-        }
-        Insert: {
-          choice_id: string
-          choice_label?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          node_id: string
-          result_summary?: string | null
-          story_id: string
-          story_state_id: string
-          user_id: string
-        }
-        Update: {
-          choice_id?: string
-          choice_label?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          node_id?: string
-          result_summary?: string | null
-          story_id?: string
-          story_state_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "story_choices_story_state_id_fkey"
-            columns: ["story_state_id"]
-            isOneToOne: false
-            referencedRelation: "story_states"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      story_states: {
-        Row: {
-          created_at: string
-          current_node_id: string
-          flags: Json
-          id: string
-          metadata: Json | null
-          profile_id: string | null
-          story_id: string
-          updated_at: string
-          user_id: string
-          visited_node_ids: string[]
-        }
-        Insert: {
-          created_at?: string
-          current_node_id: string
-          flags?: Json
-          id?: string
-          metadata?: Json | null
-          profile_id?: string | null
-          story_id: string
-          updated_at?: string
-          user_id: string
-          visited_node_ids?: string[]
-        }
-        Update: {
-          created_at?: string
-          current_node_id?: string
-          flags?: Json
-          id?: string
-          metadata?: Json | null
-          profile_id?: string | null
-          story_id?: string
-          updated_at?: string
-          user_id?: string
-          visited_node_ids?: string[]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "story_states_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -7622,82 +6608,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "songwriting_projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      songwriting_drafts: {
-        Row: {
-          content: Json | null
-          created_at: string
-          id: string
-          last_edited_by: string | null
-          project_id: string | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content?: Json | null
-          created_at?: string
-          id?: string
-          last_edited_by?: string | null
-          project_id?: string | null
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content?: Json | null
-          created_at?: string
-          id?: string
-          last_edited_by?: string | null
-          project_id?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "songwriting_drafts_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "songwriting_projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      songwriting_draft_revisions: {
-        Row: {
-          content: Json | null
-          created_at: string
-          created_by: string | null
-          draft_id: string
-          id: string
-          summary: string | null
-        }
-        Insert: {
-          content?: Json | null
-          created_at?: string
-          created_by?: string | null
-          draft_id: string
-          id?: string
-          summary?: string | null
-        }
-        Update: {
-          content?: Json | null
-          created_at?: string
-          created_by?: string | null
-          draft_id?: string
-          id?: string
-          summary?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "songwriting_draft_revisions_draft_id_fkey"
-            columns: ["draft_id"]
-            isOneToOne: false
-            referencedRelation: "songwriting_drafts"
             referencedColumns: ["id"]
           },
         ]
@@ -8902,366 +7812,6 @@ export type Database = {
           },
         ]
       }
-      gear_slot_catalog: {
-        Row: {
-          category: string
-          default_capacity: number
-          slot_kind: string
-        }
-        Insert: {
-          category: string
-          default_capacity?: number
-          slot_kind: string
-        }
-        Update: {
-          category?: string
-          default_capacity?: number
-          slot_kind?: string
-        }
-        Relationships: []
-      }
-      gear_items: {
-        Row: {
-          created_at: string
-          description: string | null
-          gear_type: Database["public"]["Enums"]["gear_type"]
-          id: string
-          manufacturer: string | null
-          metadata: Json
-          name: string
-          quality: Database["public"]["Enums"]["gear_quality"]
-          rarity: Database["public"]["Enums"]["gear_rarity"]
-          tags: string[]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          gear_type: Database["public"]["Enums"]["gear_type"]
-          id?: string
-          manufacturer?: string | null
-          metadata?: Json
-          name: string
-          quality?: Database["public"]["Enums"]["gear_quality"]
-          rarity?: Database["public"]["Enums"]["gear_rarity"]
-          tags?: string[]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          gear_type?: Database["public"]["Enums"]["gear_type"]
-          id?: string
-          manufacturer?: string | null
-          metadata?: Json
-          name?: string
-          quality?: Database["public"]["Enums"]["gear_quality"]
-          rarity?: Database["public"]["Enums"]["gear_rarity"]
-          tags?: string[]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      side_hustle_minigame_attempts: {
-        Row: {
-          accuracy: number
-          activity_id: string
-          cash_reward: number
-          created_at: string
-          difficulty: number
-          id: string
-          metadata: Json | null
-          minigame_type: string
-          profile_id: string
-          score: number
-          success: boolean
-          duration_seconds: number
-          xp_earned: number
-        }
-        Insert: {
-          accuracy: number
-          activity_id: string
-          cash_reward: number
-          created_at?: string
-          difficulty: number
-          id?: string
-          metadata?: Json | null
-          minigame_type: string
-          profile_id: string
-          score: number
-          success?: boolean
-          duration_seconds: number
-          xp_earned: number
-        }
-        Update: {
-          accuracy?: number
-          activity_id?: string
-          cash_reward?: number
-          created_at?: string
-          difficulty?: number
-          id?: string
-          metadata?: Json | null
-          minigame_type?: string
-          profile_id?: string
-          score?: number
-          success?: boolean
-          duration_seconds?: number
-          xp_earned?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "side_hustle_minigame_attempts_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      side_hustle_progress: {
-        Row: {
-          activity_id: string
-          best_score: number
-          created_at: string
-          experience: number
-          id: string
-          last_played_at: string | null
-          last_result: string | null
-          level: number
-          minigame_type: string
-          profile_id: string
-          total_attempts: number
-          updated_at: string
-        }
-        Insert: {
-          activity_id: string
-          best_score?: number
-          created_at?: string
-          experience?: number
-          id?: string
-          last_played_at?: string | null
-          last_result?: string | null
-          level?: number
-          minigame_type: string
-          profile_id: string
-          total_attempts?: number
-          updated_at?: string
-        }
-        Update: {
-          activity_id?: string
-          best_score?: number
-          created_at?: string
-          experience?: number
-          id?: string
-          last_played_at?: string | null
-          last_result?: string | null
-          level?: number
-          minigame_type?: string
-          profile_id?: string
-          total_attempts?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "side_hustle_progress_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      personal_loadout_items: {
-        Row: {
-          created_at: string
-          gear_item_id: string
-          id: string
-          loadout_id: string
-          notes: string | null
-          slot_kind: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          gear_item_id: string
-          id?: string
-          loadout_id: string
-          notes?: string | null
-          slot_kind: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          gear_item_id?: string
-          id?: string
-          loadout_id?: string
-          notes?: string | null
-          slot_kind?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "personal_loadout_items_gear_item_id_fkey"
-            columns: ["gear_item_id"]
-            isOneToOne: false
-            referencedRelation: "gear_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "personal_loadout_items_loadout_id_fkey"
-            columns: ["loadout_id"]
-            isOneToOne: false
-            referencedRelation: "personal_loadouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      personal_loadout_pedal_slots: {
-        Row: {
-          created_at: string
-          gear_item_id: string | null
-          id: string
-          loadout_id: string
-          notes: string | null
-          slot_number: number
-          slot_type: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          gear_item_id?: string | null
-          id?: string
-          loadout_id: string
-          notes?: string | null
-          slot_number: number
-          slot_type: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          gear_item_id?: string | null
-          id?: string
-          loadout_id?: string
-          notes?: string | null
-          slot_number?: number
-          slot_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "personal_loadout_pedal_slots_gear_item_id_fkey"
-            columns: ["gear_item_id"]
-            isOneToOne: false
-            referencedRelation: "gear_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "personal_loadout_pedal_slots_loadout_id_fkey"
-            columns: ["loadout_id"]
-            isOneToOne: false
-            referencedRelation: "personal_loadouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      personal_loadout_slots: {
-        Row: {
-          created_at: string
-          gear_item_id: string
-          gear_type: Database["public"]["Enums"]["gear_type"]
-          id: string
-          loadout_id: string
-          notes: string | null
-          pedal_position: number | null
-          pedal_stage: Database["public"]["Enums"]["pedal_chain_stage"] | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          gear_item_id: string
-          gear_type: Database["public"]["Enums"]["gear_type"]
-          id?: string
-          loadout_id: string
-          notes?: string | null
-          pedal_position?: number | null
-          pedal_stage?: Database["public"]["Enums"]["pedal_chain_stage"] | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          gear_item_id?: string
-          gear_type?: Database["public"]["Enums"]["gear_type"]
-          id?: string
-          loadout_id?: string
-          notes?: string | null
-          pedal_position?: number | null
-          pedal_stage?: Database["public"]["Enums"]["pedal_chain_stage"] | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "personal_loadout_slots_gear_item_id_fkey"
-            columns: ["gear_item_id"]
-            isOneToOne: false
-            referencedRelation: "gear_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "personal_loadout_slots_loadout_id_fkey"
-            columns: ["loadout_id"]
-            isOneToOne: false
-            referencedRelation: "personal_loadouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      personal_loadouts: {
-        Row: {
-          character_id: string
-          created_at: string
-          id: string
-          is_active: boolean
-          name: string
-          notes: string | null
-          primary_instrument: string | null
-          role: string | null
-          scenario: string | null
-          updated_at: string
-        }
-        Insert: {
-          character_id: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name: string
-          notes?: string | null
-          primary_instrument?: string | null
-          role?: string | null
-          scenario?: string | null
-          updated_at?: string
-        }
-        Update: {
-          character_id?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          notes?: string | null
-          primary_instrument?: string | null
-          role?: string | null
-          scenario?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "personal_loadouts_character_id_fkey"
-            columns: ["character_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       admin_cron_job_runs: {
@@ -9323,20 +7873,6 @@ export type Database = {
           schedule: string | null
           success_runs: number | null
           total_runs: number | null
-        }
-        Relationships: []
-      }
-      player_gear_pool_status: {
-        Row: {
-          available_slots: number | null
-          capacity: number | null
-          catalog_slot_kind: string | null
-          category: string | null
-          default_capacity: number | null
-          slot_kind: string | null
-          updated_at: string | null
-          used_count: number | null
-          user_id: string | null
         }
         Relationships: []
       }
@@ -9446,18 +7982,6 @@ export type Database = {
         }
         Returns: Json
       }
-      check_radio_submission_week: {
-        Args: {
-          p_station_id: string
-          p_song_id: string
-          p_anchor?: number
-          p_reference?: string
-        }
-        Returns: {
-          week_start_date: string | null
-          already_submitted: boolean | null
-        }[]
-      }
       check_scheduling_conflict: {
         Args: {
           p_end: string
@@ -9487,23 +8011,6 @@ export type Database = {
         Args: { amount: number; release_id: string }
         Returns: undefined
       }
-      process_radio_submission: {
-        Args: { p_submission_id: string; p_force_failure?: string | null }
-        Returns: {
-          submission_id: string
-          playlist_id: string
-          play_id: string
-          listeners: number
-          hype_gain: number
-          streams_boost: number
-          sales_boost: number
-          week_start_date: string
-          show_id: string
-          band_id: string | null
-          playlist_times_played: number
-          is_new_playlist: boolean
-        }
-      }
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
@@ -9516,35 +8023,6 @@ export type Database = {
       chat_participant_status: "online" | "offline" | "typing" | "away"
       enrollment_status: "enrolled" | "in_progress" | "completed" | "dropped"
       friendship_status: "pending" | "accepted" | "declined" | "blocked"
-      gear_quality:
-        | "budget"
-        | "standard"
-        | "professional"
-        | "boutique"
-        | "experimental"
-      gear_rarity: "common" | "uncommon" | "rare" | "epic" | "legendary"
-      gear_type:
-        | "instrument"
-        | "pedal"
-        | "amplifier"
-        | "speaker_cabinet"
-        | "pedalboard"
-        | "vocal_rig"
-        | "microphone"
-        | "outboard"
-        | "accessory"
-        | "utility"
-      pedal_chain_stage:
-        | "input"
-        | "preamp"
-        | "drive"
-        | "modulation"
-        | "ambient"
-        | "utility"
-        | "loop"
-        | "multi_fx"
-        | "expression"
-        | "output"
       show_type_enum: "concert" | "festival" | "private" | "street"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
