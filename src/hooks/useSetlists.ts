@@ -30,7 +30,6 @@ export interface SetlistSong {
     id: string;
     name: string;
     item_category: string;
-    spotlight_level?: string | null;
   } | null;
 }
 
@@ -81,8 +80,7 @@ export const useSetlistSongs = (setlistId: string | null) => {
           performance_items (
             id,
             name,
-            category,
-            spotlight_level
+            category
           )
         `)
         .eq("setlist_id", setlistId)
