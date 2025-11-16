@@ -9,7 +9,7 @@ export const useFestivalSlotApplications = (festivalId?: string, bandId?: string
   const { data: applications, isLoading } = useQuery({
     queryKey: ["festival-slot-applications", festivalId, bandId],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("festival_slot_applications")
         .select(`
           *,
@@ -24,7 +24,7 @@ export const useFestivalSlotApplications = (festivalId?: string, bandId?: string
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!festivalId || !!bandId,
   });
@@ -39,7 +39,7 @@ export const useFestivalSlotApplications = (festivalId?: string, bandId?: string
       setlist_id?: string;
       application_message?: string;
     }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("festival_slot_applications")
         .insert(applicationData);
 
@@ -73,7 +73,7 @@ export const useFestivalSlotApplications = (festivalId?: string, bandId?: string
       adminNotes?: string;
       offeredPayment?: number;
     }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("festival_slot_applications")
         .update({
           status,
