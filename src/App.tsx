@@ -50,6 +50,9 @@ const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
 const Legacy = lazyWithRetry(() => import("./pages/legacy"));
+const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
+const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
+const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
 const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
 const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
@@ -218,6 +221,9 @@ function App() {
                     <Route path="songs" element={<RedirectTo to="/music" />} />
                     <Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />
                     <Route path="admin" element={<Admin />} />
+                    <Route path="admin/players" element={<AdminPlayerManagement />} />
+                    <Route path="admin/achievements" element={<AdminAchievements />} />
+                    <Route path="admin/analytics" element={<AdminAnalytics />} />
                     <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="admin/universities" element={<AdminUniversities />} />
                     <Route path="admin/courses" element={<AdminCourses />} />
