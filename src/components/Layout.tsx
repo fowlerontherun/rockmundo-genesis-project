@@ -11,6 +11,7 @@ import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { VersionHeader } from "@/components/VersionHeader";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 
 const BUILD_VERSION = "v1.0.0";
 const BUILD_DATE = "2025-01-16";
@@ -60,6 +61,7 @@ const Layout = () => {
             <SidebarTrigger />
             <div className="flex-1" />
             <div className="flex items-center gap-2">
+              <ActivityStatusIndicator />
               <ThemeSwitcher />
               <LanguageSwitcher />
               <HowToPlayDialog />

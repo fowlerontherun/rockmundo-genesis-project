@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarDays, Clock, List } from "lucide-react";
+import { Calendar, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
-import { addDays, startOfWeek } from "date-fns";
+import { addDays, startOfWeek, format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Schedule = () => {
   const { user } = useAuth();
@@ -16,60 +15,80 @@ const Schedule = () => {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-3 md:p-4 space-y-3 md:space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">My Schedule</h1>
-          <p className="text-muted-foreground">Plan your activities and manage your time</p>
+          <h1 className="text-xl md:text-2xl font-bold">Schedule</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Plan and manage your activities</p>
         </div>
         
         <div className="flex gap-2">
           <Button
+            size="sm"
             variant={viewMode === 'day' ? 'default' : 'outline'}
             onClick={() => setViewMode('day')}
           >
-            <Calendar className="h-4 w-4 mr-2" />
-            Day View
+            <Calendar className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
+            <span className="hidden md:inline">Day</span>
           </Button>
           <Button
+            size="sm"
             variant={viewMode === 'week' ? 'default' : 'outline'}
             onClick={() => setViewMode('week')}
           >
-            <CalendarDays className="h-4 w-4 mr-2" />
-            Week View
+            <CalendarDays className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
+            <span className="hidden md:inline">Week</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <Button
+          size="sm"
           variant="outline"
           onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? -1 : -7))}
         >
-          Previous {viewMode === 'day' ? 'Day' : 'Week'}
+          <ChevronLeft className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
         <Button
+          size="sm"
           variant="outline"
           onClick={() => setCurrentDate(new Date())}
+          className="flex-1"
         >
-          Today
+          <span className="text-xs md:text-sm">Today</span>
         </Button>
         <Button
+          size="sm"
           variant="outline"
           onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? 1 : 7))}
         >
-          Next {viewMode === 'day' ? 'Day' : 'Week'}
+          <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
         </Button>
       </div>
 
       {viewMode === 'day' ? (
         <DaySchedule date={currentDate} userId={user?.id} />
       ) : (
-        <div className="grid gap-4">
+        <Tabs defaultValue={format(weekDays[0], 'yyyy-MM-dd')} className="w-full">
+          <TabsList className="w-full grid grid-cols-7 h-auto">
+            {weekDays.map(day => (
+              <TabsTrigger 
+                key={day.toISOString()} 
+                value={format(day, 'yyyy-MM-dd')}
+                className="flex flex-col py-1.5 md:py-2"
+              >
+                <span className="text-xs">{format(day, 'EEE')}</span>
+                <span className="text-base md:text-lg font-bold">{format(day, 'd')}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
           {weekDays.map(day => (
-            <DaySchedule key={day.toISOString()} date={day} userId={user?.id} />
+            <TabsContent key={day.toISOString()} value={format(day, 'yyyy-MM-dd')}>
+              <DaySchedule date={day} userId={user?.id} />
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
       )}
     </div>
   );
