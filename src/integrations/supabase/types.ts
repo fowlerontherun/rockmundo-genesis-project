@@ -5338,6 +5338,8 @@ export type Database = {
           from_city_id: string | null
           id: string
           profile_id: string | null
+          scheduled_departure_time: string | null
+          status: string | null
           to_city_id: string
           transport_type: string
           travel_duration_hours: number
@@ -5351,6 +5353,8 @@ export type Database = {
           from_city_id?: string | null
           id?: string
           profile_id?: string | null
+          scheduled_departure_time?: string | null
+          status?: string | null
           to_city_id: string
           transport_type: string
           travel_duration_hours: number
@@ -5364,6 +5368,8 @@ export type Database = {
           from_city_id?: string | null
           id?: string
           profile_id?: string | null
+          scheduled_departure_time?: string | null
+          status?: string | null
           to_city_id?: string
           transport_type?: string
           travel_duration_hours?: number
@@ -9667,6 +9673,7 @@ export type Database = {
         Args: { amount: number; release_id: string }
         Returns: undefined
       }
+      is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
