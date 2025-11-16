@@ -4035,6 +4035,72 @@ export type Database = {
           },
         ]
       }
+      music_videos: {
+        Row: {
+          budget: number
+          created_at: string
+          description: string | null
+          director_id: string | null
+          earnings: number
+          hype_score: number
+          id: string
+          production_quality: number
+          release_date: string | null
+          song_id: string
+          status: string
+          title: string
+          updated_at: string
+          views_count: number
+        }
+        Insert: {
+          budget?: number
+          created_at?: string
+          description?: string | null
+          director_id?: string | null
+          earnings?: number
+          hype_score?: number
+          id?: string
+          production_quality?: number
+          release_date?: string | null
+          song_id: string
+          status?: string
+          title: string
+          updated_at?: string
+          views_count?: number
+        }
+        Update: {
+          budget?: number
+          created_at?: string
+          description?: string | null
+          director_id?: string | null
+          earnings?: number
+          hype_score?: number
+          id?: string
+          production_quality?: number
+          release_date?: string | null
+          song_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_videos_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "music_videos_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orchestra_bookings: {
         Row: {
           cost: number

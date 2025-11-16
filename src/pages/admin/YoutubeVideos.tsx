@@ -119,7 +119,7 @@ const YoutubeVideos = () => {
         <div className="flex items-center gap-3">
           <Youtube className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">YouTube Resources</h1>
+            <h1 className="text-3xl font-bold">PooTube Resources</h1>
             <p className="text-muted-foreground">Manage educational video resources</p>
           </div>
         </div>
@@ -220,8 +220,8 @@ const YoutubeVideos = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="resourceUrl">YouTube URL</Label>
-                <Input id="resourceUrl" {...register("resourceUrl")} placeholder="https://youtube.com/..." />
+                <Label htmlFor="resourceUrl">PooTube URL</Label>
+                <Input id="resourceUrl" {...register("resourceUrl")} placeholder="https://pootube.com/..." />
                 {errors.resourceUrl && (
                   <p className="text-sm text-destructive">{errors.resourceUrl.message}</p>
                 )}
@@ -249,7 +249,7 @@ const YoutubeVideos = () => {
       ) : resources.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
-            No YouTube resources yet. Click "Add Resource" to create one.
+            No PooTube resources yet. Click "Add Resource" to create one.
           </CardContent>
         </Card>
       ) : (

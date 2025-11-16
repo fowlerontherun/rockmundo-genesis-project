@@ -74,7 +74,7 @@ export default function EducationBooking() {
       scheduled_start: scheduledStart.toISOString(),
       scheduled_end: new Date(scheduledStart.getTime() + 60 * 60 * 1000).toISOString(),
       status: "scheduled",
-      title: `${activityType === "reading" ? "Reading" : activityType === "university" ? "University" : activityType === "mentorship" ? "Mentorship" : "YouTube Learning"}`,
+      title: `${activityType === "reading" ? "Reading" : activityType === "university" ? "University" : activityType === "mentorship" ? "Mentorship" : "PooTube Learning"}`,
       metadata,
     });
 
@@ -123,7 +123,7 @@ export default function EducationBooking() {
           </TabsTrigger>
           <TabsTrigger value="youtube_video">
             <Video className="h-4 w-4 mr-2" />
-            YouTube
+            PooTube
           </TabsTrigger>
         </TabsList>
 
