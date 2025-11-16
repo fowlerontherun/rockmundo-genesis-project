@@ -6974,6 +6974,42 @@ export type Database = {
         }
         Relationships: []
       }
+      skill_improvements: {
+        Row: {
+          created_at: string | null
+          id: string
+          improved_at: string
+          improvement_amount: number
+          new_value: number
+          previous_value: number
+          skill_name: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          improved_at?: string
+          improvement_amount: number
+          new_value: number
+          previous_value: number
+          skill_name: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          improved_at?: string
+          improvement_amount?: number
+          new_value?: number
+          previous_value?: number
+          skill_name?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       skill_parent_links: {
         Row: {
           created_at: string | null

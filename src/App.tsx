@@ -50,6 +50,9 @@ const StageSetup = lazyWithRetry(() => import("./pages/StageSetup"));
 const EnhancedBandManager = lazyWithRetry(() => import("./pages/EnhancedBandManager"));
 const PublicRelations = lazyWithRetry(() => import("./pages/PublicRelations"));
 const Legacy = lazyWithRetry(() => import("./pages/legacy"));
+const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
+const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
+const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
 const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
@@ -160,6 +163,9 @@ function App() {
                     <Route path="advisor" element={<AdvisorPage />} />
                     <Route path="competitive-charts" element={<CompetitiveCharts />} />
                     <Route path="schedule" element={<Schedule />} />
+                    <Route path="booking/education" element={<EducationBooking />} />
+                    <Route path="booking/performance" element={<PerformanceBooking />} />
+                    <Route path="booking/work" element={<WorkBooking />} />
                     <Route path="skills" element={<SkillsPage />} />
                     <Route path="world-pulse" element={<WorldPulsePage />} />
                     <Route path="community/feed" element={<CommunityFeed />} />

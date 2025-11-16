@@ -27,6 +27,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 import { GameDateWidget } from "@/components/calendar/GameDateWidget";
 import { DaySchedule } from "@/components/schedule/DaySchedule";
+import { useRecentSkillImprovements } from "@/hooks/useRecentSkillImprovements";
+import { TrendingUp as TrendingUpIcon } from "lucide-react";
 
 type ChatScope = "general" | "city";
 
@@ -119,15 +121,8 @@ const Dashboard = () => {
     fetchCity();
   }, [profile?.current_city_id]);
 
+  const { data: recentImprovements = [] } = useRecentSkillImprovements(profile?.user_id, 24);
   const dashboardNotifications: DashboardNotification[] = [];
-
-  const topSkills = useMemo(() => {
-    if (!skills || !Array.isArray(skills)) return [];
-    return skills
-      .filter((s: any) => s.skill_value > 0)
-      .sort((a: any, b: any) => b.skill_value - a.skill_value)
-      .slice(0, 5);
-  }, [skills]);
 
   if (gameDataLoading) {
     return (
@@ -234,38 +229,39 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Top Skills */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base md:text-lg flex items-center gap-2">
-                <Sparkles className="h-4 w-4 md:h-5 md:w-5" />
-                Top Skills
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {topSkills.length === 0 ? (
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  No skills yet. Start practicing!
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {topSkills.map(skill => (
-                    <div key={skill.id}>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-xs md:text-sm font-medium">
-                          {formatSkillName(skill.skill_slug)}
-                        </span>
-                        <span className="text-xs md:text-sm text-muted-foreground">
-                          {skill.skill_value}
-                        </span>
+          {/* Recent Skill Improvements */}
+          {recentImprovements.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                  <TrendingUpIcon className="h-4 w-4 md:h-5 md:w-5" />
+                  Skills Improved (24hrs)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {recentImprovements.slice(0, 5).map(improvement => (
+                    <div
+                      key={improvement.id}
+                      className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-accent/50"
+                    >
+                      <div>
+                        <p className="text-xs md:text-sm font-medium">
+                          {formatSkillName(improvement.skill_name)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {improvement.previous_value} → {improvement.new_value}
+                        </p>
                       </div>
-                      <Progress value={skill.skill_value} max={100} className="h-1.5" />
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        +{improvement.improvement_amount}
+                      </Badge>
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Recent Activity */}
           <Card>
