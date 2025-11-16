@@ -74,6 +74,13 @@ const Dashboard = () => {
 
   const [activityFeed, setActivityFeed] = useState<ActivityEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [currentCity, setCurrentCity] = useState<{
+    id: string;
+    name: string;
+    country: string;
+    music_scene: number;
+  } | null>(null);
+  const [cityLoading, setCityLoading] = useState(false);
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -93,6 +100,24 @@ const Dashboard = () => {
 
     fetchActivity();
   }, [profile?.user_id]);
+
+  useEffect(() => {
+    const fetchCity = async () => {
+      if (!profile?.current_city_id) return;
+      setCityLoading(true);
+
+      const { data } = await supabase
+        .from("cities")
+        .select("id, name, country, music_scene")
+        .eq("id", profile.current_city_id)
+        .single();
+
+      setCurrentCity(data);
+      setCityLoading(false);
+    };
+
+    fetchCity();
+  }, [profile?.current_city_id]);
 
   const dashboardNotifications: DashboardNotification[] = [];
 
@@ -294,7 +319,7 @@ const Dashboard = () => {
         <div className="space-y-4 md:space-y-6">
           {/* Location & Date */}
           <div className="space-y-3 md:space-y-4">
-            <CurrentLocationWidget />
+            <CurrentLocationWidget city={currentCity} loading={cityLoading} />
             <GameDateWidget />
           </div>
 
