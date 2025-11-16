@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Coins } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { cn } from "@/lib/utils";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { useUnderworld } from "@/hooks/useUnderworld";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth-context";
 
 interface MerchandiseItem {
   name: string;
@@ -38,6 +40,13 @@ const overviewMetrics = [
 const formatPrice = (price: number) => `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const formatVolume = (volume: number) => `$${(volume / 1_000_000).toFixed(2)}M`;
 const formatDate = (date: string) => new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const formatDateTime = (date: string) =>
+  new Date(date).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
 const rarityStyles: Record<string, { badge: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   Common: { badge: "bg-muted text-muted-foreground", variant: "secondary" },
@@ -54,7 +63,9 @@ const availabilityStyles: Record<string, { badge: string; variant: "default" | "
 };
 
 const Underworld = () => {
-  const { tokens, tokensLoading } = useUnderworld();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { tokens, tokensLoading, holdings, holdingsLoading, transactions, transactionsLoading, placeOrder, placingOrder } = useUnderworld();
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [buyQuantity, setBuyQuantity] = useState<string>("1");
   const [sellQuantity, setSellQuantity] = useState<string>("1");
@@ -63,6 +74,53 @@ const Underworld = () => {
 
   const selectedTokenData = tokens.find((t) => t.symbol === selectedToken);
   const chartData = selectedTokenData?.price_history || [];
+
+  useEffect(() => {
+    if (!selectedToken && tokens.length > 0) {
+      setSelectedToken(tokens[0].symbol);
+    }
+  }, [tokens, selectedToken]);
+
+  const handleTrade = async (type: "buy" | "sell") => {
+    if (!selectedTokenData) {
+      toast({ title: "Select a token", description: "Choose a token from the market table before trading.", variant: "destructive" });
+      return;
+    }
+
+    const quantityInput = type === "buy" ? buyQuantity : sellQuantity;
+    const priceInput = type === "buy" ? buyPrice : sellPrice;
+    const parsedQuantity = Number(quantityInput);
+    const parsedPrice = priceInput ? Number(priceInput) : Number(selectedTokenData.current_price);
+
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+      toast({ title: "Invalid quantity", description: "Enter how many tokens you want to trade.", variant: "destructive" });
+      return;
+    }
+
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      toast({ title: "Invalid price", description: "Enter a valid price per token.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await placeOrder({
+        tokenId: selectedTokenData.id,
+        quantity: parsedQuantity,
+        pricePerToken: parsedPrice,
+        type,
+      });
+
+      if (type === "buy") {
+        setBuyQuantity("1");
+        setBuyPrice("");
+      } else {
+        setSellQuantity("1");
+        setSellPrice("");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   if (tokensLoading) {
     return (
@@ -192,7 +250,9 @@ const Underworld = () => {
                         <Input id="buy-price" type="number" value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} placeholder={formatPrice(selectedTokenData.current_price)} />
                       </div>
                     </div>
-                    <Button className="w-full">Place Buy Order</Button>
+                    <Button className="w-full" onClick={() => handleTrade("buy")} disabled={placingOrder || !user}>
+                      {user ? (placingOrder ? "Processing..." : "Place Buy Order") : "Sign in to trade"}
+                    </Button>
                   </TabsContent>
                   <TabsContent value="sell" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -205,13 +265,109 @@ const Underworld = () => {
                         <Input id="sell-price" type="number" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} placeholder={formatPrice(selectedTokenData.current_price)} />
                       </div>
                     </div>
-                    <Button className="w-full" variant="destructive">Place Sell Order</Button>
+                    <Button className="w-full" variant="destructive" onClick={() => handleTrade("sell")} disabled={placingOrder || !user}>
+                      {user ? (placingOrder ? "Processing..." : "Place Sell Order") : "Sign in to trade"}
+                    </Button>
                   </TabsContent>
                 </Tabs>
               </div>
             )}
           </CardContent>
         </Card>
+
+        <div className="grid gap-4 lg:grid-cols-2 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Holdings</CardTitle>
+              <CardDescription>Track your positions across Underworld tokens</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!user ? (
+                <p className="text-muted-foreground">Sign in to view and manage your holdings.</p>
+              ) : holdingsLoading ? (
+                <p className="text-muted-foreground">Loading holdings...</p>
+              ) : holdings.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Token</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Avg. Buy</TableHead>
+                      <TableHead className="text-right">Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {holdings.map((holding) => {
+                      const currentPrice = holding.crypto_tokens?.current_price || 0;
+                      const quantity = Number(holding.quantity || 0);
+                      const totalValue = quantity * Number(currentPrice);
+
+                      return (
+                        <TableRow key={holding.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-mono font-semibold">{holding.crypto_tokens?.symbol}</div>
+                              <div className="text-sm text-muted-foreground">{holding.crypto_tokens?.name}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">{quantity.toFixed(4)}</TableCell>
+                          <TableCell className="text-right font-mono">${Number(holding.average_buy_price || 0).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-mono">{formatPrice(totalValue)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground">No holdings yet. Start trading to build your portfolio.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Transactions</CardTitle>
+              <CardDescription>Your latest moves inside the Underworld market</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!user ? (
+                <p className="text-muted-foreground">Sign in to review your trading activity.</p>
+              ) : transactionsLoading ? (
+                <p className="text-muted-foreground">Loading transactions...</p>
+              ) : transactions.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Token</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-right">When</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell>
+                          <div className="font-mono font-semibold">{transaction.crypto_tokens?.symbol}</div>
+                          <p className="text-sm text-muted-foreground">{transaction.crypto_tokens?.name}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={transaction.transaction_type === "buy" ? "default" : "secondary"}>{transaction.transaction_type.toUpperCase()}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{Number(transaction.quantity).toFixed(4)}</TableCell>
+                        <TableCell className="text-right font-mono">${Number(transaction.price_per_token).toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">{formatDateTime(transaction.created_at)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground">No transactions yet. Your activity will appear here.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
