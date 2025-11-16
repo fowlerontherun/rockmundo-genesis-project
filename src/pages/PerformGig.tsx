@@ -285,6 +285,19 @@ export default function PerformGig() {
     }
   };
 
+  // All hooks must be called before any early returns
+  const setlistLength = setlistSongs.length;
+  
+  const gearOutcomeNarrative = useMemo(() => {
+    if (!outcome) return null;
+
+    return buildGearOutcomeNarrative({
+      outcome,
+      gearEffects: gearEffects ?? undefined,
+      setlistLength,
+    });
+  }, [outcome, gearEffects, setlistLength]);
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -318,18 +331,6 @@ export default function PerformGig() {
   const venueName = gig.venues?.name || 'Unknown Venue';
   const venueLocation = gig.venues?.location || 'Unknown Location';
   const capacity = gig.venues?.capacity || 0;
-
-  const setlistLength = setlistSongs.length;
-
-  const gearOutcomeNarrative = useMemo(() => {
-    if (!outcome) return null;
-
-    return buildGearOutcomeNarrative({
-      outcome,
-      gearEffects: gearEffects ?? undefined,
-      setlistLength,
-    });
-  }, [outcome, gearEffects, setlistLength]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
