@@ -1,280 +1,63 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Video, TrendingUp, Music, BarChart3, Loader2 } from "lucide-react";
+import { useGameData } from "@/hooks/useGameData";
+import { useDikCokVideos } from "@/hooks/useDikCokVideos";
+import { useDikCokVideoTypes } from "@/hooks/useDikCokVideoTypes";
+import { useDikCokChallenges } from "@/hooks/useDikCokChallenges";
+import { DikCokVideoCard } from "@/components/dikcok/DikCokVideoCard";
+import { DikCokCreateDialog } from "@/components/dikcok/DikCokCreateDialog";
+import { DikCokBandAnalytics } from "@/components/dikcok/DikCokBandAnalytics";
 import { Badge } from "@/components/ui/badge";
-import { Video, TrendingUp, Music, Trophy, Users, Sparkles } from "lucide-react";
-import type { DikCokBand, DikCokVideoType, DikCokTrack, DikCokTrendVideo } from "@/types/dikcok";
 
 export default function DikCok() {
-  const [selectedBand] = useState<DikCokBand | null>(null);
+  const { profile } = useGameData();
+  const selectedBand = null; // Will be replaced with actual band selection
+  const { videos, trending, isLoading, incrementViews } = useDikCokVideos(selectedBand?.id);
+  const { videoTypes, isLoading: typesLoading } = useDikCokVideoTypes();
+  const { challenges } = useDikCokChallenges();
 
-  // Mock data - will be replaced with real data fetching
-  const videoTypes: DikCokVideoType[] = [
-    {
-      id: "1",
-      name: "Performance Clip",
-      category: "Music",
-      description: "Short performance videos",
-      difficulty: "Easy",
-      unlockRequirement: "Available from start",
-      durationHint: "15-30 seconds",
-      signatureEffects: ["Music overlay", "Stage lighting"]
-    }
-  ];
+  if (!profile) return <div className="container mx-auto p-6 flex items-center justify-center min-h-[50vh]"><p className="text-muted-foreground">Loading...</p></div>;
 
-  const myBands: DikCokBand[] = [
-    {
-      id: "1",
-      name: "Demo Band",
-      genre: "Rock",
-      hype: 1500,
-      fans: 5000,
-      fameTier: "Bronze",
-      trendTag: "#RisingStars",
-      momentum: "Rising",
-      analytics: {
-        videosCreated: 12,
-        averageEngagement: 8.5,
-        duetParticipationRate: 15,
-        fanConversionRate: 3.2
-      }
-    }
-  ];
-
-  const trendingVideos: DikCokTrendVideo[] = [
-    {
-      id: "1",
-      title: "Epic Guitar Solo",
-      creator: "RockLegends",
-      bandId: "1",
-      videoTypeId: "1",
-      views: 150000,
-      hypeGain: 500,
-      fanGain: 200,
-      trendingTag: "#ViralSound",
-      engagementVelocity: "Exploding",
-      bestForFeeds: ["ForYou", "Trending"]
-    }
-  ];
+  const myBandVideos = videos?.filter(v => v.band_id === selectedBand?.id) || [];
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-4xl font-bold flex items-center gap-2">
-            <Video className="h-8 w-8" />
-            DikCok
-          </h1>
-          <p className="text-muted-foreground">Create viral music content and grow your fanbase</p>
+          <h1 className="text-4xl font-bold flex items-center gap-3"><Video className="h-10 w-10" />DikCok</h1>
+          <p className="text-muted-foreground mt-1">Create viral short-form videos and grow your fanbase</p>
         </div>
-        <Button size="lg">
-          <Video className="h-4 w-4 mr-2" />
-          Create Video
-        </Button>
+        {selectedBand && <DikCokCreateDialog bandId={selectedBand.id} userId={profile.user_id} bandName={selectedBand.name} />}
       </div>
 
-      <Tabs defaultValue="create" className="w-full">
+      <Tabs defaultValue="trending" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="create">Create</TabsTrigger>
-          <TabsTrigger value="trending">Trending</TabsTrigger>
-          <TabsTrigger value="mybands">My Bands</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="trending"><TrendingUp className="h-4 w-4 mr-2" />Trending</TabsTrigger>
+          <TabsTrigger value="my-videos"><Video className="h-4 w-4 mr-2" />My Videos</TabsTrigger>
+          <TabsTrigger value="challenges"><Music className="h-4 w-4 mr-2" />Challenges</TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="create" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Video Types</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {videoTypes.map((type) => (
-                  <Card key={type.id}>
-                    <CardContent className="pt-6">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <h3 className="font-semibold">{type.name}</h3>
-                          <Badge variant={type.difficulty === "Easy" ? "default" : "secondary"}>
-                            {type.difficulty}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{type.description}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Video className="h-3 w-3" />
-                          {type.durationHint}
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {type.signatureEffects.map((effect, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">
-                              {effect}
-                            </Badge>
-                          ))}
-                        </div>
-                        <Button className="w-full" size="sm">Create Video</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="trending">
+          {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div> : 
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{trending?.map(v => <DikCokVideoCard key={v.id} video={v} onView={incrementViews} />)}</div>}
         </TabsContent>
 
-        <TabsContent value="trending" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Trending Videos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {trendingVideos.map((video) => (
-                  <Card key={video.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2 flex-1">
-                          <h3 className="font-semibold">{video.title}</h3>
-                          <p className="text-sm text-muted-foreground">by {video.creator}</p>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline">{video.trendingTag}</Badge>
-                            <Badge variant={video.engagementVelocity === "Exploding" ? "default" : "secondary"}>
-                              {video.engagementVelocity}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 pt-2">
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Views</p>
-                              <p className="text-sm font-semibold">{video.views.toLocaleString()}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Hype Gain</p>
-                              <p className="text-sm font-semibold text-primary">+{video.hypeGain}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Fan Gain</p>
-                              <p className="text-sm font-semibold text-green-500">+{video.fanGain}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="my-videos">
+          {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div> : 
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{myBandVideos.map(v => <DikCokVideoCard key={v.id} video={v} onView={incrementViews} />)}</div>}
         </TabsContent>
 
-        <TabsContent value="mybands" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                My Bands on DikCok
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {myBands.map((band) => (
-                  <Card key={band.id}>
-                    <CardContent className="pt-6">
-                      <div className="space-y-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold text-lg">{band.name}</h3>
-                            <p className="text-sm text-muted-foreground">{band.genre}</p>
-                          </div>
-                          <Badge variant="outline">{band.fameTier}</Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Hype</p>
-                            <p className="text-lg font-bold text-primary">{band.hype.toLocaleString()}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Fans</p>
-                            <p className="text-lg font-bold">{band.fans.toLocaleString()}</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Momentum</span>
-                            <Badge variant={band.momentum === "Surging" ? "default" : "secondary"}>
-                              {band.momentum}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Sparkles className="h-4 w-4 text-primary" />
-                            <span className="text-muted-foreground">{band.trendTag}</span>
-                          </div>
-                        </div>
-
-                        <Button className="w-full" size="sm">View Details</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="challenges">
+          <Card><CardHeader><CardTitle>Active Challenges</CardTitle></CardHeader><CardContent>
+            {challenges?.map(c => <Card key={c.id} className="mb-4"><CardHeader><CardTitle className="text-lg">{c.name}</CardTitle><CardDescription>{c.theme}</CardDescription></CardHeader></Card>)}
+          </CardContent></Card>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
-          {selectedBand ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics for {selectedBand.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Videos Created</p>
-                        <p className="text-2xl font-bold">{selectedBand.analytics.videosCreated}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Avg Engagement</p>
-                        <p className="text-2xl font-bold">{selectedBand.analytics.averageEngagement}%</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Duet Rate</p>
-                        <p className="text-2xl font-bold">{selectedBand.analytics.duetParticipationRate}%</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Fan Conversion</p>
-                        <p className="text-2xl font-bold">{selectedBand.analytics.fanConversionRate}%</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="pt-6 text-center py-12">
-                <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">Select a band to view analytics</p>
-              </CardContent>
-            </Card>
-          )}
+        <TabsContent value="analytics">
+          {selectedBand && <DikCokBandAnalytics band={selectedBand} videos={myBandVideos} />}
         </TabsContent>
       </Tabs>
     </div>

@@ -1753,6 +1753,367 @@ export type Database = {
         }
         Relationships: []
       }
+      dikcok_challenge_entries: {
+        Row: {
+          band_id: string
+          challenge_id: string
+          created_at: string | null
+          id: string
+          score: number | null
+          video_id: string
+        }
+        Insert: {
+          band_id: string
+          challenge_id: string
+          created_at?: string | null
+          id?: string
+          score?: number | null
+          video_id: string
+        }
+        Update: {
+          band_id?: string
+          challenge_id?: string
+          created_at?: string | null
+          id?: string
+          score?: number | null
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dikcok_challenge_entries_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dikcok_challenge_entries_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "dikcok_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dikcok_challenge_entries_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "dikcok_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dikcok_challenges: {
+        Row: {
+          created_at: string | null
+          cross_game_hook: string | null
+          ends_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          requirements: string[] | null
+          rewards: string[] | null
+          sponsor: string | null
+          starts_at: string
+          theme: string
+        }
+        Insert: {
+          created_at?: string | null
+          cross_game_hook?: string | null
+          ends_at: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          requirements?: string[] | null
+          rewards?: string[] | null
+          sponsor?: string | null
+          starts_at: string
+          theme: string
+        }
+        Update: {
+          created_at?: string | null
+          cross_game_hook?: string | null
+          ends_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          requirements?: string[] | null
+          rewards?: string[] | null
+          sponsor?: string | null
+          starts_at?: string
+          theme?: string
+        }
+        Relationships: []
+      }
+      dikcok_comments: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          likes: number | null
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          likes?: number | null
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          likes?: number | null
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dikcok_comments_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "dikcok_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dikcok_fan_missions: {
+        Row: {
+          band_id: string
+          created_at: string | null
+          description: string
+          expires_at: string
+          id: string
+          is_completed: boolean | null
+          mission_type: string
+          rewards: string[] | null
+          target_count: number | null
+        }
+        Insert: {
+          band_id: string
+          created_at?: string | null
+          description: string
+          expires_at: string
+          id?: string
+          is_completed?: boolean | null
+          mission_type: string
+          rewards?: string[] | null
+          target_count?: number | null
+        }
+        Update: {
+          band_id?: string
+          created_at?: string | null
+          description?: string
+          expires_at?: string
+          id?: string
+          is_completed?: boolean | null
+          mission_type?: string
+          rewards?: string[] | null
+          target_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dikcok_fan_missions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dikcok_forecasts: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          prediction_window: string
+          projected_outcome: string
+          trend_tag: string
+          wager_range: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          prediction_window: string
+          projected_outcome: string
+          trend_tag: string
+          wager_range?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          prediction_window?: string
+          projected_outcome?: string
+          trend_tag?: string
+          wager_range?: string | null
+        }
+        Relationships: []
+      }
+      dikcok_reactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          reaction_type: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reaction_type: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reaction_type?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dikcok_reactions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "dikcok_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dikcok_video_types: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          difficulty: string
+          duration_hint: string | null
+          id: string
+          name: string
+          signature_effects: string[] | null
+          unlock_requirement: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          difficulty: string
+          duration_hint?: string | null
+          id?: string
+          name: string
+          signature_effects?: string[] | null
+          unlock_requirement?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string
+          duration_hint?: string | null
+          id?: string
+          name?: string
+          signature_effects?: string[] | null
+          unlock_requirement?: string | null
+        }
+        Relationships: []
+      }
+      dikcok_videos: {
+        Row: {
+          band_id: string
+          best_for_feeds: string[] | null
+          created_at: string | null
+          creator_user_id: string
+          description: string | null
+          engagement_velocity: string | null
+          fan_gain: number | null
+          hype_gained: number | null
+          id: string
+          title: string
+          track_id: string | null
+          trending_tag: string | null
+          updated_at: string | null
+          video_type_id: string
+          views: number | null
+        }
+        Insert: {
+          band_id: string
+          best_for_feeds?: string[] | null
+          created_at?: string | null
+          creator_user_id: string
+          description?: string | null
+          engagement_velocity?: string | null
+          fan_gain?: number | null
+          hype_gained?: number | null
+          id?: string
+          title: string
+          track_id?: string | null
+          trending_tag?: string | null
+          updated_at?: string | null
+          video_type_id: string
+          views?: number | null
+        }
+        Update: {
+          band_id?: string
+          best_for_feeds?: string[] | null
+          created_at?: string | null
+          creator_user_id?: string
+          description?: string | null
+          engagement_velocity?: string | null
+          fan_gain?: number | null
+          hype_gained?: number | null
+          id?: string
+          title?: string
+          track_id?: string | null
+          trending_tag?: string | null
+          updated_at?: string | null
+          video_type_id?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dikcok_videos_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dikcok_videos_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "dikcok_videos_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "dikcok_videos_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dikcok_videos_video_type_id_fkey"
+            columns: ["video_type_id"]
+            isOneToOne: false
+            referencedRelation: "dikcok_video_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       education_mentors: {
         Row: {
           attribute_keys: Json
@@ -9672,6 +10033,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_dikcok_video_views: {
+        Args: { p_video_id: string }
+        Returns: undefined
       }
       increment_release_revenue: {
         Args: { amount: number; release_id: string }

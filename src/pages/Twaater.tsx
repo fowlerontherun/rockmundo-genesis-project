@@ -151,7 +151,7 @@ const Twaater = () => {
                   <div className="border-b p-4" style={{ borderColor: 'hsl(var(--twaater-border))' }}>
                     <TwaaterComposer accountId={account.id} />
                   </div>
-                  <TwaaterFeed feed={feed || []} isLoading={feedLoading} viewerAccountId={account.id} />
+                  <TwaaterFeed viewerAccountId={account.id} feedType="feed" />
                 </TabsContent>
 
                 <TabsContent value="trending" className="mt-0">
