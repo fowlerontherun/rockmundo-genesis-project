@@ -84,6 +84,37 @@ supabase db reset
 The migration pulls in the generated `supabase/seed/skills_seed.sql` file, so running the script keeps migrations and runtime data
 in sync.
 
+## Audio generation pipeline
+
+Automated audio creation is orchestrated with two Supabase tables:
+
+- `public.audio_generation_prompts` stores the prompts coming from recording sessions, their current status, the target model, and
+  per-request metadata.
+- `public.audio_generation_results` captures the final clip metadata (model version, seed, latency, cost) plus the storage paths
+  for the rendered audio files. Each row links back to both the originating prompt and the `recording_sessions` entry so the
+  frontend can compare outputs to the source session.
+
+The worker defined in `scripts/audio-generation-worker.ts` can run on a cron schedule (or as a Supabase Edge Function invocation)
+to process pending prompts, call the external audio API with a fixed 30 second duration, and upload the returned clips into the
+`generated-audio-clips` storage bucket. Run it locally with:
+
+```sh
+npm run audio:worker
+```
+
+Required environment variables:
+
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (service role required to bypass RLS for background processing)
+- `AUDIO_API_URL` and `AUDIO_API_KEY` for the target audio-generation provider
+
+Optional configuration:
+
+- `AUDIO_STORAGE_BUCKET` (defaults to `generated-audio-clips`)
+- `AUDIO_WORKER_BATCH_SIZE` to control the number of prompts claimed per run
+
+Each execution logs success rate, latency, and total cost across the batch, making it easy to ship those metrics into your
+preferred monitoring stack.
+
 ## Profile data reset for the new flow
 
 Deployments that introduce the refreshed profile flow must run the `20270431150000_reset_profile_data.sql` migration before

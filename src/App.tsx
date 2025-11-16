@@ -103,6 +103,7 @@ const AdminReleaseConfig = lazyWithRetry(() => import("./pages/admin/ReleaseConf
 const AdminRadioStations = lazyWithRetry(() => import("./pages/admin/RadioStations"));
 const AdminStageEquipmentCatalog = lazyWithRetry(() => import("./pages/admin/StageEquipmentCatalog"));
 const AdminCrewCatalog = lazyWithRetry(() => import("./pages/admin/CrewCatalog"));
+const AdminAudioGeneration = lazyWithRetry(() => import("./pages/admin/AudioGenerationDashboard"));
 const SongwritingAdmin = lazyWithRetry(() => import("./pages/admin/SongwritingAdmin"));
 const GigsAdmin = lazyWithRetry(() => import("./pages/admin/GigsAdmin"));
 const ChartsAdmin = lazyWithRetry(() => import("./pages/admin/ChartsAdmin"));
@@ -262,6 +263,7 @@ function App() {
                     <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
+                    <Route path="admin/audio-generation" element={<AdminAudioGeneration />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
                     <Route path="admin/streaming-platforms" element={<AdminStreamingPlatforms />} />
                     <Route path="admin/marketplace" element={<AdminMarketplace />} />
