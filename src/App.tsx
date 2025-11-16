@@ -52,7 +52,11 @@ const Legacy = lazyWithRetry(() => import("./pages/legacy"));
 const AdminPlayerManagement = lazyWithRetry(() => import("./pages/admin/PlayerManagement"));
 const AdminAchievements = lazyWithRetry(() => import("./pages/admin/Achievements"));
 const AdminAnalytics = lazyWithRetry(() => import("./pages/admin/Analytics"));
+const AwardsAdmin = lazyWithRetry(() => import("./pages/admin/AwardsAdmin"));
 const FestivalsAdminPage = lazyWithRetry(() => import("./pages/admin/FestivalsAdmin"));
+const AdvisorAdmin = lazyWithRetry(() => import("./pages/admin/AdvisorAdmin"));
+const PublicRelationsAdmin = lazyWithRetry(() => import("./pages/admin/PublicRelationsAdmin"));
+const UnderworldAdmin = lazyWithRetry(() => import("./pages/admin/UnderworldAdmin"));
 const WellnessPage = lazyWithRetry(() => import("./pages/Wellness"));
 const EducationBooking = lazyWithRetry(() => import("./pages/booking/EducationBooking"));
 const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/PerformanceBooking"));
@@ -121,7 +125,7 @@ const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
 const SkillsPage = lazyWithRetry(() => import("./pages/SkillsPage"));
 
-const Underworld = lazyWithRetry(() => import("./pages/Underworld"));
+const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
 const NarrativeStoryPage = lazyWithRetry(
   () => import("./pages/events/narratives/[storyId]"),
 );
@@ -249,6 +253,10 @@ function App() {
                     <Route path="admin/travel" element={<AdminTravel />} />
                     <Route path="admin/song-gifts" element={<AdminSongGifts />} />
                     <Route path="admin/festivals" element={<FestivalsAdminPage />} />
+                    <Route path="admin/awards" element={<AwardsAdmin />} />
+                    <Route path="admin/advisor" element={<AdvisorAdmin />} />
+                    <Route path="admin/pr" element={<PublicRelationsAdmin />} />
+                    <Route path="admin/underworld" element={<UnderworldAdmin />} />
                     <Route path="admin/stage-equipment" element={<AdminStageEquipmentCatalog />} />
                     <Route path="admin/crew" element={<AdminCrewCatalog />} />
                     <Route path="admin/producers" element={<AdminProducers />} />
