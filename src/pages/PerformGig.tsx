@@ -6,14 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2 } from 'lucide-react';
+import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag, CheckCircle2, Clock } from 'lucide-react';
 import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
-import { format } from 'date-fns';
+import { format, differenceInMinutes, isBefore, addMinutes } from 'date-fns';
 import { useBandGearEffects } from '@/hooks/useBandGearEffects';
 import { buildGearOutcomeNarrative } from '@/utils/gigNarrative';
 
@@ -37,6 +37,7 @@ export default function PerformGig() {
   const [outcome, setOutcome] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
+  const [timeUntilReport, setTimeUntilReport] = useState<string | null>(null);
 
   const { data: bandGearData, isLoading: bandGearLoading } = useBandGearEffects(gig?.band_id ?? null, {
     enabled: !!gig?.band_id,
@@ -108,28 +109,40 @@ export default function PerformGig() {
       }
 
       if (existingOutcome) {
-        const transformedOutcome = {
-          ...existingOutcome,
-          breakdown_data: {
-            equipment_quality: existingOutcome.equipment_quality_avg || 0,
-            crew_skill: existingOutcome.crew_skill_avg || 0,
-            band_chemistry: existingOutcome.band_chemistry_level || 0,
-            member_skills: existingOutcome.member_skill_avg || 0,
-            merch_items_sold: existingOutcome.merch_items_sold || 0
-          },
-          chemistry_impact: existingOutcome.chemistry_change || 0,
-          equipment_wear_cost: existingOutcome.equipment_cost || 0,
-          gear_effects: {
-            equipmentQualityBonus: existingOutcome.band_synergy_modifier || 0,
-            attendanceBonusPercent: existingOutcome.social_buzz_impact || 0,
-            reliabilitySwingReductionPercent: existingOutcome.audience_memory_impact || 0,
-            revenueBonusPercent: existingOutcome.promoter_modifier || 0,
-            fameBonusPercent: existingOutcome.venue_loyalty_bonus || 0,
-            breakdown: (existingOutcome as any).gear_effects?.breakdown,
-          }
-        };
-        setOutcome(transformedOutcome);
-        setShowOutcome(true);
+        const now = new Date();
+        const completedAt = gigData.completed_at ? new Date(gigData.completed_at) : null;
+        
+        // Only show outcome if gig completed more than 10 minutes ago
+        const canShowOutcome = completedAt && differenceInMinutes(now, completedAt) >= 10;
+        
+        if (canShowOutcome) {
+          const transformedOutcome = {
+            ...existingOutcome,
+            breakdown_data: {
+              equipment_quality: existingOutcome.equipment_quality_avg || 0,
+              crew_skill: existingOutcome.crew_skill_avg || 0,
+              band_chemistry: existingOutcome.band_chemistry_level || 0,
+              member_skills: existingOutcome.member_skill_avg || 0,
+              merch_items_sold: existingOutcome.merch_items_sold || 0
+            },
+            chemistry_impact: existingOutcome.chemistry_change || 0,
+            equipment_wear_cost: existingOutcome.equipment_cost || 0,
+            gear_effects: {
+              equipmentQualityBonus: existingOutcome.band_synergy_modifier || 0,
+              attendanceBonusPercent: existingOutcome.social_buzz_impact || 0,
+              reliabilitySwingReductionPercent: existingOutcome.audience_memory_impact || 0,
+              revenueBonusPercent: existingOutcome.promoter_modifier || 0,
+              fameBonusPercent: existingOutcome.venue_loyalty_bonus || 0,
+              breakdown: (existingOutcome as any).gear_effects?.breakdown,
+            }
+          };
+          setOutcome(transformedOutcome);
+          setShowOutcome(false); // Don't auto-show, let user click to view
+        } else {
+          // Outcome exists but it's too soon - keep showing live view
+          setOutcome(null);
+          setShowOutcome(false);
+        }
       } else {
         setOutcome(null);
         setShowOutcome(false);
@@ -153,9 +166,76 @@ export default function PerformGig() {
 
   const startGigMutation = useManualGigStart();
 
-  // Use realtime gig advancement
-  const isGigInProgress = gig?.status === 'in_progress' || gig?.status === 'ready_for_completion';
-  useRealtimeGigAdvancement(gigId || null, isGigInProgress && !showOutcome);
+  // Determine if we should show live viewer or final report
+  const shouldShowLiveViewer = useMemo(() => {
+    if (!gig) return false;
+    
+    const now = new Date();
+    const scheduledDate = new Date(gig.scheduled_date);
+    const completedAt = gig.completed_at ? new Date(gig.completed_at) : null;
+    
+    // Show live viewer if gig starts within 10 minutes
+    const isWithin10MinutesOfStart = differenceInMinutes(scheduledDate, now) <= 10 && isBefore(now, scheduledDate);
+    
+    // Show live viewer if gig is in progress
+    const isInProgress = gig.status === 'in_progress' || gig.status === 'ready_for_completion';
+    
+    // Show live viewer if gig completed less than 10 minutes ago
+    const isRecentlyCompleted = completedAt && differenceInMinutes(now, completedAt) < 10;
+    
+    return isWithin10MinutesOfStart || isInProgress || isRecentlyCompleted;
+  }, [gig]);
+
+  // Use realtime gig advancement only when showing live viewer
+  useRealtimeGigAdvancement(gigId || null, shouldShowLiveViewer && !showOutcome);
+
+  // Auto-refresh when the 10-minute window elapses after completion
+  useEffect(() => {
+    if (!gig?.completed_at) return;
+    
+    const completedAt = new Date(gig.completed_at);
+    const tenMinutesAfter = addMinutes(completedAt, 10);
+    const now = new Date();
+    
+    // If we're before the 10-minute mark, set a timer to reload at that time
+    if (isBefore(now, tenMinutesAfter)) {
+      const msUntilRefresh = tenMinutesAfter.getTime() - now.getTime();
+      
+      const timer = setTimeout(() => {
+        console.log('[PerformGig] 10 minutes elapsed since completion, reloading to show report');
+        loadGig();
+      }, msUntilRefresh);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [gig?.completed_at, loadGig]);
+
+  // Update countdown timer for report availability
+  useEffect(() => {
+    if (!gig?.completed_at || outcome) {
+      setTimeUntilReport(null);
+      return;
+    }
+    
+    const updateCountdown = () => {
+      const completedAt = new Date(gig.completed_at!);
+      const tenMinutesAfter = addMinutes(completedAt, 10);
+      const now = new Date();
+      
+      if (isBefore(now, tenMinutesAfter)) {
+        const minutesLeft = Math.ceil(differenceInMinutes(tenMinutesAfter, now));
+        const secondsLeft = Math.ceil((tenMinutesAfter.getTime() - now.getTime()) / 1000) % 60;
+        setTimeUntilReport(`${minutesLeft}:${secondsLeft.toString().padStart(2, '0')}`);
+      } else {
+        setTimeUntilReport(null);
+      }
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    
+    return () => clearInterval(interval);
+  }, [gig?.completed_at, outcome]);
 
   const handleGigComplete = async () => {
     // Reload to show outcome
@@ -380,12 +460,48 @@ export default function PerformGig() {
         </Card>
       )}
 
-      {/* Real-time Performance Viewer - shown when gig is in progress */}
-      {gig.status === 'in_progress' && setlistSongs.length > 0 && !showOutcome && (
+      {/* Real-time Performance Viewer - shown when within 10 min of start, during gig, or up to 10 min after */}
+      {shouldShowLiveViewer && setlistSongs.length > 0 && !showOutcome && (
         <RealtimeGigViewer
           gigId={gig.id}
           onComplete={handleGigComplete}
         />
+      )}
+
+      {/* Processing Message - shown when gig just completed but report not ready yet */}
+      {gig.status === 'completed' && !outcome && (
+        <Card className="border-primary/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+              Processing Results
+            </CardTitle>
+            <CardDescription>
+              The gig just wrapped up! We're processing the performance data and will have your report ready in a few minutes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Final reports are typically available 10 minutes after the performance ends.
+            </p>
+            {timeUntilReport && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/50">
+                <Clock className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Report Ready In</p>
+                  <p className="text-2xl font-bold text-primary">{timeUntilReport}</p>
+                </div>
+              </div>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={loadGig}
+              className="w-full"
+            >
+              Refresh Status
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Completed Gig CTA */}
