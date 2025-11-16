@@ -1,4 +1,5 @@
 import type { Json } from "@/lib/supabase-types";
+import type { LanguageProficiencyLevel } from "./education";
 
 // Working database types to override the problematic generated types
 export type RequirementValue = number | string | boolean | null;
@@ -124,6 +125,20 @@ export interface PlayerSkills {
   creativity: number;
   technical: number;
   composition: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlayerLanguageProficiency {
+  id: string;
+  profile_id: string;
+  language: string;
+  proficiency_level: LanguageProficiencyLevel;
+  proficiency_score: number;
+  immersion_hours: number;
+  study_streak_days: number;
+  certifications: string[] | null;
+  last_assessed_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { CreateReleaseDialog } from "@/components/releases/CreateReleaseDialog";
 import { MyReleasesTab } from "@/components/releases/MyReleasesTab";
 import { ReleaseSalesTab } from "@/components/releases/ReleaseSalesTab";
-import { MusicVideoReleaseTab } from "@/components/music-video/MusicVideoReleaseTab";
 import { useAutoReleaseManufacturing } from "@/hooks/useAutoReleaseManufacturing";
 
 export default function ReleaseManager() {
@@ -18,7 +17,7 @@ export default function ReleaseManager() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get("tab");
-  const validTabs = new Set(["releases", "sales", "video"]);
+  const validTabs = new Set(["releases", "sales"]);
   const currentTab = validTabs.has(tabParam ?? "") ? (tabParam as string) : "releases";
 
   const handleTabChange = (value: string) => {
@@ -70,10 +69,9 @@ export default function ReleaseManager() {
       </div>
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="releases">My Releases</TabsTrigger>
           <TabsTrigger value="sales">Sales & Revenue</TabsTrigger>
-          <TabsTrigger value="video">Music Videos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="releases" className="mt-6">
@@ -82,10 +80,6 @@ export default function ReleaseManager() {
 
         <TabsContent value="sales" className="mt-6">
           <ReleaseSalesTab userId={userId} />
-        </TabsContent>
-
-        <TabsContent value="video" className="mt-6">
-          <MusicVideoReleaseTab userId={userId} />
         </TabsContent>
       </Tabs>
 

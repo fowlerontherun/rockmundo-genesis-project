@@ -5,6 +5,7 @@ import { getAvailableRoutes, calculateTravelCost, TravelRoute } from "@/utils/tr
 import { checkTravelDisruptions } from "@/utils/gameCalendar";
 import { WeatherDisruptionAlert } from "@/components/travel/WeatherDisruptionAlert";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import type { TravelDisruption } from "@/utils/gameCalendar";
 import {
   Dialog,
@@ -17,7 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Train, Plane, Bus, Ship, Clock, DollarSign, Star, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Train, Plane, Bus, Ship, Clock, DollarSign, Star, Loader2, Calendar } from "lucide-react";
 
 interface TravelBookingDialogProps {
   open: boolean;
@@ -48,10 +51,15 @@ export function TravelBookingDialog({
   const [playerMoney, setPlayerMoney] = useState(0);
   const [loading, setLoading] = useState(false);
   const [disruption, setDisruption] = useState<TravelDisruption | null>(null);
+  const [departureDate, setDepartureDate] = useState<string>("");
+  const [departureTime, setDepartureTime] = useState<string>("09:00");
 
   useEffect(() => {
     if (open && currentCityId) {
       loadRoutesAndMoney();
+      // Set default departure to today
+      const today = new Date().toISOString().split('T')[0];
+      setDepartureDate(today);
     }
   }, [open, currentCityId]);
 
@@ -94,9 +102,22 @@ export function TravelBookingDialog({
   };
 
   const handleBookTravel = async () => {
-    if (!selectedRoute || !user || !currentCityId) return;
+    if (!selectedRoute || !user || !currentCityId || !departureDate || !departureTime) return;
 
     const cost = calculateTravelCost(selectedRoute.base_cost, selectedRoute.comfort_rating || 50);
+    
+    // Combine date and time
+    const scheduledDeparture = new Date(`${departureDate}T${departureTime}`);
+    
+    // Validate departure is not in the past
+    if (scheduledDeparture < new Date()) {
+      toast({
+        title: "Invalid Departure Time",
+        description: "You cannot book travel in the past",
+        variant: "destructive",
+      });
+      return;
+    }
 
     await travelMutation.mutateAsync({
       userId: user.id,
@@ -107,6 +128,7 @@ export function TravelBookingDialog({
       cost,
       durationHours: selectedRoute.duration_hours,
       comfortRating: selectedRoute.comfort_rating || 50,
+      scheduledDepartureTime: scheduledDeparture.toISOString(),
     });
 
     onOpenChange(false);
@@ -165,6 +187,38 @@ export function TravelBookingDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            {selectedRoute && (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="departure-date" className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Departure Date
+                    </Label>
+                    <Input
+                      id="departure-date"
+                      type="date"
+                      value={departureDate}
+                      onChange={(e) => setDepartureDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="departure-time" className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Departure Time
+                    </Label>
+                    <Input
+                      id="departure-time"
+                      type="time"
+                      value={departureTime}
+                      onChange={(e) => setDepartureTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             {selectedRoute && (
               <>

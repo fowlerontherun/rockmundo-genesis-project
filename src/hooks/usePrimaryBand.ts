@@ -12,8 +12,12 @@ export interface PrimaryBandRecord {
   bands?: {
     id: string;
     name: string | null;
+    genre: string | null;
     fame: number | null;
     band_balance: number | null;
+    chemistry_level: number | null;
+    weekly_fans: number | null;
+    performance_count: number | null;
     status: string | null;
   } | null;
 }
@@ -41,8 +45,12 @@ export const usePrimaryBand = () => {
             bands:bands!band_members_band_id_fkey (
               id,
               name,
+              genre,
               fame,
               band_balance,
+              chemistry_level,
+              weekly_fans,
+              performance_count,
               status
             )
           `

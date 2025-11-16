@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useToast } from "@/hooks/use-toast";
+import { TShirtDesigner } from "@/components/merchandise/TShirtDesigner";
+import { SavedDesigns } from "@/components/merchandise/SavedDesigns";
 import {
   Loader2,
   PackagePlus,
@@ -21,6 +23,7 @@ import {
   BarChart3,
   ClipboardList,
   Sparkles,
+  Shirt,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -501,6 +504,48 @@ const Merchandise = () => {
       });
     },
   });
+
+  const createMerchWithDesign = async (designId: string, designName: string) => {
+    if (!bandId) {
+      toast({
+        title: "No band selected",
+        description: "Please select a band first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("player_merchandise")
+        .insert({
+          band_id: bandId,
+          design_name: `Custom ${designName}`,
+          item_type: "Custom T-Shirt",
+          cost_to_produce: 12,
+          selling_price: 35,
+          stock_quantity: 50,
+          custom_design_id: designId,
+          sales_boost_pct: 1.0, // 1% sales boost
+        });
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["player-merchandise", bandId] });
+      toast({
+        title: "Custom merch created!",
+        description: `"${designName}" has been added to your inventory with a 1% sales boost.`,
+      });
+      setActiveTab("manage-product");
+    } catch (error: any) {
+      toast({
+        title: "Failed to create merchandise",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
 
   const handleAddProduct = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

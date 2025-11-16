@@ -12,6 +12,7 @@ import {
   Briefcase,
   Music2,
   Plane,
+  Calendar as CalendarIcon,
   Calendar,
   TrendingUp,
   Shield,
@@ -28,11 +29,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const adminSections = [
   {
+    title: "Festival Management",
+    description: "Manage festivals, slot offers, and band applications",
+    href: "/admin/festivals",
+    action: "Manage festivals",
+    Icon: CalendarIcon,
+  },
+  {
     title: "Game Calendar",
     description: "Configure in-game time progression, seasons, and seasonal modifiers for genres.",
     href: "/admin/game-calendar",
     action: "Manage calendar",
-    Icon: Calendar,
+    Icon: CalendarIcon,
   },
   {
     title: "Cities",
@@ -167,6 +175,48 @@ const adminSections = [
     action: "Manage Radio",
     Icon: Radio,
   },
+  {
+    title: "Songwriting",
+    description: "Manage songwriting mechanics, chord progressions, and quality multipliers.",
+    href: "/admin/songwriting",
+    action: "Manage Songwriting",
+    Icon: Music2,
+  },
+  {
+    title: "Gigs",
+    description: "Configure gig payouts, performance ratings, and fame generation.",
+    href: "/admin/gigs",
+    action: "Manage Gigs",
+    Icon: Music2,
+  },
+  {
+    title: "Charts",
+    description: "Manage music charts, ranking algorithms, and chart rewards.",
+    href: "/admin/charts",
+    action: "Manage Charts",
+    Icon: TrendingUp,
+  },
+  {
+    title: "Twaater",
+    description: "Configure Twaater platform features, engagement, and trending algorithms.",
+    href: "/admin/twaater",
+    action: "Manage Twaater",
+    Icon: Shield,
+  },
+  {
+    title: "Record Labels",
+    description: "Manage record labels, deal types, and royalty systems.",
+    href: "/admin/labels",
+    action: "Manage Labels",
+    Icon: Building2,
+  },
+  {
+    title: "Band & Chemistry",
+    description: "Configure band mechanics, chemistry systems, and collaboration features.",
+    href: "/admin/bands",
+    action: "Manage Bands",
+    Icon: Users,
+  },
 ] as const;
 
 const adminSubSections = [
@@ -183,6 +233,27 @@ const adminSubSections = [
     href: "/admin/crew",
     action: "Manage crew",
     Icon: HardHat,
+  },
+  {
+    title: "Player Management",
+    description: "View and manage player accounts, grant resources, and modify stats.",
+    href: "/admin/players",
+    action: "Manage players",
+    Icon: Shield,
+  },
+  {
+    title: "Achievements",
+    description: "Create and manage achievements with requirements and rewards.",
+    href: "/admin/achievements",
+    action: "Manage achievements",
+    Icon: TrendingUp,
+  },
+  {
+    title: "Analytics",
+    description: "View game statistics, player activity, and performance metrics.",
+    href: "/admin/analytics",
+    action: "View analytics",
+    Icon: TrendingUp,
   },
 ] as const;
 

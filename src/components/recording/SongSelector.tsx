@@ -17,7 +17,13 @@ export const SongSelector = ({ userId, selectedSong, onSelect }: SongSelectorPro
     queryFn: async () => {
       const { data, error } = await supabase
         .from('songs')
-        .select('*')
+        .select(`
+          *,
+          band_song_familiarity!song_id (
+            familiarity_percentage,
+            rehearsal_stage
+          )
+        `)
         .eq('user_id', userId)
         .in('status', ['draft', 'recorded'])
         .order('created_at', { ascending: false });
@@ -67,6 +73,11 @@ export const SongSelector = ({ userId, selectedSong, onSelect }: SongSelectorPro
                     <Badge variant="secondary">{song.genre}</Badge>
                     {song.catalog_status && (
                       <Badge variant="outline">{song.catalog_status}</Badge>
+                    )}
+                    {(song as any).band_song_familiarity?.[0] && (
+                      <Badge variant="outline">
+                        {(song as any).band_song_familiarity[0].rehearsal_stage || 'Learning'} - {(song as any).band_song_familiarity[0].familiarity_percentage}%
+                      </Badge>
                     )}
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimePresence } from "./useRealtimePresence";
 
 interface UsePlayerPresenceStatsOptions {
   refreshInterval?: number | null;
@@ -46,10 +47,10 @@ export const usePlayerPresenceStats = (
   const refreshInterval = options.refreshInterval ?? DEFAULT_REFRESH_INTERVAL;
   const mountedRef = useRef(true);
   const [totalPlayers, setTotalPlayers] = useState<number | null>(null);
-  const [onlinePlayers, setOnlinePlayers] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const { onlineCount } = useRealtimePresence();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -69,7 +70,6 @@ export const usePlayerPresenceStats = (
 
     try {
       let nextTotalPlayers = 0;
-      let nextOnlinePlayers = 0;
 
       const totalResult = await supabase.from("profiles").select("*", { count: "exact", head: true });
 
@@ -81,25 +81,11 @@ export const usePlayerPresenceStats = (
         nextTotalPlayers = totalResult.count ?? 0;
       }
 
-      const onlineResult = await supabase
-        .from("chat_participants")
-        .select("*", { count: "exact", head: true })
-        .neq("status", "offline");
-
-      if (onlineResult.error) {
-        if (!isMissingRelationError(onlineResult.error)) {
-          throw onlineResult.error;
-        }
-      } else {
-        nextOnlinePlayers = onlineResult.count ?? 0;
-      }
-
       if (!mountedRef.current) {
         return;
       }
 
       setTotalPlayers(nextTotalPlayers);
-      setOnlinePlayers(nextOnlinePlayers);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -135,7 +121,7 @@ export const usePlayerPresenceStats = (
 
   return {
     totalPlayers,
-    onlinePlayers,
+    onlinePlayers: onlineCount,
     loading,
     error,
     lastUpdated,

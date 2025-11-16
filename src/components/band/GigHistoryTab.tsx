@@ -82,21 +82,25 @@ export const GigHistoryTab = ({ bandId }: GigHistoryTabProps) => {
         .from('gig_outcomes')
         .select(`
           *,
-          gigs!gig_outcomes_gig_id_fkey!inner(
+          gigs!inner(
             *,
-            venues!gigs_venue_id_fkey(name, capacity, location),
+            venues(name, capacity, location),
             setlists(name)
           )
         `)
         .eq('gigs.band_id', bandId)
         .eq('gigs.status', 'completed')
-        .order('completed_at', { ascending: false, foreignTable: 'gigs' })
+        .not('gigs.completed_at', 'is', null)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching gig history:', error);
+        throw error;
+      }
       return (data ?? []) as unknown as GigHistoryOutcome[];
     },
-    refetchInterval: 5000, // Refetch every 5 seconds to catch newly completed gigs
+    refetchInterval: 10000, // Refetch every 10 seconds to catch newly completed gigs
+    enabled: !!bandId,
   });
 
   if (error) {

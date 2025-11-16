@@ -93,10 +93,10 @@ const SetlistManager = () => {
             <h1 className="text-3xl font-bold mb-2">Setlist Manager</h1>
             <p className="text-muted-foreground">
               Create and manage setlists for {band.name}
-              <Badge variant="outline" className="ml-2">
-                {setlists?.length || 0}/3 Setlists
-              </Badge>
             </p>
+            <Badge variant="outline" className="mt-1">
+              {setlists?.length || 0}/3 Setlists
+            </Badge>
           </div>
           <div className="flex flex-col items-end gap-2">
             <Button 
