@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { format } from "date-fns";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase-client";
 import type { Tables } from "@/lib/supabase-types";

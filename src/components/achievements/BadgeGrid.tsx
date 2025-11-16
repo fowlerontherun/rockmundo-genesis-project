@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { BadgeCard } from "@/components/achievements/BadgeCard";
 import type { LeaderboardBadge } from "@/lib/api/leaderboards";
 import { Card, CardContent } from "@/components/ui/card";

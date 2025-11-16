@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import {

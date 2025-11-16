@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BadgeGrid } from "@/components/achievements";
