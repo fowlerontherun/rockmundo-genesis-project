@@ -9626,6 +9626,7 @@ export type Database = {
           converted_projects: number
         }[]
       }
+      auto_complete_travel: { Args: never; Returns: undefined }
       auto_start_scheduled_gigs: { Args: never; Returns: undefined }
       calculate_chart_trends: { Args: never; Returns: undefined }
       calculate_setlist_duration: {

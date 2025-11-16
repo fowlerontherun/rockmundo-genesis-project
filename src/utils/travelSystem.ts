@@ -58,12 +58,12 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   if (profileError) throw profileError;
 
-  // Deduct cost
+  // Deduct cost only - do NOT update current_city_id yet
+  // Player will move to new city only after travel completes
   const { error: updateError } = await supabase
     .from("profiles")
     .update({ 
-      cash: (profile.cash || 0) - cost,
-      current_city_id: toCityId 
+      cash: (profile.cash || 0) - cost
     })
     .eq("user_id", userId);
 
