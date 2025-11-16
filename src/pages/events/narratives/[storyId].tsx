@@ -23,15 +23,37 @@ import {
   type NarrativeChoice,
   type NarrativeStateRecord,
 } from "@/lib/narratives";
-import type { Database } from "@/lib/supabase-types";
-
 const STORY_STATE_QUERY_KEY = "narrative-story-state" as const;
 
-type StoryStateRow = Database["public"]["Tables"]["story_states"]["Row"];
+// Temporary types until database migration is applied
+type StoryStateRow = {
+  id: string;
+  story_id: string;
+  user_id: string;
+  profile_id: string | null;
+  current_node_id: string;
+  visited_node_ids: string[];
+  flags: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+};
 
-type StoryChoiceInsert = Database["public"]["Tables"]["story_choices"]["Insert"];
+type StoryChoiceInsert = {
+  story_id: string;
+  user_id: string;
+  profile_id?: string | null;
+  node_id: string;
+  choice_key: string;
+};
 
-type StoryStateInsert = Database["public"]["Tables"]["story_states"]["Insert"];
+type StoryStateInsert = {
+  story_id: string;
+  user_id: string;
+  profile_id?: string | null;
+  current_node_id: string;
+  visited_node_ids: string[];
+  flags: Record<string, any>;
+};
 
 const mapRowToState = (row: StoryStateRow): NarrativeStateRecord => ({
   id: row.id,
@@ -72,11 +94,11 @@ const NarrativeStoryPage = () => {
       }
 
       const { data, error: fetchError } = await supabase
-        .from("story_states")
+        .from("story_states" as any)
         .select("*")
         .eq("story_id", story.id)
         .eq("user_id", user.id)
-        .maybeSingle();
+        .maybeSingle() as { data: StoryStateRow | null; error: any };
 
       if (fetchError) {
         throw fetchError;
@@ -98,10 +120,10 @@ const NarrativeStoryPage = () => {
       };
 
       const { data: inserted, error: insertError } = await supabase
-        .from("story_states")
+        .from("story_states" as any)
         .insert(payload)
         .select()
-        .single();
+        .single() as { data: StoryStateRow | null; error: any };
 
       if (insertError || !inserted) {
         throw insertError ?? new Error("Failed to initialize story state");

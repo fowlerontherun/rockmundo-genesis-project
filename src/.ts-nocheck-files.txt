@@ -1,7 +1,7 @@
 // This is a temporary list of files with @ts-nocheck
 // These files will need type checking re-enabled once Supabase types regenerate
 
-src/pages/events/narratives/[storyId].tsx
-src/pages/side-hustles/index.tsx
-src/pages/studio/recording.tsx
-src/pages/talent/discovery.tsx
+src/pages/events/narratives/[storyId].tsx (requires story_states and story_choices tables in types)
+src/pages/side-hustles/index.tsx (uses isLoading on mutation - needs isPending update)
+src/pages/studio/recording.tsx (edge functions not in types)
+src/pages/talent/discovery.tsx (missing casting call and profile fields in types)

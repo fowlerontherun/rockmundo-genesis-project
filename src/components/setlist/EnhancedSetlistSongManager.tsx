@@ -52,6 +52,7 @@ export const EnhancedSetlistSongManager = ({
   const { data: userSkills } = useQuery({
     queryKey: ['user-skills'],
     queryFn: async () => {
+      console.log('[EnhancedSetlistSongManager] Fetching user skills - currently returning empty object');
       // Return empty object for now - skills integration can be added later
       return {} as Record<string, number>;
     },
@@ -65,6 +66,11 @@ export const EnhancedSetlistSongManager = ({
         .select('genre')
         .eq('id', bandId)
         .single();
+      
+      console.log('[EnhancedSetlistSongManager] Fetched band data:', {
+        bandId,
+        genre: data?.genre
+      });
       return data;
     },
   });
@@ -72,6 +78,15 @@ export const EnhancedSetlistSongManager = ({
   const addPerformanceItemMutation = useMutation({
     mutationFn: async (item: PerformanceItem) => {
       const nextPosition = (setlistSongs?.filter(s => s.section === 'main').length || 0) + 1;
+      
+      console.log('[EnhancedSetlistSongManager] Adding performance item:', {
+        itemId: item.id,
+        itemName: item.name,
+        setlistId,
+        nextPosition,
+        currentMainSectionCount: setlistSongs?.filter(s => s.section === 'main').length || 0
+      });
+      
       const { error } = await supabase
         .from("setlist_songs")
         .insert({
@@ -82,7 +97,12 @@ export const EnhancedSetlistSongManager = ({
           section: 'main',
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[EnhancedSetlistSongManager] Error adding performance item:', error);
+        throw error;
+      }
+      
+      console.log('[EnhancedSetlistSongManager] Successfully added performance item');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["setlist-songs", setlistId] });
