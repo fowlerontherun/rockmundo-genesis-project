@@ -59,7 +59,7 @@ const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/Performan
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
-const Festivals = lazyWithRetry(() => import("./pages/Festivals"));
+const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
 const EnhancedEquipmentStore = lazyWithRetry(() => import("./pages/EnhancedEquipmentStore"));
@@ -193,7 +193,7 @@ function App() {
                     <Route path="pr" element={<PublicRelations />} />
                     <Route path="legacy" element={<Legacy />} />
                     <Route path="venues" element={<VenueManagement />} />
-                    <Route path="festivals" element={<Festivals />} />
+                    <Route path="festivals" element={<FestivalsNew />} />
                     <Route path="awards" element={<Awards />} />
                     <Route path="chemistry" element={<BandChemistry />} />
                     <Route path="stage-setup" element={<StageSetup />} />
