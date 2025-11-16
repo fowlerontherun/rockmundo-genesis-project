@@ -50,6 +50,7 @@ import {
   Video,
   Radio as RadioIcon,
   Newspaper,
+  Heart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -83,6 +84,7 @@ export function AppSidebar() {
         { icon: Newspaper, label: "Today's News", path: "/todays-news" },
         { icon: Bot, label: t('advisor'), path: "/advisor" },
         { icon: User, label: t('character'), path: "/my-character" },
+        { icon: Heart, label: "Wellness", path: "/wellness" },
         { icon: Guitar, label: t('gear'), path: "/gear" },
         { icon: Crown, label: t('legacy'), path: "/legacy" },
         { icon: Calendar, label: t('schedule'), path: "/schedule" },
