@@ -77,6 +77,26 @@ const clampToFuture = (candidate: Date, reference: Date): Date => {
   return candidate;
 };
 
+const advanceCandidateToReference = (
+  candidate: Date,
+  reference: Date,
+  cadence: TrainingCadence,
+  intervalDays: number
+): Date => {
+  if (candidate.getTime() > reference.getTime()) {
+    return candidate;
+  }
+
+  let next = new Date(candidate);
+  const interval = Math.max(1, intervalDays);
+
+  while (next.getTime() <= reference.getTime()) {
+    next = cadence === "monthly" ? addMonths(next, 1) : addDays(next, interval);
+  }
+
+  return next;
+};
+
 const findNextPreferredWeekday = (
   candidate: Date,
   preferredWeekdays: number[],
@@ -141,7 +161,8 @@ export const calculateNextTrainingSession = (
   let candidate: Date;
 
   if (lastCompletedAt) {
-    candidate = cadence === "monthly" ? addMonths(anchor, 1) : addDays(anchor, intervalDays);
+    const nextInterval = cadence === "monthly" ? addMonths(anchor, 1) : addDays(anchor, intervalDays);
+    candidate = advanceCandidateToReference(nextInterval, reference, cadence, intervalDays);
   } else {
     candidate = anchor.getTime() < reference.getTime() ? new Date(reference) : anchor;
   }
