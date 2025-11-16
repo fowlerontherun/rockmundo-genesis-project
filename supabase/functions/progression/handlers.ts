@@ -30,29 +30,34 @@ export async function handleClaimDailyXp(
     throw new Error("Daily XP already claimed today");
   }
 
-  // Fixed: Award 100 XP daily stipend
+  // Base daily amount: always 100 XP
   const baseDailyAmount = 100;
 
-  // Calculate activity bonus from past 7 days
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  // Calculate activity bonus from previous day only
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStart = new Date(yesterday.setHours(0, 0, 0, 0)).toISOString();
+  const yesterdayEnd = new Date(yesterday.setHours(23, 59, 59, 999)).toISOString();
 
-  const { data: weeklyXpData } = await client
+  const { data: yesterdayXpData } = await client
     .from('experience_ledger')
     .select('xp_amount')
     .eq('profile_id', profileId)
-    .gte('created_at', sevenDaysAgo.toISOString());
+    .gte('created_at', yesterdayStart)
+    .lte('created_at', yesterdayEnd);
 
-  const weeklyXp = weeklyXpData?.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0) || 0;
+  const yesterdayXp = yesterdayXpData?.reduce((sum, entry) => sum + (entry.xp_amount || 0), 0) || 0;
 
-  // Activity tier bonuses (removed - now flat 100 XP)
-  const activityBonus = 0;
-  const dailyAmount = baseDailyAmount;
+  // Small activity bonus: +1 XP per 50 XP earned yesterday (max 50 bonus)
+  const activityBonus = Math.min(50, Math.floor(yesterdayXp / 50));
+  const dailyAmount = baseDailyAmount + activityBonus;
 
   // Create grant record
   const grantMetadata = {
     ...metadata,
-    base_amount: baseDailyAmount
+    base_amount: baseDailyAmount,
+    activity_bonus: activityBonus,
+    yesterday_xp: yesterdayXp
   };
 
   const { error: grantError } = await client

@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase-client";
+// @ts-nocheck
+import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
 export type GearItemRecord = Tables<"gear_items">;

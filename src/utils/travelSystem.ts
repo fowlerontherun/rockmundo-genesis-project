@@ -22,6 +22,7 @@ export interface TravelBookingData {
   cost: number;
   durationHours: number;
   comfortRating: number;
+  scheduledDepartureTime?: string;
 }
 
 export async function validateTravelEligibility(userId: string, cost: number) {
@@ -43,7 +44,7 @@ export async function validateTravelEligibility(userId: string, cost: number) {
 }
 
 export async function bookTravel(bookingData: TravelBookingData) {
-  const { userId, fromCityId, toCityId, transportType, cost, durationHours, comfortRating } = bookingData;
+  const { userId, fromCityId, toCityId, transportType, cost, durationHours, comfortRating, scheduledDepartureTime } = bookingData;
 
   // Validate eligibility
   await validateTravelEligibility(userId, cost);
@@ -57,12 +58,12 @@ export async function bookTravel(bookingData: TravelBookingData) {
 
   if (profileError) throw profileError;
 
-  // Deduct cost
+  // Deduct cost only - do NOT update current_city_id yet
+  // Player will move to new city only after travel completes
   const { error: updateError } = await supabase
     .from("profiles")
     .update({ 
-      cash: (profile.cash || 0) - cost,
-      current_city_id: toCityId 
+      cash: (profile.cash || 0) - cost
     })
     .eq("user_id", userId);
 
@@ -82,8 +83,13 @@ export async function bookTravel(bookingData: TravelBookingData) {
     .single();
 
   // Create travel history entry
-  const now = new Date().toISOString();
-  const arrivalTime = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+  const departureTime = scheduledDepartureTime || new Date().toISOString();
+  const departureDate = new Date(departureTime);
+  const arrivalTime = new Date(departureDate.getTime() + durationHours * 60 * 60 * 1000).toISOString();
+  
+  // Determine status: if departure is in the future, it's scheduled; if now, it's in progress
+  const now = new Date();
+  const status = departureDate > now ? 'scheduled' : 'in_progress';
   
   const { error: historyError } = await supabase
     .from("player_travel_history")
@@ -94,8 +100,10 @@ export async function bookTravel(bookingData: TravelBookingData) {
       transport_type: transportType,
       cost_paid: cost,
       travel_duration_hours: durationHours,
-      departure_time: now,
+      departure_time: departureTime,
+      scheduled_departure_time: departureTime,
       arrival_time: arrivalTime,
+      status,
     });
 
   if (historyError) throw historyError;

@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
+import { Twitter } from "lucide-react";
 import logo from "@/assets/rockmundo-new-logo.png";
 import {
   Sidebar,
@@ -16,6 +17,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar-context";
 import {
   Home,
+  Bot,
   User,
   Guitar,
   Music,
@@ -44,12 +46,13 @@ import {
   Target,
   TrendingUp,
   Map,
+  BedDouble,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
-import { ThemeSwitcher } from "./ThemeSwitcher";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -58,6 +61,7 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   const collapsed = state === "collapsed";
   const cityOverviewPath = currentCity?.id ? `/cities/${currentCity.id}` : "/cities";
@@ -70,27 +74,39 @@ export function AppSidebar() {
 
   const navSections = [
     {
-      label: "Home",
+      label: t('home'),
       items: [
-        { icon: Home, label: "Dashboard", path: "/dashboard" },
-        { icon: User, label: "Character", path: "/my-character" },
-        { icon: Guitar, label: "Gear", path: "/gear" },
-        { icon: Calendar, label: "Schedule", path: "/schedule" },
+        { icon: Home, label: t('dashboard'), path: "/dashboard" },
+        { icon: Newspaper, label: "Today's News", path: "/todays-news" },
+        { icon: Bot, label: t('advisor'), path: "/advisor" },
+        { icon: User, label: t('character'), path: "/my-character" },
+        { icon: Heart, label: "Wellness", path: "/wellness" },
+        { icon: Guitar, label: t('gear'), path: "/gear" },
+        { icon: Crown, label: t('legacy'), path: "/legacy" },
+        { icon: Calendar, label: t('schedule'), path: "/schedule" },
       ],
     },
     {
       label: "Music",
       items: [
-        { icon: Music, label: "Music Hub", path: "/music" },
-        { icon: GraduationCap, label: "Education", path: "/education" },
-        { icon: Target, label: "Skills", path: "/skills" },
+        { icon: Music, label: "Songwriting", path: "/songwriting" },
+        { icon: Disc, label: "Song Catalog", path: "/song-manager" },
+        { icon: Disc, label: "Streaming", path: "/streaming" },
+        { icon: TrendingUp, label: "Charts", path: "/music/charts" },
+        { icon: Music, label: "Song Market", path: "/song-market" },
+        { icon: Package, label: "Releases", path: "/release-manager" },
+        { icon: Music, label: "Recording", path: "/recording-studio" },
+        { icon: Video, label: "Music Videos", path: "/music-videos" },
+        { icon: Music, label: "Radio", path: "/radio" },
       ],
     },
     {
       label: "Performance",
       items: [
-        { icon: Mic, label: "Perform", path: "/performance" },
-        { icon: Calendar, label: "Gigs", path: "/gigs" },
+        { icon: Mic, label: "Gigs", path: "/gig-booking" },
+        { icon: Music, label: "Jam Sessions", path: "/jam-sessions" },
+        { icon: Mic, label: "Busking", path: "/busking" },
+        { icon: RadioIcon, label: "Rehearsals", path: "/rehearsals" },
         { icon: ListMusic, label: "Setlists", path: "/setlists" },
         { icon: Wrench, label: "Stage Equipment", path: "/stage-equipment" },
         { icon: HardHat, label: "Band Crew", path: "/band-crew" },
@@ -99,41 +115,55 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "World",
+      label: "Education",
       items: [
-        { icon: Globe, label: "Cities", path: "/cities" },
-        { icon: Plane, label: "Travel", path: "/travel" },
-        { icon: Building2, label: "Current City", path: cityOverviewPath },
-        { icon: TrendingUp, label: "World Pulse", path: "/world-pulse" },
-        { icon: Map, label: "Tours", path: "/tours" },
+        { icon: GraduationCap, label: "Education", path: "/education" },
+        { icon: Target, label: "Skills", path: "/skills" },
       ],
     },
     {
-      label: "Social",
+      label: t('world'),
       items: [
-        { icon: Users, label: "Band", path: "/band" },
-        { icon: Megaphone, label: "PR", path: "/pr" },
-        { icon: Share2, label: "Social", path: "/social" },
-        { icon: HeartHandshake, label: "Relationships", path: "/relationships" },
+        { icon: Globe, label: t('cities'), path: "/cities" },
+        { icon: Plane, label: t('travel'), path: "/travel" },
+        { icon: Building2, label: t('currentCity'), path: cityOverviewPath },
+        { icon: TrendingUp, label: t('worldPulse'), path: "/world-pulse" },
+        { icon: Map, label: t('tours'), path: "/tour-manager" },
+      ],
+    },
+    {
+      label: t('social'),
+      items: [
+        { icon: Users, label: t('band'), path: "/band" },
+        { icon: RadioIcon, label: "Band Chemistry", path: "/chemistry" },
+        { icon: Twitter, label: "Twaater", path: "/twaater" },
+        { icon: Video, label: "DikCok", path: "/dikcok" },
+        { icon: Megaphone, label: t('pr'), path: "/pr" },
+        { icon: HeartHandshake, label: t('relationships'), path: "/relationships" },
+      ],
+    },
+    {
+      label: "Lifestyle",
+      items: [
+        { icon: BedDouble, label: "Homes", path: "/lifestyle/homes" },
       ],
     },
     {
       label: "Business",
       items: [
-        { icon: Briefcase, label: "Employment", path: "/employment" },
-        { icon: DollarSign, label: "Finances", path: "/finances" },
-        { icon: Store, label: "Gear Shop", path: "/gear-shop" },
-        { icon: Package, label: "Inventory", path: "/inventory" },
-        { icon: ShoppingCart, label: "Merch", path: "/merchandise" },
+        { icon: Briefcase, label: t('employment'), path: "/employment" },
+        { icon: DollarSign, label: t('finances'), path: "/finances" },
+        { icon: Package, label: t('inventory'), path: "/inventory" },
+        { icon: ShoppingCart, label: t('merch'), path: "/merchandise" },
         { icon: Disc, label: "Record Labels", path: "/labels" },
-        { icon: Building2, label: "Venues", path: "/venues" },
+        { icon: Building2, label: t('venues'), path: "/venues" },
       ],
     },
     {
-      label: "Admin",
+      label: t('admin'),
       items: [
-        { icon: Settings, label: "Admin", path: "/admin" },
-        { icon: Wrench, label: "Stage Equipment", path: "/admin/stage-equipment" },
+        { icon: Settings, label: t('admin'), path: "/admin" },
+        { icon: Wrench, label: t('stageEquipment'), path: "/admin/stage-equipment" },
         { icon: HardHat, label: "Crew Catalog", path: "/admin/crew" },
       ],
     },
@@ -143,7 +173,7 @@ export function AppSidebar() {
     await signOut();
     navigate("/auth");
     toast({
-      title: "Signed out",
+      title: t('logout'),
       description: "You have been logged out.",
     });
   };
@@ -190,18 +220,10 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center gap-2 p-2">
-              <ThemeSwitcher />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="flex-1 justify-start gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                {!collapsed && <span>Logout</span>}
-              </Button>
-            </div>
+            <SidebarMenuButton onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              <span>{t('logout')}</span>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

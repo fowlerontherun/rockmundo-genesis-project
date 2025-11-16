@@ -25,11 +25,11 @@
 
 **Solution**:
 - **Removed song count limits** - setlists can now have any number of songs
-- **Added time-based validation** for different slot types:
-  - Kids Slot: 30 min max
-  - Opening Slot: 30 min max
-  - Support Slot: 45 min max
-  - Headline Slot: 75 min max
+- **Added time-based validation** for different slot types (with a 5-minute flex window):
+  - Kids Slot: 30 min slot / 35 min max
+  - Opening Slot: 30 min slot / 35 min max
+  - Support Slot: 45 min slot / 50 min max
+  - Headline Slot: 75 min slot / 80 min max
 - Created database functions:
   - `get_setlist_total_duration(setlist_id)` - calculates total duration
   - `validate_setlist_for_slot(setlist_id, slot_type)` - validates duration for slot
@@ -85,7 +85,7 @@ RETURNS void;
 
 ### UI Improvements
 - Setlist duration displayed as `MM:SS` format
-- Slot time limits shown in setlist manager: "Kids/Opening: 30min • Support: 45min • Headline: 75min"
+- Slot time limits shown in setlist manager: "Kids/Opening: 30min (+5 flex) • Support: 45min (+5 flex) • Headline: 75min (+5 flex)"
 - Encore songs highlighted with star icon and special styling
 - Gig status badges: 🔴 Live Now for in-progress gigs
 - "Start Performance" button appears when gig is scheduled and time has passed

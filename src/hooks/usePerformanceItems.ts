@@ -35,28 +35,11 @@ export const usePerformanceItems = () => {
 export const useFilteredPerformanceItems = (userSkills: Record<string, number>, userGenres: string[]) => {
   const { data: allItems, ...query } = usePerformanceItems();
   
-  const availableItems = allItems?.filter(item => {
-    // Check skill requirement
-    if (item.required_skill) {
-      const userSkillLevel = userSkills[item.required_skill] || 0;
-      if (userSkillLevel < item.min_skill_level) {
-        return false;
-      }
-    }
-    
-    // Check genre requirement (if any)
-    if (item.required_genre) {
-      if (!userGenres.includes(item.required_genre)) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
-  
+  // Return ALL items - no filtering by skills or genres
+  // Users can select any performance item for their setlist
   return {
     ...query,
-    data: availableItems,
+    data: allItems,
     allItems
   };
 };

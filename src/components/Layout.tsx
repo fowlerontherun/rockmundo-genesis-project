@@ -8,6 +8,10 @@ import { useGameData } from "@/hooks/useGameData";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
+import { VersionHeader } from "@/components/VersionHeader";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 
 const BUILD_VERSION = "v1.0.0";
 const BUILD_DATE = "2025-01-16";
@@ -48,22 +52,23 @@ const Layout = () => {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={false}>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="flex-1">
+          <VersionHeader />
           <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
             <SidebarTrigger />
             <div className="flex-1" />
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground hidden sm:block">
-                {BUILD_VERSION} ({BUILD_DATE})
-              </span>
+              <ActivityStatusIndicator />
+              <ThemeSwitcher />
+              <LanguageSwitcher />
               <HowToPlayDialog />
             </div>
           </header>
           
-          <main className="flex-1 p-4 md:p-6">
+          <main className="flex-1 p-3 md:p-4">
             {profileError && (
               <Alert variant="destructive" className="mb-4 max-w-2xl">
                 <AlertCircle className="h-4 w-4" />
