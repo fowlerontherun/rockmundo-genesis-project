@@ -12,6 +12,7 @@ import {
   getSongQualityDescriptor,
   SONG_RATING_RANGE,
 } from "@/hooks/useSongwritingData";
+import { useSongwritingEventLogger } from "@/hooks/useSongwritingEventLogger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -101,6 +102,7 @@ interface ProjectFormState {
   sessionMusicians: string[];
   inspirationModifiers: string[];
   moodModifiers: string[];
+  tempoBpm: number | null;
 }
 
 type SessionEffortOption = {
@@ -140,6 +142,7 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   sessionMusicians: [],
   inspirationModifiers: [],
   moodModifiers: [],
+  tempoBpm: 120,
 };
 
 // Simplified song select - only use existing columns
@@ -398,6 +401,7 @@ const Songwriting = () => {
     convertToSong,
     refetchProjects,
   } = useSongwritingData(user?.id);
+  const { logEvent: songwritingEventLogger } = useSongwritingEventLogger(user?.id);
 
   // Map attributes to required format
   const attributes = useMemo(() => {
@@ -879,6 +883,7 @@ const Songwriting = () => {
       sessionMusicians: creativeBrief?.session_musicians ?? [],
       inspirationModifiers: creativeBrief?.inspiration_modifiers ?? [],
       moodModifiers: creativeBrief?.mood_modifiers ?? [],
+      tempoBpm: creativeBrief?.tempo_bpm ?? DEFAULT_FORM_STATE.tempoBpm,
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -948,6 +953,7 @@ const Songwriting = () => {
       session_musicians: formState.sessionMusicians,
       inspiration_modifiers: formState.inspirationModifiers,
       mood_modifiers: formState.moodModifiers,
+      tempo_bpm: formState.tempoBpm,
       rating_revealed_at: selectedProject?.creative_brief?.rating_revealed_at ?? null,
       core_attributes: selectedProject?.creative_brief?.core_attributes ?? null,
     } as const;
@@ -961,6 +967,8 @@ const Songwriting = () => {
     };
 
     try {
+      let savedProjectId: string | null = null;
+
       if (selectedProject) {
         await updateProject.mutateAsync({
           id: selectedProject.id,
@@ -971,14 +979,52 @@ const Songwriting = () => {
           lyrics: payload.initial_lyrics ?? null,
           creative_brief: payload.creative_brief,
         });
+        savedProjectId = selectedProject.id;
       } else {
-        await createProject.mutateAsync({
+        const createdProject = await createProject.mutateAsync({
           title: payload.title,
           theme_id: payload.theme_id || null,
           chord_progression_id: payload.chord_progression_id || null,
           initial_lyrics: payload.initial_lyrics ?? undefined,
           creative_brief: payload.creative_brief,
         });
+        savedProjectId = createdProject?.id ?? null;
+      }
+
+      if (savedProjectId && songwritingEventLogger) {
+        const instrumentationLabels = formState.sessionMusicians
+          .map((id) => sessionMusicianOptionMap[id]?.label ?? id)
+          .filter(Boolean);
+        const moodLabels = formState.moodModifiers
+          .map((id) => moodTagMap[id]?.label ?? id)
+          .filter(Boolean);
+        const inspirationLabels = formState.inspirationModifiers
+          .map((id) => inspirationTagMap[id]?.label ?? id)
+          .filter(Boolean);
+        const chordProgressionLabel =
+          progressionsList.find((progression) => progression.id === formState.chord_progression_id)?.progression ?? null;
+
+        try {
+          await songwritingEventLogger.mutateAsync({
+            projectId: savedProjectId,
+            eventType: "lyrics_draft",
+            tempoBpm: formState.tempoBpm ?? undefined,
+            chordProgression: chordProgressionLabel,
+            lyricsDraft: formState.initial_lyrics || undefined,
+            instrumentation: instrumentationLabels,
+            mood: moodLabels.length > 0 ? moodLabels.join(", ") : undefined,
+            genre: formState.genre || undefined,
+            referenceTracks: inspirationLabels,
+            metadata: {
+              writingMode: formState.writingMode,
+              coWriters: coWriterEntries,
+              producers: formState.producers,
+              sessionMusicians: formState.sessionMusicians,
+            },
+          });
+        } catch (eventError) {
+          logger.warn("Unable to log songwriting event", { eventError });
+        }
       }
 
       setIsDialogOpen(false);
@@ -1368,6 +1414,30 @@ const Songwriting = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="project-tempo">Target Tempo (BPM)</Label>
+                      <Input
+                        id="project-tempo"
+                        type="number"
+                        min={40}
+                        max={220}
+                        value={typeof formState.tempoBpm === "number" ? formState.tempoBpm : ""}
+                        onChange={(event) => {
+                          const parsed = Number(event.target.value);
+                          setFormState((previous) => ({
+                            ...previous,
+                            tempoBpm: Number.isNaN(parsed)
+                              ? null
+                              : Math.max(40, Math.min(220, parsed)),
+                          }));
+                        }}
+                        placeholder="120"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Logged with your creative notes for future session context.
+                      </p>
                     </div>
                   </TabsContent>
 

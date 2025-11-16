@@ -6,12 +6,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Clock, DollarSign, TrendingUp, Music2, Users, Wallet, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Clock, DollarSign, TrendingUp, Music2, Users, Wallet, AlertCircle, NotebookPen } from "lucide-react";
 import { useCreateRecordingSession, calculateRecordingQuality, ORCHESTRA_OPTIONS, type RecordingProducer } from "@/hooks/useRecordingData";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RehearsalWarningDialog } from "./RehearsalWarningDialog";
+import { useSongwritingEventLogger } from "@/hooks/useSongwritingEventLogger";
+import logger from "@/lib/logger";
 
 interface SessionConfiguratorProps {
   userId: string;
@@ -35,8 +39,15 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     penalty: number;
   } | null>(null);
   const [showRehearsalWarning, setShowRehearsalWarning] = useState(false);
-  
+  const [sessionTempo, setSessionTempo] = useState<number>(song?.tempo_bpm ?? 120);
+  const [annotationMood, setAnnotationMood] = useState('');
+  const [annotationGenre, setAnnotationGenre] = useState(song?.genre ?? '');
+  const [annotationReferences, setAnnotationReferences] = useState('');
+  const [instrumentationNotes, setInstrumentationNotes] = useState('');
+  const [currentTake, setCurrentTake] = useState(1);
+
   const createSession = useCreateRecordingSession();
+  const { logEvent: recordingEventLogger } = useSongwritingEventLogger(userId);
 
   // Fetch band balance, personal cash, and rehearsal data
   useEffect(() => {
@@ -84,8 +95,18 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
     fetchData();
   }, [bandId, userId, song.id]);
 
+  useEffect(() => {
+    setAnnotationGenre(song?.genre ?? '');
+    setSessionTempo(song?.tempo_bpm ?? 120);
+    setAnnotationMood('');
+    setAnnotationReferences('');
+    setInstrumentationNotes('');
+    setCurrentTake(1);
+  }, [song?.id, song?.genre, song?.tempo_bpm]);
+
   const orchestraOption = orchestraSize ? ORCHESTRA_OPTIONS.find(o => o.size === orchestraSize) : undefined;
-  
+  const parseList = (value: string) => value.split(/[\n,]/).map(entry => entry.trim()).filter(Boolean);
+
   // Calculate quality with rehearsal penalty/bonus
   const rehearsalBonus = bandId && rehearsalData ? rehearsalData.penalty : 0;
   
@@ -135,7 +156,7 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
 
   const proceedWithRecording = async () => {
     setShowRehearsalWarning(false);
-    await createSession.mutateAsync({
+    const sessionRecord = await createSession.mutateAsync({
       user_id: userId,
       band_id: bandId || null,
       studio_id: studio.id,
@@ -146,6 +167,38 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
       recording_version: recordingVersion,
       rehearsal_bonus: rehearsalBonus,
     });
+
+    if (recordingEventLogger) {
+      const instrumentation = parseList(instrumentationNotes);
+      const references = parseList(annotationReferences);
+
+      try {
+        await recordingEventLogger.mutateAsync({
+          projectId: song?.songwriting_project_id ?? null,
+          sessionId: sessionRecord?.id ?? null,
+          songId: song.id,
+          eventType: "recording_take",
+          tempoBpm: sessionTempo,
+          chordProgression: song?.chord_progression ?? null,
+          lyricsDraft: song?.lyrics ?? null,
+          instrumentation: instrumentation.length > 0 ? instrumentation : undefined,
+          takeNumber: currentTake,
+          mood: annotationMood || undefined,
+          genre: annotationGenre || song?.genre || undefined,
+          referenceTracks: references,
+          metadata: {
+            studioId: studio.id,
+            studioName: studio.name,
+            producerId: producer.id,
+            recordingVersion: recordingVersion ?? 'standard',
+            orchestraSize: orchestraSize ?? null,
+          },
+        });
+      } catch (error) {
+        logger.warn('Failed to persist recording annotations', { error });
+      }
+    }
+
     onComplete();
   };
 
@@ -271,6 +324,90 @@ export const SessionConfigurator = ({ userId, bandId, studio, song, producer, re
                 Recording with {bandName}
               </p>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <NotebookPen className="h-5 w-5 text-primary" />
+            Session Notes & Annotations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="annotation-mood">Mood</Label>
+              <Input
+                id="annotation-mood"
+                value={annotationMood}
+                onChange={(event) => setAnnotationMood(event.target.value)}
+                placeholder="Euphoric, cinematic, moody..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="annotation-genre">Session Genre Focus</Label>
+              <Input
+                id="annotation-genre"
+                value={annotationGenre}
+                onChange={(event) => setAnnotationGenre(event.target.value)}
+                placeholder={song.genre || 'Alt Pop'}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="session-tempo">Session Tempo (BPM)</Label>
+              <Input
+                id="session-tempo"
+                type="number"
+                min={40}
+                max={220}
+                value={sessionTempo}
+                onChange={(event) => {
+                  const parsed = Number(event.target.value);
+                  setSessionTempo(Number.isNaN(parsed) ? 120 : Math.max(40, Math.min(220, parsed)));
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="take-number">Current Take</Label>
+              <Input
+                id="take-number"
+                type="number"
+                min={1}
+                value={currentTake}
+                onChange={(event) => {
+                  const parsed = Number(event.target.value);
+                  setCurrentTake(Number.isNaN(parsed) ? 1 : Math.max(1, parsed));
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="annotation-references">Reference Tracks & Influences</Label>
+            <Textarea
+              id="annotation-references"
+              value={annotationReferences}
+              onChange={(event) => setAnnotationReferences(event.target.value)}
+              placeholder="Artist - Song, Producer, Film score..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">Separate entries with commas or new lines.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="instrumentation-notes">Instrumentation Notes</Label>
+            <Textarea
+              id="instrumentation-notes"
+              value={instrumentationNotes}
+              onChange={(event) => setInstrumentationNotes(event.target.value)}
+              placeholder="Warm pads, stacked vocals, analog bass, etc."
+              rows={3}
+            />
           </div>
         </CardContent>
       </Card>
