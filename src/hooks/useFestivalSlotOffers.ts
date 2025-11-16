@@ -9,7 +9,7 @@ export const useFestivalSlotOffers = (bandId?: string) => {
   const { data: offers, isLoading } = useQuery({
     queryKey: ["festival-slot-offers", bandId],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("festival_slot_offers")
         .select(`
           *,
@@ -24,14 +24,14 @@ export const useFestivalSlotOffers = (bandId?: string) => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!bandId,
   });
 
   const respondToOfferMutation = useMutation({
     mutationFn: async ({ offerId, status }: { offerId: string; status: "accepted" | "rejected" }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("festival_slot_offers")
         .update({
           status,

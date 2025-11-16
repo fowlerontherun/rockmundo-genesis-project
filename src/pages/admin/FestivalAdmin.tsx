@@ -25,7 +25,7 @@ export default function FestivalAdmin() {
   const { data: festivals } = useQuery({
     queryKey: ["admin-festivals"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("festivals")
         .select(`
           *,
@@ -33,7 +33,7 @@ export default function FestivalAdmin() {
         `)
         .order("start_date", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
