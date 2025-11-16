@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Calendar, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -7,6 +8,7 @@ import { addDays, startOfWeek, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Schedule = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
@@ -20,6 +22,44 @@ const Schedule = () => {
         <div>
           <h1 className="text-xl md:text-2xl font-bold">Schedule</h1>
           <p className="text-xs md:text-sm text-muted-foreground">Plan and manage your activities</p>
+        </div>
+        
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/performance')}>
+            Performance
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/education')}>
+            Education
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/booking/work')}>
+            Life
+          </Button>
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? -1 : -7))}
+          >
+            <ChevronLeft className="h-3 w-3 md:h-4 md:w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentDate(new Date())}
+          >
+            <span className="text-xs md:text-sm">Today</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? 1 : 7))}
+          >
+            <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
+          </Button>
         </div>
         
         <div className="flex gap-2">
@@ -40,31 +80,6 @@ const Schedule = () => {
             <span className="hidden md:inline">Week</span>
           </Button>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? -1 : -7))}
-        >
-          <ChevronLeft className="h-3 w-3 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setCurrentDate(new Date())}
-          className="flex-1"
-        >
-          <span className="text-xs md:text-sm">Today</span>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'day' ? 1 : 7))}
-        >
-          <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
-        </Button>
       </div>
 
       {viewMode === 'day' ? (
