@@ -48,6 +48,7 @@ import {
   Map,
   Crown,
   Video,
+  Radio as RadioIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useNavigate } from "react-router-dom";
@@ -94,6 +95,7 @@ export function AppSidebar() {
         { icon: Music, label: "Song Market", path: "/song-market" },
         { icon: Package, label: "Releases", path: "/release-manager" },
         { icon: Music, label: "Recording", path: "/recording-studio" },
+        { icon: Video, label: "Music Videos", path: "/music-videos" },
         { icon: Music, label: "Radio", path: "/radio" },
       ],
     },
@@ -131,6 +133,7 @@ export function AppSidebar() {
       label: t('social'),
       items: [
         { icon: Users, label: t('band'), path: "/band" },
+        { icon: RadioIcon, label: "Band Chemistry", path: "/chemistry" },
         { icon: Twitter, label: "Twaater", path: "/twaater" },
         { icon: Video, label: "DikCok", path: "/dikcok" },
         { icon: Megaphone, label: t('pr'), path: "/pr" },
