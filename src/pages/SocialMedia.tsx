@@ -1,4 +1,7 @@
 import { Bell, Loader2, MessageSquare, TrendingUp, Video } from "lucide-react";
+import { formatDistanceToNowStrict } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 import {
   Card,
@@ -7,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
@@ -17,9 +21,18 @@ import { TwaaterAccountSetup } from "@/components/twaater/TwaaterAccountSetup";
 import { TwaaterMentionsFeed } from "@/components/twaater/TwaaterMentionsFeed";
 import { useDailyTwaatXP } from "@/hooks/useDailyTwaatXP";
 import { DikCokExperience } from "@/components/dikcok/DikCokExperience";
+import { fetchCommunityFeed, type CommunityFeedPost, type CommunityPostCategory } from "@/lib/api/feed";
+
+const communityCategoryLabels: Record<CommunityPostCategory, string> = {
+  gig_invite: "Jam Invite",
+  challenge: "Challenge",
+  shoutout: "Shoutout",
+};
 
 const SocialMedia = () => {
+  const navigate = useNavigate();
   const { profile } = useGameData();
+  const viewerId = profile?.id || null;
   const { account: twaaterAccount, isLoading: twaaterAccountLoading } =
     useTwaaterAccount("persona", profile?.id);
   const { feed: twaaterFeed, isLoading: twaaterFeedLoading } = useTwaaterFeed(
@@ -27,6 +40,84 @@ const SocialMedia = () => {
   );
   const { twaatsPostedToday, xpEarnedToday, canEarnMore } =
     useDailyTwaatXP(twaaterAccount?.id);
+
+  const {
+    data: spotlightFeed,
+    isPending: spotlightLoading,
+    isError: spotlightError,
+  } = useQuery({
+    queryKey: ["community-feed", "spotlight", viewerId ?? "anonymous"],
+    queryFn: () =>
+      fetchCommunityFeed({
+        viewerId,
+        spotlightOnly: true,
+        limit: 4,
+      }),
+    enabled: !!viewerId,
+  });
+
+  const spotlightPosts = spotlightFeed?.posts ?? [];
+
+  const getCategoryLabel = (category?: string | null) => {
+    if (!category) {
+      return null;
+    }
+
+    return communityCategoryLabels[category as CommunityPostCategory] ?? null;
+  };
+
+  const handleJoinJam = (sessionId?: string | null) => {
+    const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : "";
+    navigate(`/jams${query}`);
+  };
+
+  const handleSupportBand = () => {
+    const hasBandOperations = (profile?.fans ?? 0) > 0;
+    navigate(hasBandOperations ? "/band" : "/fans");
+  };
+
+  const renderSpotlightPost = (post: CommunityFeedPost) => {
+    const headline = post.content.split("\n")[0]?.trim() || "Community update";
+    const createdAt = post.created_at ? new Date(post.created_at) : null;
+    const categoryLabel = getCategoryLabel(post.category);
+    const metadata = (post.metadata && typeof post.metadata === "object" ? post.metadata : {}) as Record<string, any>;
+    const sessionId = typeof metadata.sessionId === "string" ? metadata.sessionId : null;
+
+    let ctaLabel = "View details";
+    let ctaVariant: "default" | "secondary" | "outline" = "default";
+    let ctaAction = () => navigate("/community/feed");
+
+    if (post.category === "gig_invite") {
+      ctaLabel = "Join Jam";
+      ctaVariant = "default";
+      ctaAction = () => handleJoinJam(sessionId);
+    } else if (post.category === "shoutout") {
+      ctaLabel = "Support Band";
+      ctaVariant = "outline";
+      ctaAction = () => handleSupportBand();
+    } else if (post.category === "challenge") {
+      ctaLabel = "Join Challenge";
+      ctaVariant = "secondary";
+    }
+
+    return (
+      <div key={post.id} className="space-y-2 rounded-lg border p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold leading-tight">{headline}</p>
+          {categoryLabel && <span className="text-xs font-semibold uppercase text-muted-foreground">{categoryLabel}</span>}
+        </div>
+        {createdAt && (
+          <p className="text-xs text-muted-foreground">
+            {formatDistanceToNowStrict(createdAt, { addSuffix: true })}
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">{post.content}</p>
+        <Button size="sm" variant={ctaVariant} className="w-full" onClick={ctaAction}>
+          {ctaLabel}
+        </Button>
+      </div>
+    );
+  };
 
   if (!profile) {
     return (
@@ -119,6 +210,40 @@ const SocialMedia = () => {
                     <TwaaterMentionsFeed accountId={twaaterAccount.id} />
                   </TabsContent>
                 </Tabs>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Community Spotlight</CardTitle>
+                    <CardDescription>Catch jam invites and challenges without leaving Twaater.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {spotlightLoading && (
+                      <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, index) => (
+                          <div key={`spotlight-skeleton-${index}`} className="space-y-2 rounded-lg border p-3">
+                            <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                            <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                            <div className="h-8 w-full animate-pulse rounded bg-muted" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {spotlightError && (
+                      <p className="text-sm text-muted-foreground">Unable to load spotlighted posts right now.</p>
+                    )}
+
+                    {!spotlightLoading && !spotlightError && spotlightPosts.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No spotlighted community events yet.</p>
+                    )}
+
+                    {!spotlightLoading && !spotlightError && spotlightPosts.length > 0 && (
+                      <div className="space-y-3">
+                        {spotlightPosts.map((post) => renderSpotlightPost(post))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="lg:col-span-4 space-y-6">

@@ -2,14 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import {
   useInfiniteQuery,
+  useQuery,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +22,7 @@ import {
   toggleCommunityReaction,
   type CommunityFeedPage,
   type CommunityFeedPost,
+  type CommunityPostCategory,
   type ReactionType,
 } from "@/lib/api/feed";
 
@@ -32,16 +36,52 @@ const reactionOptions: Array<{ type: ReactionType; label: string; emoji: string 
 
 const INITIAL_QUERY_KEY = "community-feed";
 
+const categoryLabels: Record<CommunityPostCategory, string> = {
+  gig_invite: "Jam Invite",
+  challenge: "Challenge",
+  shoutout: "Shoutout",
+};
+
+type ComposerPreset = {
+  key: string;
+  label: string;
+  description: string;
+  template: string;
+  category: CommunityPostCategory;
+};
+
+const composerPresets: ComposerPreset[] = [
+  {
+    key: "jam-invite",
+    label: "Jam Invite",
+    description: "Rally players for a pop-up session",
+    category: "gig_invite",
+    template:
+      "🎸 Jam invite: We need one more guitarist + drummer for tonight's rooftop session. Drop your rig + vibe if you can make it!",
+  },
+  {
+    key: "challenge",
+    label: "Challenge",
+    description: "Launch a 48-hour fan or band challenge",
+    category: "challenge",
+    template:
+      "🔥 Challenge alert: Flip our latest single into a new vibe by Sunday night. Share progress clips + tag teammates to earn rep.",
+  },
+];
+
 const CommunityFeedPage = () => {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useGameData();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [composerValue, setComposerValue] = useState("");
+  const [composerCategory, setComposerCategory] = useState<CommunityPostCategory | null>(null);
   const [isPosting, setIsPosting] = useState(false);
 
   const viewerId = profile?.id ?? null;
+  const composerCategoryLabel = composerCategory ? categoryLabels[composerCategory] : null;
 
   const {
     data,
@@ -71,6 +111,7 @@ const CommunityFeedPage = () => {
   );
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -95,6 +136,19 @@ const CommunityFeedPage = () => {
       observer.disconnect();
     };
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, posts.length]);
+
+  const { data: challengeWidgetData, isPending: challengeWidgetLoading } = useQuery({
+    queryKey: [INITIAL_QUERY_KEY, "trending-challenges", viewerId ?? "anonymous"],
+    queryFn: () =>
+      fetchCommunityFeed({
+        limit: 3,
+        viewerId,
+        categories: ["challenge"],
+      }),
+    enabled: !!viewerId && !authLoading && !profileLoading,
+  });
+
+  const trendingChallenges = challengeWidgetData?.posts ?? [];
 
   const updateCachedPost = (updatedPost: CommunityFeedPost) => {
     queryClient.setQueryData<InfiniteData<CommunityFeedPage>>(
@@ -153,6 +207,91 @@ const CommunityFeedPage = () => {
     );
   };
 
+  const getCategoryLabel = (category?: string | null) => {
+    if (!category) {
+      return null;
+    }
+
+    return categoryLabels[category as CommunityPostCategory] ?? null;
+  };
+
+  const handleApplyPreset = (preset: ComposerPreset) => {
+    setComposerValue(preset.template);
+    setComposerCategory(preset.category);
+    composerTextareaRef.current?.focus();
+  };
+
+  const handleJoinJam = (sessionId?: string | null) => {
+    const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : "";
+    navigate(`/jams${query}`);
+  };
+
+  const handleSupportBand = () => {
+    const hasBandOperations = (profile?.fans ?? 0) > 0;
+    navigate(hasBandOperations ? "/band" : "/fans");
+  };
+
+  const handleJoinChallenge = (challengePost: CommunityFeedPost) => {
+    const title = challengePost.content.split("\n")[0]?.trim() || "this challenge";
+    const responseTemplate = `Joining ${title} with a fresh take...`;
+    setComposerValue(responseTemplate);
+    setComposerCategory("challenge");
+    composerTextareaRef.current?.focus();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const renderTrendingChallenges = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Top Challenges</CardTitle>
+        <CardDescription>Show up for the collabs everyone is buzzing about.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {challengeWidgetLoading && (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={`challenge-skeleton-${index}`} className="space-y-2 rounded-lg border p-3">
+                <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                <div className="h-8 w-full animate-pulse rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!challengeWidgetLoading && trendingChallenges.length === 0 && (
+          <p className="text-sm text-muted-foreground">No spotlighted challenges yet. Be the first to start one!</p>
+        )}
+
+        {!challengeWidgetLoading &&
+          trendingChallenges.length > 0 &&
+          trendingChallenges.map((challenge) => {
+            const createdAt = challenge.created_at ? new Date(challenge.created_at) : null;
+            const title = challenge.content.split("\n")[0]?.trim() || "Community challenge";
+
+            return (
+              <div key={challenge.id} className="space-y-2 rounded-lg border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold leading-tight">{title}</p>
+                  <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
+                    Challenge
+                  </Badge>
+                </div>
+                {createdAt && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNowStrict(createdAt, { addSuffix: true })}
+                  </p>
+                )}
+                <Button size="sm" className="w-full" onClick={() => handleJoinChallenge(challenge)}>
+                  Share your entry
+                </Button>
+              </div>
+            );
+          })}
+      </CardContent>
+    </Card>
+  );
+
   const handleSubmitPost = async () => {
     if (!viewerId) {
       toast({
@@ -178,9 +317,11 @@ const CommunityFeedPage = () => {
       const newPost = await createCommunityPost({
         authorId: viewerId,
         content,
+        category: composerCategory,
       });
 
       setComposerValue("");
+      setComposerCategory(null);
       prependCachedPost(newPost);
       toast({
         title: "Posted to the community",
@@ -240,20 +381,40 @@ const CommunityFeedPage = () => {
         <CardTitle>Share with the community</CardTitle>
         <CardDescription>Post your latest wins, challenges, or crowd highlights.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <Textarea
           placeholder="Announce new releases, celebrate fan milestones, or rally help for an upcoming gig."
           value={composerValue}
           onChange={(event) => setComposerValue(event.target.value)}
           rows={4}
           maxLength={500}
+          ref={composerTextareaRef}
         />
-      </CardContent>
-      <CardFooter className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {composerValue.length} / 500 characters
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Quick presets</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {composerPresets.map((preset) => (
+              <Button key={preset.key} type="button" variant="secondary" size="sm" onClick={() => handleApplyPreset(preset)}>
+                {preset.label}
+              </Button>
+            ))}
+          </div>
         </div>
-        <Button onClick={handleSubmitPost} disabled={isPosting || composerValue.trim().length === 0}>
+      </CardContent>
+      <CardFooter className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="w-full space-y-2 text-sm text-muted-foreground">
+          <div>{composerValue.length} / 500 characters</div>
+          {composerCategoryLabel && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground/80">Tagged:</span>
+              <Badge variant="secondary">{composerCategoryLabel}</Badge>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setComposerCategory(null)}>
+                Clear tag
+              </Button>
+            </div>
+          )}
+        </div>
+        <Button className="w-full sm:w-auto" onClick={handleSubmitPost} disabled={isPosting || composerValue.trim().length === 0}>
           {isPosting ? "Posting..." : "Post update"}
         </Button>
       </CardFooter>
@@ -264,6 +425,30 @@ const CommunityFeedPage = () => {
     const displayName = post.author?.display_name || post.author?.username || "Unknown artist";
     const username = post.author?.username ? `@${post.author.username}` : "@unknown";
     const createdAt = (post as any).created_at ? new Date((post as any).created_at) : null;
+    const categoryLabel = getCategoryLabel((post as any).category);
+    const metadata = (post.metadata && typeof post.metadata === "object" ? post.metadata : {}) as Record<string, any>;
+    const sessionId = typeof metadata.sessionId === "string" ? metadata.sessionId : null;
+
+    let postCta: JSX.Element | null = null;
+    if ((post as any).category === "gig_invite") {
+      postCta = (
+        <Button size="sm" onClick={() => handleJoinJam(sessionId)}>
+          Join Jam
+        </Button>
+      );
+    } else if ((post as any).category === "challenge") {
+      postCta = (
+        <Button size="sm" variant="secondary" onClick={() => handleJoinChallenge(post)}>
+          Join Challenge
+        </Button>
+      );
+    } else if ((post as any).category === "shoutout") {
+      postCta = (
+        <Button size="sm" variant="outline" onClick={() => handleSupportBand()}>
+          Support Band
+        </Button>
+      );
+    }
 
     return (
       <Card key={(post as any).id}>
@@ -281,30 +466,34 @@ const CommunityFeedPage = () => {
               {username}
               {createdAt && ` • ${formatDistanceToNowStrict(createdAt, { addSuffix: true })}`}
             </CardDescription>
+            {categoryLabel && <Badge className="mt-2" variant="secondary">{categoryLabel}</Badge>}
           </div>
         </CardHeader>
         <CardContent>
           <p className="whitespace-pre-wrap leading-relaxed text-sm text-foreground/90">{(post as any).content}</p>
         </CardContent>
-        <CardFooter className="flex flex-wrap items-center gap-2">
-          {reactionOptions.map((reaction) => {
-            const isActive = post.viewerReaction === reaction.type;
-            const count = post.reactionCounts[reaction.type] ?? 0;
+        <CardFooter className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {reactionOptions.map((reaction) => {
+              const isActive = post.viewerReaction === reaction.type;
+              const count = post.reactionCounts[reaction.type] ?? 0;
 
-            return (
-              <Button
-                key={reaction.type}
-                variant={isActive ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleToggleReaction((post as any).id, reaction.type)}
-              >
-                <span role="img" aria-label={reaction.label}>
-                  {reaction.emoji}
-                </span>
-                {count > 0 && <span className="ml-1 text-xs font-semibold">{count}</span>}
-              </Button>
-            );
-          })}
+              return (
+                <Button
+                  key={reaction.type}
+                  variant={isActive ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleToggleReaction((post as any).id, reaction.type)}
+                >
+                  <span role="img" aria-label={reaction.label}>
+                    {reaction.emoji}
+                  </span>
+                  {count > 0 && <span className="ml-1 text-xs font-semibold">{count}</span>}
+                </Button>
+              );
+            })}
+          </div>
+          {postCta && <div className="flex flex-wrap gap-2">{postCta}</div>}
         </CardFooter>
       </Card>
     );
@@ -334,65 +523,73 @@ const CommunityFeedPage = () => {
   }
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-6 py-10">
-      {renderComposer()}
-
-      {isError && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Unable to load feed</CardTitle>
-            <CardDescription>
-              {(error as Error)?.message ?? "We could not connect to the feed. Try refreshing in a moment."}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button variant="outline" onClick={() => refetch()}>
-              Retry
-            </Button>
-          </CardFooter>
-        </Card>
-      )}
-
-      {isPending && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Loading feed</CardTitle>
-            <CardDescription>Fetching the latest backstage chatter...</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
-              <div className="h-24 animate-pulse rounded bg-muted" />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {isSuccess && posts.length === 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>No posts yet</CardTitle>
-            <CardDescription>Break the silence with the first update from your band.</CardDescription>
-          </CardHeader>
-        </Card>
-      )}
-
-      {isSuccess && posts.length > 0 && (
+    <div className="container mx-auto max-w-6xl py-10">
+      <div className="grid gap-8 lg:grid-cols-[2fr,1fr]">
         <div className="space-y-6">
-          {posts.map((post) => renderPost(post))}
-        </div>
-      )}
+          {renderComposer()}
 
-      <div ref={sentinelRef} />
+          {isError && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Unable to load feed</CardTitle>
+                <CardDescription>
+                  {(error as Error)?.message ?? "We could not connect to the feed. Try refreshing in a moment."}
+                </CardDescription>
+              </CardHeader>
+              <CardFooter>
+                <Button variant="outline" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
 
-      {hasNextPage && (
-        <div className="flex justify-center">
-          <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? "Loading more..." : "Load more"}
-          </Button>
+          {isPending && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Loading feed</CardTitle>
+                <CardDescription>Fetching the latest backstage chatter...</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                  <div className="h-24 animate-pulse rounded bg-muted" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isSuccess && posts.length === 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>No posts yet</CardTitle>
+                <CardDescription>Break the silence with the first update from your band.</CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
+          {isSuccess && posts.length > 0 && (
+            <div className="space-y-6">
+              {posts.map((post) => renderPost(post))}
+            </div>
+          )}
+
+          <div ref={sentinelRef} />
+
+          {hasNextPage && (
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                {isFetchingNextPage ? "Loading more..." : "Load more"}
+              </Button>
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="space-y-6">
+          {renderTrendingChallenges()}
+        </aside>
+      </div>
     </div>
   );
 };

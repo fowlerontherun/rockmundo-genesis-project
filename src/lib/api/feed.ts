@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 
 export type ReactionType = "like" | "love" | "fire" | "wow" | "laugh";
+export type CommunityPostCategory = "gig_invite" | "challenge" | "shoutout";
+type CommunityPostMetadata = Record<string, any> | null;
 
 const REACTION_TYPES: ReactionType[] = ["like", "love", "fire", "wow", "laugh"];
 const DEFAULT_PAGE_SIZE = 15;
@@ -10,7 +12,15 @@ const DEFAULT_PAGE_SIZE = 15;
 const isReactionType = (value: string | null | undefined): value is ReactionType =>
   value !== null && value !== undefined && REACTION_TYPES.includes(value as ReactionType);
 
-export type CommunityPostRecord = Tables<"community_posts">;
+type BaseCommunityPostRecord = Tables<"community_posts">;
+
+export type CommunityPostRecord = BaseCommunityPostRecord & {
+  category?: CommunityPostCategory | null;
+  tags?: string[] | null;
+  metadata?: CommunityPostMetadata;
+  is_spotlight?: boolean | null;
+  spotlight_rank?: number | null;
+};
 export type CommunityPostReactionRecord = Tables<"community_post_reactions">;
 
 type CommunityPostAuthor = {
@@ -31,12 +41,15 @@ export interface CommunityFeedPost extends CommunityPostRecord {
   reactionCounts: Record<ReactionType, number>;
   totalReactions: number;
   viewerReaction: ReactionType | null;
+  metadata: CommunityPostMetadata;
 }
 
 export interface FetchCommunityFeedParams {
   limit?: number;
   cursor?: string | null;
   viewerId?: string | null;
+  categories?: CommunityPostCategory[];
+  spotlightOnly?: boolean;
 }
 
 export interface CommunityFeedPage {
@@ -48,6 +61,9 @@ export interface CreateCommunityPostInput {
   authorId: string;
   content: string;
   mediaUrl?: string | null;
+  category?: CommunityPostCategory | null;
+  metadata?: CommunityPostMetadata;
+  isSpotlight?: boolean | null;
 }
 
 export interface ToggleCommunityReactionInput {
@@ -87,6 +103,7 @@ const mapQueryRowToFeedPost = (
     reactionCounts,
     totalReactions: reactions.length,
     viewerReaction,
+    metadata: (typeof row.metadata === "object" ? row.metadata : null) as CommunityPostMetadata,
   };
 };
 
@@ -95,6 +112,11 @@ const withAuthorAndReactionsSelect = `
   author_id,
   content,
   media_url,
+  category,
+  tags,
+  metadata,
+  is_spotlight,
+  spotlight_rank,
   created_at,
   updated_at,
   author:profiles (
@@ -116,13 +138,25 @@ const withAuthorAndReactionsSelect = `
 export const fetchCommunityFeed = async (
   params: FetchCommunityFeedParams = {},
 ): Promise<CommunityFeedPage> => {
-  const { limit = DEFAULT_PAGE_SIZE, cursor, viewerId } = params;
+  const { limit = DEFAULT_PAGE_SIZE, cursor, viewerId, categories, spotlightOnly } = params;
 
   let query = supabase
     .from("community_posts")
     .select(withAuthorAndReactionsSelect)
-    .order("created_at", { ascending: false })
     .limit(limit + 1);
+
+  if (spotlightOnly) {
+    query = query
+      .eq("is_spotlight", true)
+      .order("spotlight_rank", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false });
+  } else {
+    query = query.order("created_at", { ascending: false });
+  }
+
+  if (categories && categories.length > 0) {
+    query = query.in("category", categories);
+  }
 
   if (cursor) {
     query = query.lt("created_at", cursor);
@@ -172,7 +206,7 @@ export const createCommunityPost = async (
   input: CreateCommunityPostInput,
   viewerId?: string | null,
 ): Promise<CommunityFeedPost> => {
-  const { authorId, content, mediaUrl = null } = input;
+  const { authorId, content, mediaUrl = null, category = null, metadata = null, isSpotlight = null } = input;
   const trimmedContent = content.trim();
 
   if (!trimmedContent) {
@@ -189,6 +223,9 @@ export const createCommunityPost = async (
       author_id: authorId,
       content: trimmedContent,
       media_url: mediaUrl,
+      category,
+      metadata,
+      is_spotlight: isSpotlight,
     })
     .select(withAuthorAndReactionsSelect)
     .single();
