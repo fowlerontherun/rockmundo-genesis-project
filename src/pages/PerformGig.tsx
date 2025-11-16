@@ -10,6 +10,7 @@ import { Music, Calendar, MapPin, ArrowLeft, Users, DollarSign, PlayCircle, Flag
 import { RealtimeGigViewer } from '@/components/gig/RealtimeGigViewer';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
 import { GigPreparationChecklist } from '@/components/gig/GigPreparationChecklist';
+import { GigSetlistSelector } from '@/components/gig/GigSetlistSelector';
 import { useRealtimeGigAdvancement } from '@/hooks/useRealtimeGigAdvancement';
 import { useManualGigStart } from '@/hooks/useManualGigStart';
 import type { Database } from '@/lib/supabase-types';
@@ -38,6 +39,7 @@ export default function PerformGig() {
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
   const [timeUntilReport, setTimeUntilReport] = useState<string | null>(null);
+  const [bandSetlists, setBandSetlists] = useState<any[]>([]);
 
   const { data: bandGearData, isLoading: bandGearLoading } = useBandGearEffects(gig?.band_id ?? null, {
     enabled: !!gig?.band_id,
@@ -67,6 +69,15 @@ export default function PerformGig() {
         .single();
 
       setGig(gigData as any);
+
+      // Load band setlists for setlist selector
+      const { data: setlistsData } = await supabase
+        .from('setlists')
+        .select('id, name, song_count')
+        .eq('band_id', gigData.band_id)
+        .order('created_at', { ascending: false });
+      
+      setBandSetlists(setlistsData || []);
 
       if (gigData.setlist_id) {
         const [songsRes, rehearsalsRes, equipmentRes, crewRes, bandRes] = await Promise.all([
@@ -399,6 +410,17 @@ export default function PerformGig() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Setlist Selector - only for scheduled gigs before they start */}
+      {gig.status === 'scheduled' && bandSetlists.length > 0 && (
+        <GigSetlistSelector
+          gigId={gig.id}
+          bandId={gig.band_id}
+          currentSetlistId={gig.setlist_id}
+          setlists={bandSetlists}
+          onSetlistChanged={loadGig}
+        />
+      )}
 
       {/* Preparation Checklist */}
       {setlistSongs.length > 0 && (
