@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useGameData } from "@/hooks/useGameData";
+import { Twitter } from "lucide-react";
 import logo from "@/assets/rockmundo-new-logo.png";
 import {
   Sidebar,
@@ -117,6 +118,7 @@ export function AppSidebar() {
       label: t('social'),
       items: [
         { icon: Users, label: t('band'), path: "/band" },
+        { icon: Twitter, label: "Twaater", path: "/twaater" },
         { icon: Megaphone, label: t('pr'), path: "/pr" },
         { icon: Share2, label: t('social'), path: "/social" },
         { icon: HeartHandshake, label: t('relationships'), path: "/relationships" },

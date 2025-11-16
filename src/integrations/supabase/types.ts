@@ -8370,6 +8370,8 @@ export type Database = {
       }
       twaater_accounts: {
         Row: {
+          banner_url: string | null
+          bio: string | null
           created_at: string | null
           display_name: string
           fame_score: number | null
@@ -8377,12 +8379,17 @@ export type Database = {
           following_count: number | null
           handle: string
           id: string
+          location: string | null
           owner_id: string
           owner_type: Database["public"]["Enums"]["twaater_owner_type"]
+          profile_views: number | null
           updated_at: string | null
           verified: boolean | null
+          website_url: string | null
         }
         Insert: {
+          banner_url?: string | null
+          bio?: string | null
           created_at?: string | null
           display_name: string
           fame_score?: number | null
@@ -8390,12 +8397,17 @@ export type Database = {
           following_count?: number | null
           handle: string
           id?: string
+          location?: string | null
           owner_id: string
           owner_type: Database["public"]["Enums"]["twaater_owner_type"]
+          profile_views?: number | null
           updated_at?: string | null
           verified?: boolean | null
+          website_url?: string | null
         }
         Update: {
+          banner_url?: string | null
+          bio?: string | null
           created_at?: string | null
           display_name?: string
           fame_score?: number | null
@@ -8403,12 +8415,59 @@ export type Database = {
           following_count?: number | null
           handle?: string
           id?: string
+          location?: string | null
           owner_id?: string
           owner_type?: Database["public"]["Enums"]["twaater_owner_type"]
+          profile_views?: number | null
           updated_at?: string | null
           verified?: boolean | null
+          website_url?: string | null
         }
         Relationships: []
+      }
+      twaater_bot_accounts: {
+        Row: {
+          account_id: string
+          bot_type: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_posted_at: string | null
+          personality_traits: Json | null
+          posting_frequency: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          bot_type: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_posted_at?: string | null
+          personality_traits?: Json | null
+          posting_frequency?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          bot_type?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_posted_at?: string | null
+          personality_traits?: Json | null
+          posting_frequency?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_bot_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       twaater_daily_awards: {
         Row: {
@@ -8576,6 +8635,42 @@ export type Database = {
           weight_base?: number | null
         }
         Relationships: []
+      }
+      twaater_profile_views: {
+        Row: {
+          id: string
+          viewed_account_id: string
+          viewed_at: string | null
+          viewer_account_id: string
+        }
+        Insert: {
+          id?: string
+          viewed_account_id: string
+          viewed_at?: string | null
+          viewer_account_id: string
+        }
+        Update: {
+          id?: string
+          viewed_account_id?: string
+          viewed_at?: string | null
+          viewer_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twaater_profile_views_viewed_account_id_fkey"
+            columns: ["viewed_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twaater_profile_views_viewer_account_id_fkey"
+            columns: ["viewer_account_id"]
+            isOneToOne: false
+            referencedRelation: "twaater_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       twaater_reactions: {
         Row: {
@@ -9197,7 +9292,7 @@ export type Database = {
         | "backfire"
         | "algo"
         | "serendipity"
-      twaater_owner_type: "persona" | "band"
+      twaater_owner_type: "persona" | "band" | "bot"
       twaater_visibility: "public" | "followers"
     }
     CompositeTypes: {
@@ -9344,7 +9439,7 @@ export const Constants = {
         "algo",
         "serendipity",
       ],
-      twaater_owner_type: ["persona", "band"],
+      twaater_owner_type: ["persona", "band", "bot"],
       twaater_visibility: ["public", "followers"],
     },
   },
