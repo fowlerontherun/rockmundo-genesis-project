@@ -1131,7 +1131,29 @@ export type Database = {
           trend_change?: number | null
           weeks_on_chart?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chart_entries_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_entries_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_entries_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_messages: {
         Row: {
