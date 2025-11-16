@@ -176,6 +176,86 @@ const formatDateRange = (start?: string | null, end?: string | null) => {
   return `Until ${format(end!)}`;
 };
 
+const createPopupContainer = () => {
+  const container = document.createElement("div");
+  container.style.cssText = "font-family: var(--font-sans, system-ui); min-width: 220px;";
+  return container;
+};
+
+const appendPopupRow = (container: HTMLDivElement, text: string, styles: string) => {
+  const row = document.createElement("div");
+  row.style.cssText = styles;
+  row.textContent = text;
+  container.appendChild(row);
+};
+
+const createVenuePopupContent = (venue: CityVenue) => {
+  const container = createPopupContainer();
+
+  appendPopupRow(
+    container,
+    venue.name ?? "Unnamed Venue",
+    "font-size: 15px; font-weight: 600; color: hsl(var(--foreground));",
+  );
+
+  const venueMeta = `${toTitleCase(venue.venueType) ?? "Venue"}${
+    venue.district ? ` · ${venue.district}` : ""
+  }`;
+  appendPopupRow(
+    container,
+    venueMeta,
+    "font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 4px;",
+  );
+
+  appendPopupRow(
+    container,
+    `Capacity ${formatNumber(venue.capacity)} · Prestige ${formatNumber(venue.prestigeLevel)}`,
+    "font-size: 12px; margin-top: 6px; color: hsl(var(--foreground));",
+  );
+
+  if (venue.location) {
+    appendPopupRow(
+      container,
+      venue.location,
+      "font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 6px;",
+    );
+  }
+
+  return container;
+};
+
+const createEventPopupContent = (event: CityEvent) => {
+  const container = createPopupContainer();
+
+  appendPopupRow(
+    container,
+    event.title ?? "Event",
+    "font-size: 15px; font-weight: 600; color: hsl(var(--foreground));",
+  );
+
+  appendPopupRow(
+    container,
+    `${toTitleCase(event.type)} · ${event.isActive ? "Active" : "Past"}`,
+    "font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 4px;",
+  );
+
+  if (event.description) {
+    appendPopupRow(
+      container,
+      event.description,
+      "font-size: 12px; margin-top: 6px; color: hsl(var(--muted-foreground));",
+    );
+  }
+
+  appendPopupRow(
+    container,
+    formatDateRange(event.startDate, event.endDate),
+    "font-size: 12px; margin-top: 6px; color: hsl(var(--foreground));",
+  );
+
+  return container;
+};
+
 export const CityMap = ({
   cityName,
   country,
@@ -294,26 +374,8 @@ export const CityMap = ({
         }
 
         const markerElement = createVenueMarker(venue);
-        const popupHtml = `
-          <div style="font-family: var(--font-sans, system-ui); min-width: 220px;">
-            <div style="font-size: 15px; font-weight: 600; color: hsl(var(--foreground));">${venue.name}</div>
-            <div style="font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 4px;">
-              ${toTitleCase(venue.venueType) ?? "Venue"}${
-                venue.district ? ` · ${venue.district}` : ""
-              }
-            </div>
-            <div style="font-size: 12px; margin-top: 6px; color: hsl(var(--foreground));">
-              Capacity ${formatNumber(venue.capacity)} · Prestige ${formatNumber(venue.prestigeLevel)}
-            </div>
-            ${
-              venue.location
-                ? `<div style="font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 6px;">${venue.location}</div>`
-                : ""
-            }
-          </div>
-        `;
-
-        const popup = new mapboxgl.Popup({ offset: 16, closeButton: false }).setHTML(popupHtml);
+        const popupContent = createVenuePopupContent(venue);
+        const popup = new mapboxgl.Popup({ offset: 16, closeButton: false }).setDOMContent(popupContent);
 
         const marker = new mapboxgl.Marker({ element: markerElement, anchor: "bottom" })
           .setLngLat([venue.coordinates.lng, venue.coordinates.lat])
@@ -332,24 +394,8 @@ export const CityMap = ({
         }
 
         const markerElement = createEventMarker(event);
-        const popupHtml = `
-          <div style="font-family: var(--font-sans, system-ui); min-width: 220px;">
-            <div style="font-size: 15px; font-weight: 600; color: hsl(var(--foreground));">${event.title}</div>
-            <div style="font-size: 12px; color: hsl(var(--muted-foreground)); margin-top: 4px;">
-              ${toTitleCase(event.type)} · ${event.isActive ? "Active" : "Past"}
-            </div>
-            ${
-              event.description
-                ? `<div style="font-size: 12px; margin-top: 6px; color: hsl(var(--muted-foreground));">${event.description}</div>`
-                : ""
-            }
-            <div style="font-size: 12px; margin-top: 6px; color: hsl(var(--foreground));">
-              ${formatDateRange(event.startDate, event.endDate)}
-            </div>
-          </div>
-        `;
-
-        const popup = new mapboxgl.Popup({ offset: 16, closeButton: false }).setHTML(popupHtml);
+        const popupContent = createEventPopupContent(event);
+        const popup = new mapboxgl.Popup({ offset: 16, closeButton: false }).setDOMContent(popupContent);
 
         const marker = new mapboxgl.Marker({ element: markerElement, anchor: "center" })
           .setLngLat([event.coordinates.lng, event.coordinates.lat])
