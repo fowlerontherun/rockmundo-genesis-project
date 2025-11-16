@@ -127,6 +127,13 @@ export type Database = {
             foreignKeyName: "admin_song_gifts_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "admin_song_gifts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -834,6 +841,13 @@ export type Database = {
             foreignKeyName: "band_rehearsals_selected_song_id_fkey"
             columns: ["selected_song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "band_rehearsals_selected_song_id_fkey"
+            columns: ["selected_song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -886,6 +900,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "band_song_familiarity_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -2611,6 +2632,13 @@ export type Database = {
             foreignKeyName: "gig_song_performances_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "gig_song_performances_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -3080,6 +3108,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "artist_label_contracts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_releases_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
           },
           {
             foreignKeyName: "label_releases_release_id_fkey"
@@ -3625,6 +3660,13 @@ export type Database = {
             foreignKeyName: "marketplace_listings_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -3680,6 +3722,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "marketplace_transactions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -4030,6 +4079,13 @@ export type Database = {
             foreignKeyName: "music_video_configs_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "music_video_configs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -4090,6 +4146,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "music_videos_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -5853,6 +5916,13 @@ export type Database = {
             foreignKeyName: "radio_playlists_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "radio_playlists_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -5918,6 +5988,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "radio_plays_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -6104,6 +6181,13 @@ export type Database = {
             foreignKeyName: "radio_submissions_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "radio_submissions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -6274,6 +6358,13 @@ export type Database = {
             foreignKeyName: "recording_sessions_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "recording_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -6394,6 +6485,13 @@ export type Database = {
             foreignKeyName: "release_formats_release_id_fkey"
             columns: ["release_id"]
             isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "release_formats_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
             referencedRelation: "releases"
             referencedColumns: ["id"]
           },
@@ -6470,6 +6568,13 @@ export type Database = {
             foreignKeyName: "release_songs_release_id_fkey"
             columns: ["release_id"]
             isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "release_songs_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
             referencedRelation: "releases"
             referencedColumns: ["id"]
           },
@@ -6478,6 +6583,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "release_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -6494,8 +6606,13 @@ export type Database = {
           artist_name: string
           artwork_url: string | null
           band_id: string | null
+          cassette_sales: number | null
           catalog_number: string | null
+          cd_sales: number | null
+          country: string | null
           created_at: string
+          digital_sales: number | null
+          format_type: string | null
           id: string
           manufacturing_complete_at: string | null
           release_status: string
@@ -6504,15 +6621,22 @@ export type Database = {
           title: string
           total_cost: number | null
           total_revenue: number | null
+          total_units_sold: number | null
           updated_at: string
           user_id: string | null
+          vinyl_sales: number | null
         }
         Insert: {
           artist_name: string
           artwork_url?: string | null
           band_id?: string | null
+          cassette_sales?: number | null
           catalog_number?: string | null
+          cd_sales?: number | null
+          country?: string | null
           created_at?: string
+          digital_sales?: number | null
+          format_type?: string | null
           id?: string
           manufacturing_complete_at?: string | null
           release_status?: string
@@ -6521,15 +6645,22 @@ export type Database = {
           title: string
           total_cost?: number | null
           total_revenue?: number | null
+          total_units_sold?: number | null
           updated_at?: string
           user_id?: string | null
+          vinyl_sales?: number | null
         }
         Update: {
           artist_name?: string
           artwork_url?: string | null
           band_id?: string | null
+          cassette_sales?: number | null
           catalog_number?: string | null
+          cd_sales?: number | null
+          country?: string | null
           created_at?: string
+          digital_sales?: number | null
+          format_type?: string | null
           id?: string
           manufacturing_complete_at?: string | null
           release_status?: string
@@ -6538,8 +6669,10 @@ export type Database = {
           title?: string
           total_cost?: number | null
           total_revenue?: number | null
+          total_units_sold?: number | null
           updated_at?: string
           user_id?: string | null
+          vinyl_sales?: number | null
         }
         Relationships: [
           {
@@ -6826,6 +6959,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "setlist_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -7289,6 +7429,13 @@ export type Database = {
             foreignKeyName: "song_market_listings_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_market_listings_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -7347,6 +7494,13 @@ export type Database = {
             foreignKeyName: "song_rehearsals_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_rehearsals_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
             referencedRelation: "songs"
             referencedColumns: ["id"]
           },
@@ -7355,10 +7509,12 @@ export type Database = {
       song_releases: {
         Row: {
           band_id: string | null
+          country: string | null
           created_at: string
           id: string
           is_active: boolean
           platform_id: string
+          platform_name: string | null
           release_date: string
           release_id: string | null
           release_type: string
@@ -7370,10 +7526,12 @@ export type Database = {
         }
         Insert: {
           band_id?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           platform_id: string
+          platform_name?: string | null
           release_date?: string
           release_id?: string | null
           release_type?: string
@@ -7385,10 +7543,12 @@ export type Database = {
         }
         Update: {
           band_id?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           platform_id?: string
+          platform_name?: string | null
           release_date?: string
           release_id?: string | null
           release_type?: string
@@ -7417,6 +7577,13 @@ export type Database = {
             foreignKeyName: "song_releases_release_id_fkey"
             columns: ["release_id"]
             isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "song_releases_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
             referencedRelation: "releases"
             referencedColumns: ["id"]
           },
@@ -7425,6 +7592,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_releases_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -7470,6 +7644,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "song_sales_royalties_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -7759,6 +7940,13 @@ export type Database = {
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "songwriting_projects_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
             referencedColumns: ["song_id"]
           },
           {
@@ -9259,6 +9447,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chart_albums: {
+        Row: {
+          band_name: string | null
+          cassette_sales: number | null
+          cd_sales: number | null
+          country: string | null
+          created_at: string | null
+          digital_sales: number | null
+          format_type: string | null
+          release_id: string | null
+          release_status: string | null
+          title: string | null
+          total_revenue: number | null
+          total_units_sold: number | null
+          vinyl_sales: number | null
+        }
+        Relationships: []
+      }
+      chart_singles: {
+        Row: {
+          band_name: string | null
+          country: string | null
+          genre: string | null
+          platform_count: number | null
+          platform_name: string | null
+          song_id: string | null
+          streaming_revenue: number | null
+          title: string | null
+          total_streams: number | null
+        }
+        Relationships: []
       }
     }
     Functions: {

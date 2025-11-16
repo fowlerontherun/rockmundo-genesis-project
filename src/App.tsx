@@ -63,6 +63,10 @@ const PerformanceBooking = lazyWithRetry(() => import("./pages/booking/Performan
 const WorkBooking = lazyWithRetry(() => import("./pages/booking/WorkBooking"));
 const City = lazyWithRetry(() => import("./pages/City"));
 const WorldMap = lazyWithRetry(() => import("./pages/WorldMap"));
+const UnderworldNew = lazyWithRetry(() => import("./pages/UnderworldNew"));
+const DikCok = lazyWithRetry(() => import("./pages/DikCok"));
+const TourManagerNew = lazyWithRetry(() => import("./pages/TourManagerNew"));
+const StreamingNew = lazyWithRetry(() => import("./pages/StreamingNew"));
 const FestivalsNew = lazyWithRetry(() => import("./pages/FestivalsNew"));
 const Awards = lazyWithRetry(() => import("./pages/Awards"));
 const SetlistManager = lazyWithRetry(() => import("./pages/SetlistManager"));
@@ -161,6 +165,10 @@ function App() {
                     <Route index element={<Index />} />
                     <Route path="todays-news" element={<TodaysNewsPage />} />
                     <Route path="wellness" element={<WellnessPage />} />
+                    <Route path="underworld" element={<UnderworldNew />} />
+                    <Route path="dikcok" element={<DikCok />} />
+                    <Route path="tour-manager" element={<TourManagerNew />} />
+                    <Route path="streaming" element={<StreamingNew />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="onboarding" element={<Onboarding />} />
                     <Route path="band" element={<BandManager />} />
