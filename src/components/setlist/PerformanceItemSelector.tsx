@@ -40,21 +40,16 @@ export const PerformanceItemSelector = ({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   
-  // Get ALL performance items - no longer filtering by user skills/genres
+  // Get ALL performance items - no filtering by user skills/genres
   const { data: allPerformanceItems } = useFilteredPerformanceItems(userSkills, userGenres);
   
-  // Use all items directly instead of filtering by locked status
+  // Filter by search and category only
   const filteredItems = allPerformanceItems?.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
                          item.description?.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "all" || item.item_category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
-  
-  // All items are now always unlocked
-  const isItemLocked = (item: PerformanceItem) => {
-    return false; // Never locked anymore
-  };
   
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -94,8 +89,7 @@ export const PerformanceItemSelector = ({
           
           <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-2">
-              {filteredItems?.map((item) => {
-                return (
+              {filteredItems?.map((item) => (
                   <div
                     key={item.id}
                     className="border rounded-lg p-4 transition-colors hover:bg-accent cursor-pointer"
@@ -144,8 +138,7 @@ export const PerformanceItemSelector = ({
                       </div>
                     )}
                   </div>
-                );
-              })}
+              ))}
               
               {filteredItems?.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
