@@ -184,6 +184,27 @@ const adminSubSections = [
     action: "Manage crew",
     Icon: HardHat,
   },
+  {
+    title: "Player Management",
+    description: "View and manage player accounts, grant resources, and modify stats.",
+    href: "/admin/players",
+    action: "Manage players",
+    Icon: Shield,
+  },
+  {
+    title: "Achievements",
+    description: "Create and manage achievements with requirements and rewards.",
+    href: "/admin/achievements",
+    action: "Manage achievements",
+    Icon: TrendingUp,
+  },
+  {
+    title: "Analytics",
+    description: "View game statistics, player activity, and performance metrics.",
+    href: "/admin/analytics",
+    action: "View analytics",
+    Icon: TrendingUp,
+  },
 ] as const;
 
 export default function Admin() {
