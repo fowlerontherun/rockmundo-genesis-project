@@ -36,6 +36,9 @@ const FanManagement = lazyWithRetry(() => import("./pages/FanManagement"));
 
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
+const LabelBusinessDashboard = lazyWithRetry(
+  () => import("./pages/business/labels/[labelId]/dashboard"),
+);
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
 const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
@@ -186,6 +189,10 @@ function App() {
                     <Route path="band-enhanced" element={<RedirectTo to="/band" />} />
                     <Route path="streaming" element={<StreamingPlatforms />} />
                     <Route path="labels" element={<RecordLabel />} />
+                    <Route
+                      path="business/labels/:labelId/dashboard"
+                      element={<LabelBusinessDashboard />}
+                    />
                     <Route path="record-label" element={<Navigate to="/labels" replace />} />
                     <Route path="tours-system" element={<RedirectTo to="/travel" />} />
                     <Route path="charts" element={<RedirectTo to="/dashboard" />} />
