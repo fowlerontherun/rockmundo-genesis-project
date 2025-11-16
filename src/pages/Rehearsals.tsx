@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useGameData } from "@/hooks/useGameData";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
-import { useNavigate } from "react-router-dom";
+import { RehearsalBookingDialog } from "@/components/performance/RehearsalBookingDialog";
+import { useToast } from "@/hooks/use-toast";
+import { createScheduledActivity } from "@/hooks/useActivityBooking";
 
 interface Rehearsal {
   id: string;
@@ -39,8 +41,11 @@ interface Rehearsal {
 
 const Rehearsals = () => {
   const { profile } = useGameData();
-  const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"upcoming" | "completed">("upcoming");
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [selectedBand, setSelectedBand] = useState<any>(null);
 
   // Fetch all user's bands
   const { data: userBands = [] } = useQuery({
@@ -66,6 +71,44 @@ const Rehearsals = () => {
   });
 
   const bandIds = userBands.map((b: any) => b.id);
+
+  // Fetch rehearsal rooms
+  const { data: rooms = [] } = useQuery({
+    queryKey: ["rehearsal-rooms"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rehearsal_rooms")
+        .select("*")
+        .order("quality_rating", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch songs for selected band
+  const { data: bandSongs = [] } = useQuery({
+    queryKey: ["band-songs", selectedBand?.id],
+    queryFn: async () => {
+      if (!selectedBand?.id) return [];
+      
+      const { data: members } = await supabase
+        .from("band_members")
+        .select("user_id")
+        .eq("band_id", selectedBand.id);
+      
+      const userIds = members?.map(m => m.user_id) || [];
+      
+      const { data, error } = await supabase
+        .from("songs")
+        .select("*")
+        .in("user_id", userIds);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedBand?.id,
+  });
 
   // Fetch rehearsals for all user's bands
   const { data: rehearsals = [], isLoading } = useQuery({
@@ -140,6 +183,91 @@ const Rehearsals = () => {
     ? completedRehearsals.reduce((sum, r) => sum + (r.chemistry_gain || 0), 0) / completedRehearsals.length
     : 0;
 
+  const handleBookRehearsal = async (
+    roomId: string, 
+    duration: number, 
+    songId: string | null, 
+    setlistId: string | null, 
+    scheduledStart: Date
+  ) => {
+    if (!selectedBand) return;
+
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+
+    const totalCost = room.hourly_rate * duration;
+    const currentBalance = selectedBand.band_balance || 0;
+
+    if (currentBalance < totalCost) {
+      toast({
+        title: "Insufficient Funds",
+        description: `This rehearsal costs $${totalCost.toFixed(2)} but your band only has $${currentBalance.toFixed(2)}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const scheduledEnd = new Date(scheduledStart);
+    scheduledEnd.setHours(scheduledEnd.getHours() + duration);
+
+    const { data, error } = await supabase
+      .from("band_rehearsals")
+      .insert({
+        band_id: selectedBand.id,
+        rehearsal_room_id: roomId,
+        duration_hours: duration,
+        total_cost: totalCost,
+        scheduled_start: scheduledStart.toISOString(),
+        scheduled_end: scheduledEnd.toISOString(),
+        selected_song_id: songId,
+        status: "scheduled",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Booking Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Deduct cost from band balance
+    await supabase
+      .from("bands")
+      .update({ band_balance: currentBalance - totalCost })
+      .eq("id", selectedBand.id);
+
+    // Create scheduled activity
+    await createScheduledActivity({
+      activityType: "rehearsal",
+      scheduledStart,
+      scheduledEnd,
+      title: `Band Rehearsal - ${room.name}`,
+      location: room.location,
+      linkedRehearsalId: data.id,
+      metadata: {
+        rehearsalId: data.id,
+        bandId: selectedBand.id,
+        roomId,
+        songId,
+        setlistId,
+      },
+    });
+
+    toast({
+      title: "Rehearsal Booked!",
+      description: `${duration}-hour rehearsal scheduled at ${room.name}`,
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["all-rehearsals"] });
+    queryClient.invalidateQueries({ queryKey: ["user-bands"] });
+    setShowBookingDialog(false);
+    return data.id;
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       scheduled: "secondary",
@@ -162,12 +290,21 @@ const Rehearsals = () => {
             Manage rehearsals for all your bands to improve chemistry and song familiarity
           </p>
         </div>
-        {userBands.length > 0 && (
-          <Button onClick={() => navigate(`/bands/${(userBands[0] as any).id}/management?tab=rehearsals`)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Book Rehearsal
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {userBands.map((band: any) => (
+            <Button 
+              key={band.id}
+              variant={selectedBand?.id === band.id ? "default" : "outline"}
+              onClick={() => {
+                setSelectedBand(band);
+                setShowBookingDialog(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Book for {band.name}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -365,6 +502,16 @@ const Rehearsals = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {showBookingDialog && selectedBand && (
+        <RehearsalBookingDialog
+          rooms={rooms}
+          band={selectedBand}
+          songs={bandSongs}
+          onConfirm={handleBookRehearsal}
+          onClose={() => setShowBookingDialog(false)}
+        />
+      )}
     </div>
   );
 };
