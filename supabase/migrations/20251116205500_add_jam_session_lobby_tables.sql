@@ -63,9 +63,19 @@ create policy "Participants can update readiness"
   for update
   using (
     profile_id in (select id from public.profiles where user_id = auth.uid())
+    or jam_session_id in (
+      select js.id
+      from public.jam_sessions js
+      where js.host_id in (select id from public.profiles where user_id = auth.uid())
+    )
   )
   with check (
     profile_id in (select id from public.profiles where user_id = auth.uid())
+    or jam_session_id in (
+      select js.id
+      from public.jam_sessions js
+      where js.host_id in (select id from public.profiles where user_id = auth.uid())
+    )
   );
 
 -- Create jam_session_messages table for lobby chat
@@ -104,7 +114,12 @@ create policy "Jam session members can post messages"
   on public.jam_session_messages
   for insert
   with check (
-    sender_profile_id in (select id from public.profiles where user_id = auth.uid())
+    sender_profile_id = (
+      select id
+      from public.profiles
+      where user_id = auth.uid()
+      limit 1
+    )
     and (
       exists (
         select 1
