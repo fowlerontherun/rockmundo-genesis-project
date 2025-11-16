@@ -12,6 +12,7 @@ import {
   Briefcase,
   Music2,
   Plane,
+  Calendar as CalendarIcon,
   Calendar,
   TrendingUp,
   Shield,
@@ -28,11 +29,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const adminSections = [
   {
+    title: "Festival Management",
+    description: "Manage festivals, slot offers, and band applications",
+    href: "/admin/festivals",
+    action: "Manage festivals",
+    Icon: CalendarIcon,
+  },
+  {
     title: "Game Calendar",
     description: "Configure in-game time progression, seasons, and seasonal modifiers for genres.",
     href: "/admin/game-calendar",
     action: "Manage calendar",
-    Icon: Calendar,
+    Icon: CalendarIcon,
   },
   {
     title: "Cities",
