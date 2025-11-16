@@ -141,6 +141,12 @@ export default function Employment() {
     mutationFn: async (jobId: string) => {
       if (!profile?.id) throw new Error("Profile not found");
 
+      // First, delete any existing employment records (quit/terminated)
+      await supabase
+        .from("player_employment")
+        .delete()
+        .eq("profile_id", profile.id);
+
       const { data, error } = await supabase
         .from("player_employment")
         .insert([{
