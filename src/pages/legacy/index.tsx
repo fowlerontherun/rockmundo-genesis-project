@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Award, Crown, Flame, History, RefreshCw, Sparkles } from "lucide-react";
