@@ -6987,6 +6987,66 @@ export type Database = {
           },
         ]
       }
+      session_prompt_artifacts: {
+        Row: {
+          context_tokens: number
+          created_at: string
+          id: string
+          lyrics_excerpt: string | null
+          metadata: Json
+          prompt: Json
+          session_id: string
+          song_id: string
+          stem_paths: string[]
+          summary: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          context_tokens?: number
+          created_at?: string
+          id?: string
+          lyrics_excerpt?: string | null
+          metadata: Json
+          prompt: Json
+          session_id: string
+          song_id: string
+          stem_paths?: string[]
+          summary: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          context_tokens?: number
+          created_at?: string
+          id?: string
+          lyrics_excerpt?: string | null
+          metadata?: Json
+          prompt?: Json
+          session_id?: string
+          song_id?: string
+          stem_paths?: string[]
+          summary?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_prompt_artifacts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_prompt_artifacts_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rehearsal_rooms: {
         Row: {
           capacity: number | null
